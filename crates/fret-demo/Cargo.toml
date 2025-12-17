@@ -1,0 +1,16 @@
+[package]
+name = "fret-demo"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+pollster.workspace = true
+winit.workspace = true
+wgpu.workspace = true
+
+fret-core = { path = "../fret-core" }
+fret-app = { path = "../fret-app" }
+fret-render = { path = "../fret-render" }
+fret-ui = { path = "../fret-ui" }
+slotmap.workspace = true

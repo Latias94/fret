@@ -1,0 +1,10 @@
+[package]
+name = "fret-ui"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fret-app = { path = "../fret-app" }
+fret-core = { path = "../fret-core" }
+slotmap.workspace = true
+taffy.workspace = true

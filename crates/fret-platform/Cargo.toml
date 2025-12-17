@@ -1,0 +1,10 @@
+[package]
+name = "fret-platform"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+fret-core = { path = "../fret-core" }
+slotmap.workspace = true
+winit.workspace = true
