@@ -26,7 +26,11 @@ impl Widget for Clip {
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
         cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
         for &child in cx.children {
-            cx.paint(child, cx.bounds);
+            if let Some(bounds) = cx.child_bounds(child) {
+                cx.paint(child, bounds);
+            } else {
+                cx.paint(child, cx.bounds);
+            }
         }
         cx.scene.push(SceneOp::PopClip);
     }

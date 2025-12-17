@@ -167,6 +167,10 @@ impl UiTree {
 
     pub fn layout(&mut self, app: &mut App, root: NodeId, available: Size) -> Size {
         let bounds = Rect::new(Point::new(fret_core::Px(0.0), fret_core::Px(0.0)), available);
+        self.layout_in(app, root, bounds)
+    }
+
+    pub fn layout_in(&mut self, app: &mut App, root: NodeId, bounds: Rect) -> Size {
         self.layout_node(app, root, bounds)
     }
 

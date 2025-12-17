@@ -36,6 +36,7 @@ impl Widget for Scroll {
         cx.invalidate_self(Invalidation::Layout);
         cx.invalidate_self(Invalidation::Paint);
         cx.request_redraw();
+        cx.stop_propagation();
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
@@ -66,8 +67,11 @@ impl Widget for Scroll {
 
         cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
 
-        // Child bounds were written during layout; we just re-use the same clip here.
-        cx.paint(child, cx.bounds);
+        if let Some(bounds) = cx.child_bounds(child) {
+            cx.paint(child, bounds);
+        } else {
+            cx.paint(child, cx.bounds);
+        }
 
         cx.scene.push(SceneOp::PopClip);
     }

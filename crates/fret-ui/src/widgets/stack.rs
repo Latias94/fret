@@ -25,8 +25,11 @@ impl Widget for Stack {
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
         for &child in cx.children {
-            cx.paint(child, cx.bounds);
+            if let Some(bounds) = cx.child_bounds(child) {
+                cx.paint(child, bounds);
+            } else {
+                cx.paint(child, cx.bounds);
+            }
         }
     }
 }
-
