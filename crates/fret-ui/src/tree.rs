@@ -109,9 +109,15 @@ impl UiTree {
             let (invalidations, requested_focus, requested_capture, stop_propagation, parent) =
                 self.with_widget_mut(node_id, |widget, tree| {
                     let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                    let children: Vec<NodeId> = tree
+                        .nodes
+                        .get(node_id)
+                        .map(|n| n.children.clone())
+                        .unwrap_or_default();
                     let mut cx = EventCx {
                         app,
                         node: node_id,
+                        children: &children,
                         focus: tree.focus,
                         captured: tree.captured,
                         invalidations: Vec::new(),
@@ -186,10 +192,16 @@ impl UiTree {
             unsafe { (&mut *tree_ptr).layout_node(&mut *app_ptr, child, available) }
         };
 
-        let size = self.with_widget_mut(node, |widget, _tree| {
+        let size = self.with_widget_mut(node, |widget, tree| {
+            let children: Vec<NodeId> = tree
+                .nodes
+                .get(node)
+                .map(|n| n.children.clone())
+                .unwrap_or_default();
             let mut cx = LayoutCx {
                 app,
                 node,
+                children: &children,
                 available,
                 layout_child: &mut layout_child,
             };
@@ -222,10 +234,16 @@ impl UiTree {
             n.bounds = bounds;
         }
 
-        self.with_widget_mut(node, |widget, _tree| {
+        self.with_widget_mut(node, |widget, tree| {
+            let children: Vec<NodeId> = tree
+                .nodes
+                .get(node)
+                .map(|n| n.children.clone())
+                .unwrap_or_default();
             let mut cx = PaintCx {
                 app,
                 node,
+                children: &children,
                 bounds,
                 scene,
                 paint_child: &mut paint_child,

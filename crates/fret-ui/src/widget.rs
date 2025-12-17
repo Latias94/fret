@@ -11,6 +11,7 @@ pub enum Invalidation {
 pub struct EventCx<'a> {
     pub app: &'a mut App,
     pub node: NodeId,
+    pub children: &'a [NodeId],
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
     pub invalidations: Vec<(NodeId, Invalidation)>,
@@ -49,6 +50,7 @@ impl<'a> EventCx<'a> {
 pub struct LayoutCx<'a> {
     pub app: &'a mut App,
     pub node: NodeId,
+    pub children: &'a [NodeId],
     pub available: Size,
     pub layout_child: &'a mut dyn FnMut(NodeId, Size) -> Size,
 }
@@ -62,6 +64,7 @@ impl<'a> LayoutCx<'a> {
 pub struct PaintCx<'a> {
     pub app: &'a mut App,
     pub node: NodeId,
+    pub children: &'a [NodeId],
     pub bounds: Rect,
     pub scene: &'a mut Scene,
     pub paint_child: &'a mut dyn FnMut(NodeId, Rect),
