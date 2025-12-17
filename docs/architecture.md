@@ -86,9 +86,26 @@ Fret provides an `App`-level service container (similar to GPUI’s `Global`) fo
 
 Shared application state lives in **models** (a.k.a. entities). Widgets subscribe to model changes and invalidate themselves.
 
-- `Model<T>` is an opaque handle with a stable identity.
-- Reads are allowed during any phase.
-- Writes happen in explicit update closures, and can trigger invalidation.
+#### App-owned entities and typed handles (Zed/GPUI-inspired)
+
+One key constraint in Rust UI runtimes is avoiding borrow conflicts between `&mut App` and `&mut ModelState`.
+
+We adopt an **App-owned entity** approach:
+
+- All model state is owned by `App` (single owner).
+- Callers hold a typed, cloneable handle `Model<T>` that does not directly own the state.
+- Mutations happen via explicit update closures, and can emit effects (redraw, commands, window requests).
+
+To keep this ergonomic without pervasive `Rc<RefCell<...>>`, the update path should support **leasing**:
+
+- Temporarily move the model state out of the store while the closure runs.
+- This allows passing `&mut App` and `&mut T` to the same closure without aliasing.
+- A dropped/poisoned lease must not permanently remove the model; restore on unwind.
+
+Guideline:
+
+- Put long-lived shared state in models (selection, dock graph, settings, project state).
+- Put small and short-lived UI interaction state inside the widget tree (hover, local focus helpers, transient form state).
 
 ### Commands / Actions
 
@@ -195,6 +212,7 @@ This mirrors the strengths of `gpui-component`’s theme approach while keeping 
 
 - Short-term: simplified text for property panels.
 - Long-term: integrate `cosmic-text` for editor-grade text shaping/layout; keep the rendering backend decoupled so we can iterate on subpixel/gamma and caching later.
+- Performance stance (Zed-style): cache shaped glyph runs and atlas uploads; treat text and UI primitives as GPU-driven “game-like” rendering.
 
 ## Async & Scheduling
 
@@ -203,6 +221,37 @@ Fret should not hard-require a specific async runtime.
 - Provide a small `Executor` abstraction in `fret-app`.
 - Default implementation can be a lightweight executor and `EventLoopProxy` wakeups.
 - Optional feature flags can enable integration with Tokio/async-std if needed.
+
+### Frame scheduling (120fps-inspired)
+
+Avoid unconditional continuous redraw. The platform layer should:
+
+- redraw only when there are **dirty windows** (state changed, animation tick, or input),
+- optionally keep presenting for a short “burst” after user input (e.g. ~1s) to avoid variable refresh-rate downshifts,
+- handle per-platform sync differences (e.g. “scheduled” vs “completed” semantics on macOS/Metal).
+
+On the renderer side, anticipate **multi-buffering** for dynamic GPU resources (instance buffers, staging uploads) to avoid frame N / N+1 races when presentation becomes more asynchronous.
+
+### Effects flush loop (ownership/handles)
+
+Model updates and widget events should enqueue side effects instead of performing platform operations directly.
+
+`App::flush_effects()` should be the single place that:
+
+- drains window create/close requests,
+- drains redraw requests,
+- resolves dropped handles (refcounts reaching zero),
+- triggers platform wakeups/redraw.
+
+This keeps borrow scopes small and makes multi-window coordination predictable.
+
+## Settings & Configuration (settings-ui-inspired)
+
+For editor-grade products, settings quickly become a cross-cutting concern. Prefer:
+
+- centralized, strongly typed `UserSettings` / `ProjectSettings` models,
+- “files as the organizing principle” (both in code and in UI),
+- avoiding macro glue that entangles “pre-UI” crates with UI component crates.
 
 ## Plugin & Component Boundaries
 
@@ -248,7 +297,7 @@ Key properties:
 
 ```rust
 let selection: Model<Selection> = app.models().insert(Selection::default());
-selection.update(&mut app, |sel| sel.set_active(entity_id));
+selection.update(&mut app, |sel, _cx| sel.set_active(entity_id));
 ```
 
 ## Early Architecture Decisions (ADR-style)

@@ -20,7 +20,9 @@ This roadmap focuses on building a retained-mode editor-grade UI framework with 
 
 - P0: `App` runtime with global services container (type map).
 - P0: `Model<T>` store with typed handles and explicit update closures.
+- P0: Lease-based model updates (`App` can pass `&mut App` + `&mut T` safely).
 - P0: Command registry (`CommandId`, metadata, discovery hooks).
+- P0: Effects queue + `flush_effects` loop (redraw/window requests, dropped-handle cleanup).
 - P1: Plugin registry scaffolding (panel factories, command registration).
 
 ### M2 — Retained UI Core (Single Window)
@@ -38,6 +40,7 @@ This roadmap focuses on building a retained-mode editor-grade UI framework with 
   - instanced quads,
   - rounded rect via SDF, borders (pending),
   - clip rect stack (initially via scissor; later refine). (MVP done for quads + scissor)
+- P0: Dynamic GPU buffer strategy (anticipate multi-buffering/pools for async presentation).
 - P1: Atlas allocation and uploads (images, glyphs).
 
 ### M4 — Docking (Multi-Window + Tear-off)
@@ -59,6 +62,7 @@ This roadmap focuses on building a retained-mode editor-grade UI framework with 
 
 - P1: Basic text for inspector/property panels (layout + glyph atlas).
 - P2: `cosmic-text` integration for editor-grade text shaping/layout.
+- P2: Shaped-run caching + incremental atlas uploads for large documents.
 - P2: IME events end-to-end, composition UI.
 - P2: High-performance text widgets (code editor view, large buffers).
 
