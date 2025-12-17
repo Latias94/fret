@@ -134,7 +134,7 @@ Docking is managed by a **global Dock Manager** (app-level service), not by a si
   - either attach to a drop zone within a window,
   - or create/merge into a floating window.
 
-Platform actions (such as creating a new OS window for tear-off) should be requested by the dock UI and executed by the platform layer. A simple shape is a request queue owned by `DockManager` (e.g. `DockRequest::CreateFloatingWindow`).
+Platform actions (such as creating a new OS window for tear-off) should be requested by the dock UI and executed by the platform layer. The current direction is an `App`-owned effects queue (e.g. `Effect::Window(WindowEffect::CreateDockFloating(...))`) so platform code can drain and execute requests in one place.
 
 Reference: Godot’s dock windows are explicitly created and managed (`editor/docks/editor_dock_manager.cpp`).
 

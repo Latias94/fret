@@ -22,7 +22,7 @@ This roadmap focuses on building a retained-mode editor-grade UI framework with 
 - P0: `Model<T>` store with typed handles and explicit update closures.
 - P0: Lease-based model updates (`App` can pass `&mut App` + `&mut T` safely).
 - P0: Command registry (`CommandId`, metadata, discovery hooks).
-- P0: Effects queue + `flush_effects` loop (redraw/window requests, dropped-handle cleanup).
+- P0: Effects queue + `flush_effects` loop (redraw/window requests, dropped-handle cleanup). (initial impl)
 - P1: Plugin registry scaffolding (panel factories, command registration).
 
 ### M2 — Retained UI Core (Single Window)
