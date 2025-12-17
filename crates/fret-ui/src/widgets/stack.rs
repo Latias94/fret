@@ -18,7 +18,7 @@ impl Default for Stack {
 impl Widget for Stack {
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
         for &child in cx.children {
-            let _ = cx.layout(child, cx.available);
+            let _ = cx.layout_in(child, cx.bounds);
         }
         cx.available
     }

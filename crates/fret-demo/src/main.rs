@@ -11,7 +11,7 @@ use fret_core::{
     Axis, Color, DockNode, DropZone, Modifiers, MouseButton, Point, Px, Rect, Scene, Size,
 };
 use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
-use fret_ui::{DockManager, DockPanel, DockSpace, UiTree};
+use fret_ui::{Column, DockManager, DockPanel, DockSpace, FixedPanel, Scroll, Split, UiTree};
 use slotmap::SlotMap;
 use winit::{
     application::ApplicationHandler,
@@ -96,8 +96,33 @@ impl DemoApp {
         let id = self.windows.insert_with_key(|id| {
             let mut ui = UiTree::new();
             ui.set_window(id);
-            let root = ui.create_node(DockSpace::new(id));
+            let root = ui.create_node(Split::new(Axis::Horizontal, 0.72));
             ui.set_root(root);
+
+            let dock = ui.create_node(DockSpace::new(id));
+            ui.add_child(root, dock);
+
+            let scroll = ui.create_node(Scroll::new());
+            ui.add_child(root, scroll);
+
+            let column = ui.create_node(Column::new().with_padding(Px(10.0)).with_spacing(Px(8.0)));
+            ui.add_child(scroll, column);
+
+            for i in 0..28 {
+                let shade = 0.14 + (i % 2) as f32 * 0.02;
+                let height = if i % 7 == 0 { Px(72.0) } else { Px(44.0) };
+                let item = ui.create_node(FixedPanel::new(
+                    height,
+                    Color {
+                        r: shade,
+                        g: shade + 0.01,
+                        b: shade + 0.02,
+                        a: 1.0,
+                    },
+                ));
+                ui.add_child(column, item);
+            }
+
             WindowState {
                 window,
                 surface,

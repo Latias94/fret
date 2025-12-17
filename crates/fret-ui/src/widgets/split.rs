@@ -24,17 +24,24 @@ impl Widget for Split {
             Axis::Horizontal => {
                 let w0 = Px(cx.available.width.0 * f);
                 let w1 = Px((cx.available.width.0 - w0.0).max(0.0));
-                let _ = cx.layout(a, Size::new(w0, cx.available.height));
+                let rect_a = Rect::new(cx.bounds.origin, Size::new(w0, cx.available.height));
+                let _ = cx.layout_in(a, rect_a);
                 if let Some(b) = b {
-                    let _ = cx.layout(b, Size::new(w1, cx.available.height));
+                    let origin_b =
+                        Point::new(Px(cx.bounds.origin.x.0 + w0.0), cx.bounds.origin.y);
+                    let rect_b = Rect::new(origin_b, Size::new(w1, cx.available.height));
+                    let _ = cx.layout_in(b, rect_b);
                 }
             }
             Axis::Vertical => {
                 let h0 = Px(cx.available.height.0 * f);
                 let h1 = Px((cx.available.height.0 - h0.0).max(0.0));
-                let _ = cx.layout(a, Size::new(cx.available.width, h0));
+                let rect_a = Rect::new(cx.bounds.origin, Size::new(cx.available.width, h0));
+                let _ = cx.layout_in(a, rect_a);
                 if let Some(b) = b {
-                    let _ = cx.layout(b, Size::new(cx.available.width, h1));
+                    let origin_b = Point::new(cx.bounds.origin.x, Px(cx.bounds.origin.y.0 + h0.0));
+                    let rect_b = Rect::new(origin_b, Size::new(cx.available.width, h1));
+                    let _ = cx.layout_in(b, rect_b);
                 }
             }
         }
@@ -76,4 +83,3 @@ impl Widget for Split {
         }
     }
 }
-
