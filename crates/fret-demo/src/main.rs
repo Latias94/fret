@@ -4,12 +4,12 @@ use std::{
     time::{Duration, Instant},
 };
 
-use fret_app::App;
+use fret_app::{App, Effect, WindowEffect};
 use fret_core::{
     Axis, Color, DockNode, DropZone, Modifiers, MouseButton, Point, Px, Rect, Scene, Size,
 };
 use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
-use fret_ui::{DockManager, DockPanel, DockRequest, DockSpace, UiTree};
+use fret_ui::{DockManager, DockPanel, DockSpace, UiTree};
 use slotmap::SlotMap;
 use winit::{
     application::ApplicationHandler,
@@ -135,74 +135,76 @@ impl DemoApp {
         self.mark_activity(window);
     }
 
-    fn process_dock_requests(&mut self, event_loop: &ActiveEventLoop) {
-        let requests = match self.app.global_mut::<DockManager>() {
-            Some(dock) => dock.take_requests(),
-            None => return,
-        };
-
-        for request in requests {
-            match request {
-                DockRequest::CreateFloatingWindow {
-                    source_window,
-                    panel,
-                    anchor_window,
-                    anchor_position,
-                } => {
-                    let title = self
-                        .app
-                        .global::<DockManager>()
-                        .and_then(|dock| dock.panel(panel))
-                        .map(|p| p.title.clone())
-                        .unwrap_or_else(|| "Floating".to_string());
-
-                    let position = self.windows.get(anchor_window).and_then(|anchor| {
-                        let outer = anchor.window.outer_position().ok()?;
-                        let scale = anchor.window.scale_factor();
-                        let x = outer.x as f64 + anchor_position.x.0 as f64 * scale - 40.0;
-                        let y = outer.y as f64 + anchor_position.y.0 as f64 * scale - 20.0;
-                        Some(winit::dpi::PhysicalPosition::new(x as i32, y as i32).into())
-                    });
-
-                    let (window, surface) = match self.create_window(
-                        event_loop,
-                        &format!("fret-demo - {title}"),
-                        LogicalSize::new(640.0, 480.0),
-                        position,
-                    ) {
-                        Ok(v) => v,
-                        Err(_) => continue,
-                    };
-
-                    let new_window = match self.insert_window_state(window, surface) {
-                        Ok(id) => id,
-                        Err(_) => continue,
-                    };
-
-                    if let Some(dock) = self.app.global_mut::<DockManager>() {
-                        dock.graph
-                            .float_panel_to_window(source_window, panel, new_window);
+    fn process_effects(&mut self, event_loop: &ActiveEventLoop) {
+        let effects = self.app.flush_effects();
+        for effect in effects {
+            match effect {
+                Effect::Redraw(window) => {
+                    if let Some(state) = self.windows.get(window) {
+                        state.window.request_redraw();
                     }
-
-                    if let Some(dock) = self.app.global_mut::<DockManager>() {
-                        let empty = dock
-                            .graph
-                            .collect_panels_in_window(source_window)
-                            .is_empty();
-                        if empty && Some(source_window) != self.main_window {
-                            self.close_window(source_window);
+                }
+                Effect::Command(_) => {}
+                Effect::Window(we) => match we {
+                    WindowEffect::Close(window) => {
+                        if Some(window) == self.main_window {
+                            continue;
                         }
+                        self.close_window(window);
                     }
+                    WindowEffect::CreateDockFloating(req) => {
+                        let title = self
+                            .app
+                            .global::<DockManager>()
+                            .and_then(|dock| dock.panel(req.panel))
+                            .map(|p| p.title.clone())
+                            .unwrap_or_else(|| "Floating".to_string());
 
-                    self.mark_activity(source_window);
-                    self.mark_activity(new_window);
-                }
-                DockRequest::CloseWindow { window } => {
-                    if Some(window) == self.main_window {
-                        continue;
+                        let position = self.windows.get(req.anchor_window).and_then(|anchor| {
+                            let outer = anchor.window.outer_position().ok()?;
+                            let scale = anchor.window.scale_factor();
+                            let x = outer.x as f64 + req.anchor_position.x.0 as f64 * scale - 40.0;
+                            let y = outer.y as f64 + req.anchor_position.y.0 as f64 * scale - 20.0;
+                            Some(winit::dpi::PhysicalPosition::new(x as i32, y as i32).into())
+                        });
+
+                        let (window, surface) = match self.create_window(
+                            event_loop,
+                            &format!("fret-demo - {title}"),
+                            LogicalSize::new(640.0, 480.0),
+                            position,
+                        ) {
+                            Ok(v) => v,
+                            Err(_) => continue,
+                        };
+
+                        let new_window = match self.insert_window_state(window, surface) {
+                            Ok(id) => id,
+                            Err(_) => continue,
+                        };
+
+                        if let Some(dock) = self.app.global_mut::<DockManager>() {
+                            dock.graph.float_panel_to_window(
+                                req.source_window,
+                                req.panel,
+                                new_window,
+                            );
+                        }
+
+                        if let Some(dock) = self.app.global_mut::<DockManager>() {
+                            let empty = dock
+                                .graph
+                                .collect_panels_in_window(req.source_window)
+                                .is_empty();
+                            if empty && Some(req.source_window) != self.main_window {
+                                self.close_window(req.source_window);
+                            }
+                        }
+
+                        self.mark_activity(req.source_window);
+                        self.mark_activity(new_window);
                     }
-                    self.close_window(window);
-                }
+                },
             }
         }
     }
@@ -365,7 +367,7 @@ impl ApplicationHandler for DemoApp {
                     app_window,
                     fret_core::PointerEvent::Move { position: pos },
                 );
-                self.process_dock_requests(event_loop);
+                self.process_effects(event_loop);
             }
             WindowEvent::MouseInput { state, button, .. } => {
                 let Some(button) = map_mouse_button(button) else {
@@ -387,7 +389,7 @@ impl ApplicationHandler for DemoApp {
                     },
                 };
                 self.dispatch_pointer_event(app_window, pe);
-                self.process_dock_requests(event_loop);
+                self.process_effects(event_loop);
             }
             WindowEvent::MouseWheel { delta, .. } => {
                 let Some(state) = self.windows.get(app_window) else {
@@ -409,7 +411,7 @@ impl ApplicationHandler for DemoApp {
                         modifiers: self.modifiers,
                     },
                 );
-                self.process_dock_requests(event_loop);
+                self.process_effects(event_loop);
             }
             WindowEvent::RedrawRequested => {
                 let (Some(context), Some(renderer)) =
@@ -475,14 +477,17 @@ impl ApplicationHandler for DemoApp {
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         const FRAME_INTERVAL: Duration = Duration::from_millis(8);
 
+        self.process_effects(event_loop);
+
         let now = Instant::now();
 
         let mut should_keep_alive = false;
-        let mut to_redraw = self.app.take_redraw_requests();
         for (window, deadline) in &self.keep_alive_deadlines {
             if *deadline > now {
                 should_keep_alive = true;
-                to_redraw.push(*window);
+                if let Some(state) = self.windows.get(*window) {
+                    state.window.request_redraw();
+                }
             }
         }
 
@@ -490,17 +495,6 @@ impl ApplicationHandler for DemoApp {
             event_loop.set_control_flow(ControlFlow::WaitUntil(now + FRAME_INTERVAL));
         } else {
             event_loop.set_control_flow(ControlFlow::Wait);
-        }
-
-        let mut dedup: std::collections::HashSet<fret_core::AppWindowId> =
-            std::collections::HashSet::new();
-        for window in to_redraw {
-            if !dedup.insert(window) {
-                continue;
-            }
-            if let Some(state) = self.windows.get(window) {
-                state.window.request_redraw();
-            }
         }
     }
 }
