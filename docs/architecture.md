@@ -121,6 +121,10 @@ Platform actions (such as creating a new OS window for tear-off) should be reque
 
 Reference: Godot’s dock windows are explicitly created and managed (`editor/docks/editor_dock_manager.cpp`).
 
+Practical note:
+
+- `DockSpace` reserves a top "chrome" region (future menu/toolbar area). Dropping a dragged tab onto this region triggers a tear-off window.
+
 ## Rendering: Scene/Display List + SDF Quads
 
 The renderer consumes a **display list** (or “Scene”) built from the retained tree.

@@ -16,6 +16,8 @@ pub enum DockRequest {
     CreateFloatingWindow {
         source_window: fret_core::AppWindowId,
         panel: PanelId,
+        anchor_window: fret_core::AppWindowId,
+        anchor_position: Point,
     },
     CloseWindow {
         window: fret_core::AppWindowId,
@@ -117,7 +119,8 @@ impl Widget for DockSpace {
                     if *button != fret_core::MouseButton::Left {
                         return;
                     }
-                    let layout = compute_layout_map(&dock.graph, root, self.last_bounds);
+                    let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
+                    let layout = compute_layout_map(&dock.graph, root, dock_bounds);
                     if let Some(handle) = hit_test_split_handle(&dock.graph, &layout, *position) {
                         self.divider_drag = Some(handle);
                         cx.invalidate(cx.node, crate::widget::Invalidation::Paint);
@@ -138,7 +141,8 @@ impl Widget for DockSpace {
                 }
                 fret_core::PointerEvent::Move { position } => {
                     if let Some(divider) = self.divider_drag {
-                        let layout = compute_layout_map(&dock.graph, root, self.last_bounds);
+                        let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
+                        let layout = compute_layout_map(&dock.graph, root, dock_bounds);
                         if let Some((left, right)) = split_children_two(&dock.graph, divider.split)
                             .and_then(|(a, b)| {
                                 Some((layout.get(&a).copied()?, layout.get(&b).copied()?))
@@ -181,21 +185,23 @@ impl Widget for DockSpace {
                         return;
                     }
 
-                    let layout = compute_layout_map(&dock.graph, root, self.last_bounds);
-                    if float_zone(self.last_bounds).contains(*position) {
+                    let (chrome, dock_bounds) = dock_space_regions(self.last_bounds);
+                    if chrome.contains(*position) {
                         dock.hover = Some(DockDropTarget::Float {
                             window: self.window,
                         });
-                    } else if let Some(target) =
-                        hit_test_drop_target(&dock.graph, &layout, *position)
-                    {
-                        dock.hover = Some(DockDropTarget::Dock(target));
+                    } else if dock_bounds.contains(*position) {
+                        let layout = compute_layout_map(&dock.graph, root, dock_bounds);
+                        dock.hover = hit_test_drop_target(&dock.graph, &layout, *position)
+                            .map(DockDropTarget::Dock);
                     } else {
                         dock.hover = None;
                     }
                     cx.invalidate(cx.node, crate::widget::Invalidation::Paint);
                 }
-                fret_core::PointerEvent::Up { button, .. } => {
+                fret_core::PointerEvent::Up {
+                    position, button, ..
+                } => {
                     if *button != fret_core::MouseButton::Left {
                         return;
                     }
@@ -232,9 +238,21 @@ impl Widget for DockSpace {
                                 dock.requests.push(DockRequest::CreateFloatingWindow {
                                     source_window: drag.source_window,
                                     panel: drag.panel,
+                                    anchor_window: self.window,
+                                    anchor_position: *position,
                                 });
                             }
-                            None => {}
+                            None => {
+                                let (chrome, _dock_bounds) = dock_space_regions(self.last_bounds);
+                                if chrome.contains(*position) {
+                                    dock.requests.push(DockRequest::CreateFloatingWindow {
+                                        source_window: drag.source_window,
+                                        panel: drag.panel,
+                                        anchor_window: self.window,
+                                        anchor_position: *position,
+                                    });
+                                }
+                            }
                         }
                     }
 
@@ -260,13 +278,14 @@ impl Widget for DockSpace {
             return;
         };
 
-        let layout = compute_layout_map(&dock.graph, root, cx.bounds);
+        let (chrome, dock_bounds) = dock_space_regions(cx.bounds);
+        let layout = compute_layout_map(&dock.graph, root, dock_bounds);
 
+        paint_chrome(chrome, cx.scene);
         paint_dock(dock, &layout, cx.scene);
         paint_split_handles(&dock.graph, &layout, cx.scene);
 
-        paint_float_zone(cx.bounds, cx.scene);
-        paint_drop_overlay(dock.hover, self.window, cx.bounds, &layout, cx.scene);
+        paint_drop_overlay(dock.hover, self.window, chrome, &layout, cx.scene);
     }
 }
 
@@ -736,7 +755,21 @@ fn paint_drop_overlay(
     }
 }
 
-fn paint_float_zone(bounds: Rect, scene: &mut Scene) {
+fn paint_chrome(bounds: Rect, scene: &mut Scene) {
+    scene.push(SceneOp::Quad {
+        order: fret_core::DrawOrder(50),
+        rect: bounds,
+        background: Color {
+            r: 0.08,
+            g: 0.08,
+            b: 0.09,
+            a: 1.0,
+        },
+        border: Edges::all(Px(0.0)),
+        border_color: Color::TRANSPARENT,
+        corner_radii: fret_core::Corners::all(Px(0.0)),
+    });
+
     let rect = float_zone(bounds);
     scene.push(SceneOp::Quad {
         order: fret_core::DrawOrder(8_000),
@@ -751,4 +784,23 @@ fn paint_float_zone(bounds: Rect, scene: &mut Scene) {
         border_color: Color::TRANSPARENT,
         corner_radii: fret_core::Corners::all(Px(8.0)),
     });
+}
+
+fn dock_space_regions(bounds: Rect) -> (Rect, Rect) {
+    let chrome_h = Px(44.0);
+    let chrome = Rect {
+        origin: bounds.origin,
+        size: Size::new(bounds.size.width, Px(chrome_h.0.min(bounds.size.height.0))),
+    };
+    let dock = Rect {
+        origin: Point::new(
+            bounds.origin.x,
+            Px(bounds.origin.y.0 + chrome.size.height.0),
+        ),
+        size: Size::new(
+            bounds.size.width,
+            Px((bounds.size.height.0 - chrome.size.height.0).max(0.0)),
+        ),
+    };
+    (chrome, dock)
 }

@@ -44,16 +44,15 @@ impl DemoApp {
         event_loop: &ActiveEventLoop,
         title: &str,
         size: LogicalSize<f64>,
+        position: Option<winit::dpi::Position>,
     ) -> anyhow::Result<(Arc<Window>, wgpu::Surface<'static>)> {
-        let window = Arc::new(
-            event_loop
-                .create_window(
-                    Window::default_attributes()
-                        .with_title(title)
-                        .with_inner_size(size),
-                )
-                .expect("create window"),
-        );
+        let mut attrs = Window::default_attributes()
+            .with_title(title)
+            .with_inner_size(size);
+        if let Some(position) = position {
+            attrs = attrs.with_position(position);
+        }
+        let window = Arc::new(event_loop.create_window(attrs).expect("create window"));
 
         let Some(context) = self.context.as_ref() else {
             anyhow::bail!("wgpu context not initialized");
@@ -133,6 +132,8 @@ impl DemoApp {
                 DockRequest::CreateFloatingWindow {
                     source_window,
                     panel,
+                    anchor_window,
+                    anchor_position,
                 } => {
                     let title = self
                         .app
@@ -141,10 +142,19 @@ impl DemoApp {
                         .map(|p| p.title.clone())
                         .unwrap_or_else(|| "Floating".to_string());
 
+                    let position = self.windows.get(anchor_window).and_then(|anchor| {
+                        let outer = anchor.window.outer_position().ok()?;
+                        let scale = anchor.window.scale_factor();
+                        let x = outer.x as f64 + anchor_position.x.0 as f64 * scale - 40.0;
+                        let y = outer.y as f64 + anchor_position.y.0 as f64 * scale - 20.0;
+                        Some(winit::dpi::PhysicalPosition::new(x as i32, y as i32).into())
+                    });
+
                     let (window, surface) = match self.create_window(
                         event_loop,
                         &format!("fret-demo - {title}"),
                         LogicalSize::new(640.0, 480.0),
+                        position,
                     ) {
                         Ok(v) => v,
                         Err(_) => continue,
