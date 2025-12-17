@@ -160,12 +160,28 @@ impl DemoApp {
                             .float_panel_to_window(source_window, panel, new_window);
                     }
 
+                    if let Some(dock) = self.app.global_mut::<DockManager>() {
+                        let empty = dock
+                            .graph
+                            .collect_panels_in_window(source_window)
+                            .is_empty();
+                        if empty && Some(source_window) != self.main_window {
+                            self.close_window(source_window);
+                        }
+                    }
+
                     if let Some(state) = self.windows.get(source_window) {
                         state.window.request_redraw();
                     }
                     if let Some(state) = self.windows.get(new_window) {
                         state.window.request_redraw();
                     }
+                }
+                DockRequest::CloseWindow { window } => {
+                    if Some(window) == self.main_window {
+                        continue;
+                    }
+                    self.close_window(window);
                 }
             }
         }

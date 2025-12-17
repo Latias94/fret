@@ -45,7 +45,7 @@ This roadmap focuses on building a retained-mode editor-grade UI framework with 
 - P0: `DockManager` (App-level) owns dock graph for all windows.
 - P0: Dock UX in a `DockSpace` widget (split + tabs + drag drop zones, tab insert/reorder, split handle dragging). (prototype done for single-window)
 - P0: Floating windows are first-class: tear-off and merge back. (prototype done via window-creation requests in demo)
-- P0: Cross-window drag state and drop target rendering. (prototype done)
+- P0: Cross-window drag state and drop target rendering. (prototype done; empty floating windows auto-close)
 - P1: Dock persistence (optional), layout versioning hook.
 
 ### M5 — Engine Viewports

@@ -17,6 +17,9 @@ pub enum DockRequest {
         source_window: fret_core::AppWindowId,
         panel: PanelId,
     },
+    CloseWindow {
+        window: fret_core::AppWindowId,
+    },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -214,6 +217,16 @@ impl Widget for DockSpace {
                                     target.zone,
                                     target.insert_index,
                                 );
+
+                                if dock
+                                    .graph
+                                    .collect_panels_in_window(drag.source_window)
+                                    .is_empty()
+                                {
+                                    dock.requests.push(DockRequest::CloseWindow {
+                                        window: drag.source_window,
+                                    });
+                                }
                             }
                             Some(DockDropTarget::Float { .. }) => {
                                 dock.requests.push(DockRequest::CreateFloatingWindow {
