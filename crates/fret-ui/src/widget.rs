@@ -15,6 +15,9 @@ pub struct EventCx<'a> {
     pub captured: Option<NodeId>,
     pub invalidations: Vec<(NodeId, Invalidation)>,
     pub commands: Vec<CommandId>,
+    pub requested_focus: Option<NodeId>,
+    pub requested_capture: Option<Option<NodeId>>,
+    pub stop_propagation: bool,
 }
 
 impl<'a> EventCx<'a> {
@@ -25,12 +28,35 @@ impl<'a> EventCx<'a> {
     pub fn dispatch_command(&mut self, command: CommandId) {
         self.commands.push(command);
     }
+
+    pub fn request_focus(&mut self, node: NodeId) {
+        self.requested_focus = Some(node);
+    }
+
+    pub fn capture_pointer(&mut self, node: NodeId) {
+        self.requested_capture = Some(Some(node));
+    }
+
+    pub fn release_pointer_capture(&mut self) {
+        self.requested_capture = Some(None);
+    }
+
+    pub fn stop_propagation(&mut self) {
+        self.stop_propagation = true;
+    }
 }
 
 pub struct LayoutCx<'a> {
     pub app: &'a mut App,
     pub node: NodeId,
     pub available: Size,
+    pub layout_child: &'a mut dyn FnMut(NodeId, Size) -> Size,
+}
+
+impl<'a> LayoutCx<'a> {
+    pub fn layout(&mut self, child: NodeId, available: Size) -> Size {
+        (self.layout_child)(child, available)
+    }
 }
 
 pub struct PaintCx<'a> {
@@ -38,6 +64,13 @@ pub struct PaintCx<'a> {
     pub node: NodeId,
     pub bounds: Rect,
     pub scene: &'a mut Scene,
+    pub paint_child: &'a mut dyn FnMut(NodeId, Rect),
+}
+
+impl<'a> PaintCx<'a> {
+    pub fn paint(&mut self, child: NodeId, bounds: Rect) {
+        (self.paint_child)(child, bounds);
+    }
 }
 
 pub trait Widget {
