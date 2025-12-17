@@ -1,303 +1,37 @@
-use std::{
-    collections::HashMap,
-    sync::Arc,
-    time::{Duration, Instant},
-};
-
-use fret_app::{
-    App, CreateWindowKind, Effect, WindowAnchor, WindowRequest,
-};
-use fret_core::{
-    Axis, Color, DockNode, DropZone, Modifiers, MouseButton, Point, Px, Rect, Scene, Size,
-};
-use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
+use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
+use fret_core::{Axis, Color, DockNode, DropZone, Rect, Scene};
+use fret_platform::winit_runner::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui::{Column, DockManager, DockPanel, DockSpace, FixedPanel, Scroll, Split, UiTree};
-use slotmap::SlotMap;
-use winit::{
-    application::ApplicationHandler,
-    dpi::LogicalSize,
-    event::{ElementState, MouseButton as WinitMouseButton, MouseScrollDelta, WindowEvent},
-    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
-    keyboard::ModifiersState,
-    window::Window,
-};
+use winit::event_loop::EventLoop;
 
-struct WindowState {
-    window: Arc<Window>,
-    surface: SurfaceState<'static>,
+struct DemoWindowState {
     ui: UiTree,
     root: fret_core::NodeId,
-    scene: Scene,
-    cursor_pos: Point,
 }
 
 #[derive(Default)]
-struct DemoApp {
-    context: Option<WgpuContext>,
-    renderer: Option<Renderer>,
-
-    app: App,
-    windows: SlotMap<fret_core::AppWindowId, WindowState>,
-    winit_to_app: HashMap<winit::window::WindowId, fret_core::AppWindowId>,
-
+struct DemoDriver {
     main_window: Option<fret_core::AppWindowId>,
-    modifiers: Modifiers,
-
-    keep_alive_deadlines: HashMap<fret_core::AppWindowId, Instant>,
 }
 
-impl DemoApp {
-    fn mark_activity(&mut self, window: fret_core::AppWindowId) {
-        let deadline = Instant::now() + Duration::from_secs(1);
-        self.keep_alive_deadlines.insert(window, deadline);
-        self.app.request_redraw(window);
-    }
-
-    fn create_window(
-        &mut self,
-        event_loop: &ActiveEventLoop,
-        title: &str,
-        size: LogicalSize<f64>,
-        position: Option<winit::dpi::Position>,
-    ) -> anyhow::Result<(Arc<Window>, wgpu::Surface<'static>)> {
-        let mut attrs = Window::default_attributes()
-            .with_title(title)
-            .with_inner_size(size);
-        if let Some(position) = position {
-            attrs = attrs.with_position(position);
-        }
-        let window = Arc::new(event_loop.create_window(attrs).expect("create window"));
-
-        let Some(context) = self.context.as_ref() else {
-            anyhow::bail!("wgpu context not initialized");
-        };
-        let surface = context.create_surface(window.clone())?;
-        Ok((window, surface))
-    }
-
-    fn insert_window_state(
-        &mut self,
-        window: Arc<Window>,
-        surface: wgpu::Surface<'static>,
-    ) -> anyhow::Result<fret_core::AppWindowId> {
-        let Some(context) = self.context.as_ref() else {
-            anyhow::bail!("wgpu context not initialized");
-        };
-
-        let size = window.inner_size();
-        let surface = SurfaceState::new(
-            &context.adapter,
-            &context.device,
-            surface,
-            size.width,
-            size.height,
-        )?;
-
-        let id = self.windows.insert_with_key(|id| {
-            let mut ui = UiTree::new();
-            ui.set_window(id);
-            let root = ui.create_node(Split::new(Axis::Horizontal, 0.72));
-            ui.set_root(root);
-
-            let dock = ui.create_node(DockSpace::new(id));
-            ui.add_child(root, dock);
-
-            let scroll = ui.create_node(Scroll::new());
-            ui.add_child(root, scroll);
-
-            let column = ui.create_node(Column::new().with_padding(Px(10.0)).with_spacing(Px(8.0)));
-            ui.add_child(scroll, column);
-
-            for i in 0..28 {
-                let shade = 0.14 + (i % 2) as f32 * 0.02;
-                let height = if i % 7 == 0 { Px(72.0) } else { Px(44.0) };
-                let item = ui.create_node(FixedPanel::new(
-                    height,
-                    Color {
-                        r: shade,
-                        g: shade + 0.01,
-                        b: shade + 0.02,
-                        a: 1.0,
-                    },
-                ));
-                ui.add_child(column, item);
-            }
-
-            WindowState {
-                window,
-                surface,
-                ui,
-                root,
-                scene: Scene::default(),
-                cursor_pos: Point::new(Px(0.0), Px(0.0)),
-            }
-        });
-
-        let winit_id = self.windows[id].window.id();
-        self.winit_to_app.insert(winit_id, id);
-        Ok(id)
-    }
-
-    fn resize_surface(&mut self, window: fret_core::AppWindowId, width: u32, height: u32) {
-        let Some(context) = self.context.as_ref() else {
-            return;
-        };
-        let Some(state) = self.windows.get_mut(window) else {
-            return;
-        };
-        state.surface.resize(&context.device, width, height);
-    }
-
-    fn dispatch_pointer_event(
-        &mut self,
-        window: fret_core::AppWindowId,
-        pe: fret_core::PointerEvent,
-    ) {
-        {
-            let Some(state) = self.windows.get_mut(window) else {
-                return;
-            };
-            state.ui
-                .dispatch_event(&mut self.app, &fret_core::Event::Pointer(pe));
-        }
-        self.mark_activity(window);
-    }
-
-    fn process_effects(&mut self, event_loop: &ActiveEventLoop) {
-        let effects = self.app.flush_effects();
-        for effect in effects {
-            match effect {
-                Effect::Redraw(window) => {
-                    if let Some(state) = self.windows.get(window) {
-                        state.window.request_redraw();
-                    }
-                }
-                Effect::Command(_) => {}
-                Effect::Window(we) => match we {
-                    WindowRequest::Close(window) => {
-                        if Some(window) == self.main_window {
-                            continue;
-                        }
-                        self.close_window(window);
-                    }
-                    WindowRequest::Create(req) => match req.kind {
-                        CreateWindowKind::DockFloating { source_window, panel } => {
-                            let title = self
-                                .app
-                                .global::<DockManager>()
-                                .and_then(|dock| dock.panel(panel))
-                                .map(|p| p.title.clone())
-                                .unwrap_or_else(|| "Floating".to_string());
-
-                            let anchor = req.anchor.and_then(|WindowAnchor { window, position }| {
-                                let anchor_state = self.windows.get(window)?;
-                                let outer = anchor_state.window.outer_position().ok()?;
-                                let scale = anchor_state.window.scale_factor();
-                                let x = outer.x as f64 + position.x.0 as f64 * scale - 40.0;
-                                let y = outer.y as f64 + position.y.0 as f64 * scale - 20.0;
-                                Some(winit::dpi::PhysicalPosition::new(x as i32, y as i32).into())
-                            });
-
-                            let (window, surface) = match self.create_window(
-                                event_loop,
-                                &format!("fret-demo - {title}"),
-                                LogicalSize::new(640.0, 480.0),
-                                anchor,
-                            ) {
-                                Ok(v) => v,
-                                Err(_) => continue,
-                            };
-
-                            let new_window = match self.insert_window_state(window, surface) {
-                                Ok(id) => id,
-                                Err(_) => continue,
-                            };
-
-                            if let Some(dock) = self.app.global_mut::<DockManager>() {
-                                dock.graph.float_panel_to_window(source_window, panel, new_window);
-                            }
-
-                            if let Some(dock) = self.app.global_mut::<DockManager>() {
-                                let empty = dock
-                                    .graph
-                                    .collect_panels_in_window(source_window)
-                                    .is_empty();
-                                if empty && Some(source_window) != self.main_window {
-                                    self.close_window(source_window);
-                                }
-                            }
-
-                            self.mark_activity(source_window);
-                            self.mark_activity(new_window);
-                        }
-                    },
-                },
-            }
-        }
-    }
-
-    fn close_window(&mut self, window: fret_core::AppWindowId) {
-        let Some(main) = self.main_window else {
-            return;
-        };
-
-        if let Some(dock) = self.app.global_mut::<DockManager>() {
-            let target_tabs = dock.graph.first_tabs_in_window(main).unwrap_or_else(|| {
-                let tabs = dock.graph.insert_node(DockNode::Tabs {
-                    tabs: Vec::new(),
-                    active: 0,
-                });
-                dock.graph.set_window_root(main, tabs);
-                tabs
+impl DemoDriver {
+    fn ensure_main_tabs(dock: &mut DockManager, main: fret_core::AppWindowId) -> fret_core::DockNodeId {
+        dock.graph.first_tabs_in_window(main).unwrap_or_else(|| {
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: Vec::new(),
+                active: 0,
             });
-
-            let panels = dock.graph.collect_panels_in_window(window);
-            for panel in panels {
-                dock.graph.move_panel_between_windows(
-                    window,
-                    panel,
-                    main,
-                    target_tabs,
-                    DropZone::Center,
-                    None,
-                );
-            }
-            dock.graph.remove_window_root(window);
-        }
-
-        if let Some(state) = self.windows.remove(window) {
-            self.winit_to_app.remove(&state.window.id());
-        }
-        self.keep_alive_deadlines.remove(&window);
+            dock.graph.set_window_root(main, tabs);
+            tabs
+        })
     }
 }
 
-impl ApplicationHandler for DemoApp {
-    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        if self.context.is_some() {
-            return;
-        }
+impl WinitDriver for DemoDriver {
+    type WindowState = DemoWindowState;
 
-        let window = Arc::new(
-            event_loop
-                .create_window(
-                    Window::default_attributes()
-                        .with_title("fret-demo")
-                        .with_inner_size(LogicalSize::new(1280.0, 720.0)),
-                )
-                .expect("create window"),
-        );
-
-        let (context, surface) =
-            pollster::block_on(WgpuContext::new_with_surface(window.clone())).expect("wgpu init");
-        let renderer = Renderer::new(&context.device);
-
-        self.context = Some(context);
-        self.renderer = Some(renderer);
-
-        let main_window = self
-            .insert_window_state(window, surface)
-            .expect("insert window state");
+    fn init(&mut self, app: &mut App, main_window: fret_core::AppWindowId) {
+        self.main_window = Some(main_window);
 
         let mut dock = DockManager::default();
         let panel_scene = dock.create_panel(DockPanel {
@@ -350,205 +84,158 @@ impl ApplicationHandler for DemoApp {
             children: vec![tabs_left, right],
             fractions: vec![0.26, 0.74],
         });
+
         dock.graph.set_window_root(main_window, root_dock);
-        self.app.set_global(dock);
-        self.main_window = Some(main_window);
-        self.mark_activity(main_window);
+        app.set_global(dock);
     }
 
-    fn window_event(
+    fn create_window_state(
         &mut self,
-        event_loop: &ActiveEventLoop,
-        window_id: winit::window::WindowId,
-        event: WindowEvent,
-    ) {
-        let Some(app_window) = self.winit_to_app.get(&window_id).copied() else {
-            return;
-        };
+        _app: &mut App,
+        window: fret_core::AppWindowId,
+    ) -> Self::WindowState {
+        let mut ui = UiTree::new();
+        ui.set_window(window);
 
-        match event {
-            WindowEvent::CloseRequested => {
-                if Some(app_window) == self.main_window {
-                    event_loop.exit();
-                } else {
-                    self.close_window(app_window);
-                }
+        let root = ui.create_node(Split::new(Axis::Horizontal, 0.72));
+        ui.set_root(root);
+
+        let dock = ui.create_node(DockSpace::new(window));
+        ui.add_child(root, dock);
+
+        let scroll = ui.create_node(Scroll::new());
+        ui.add_child(root, scroll);
+
+        let column = ui.create_node(Column::new().with_padding(fret_core::Px(10.0)).with_spacing(fret_core::Px(8.0)));
+        ui.add_child(scroll, column);
+
+        for i in 0..28 {
+            let shade = 0.14 + (i % 2) as f32 * 0.02;
+            let height = if i % 7 == 0 { fret_core::Px(72.0) } else { fret_core::Px(44.0) };
+            let item = ui.create_node(FixedPanel::new(
+                height,
+                Color {
+                    r: shade,
+                    g: shade + 0.01,
+                    b: shade + 0.02,
+                    a: 1.0,
+                },
+            ));
+            ui.add_child(column, item);
+        }
+
+        Self::WindowState { ui, root }
+    }
+
+    fn handle_event(
+        &mut self,
+        app: &mut App,
+        _window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        event: &fret_core::Event,
+    ) {
+        state.ui.dispatch_event(app, event);
+    }
+
+    fn render(
+        &mut self,
+        app: &mut App,
+        _window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        bounds: Rect,
+        scene: &mut Scene,
+    ) {
+        scene.clear();
+        let _ = state.ui.layout_in(app, state.root, bounds);
+        state.ui.paint(app, state.root, bounds, scene);
+    }
+
+    fn window_create_spec(
+        &mut self,
+        app: &mut App,
+        request: CreateWindowRequest,
+    ) -> Option<WindowCreateSpec> {
+        match request.kind {
+            CreateWindowKind::DockFloating { panel, .. } => {
+                let title = app
+                    .global::<DockManager>()
+                    .and_then(|dock| dock.panel(panel))
+                    .map(|p| p.title.clone())
+                    .unwrap_or_else(|| "Floating".to_string());
+                Some(WindowCreateSpec::new(
+                    format!("fret-demo - {title}"),
+                    winit::dpi::LogicalSize::new(640.0, 480.0),
+                ))
             }
-            WindowEvent::ModifiersChanged(mods) => {
-                self.modifiers = map_modifiers(mods.state());
-            }
-            WindowEvent::Resized(size) => {
-                self.resize_surface(app_window, size.width, size.height);
-                self.mark_activity(app_window);
-            }
-            WindowEvent::CursorMoved { position, .. } => {
-                let pos = {
-                    let Some(state) = self.windows.get_mut(app_window) else {
+        }
+    }
+
+    fn window_created(
+        &mut self,
+        app: &mut App,
+        request: CreateWindowRequest,
+        new_window: fret_core::AppWindowId,
+    ) {
+        match request.kind {
+            CreateWindowKind::DockFloating { source_window, panel } => {
+                let empty = {
+                    let Some(dock) = app.global_mut::<DockManager>() else {
                         return;
                     };
-                    let logical = position.to_logical::<f32>(state.window.scale_factor());
-                    state.cursor_pos = Point::new(Px(logical.x), Px(logical.y));
-                    state.cursor_pos
-                };
-                self.dispatch_pointer_event(
-                    app_window,
-                    fret_core::PointerEvent::Move { position: pos },
-                );
-                self.process_effects(event_loop);
-            }
-            WindowEvent::MouseInput { state, button, .. } => {
-                let Some(button) = map_mouse_button(button) else {
-                    return;
-                };
-                let Some(pos) = self.windows.get(app_window).map(|s| s.cursor_pos) else {
-                    return;
-                };
-                let pe = match state {
-                    ElementState::Pressed => fret_core::PointerEvent::Down {
-                        position: pos,
-                        button,
-                        modifiers: self.modifiers,
-                    },
-                    ElementState::Released => fret_core::PointerEvent::Up {
-                        position: pos,
-                        button,
-                        modifiers: self.modifiers,
-                    },
-                };
-                self.dispatch_pointer_event(app_window, pe);
-                self.process_effects(event_loop);
-            }
-            WindowEvent::MouseWheel { delta, .. } => {
-                let Some(state) = self.windows.get(app_window) else {
-                    return;
-                };
-                let delta = match delta {
-                    MouseScrollDelta::LineDelta(x, y) => Point::new(Px(x * 20.0), Px(y * 20.0)),
-                    MouseScrollDelta::PixelDelta(p) => {
-                        let logical = p.to_logical::<f32>(state.window.scale_factor());
-                        Point::new(Px(logical.x), Px(logical.y))
-                    }
-                };
-                let pos = state.cursor_pos;
-                self.dispatch_pointer_event(
-                    app_window,
-                    fret_core::PointerEvent::Wheel {
-                        position: pos,
-                        delta,
-                        modifiers: self.modifiers,
-                    },
-                );
-                self.process_effects(event_loop);
-            }
-            WindowEvent::RedrawRequested => {
-                let (Some(context), Some(renderer)) =
-                    (self.context.as_ref(), self.renderer.as_mut())
-                else {
-                    return;
-                };
-                let (app, windows) = (&mut self.app, &mut self.windows);
-                let Some(state) = windows.get_mut(app_window) else {
-                    return;
+                    dock.graph.float_panel_to_window(source_window, panel, new_window);
+                    dock.graph.collect_panels_in_window(source_window).is_empty()
                 };
 
-                let (frame, view) = match state.surface.get_current_frame_view() {
-                    Ok(v) => v,
-                    Err(wgpu::SurfaceError::Lost) => {
-                        let size = state.window.inner_size();
-                        self.resize_surface(app_window, size.width, size.height);
-                        return;
-                    }
-                    Err(wgpu::SurfaceError::OutOfMemory) => {
-                        event_loop.exit();
-                        return;
-                    }
-                    Err(
-                        wgpu::SurfaceError::Outdated
-                        | wgpu::SurfaceError::Timeout
-                        | wgpu::SurfaceError::Other,
-                    ) => return,
-                };
+                app.request_redraw(source_window);
+                app.request_redraw(new_window);
 
-                let scale_factor = state.window.scale_factor() as f32;
-                let physical = state.window.inner_size();
-                let logical: winit::dpi::LogicalSize<f32> =
-                    physical.to_logical(state.window.scale_factor());
-
-                state.scene.clear();
-
-                let bounds = Rect::new(
-                    Point::new(Px(0.0), Px(0.0)),
-                    Size::new(Px(logical.width), Px(logical.height)),
-                );
-                let _ = state.ui.layout(app, state.root, bounds.size);
-                state.ui.paint(app, state.root, bounds, &mut state.scene);
-
-                let cmd = renderer.render_scene(
-                    &context.device,
-                    &context.queue,
-                    state.surface.format(),
-                    &view,
-                    &state.scene,
-                    ClearColor::default(),
-                    scale_factor,
-                    state.surface.size(),
-                );
-
-                context.queue.submit([cmd]);
-                frame.present();
-            }
-            _ => {}
-        }
-    }
-
-    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
-        const FRAME_INTERVAL: Duration = Duration::from_millis(8);
-
-        self.process_effects(event_loop);
-
-        let now = Instant::now();
-
-        let mut should_keep_alive = false;
-        for (window, deadline) in &self.keep_alive_deadlines {
-            if *deadline > now {
-                should_keep_alive = true;
-                if let Some(state) = self.windows.get(*window) {
-                    state.window.request_redraw();
+                if empty && Some(source_window) != self.main_window {
+                    app.push_effect(Effect::Window(WindowRequest::Close(source_window)));
                 }
             }
         }
+    }
 
-        if should_keep_alive {
-            event_loop.set_control_flow(ControlFlow::WaitUntil(now + FRAME_INTERVAL));
-        } else {
-            event_loop.set_control_flow(ControlFlow::Wait);
+    fn before_close_window(&mut self, app: &mut App, window: fret_core::AppWindowId) -> bool {
+        let Some(main) = self.main_window else {
+            return true;
+        };
+        if window == main {
+            return true;
         }
+
+        let Some(dock) = app.global_mut::<DockManager>() else {
+            return true;
+        };
+
+        let target_tabs = Self::ensure_main_tabs(dock, main);
+        let panels = dock.graph.collect_panels_in_window(window);
+        for panel in panels {
+            dock.graph.move_panel_between_windows(
+                window,
+                panel,
+                main,
+                target_tabs,
+                DropZone::Center,
+                None,
+            );
+        }
+        dock.graph.remove_window_root(window);
+
+        app.request_redraw(main);
+        true
     }
 }
 
 fn main() -> anyhow::Result<()> {
     let event_loop = EventLoop::new()?;
-    let mut app = DemoApp::default();
-    event_loop.run_app(&mut app)?;
+    let config = WinitRunnerConfig {
+        main_window_title: "fret-demo".to_string(),
+        ..Default::default()
+    };
+    let app = App::new();
+    let driver = DemoDriver::default();
+    let mut runner = WinitRunner::new(config, app, driver);
+    event_loop.run_app(&mut runner)?;
     Ok(())
-}
-
-fn map_modifiers(state: ModifiersState) -> Modifiers {
-    Modifiers {
-        shift: state.shift_key(),
-        ctrl: state.control_key(),
-        alt: state.alt_key(),
-        meta: state.super_key(),
-    }
-}
-
-fn map_mouse_button(button: WinitMouseButton) -> Option<MouseButton> {
-    Some(match button {
-        WinitMouseButton::Left => MouseButton::Left,
-        WinitMouseButton::Right => MouseButton::Right,
-        WinitMouseButton::Middle => MouseButton::Middle,
-        WinitMouseButton::Back => MouseButton::Back,
-        WinitMouseButton::Forward => MouseButton::Forward,
-        WinitMouseButton::Other(v) => MouseButton::Other(v),
-    })
 }

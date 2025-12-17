@@ -481,11 +481,8 @@ dependencies = [
  "anyhow",
  "fret-app",
  "fret-core",
- "fret-render",
+ "fret-platform",
  "fret-ui",
- "pollster",
- "slotmap",
- "wgpu",
  "winit",
 ]
 
@@ -494,8 +491,12 @@ name = "fret-platform"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "fret-app",
  "fret-core",
+ "fret-render",
+ "pollster",
  "slotmap",
+ "wgpu",
  "winit",
 ]
 
