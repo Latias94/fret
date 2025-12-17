@@ -64,6 +64,10 @@ impl DockGraph {
         self.window_roots.get(&window).copied()
     }
 
+    pub fn remove_window_root(&mut self, window: AppWindowId) -> Option<DockNodeId> {
+        self.window_roots.remove(&window)
+    }
+
     pub fn move_panel(
         &mut self,
         window: AppWindowId,
@@ -82,11 +86,28 @@ impl DockGraph {
         zone: DropZone,
         insert_index: Option<usize>,
     ) -> bool {
-        let Some((source_tabs, source_index)) = self.find_panel_in_window(window, panel) else {
+        self.move_panel_between_windows(window, panel, window, target_tabs, zone, insert_index)
+    }
+
+    pub fn move_panel_between_windows(
+        &mut self,
+        source_window: AppWindowId,
+        panel: PanelId,
+        target_window: AppWindowId,
+        target_tabs: DockNodeId,
+        zone: DropZone,
+        insert_index: Option<usize>,
+    ) -> bool {
+        let Some((source_tabs, source_index)) = self.find_panel_in_window(source_window, panel)
+        else {
             return false;
         };
 
-        if zone == DropZone::Center && source_tabs == target_tabs && insert_index.is_none() {
+        if zone == DropZone::Center
+            && source_window == target_window
+            && source_tabs == target_tabs
+            && insert_index.is_none()
+        {
             return true;
         }
 
@@ -94,19 +115,19 @@ impl DockGraph {
             return false;
         }
 
-        match zone {
-            DropZone::Center => {
-                let mut index = insert_index;
-                if source_tabs == target_tabs {
-                    if let Some(i) = index.as_mut() {
-                        if *i > source_index {
-                            *i = i.saturating_sub(1);
-                        }
+        if zone == DropZone::Center {
+            let mut index = insert_index;
+            if source_window == target_window && source_tabs == target_tabs {
+                if let Some(i) = index.as_mut() {
+                    if *i > source_index {
+                        *i = i.saturating_sub(1);
                     }
                 }
-                return self.insert_panel_into_tabs_at(target_tabs, panel, index);
             }
-            DropZone::Left | DropZone::Right | DropZone::Top | DropZone::Bottom => {}
+
+            let ok = self.insert_panel_into_tabs_at(target_tabs, panel, index);
+            self.collapse_empty_tabs_upwards(source_window, source_tabs);
+            return ok;
         }
 
         let axis = match zone {
@@ -132,8 +153,31 @@ impl DockGraph {
             fractions: vec![0.5, 0.5],
         });
 
-        self.replace_node_in_window_tree(window, target_tabs, split);
-        self.collapse_empty_tabs_upwards(window, source_tabs);
+        self.replace_node_in_window_tree(target_window, target_tabs, split);
+        self.collapse_empty_tabs_upwards(source_window, source_tabs);
+        true
+    }
+
+    pub fn float_panel_to_window(
+        &mut self,
+        source_window: AppWindowId,
+        panel: PanelId,
+        new_window: AppWindowId,
+    ) -> bool {
+        let Some((source_tabs, source_index)) = self.find_panel_in_window(source_window, panel)
+        else {
+            return false;
+        };
+        if !self.remove_panel_from_tabs(source_tabs, source_index) {
+            return false;
+        }
+
+        let tabs = self.insert_node(DockNode::Tabs {
+            tabs: vec![panel],
+            active: 0,
+        });
+        self.set_window_root(new_window, tabs);
+        self.collapse_empty_tabs_upwards(source_window, source_tabs);
         true
     }
 
@@ -233,6 +277,47 @@ impl DockGraph {
     ) -> Option<(DockNodeId, usize)> {
         let root = self.window_root(window)?;
         self.find_panel_in_subtree(root, panel)
+    }
+
+    pub fn collect_panels_in_window(&self, window: AppWindowId) -> Vec<PanelId> {
+        let Some(root) = self.window_root(window) else {
+            return Vec::new();
+        };
+        self.collect_panels_in_subtree(root)
+    }
+
+    pub fn first_tabs_in_window(&self, window: AppWindowId) -> Option<DockNodeId> {
+        let root = self.window_root(window)?;
+        self.first_tabs_in_subtree(root)
+    }
+
+    fn collect_panels_in_subtree(&self, node: DockNodeId) -> Vec<PanelId> {
+        let Some(n) = self.nodes.get(node) else {
+            return Vec::new();
+        };
+        match n {
+            DockNode::Tabs { tabs, .. } => tabs.clone(),
+            DockNode::Split { children, .. } => {
+                let mut out = Vec::new();
+                for child in children {
+                    out.extend(self.collect_panels_in_subtree(*child));
+                }
+                out
+            }
+        }
+    }
+
+    fn first_tabs_in_subtree(&self, node: DockNodeId) -> Option<DockNodeId> {
+        let Some(n) = self.nodes.get(node) else {
+            return None;
+        };
+        match n {
+            DockNode::Tabs { .. } => Some(node),
+            DockNode::Split { children, .. } => children
+                .iter()
+                .copied()
+                .find_map(|child| self.first_tabs_in_subtree(child)),
+        }
     }
 
     fn find_panel_in_subtree(

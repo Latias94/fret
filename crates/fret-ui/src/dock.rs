@@ -11,9 +11,34 @@ pub struct DockPanel {
     pub color: Color,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum DockRequest {
+    CreateFloatingWindow {
+        source_window: fret_core::AppWindowId,
+        panel: PanelId,
+    },
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DockDrag {
+    source_window: fret_core::AppWindowId,
+    panel: PanelId,
+    pointer_start: Point,
+    dragging: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum DockDropTarget {
+    Dock(HoverTarget),
+    Float { window: fret_core::AppWindowId },
+}
+
 pub struct DockManager {
     pub graph: DockGraph,
     pub panels: SlotMap<PanelId, DockPanel>,
+    drag: Option<DockDrag>,
+    hover: Option<DockDropTarget>,
+    requests: Vec<DockRequest>,
 }
 
 impl Default for DockManager {
@@ -21,6 +46,9 @@ impl Default for DockManager {
         Self {
             graph: DockGraph::new(),
             panels: SlotMap::with_key(),
+            drag: None,
+            hover: None,
+            requests: Vec::new(),
         }
     }
 }
@@ -33,13 +61,10 @@ impl DockManager {
     pub fn panel(&self, id: PanelId) -> Option<&DockPanel> {
         self.panels.get(id)
     }
-}
 
-#[derive(Debug, Clone, Copy)]
-struct DragState {
-    panel: PanelId,
-    pointer_start: Point,
-    dragging: bool,
+    pub fn take_requests(&mut self) -> Vec<DockRequest> {
+        std::mem::take(&mut self.requests)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -59,9 +84,7 @@ struct HoverTarget {
 pub struct DockSpace {
     pub window: fret_core::AppWindowId,
     last_bounds: Rect,
-    drag: Option<DragState>,
     divider_drag: Option<DividerDragState>,
-    hover_target: Option<HoverTarget>,
 }
 
 impl DockSpace {
@@ -69,9 +92,7 @@ impl DockSpace {
         Self {
             window,
             last_bounds: Rect::default(),
-            drag: None,
             divider_drag: None,
-            hover_target: None,
         }
     }
 }
@@ -102,11 +123,13 @@ impl Widget for DockSpace {
                     if let Some(hit) = hit_test_tab(&dock.graph, &layout, *position) {
                         let (tabs_node, tab_index, panel_id) = hit;
                         dock.graph.set_active_tab(tabs_node, tab_index);
-                        self.drag = Some(DragState {
+                        dock.drag = Some(DockDrag {
+                            source_window: self.window,
                             panel: panel_id,
                             pointer_start: *position,
                             dragging: false,
                         });
+                        dock.hover = None;
                         cx.invalidate(cx.node, crate::widget::Invalidation::Paint);
                     }
                 }
@@ -133,54 +156,76 @@ impl Widget for DockSpace {
                         return;
                     }
 
-                    let Some(mut drag) = self.drag else {
+                    let Some(mut drag) = dock.drag else {
+                        dock.hover = None;
                         return;
                     };
 
-                    let dx = position.x.0 - drag.pointer_start.x.0;
-                    let dy = position.y.0 - drag.pointer_start.y.0;
-                    let dist2 = dx * dx + dy * dy;
-                    if !drag.dragging && dist2 > 16.0 {
+                    if drag.source_window == self.window {
+                        let dx = position.x.0 - drag.pointer_start.x.0;
+                        let dy = position.y.0 - drag.pointer_start.y.0;
+                        let dist2 = dx * dx + dy * dy;
+                        if !drag.dragging && dist2 > 16.0 {
+                            drag.dragging = true;
+                        }
+                    } else if !drag.dragging {
                         drag.dragging = true;
                     }
-                    self.drag = Some(drag);
+                    dock.drag = Some(drag);
 
                     if !drag.dragging {
+                        dock.hover = None;
                         return;
                     }
 
                     let layout = compute_layout_map(&dock.graph, root, self.last_bounds);
-                    self.hover_target = hit_test_drop_target(&dock.graph, &layout, *position);
+                    if float_zone(self.last_bounds).contains(*position) {
+                        dock.hover = Some(DockDropTarget::Float {
+                            window: self.window,
+                        });
+                    } else if let Some(target) =
+                        hit_test_drop_target(&dock.graph, &layout, *position)
+                    {
+                        dock.hover = Some(DockDropTarget::Dock(target));
+                    } else {
+                        dock.hover = None;
+                    }
                     cx.invalidate(cx.node, crate::widget::Invalidation::Paint);
                 }
-                fret_core::PointerEvent::Up {
-                    position, button, ..
-                } => {
+                fret_core::PointerEvent::Up { button, .. } => {
                     if *button != fret_core::MouseButton::Left {
                         return;
                     }
                     self.divider_drag = None;
 
-                    let Some(drag) = self.drag.take() else {
-                        self.hover_target = None;
+                    let Some(drag) = dock.drag.take() else {
+                        dock.hover = None;
                         cx.invalidate(cx.node, crate::widget::Invalidation::Paint);
                         return;
                     };
                     if drag.dragging {
-                        let layout = compute_layout_map(&dock.graph, root, self.last_bounds);
-                        if let Some(target) = hit_test_drop_target(&dock.graph, &layout, *position)
-                        {
-                            dock.graph.move_panel_ex(
-                                self.window,
-                                drag.panel,
-                                target.tabs,
-                                target.zone,
-                                target.insert_index,
-                            );
+                        match dock.hover {
+                            Some(DockDropTarget::Dock(target)) => {
+                                dock.graph.move_panel_between_windows(
+                                    drag.source_window,
+                                    drag.panel,
+                                    self.window,
+                                    target.tabs,
+                                    target.zone,
+                                    target.insert_index,
+                                );
+                            }
+                            Some(DockDropTarget::Float { .. }) => {
+                                dock.requests.push(DockRequest::CreateFloatingWindow {
+                                    source_window: drag.source_window,
+                                    panel: drag.panel,
+                                });
+                            }
+                            None => {}
                         }
                     }
 
-                    self.hover_target = None;
+                    dock.hover = None;
                     cx.invalidate(cx.node, crate::widget::Invalidation::Paint);
                 }
                 _ => {}
@@ -207,7 +252,8 @@ impl Widget for DockSpace {
         paint_dock(dock, &layout, cx.scene);
         paint_split_handles(&dock.graph, &layout, cx.scene);
 
-        paint_drop_overlay(self.hover_target, &layout, cx.scene);
+        paint_float_zone(cx.bounds, cx.scene);
+        paint_drop_overlay(dock.hover, self.window, cx.bounds, &layout, cx.scene);
     }
 }
 
@@ -359,6 +405,14 @@ fn drop_zone_rect(rect: Rect, zone: DropZone) -> Rect {
             size: Size::new(rect.size.width, Px(thickness)),
         },
         DropZone::Center => rect,
+    }
+}
+
+fn float_zone(bounds: Rect) -> Rect {
+    let size = Px(34.0);
+    Rect {
+        origin: Point::new(Px(bounds.origin.x.0 + 8.0), Px(bounds.origin.y.0 + 8.0)),
+        size: Size::new(size, size),
     }
 }
 
@@ -592,54 +646,96 @@ fn paint_split_handles(
 }
 
 fn paint_drop_overlay(
-    target: Option<HoverTarget>,
+    target: Option<DockDropTarget>,
+    window: fret_core::AppWindowId,
+    bounds: Rect,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     scene: &mut Scene,
 ) {
     let Some(target) = target else {
         return;
     };
-    let Some(rect) = layout.get(&target.tabs).copied() else {
-        return;
-    };
 
-    if target.zone == DropZone::Center {
-        let (tab_bar, _content) = split_tab_bar(rect);
-        if let Some(i) = target.insert_index {
-            let x = tab_bar.origin.x.0 + Px(120.0).0 * i as f32;
-            let marker = Rect {
-                origin: Point::new(Px(x - 2.0), tab_bar.origin.y),
-                size: Size::new(Px(4.0), tab_bar.size.height),
-            };
+    match target {
+        DockDropTarget::Float { window: w } => {
+            if w != window {
+                return;
+            }
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(10_000),
-                rect: marker,
+                rect: float_zone(bounds),
                 background: Color {
                     r: 0.20,
                     g: 0.55,
                     b: 1.00,
-                    a: 0.65,
+                    a: 0.45,
                 },
                 border: Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
-                corner_radii: fret_core::Corners::all(Px(2.0)),
+                corner_radii: fret_core::Corners::all(Px(8.0)),
             });
-            return;
+        }
+        DockDropTarget::Dock(target) => {
+            let Some(rect) = layout.get(&target.tabs).copied() else {
+                return;
+            };
+
+            if target.zone == DropZone::Center {
+                let (tab_bar, _content) = split_tab_bar(rect);
+                if let Some(i) = target.insert_index {
+                    let x = tab_bar.origin.x.0 + Px(120.0).0 * i as f32;
+                    let marker = Rect {
+                        origin: Point::new(Px(x - 2.0), tab_bar.origin.y),
+                        size: Size::new(Px(4.0), tab_bar.size.height),
+                    };
+                    scene.push(SceneOp::Quad {
+                        order: fret_core::DrawOrder(10_000),
+                        rect: marker,
+                        background: Color {
+                            r: 0.20,
+                            g: 0.55,
+                            b: 1.00,
+                            a: 0.65,
+                        },
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: fret_core::Corners::all(Px(2.0)),
+                    });
+                    return;
+                }
+            }
+
+            let overlay = drop_zone_rect(rect, target.zone);
+            scene.push(SceneOp::Quad {
+                order: fret_core::DrawOrder(10_000),
+                rect: overlay,
+                background: Color {
+                    r: 0.20,
+                    g: 0.55,
+                    b: 1.00,
+                    a: 0.22,
+                },
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: fret_core::Corners::all(Px(6.0)),
+            });
         }
     }
+}
 
-    let overlay = drop_zone_rect(rect, target.zone);
+fn paint_float_zone(bounds: Rect, scene: &mut Scene) {
+    let rect = float_zone(bounds);
     scene.push(SceneOp::Quad {
-        order: fret_core::DrawOrder(10_000),
-        rect: overlay,
+        order: fret_core::DrawOrder(8_000),
+        rect,
         background: Color {
-            r: 0.20,
-            g: 0.55,
-            b: 1.00,
-            a: 0.22,
+            r: 0.10,
+            g: 0.10,
+            b: 0.11,
+            a: 1.0,
         },
         border: Edges::all(Px(0.0)),
         border_color: Color::TRANSPARENT,
-        corner_radii: fret_core::Corners::all(Px(6.0)),
+        corner_radii: fret_core::Corners::all(Px(8.0)),
     });
 }

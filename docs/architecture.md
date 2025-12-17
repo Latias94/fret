@@ -111,11 +111,13 @@ Docking is managed by a **global Dock Manager** (app-level service), not by a si
 
 ### Interaction model (inspired by Godot)
 
-- Drag state is global.
+- Drag state is global (lives in the app-level `DockManager`).
 - Each window renders drop targets/hints during drag.
 - On drop:
   - either attach to a drop zone within a window,
   - or create/merge into a floating window.
+
+Platform actions (such as creating a new OS window for tear-off) should be requested by the dock UI and executed by the platform layer. A simple shape is a request queue owned by `DockManager` (e.g. `DockRequest::CreateFloatingWindow`).
 
 Reference: Godot’s dock windows are explicitly created and managed (`editor/docks/editor_dock_manager.cpp`).
 
