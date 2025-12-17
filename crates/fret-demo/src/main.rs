@@ -1,4 +1,8 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use fret_app::App;
 use fret_core::{
@@ -36,9 +40,17 @@ struct DemoApp {
 
     main_window: Option<fret_core::AppWindowId>,
     modifiers: Modifiers,
+
+    keep_alive_deadlines: HashMap<fret_core::AppWindowId, Instant>,
 }
 
 impl DemoApp {
+    fn mark_activity(&mut self, window: fret_core::AppWindowId) {
+        let deadline = Instant::now() + Duration::from_secs(1);
+        self.keep_alive_deadlines.insert(window, deadline);
+        self.app.request_redraw(window);
+    }
+
     fn create_window(
         &mut self,
         event_loop: &ActiveEventLoop,
@@ -113,12 +125,14 @@ impl DemoApp {
         window: fret_core::AppWindowId,
         pe: fret_core::PointerEvent,
     ) {
-        let (app, windows) = (&mut self.app, &mut self.windows);
-        let Some(state) = windows.get_mut(window) else {
-            return;
-        };
-        state.ui.dispatch_event(app, &fret_core::Event::Pointer(pe));
-        state.window.request_redraw();
+        {
+            let Some(state) = self.windows.get_mut(window) else {
+                return;
+            };
+            state.ui
+                .dispatch_event(&mut self.app, &fret_core::Event::Pointer(pe));
+        }
+        self.mark_activity(window);
     }
 
     fn process_dock_requests(&mut self, event_loop: &ActiveEventLoop) {
@@ -180,12 +194,8 @@ impl DemoApp {
                         }
                     }
 
-                    if let Some(state) = self.windows.get(source_window) {
-                        state.window.request_redraw();
-                    }
-                    if let Some(state) = self.windows.get(new_window) {
-                        state.window.request_redraw();
-                    }
+                    self.mark_activity(source_window);
+                    self.mark_activity(new_window);
                 }
                 DockRequest::CloseWindow { window } => {
                     if Some(window) == self.main_window {
@@ -229,6 +239,7 @@ impl DemoApp {
         if let Some(state) = self.windows.remove(window) {
             self.winit_to_app.remove(&state.window.id());
         }
+        self.keep_alive_deadlines.remove(&window);
     }
 }
 
@@ -313,6 +324,7 @@ impl ApplicationHandler for DemoApp {
         dock.graph.set_window_root(main_window, root_dock);
         self.app.set_global(dock);
         self.main_window = Some(main_window);
+        self.mark_activity(main_window);
     }
 
     fn window_event(
@@ -338,9 +350,7 @@ impl ApplicationHandler for DemoApp {
             }
             WindowEvent::Resized(size) => {
                 self.resize_surface(app_window, size.width, size.height);
-                if let Some(state) = self.windows.get(app_window) {
-                    state.window.request_redraw();
-                }
+                self.mark_activity(app_window);
             }
             WindowEvent::CursorMoved { position, .. } => {
                 let pos = {
@@ -463,9 +473,34 @@ impl ApplicationHandler for DemoApp {
     }
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
-        event_loop.set_control_flow(ControlFlow::Wait);
-        for (_, state) in self.windows.iter() {
-            state.window.request_redraw();
+        const FRAME_INTERVAL: Duration = Duration::from_millis(8);
+
+        let now = Instant::now();
+
+        let mut should_keep_alive = false;
+        let mut to_redraw = self.app.take_redraw_requests();
+        for (window, deadline) in &self.keep_alive_deadlines {
+            if *deadline > now {
+                should_keep_alive = true;
+                to_redraw.push(*window);
+            }
+        }
+
+        if should_keep_alive {
+            event_loop.set_control_flow(ControlFlow::WaitUntil(now + FRAME_INTERVAL));
+        } else {
+            event_loop.set_control_flow(ControlFlow::Wait);
+        }
+
+        let mut dedup: std::collections::HashSet<fret_core::AppWindowId> =
+            std::collections::HashSet::new();
+        for window in to_redraw {
+            if !dedup.insert(window) {
+                continue;
+            }
+            if let Some(state) = self.windows.get(window) {
+                state.window.request_redraw();
+            }
         }
     }
 }
