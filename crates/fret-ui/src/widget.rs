@@ -64,13 +64,19 @@ pub struct LayoutCx<'a> {
     pub node: NodeId,
     pub window: Option<AppWindowId>,
     pub children: &'a [NodeId],
+    pub bounds: Rect,
     pub available: Size,
-    pub layout_child: &'a mut dyn FnMut(NodeId, Size) -> Size,
+    pub layout_child: &'a mut dyn FnMut(NodeId, Rect) -> Size,
 }
 
 impl<'a> LayoutCx<'a> {
     pub fn layout(&mut self, child: NodeId, available: Size) -> Size {
-        (self.layout_child)(child, available)
+        let rect = Rect::new(self.bounds.origin, available);
+        (self.layout_child)(child, rect)
+    }
+
+    pub fn layout_in(&mut self, child: NodeId, bounds: Rect) -> Size {
+        (self.layout_child)(child, bounds)
     }
 }
 
@@ -82,11 +88,16 @@ pub struct PaintCx<'a> {
     pub bounds: Rect,
     pub scene: &'a mut Scene,
     pub paint_child: &'a mut dyn FnMut(NodeId, Rect),
+    pub child_bounds: &'a dyn Fn(NodeId) -> Option<Rect>,
 }
 
 impl<'a> PaintCx<'a> {
     pub fn paint(&mut self, child: NodeId, bounds: Rect) {
         (self.paint_child)(child, bounds);
+    }
+
+    pub fn child_bounds(&self, child: NodeId) -> Option<Rect> {
+        (self.child_bounds)(child)
     }
 }
 

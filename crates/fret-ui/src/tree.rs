@@ -166,7 +166,8 @@ impl UiTree {
     }
 
     pub fn layout(&mut self, app: &mut App, root: NodeId, available: Size) -> Size {
-        self.layout_node(app, root, available)
+        let bounds = Rect::new(Point::new(fret_core::Px(0.0), fret_core::Px(0.0)), available);
+        self.layout_node(app, root, bounds)
     }
 
     pub fn paint(&mut self, app: &mut App, root: NodeId, bounds: Rect, scene: &mut Scene) {
@@ -191,20 +192,25 @@ impl UiTree {
         result
     }
 
-    fn layout_node(&mut self, app: &mut App, node: NodeId, available: Size) -> Size {
-        let needs_layout = self
-            .nodes
-            .get(node)
-            .map(|n| n.invalidation.layout)
-            .unwrap_or(false);
+    fn layout_node(&mut self, app: &mut App, node: NodeId, bounds: Rect) -> Size {
+        let (prev_bounds, measured, invalidated) = match self.nodes.get(node) {
+            Some(n) => (n.bounds, n.measured_size, n.invalidation.layout),
+            None => return Size::default(),
+        };
+
+        if let Some(n) = self.nodes.get_mut(node) {
+            n.bounds = bounds;
+        }
+
+        let needs_layout = invalidated || prev_bounds != bounds;
         if !needs_layout {
-            return self.nodes.get(node).map(|n| n.measured_size).unwrap_or_default();
+            return measured;
         }
 
         let tree_ptr: *mut UiTree = self;
         let app_ptr: *mut App = app;
-        let mut layout_child = move |child: NodeId, available: Size| -> Size {
-            unsafe { (&mut *tree_ptr).layout_node(&mut *app_ptr, child, available) }
+        let mut layout_child = move |child: NodeId, bounds: Rect| -> Size {
+            unsafe { (&mut *tree_ptr).layout_node(&mut *app_ptr, child, bounds) }
         };
 
         let size = self.with_widget_mut(node, |widget, tree| {
@@ -218,7 +224,8 @@ impl UiTree {
                 node,
                 window: tree.window,
                 children: &children,
-                available,
+                bounds,
+                available: bounds.size,
                 layout_child: &mut layout_child,
             };
             widget.layout(&mut cx)
@@ -239,11 +246,15 @@ impl UiTree {
         bounds: Rect,
         scene: &mut Scene,
     ) {
+        let tree_ref: *const UiTree = self as *const UiTree;
         let tree_ptr: *mut UiTree = self;
         let app_ptr: *mut App = app;
         let scene_ptr: *mut Scene = scene;
         let mut paint_child = move |child: NodeId, bounds: Rect| {
             unsafe { (&mut *tree_ptr).paint_node(&mut *app_ptr, child, bounds, &mut *scene_ptr) };
+        };
+        let child_bounds = move |child: NodeId| -> Option<Rect> {
+            unsafe { (&*tree_ref).nodes.get(child).map(|n| n.bounds) }
         };
 
         if let Some(n) = self.nodes.get_mut(node) {
@@ -264,6 +275,7 @@ impl UiTree {
                 bounds,
                 scene,
                 paint_child: &mut paint_child,
+                child_bounds: &child_bounds,
             };
             widget.paint(&mut cx);
         });
