@@ -1,6 +1,6 @@
 use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 use fret_app::App;
-use fret_core::{Event, NodeId, Point, PointerEvent, Rect, Scene, Size};
+use fret_core::{AppWindowId, Event, NodeId, Point, PointerEvent, Rect, Scene, Size};
 use slotmap::SlotMap;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -58,11 +58,16 @@ pub struct UiTree {
     roots: Vec<NodeId>,
     focus: Option<NodeId>,
     captured: Option<NodeId>,
+    window: Option<AppWindowId>,
 }
 
 impl UiTree {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn set_window(&mut self, window: AppWindowId) {
+        self.window = Some(window);
     }
 
     pub fn create_node(&mut self, widget: impl Widget + 'static) -> NodeId {
@@ -117,6 +122,7 @@ impl UiTree {
                     let mut cx = EventCx {
                         app,
                         node: node_id,
+                        window: tree.window,
                         children: &children,
                         focus: tree.focus,
                         captured: tree.captured,
@@ -186,6 +192,15 @@ impl UiTree {
     }
 
     fn layout_node(&mut self, app: &mut App, node: NodeId, available: Size) -> Size {
+        let needs_layout = self
+            .nodes
+            .get(node)
+            .map(|n| n.invalidation.layout)
+            .unwrap_or(false);
+        if !needs_layout {
+            return self.nodes.get(node).map(|n| n.measured_size).unwrap_or_default();
+        }
+
         let tree_ptr: *mut UiTree = self;
         let app_ptr: *mut App = app;
         let mut layout_child = move |child: NodeId, available: Size| -> Size {
@@ -201,6 +216,7 @@ impl UiTree {
             let mut cx = LayoutCx {
                 app,
                 node,
+                window: tree.window,
                 children: &children,
                 available,
                 layout_child: &mut layout_child,
@@ -243,6 +259,7 @@ impl UiTree {
             let mut cx = PaintCx {
                 app,
                 node,
+                window: tree.window,
                 children: &children,
                 bounds,
                 scene,

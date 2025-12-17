@@ -95,6 +95,7 @@ impl DemoApp {
 
         let id = self.windows.insert_with_key(|id| {
             let mut ui = UiTree::new();
+            ui.set_window(id);
             let root = ui.create_node(DockSpace::new(id));
             ui.set_root(root);
             WindowState {

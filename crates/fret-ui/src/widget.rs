@@ -1,5 +1,5 @@
 use fret_app::{App, CommandId};
-use fret_core::{Event, NodeId, Rect, Scene, Size};
+use fret_core::{AppWindowId, Event, NodeId, Rect, Scene, Size};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Invalidation {
@@ -11,6 +11,7 @@ pub enum Invalidation {
 pub struct EventCx<'a> {
     pub app: &'a mut App,
     pub node: NodeId,
+    pub window: Option<AppWindowId>,
     pub children: &'a [NodeId],
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
@@ -24,6 +25,10 @@ pub struct EventCx<'a> {
 impl<'a> EventCx<'a> {
     pub fn invalidate(&mut self, node: NodeId, kind: Invalidation) {
         self.invalidations.push((node, kind));
+    }
+
+    pub fn invalidate_self(&mut self, kind: Invalidation) {
+        self.invalidate(self.node, kind);
     }
 
     pub fn dispatch_command(&mut self, command: CommandId) {
@@ -45,11 +50,19 @@ impl<'a> EventCx<'a> {
     pub fn stop_propagation(&mut self) {
         self.stop_propagation = true;
     }
+
+    pub fn request_redraw(&mut self) {
+        let Some(window) = self.window else {
+            return;
+        };
+        self.app.request_redraw(window);
+    }
 }
 
 pub struct LayoutCx<'a> {
     pub app: &'a mut App,
     pub node: NodeId,
+    pub window: Option<AppWindowId>,
     pub children: &'a [NodeId],
     pub available: Size,
     pub layout_child: &'a mut dyn FnMut(NodeId, Size) -> Size,
@@ -64,6 +77,7 @@ impl<'a> LayoutCx<'a> {
 pub struct PaintCx<'a> {
     pub app: &'a mut App,
     pub node: NodeId,
+    pub window: Option<AppWindowId>,
     pub children: &'a [NodeId],
     pub bounds: Rect,
     pub scene: &'a mut Scene,
