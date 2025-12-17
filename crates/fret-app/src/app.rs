@@ -10,11 +10,33 @@ use slotmap::SlotMap;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CommandId(pub &'static str);
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Effect {
+    Redraw(AppWindowId),
+    Window(WindowEffect),
+    Command(CommandId),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum WindowEffect {
+    CreateDockFloating(CreateDockFloatingWindow),
+    Close(AppWindowId),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CreateDockFloatingWindow {
+    pub source_window: AppWindowId,
+    pub panel: fret_core::PanelId,
+    pub anchor_window: AppWindowId,
+    pub anchor_position: fret_core::Point,
+}
+
 pub struct App {
     globals: HashMap<TypeId, Box<dyn Any>>,
     models: ModelStore,
     commands: CommandRegistry,
     redraw_requests: HashSet<AppWindowId>,
+    effects: Vec<Effect>,
 }
 
 impl Default for App {
@@ -30,6 +52,7 @@ impl App {
             models: ModelStore::default(),
             commands: CommandRegistry::default(),
             redraw_requests: HashSet::new(),
+            effects: Vec::new(),
         }
     }
 
@@ -69,8 +92,16 @@ impl App {
         self.redraw_requests.insert(window);
     }
 
-    pub fn take_redraw_requests(&mut self) -> Vec<AppWindowId> {
-        self.redraw_requests.drain().collect()
+    pub fn push_effect(&mut self, effect: Effect) {
+        self.effects.push(effect);
+    }
+
+    pub fn flush_effects(&mut self) -> Vec<Effect> {
+        let mut effects = std::mem::take(&mut self.effects);
+        for window in self.redraw_requests.drain() {
+            effects.push(Effect::Redraw(window));
+        }
+        effects
     }
 
     pub fn update_model<T: Any, R>(
