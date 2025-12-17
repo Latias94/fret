@@ -13,22 +13,31 @@ pub struct CommandId(pub &'static str);
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Effect {
     Redraw(AppWindowId),
-    Window(WindowEffect),
+    Window(WindowRequest),
     Command(CommandId),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum WindowEffect {
-    CreateDockFloating(CreateDockFloatingWindow),
+pub enum WindowRequest {
+    Create(CreateWindowRequest),
     Close(AppWindowId),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct CreateDockFloatingWindow {
-    pub source_window: AppWindowId,
-    pub panel: fret_core::PanelId,
-    pub anchor_window: AppWindowId,
-    pub anchor_position: fret_core::Point,
+pub struct CreateWindowRequest {
+    pub kind: CreateWindowKind,
+    pub anchor: Option<WindowAnchor>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CreateWindowKind {
+    DockFloating { source_window: AppWindowId, panel: fret_core::PanelId },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WindowAnchor {
+    pub window: AppWindowId,
+    pub position: fret_core::Point,
 }
 
 pub struct App {

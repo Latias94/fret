@@ -1,4 +1,4 @@
-use fret_app::{CreateDockFloatingWindow, Effect, WindowEffect};
+use fret_app::{CreateWindowKind, CreateWindowRequest, Effect, WindowAnchor, WindowRequest};
 use fret_core::{
     geometry::{Point, Px, Rect, Size},
     Color, DockGraph, DockNode, DockNodeId, DropZone, Edges, PanelId, Scene, SceneOp,
@@ -218,35 +218,41 @@ impl Widget for DockSpace {
                                         .collect_panels_in_window(drag.source_window)
                                         .is_empty()
                                     {
-                                        pending_effects.push(Effect::Window(WindowEffect::Close(
+                                        pending_effects.push(Effect::Window(WindowRequest::Close(
                                             drag.source_window,
                                         )));
                                     }
                                 }
                                 Some(DockDropTarget::Float { .. }) => {
-                                    pending_effects.push(Effect::Window(
-                                        WindowEffect::CreateDockFloating(CreateDockFloatingWindow {
-                                            source_window: drag.source_window,
-                                            panel: drag.panel,
-                                            anchor_window: self.window,
-                                            anchor_position: *position,
-                                        }),
-                                    ));
+                                    pending_effects.push(Effect::Window(WindowRequest::Create(
+                                        CreateWindowRequest {
+                                            kind: CreateWindowKind::DockFloating {
+                                                source_window: drag.source_window,
+                                                panel: drag.panel,
+                                            },
+                                            anchor: Some(WindowAnchor {
+                                                window: self.window,
+                                                position: *position,
+                                            }),
+                                        },
+                                    )));
                                 }
                                 None => {
                                     let (chrome, _dock_bounds) =
                                         dock_space_regions(self.last_bounds);
                                     if chrome.contains(*position) {
-                                        pending_effects.push(Effect::Window(
-                                            WindowEffect::CreateDockFloating(
-                                                CreateDockFloatingWindow {
+                                        pending_effects.push(Effect::Window(WindowRequest::Create(
+                                            CreateWindowRequest {
+                                                kind: CreateWindowKind::DockFloating {
                                                     source_window: drag.source_window,
                                                     panel: drag.panel,
-                                                    anchor_window: self.window,
-                                                    anchor_position: *position,
                                                 },
-                                            ),
-                                        ));
+                                                anchor: Some(WindowAnchor {
+                                                    window: self.window,
+                                                    position: *position,
+                                                }),
+                                            },
+                                        )));
                                     }
                                 }
                             }

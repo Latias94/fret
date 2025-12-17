@@ -4,7 +4,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-use fret_app::{App, Effect, WindowEffect};
+use fret_app::{
+    App, CreateWindowKind, Effect, WindowAnchor, WindowRequest,
+};
 use fret_core::{
     Axis, Color, DockNode, DropZone, Modifiers, MouseButton, Point, Px, Rect, Scene, Size,
 };
@@ -146,64 +148,63 @@ impl DemoApp {
                 }
                 Effect::Command(_) => {}
                 Effect::Window(we) => match we {
-                    WindowEffect::Close(window) => {
+                    WindowRequest::Close(window) => {
                         if Some(window) == self.main_window {
                             continue;
                         }
                         self.close_window(window);
                     }
-                    WindowEffect::CreateDockFloating(req) => {
-                        let title = self
-                            .app
-                            .global::<DockManager>()
-                            .and_then(|dock| dock.panel(req.panel))
-                            .map(|p| p.title.clone())
-                            .unwrap_or_else(|| "Floating".to_string());
+                    WindowRequest::Create(req) => match req.kind {
+                        CreateWindowKind::DockFloating { source_window, panel } => {
+                            let title = self
+                                .app
+                                .global::<DockManager>()
+                                .and_then(|dock| dock.panel(panel))
+                                .map(|p| p.title.clone())
+                                .unwrap_or_else(|| "Floating".to_string());
 
-                        let position = self.windows.get(req.anchor_window).and_then(|anchor| {
-                            let outer = anchor.window.outer_position().ok()?;
-                            let scale = anchor.window.scale_factor();
-                            let x = outer.x as f64 + req.anchor_position.x.0 as f64 * scale - 40.0;
-                            let y = outer.y as f64 + req.anchor_position.y.0 as f64 * scale - 20.0;
-                            Some(winit::dpi::PhysicalPosition::new(x as i32, y as i32).into())
-                        });
+                            let anchor = req.anchor.and_then(|WindowAnchor { window, position }| {
+                                let anchor_state = self.windows.get(window)?;
+                                let outer = anchor_state.window.outer_position().ok()?;
+                                let scale = anchor_state.window.scale_factor();
+                                let x = outer.x as f64 + position.x.0 as f64 * scale - 40.0;
+                                let y = outer.y as f64 + position.y.0 as f64 * scale - 20.0;
+                                Some(winit::dpi::PhysicalPosition::new(x as i32, y as i32).into())
+                            });
 
-                        let (window, surface) = match self.create_window(
-                            event_loop,
-                            &format!("fret-demo - {title}"),
-                            LogicalSize::new(640.0, 480.0),
-                            position,
-                        ) {
-                            Ok(v) => v,
-                            Err(_) => continue,
-                        };
+                            let (window, surface) = match self.create_window(
+                                event_loop,
+                                &format!("fret-demo - {title}"),
+                                LogicalSize::new(640.0, 480.0),
+                                anchor,
+                            ) {
+                                Ok(v) => v,
+                                Err(_) => continue,
+                            };
 
-                        let new_window = match self.insert_window_state(window, surface) {
-                            Ok(id) => id,
-                            Err(_) => continue,
-                        };
+                            let new_window = match self.insert_window_state(window, surface) {
+                                Ok(id) => id,
+                                Err(_) => continue,
+                            };
 
-                        if let Some(dock) = self.app.global_mut::<DockManager>() {
-                            dock.graph.float_panel_to_window(
-                                req.source_window,
-                                req.panel,
-                                new_window,
-                            );
-                        }
-
-                        if let Some(dock) = self.app.global_mut::<DockManager>() {
-                            let empty = dock
-                                .graph
-                                .collect_panels_in_window(req.source_window)
-                                .is_empty();
-                            if empty && Some(req.source_window) != self.main_window {
-                                self.close_window(req.source_window);
+                            if let Some(dock) = self.app.global_mut::<DockManager>() {
+                                dock.graph.float_panel_to_window(source_window, panel, new_window);
                             }
-                        }
 
-                        self.mark_activity(req.source_window);
-                        self.mark_activity(new_window);
-                    }
+                            if let Some(dock) = self.app.global_mut::<DockManager>() {
+                                let empty = dock
+                                    .graph
+                                    .collect_panels_in_window(source_window)
+                                    .is_empty();
+                                if empty && Some(source_window) != self.main_window {
+                                    self.close_window(source_window);
+                                }
+                            }
+
+                            self.mark_activity(source_window);
+                            self.mark_activity(new_window);
+                        }
+                    },
                 },
             }
         }
