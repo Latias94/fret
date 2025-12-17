@@ -1,10 +1,10 @@
 use std::{
     any::{Any, TypeId},
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     marker::PhantomData,
 };
 
-use fret_core::NodeId;
+use fret_core::{AppWindowId, NodeId};
 use slotmap::SlotMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -14,6 +14,7 @@ pub struct App {
     globals: HashMap<TypeId, Box<dyn Any>>,
     models: ModelStore,
     commands: CommandRegistry,
+    redraw_requests: HashSet<AppWindowId>,
 }
 
 impl Default for App {
@@ -28,6 +29,7 @@ impl App {
             globals: HashMap::new(),
             models: ModelStore::default(),
             commands: CommandRegistry::default(),
+            redraw_requests: HashSet::new(),
         }
     }
 
@@ -62,6 +64,28 @@ impl App {
     pub fn commands_mut(&mut self) -> &mut CommandRegistry {
         &mut self.commands
     }
+
+    pub fn request_redraw(&mut self, window: AppWindowId) {
+        self.redraw_requests.insert(window);
+    }
+
+    pub fn take_redraw_requests(&mut self) -> Vec<AppWindowId> {
+        self.redraw_requests.drain().collect()
+    }
+
+    pub fn update_model<T: Any, R>(
+        &mut self,
+        model: Model<T>,
+        f: impl FnOnce(&mut T, &mut ModelCx<'_>) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        let mut lease = self.models.lease(model)?;
+        let result = {
+            let mut cx = ModelCx { app: self };
+            f(lease.value_mut(), &mut cx)
+        };
+        drop(lease);
+        Ok(result)
+    }
 }
 
 slotmap::new_key_type! {
@@ -85,10 +109,42 @@ impl<T> Model<T> {
     pub fn id(self) -> ModelId {
         self.id
     }
+
+    pub fn update<R>(
+        self,
+        app: &mut App,
+        f: impl FnOnce(&mut T, &mut ModelCx<'_>) -> R,
+    ) -> Result<R, ModelUpdateError>
+    where
+        T: Any,
+    {
+        app.update_model(self, f)
+    }
+
+    pub fn get<'a>(self, app: &'a App) -> Option<&'a T>
+    where
+        T: Any,
+    {
+        app.models().get(self)
+    }
+}
+
+pub struct ModelCx<'a> {
+    app: &'a mut App,
+}
+
+impl<'a> ModelCx<'a> {
+    pub fn app(&mut self) -> &mut App {
+        self.app
+    }
 }
 
 pub struct ModelStore {
-    storage: SlotMap<ModelId, Box<dyn Any>>,
+    storage: SlotMap<ModelId, ModelEntry>,
+}
+
+struct ModelEntry {
+    value: Option<Box<dyn Any>>,
 }
 
 impl Default for ModelStore {
@@ -99,9 +155,49 @@ impl Default for ModelStore {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModelUpdateError {
+    NotFound,
+    AlreadyLeased,
+    TypeMismatch,
+}
+
+struct ModelLease<T: Any> {
+    store: *mut ModelStore,
+    id: ModelId,
+    value: Option<Box<T>>,
+}
+
+impl<T: Any> ModelLease<T> {
+    fn value_mut(&mut self) -> &mut T {
+        self.value
+            .as_deref_mut()
+            .expect("leased model must contain a value")
+    }
+}
+
+impl<T: Any> Drop for ModelLease<T> {
+    fn drop(&mut self) {
+        let Some(value) = self.value.take() else {
+            return;
+        };
+
+        unsafe {
+            let store = &mut *self.store;
+            if let Some(entry) = store.storage.get_mut(self.id) {
+                if entry.value.is_none() {
+                    entry.value = Some(value);
+                }
+            }
+        }
+    }
+}
+
 impl ModelStore {
     pub fn insert<T: Any>(&mut self, value: T) -> Model<T> {
-        let id = self.storage.insert(Box::new(value));
+        let id = self.storage.insert(ModelEntry {
+            value: Some(Box::new(value)),
+        });
         Model {
             id,
             _phantom: PhantomData,
@@ -109,17 +205,47 @@ impl ModelStore {
     }
 
     pub fn get<T: Any>(&self, model: Model<T>) -> Option<&T> {
-        self.storage.get(model.id)?.downcast_ref::<T>()
+        self.storage
+            .get(model.id)?
+            .value
+            .as_ref()?
+            .downcast_ref::<T>()
     }
 
     pub fn update<T: Any>(&mut self, model: Model<T>, f: impl FnOnce(&mut T)) {
-        let Some(any) = self.storage.get_mut(model.id) else {
+        let Some(entry) = self.storage.get_mut(model.id) else {
+            return;
+        };
+        let Some(any) = entry.value.as_deref_mut() else {
             return;
         };
         let Some(value) = any.downcast_mut::<T>() else {
             return;
         };
         f(value);
+    }
+
+    fn lease<T: Any>(&mut self, model: Model<T>) -> Result<ModelLease<T>, ModelUpdateError> {
+        let boxed = {
+            let entry = self.storage.get_mut(model.id).ok_or(ModelUpdateError::NotFound)?;
+            entry.value.take().ok_or(ModelUpdateError::AlreadyLeased)?
+        };
+
+        match boxed.downcast::<T>() {
+            Ok(value) => Ok(ModelLease {
+                store: self as *mut ModelStore,
+                id: model.id,
+                value: Some(value),
+            }),
+            Err(boxed) => {
+                if let Some(entry) = self.storage.get_mut(model.id) {
+                    if entry.value.is_none() {
+                        entry.value = Some(boxed);
+                    }
+                }
+                Err(ModelUpdateError::TypeMismatch)
+            }
+        }
     }
 }
 
