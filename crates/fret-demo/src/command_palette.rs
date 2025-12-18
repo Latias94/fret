@@ -50,13 +50,13 @@ impl Widget for OverlayBackdrop {
 }
 
 #[derive(Debug)]
-pub struct OverlayAnchor {
+pub struct OverlayPanelLayout {
     pub width: Px,
     pub height: Px,
     pub top: Px,
 }
 
-impl OverlayAnchor {
+impl OverlayPanelLayout {
     pub fn new(width: Px, height: Px) -> Self {
         Self {
             width,
@@ -71,23 +71,31 @@ impl OverlayAnchor {
     }
 }
 
-impl Widget for OverlayAnchor {
+impl Widget for OverlayPanelLayout {
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
-        let mut child_bounds = cx.bounds;
+        let Some((&backdrop, rest)) = cx.children.split_first() else {
+            return cx.available;
+        };
 
-        let w = self.width.0.min(cx.available.width.0).max(0.0);
-        let h = self
-            .height
-            .0
-            .min((cx.available.height.0 - self.top.0).max(0.0));
+        let backdrop_bounds = cx.bounds;
+        let _ = cx.layout_in(backdrop, backdrop_bounds);
 
-        child_bounds.origin.x = Px(cx.bounds.origin.x.0 + (cx.available.width.0 - w) * 0.5);
-        child_bounds.origin.y = Px(cx.bounds.origin.y.0 + self.top.0);
-        child_bounds.size = Size::new(Px(w), Px(h));
+        if let Some(&panel) = rest.first() {
+            let mut panel_bounds = cx.bounds;
 
-        for &child in cx.children {
-            let _ = cx.layout_in(child, child_bounds);
+            let w = self.width.0.min(cx.available.width.0).max(0.0);
+            let h = self
+                .height
+                .0
+                .min((cx.available.height.0 - self.top.0).max(0.0));
+
+            panel_bounds.origin.x = Px(cx.bounds.origin.x.0 + (cx.available.width.0 - w) * 0.5);
+            panel_bounds.origin.y = Px(cx.bounds.origin.y.0 + self.top.0);
+            panel_bounds.size = Size::new(Px(w), Px(h));
+
+            let _ = cx.layout_in(panel, panel_bounds);
         }
+
         cx.available
     }
 

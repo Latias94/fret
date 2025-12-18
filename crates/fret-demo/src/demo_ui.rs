@@ -1,4 +1,4 @@
-use crate::command_palette::{CommandPalette, OverlayAnchor, OverlayBackdrop};
+use crate::command_palette::{CommandPalette, OverlayBackdrop, OverlayPanelLayout};
 use crate::dnd_probe::DndProbe;
 use crate::elements_mvp2::ElementsMvp2Demo;
 use crate::ime_probe::ImeProbe;
@@ -81,7 +81,7 @@ pub fn build_demo_ui(window: AppWindowId, config: DemoUiConfig) -> (UiTree, Demo
     let external_dnd = ui.push_overlay_root_ex(dnd_root, false, false);
     ui.set_layer_visible(external_dnd, false);
 
-    let palette_root = ui.create_node(fret_ui::Stack::new());
+    let palette_root = ui.create_node(OverlayPanelLayout::new(Px(640.0), Px(360.0)).with_top(Px(64.0)));
     let command_palette = ui.push_overlay_root(palette_root, true);
     ui.set_layer_visible(command_palette, false);
 
@@ -96,11 +96,8 @@ pub fn build_demo_ui(window: AppWindowId, config: DemoUiConfig) -> (UiTree, Demo
     ));
     ui.add_child(palette_root, backdrop);
 
-    let anchor = ui.create_node(OverlayAnchor::new(Px(640.0), Px(360.0)).with_top(Px(64.0)));
-    ui.add_child(palette_root, anchor);
-
     let command_palette_node = ui.create_node(CommandPalette::new());
-    ui.add_child(anchor, command_palette_node);
+    ui.add_child(palette_root, command_palette_node);
 
     (
         ui,
