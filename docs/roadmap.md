@@ -175,7 +175,7 @@ Notes:
 
 Immediate next step:
 
-- Move to MVP10 (text editing baseline) now that command UI + focus + clipboard + pending bindings are in place (see `docs/mvp.md`).
+- MVP10 is prototype implemented (text editing baseline). Next decision gate is MVP11 (text layout geometry contracts) (see `docs/mvp.md`).
 
 ### M7 — Portability (wasm/WebGPU)
 

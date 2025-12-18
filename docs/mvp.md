@@ -140,6 +140,42 @@ References:
 - `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
 - `docs/adr/0044-text-editing-state-and-commands.md`
 
+## MVP 11 — Text Layout Contracts (Hit Test + Caret Metrics)
+
+Goal: lock the long-term contract for “text geometry queries” that high-end widgets require (code editor, large
+documents, precise IME caret positioning) before building more components on top.
+
+This MVP is primarily a **contract / API boundary** milestone; performance work can iterate after the contract is stable.
+
+**Scope**
+
+- Extend the text boundary (ADR 0006 / ADR 0029) to support:
+  - hit-testing from x/y to caret position (byte offset),
+  - caret/selection geometry queries (rects) for painting selection and IME cursor-area,
+  - multi-line constraints (wrap + line breaks) for future editor widgets.
+- Decide the lifetime model:
+  - “layout object” handle (e.g. `TextLayoutId`/`TextLayout`) vs “stateless query methods”.
+- Define caching expectations:
+  - avoid allocating new blobs/atlas entries for measurement-only queries,
+  - allow shaped-run caches and incremental atlas uploads.
+
+**Definition of Done**
+
+- An ADR (or ADR updates) fully specifies the geometry query API, including:
+  - index representation (byte offsets at char boundaries; ADR 0044),
+  - coordinate spaces (logical px; scale_factor behavior),
+  - behavior for IME preedit cursor within composed text.
+- A demo plan exists for validating it with:
+  - a multi-line text widget (not necessarily a code editor yet),
+  - accurate selection painting and caret positioning at arbitrary x/y.
+
+References:
+
+- `docs/adr/0006-text-system.md`
+- `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
+- Zed/GPUI text system patterns:
+  - `repo-ref/zed/crates/gpui/src/text_system.rs`
+
 ## Parking Lot (Explicitly Deferred)
 
 - External OS drag & drop hover semantics on macOS/winit (see `docs/known-issues.md`).
