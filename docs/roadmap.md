@@ -61,6 +61,7 @@ Key contracts are captured in ADRs under `docs/adr/`.
 
 - P0: Shared `wgpu::Device/Queue` integration path.
 - P0: Viewport widget that displays an engine texture/render target.
+- P0: Viewport mapping + input event contract (window -> uv/px). (prototype implemented)
 - P1: Overlay layer (gizmo, selection rect, grid) rendered by UI over the viewport.
 - P1: Input forwarding and capture rules (mouse/keyboard routed to viewport when focused).
 

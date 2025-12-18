@@ -5,7 +5,7 @@ use std::{
 };
 
 use fret_app::{App, CreateWindowRequest, Effect, WindowAnchor, WindowRequest};
-use fret_core::{Event, Modifiers, MouseButton, Point, Px, Rect, Scene, Size};
+use fret_core::{Event, Modifiers, MouseButton, Point, Px, Rect, Scene, Size, ViewportInputEvent};
 use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
 use slotmap::SlotMap;
 use winit::{
@@ -91,6 +91,8 @@ pub trait WinitDriver {
     fn init(&mut self, _app: &mut App, _main_window: fret_core::AppWindowId) {}
 
     fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, _renderer: &mut Renderer) {}
+
+    fn viewport_input(&mut self, _app: &mut App, _event: ViewportInputEvent) {}
 
     fn create_window_state(&mut self, app: &mut App, window: fret_core::AppWindowId)
         -> Self::WindowState;
@@ -312,6 +314,9 @@ impl<D: WinitDriver> WinitRunner<D> {
                         }
                     }
                     Effect::Command(_) => {}
+                    Effect::ViewportInput(event) => {
+                        self.driver.viewport_input(&mut self.app, event);
+                    }
                     Effect::Window(req) => match req {
                         WindowRequest::Close(window) => {
                             let is_main = Some(window) == self.main_window;

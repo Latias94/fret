@@ -6,7 +6,7 @@ use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest
 use fret_core::{Axis, Color, DockNode, DropZone, Rect, RenderTargetId, Scene};
 use fret_platform::winit_runner::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
-use fret_ui::{DockManager, DockPanel, UiTree};
+use fret_ui::{DockManager, DockPanel, UiTree, ViewportPanel};
 use winit::event_loop::EventLoop;
 
 struct DemoWindowState {
@@ -18,6 +18,7 @@ struct DemoWindowState {
 struct DemoDriver {
     main_window: Option<fret_core::AppWindowId>,
     scene_target: Option<RenderTargetId>,
+    scene_target_size: Option<(u32, u32)>,
     scene_texture: Option<wgpu::Texture>,
 }
 
@@ -98,6 +99,7 @@ impl WinitDriver for DemoDriver {
         });
 
         self.scene_target = Some(target);
+        self.scene_target_size = Some((size, size));
         self.scene_texture = Some(texture);
     }
 
@@ -113,7 +115,13 @@ impl WinitDriver for DemoDriver {
                 b: 0.22,
                 a: 1.0,
             },
-            viewport: self.scene_target,
+            viewport: self.scene_target.zip(self.scene_target_size).map(|(target, target_px_size)| {
+                ViewportPanel {
+                    target,
+                    target_px_size,
+                    fit: fret_core::ViewportFit::Contain,
+                }
+            }),
         });
         let panel_inspector = dock.create_panel(DockPanel {
             title: "Inspector".to_string(),
@@ -180,6 +188,17 @@ impl WinitDriver for DemoDriver {
         event: &fret_core::Event,
     ) {
         state.ui.dispatch_event(app, event);
+    }
+
+    fn viewport_input(&mut self, _app: &mut App, event: fret_core::ViewportInputEvent) {
+        match event.kind {
+            fret_core::ViewportInputKind::PointerDown { .. }
+            | fret_core::ViewportInputKind::PointerUp { .. }
+            | fret_core::ViewportInputKind::Wheel { .. } => {
+                println!("viewport_input: {event:?}");
+            }
+            fret_core::ViewportInputKind::PointerMove { .. } => {}
+        }
     }
 
     fn render(

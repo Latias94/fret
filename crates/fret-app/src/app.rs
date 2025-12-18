@@ -15,6 +15,7 @@ pub enum Effect {
     Redraw(AppWindowId),
     Window(WindowRequest),
     Command(CommandId),
+    ViewportInput(fret_core::ViewportInputEvent),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
