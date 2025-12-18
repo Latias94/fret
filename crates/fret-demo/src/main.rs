@@ -1,7 +1,11 @@
+mod demo_ui;
+
+use demo_ui::{build_demo_ui, DemoUiConfig};
+
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{Axis, Color, DockNode, DropZone, Rect, Scene};
 use fret_platform::winit_runner::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
-use fret_ui::{Column, DockManager, DockPanel, DockSpace, FixedPanel, Scroll, Split, UiTree};
+use fret_ui::{DockManager, DockPanel, UiTree};
 use winit::event_loop::EventLoop;
 
 struct DemoWindowState {
@@ -94,36 +98,7 @@ impl WinitDriver for DemoDriver {
         _app: &mut App,
         window: fret_core::AppWindowId,
     ) -> Self::WindowState {
-        let mut ui = UiTree::new();
-        ui.set_window(window);
-
-        let root = ui.create_node(Split::new(Axis::Horizontal, 0.72));
-        ui.set_root(root);
-
-        let dock = ui.create_node(DockSpace::new(window));
-        ui.add_child(root, dock);
-
-        let scroll = ui.create_node(Scroll::new());
-        ui.add_child(root, scroll);
-
-        let column = ui.create_node(Column::new().with_padding(fret_core::Px(10.0)).with_spacing(fret_core::Px(8.0)));
-        ui.add_child(scroll, column);
-
-        for i in 0..28 {
-            let shade = 0.14 + (i % 2) as f32 * 0.02;
-            let height = if i % 7 == 0 { fret_core::Px(72.0) } else { fret_core::Px(44.0) };
-            let item = ui.create_node(FixedPanel::new(
-                height,
-                Color {
-                    r: shade,
-                    g: shade + 0.01,
-                    b: shade + 0.02,
-                    a: 1.0,
-                },
-            ));
-            ui.add_child(column, item);
-        }
-
+        let (ui, root) = build_demo_ui(window, DemoUiConfig::default());
         Self::WindowState { ui, root }
     }
 
