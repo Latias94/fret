@@ -1,9 +1,10 @@
-use anyhow::Context as _;
-
+mod error;
 mod renderer;
 mod surface;
 mod targets;
+mod text;
 
+pub use error::RenderError;
 pub use renderer::{ClearColor, Renderer};
 pub use surface::SurfaceState;
 pub use targets::{RenderTargetColorSpace, RenderTargetDescriptor, RenderTargetRegistry};
@@ -16,12 +17,12 @@ pub struct WgpuContext {
 }
 
 impl WgpuContext {
-    pub async fn new() -> anyhow::Result<Self> {
+    pub async fn new() -> Result<Self, RenderError> {
         let instance = wgpu::Instance::default();
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions::default())
             .await
-            .context("request_adapter failed")?;
+            .map_err(|source| RenderError::RequestAdapterFailed { source })?;
 
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
@@ -33,7 +34,7 @@ impl WgpuContext {
                 trace: wgpu::Trace::default(),
             })
             .await
-            .context("request_device failed")?;
+            .map_err(|source| RenderError::RequestDeviceFailed { source })?;
 
         Ok(Self {
             instance,
@@ -45,11 +46,11 @@ impl WgpuContext {
 
     pub async fn new_with_surface<'window>(
         target: impl Into<wgpu::SurfaceTarget<'window>>,
-    ) -> anyhow::Result<(Self, wgpu::Surface<'window>)> {
+    ) -> Result<(Self, wgpu::Surface<'window>), RenderError> {
         let instance = wgpu::Instance::default();
         let surface = instance
             .create_surface(target)
-            .context("create_surface failed")?;
+            .map_err(|source| RenderError::CreateSurfaceFailed { source })?;
 
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
@@ -57,7 +58,7 @@ impl WgpuContext {
                 ..Default::default()
             })
             .await
-            .context("request_adapter failed")?;
+            .map_err(|source| RenderError::RequestAdapterFailed { source })?;
 
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
@@ -69,7 +70,7 @@ impl WgpuContext {
                 trace: wgpu::Trace::default(),
             })
             .await
-            .context("request_device failed")?;
+            .map_err(|source| RenderError::RequestDeviceFailed { source })?;
 
         Ok((
             Self {
@@ -85,9 +86,9 @@ impl WgpuContext {
     pub fn create_surface<'window>(
         &self,
         target: impl Into<wgpu::SurfaceTarget<'window>>,
-    ) -> anyhow::Result<wgpu::Surface<'window>> {
+    ) -> Result<wgpu::Surface<'window>, RenderError> {
         self.instance
             .create_surface(target)
-            .context("create_surface failed")
+            .map_err(|source| RenderError::CreateSurfaceFailed { source })
     }
 }

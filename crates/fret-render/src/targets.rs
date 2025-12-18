@@ -28,6 +28,11 @@ pub struct RenderTargetRegistry {
 
 impl RenderTargetRegistry {
     pub fn register(&mut self, desc: RenderTargetDescriptor) -> RenderTargetId {
+        debug_assert_eq!(
+            desc.format.is_srgb(),
+            desc.color_space == RenderTargetColorSpace::Srgb,
+            "RenderTargetDescriptor.format must match RenderTargetColorSpace"
+        );
         self.targets.insert(RenderTargetEntry {
             view: desc.view,
             size: desc.size,
@@ -37,6 +42,11 @@ impl RenderTargetRegistry {
     }
 
     pub fn update(&mut self, id: RenderTargetId, desc: RenderTargetDescriptor) -> bool {
+        debug_assert_eq!(
+            desc.format.is_srgb(),
+            desc.color_space == RenderTargetColorSpace::Srgb,
+            "RenderTargetDescriptor.format must match RenderTargetColorSpace"
+        );
         let Some(entry) = self.targets.get_mut(id) else {
             return false;
         };

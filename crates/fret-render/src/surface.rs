@@ -1,3 +1,5 @@
+use crate::RenderError;
+
 pub struct SurfaceState<'window> {
     pub surface: wgpu::Surface<'window>,
     pub config: wgpu::SurfaceConfiguration,
@@ -10,14 +12,24 @@ impl<'window> SurfaceState<'window> {
         surface: wgpu::Surface<'window>,
         width: u32,
         height: u32,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, RenderError> {
         let capabilities = surface.get_capabilities(adapter);
+        if capabilities.formats.is_empty() {
+            return Err(RenderError::SurfaceNoFormats);
+        }
+        if capabilities.present_modes.is_empty() {
+            return Err(RenderError::SurfaceNoPresentModes);
+        }
+        if capabilities.alpha_modes.is_empty() {
+            return Err(RenderError::SurfaceNoAlphaModes);
+        }
+
         let format = capabilities
             .formats
             .iter()
             .copied()
             .find(|format| format.is_srgb())
-            .unwrap_or_else(|| capabilities.formats[0]);
+            .unwrap_or(capabilities.formats[0]);
 
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,

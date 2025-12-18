@@ -5,6 +5,7 @@ use fret_core::{
 };
 
 use crate::targets::{RenderTargetDescriptor, RenderTargetRegistry};
+use crate::text::TextSystem;
 
 #[derive(Debug, Clone, Copy)]
 pub struct ClearColor(pub wgpu::Color);
@@ -44,6 +45,14 @@ struct ViewportVertex {
     uv: [f32; 2],
     opacity: f32,
     _pad: [f32; 3],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+struct TextVertex {
+    pos_px: [f32; 2],
+    uv: [f32; 2],
+    color: [f32; 4],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -152,9 +161,16 @@ struct ViewportDraw {
     target: fret_core::RenderTargetId,
 }
 
+struct TextDraw {
+    scissor: ScissorRect,
+    first_vertex: u32,
+    vertex_count: u32,
+}
+
 enum OrderedDraw {
     Quad(DrawCall),
     Viewport(ViewportDraw),
+    Text(TextDraw),
 }
 
 pub struct Renderer {
@@ -177,6 +193,15 @@ pub struct Renderer {
     viewport_vertex_buffers: Vec<wgpu::Buffer>,
     viewport_vertex_buffer_index: usize,
     viewport_vertex_capacity: usize,
+
+    text_pipeline_format: Option<wgpu::TextureFormat>,
+    text_pipeline: Option<wgpu::RenderPipeline>,
+
+    text_vertex_buffers: Vec<wgpu::Buffer>,
+    text_vertex_buffer_index: usize,
+    text_vertex_capacity: usize,
+
+    text_system: TextSystem,
 
     render_targets: RenderTargetRegistry,
 }
@@ -250,9 +275,11 @@ impl Renderer {
             address_mode_w: wgpu::AddressMode::ClampToEdge,
             mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,
-            mipmap_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
             ..Default::default()
         });
+
+        let text_system = TextSystem::new(device);
 
         const FRAMES_IN_FLIGHT: usize = 3;
         let instance_capacity = 1024;
@@ -279,6 +306,18 @@ impl Renderer {
             })
             .collect();
 
+        let text_vertex_capacity = 512 * 6;
+        let text_vertex_buffers = (0..FRAMES_IN_FLIGHT)
+            .map(|i| {
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(&format!("fret text vertices #{i}")),
+                    size: (text_vertex_capacity * std::mem::size_of::<TextVertex>()) as u64,
+                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                })
+            })
+            .collect();
+
         Self {
             uniform_buffer,
             uniform_bind_group,
@@ -295,6 +334,12 @@ impl Renderer {
             viewport_vertex_buffers,
             viewport_vertex_buffer_index: 0,
             viewport_vertex_capacity,
+            text_pipeline_format: None,
+            text_pipeline: None,
+            text_vertex_buffers,
+            text_vertex_buffer_index: 0,
+            text_vertex_capacity,
+            text_system,
             render_targets: RenderTargetRegistry::default(),
         }
     }
@@ -334,7 +379,7 @@ impl Renderer {
                 &self.uniform_bind_group_layout,
                 &self.viewport_bind_group_layout,
             ],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         let vertex_stride = std::mem::size_of::<ViewportVertex>() as wgpu::BufferAddress;
@@ -388,12 +433,90 @@ impl Renderer {
                 })],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             }),
-            multiview: None,
+            multiview_mask: None,
             cache: None,
         });
 
         self.viewport_pipeline_format = Some(format);
         self.viewport_pipeline = Some(pipeline);
+    }
+
+    fn ensure_text_pipeline(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
+        if self.text_pipeline_format == Some(format) && self.text_pipeline.is_some() {
+            return;
+        }
+
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("fret text shader"),
+            source: wgpu::ShaderSource::Wgsl(TEXT_SHADER.into()),
+        });
+
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("fret text pipeline layout"),
+            bind_group_layouts: &[
+                &self.uniform_bind_group_layout,
+                self.text_system.atlas_bind_group_layout(),
+            ],
+            immediate_size: 0,
+        });
+
+        let vertex_stride = std::mem::size_of::<TextVertex>() as wgpu::BufferAddress;
+        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("fret text pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: Some("vs_main"),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: vertex_stride,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &[
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 0,
+                            shader_location: 0,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 8,
+                            shader_location: 1,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x4,
+                            offset: 16,
+                            shader_location: 2,
+                        },
+                    ],
+                }],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            }),
+            multiview_mask: None,
+            cache: None,
+        });
+
+        self.text_pipeline_format = Some(format);
+        self.text_pipeline = Some(pipeline);
     }
 
     fn ensure_pipeline(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
@@ -409,7 +532,7 @@ impl Renderer {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret quad pipeline layout"),
             bind_group_layouts: &[&self.uniform_bind_group_layout],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         let instance_stride = std::mem::size_of::<QuadInstance>() as wgpu::BufferAddress;
@@ -473,7 +596,7 @@ impl Renderer {
                 })],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             }),
-            multiview: None,
+            multiview_mask: None,
             cache: None,
         });
 
@@ -522,6 +645,26 @@ impl Renderer {
         self.viewport_vertex_capacity = new_capacity;
     }
 
+    fn ensure_text_vertex_capacity(&mut self, device: &wgpu::Device, needed: usize) {
+        if needed <= self.text_vertex_capacity {
+            return;
+        }
+
+        let new_capacity = needed.next_power_of_two().max(self.text_vertex_capacity * 2);
+        self.text_vertex_buffers = (0..self.text_vertex_buffers.len())
+            .map(|i| {
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(&format!("fret text vertices (resized) #{i}")),
+                    size: (new_capacity * std::mem::size_of::<TextVertex>()) as u64,
+                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                })
+            })
+            .collect();
+        self.text_vertex_buffer_index = 0;
+        self.text_vertex_capacity = new_capacity;
+    }
+
     pub fn render_scene(
         &mut self,
         device: &wgpu::Device,
@@ -535,6 +678,7 @@ impl Renderer {
     ) -> wgpu::CommandBuffer {
         self.ensure_viewport_pipeline(device, format);
         self.ensure_pipeline(device, format);
+        self.ensure_text_pipeline(device, format);
 
         let uniform = ViewportUniform {
             viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
@@ -542,8 +686,11 @@ impl Renderer {
         };
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
 
+        self.text_system.flush_uploads(queue);
+
         let mut instances: Vec<QuadInstance> = Vec::new();
         let mut viewport_vertices: Vec<ViewportVertex> = Vec::new();
+        let mut text_vertices: Vec<TextVertex> = Vec::new();
         let mut ordered_draws: Vec<OrderedDraw> = Vec::new();
 
         let mut scissor_stack: Vec<ScissorRect> =
@@ -632,10 +779,79 @@ impl Renderer {
                         border_color: color_to_linear_rgba_premul(*border_color),
                     });
                 }
-                SceneOp::Image { .. } | SceneOp::Text { .. } => {
-                    // Not implemented yet. Flush to preserve ordering when these primitives are
+                SceneOp::Image { .. } => {
+                    // Not implemented yet. Flush to preserve ordering when this primitive is
                     // implemented later.
                     flush_quad_batch!();
+                }
+                SceneOp::Text {
+                    origin,
+                    text,
+                    color,
+                    ..
+                } => {
+                    flush_quad_batch!();
+
+                    let Some(blob) = self.text_system.blob(*text) else {
+                        continue;
+                    };
+
+                    let first_vertex = text_vertices.len() as u32;
+
+                    let base_x = origin.x.0 * scale_factor;
+                    let base_y = origin.y.0 * scale_factor;
+                    let premul = color_to_linear_rgba_premul(*color);
+
+                    for g in &blob.glyphs {
+                        let x0 = base_x + g.rect[0] * scale_factor;
+                        let y0 = base_y + g.rect[1] * scale_factor;
+                        let x1 = x0 + g.rect[2] * scale_factor;
+                        let y1 = y0 + g.rect[3] * scale_factor;
+
+                        let (u0, v0, u1, v1) = (g.uv[0], g.uv[1], g.uv[2], g.uv[3]);
+
+                        text_vertices.extend_from_slice(&[
+                            TextVertex {
+                                pos_px: [x0, y0],
+                                uv: [u0, v0],
+                                color: premul,
+                            },
+                            TextVertex {
+                                pos_px: [x1, y0],
+                                uv: [u1, v0],
+                                color: premul,
+                            },
+                            TextVertex {
+                                pos_px: [x1, y1],
+                                uv: [u1, v1],
+                                color: premul,
+                            },
+                            TextVertex {
+                                pos_px: [x0, y0],
+                                uv: [u0, v0],
+                                color: premul,
+                            },
+                            TextVertex {
+                                pos_px: [x1, y1],
+                                uv: [u1, v1],
+                                color: premul,
+                            },
+                            TextVertex {
+                                pos_px: [x0, y1],
+                                uv: [u0, v1],
+                                color: premul,
+                            },
+                        ]);
+                    }
+
+                    let vertex_count = (text_vertices.len() as u32).saturating_sub(first_vertex);
+                    if vertex_count > 0 {
+                        ordered_draws.push(OrderedDraw::Text(TextDraw {
+                            scissor: current_scissor,
+                            first_vertex,
+                            vertex_count,
+                        }));
+                    }
                 }
                 SceneOp::ViewportSurface {
                     rect,
@@ -716,6 +932,7 @@ impl Renderer {
 
         self.ensure_instance_capacity(device, instances.len());
         self.ensure_viewport_vertex_capacity(device, viewport_vertices.len());
+        self.ensure_text_vertex_capacity(device, text_vertices.len());
 
         let instance_buffer_index = self.instance_buffer_index;
         self.instance_buffer_index = (self.instance_buffer_index + 1) % self.instance_buffers.len();
@@ -734,6 +951,14 @@ impl Renderer {
                 0,
                 bytemuck::cast_slice(&viewport_vertices),
             );
+        }
+
+        let text_vertex_buffer_index = self.text_vertex_buffer_index;
+        self.text_vertex_buffer_index =
+            (self.text_vertex_buffer_index + 1) % self.text_vertex_buffers.len();
+        let text_vertex_buffer = &self.text_vertex_buffers[text_vertex_buffer_index];
+        if !text_vertices.is_empty() {
+            queue.write_buffer(text_vertex_buffer, 0, bytemuck::cast_slice(&text_vertices));
         }
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -755,12 +980,14 @@ impl Renderer {
                 depth_stencil_attachment: None,
                 timestamp_writes: None,
                 occlusion_query_set: None,
+                multiview_mask: None,
             });
 
             enum ActivePipeline {
                 None,
                 Quad,
                 Viewport,
+                Text,
             }
 
             let quad_pipeline = self
@@ -771,6 +998,10 @@ impl Renderer {
                 .viewport_pipeline
                 .as_ref()
                 .expect("viewport pipeline must exist");
+            let text_pipeline = self
+                .text_pipeline
+                .as_ref()
+                .expect("text pipeline must exist");
 
             let mut active_pipeline = ActivePipeline::None;
 
@@ -843,11 +1074,50 @@ impl Renderer {
                             0..1,
                         );
                     }
+                    OrderedDraw::Text(draw) => {
+                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                            continue;
+                        }
+
+                        if !matches!(active_pipeline, ActivePipeline::Text) {
+                            pass.set_pipeline(text_pipeline);
+                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                            pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
+                            pass.set_bind_group(1, self.text_system.atlas_bind_group(), &[]);
+                            active_pipeline = ActivePipeline::Text;
+                        }
+
+                        pass.set_scissor_rect(
+                            draw.scissor.x,
+                            draw.scissor.y,
+                            draw.scissor.w,
+                            draw.scissor.h,
+                        );
+                        pass.draw(
+                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                            0..1,
+                        );
+                    }
                 }
             }
         }
 
         encoder.finish()
+    }
+}
+
+impl fret_core::TextService for Renderer {
+    fn prepare(
+        &mut self,
+        text: &str,
+        style: fret_core::TextStyle,
+        constraints: fret_core::TextConstraints,
+    ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+        self.text_system.prepare(text, style, constraints)
+    }
+
+    fn release(&mut self, blob: fret_core::TextBlobId) {
+        self.text_system.release(blob);
     }
 }
 
@@ -955,11 +1225,13 @@ fn saturate(x: f32) -> f32 {
 
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
-  let antialias_threshold = 0.5;
   let sdf = quad_sdf(input.pixel_pos, input.rect_origin, input.rect_size, input.corner_radii);
 
   // TODO: border rendering (dash / per-edge widths) and stroke alignment.
-  let alpha = saturate(antialias_threshold - sdf);
+  // NOTE: AA must scale with derivatives. A fixed threshold (e.g. 0.5) breaks under DPI changes
+  // and transforms. See ADR 0030.
+  let aa = max(fwidth(sdf), 1e-4);
+  let alpha = 1.0 - smoothstep(-aa, aa, sdf);
 
   return vec4<f32>(input.color.rgb, input.color.a) * alpha;
 }
@@ -1009,5 +1281,52 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let tex = textureSample(viewport_texture, viewport_sampler, input.uv);
   let a = tex.a * input.opacity;
   return vec4<f32>(tex.rgb * a, a);
+}
+"#;
+
+const TEXT_SHADER: &str = r#"
+struct Viewport {
+  viewport_size: vec2<f32>,
+  _pad: vec2<f32>,
+};
+
+@group(0) @binding(0) var<uniform> viewport: Viewport;
+
+@group(1) @binding(0) var glyph_sampler: sampler;
+@group(1) @binding(1) var glyph_atlas: texture_2d<f32>;
+
+struct VsIn {
+  @location(0) pos_px: vec2<f32>,
+  @location(1) uv: vec2<f32>,
+  @location(2) color: vec4<f32>,
+};
+
+struct VsOut {
+  @builtin(position) clip_pos: vec4<f32>,
+  @location(0) uv: vec2<f32>,
+  @location(1) color: vec4<f32>,
+};
+
+fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
+  let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
+  let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
+  return vec2<f32>(ndc_x, ndc_y);
+}
+
+@vertex
+fn vs_main(input: VsIn) -> VsOut {
+  var out: VsOut;
+  let clip_xy = to_clip_space(input.pos_px);
+  out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
+  out.uv = input.uv;
+  out.color = input.color;
+  return out;
+}
+
+@fragment
+fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
+  let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
+  let coverage = tex.r;
+  return vec4<f32>(input.color.rgb * coverage, input.color.a * coverage);
 }
 "#;

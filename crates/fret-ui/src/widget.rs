@@ -1,5 +1,5 @@
 use fret_app::{App, CommandId};
-use fret_core::{AppWindowId, Event, NodeId, Rect, Scene, Size};
+use fret_core::{AppWindowId, Event, NodeId, Rect, Scene, Size, TextService};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Invalidation {
@@ -16,7 +16,6 @@ pub struct EventCx<'a> {
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
     pub invalidations: Vec<(NodeId, Invalidation)>,
-    pub commands: Vec<CommandId>,
     pub requested_focus: Option<NodeId>,
     pub requested_capture: Option<Option<NodeId>>,
     pub stop_propagation: bool,
@@ -32,7 +31,10 @@ impl<'a> EventCx<'a> {
     }
 
     pub fn dispatch_command(&mut self, command: CommandId) {
-        self.commands.push(command);
+        self.app.push_effect(fret_app::Effect::Command {
+            window: self.window,
+            command,
+        });
     }
 
     pub fn request_focus(&mut self, node: NodeId) {
@@ -59,13 +61,51 @@ impl<'a> EventCx<'a> {
     }
 }
 
+pub struct CommandCx<'a> {
+    pub app: &'a mut App,
+    pub node: NodeId,
+    pub window: Option<AppWindowId>,
+    pub focus: Option<NodeId>,
+    pub invalidations: Vec<(NodeId, Invalidation)>,
+    pub requested_focus: Option<NodeId>,
+    pub stop_propagation: bool,
+}
+
+impl<'a> CommandCx<'a> {
+    pub fn invalidate(&mut self, node: NodeId, kind: Invalidation) {
+        self.invalidations.push((node, kind));
+    }
+
+    pub fn invalidate_self(&mut self, kind: Invalidation) {
+        self.invalidate(self.node, kind);
+    }
+
+    pub fn request_focus(&mut self, node: NodeId) {
+        self.requested_focus = Some(node);
+    }
+
+    pub fn stop_propagation(&mut self) {
+        self.stop_propagation = true;
+    }
+
+    pub fn request_redraw(&mut self) {
+        let Some(window) = self.window else {
+            return;
+        };
+        self.app.request_redraw(window);
+    }
+}
+
 pub struct LayoutCx<'a> {
     pub app: &'a mut App,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
+    pub focus: Option<NodeId>,
     pub children: &'a [NodeId],
     pub bounds: Rect,
     pub available: Size,
+    pub scale_factor: f32,
+    pub text: &'a mut dyn TextService,
     pub layout_child: &'a mut dyn FnMut(NodeId, Rect) -> Size,
 }
 
@@ -84,8 +124,11 @@ pub struct PaintCx<'a> {
     pub app: &'a mut App,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
+    pub focus: Option<NodeId>,
     pub children: &'a [NodeId],
     pub bounds: Rect,
+    pub scale_factor: f32,
+    pub text: &'a mut dyn TextService,
     pub scene: &'a mut Scene,
     pub paint_child: &'a mut dyn FnMut(NodeId, Rect),
     pub child_bounds: &'a dyn Fn(NodeId) -> Option<Rect>,
@@ -103,6 +146,12 @@ impl<'a> PaintCx<'a> {
 
 pub trait Widget {
     fn event(&mut self, _cx: &mut EventCx<'_>, _event: &Event) {}
+    fn command(&mut self, _cx: &mut CommandCx<'_>, _command: &CommandId) -> bool {
+        false
+    }
+    fn is_text_input(&self) -> bool {
+        false
+    }
     fn layout(&mut self, _cx: &mut LayoutCx<'_>) -> Size {
         Size::default()
     }

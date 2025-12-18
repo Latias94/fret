@@ -1,6 +1,6 @@
 use crate::{TextBlobId, geometry::Px, ids::FontId};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TextWrap {
     None,
     Word,
@@ -10,6 +10,12 @@ pub enum TextWrap {
 pub struct TextConstraints {
     pub max_width: Option<Px>,
     pub wrap: TextWrap,
+    /// Window/device scale factor used for rasterization and caching.
+    ///
+    /// UI/layout coordinates remain in logical pixels. Implementations should rasterize at
+    /// `style.size * scale_factor` (and any other scale-dependent parameters), then return metrics
+    /// back in logical units.
+    pub scale_factor: f32,
 }
 
 impl Default for TextConstraints {
@@ -17,6 +23,7 @@ impl Default for TextConstraints {
         Self {
             max_width: None,
             wrap: TextWrap::Word,
+            scale_factor: 1.0,
         }
     }
 }
