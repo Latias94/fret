@@ -142,7 +142,8 @@ pub struct Renderer {
     quad_pipeline_format: Option<wgpu::TextureFormat>,
     quad_pipeline: Option<wgpu::RenderPipeline>,
 
-    instance_buffer: wgpu::Buffer,
+    instance_buffers: Vec<wgpu::Buffer>,
+    instance_buffer_index: usize,
     instance_capacity: usize,
 }
 
@@ -185,13 +186,18 @@ impl Renderer {
             }],
         });
 
+        const FRAMES_IN_FLIGHT: usize = 3;
         let instance_capacity = 1024;
-        let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("fret quad instances"),
-            size: (instance_capacity * std::mem::size_of::<QuadInstance>()) as u64,
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
+        let instance_buffers = (0..FRAMES_IN_FLIGHT)
+            .map(|i| {
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(&format!("fret quad instances #{i}")),
+                    size: (instance_capacity * std::mem::size_of::<QuadInstance>()) as u64,
+                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                })
+            })
+            .collect();
 
         Self {
             uniform_buffer,
@@ -199,7 +205,8 @@ impl Renderer {
             uniform_bind_group_layout,
             quad_pipeline_format: None,
             quad_pipeline: None,
-            instance_buffer,
+            instance_buffers,
+            instance_buffer_index: 0,
             instance_capacity,
         }
     }
@@ -294,12 +301,17 @@ impl Renderer {
             return;
         }
         let new_capacity = needed.next_power_of_two().max(self.instance_capacity * 2);
-        self.instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("fret quad instances (resized)"),
-            size: (new_capacity * std::mem::size_of::<QuadInstance>()) as u64,
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
+        self.instance_buffers = (0..self.instance_buffers.len())
+            .map(|i| {
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(&format!("fret quad instances (resized) #{i}")),
+                    size: (new_capacity * std::mem::size_of::<QuadInstance>()) as u64,
+                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                })
+            })
+            .collect();
+        self.instance_buffer_index = 0;
         self.instance_capacity = new_capacity;
     }
 
@@ -418,8 +430,11 @@ impl Renderer {
         }
 
         self.ensure_instance_capacity(device, instances.len());
+        let instance_buffer = &self.instance_buffers[self.instance_buffer_index];
+        self.instance_buffer_index =
+            (self.instance_buffer_index + 1) % self.instance_buffers.len();
         if !instances.is_empty() {
-            queue.write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(&instances));
+            queue.write_buffer(instance_buffer, 0, bytemuck::cast_slice(&instances));
         }
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -450,7 +465,7 @@ impl Renderer {
 
             pass.set_pipeline(pipeline);
             pass.set_bind_group(0, &self.uniform_bind_group, &[]);
-            pass.set_vertex_buffer(0, self.instance_buffer.slice(..));
+            pass.set_vertex_buffer(0, instance_buffer.slice(..));
 
             for draw in draws {
                 if draw.scissor.w == 0 || draw.scissor.h == 0 {

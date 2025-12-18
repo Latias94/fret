@@ -22,7 +22,8 @@ Introduce an `App`-owned effects queue:
 
 - Widgets must not call platform APIs directly.
 - Effects are best-effort and should be safe to drop when the target window/model no longer exists.
-- The runner may deduplicate effects (e.g. multiple redraws for the same window).
+- Redraw requests are deduplicated by `App` (a window is either dirty or not).
+- The runner drains effects in a fixed-point loop (bounded) because applying one effect may enqueue more effects (e.g. `window_created` callbacks).
 
 ### Initial effect set
 
@@ -37,6 +38,6 @@ Introduce an `App`-owned effects queue:
 
 ## Future Work
 
-- Add `App::flush_effects()` semantics for “effects generated while draining effects” (loop or fixed-point).
+- Add additional effect types (clipboard, cursor, drag-and-drop, IME requests).
 - Add more window operations (set title, set cursor, clipboard, drag-and-drop).
 - Add scheduling hooks (timers/animations) as effects or as a sibling subsystem.

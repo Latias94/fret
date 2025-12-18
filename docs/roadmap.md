@@ -22,7 +22,7 @@ This roadmap focuses on building a retained-mode editor-grade UI framework with 
 - P0: `Model<T>` store with typed handles and explicit update closures.
 - P0: Lease-based model updates (`App` can pass `&mut App` + `&mut T` safely).
 - P0: Command registry (`CommandId`, metadata, discovery hooks).
-- P0: Effects queue + `flush_effects` loop (redraw/window requests, dropped-handle cleanup). (initial impl)
+- P0: Effects queue + fixed-point draining (redraw/window requests; effects enqueued from callbacks). (done)
 - P1: Plugin registry scaffolding (panel factories, command registration).
 
 ### M2 — Retained UI Core (Single Window)
@@ -33,6 +33,7 @@ This roadmap focuses on building a retained-mode editor-grade UI framework with 
 - P1: Base widgets: `Root`, `Stack`, `Split`, `Clip`, `Scroll`, `Column` (non-taffy). (prototype implemented)
 - P1: Scrollbar UX: draggable thumb + track clicking. (prototype implemented)
 - P1: Layout contract: `layout_in(child, rect)` stores child bounds for hit-test/paint. (prototype implemented)
+- P1: Optional `Flex`/`Grid` widget backed by `taffy` (defer until needed; no `UiTree` refactor).
 - P1: Theme/tokens (shadcn-inspired typed tokens).
 
 ### M3 — Display List Contract + Renderer MVP
@@ -90,7 +91,7 @@ This roadmap focuses on building a retained-mode editor-grade UI framework with 
 
 ### `fret-ui` (P0)
 
-- Retained widget tree, invalidation, layout (taffy), hit-testing.
+- Retained widget tree, invalidation, layout widgets, hit-testing.
 - Focus, capture, command routing.
 - Dock UI (`DockArea`) as a widget consuming `DockManager`.
 

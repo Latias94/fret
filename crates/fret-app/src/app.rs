@@ -102,7 +102,10 @@ impl App {
     }
 
     pub fn push_effect(&mut self, effect: Effect) {
-        self.effects.push(effect);
+        match effect {
+            Effect::Redraw(window) => self.request_redraw(window),
+            effect => self.effects.push(effect),
+        }
     }
 
     pub fn flush_effects(&mut self) -> Vec<Effect> {

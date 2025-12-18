@@ -293,37 +293,47 @@ impl<D: WinitDriver> WinitRunner<D> {
     }
 
     fn drain_effects(&mut self, event_loop: &ActiveEventLoop) {
-        let effects = self.app.flush_effects();
-        for effect in effects {
-            match effect {
-                Effect::Redraw(window) => {
-                    if let Some(state) = self.windows.get(window) {
-                        state.window.request_redraw();
+        const MAX_EFFECT_DRAIN_TURNS: usize = 16;
+
+        for _ in 0..MAX_EFFECT_DRAIN_TURNS {
+            let effects = self.app.flush_effects();
+            if effects.is_empty() {
+                break;
+            }
+
+            for effect in effects {
+                match effect {
+                    Effect::Redraw(window) => {
+                        if let Some(state) = self.windows.get(window) {
+                            state.window.request_redraw();
+                            self.mark_activity(window);
+                        }
                     }
+                    Effect::Command(_) => {}
+                    Effect::Window(req) => match req {
+                        WindowRequest::Close(window) => {
+                            let is_main = Some(window) == self.main_window;
+                            if is_main && self.config.exit_on_main_window_close {
+                                event_loop.exit();
+                                return;
+                            }
+                            self.close_window(window);
+                            if is_main && self.windows.is_empty() {
+                                event_loop.exit();
+                                return;
+                            }
+                        }
+                        WindowRequest::Create(create) => {
+                            let new_window =
+                                match self.create_window_from_request(event_loop, create) {
+                                    Ok(id) => id,
+                                    Err(_) => continue,
+                                };
+                            self.driver.window_created(&mut self.app, create, new_window);
+                            self.mark_activity(new_window);
+                        }
+                    },
                 }
-                Effect::Command(_) => {}
-                Effect::Window(req) => match req {
-                    WindowRequest::Close(window) => {
-                        let is_main = Some(window) == self.main_window;
-                        if is_main && self.config.exit_on_main_window_close {
-                            event_loop.exit();
-                            continue;
-                        }
-                        self.close_window(window);
-                        if is_main && self.windows.is_empty() {
-                            event_loop.exit();
-                        }
-                    }
-                    WindowRequest::Create(create) => {
-                        let new_window = match self.create_window_from_request(event_loop, create) {
-                            Ok(id) => id,
-                            Err(_) => continue,
-                        };
-                        self.driver
-                            .window_created(&mut self.app, create, new_window);
-                        self.mark_activity(new_window);
-                    }
-                },
             }
         }
     }

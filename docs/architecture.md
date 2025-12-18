@@ -226,7 +226,10 @@ Fallback only:
 
 ## Layout Engine
 
-- Use `taffy` for flex/grid in general UI.
+The core retained `UiTree` does **not** depend on a specific layout engine.
+
+- Start with small, explicit layout widgets (`Split`, `Stack`, `Column`, `Scroll`) to validate contracts.
+- Add an optional `Flex`/`Grid` widget backed by `taffy` later without changing `UiTree`.
 - Dock splits and pane sizing are specialized and should not depend on flex rules.
 
 ## Theme & Styling (shadcn-inspired)
@@ -262,6 +265,7 @@ Avoid unconditional continuous redraw. The platform layer should:
 - handle per-platform sync differences (e.g. “scheduled” vs “completed” semantics on macOS/Metal).
 
 On the renderer side, anticipate **multi-buffering** for dynamic GPU resources (instance buffers, staging uploads) to avoid frame N / N+1 races when presentation becomes more asynchronous.
+This matches the failure mode described in Zed’s 120fps work: a single reused instance buffer can cause corruption once rendering becomes effectively “in flight”.
 
 ### Effects flush loop (ownership/handles)
 
@@ -275,6 +279,11 @@ Model updates and widget events should enqueue side effects instead of performin
 - triggers platform wakeups/redraw.
 
 This keeps borrow scopes small and makes multi-window coordination predictable.
+
+Implementation detail:
+
+- `App` deduplicates redraw requests (`Effect::Redraw` is treated as a request, not an immediate effect).
+- The platform runner drains effects in a bounded fixed-point loop because effect application can enqueue new effects via callbacks.
 
 ## Settings & Configuration (settings-ui-inspired)
 
