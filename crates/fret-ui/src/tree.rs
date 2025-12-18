@@ -166,7 +166,10 @@ impl UiTree {
     }
 
     pub fn layout(&mut self, app: &mut App, root: NodeId, available: Size) -> Size {
-        let bounds = Rect::new(Point::new(fret_core::Px(0.0), fret_core::Px(0.0)), available);
+        let bounds = Rect::new(
+            Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            available,
+        );
         self.layout_in(app, root, bounds)
     }
 
@@ -243,13 +246,7 @@ impl UiTree {
         size
     }
 
-    fn paint_node(
-        &mut self,
-        app: &mut App,
-        node: NodeId,
-        bounds: Rect,
-        scene: &mut Scene,
-    ) {
+    fn paint_node(&mut self, app: &mut App, node: NodeId, bounds: Rect, scene: &mut Scene) {
         let tree_ref: *const UiTree = self as *const UiTree;
         let tree_ptr: *mut UiTree = self;
         let app_ptr: *mut App = app;
@@ -323,7 +320,7 @@ impl UiTree {
 
 fn pointer_position(pe: &PointerEvent) -> Point {
     match pe {
-        PointerEvent::Move { position }
+        PointerEvent::Move { position, .. }
         | PointerEvent::Down { position, .. }
         | PointerEvent::Up { position, .. }
         | PointerEvent::Wheel { position, .. } => *position,

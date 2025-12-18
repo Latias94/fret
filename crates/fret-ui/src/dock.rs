@@ -1,9 +1,8 @@
 use fret_app::{CreateWindowKind, CreateWindowRequest, Effect, WindowAnchor, WindowRequest};
 use fret_core::{
+    Color, DockGraph, DockNode, DockNodeId, DropZone, Edges, PanelId, RenderTargetId, Scene,
+    SceneOp, ViewportFit, ViewportInputEvent, ViewportInputKind, ViewportMapping,
     geometry::{Point, Px, Rect, Size},
-    Color, DockGraph, DockNode, DockNodeId, DropZone, Edges, Modifiers, MouseButtons, PanelId,
-    RenderTargetId, Scene, SceneOp, ViewportFit, ViewportInputEvent, ViewportInputKind,
-    ViewportMapping,
 };
 use slotmap::SlotMap;
 
@@ -49,7 +48,6 @@ pub struct DockManager {
     drag: Option<DockDrag>,
     hover: Option<DockDropTarget>,
     viewport_hover: Option<ViewportHover>,
-    pressed_buttons: MouseButtons,
 }
 
 impl Default for DockManager {
@@ -60,7 +58,6 @@ impl Default for DockManager {
             drag: None,
             hover: None,
             viewport_hover: None,
-            pressed_buttons: MouseButtons::default(),
         }
     }
 }
@@ -125,35 +122,37 @@ impl Widget for DockSpace {
                         button,
                         modifiers,
                     } => {
-                        if *button != fret_core::MouseButton::Left {
-                            return;
-                        }
                         let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
                         let layout = compute_layout_map(&dock.graph, root, dock_bounds);
-                        if let Some(handle) = hit_test_split_handle(&dock.graph, &layout, *position) {
-                            self.divider_drag = Some(handle);
-                            cx.invalidate(cx.node, crate::widget::Invalidation::Paint);
-                            return;
-                        }
-                        if let Some(hit) = hit_test_tab(&dock.graph, &layout, *position) {
-                            let (tabs_node, tab_index, panel_id) = hit;
-                            dock.graph.set_active_tab(tabs_node, tab_index);
-                            dock.drag = Some(DockDrag {
-                                source_window: self.window,
-                                panel: panel_id,
-                                pointer_start: *position,
-                                dragging: false,
-                            });
-                            dock.hover = None;
-                            cx.invalidate(cx.node, crate::widget::Invalidation::Paint);
-                            return;
+                        if *button == fret_core::MouseButton::Left {
+                            if let Some(handle) =
+                                hit_test_split_handle(&dock.graph, &layout, *position)
+                            {
+                                self.divider_drag = Some(handle);
+                                cx.invalidate(cx.node, crate::widget::Invalidation::Paint);
+                                return;
+                            }
+                            if let Some(hit) = hit_test_tab(&dock.graph, &layout, *position) {
+                                let (tabs_node, tab_index, panel_id) = hit;
+                                dock.graph.set_active_tab(tabs_node, tab_index);
+                                dock.drag = Some(DockDrag {
+                                    source_window: self.window,
+                                    panel: panel_id,
+                                    pointer_start: *position,
+                                    dragging: false,
+                                });
+                                dock.hover = None;
+                                cx.invalidate(cx.node, crate::widget::Invalidation::Paint);
+                                return;
+                            }
                         }
 
-                        dock.pressed_buttons.left = true;
-
-                        if let Some(hit) =
-                            hit_test_active_viewport_panel(&dock.graph, &dock.panels, &layout, *position)
-                        {
+                        if let Some(hit) = hit_test_active_viewport_panel(
+                            &dock.graph,
+                            &dock.panels,
+                            &layout,
+                            *position,
+                        ) {
                             if let Some(e) = viewport_input_from_hit(
                                 self.window,
                                 hit,
@@ -168,7 +167,11 @@ impl Widget for DockSpace {
                             }
                         }
                     }
-                    fret_core::PointerEvent::Move { position } => {
+                    fret_core::PointerEvent::Move {
+                        position,
+                        buttons,
+                        modifiers,
+                    } => {
                         if let Some(divider) = self.divider_drag {
                             let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
                             let layout = compute_layout_map(&dock.graph, root, dock_bounds);
@@ -193,7 +196,8 @@ impl Widget for DockSpace {
                         }
 
                         let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                        if dock.drag.map_or(true, |d| !d.dragging) && dock_bounds.contains(*position)
+                        if dock.drag.map_or(true, |d| !d.dragging)
+                            && dock_bounds.contains(*position)
                         {
                             let layout = compute_layout_map(&dock.graph, root, dock_bounds);
                             let hit = hit_test_active_viewport_panel(
@@ -222,8 +226,8 @@ impl Widget for DockSpace {
                                     hit,
                                     *position,
                                     ViewportInputKind::PointerMove {
-                                        buttons: dock.pressed_buttons,
-                                        modifiers: Modifiers::default(),
+                                        buttons: *buttons,
+                                        modifiers: *modifiers,
                                     },
                                 ) {
                                     pending_effects.push(Effect::ViewportInput(e));
@@ -249,11 +253,14 @@ impl Widget for DockSpace {
                             if drag.dragging {
                                 let (chrome, dock_bounds) = dock_space_regions(self.last_bounds);
                                 if chrome.contains(*position) {
-                                    dock.hover = Some(DockDropTarget::Float { window: self.window });
+                                    dock.hover = Some(DockDropTarget::Float {
+                                        window: self.window,
+                                    });
                                 } else if dock_bounds.contains(*position) {
                                     let layout = compute_layout_map(&dock.graph, root, dock_bounds);
-                                    dock.hover = hit_test_drop_target(&dock.graph, &layout, *position)
-                                        .map(DockDropTarget::Dock);
+                                    dock.hover =
+                                        hit_test_drop_target(&dock.graph, &layout, *position)
+                                            .map(DockDropTarget::Dock);
                                 } else {
                                     dock.hover = None;
                                 }
@@ -302,11 +309,9 @@ impl Widget for DockSpace {
                         button,
                         modifiers,
                     } => {
-                        if *button != fret_core::MouseButton::Left {
-                            return;
+                        if *button == fret_core::MouseButton::Left {
+                            self.divider_drag = None;
                         }
-                        self.divider_drag = None;
-                        dock.pressed_buttons.left = false;
 
                         if let Some(drag) = dock.drag.take() {
                             if drag.dragging {
@@ -329,14 +334,14 @@ impl Widget for DockSpace {
                                             .collect_panels_in_window(drag.source_window)
                                             .is_empty()
                                         {
-                                            pending_effects.push(Effect::Window(WindowRequest::Close(
-                                                drag.source_window,
-                                            )));
+                                            pending_effects.push(Effect::Window(
+                                                WindowRequest::Close(drag.source_window),
+                                            ));
                                         }
                                     }
                                     Some(DockDropTarget::Float { .. }) => {
-                                        pending_effects.push(Effect::Window(WindowRequest::Create(
-                                            CreateWindowRequest {
+                                        pending_effects.push(Effect::Window(
+                                            WindowRequest::Create(CreateWindowRequest {
                                                 kind: CreateWindowKind::DockFloating {
                                                     source_window: drag.source_window,
                                                     panel: drag.panel,
@@ -345,15 +350,15 @@ impl Widget for DockSpace {
                                                     window: self.window,
                                                     position: *position,
                                                 }),
-                                            },
-                                        )));
+                                            }),
+                                        ));
                                     }
                                     None => {
                                         let (chrome, _dock_bounds) =
                                             dock_space_regions(self.last_bounds);
                                         if chrome.contains(*position) {
-                                            pending_effects.push(Effect::Window(WindowRequest::Create(
-                                                CreateWindowRequest {
+                                            pending_effects.push(Effect::Window(
+                                                WindowRequest::Create(CreateWindowRequest {
                                                     kind: CreateWindowKind::DockFloating {
                                                         source_window: drag.source_window,
                                                         panel: drag.panel,
@@ -362,8 +367,8 @@ impl Widget for DockSpace {
                                                         window: self.window,
                                                         position: *position,
                                                     }),
-                                                },
-                                            )));
+                                                }),
+                                            ));
                                         }
                                     }
                                 }

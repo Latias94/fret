@@ -1,6 +1,6 @@
 mod demo_ui;
 
-use demo_ui::{build_demo_ui, DemoUiConfig};
+use demo_ui::{DemoUiConfig, build_demo_ui};
 
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{Axis, Color, DockNode, DropZone, Rect, RenderTargetId, Scene};
@@ -23,7 +23,10 @@ struct DemoDriver {
 }
 
 impl DemoDriver {
-    fn ensure_main_tabs(dock: &mut DockManager, main: fret_core::AppWindowId) -> fret_core::DockNodeId {
+    fn ensure_main_tabs(
+        dock: &mut DockManager,
+        main: fret_core::AppWindowId,
+    ) -> fret_core::DockNodeId {
         dock.graph.first_tabs_in_window(main).unwrap_or_else(|| {
             let tabs = dock.graph.insert_node(DockNode::Tabs {
                 tabs: Vec::new(),
@@ -115,13 +118,13 @@ impl WinitDriver for DemoDriver {
                 b: 0.22,
                 a: 1.0,
             },
-            viewport: self.scene_target.zip(self.scene_target_size).map(|(target, target_px_size)| {
-                ViewportPanel {
+            viewport: self.scene_target.zip(self.scene_target_size).map(
+                |(target, target_px_size)| ViewportPanel {
                     target,
                     target_px_size,
                     fit: fret_core::ViewportFit::Contain,
-                }
-            }),
+                },
+            ),
         });
         let panel_inspector = dock.create_panel(DockPanel {
             title: "Inspector".to_string(),
@@ -241,13 +244,19 @@ impl WinitDriver for DemoDriver {
         new_window: fret_core::AppWindowId,
     ) {
         match request.kind {
-            CreateWindowKind::DockFloating { source_window, panel } => {
+            CreateWindowKind::DockFloating {
+                source_window,
+                panel,
+            } => {
                 let empty = {
                     let Some(dock) = app.global_mut::<DockManager>() else {
                         return;
                     };
-                    dock.graph.float_panel_to_window(source_window, panel, new_window);
-                    dock.graph.collect_panels_in_window(source_window).is_empty()
+                    dock.graph
+                        .float_panel_to_window(source_window, panel, new_window);
+                    dock.graph
+                        .collect_panels_in_window(source_window)
+                        .is_empty()
                 };
 
                 app.request_redraw(source_window);

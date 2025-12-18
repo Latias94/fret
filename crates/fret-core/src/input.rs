@@ -1,4 +1,7 @@
-use crate::{geometry::{Point, Px}, AppWindowId, RenderTargetId};
+use crate::{
+    AppWindowId, RenderTargetId,
+    geometry::{Point, Px},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MouseButton {
@@ -35,6 +38,8 @@ pub enum ImeEvent {
 pub enum PointerEvent {
     Move {
         position: Point,
+        buttons: MouseButtons,
+        modifiers: Modifiers,
     },
     Down {
         position: Point,
@@ -85,10 +90,22 @@ pub struct ViewportInputEvent {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ViewportInputKind {
-    PointerMove { buttons: MouseButtons, modifiers: Modifiers },
-    PointerDown { button: MouseButton, modifiers: Modifiers },
-    PointerUp { button: MouseButton, modifiers: Modifiers },
-    Wheel { delta: Point, modifiers: Modifiers },
+    PointerMove {
+        buttons: MouseButtons,
+        modifiers: Modifiers,
+    },
+    PointerDown {
+        button: MouseButton,
+        modifiers: Modifiers,
+    },
+    PointerUp {
+        button: MouseButton,
+        modifiers: Modifiers,
+    },
+    Wheel {
+        delta: Point,
+        modifiers: Modifiers,
+    },
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

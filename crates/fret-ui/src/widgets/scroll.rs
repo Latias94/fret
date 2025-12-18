@@ -1,7 +1,7 @@
 use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp, Size,
-    PointerEvent,
+    Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, PointerEvent, Px, Rect, SceneOp,
+    Size,
 };
 
 pub struct Scroll {
@@ -53,7 +53,10 @@ impl Scroll {
 
         let w = Px(10.0);
         let track = Rect::new(
-            Point::new(Px(self.last_bounds.origin.x.0 + self.last_bounds.size.width.0 - w.0), self.last_bounds.origin.y),
+            Point::new(
+                Px(self.last_bounds.origin.x.0 + self.last_bounds.size.width.0 - w.0),
+                self.last_bounds.origin.y,
+            ),
             Size::new(w, self.last_bounds.size.height),
         );
 
@@ -70,10 +73,7 @@ impl Scroll {
         let travel = (viewport_h.0 - thumb_h.0).max(0.0);
         let thumb_y = Px(track.origin.y.0 + travel * t);
 
-        let thumb = Rect::new(
-            Point::new(track.origin.x, thumb_y),
-            Size::new(w, thumb_h),
-        );
+        let thumb = Rect::new(Point::new(track.origin.x, thumb_y), Size::new(w, thumb_h));
 
         Some((track, thumb))
     }
@@ -117,7 +117,9 @@ impl Widget for Scroll {
                 cx.request_redraw();
                 cx.stop_propagation();
             }
-            PointerEvent::Down { position, button, .. } => {
+            PointerEvent::Down {
+                position, button, ..
+            } => {
                 if *button != MouseButton::Left {
                     return;
                 }
@@ -143,7 +145,7 @@ impl Widget for Scroll {
                 cx.request_redraw();
                 cx.stop_propagation();
             }
-            PointerEvent::Move { position } => {
+            PointerEvent::Move { position, .. } => {
                 if !self.dragging_thumb {
                     return;
                 }
@@ -214,7 +216,10 @@ impl Widget for Scroll {
         self.clamp_offset(content_size.height, cx.available.height);
 
         // Layout child at a translated origin to implement scrolling.
-        let origin = Point::new(cx.bounds.origin.x, Px(cx.bounds.origin.y.0 - self.offset_y.0));
+        let origin = Point::new(
+            cx.bounds.origin.x,
+            Px(cx.bounds.origin.y.0 - self.offset_y.0),
+        );
         let child_bounds = Rect::new(origin, Size::new(content_width, content_size.height));
         let _ = cx.layout_in(child, child_bounds);
 

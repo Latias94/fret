@@ -94,8 +94,11 @@ pub trait WinitDriver {
 
     fn viewport_input(&mut self, _app: &mut App, _event: ViewportInputEvent) {}
 
-    fn create_window_state(&mut self, app: &mut App, window: fret_core::AppWindowId)
-        -> Self::WindowState;
+    fn create_window_state(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+    ) -> Self::WindowState;
 
     fn handle_event(
         &mut self,
@@ -127,11 +130,7 @@ pub trait WinitDriver {
         new_window: fret_core::AppWindowId,
     );
 
-    fn before_close_window(
-        &mut self,
-        _app: &mut App,
-        _window: fret_core::AppWindowId,
-    ) -> bool {
+    fn before_close_window(&mut self, _app: &mut App, _window: fret_core::AppWindowId) -> bool {
         true
     }
 }
@@ -141,6 +140,7 @@ struct WindowRuntime<S> {
     surface: SurfaceState<'static>,
     scene: Scene,
     cursor_pos: Point,
+    pressed_buttons: fret_core::MouseButtons,
     user: S,
 }
 
@@ -221,6 +221,7 @@ impl<D: WinitDriver> WinitRunner<D> {
                 surface,
                 scene: Scene::default(),
                 cursor_pos: Point::new(Px(0.0), Px(0.0)),
+                pressed_buttons: fret_core::MouseButtons::default(),
                 user,
             }
         });
@@ -256,10 +257,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         }
     }
 
-    fn compute_window_position_from_anchor(
-        &self,
-        anchor: WindowAnchor,
-    ) -> Option<Position> {
+    fn compute_window_position_from_anchor(&self, anchor: WindowAnchor) -> Option<Position> {
         let anchor_state = self.windows.get(anchor.window)?;
         let outer = anchor_state.window.outer_position().ok()?;
         let scale = anchor_state.window.scale_factor();
@@ -336,7 +334,8 @@ impl<D: WinitDriver> WinitRunner<D> {
                                     Ok(id) => id,
                                     Err(_) => continue,
                                 };
-                            self.driver.window_created(&mut self.app, create, new_window);
+                            self.driver
+                                .window_created(&mut self.app, create, new_window);
                             self.mark_activity(new_window);
                         }
                     },
@@ -345,16 +344,16 @@ impl<D: WinitDriver> WinitRunner<D> {
         }
     }
 
-    fn dispatch_pointer_event(&mut self, window: fret_core::AppWindowId, pe: fret_core::PointerEvent) {
+    fn dispatch_pointer_event(
+        &mut self,
+        window: fret_core::AppWindowId,
+        pe: fret_core::PointerEvent,
+    ) {
         let Some(state) = self.windows.get_mut(window) else {
             return;
         };
-        self.driver.handle_event(
-            &mut self.app,
-            window,
-            &mut state.user,
-            &Event::Pointer(pe),
-        );
+        self.driver
+            .handle_event(&mut self.app, window, &mut state.user, &Event::Pointer(pe));
         self.mark_activity(window);
     }
 
@@ -387,10 +386,11 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
             Err(_) => return,
         };
 
-        let (context, surface) = match pollster::block_on(WgpuContext::new_with_surface(window.clone())) {
-            Ok(v) => v,
-            Err(_) => return,
-        };
+        let (context, surface) =
+            match pollster::block_on(WgpuContext::new_with_surface(window.clone())) {
+                Ok(v) => v,
+                Err(_) => return,
+            };
         let renderer = Renderer::new(&context.device);
 
         self.context = Some(context);
@@ -433,6 +433,11 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
             WindowEvent::ModifiersChanged(mods) => {
                 self.modifiers = map_modifiers(mods.state());
             }
+            WindowEvent::Focused(false) => {
+                if let Some(state) = self.windows.get_mut(app_window) {
+                    state.pressed_buttons = fret_core::MouseButtons::default();
+                }
+            }
             WindowEvent::Resized(size) => {
                 self.resize_surface(app_window, size.width, size.height);
                 if let Some(state) = self.windows.get_mut(app_window) {
@@ -457,23 +462,42 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 self.mark_activity(app_window);
             }
             WindowEvent::CursorMoved { position, .. } => {
-                let pos = {
+                let (pos, buttons) = {
                     let Some(state) = self.windows.get_mut(app_window) else {
                         return;
                     };
                     let logical = position.to_logical::<f32>(state.window.scale_factor());
                     state.cursor_pos = Point::new(Px(logical.x), Px(logical.y));
-                    state.cursor_pos
+                    (state.cursor_pos, state.pressed_buttons)
                 };
-                self.dispatch_pointer_event(app_window, fret_core::PointerEvent::Move { position: pos });
+                self.dispatch_pointer_event(
+                    app_window,
+                    fret_core::PointerEvent::Move {
+                        position: pos,
+                        buttons,
+                        modifiers: self.modifiers,
+                    },
+                );
                 self.drain_effects(event_loop);
             }
             WindowEvent::MouseInput { state, button, .. } => {
                 let Some(button) = map_mouse_button(button) else {
                     return;
                 };
-                let Some(pos) = self.windows.get(app_window).map(|s| s.cursor_pos) else {
-                    return;
+                let pos = {
+                    let Some(runtime) = self.windows.get_mut(app_window) else {
+                        return;
+                    };
+                    let pressed = matches!(state, ElementState::Pressed);
+                    match button {
+                        fret_core::MouseButton::Left => runtime.pressed_buttons.left = pressed,
+                        fret_core::MouseButton::Right => runtime.pressed_buttons.right = pressed,
+                        fret_core::MouseButton::Middle => runtime.pressed_buttons.middle = pressed,
+                        fret_core::MouseButton::Back
+                        | fret_core::MouseButton::Forward
+                        | fret_core::MouseButton::Other(_) => {}
+                    }
+                    runtime.cursor_pos
                 };
                 let pe = match state {
                     ElementState::Pressed => fret_core::PointerEvent::Down {
@@ -507,7 +531,9 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 self.drain_effects(event_loop);
             }
             WindowEvent::RedrawRequested => {
-                let (Some(context), Some(renderer)) = (self.context.as_ref(), self.renderer.as_mut()) else {
+                let (Some(context), Some(renderer)) =
+                    (self.context.as_ref(), self.renderer.as_mut())
+                else {
                     return;
                 };
                 let Some(state) = self.windows.get_mut(app_window) else {
@@ -525,7 +551,11 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                         event_loop.exit();
                         return;
                     }
-                    Err(wgpu::SurfaceError::Outdated | wgpu::SurfaceError::Timeout | wgpu::SurfaceError::Other) => return,
+                    Err(
+                        wgpu::SurfaceError::Outdated
+                        | wgpu::SurfaceError::Timeout
+                        | wgpu::SurfaceError::Other,
+                    ) => return,
                 };
 
                 let scale_factor = state.window.scale_factor() as f32;
@@ -540,7 +570,13 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     Size::new(Px(logical.width), Px(logical.height)),
                 );
 
-                self.driver.render(&mut self.app, app_window, &mut state.user, bounds, &mut state.scene);
+                self.driver.render(
+                    &mut self.app,
+                    app_window,
+                    &mut state.user,
+                    bounds,
+                    &mut state.scene,
+                );
 
                 let cmd = renderer.render_scene(
                     &context.device,
