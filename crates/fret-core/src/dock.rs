@@ -1,11 +1,12 @@
 use crate::{
+    DockOp, PanelKey,
     geometry::{Point, Px, Rect, Size},
-    ids::{AppWindowId, DockNodeId, PanelId},
+    ids::{AppWindowId, DockNodeId},
 };
 use slotmap::SlotMap;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Axis {
     Horizontal,
     Vertical,
@@ -28,7 +29,7 @@ pub enum DockNode {
         fractions: Vec<f32>,
     },
     Tabs {
-        tabs: Vec<PanelId>,
+        tabs: Vec<PanelKey>,
         active: usize,
     },
 }
@@ -71,7 +72,7 @@ impl DockGraph {
     pub fn move_panel(
         &mut self,
         window: AppWindowId,
-        panel: PanelId,
+        panel: PanelKey,
         target_tabs: DockNodeId,
         zone: DropZone,
     ) -> bool {
@@ -81,7 +82,7 @@ impl DockGraph {
     pub fn move_panel_ex(
         &mut self,
         window: AppWindowId,
-        panel: PanelId,
+        panel: PanelKey,
         target_tabs: DockNodeId,
         zone: DropZone,
         insert_index: Option<usize>,
@@ -92,13 +93,13 @@ impl DockGraph {
     pub fn move_panel_between_windows(
         &mut self,
         source_window: AppWindowId,
-        panel: PanelId,
+        panel: PanelKey,
         target_window: AppWindowId,
         target_tabs: DockNodeId,
         zone: DropZone,
         insert_index: Option<usize>,
     ) -> bool {
-        let Some((source_tabs, source_index)) = self.find_panel_in_window(source_window, panel)
+        let Some((source_tabs, source_index)) = self.find_panel_in_window(source_window, &panel)
         else {
             return false;
         };
@@ -161,10 +162,10 @@ impl DockGraph {
     pub fn float_panel_to_window(
         &mut self,
         source_window: AppWindowId,
-        panel: PanelId,
+        panel: PanelKey,
         new_window: AppWindowId,
     ) -> bool {
-        let Some((source_tabs, source_index)) = self.find_panel_in_window(source_window, panel)
+        let Some((source_tabs, source_index)) = self.find_panel_in_window(source_window, &panel)
         else {
             return false;
         };
@@ -273,13 +274,13 @@ impl DockGraph {
     fn find_panel_in_window(
         &self,
         window: AppWindowId,
-        panel: PanelId,
+        panel: &PanelKey,
     ) -> Option<(DockNodeId, usize)> {
         let root = self.window_root(window)?;
         self.find_panel_in_subtree(root, panel)
     }
 
-    pub fn collect_panels_in_window(&self, window: AppWindowId) -> Vec<PanelId> {
+    pub fn collect_panels_in_window(&self, window: AppWindowId) -> Vec<PanelKey> {
         let Some(root) = self.window_root(window) else {
             return Vec::new();
         };
@@ -291,7 +292,7 @@ impl DockGraph {
         self.first_tabs_in_subtree(root)
     }
 
-    fn collect_panels_in_subtree(&self, node: DockNodeId) -> Vec<PanelId> {
+    fn collect_panels_in_subtree(&self, node: DockNodeId) -> Vec<PanelKey> {
         let Some(n) = self.nodes.get(node) else {
             return Vec::new();
         };
@@ -323,13 +324,13 @@ impl DockGraph {
     fn find_panel_in_subtree(
         &self,
         node: DockNodeId,
-        panel: PanelId,
+        panel: &PanelKey,
     ) -> Option<(DockNodeId, usize)> {
         let Some(n) = self.nodes.get(node) else {
             return None;
         };
         match n {
-            DockNode::Tabs { tabs, .. } => tabs.iter().position(|&p| p == panel).map(|i| (node, i)),
+            DockNode::Tabs { tabs, .. } => tabs.iter().position(|p| p == panel).map(|i| (node, i)),
             DockNode::Split { children, .. } => children
                 .iter()
                 .copied()
@@ -340,13 +341,13 @@ impl DockGraph {
     fn insert_panel_into_tabs_at(
         &mut self,
         tabs: DockNodeId,
-        panel: PanelId,
+        panel: PanelKey,
         index: Option<usize>,
     ) -> bool {
         let Some(DockNode::Tabs { tabs: list, active }) = self.nodes.get_mut(tabs) else {
             return false;
         };
-        if list.iter().any(|&p| p == panel) {
+        if list.iter().any(|p| *p == panel) {
             return true;
         }
 
@@ -476,5 +477,195 @@ impl DockGraph {
             self.replace_node_in_window_tree(window, parent, only_child);
             current = parent;
         }
+    }
+
+    pub fn apply_op(&mut self, op: &DockOp) -> bool {
+        match op {
+            DockOp::SetActiveTab { tabs, active } => self.set_active_tab(*tabs, *active),
+            DockOp::MovePanel {
+                source_window,
+                panel,
+                target_window,
+                target_tabs,
+                zone,
+                insert_index,
+            } => self.move_panel_between_windows(
+                *source_window,
+                panel.clone(),
+                *target_window,
+                *target_tabs,
+                *zone,
+                *insert_index,
+            ),
+            DockOp::FloatPanelToWindow {
+                source_window,
+                panel,
+                new_window,
+            } => self.float_panel_to_window(*source_window, panel.clone(), *new_window),
+            DockOp::RequestFloatPanelToNewWindow { .. } => false,
+            DockOp::MergeWindowInto {
+                source_window,
+                target_window,
+                target_tabs,
+            } => {
+                let panels = self.collect_panels_in_window(*source_window);
+                for panel in panels {
+                    let _ = self.move_panel_between_windows(
+                        *source_window,
+                        panel,
+                        *target_window,
+                        *target_tabs,
+                        DropZone::Center,
+                        None,
+                    );
+                }
+                let _ = self.remove_window_root(*source_window);
+                true
+            }
+            DockOp::SetSplitFractionTwo {
+                split,
+                first_fraction,
+            } => self.update_split_two(*split, *first_fraction),
+        }
+    }
+
+    pub fn export_layout_v1(&self, windows: &[(AppWindowId, String)]) -> crate::DockLayoutV1 {
+        self.export_layout_v1_with_placement(windows, |_| None)
+    }
+
+    pub fn export_layout_v1_with_placement(
+        &self,
+        windows: &[(AppWindowId, String)],
+        mut placement: impl FnMut(AppWindowId) -> Option<crate::DockWindowPlacementV1>,
+    ) -> crate::DockLayoutV1 {
+        use crate::{DockLayoutNodeV1, DockLayoutWindowV1};
+        use std::collections::HashMap;
+
+        fn visit(
+            graph: &DockGraph,
+            node: DockNodeId,
+            next_id: &mut u32,
+            ids: &mut HashMap<DockNodeId, u32>,
+            out: &mut Vec<DockLayoutNodeV1>,
+        ) {
+            if ids.contains_key(&node) {
+                return;
+            }
+
+            let id = *next_id;
+            *next_id = next_id.saturating_add(1);
+            ids.insert(node, id);
+
+            let Some(n) = graph.nodes.get(node) else {
+                return;
+            };
+
+            match n {
+                DockNode::Tabs { tabs, active } => {
+                    out.push(DockLayoutNodeV1::Tabs {
+                        id,
+                        tabs: tabs.clone(),
+                        active: *active,
+                    });
+                }
+                DockNode::Split {
+                    axis,
+                    children,
+                    fractions,
+                } => {
+                    for child in children {
+                        visit(graph, *child, next_id, ids, out);
+                    }
+                    let child_ids: Vec<u32> = children
+                        .iter()
+                        .filter_map(|c| ids.get(c).copied())
+                        .collect();
+                    out.push(DockLayoutNodeV1::Split {
+                        id,
+                        axis: *axis,
+                        children: child_ids,
+                        fractions: fractions.clone(),
+                    });
+                }
+            }
+        }
+
+        let mut next_id: u32 = 1;
+        let mut ids: HashMap<DockNodeId, u32> = HashMap::new();
+        let mut nodes: Vec<DockLayoutNodeV1> = Vec::new();
+        let mut out_windows: Vec<DockLayoutWindowV1> = Vec::new();
+
+        for (window, logical_window_id) in windows {
+            let Some(root) = self.window_root(*window) else {
+                continue;
+            };
+            visit(self, root, &mut next_id, &mut ids, &mut nodes);
+            let Some(root_id) = ids.get(&root).copied() else {
+                continue;
+            };
+            out_windows.push(DockLayoutWindowV1 {
+                logical_window_id: logical_window_id.clone(),
+                root: root_id,
+                placement: placement(*window),
+            });
+        }
+
+        crate::DockLayoutV1::new_v1(out_windows, nodes)
+    }
+
+    pub fn import_subtree_from_layout_v1(
+        &mut self,
+        layout: &crate::DockLayoutV1,
+        root: u32,
+    ) -> Option<DockNodeId> {
+        use crate::DockLayoutNodeV1;
+        use std::collections::HashMap;
+
+        if layout.layout_version != crate::DOCK_LAYOUT_VERSION_V1 {
+            return None;
+        }
+
+        let mut by_id: HashMap<u32, &DockLayoutNodeV1> = HashMap::new();
+        for node in &layout.nodes {
+            let id = match node {
+                DockLayoutNodeV1::Split { id, .. } => *id,
+                DockLayoutNodeV1::Tabs { id, .. } => *id,
+            };
+            by_id.insert(id, node);
+        }
+
+        fn build(
+            graph: &mut DockGraph,
+            by_id: &HashMap<u32, &DockLayoutNodeV1>,
+            id: u32,
+        ) -> Option<DockNodeId> {
+            let node = by_id.get(&id)?;
+            match node {
+                DockLayoutNodeV1::Tabs { tabs, active, .. } => {
+                    Some(graph.insert_node(DockNode::Tabs {
+                        tabs: tabs.clone(),
+                        active: *active,
+                    }))
+                }
+                DockLayoutNodeV1::Split {
+                    axis,
+                    children,
+                    fractions,
+                    ..
+                } => {
+                    let mut child_nodes: Vec<DockNodeId> = Vec::new();
+                    for child in children {
+                        child_nodes.push(build(graph, by_id, *child)?);
+                    }
+                    Some(graph.insert_node(DockNode::Split {
+                        axis: *axis,
+                        children: child_nodes,
+                        fractions: fractions.clone(),
+                    }))
+                }
+            }
+        }
+
+        build(self, &by_id, root)
     }
 }

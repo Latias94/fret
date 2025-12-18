@@ -5,5 +5,4 @@ edition.workspace = true
 
 [dependencies]
 slotmap.workspace = true
-taffy.workspace = true
-
+serde.workspace = true
