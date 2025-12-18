@@ -1,8 +1,7 @@
-use fret_app::{CommandId, InputContext, KeymapService, Platform, format_chord};
+use fret_app::{CommandId, InputContext, KeymapService, Platform, format_sequence};
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp,
-    Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
-    ids::FontId,
+    Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp, Size,
+    TextConstraints, TextMetrics, TextStyle, TextWrap, ids::FontId,
 };
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 
@@ -218,11 +217,12 @@ impl CommandPalette {
             let shortcut = keymap.and_then(|service| {
                 service
                     .keymap
-                    .shortcut_for_command(&ctx, &command)
-                    .map(|chord| format_chord(ctx.platform, chord))
+                    .shortcut_for_command_sequence(&ctx, &command)
+                    .map(|seq| format_sequence(ctx.platform, &seq))
             });
 
-            let (title_blob, title_metrics) = cx.text.prepare(meta.title.as_ref(), style, constraints);
+            let (title_blob, title_metrics) =
+                cx.text.prepare(meta.title.as_ref(), style, constraints);
 
             let (shortcut_blob, shortcut_metrics) = if let Some(s) = shortcut.as_deref() {
                 let (b, m) = cx.text.prepare(s, style, constraints);
@@ -332,51 +332,55 @@ impl Widget for CommandPalette {
                 }
                 cx.stop_propagation();
             }
-            Event::KeyDown { key, modifiers: _, repeat } => {
-                match key {
-                    KeyCode::Escape => {
-                        if *repeat {
-                            return;
-                        }
+            Event::KeyDown {
+                key,
+                modifiers: _,
+                repeat,
+            } => match key {
+                KeyCode::Escape => {
+                    if *repeat {
+                        return;
+                    }
+                    cx.dispatch_command(CommandId::from("command_palette.close"));
+                    cx.stop_propagation();
+                }
+                KeyCode::Enter => {
+                    if *repeat {
+                        return;
+                    }
+                    if let Some(command) = self.selected_command() {
                         cx.dispatch_command(CommandId::from("command_palette.close"));
+                        cx.dispatch_command(command);
                         cx.stop_propagation();
                     }
-                    KeyCode::Enter => {
-                        if *repeat {
-                            return;
-                        }
-                        if let Some(command) = self.selected_command() {
-                            cx.dispatch_command(CommandId::from("command_palette.close"));
-                            cx.dispatch_command(command);
-                            cx.stop_propagation();
-                        }
-                    }
-                    KeyCode::ArrowUp => {
-                        self.selected = self.selected.saturating_sub(1);
+                }
+                KeyCode::ArrowUp => {
+                    self.selected = self.selected.saturating_sub(1);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                }
+                KeyCode::ArrowDown => {
+                    if !self.items.is_empty() {
+                        self.selected = (self.selected + 1).min(self.items.len() - 1);
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();
                     }
-                    KeyCode::ArrowDown => {
-                        if !self.items.is_empty() {
-                            self.selected = (self.selected + 1).min(self.items.len() - 1);
-                            cx.invalidate_self(Invalidation::Paint);
-                            cx.request_redraw();
-                            cx.stop_propagation();
-                        }
-                    }
-                    KeyCode::Backspace => {
-                        let _ = self.query.pop();
-                        self.selected = 0;
-                        cx.invalidate_self(Invalidation::Layout);
-                        cx.request_redraw();
-                        cx.stop_propagation();
-                    }
-                    _ => {}
                 }
-            }
+                KeyCode::Backspace => {
+                    let _ = self.query.pop();
+                    self.selected = 0;
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                }
+                _ => {}
+            },
             Event::Pointer(pe) => match pe {
-                fret_core::PointerEvent::Down { button, position, .. } => {
+                fret_core::PointerEvent::Down {
+                    button, position, ..
+                } => {
                     if *button != MouseButton::Left {
                         return;
                     }
@@ -391,7 +395,9 @@ impl Widget for CommandPalette {
                     }
                     cx.stop_propagation();
                 }
-                fret_core::PointerEvent::Up { button, position, .. } => {
+                fret_core::PointerEvent::Up {
+                    button, position, ..
+                } => {
                     if *button != MouseButton::Left {
                         return;
                     }
@@ -518,7 +524,8 @@ impl Widget for CommandPalette {
             });
 
             if let (Some(blob), Some(metrics)) = (item.shortcut_blob, item.shortcut_metrics) {
-                let x = cx.bounds.origin.x.0 + cx.bounds.size.width.0 - pad_x - metrics.size.width.0;
+                let x =
+                    cx.bounds.origin.x.0 + cx.bounds.size.width.0 - pad_x - metrics.size.width.0;
                 let origin = Point::new(Px(x), Px(y + metrics.baseline.0 + 2.0));
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(2),

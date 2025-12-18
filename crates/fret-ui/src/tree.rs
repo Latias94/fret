@@ -1,10 +1,29 @@
 use crate::widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};
-use fret_app::{App, Effect, InputContext, KeyChord, KeymapService, Platform};
+use fret_app::{App, CommandId, Effect, InputContext, KeyChord, KeymapService, Platform};
 use fret_core::{
     AppWindowId, Event, KeyCode, NodeId, Point, PointerEvent, Rect, Scene, Size, TextService,
 };
 use slotmap::SlotMap;
 use std::collections::HashMap;
+use std::time::Duration;
+
+const PENDING_SHORTCUT_TIMEOUT: Duration = Duration::from_millis(1000);
+
+#[derive(Debug, Clone)]
+struct CapturedKeystroke {
+    chord: KeyChord,
+    text: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct PendingShortcut {
+    keystrokes: Vec<CapturedKeystroke>,
+    focus: Option<NodeId>,
+    barrier_root: Option<NodeId>,
+    fallback: Option<CommandId>,
+    timer: Option<fret_core::TimerToken>,
+    capture_next_text_input_key: Option<KeyCode>,
+}
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct InvalidationFlags {
@@ -78,11 +97,80 @@ pub struct UiTree {
     captured: Option<NodeId>,
     window: Option<AppWindowId>,
     suppress_text_input_until_key_up: Option<KeyCode>,
+    pending_shortcut: PendingShortcut,
+    replaying_pending_shortcut: bool,
 }
 
 impl UiTree {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    fn clear_pending_shortcut(&mut self, app: &mut App) {
+        if let Some(token) = self.pending_shortcut.timer.take() {
+            app.push_effect(Effect::CancelTimer { token });
+        }
+        self.pending_shortcut = PendingShortcut::default();
+    }
+
+    fn schedule_pending_shortcut_timeout(&mut self, app: &mut App) {
+        if self.pending_shortcut.keystrokes.is_empty() {
+            return;
+        }
+
+        if let Some(token) = self.pending_shortcut.timer.take() {
+            app.push_effect(Effect::CancelTimer { token });
+        }
+        let token = app.next_timer_token();
+        self.pending_shortcut.timer = Some(token);
+        app.push_effect(Effect::SetTimer {
+            window: self.window,
+            token,
+            after: PENDING_SHORTCUT_TIMEOUT,
+            repeat: None,
+        });
+    }
+
+    fn replay_captured_keystrokes(
+        &mut self,
+        app: &mut App,
+        ctx: &InputContext,
+        keystrokes: Vec<CapturedKeystroke>,
+    ) {
+        let prev = self.replaying_pending_shortcut;
+        self.replaying_pending_shortcut = true;
+
+        for stroke in keystrokes {
+            if let Some(service) = app.global::<KeymapService>() {
+                if let Some(command) = service.keymap.resolve(ctx, stroke.chord) {
+                    app.push_effect(Effect::Command {
+                        window: self.window,
+                        command,
+                    });
+                    continue;
+                }
+            }
+
+            let down = Event::KeyDown {
+                key: stroke.chord.key,
+                modifiers: stroke.chord.mods,
+                repeat: false,
+            };
+            self.dispatch_event(app, &down);
+
+            if let Some(text) = stroke.text {
+                let text = Event::TextInput(text);
+                self.dispatch_event(app, &text);
+            }
+
+            let up = Event::KeyUp {
+                key: stroke.chord.key,
+                modifiers: stroke.chord.mods,
+            };
+            self.dispatch_event(app, &up);
+        }
+
+        self.replaying_pending_shortcut = prev;
     }
 
     pub fn set_window(&mut self, window: AppWindowId) {
@@ -233,7 +321,51 @@ impl UiTree {
             return;
         };
 
-        if let Event::TextInput(_) = event {
+        let (active_layers, barrier_root) = self.active_input_layers();
+
+        if !self.replaying_pending_shortcut && !self.pending_shortcut.keystrokes.is_empty() {
+            if self.pending_shortcut.focus.is_some() && self.pending_shortcut.focus != self.focus {
+                self.clear_pending_shortcut(app);
+            } else if self.pending_shortcut.barrier_root != barrier_root {
+                self.clear_pending_shortcut(app);
+            }
+        }
+
+        if let Event::Timer { token } = event {
+            if !self.replaying_pending_shortcut
+                && !self.pending_shortcut.keystrokes.is_empty()
+                && self.pending_shortcut.timer == Some(*token)
+            {
+                let pending = std::mem::take(&mut self.pending_shortcut);
+                if let Some(command) = pending.fallback {
+                    app.push_effect(Effect::Command {
+                        window: self.window,
+                        command,
+                    });
+                } else {
+                    let ctx = InputContext {
+                        platform: Platform::current(),
+                        ui_has_modal: barrier_root.is_some(),
+                        focus_is_text_input: self.focus_is_text_input(),
+                    };
+                    self.replay_captured_keystrokes(app, &ctx, pending.keystrokes);
+                }
+                return;
+            }
+        }
+
+        if let Event::TextInput(text) = event {
+            if !self.replaying_pending_shortcut
+                && self.pending_shortcut.capture_next_text_input_key.is_some()
+            {
+                self.pending_shortcut.capture_next_text_input_key = None;
+                if let Some(last) = self.pending_shortcut.keystrokes.last_mut() {
+                    last.text = Some(text.clone());
+                }
+                self.suppress_text_input_until_key_up = None;
+                return;
+            }
+
             if self.suppress_text_input_until_key_up.is_some() {
                 self.suppress_text_input_until_key_up = None;
                 return;
@@ -244,11 +376,12 @@ impl UiTree {
             if self.suppress_text_input_until_key_up == Some(*key) {
                 self.suppress_text_input_until_key_up = None;
             }
+            if self.pending_shortcut.capture_next_text_input_key == Some(*key) {
+                self.pending_shortcut.capture_next_text_input_key = None;
+            }
         }
 
         let mut needs_redraw = false;
-
-        let (active_layers, barrier_root) = self.active_input_layers();
 
         if let Event::KeyDown {
             key,
@@ -256,7 +389,9 @@ impl UiTree {
             repeat,
         } = event
         {
-            if *repeat {
+            if self.replaying_pending_shortcut {
+                // Pending shortcut replay bypasses shortcut matching and sequence state.
+            } else if *repeat {
                 // MVP: avoid repeated command triggers on key repeat. Widgets still receive KeyDown.
             } else if let Some(service) = app.global::<KeymapService>() {
                 let ctx = InputContext {
@@ -264,10 +399,70 @@ impl UiTree {
                     ui_has_modal: barrier_root.is_some(),
                     focus_is_text_input: self.focus_is_text_input(),
                 };
-                if let Some(command) = service
+
+                let chord = KeyChord::new(*key, *modifiers);
+
+                if !self.pending_shortcut.keystrokes.is_empty() {
+                    self.pending_shortcut
+                        .keystrokes
+                        .push(CapturedKeystroke { chord, text: None });
+
+                    let sequence: Vec<KeyChord> = self
+                        .pending_shortcut
+                        .keystrokes
+                        .iter()
+                        .map(|s| s.chord)
+                        .collect();
+                    let matched = service.keymap.match_sequence(&ctx, &sequence);
+
+                    if matched.has_continuation {
+                        self.pending_shortcut.fallback = matched.exact.and_then(|c| c);
+                        self.pending_shortcut.focus = self.focus;
+                        self.pending_shortcut.barrier_root = barrier_root;
+                        self.pending_shortcut.capture_next_text_input_key =
+                            (self.focus_is_text_input() && !modifiers.ctrl && !modifiers.meta)
+                                .then_some(*key);
+                        self.suppress_text_input_until_key_up = Some(*key);
+                        self.schedule_pending_shortcut_timeout(app);
+                        return;
+                    }
+
+                    if let Some(Some(command)) = matched.exact {
+                        self.clear_pending_shortcut(app);
+                        self.suppress_text_input_until_key_up = Some(*key);
+                        app.push_effect(Effect::Command {
+                            window: self.window,
+                            command,
+                        });
+                        return;
+                    }
+
+                    let pending = std::mem::take(&mut self.pending_shortcut);
+                    if let Some(token) = pending.timer {
+                        app.push_effect(Effect::CancelTimer { token });
+                    }
+                    self.replay_captured_keystrokes(app, &ctx, pending.keystrokes);
+                    return;
+                }
+
+                let matched = service
                     .keymap
-                    .resolve(&ctx, KeyChord::new(*key, *modifiers))
-                {
+                    .match_sequence(&ctx, std::slice::from_ref(&chord));
+                if matched.has_continuation {
+                    self.pending_shortcut.keystrokes =
+                        vec![CapturedKeystroke { chord, text: None }];
+                    self.pending_shortcut.focus = self.focus;
+                    self.pending_shortcut.barrier_root = barrier_root;
+                    self.pending_shortcut.fallback = matched.exact.and_then(|c| c);
+                    self.pending_shortcut.capture_next_text_input_key =
+                        (self.focus_is_text_input() && !modifiers.ctrl && !modifiers.meta)
+                            .then_some(*key);
+                    self.suppress_text_input_until_key_up = Some(*key);
+                    self.schedule_pending_shortcut_timeout(app);
+                    return;
+                }
+
+                if let Some(command) = service.keymap.resolve(&ctx, chord) {
                     self.suppress_text_input_until_key_up = Some(*key);
                     app.push_effect(Effect::Command {
                         window: self.window,
@@ -403,8 +598,8 @@ impl UiTree {
         let mut needs_redraw = false;
 
         loop {
-            let (did_handle, invalidations, requested_focus, stop_propagation, parent) =
-                self.with_widget_mut(node_id, |widget, tree| {
+            let (did_handle, invalidations, requested_focus, stop_propagation, parent) = self
+                .with_widget_mut(node_id, |widget, tree| {
                     let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
                     let mut cx = CommandCx {
                         app,
@@ -485,7 +680,10 @@ impl UiTree {
             return true;
         }
 
-        let next = match self.focus.and_then(|f| focusables.iter().position(|n| *n == f)) {
+        let next = match self
+            .focus
+            .and_then(|f| focusables.iter().position(|n| *n == f))
+        {
             Some(idx) => {
                 if forward {
                     focusables[(idx + 1) % focusables.len()]
@@ -537,7 +735,12 @@ impl UiTree {
         let Some(focus) = self.focus else {
             return false;
         };
-        if self.nodes.get(focus).and_then(|n| n.widget.as_ref()).is_none() {
+        if self
+            .nodes
+            .get(focus)
+            .and_then(|n| n.widget.as_ref())
+            .is_none()
+        {
             return false;
         }
         self.with_widget_mut(focus, |widget, _tree| widget.is_text_input())
@@ -626,7 +829,9 @@ impl UiTree {
         let text_ptr: *mut dyn TextService = text;
         let sf = scale_factor;
         let mut layout_child = move |child: NodeId, bounds: Rect| -> Size {
-            unsafe { (&mut *tree_ptr).layout_node(&mut *app_ptr, &mut *text_ptr, child, bounds, sf) }
+            unsafe {
+                (&mut *tree_ptr).layout_node(&mut *app_ptr, &mut *text_ptr, child, bounds, sf)
+            }
         };
 
         let size = self.with_widget_mut(node, |widget, tree| {

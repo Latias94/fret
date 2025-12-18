@@ -179,6 +179,10 @@ Cons:
 - AltGr is tracked explicitly at the runner boundary:
   - `crates/fret-runner-winit-wgpu/src/runner.rs` treats `NamedKey::AltGraph` as `Modifiers.alt_gr`,
     and normalizes away `ctrl/alt` while `alt_gr` is held.
+- Keymap v2 parsing is supported (single-chord and sequences):
+  - `crates/fret-app/src/keymap.rs`
+- Pending bindings are implemented as a window-scoped state machine in the UI dispatcher:
+  - `crates/fret-ui/src/tree.rs` (`PendingShortcut`, timeout, replay via synthetic events).
 - When implementing v2, prefer a single “key dispatcher” module that produces:
   - `Command` dispatch,
   - `Pending` updates,

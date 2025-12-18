@@ -1,0 +1,36 @@
+{
+  "keymap_version": 2,
+  "bindings": [
+    {
+      "command": "command_palette.toggle",
+      "platform": "macos",
+      "keys": { "mods": ["meta"], "key": "KeyP" }
+    },
+    {
+      "command": "command_palette.toggle",
+      "platform": "windows",
+      "keys": { "mods": ["ctrl"], "key": "KeyP" }
+    },
+    {
+      "command": "command_palette.toggle",
+      "platform": "linux",
+      "keys": { "mods": ["ctrl"], "key": "KeyP" }
+    },
+    {
+      "command": "editor.comment_line",
+      "when": "focus.is_text_input == false",
+      "keys": [
+        { "mods": ["ctrl"], "key": "KeyK" },
+        { "mods": ["ctrl"], "key": "KeyC" }
+      ]
+    },
+    {
+      "command": "editor.uncomment_line",
+      "when": "focus.is_text_input == false",
+      "keys": [
+        { "mods": ["ctrl"], "key": "KeyK" },
+        { "mods": ["ctrl"], "key": "KeyU" }
+      ]
+    }
+  ]
+}

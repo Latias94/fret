@@ -67,6 +67,37 @@ V1 supports **single-stroke** shortcuts (one key + modifiers).
 The schema reserves a path for future multi-stroke chords (e.g. `Ctrl+K, Ctrl+C`) by allowing `keys`
 to become either a single object or an array in a future version.
 
+### 3b) Binding shape v2 (multi-stroke sequences)
+
+V2 supports editor-style multi-stroke bindings (ADR 0043):
+
+- `"keymap_version": 2`
+- `binding.keys` may be an array of key specs (each spec is the same `{ "mods": [...], "key": "KeyX" }` shape as v1).
+
+Example:
+
+```json
+{
+  "keymap_version": 2,
+  "bindings": [
+    {
+      "command": "editor.comment_line",
+      "when": "focus.is_text_input == false",
+      "keys": [
+        { "mods": ["ctrl"], "key": "KeyK" },
+        { "mods": ["ctrl"], "key": "KeyC" }
+      ]
+    }
+  ]
+}
+```
+
+Semantics:
+
+- “Last-wins” resolution applies to the **full sequence** (not each chord independently).
+- Pending prefixes are handled by the UI dispatcher (timeout + replay), not by platform backends.
+  See `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`.
+
 ### 4) Platform targeting
 
 Bindings may optionally target specific platforms:

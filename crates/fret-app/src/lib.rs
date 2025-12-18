@@ -11,10 +11,10 @@ pub use app::{
 };
 
 pub use drag::DragSession;
+pub use keymap::{BindingV1, KeySpecV1, KeymapFileV1};
 pub use keymap::{
     DefaultKeybinding, InputContext, KeyChord, Keymap, KeymapError, KeymapService, Platform,
 };
-pub use keymap::{format_chord};
-pub use keymap::{BindingV1, KeySpecV1, KeymapFileV1};
+pub use keymap::{format_chord, format_sequence};
 pub use menu::{Menu, MenuBar, MenuItem};
 pub use when_expr::WhenExpr;

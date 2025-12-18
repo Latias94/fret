@@ -1,7 +1,10 @@
 use crate::{App, CommandId};
 use fret_core::{KeyCode, Modifiers};
 use serde::Deserialize;
-use std::{collections::{HashMap, HashSet}, path::Path};
+use std::{
+    collections::{HashMap, HashSet},
+    path::Path,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Platform {
@@ -92,7 +95,7 @@ impl PlatformFilter {
 #[derive(Debug, Clone)]
 pub struct Binding {
     pub platform: PlatformFilter,
-    pub chord: KeyChord,
+    pub sequence: Vec<KeyChord>,
     pub when: Option<crate::when_expr::WhenExpr>,
     pub command: Option<CommandId>,
 }
@@ -109,6 +112,15 @@ pub struct Keymap {
     bindings: Vec<Binding>,
 }
 
+#[derive(Debug, Clone)]
+pub struct SequenceMatch {
+    /// `Some(Some(cmd))` if an exact binding exists and is bound, `Some(None)` if explicitly unbound,
+    /// and `None` if no exact binding exists under the provided context.
+    pub exact: Option<Option<CommandId>>,
+    /// True if any longer binding exists that starts with the provided sequence under the same context.
+    pub has_continuation: bool,
+}
+
 impl Keymap {
     pub fn empty() -> Self {
         Self::default()
@@ -122,7 +134,7 @@ impl Keymap {
     /// explicitly unbound and resolution stops.
     pub fn resolve(&self, ctx: &InputContext, chord: KeyChord) -> Option<CommandId> {
         for b in self.bindings.iter().rev() {
-            if b.chord != chord {
+            if b.sequence.as_slice() != [chord] {
                 continue;
             }
             if !b.platform.matches(ctx.platform) {
@@ -138,6 +150,55 @@ impl Keymap {
         None
     }
 
+    /// Sequence matching helper used by pending multi-stroke bindings (ADR 0043).
+    pub fn match_sequence(&self, ctx: &InputContext, sequence: &[KeyChord]) -> SequenceMatch {
+        let mut exact: Option<Option<CommandId>> = None;
+        let mut has_continuation = false;
+
+        // Track full sequences we've already evaluated to preserve last-wins semantics for
+        // continuations and exact matches under the current context.
+        let mut seen: HashSet<Vec<KeyChord>> = HashSet::new();
+
+        for b in self.bindings.iter().rev() {
+            if !b.platform.matches(ctx.platform) {
+                continue;
+            }
+            if let Some(expr) = b.when.as_ref() {
+                if !expr.eval(ctx) {
+                    continue;
+                }
+            }
+
+            if b.sequence.len() < sequence.len() {
+                continue;
+            }
+            if b.sequence.get(0..sequence.len()) != Some(sequence) {
+                continue;
+            }
+
+            if !seen.insert(b.sequence.clone()) {
+                continue;
+            }
+
+            if b.sequence.len() == sequence.len() {
+                if exact.is_none() {
+                    exact = Some(b.command.clone());
+                }
+            } else if b.command.is_some() {
+                has_continuation = true;
+            }
+
+            if exact.is_some() && has_continuation {
+                break;
+            }
+        }
+
+        SequenceMatch {
+            exact,
+            has_continuation,
+        }
+    }
+
     pub fn extend(&mut self, other: Keymap) {
         self.bindings.extend(other.bindings);
     }
@@ -151,9 +212,19 @@ impl Keymap {
         ctx: &InputContext,
         command: &CommandId,
     ) -> Option<KeyChord> {
-        let mut chord_order: Vec<KeyChord> = Vec::new();
-        let mut seen: HashSet<KeyChord> = HashSet::new();
-        let mut effective: HashMap<KeyChord, Option<CommandId>> = HashMap::new();
+        self.shortcut_for_command_sequence(ctx, command)
+            .filter(|seq| seq.len() == 1)
+            .and_then(|seq| seq.first().copied())
+    }
+
+    pub fn shortcut_for_command_sequence(
+        &self,
+        ctx: &InputContext,
+        command: &CommandId,
+    ) -> Option<Vec<KeyChord>> {
+        let mut order: Vec<Vec<KeyChord>> = Vec::new();
+        let mut seen: HashSet<Vec<KeyChord>> = HashSet::new();
+        let mut effective: HashMap<Vec<KeyChord>, Option<CommandId>> = HashMap::new();
 
         for b in &self.bindings {
             if !b.platform.matches(ctx.platform) {
@@ -164,15 +235,18 @@ impl Keymap {
                     continue;
                 }
             }
-            if seen.insert(b.chord) {
-                chord_order.push(b.chord);
+            if seen.insert(b.sequence.clone()) {
+                order.push(b.sequence.clone());
             }
-            effective.insert(b.chord, b.command.clone());
+            effective.insert(b.sequence.clone(), b.command.clone());
         }
 
-        for chord in chord_order {
-            if effective.get(&chord).is_some_and(|c| c.as_ref() == Some(command)) {
-                return Some(chord);
+        for seq in order {
+            if effective
+                .get(&seq)
+                .is_some_and(|c| c.as_ref() == Some(command))
+            {
+                return Some(seq);
             }
         }
         None
@@ -180,9 +254,9 @@ impl Keymap {
 
     pub fn from_file(path: &Path) -> Result<Self, KeymapError> {
         let bytes = std::fs::read(path).map_err(|source| KeymapError::ReadFailed { source })?;
-        let parsed: KeymapFileV1 =
+        let parsed: KeymapFileAny =
             serde_json::from_slice(&bytes).map_err(|source| KeymapError::ParseFailed { source })?;
-        Self::from_v1(parsed)
+        Self::from_any(parsed)
     }
 
     pub fn from_v1(file: KeymapFileV1) -> Result<Self, KeymapError> {
@@ -198,7 +272,12 @@ impl Keymap {
                 "windows" => PlatformFilter::Windows,
                 "linux" => PlatformFilter::Linux,
                 "web" => PlatformFilter::Web,
-                other => return Err(KeymapError::UnknownPlatform { index, value: other.into() }),
+                other => {
+                    return Err(KeymapError::UnknownPlatform {
+                        index,
+                        value: other.into(),
+                    });
+                }
             };
 
             let chord = parse_keys(index, b.keys)?;
@@ -219,13 +298,118 @@ impl Keymap {
 
             out.push_binding(Binding {
                 platform,
-                chord,
+                sequence: vec![chord],
                 when,
                 command,
             });
         }
 
         Ok(out)
+    }
+
+    fn from_any(file: KeymapFileAny) -> Result<Self, KeymapError> {
+        match file.keymap_version {
+            1 => {
+                let mut out = Keymap::empty();
+                for (index, b) in file.bindings.into_iter().enumerate() {
+                    let platform = match b.platform.as_deref().unwrap_or("all") {
+                        "all" => PlatformFilter::All,
+                        "macos" => PlatformFilter::Macos,
+                        "windows" => PlatformFilter::Windows,
+                        "linux" => PlatformFilter::Linux,
+                        "web" => PlatformFilter::Web,
+                        other => {
+                            return Err(KeymapError::UnknownPlatform {
+                                index,
+                                value: other.into(),
+                            });
+                        }
+                    };
+
+                    let KeysAny::Single(keys) = b.keys else {
+                        return Err(KeymapError::UnsupportedVersion(1));
+                    };
+
+                    let chord = parse_keys(index, keys)?;
+
+                    let when = if let Some(when) = b.when.as_deref() {
+                        Some(
+                            crate::when_expr::WhenExpr::parse(when)
+                                .map_err(|e| KeymapError::WhenParseFailed { index, error: e })?,
+                        )
+                    } else {
+                        None
+                    };
+
+                    let command = match b.command {
+                        Some(cmd) => Some(CommandId::new(cmd)),
+                        None => None,
+                    };
+
+                    out.push_binding(Binding {
+                        platform,
+                        sequence: vec![chord],
+                        when,
+                        command,
+                    });
+                }
+                Ok(out)
+            }
+            2 => {
+                let mut out = Keymap::empty();
+                for (index, b) in file.bindings.into_iter().enumerate() {
+                    let platform = match b.platform.as_deref().unwrap_or("all") {
+                        "all" => PlatformFilter::All,
+                        "macos" => PlatformFilter::Macos,
+                        "windows" => PlatformFilter::Windows,
+                        "linux" => PlatformFilter::Linux,
+                        "web" => PlatformFilter::Web,
+                        other => {
+                            return Err(KeymapError::UnknownPlatform {
+                                index,
+                                value: other.into(),
+                            });
+                        }
+                    };
+
+                    let key_specs = match b.keys {
+                        KeysAny::Single(keys) => vec![keys],
+                        KeysAny::Sequence(seq) => seq,
+                    };
+                    if key_specs.is_empty() {
+                        return Err(KeymapError::EmptyKeys { index });
+                    }
+
+                    let mut sequence: Vec<KeyChord> = Vec::with_capacity(key_specs.len());
+                    for keys in key_specs {
+                        sequence.push(parse_keys(index, keys)?);
+                    }
+
+                    let when = if let Some(when) = b.when.as_deref() {
+                        Some(
+                            crate::when_expr::WhenExpr::parse(when)
+                                .map_err(|e| KeymapError::WhenParseFailed { index, error: e })?,
+                        )
+                    } else {
+                        None
+                    };
+
+                    let command = match b.command {
+                        Some(cmd) => Some(CommandId::new(cmd)),
+                        None => None,
+                    };
+
+                    out.push_binding(Binding {
+                        platform,
+                        sequence,
+                        when,
+                        command,
+                    });
+                }
+                Ok(out)
+            }
+            other => Err(KeymapError::UnsupportedVersion(other)),
+        }
     }
 }
 
@@ -274,6 +458,17 @@ pub fn format_chord(platform: Platform, chord: KeyChord) -> String {
         return key;
     }
     format!("{}+{}", parts.join("+"), key)
+}
+
+pub fn format_sequence(platform: Platform, sequence: &[KeyChord]) -> String {
+    let mut out = String::new();
+    for (index, chord) in sequence.iter().copied().enumerate() {
+        if index > 0 {
+            out.push(' ');
+        }
+        out.push_str(&format_chord(platform, chord));
+    }
+    out
 }
 
 fn key_label(key: KeyCode) -> &'static str {
@@ -381,7 +576,7 @@ fn parse_keys(index: usize, keys: KeySpecV1) -> Result<KeyChord, KeymapError> {
                 return Err(KeymapError::UnknownModifier {
                     index,
                     value: other.into(),
-                })
+                });
             }
         }
     }
@@ -402,6 +597,8 @@ pub enum KeymapError {
     UnknownKeyToken { index: usize, token: String },
     #[error("unknown modifier at binding[{index}]: {value}")]
     UnknownModifier { index: usize, value: String },
+    #[error("empty keys sequence at binding[{index}]")]
+    EmptyKeys { index: usize },
     #[error("failed to parse when at binding[{index}]: {error}")]
     WhenParseFailed { index: usize, error: String },
 }
@@ -424,6 +621,27 @@ pub struct BindingV1 {
 pub struct KeySpecV1 {
     pub mods: Vec<String>,
     pub key: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct KeymapFileAny {
+    pub keymap_version: u32,
+    pub bindings: Vec<BindingAny>,
+}
+
+#[derive(Debug, Deserialize)]
+struct BindingAny {
+    pub command: Option<String>,
+    pub platform: Option<String>,
+    pub when: Option<String>,
+    pub keys: KeysAny,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum KeysAny {
+    Single(KeySpecV1),
+    Sequence(Vec<KeySpecV1>),
 }
 
 #[derive(Debug, Default)]
