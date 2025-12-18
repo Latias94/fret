@@ -216,6 +216,7 @@ pub struct WinitRunner<D: WinitDriver> {
 
     raf_windows: HashSet<fret_core::AppWindowId>,
     timers: HashMap<fret_core::TimerToken, TimerEntry>,
+    clipboard: Option<arboard::Clipboard>,
 }
 
 #[derive(Debug, Clone)]
@@ -241,6 +242,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             frame_id: fret_core::FrameId::default(),
             raf_windows: HashSet::new(),
             timers: HashMap::new(),
+            clipboard: arboard::Clipboard::new().ok(),
         }
     }
 
@@ -466,21 +468,41 @@ impl<D: WinitDriver> WinitRunner<D> {
                     Effect::CancelTimer { token } => {
                         self.timers.remove(&token);
                     }
-                    Effect::Command { window, command } => {
-                        match window {
-                            Some(window) => {
-                                if let Some(state) = self.windows.get_mut(window) {
-                                    self.driver.handle_command(
-                                        &mut self.app,
-                                        window,
-                                        &mut state.user,
-                                        command,
-                                    );
-                                }
+                    Effect::Command { window, command } => match window {
+                        Some(window) => {
+                            if let Some(state) = self.windows.get_mut(window) {
+                                self.driver.handle_command(
+                                    &mut self.app,
+                                    window,
+                                    &mut state.user,
+                                    command,
+                                );
                             }
-                            None => {
-                                self.driver.handle_global_command(&mut self.app, command);
-                            }
+                        }
+                        None => {
+                            self.driver.handle_global_command(&mut self.app, command);
+                        }
+                    },
+                    Effect::ClipboardSetText { text } => {
+                        let Some(clipboard) = self.clipboard.as_mut() else {
+                            continue;
+                        };
+                        if let Err(err) = clipboard.set_text(text) {
+                            tracing::debug!(?err, "failed to set clipboard text");
+                        }
+                    }
+                    Effect::ClipboardGetText { window } => {
+                        let Some(text) = self.clipboard.as_mut().and_then(|cb| cb.get_text().ok())
+                        else {
+                            continue;
+                        };
+                        if let Some(state) = self.windows.get_mut(window) {
+                            self.driver.handle_event(
+                                &mut self.app,
+                                window,
+                                &mut state.user,
+                                &Event::ClipboardText(text),
+                            );
                         }
                     }
                     Effect::ViewportInput(event) => {

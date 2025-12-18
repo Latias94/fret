@@ -152,8 +152,8 @@ Clipboard is modeled as a platform capability (app-scoped service):
 
 Clipboard access is effect-driven to keep UI code platform-agnostic:
 
-- `Effect::ClipboardSetText(String)`
-- `Effect::ClipboardGetText(oneshot)` (or callback into app/model update)
+- `Effect::ClipboardSetText { text: String }`
+- `Effect::ClipboardGetText { window: AppWindowId }` (delivers `Event::ClipboardText(String)` back into the window event stream)
 
 ### 7) Modal overlays can block drops and input beneath
 

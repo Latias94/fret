@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+arboard.workspace = true
 fret-app = { path = "../fret-app" }
 fret-core = { path = "../fret-core" }
 fret-render = { path = "../fret-render" }
@@ -13,4 +14,3 @@ thiserror.workspace = true
 tracing.workspace = true
 wgpu.workspace = true
 winit.workspace = true
-

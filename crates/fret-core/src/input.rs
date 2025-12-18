@@ -322,6 +322,8 @@ pub enum Event {
         modifiers: Modifiers,
     },
     TextInput(String),
+    /// Clipboard text payload delivered to the focused widget (typically as the result of a paste request).
+    ClipboardText(String),
     WindowScaleFactorChanged(f32),
     WindowMoved {
         x: i32,

@@ -19,5 +19,6 @@ thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 cosmic-text = "0.14.0"
+arboard = "3.4.1"
 wgpu = "28.0.0"
 winit = "0.30.12"

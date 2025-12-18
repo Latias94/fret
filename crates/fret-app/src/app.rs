@@ -39,6 +39,12 @@ pub enum Effect {
         window: Option<AppWindowId>,
         command: CommandId,
     },
+    ClipboardSetText {
+        text: String,
+    },
+    ClipboardGetText {
+        window: AppWindowId,
+    },
     ViewportInput(fret_core::ViewportInputEvent),
     Dock(fret_core::DockOp),
     ImeAllow {
@@ -556,7 +562,10 @@ impl CommandMeta {
         self
     }
 
-    pub fn with_keywords(mut self, keywords: impl IntoIterator<Item = impl Into<Arc<str>>>) -> Self {
+    pub fn with_keywords(
+        mut self,
+        keywords: impl IntoIterator<Item = impl Into<Arc<str>>>,
+    ) -> Self {
         self.keywords = keywords.into_iter().map(Into::into).collect();
         self
     }

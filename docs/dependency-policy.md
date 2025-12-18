@@ -31,3 +31,9 @@ desktop-first now, wasm/WebGPU later, and a clean split between UI contracts and
 
 - `serde`: shared derive for versioned on-disk formats (layout/keymap/settings).
 - `serde_json`: JSON I/O at app/demo boundaries (aligns with ADR 0014).
+
+## Platform Capabilities
+
+- Clipboard access is implemented at the runner boundary (not in UI/core):
+  - `arboard` is used by `fret-runner-winit-wgpu` to read/write clipboard text,
+  - UI requests clipboard access via `Effect`s (see ADR 0041).
