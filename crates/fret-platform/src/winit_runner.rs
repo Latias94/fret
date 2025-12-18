@@ -20,6 +20,12 @@ use winit::{
 pub struct WinitRunnerConfig {
     pub main_window_title: String,
     pub main_window_size: LogicalSize<f64>,
+    pub default_window_title: String,
+    pub default_window_size: LogicalSize<f64>,
+    /// Physical pixel offset applied when positioning a new window from an anchor point.
+    pub new_window_anchor_offset: (f64, f64),
+    /// When the main window requests close, exit the event loop.
+    pub exit_on_main_window_close: bool,
     pub frame_interval: Duration,
     pub activity_timeout: Duration,
     pub clear_color: ClearColor,
@@ -30,10 +36,24 @@ impl Default for WinitRunnerConfig {
         Self {
             main_window_title: "fret".to_string(),
             main_window_size: LogicalSize::new(1280.0, 720.0),
+            default_window_title: "fret".to_string(),
+            default_window_size: LogicalSize::new(640.0, 480.0),
+            new_window_anchor_offset: (-40.0, -20.0),
+            exit_on_main_window_close: true,
             frame_interval: Duration::from_millis(8),
             activity_timeout: Duration::from_secs(1),
             clear_color: ClearColor::default(),
         }
+    }
+}
+
+impl WinitRunnerConfig {
+    fn main_window_spec(&self) -> WindowCreateSpec {
+        WindowCreateSpec::new(self.main_window_title.clone(), self.main_window_size)
+    }
+
+    fn default_window_spec(&self) -> WindowCreateSpec {
+        WindowCreateSpec::new(self.default_window_title.clone(), self.default_window_size)
     }
 }
 
@@ -220,6 +240,10 @@ impl<D: WinitDriver> WinitRunner<D> {
             self.winit_to_app.remove(&state.window.id());
         }
         self.keep_alive_deadlines.remove(&window);
+
+        if Some(window) == self.main_window {
+            self.main_window = None;
+        }
     }
 
     fn compute_window_position_from_anchor(
@@ -230,9 +254,9 @@ impl<D: WinitDriver> WinitRunner<D> {
         let outer = anchor_state.window.outer_position().ok()?;
         let scale = anchor_state.window.scale_factor();
 
-        // Very small heuristic offset to keep new windows from obscuring the cursor.
-        let x = outer.x as f64 + anchor.position.x.0 as f64 * scale - 40.0;
-        let y = outer.y as f64 + anchor.position.y.0 as f64 * scale - 20.0;
+        let (ox, oy) = self.config.new_window_anchor_offset;
+        let x = outer.x as f64 + anchor.position.x.0 as f64 * scale + ox;
+        let y = outer.y as f64 + anchor.position.y.0 as f64 * scale + oy;
         Some(PhysicalPosition::new(x as i32, y as i32).into())
     }
 
@@ -244,7 +268,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         let mut spec = self
             .driver
             .window_create_spec(&mut self.app, request)
-            .unwrap_or_else(|| WindowCreateSpec::new("fret", LogicalSize::new(640.0, 480.0)));
+            .unwrap_or_else(|| self.config.default_window_spec());
 
         if spec.position.is_none() {
             if let Some(anchor) = request.anchor {
@@ -274,10 +298,14 @@ impl<D: WinitDriver> WinitRunner<D> {
                 Effect::Command(_) => {}
                 Effect::Window(req) => match req {
                     WindowRequest::Close(window) => {
-                        if Some(window) == self.main_window {
+                        let is_main = Some(window) == self.main_window;
+                        if is_main && self.config.exit_on_main_window_close {
                             event_loop.exit();
-                        } else {
-                            self.close_window(window);
+                            continue;
+                        }
+                        self.close_window(window);
+                        if is_main && self.windows.is_empty() {
+                            event_loop.exit();
                         }
                     }
                     WindowRequest::Create(create) => {
@@ -314,7 +342,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
             return;
         }
 
-        let spec = WindowCreateSpec::new(self.config.main_window_title.clone(), self.config.main_window_size);
+        let spec = self.config.main_window_spec();
         let window = match self.create_os_window(event_loop, spec) {
             Ok(w) => w,
             Err(_) => return,
@@ -350,10 +378,14 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
 
         match event {
             WindowEvent::CloseRequested => {
-                if Some(app_window) == self.main_window {
+                let is_main = Some(app_window) == self.main_window;
+                if is_main && self.config.exit_on_main_window_close {
                     event_loop.exit();
-                } else {
-                    self.close_window(app_window);
+                    return;
+                }
+                self.close_window(app_window);
+                if is_main && self.windows.is_empty() {
+                    event_loop.exit();
                 }
             }
             WindowEvent::ModifiersChanged(mods) => {
