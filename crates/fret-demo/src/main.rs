@@ -11,7 +11,7 @@ use winit::event_loop::EventLoop;
 
 struct DemoWindowState {
     ui: UiTree,
-    root: fret_core::NodeId,
+    modal_layer: fret_ui::UiLayerId,
 }
 
 #[derive(Default)]
@@ -247,17 +247,32 @@ impl WinitDriver for DemoDriver {
         _app: &mut App,
         window: fret_core::AppWindowId,
     ) -> Self::WindowState {
-        let (ui, root) = build_demo_ui(window, DemoUiConfig::default());
-        Self::WindowState { ui, root }
+        let (ui, modal_layer) = build_demo_ui(window, DemoUiConfig::default());
+        Self::WindowState { ui, modal_layer }
     }
 
     fn handle_event(
         &mut self,
         app: &mut App,
-        _window: fret_core::AppWindowId,
+        window: fret_core::AppWindowId,
         state: &mut Self::WindowState,
         event: &fret_core::Event,
     ) {
+        if let fret_core::Event::Pointer(pe) = event {
+            if let fret_core::PointerEvent::Down { button, .. } = pe {
+                if state.ui.is_layer_visible(state.modal_layer) {
+                    state.ui.set_layer_visible(state.modal_layer, false);
+                    app.request_redraw(window);
+                    return;
+                }
+
+                if *button == fret_core::MouseButton::Right {
+                    state.ui.set_layer_visible(state.modal_layer, true);
+                    app.request_redraw(window);
+                    return;
+                }
+            }
+        }
         state.ui.dispatch_event(app, event);
     }
 
@@ -287,8 +302,8 @@ impl WinitDriver for DemoDriver {
         scene: &mut Scene,
     ) {
         scene.clear();
-        let _ = state.ui.layout_in(app, state.root, bounds);
-        state.ui.paint(app, state.root, bounds, scene);
+        state.ui.layout_all(app, bounds);
+        state.ui.paint_all(app, bounds, scene);
     }
 
     fn window_create_spec(

@@ -42,6 +42,11 @@ Focus, capture, and modal blocking rules are defined in the UI runtime:
 - Pointer capture remains authoritative.
 - Modal roots can block events from reaching lower roots, except for explicitly allowed pass-through.
 
+Implementation note (MVP): the UI runtime models modal blocking as a per-root flag
+(`blocks_underlay_input`). When a blocking root is visible, hit-testing is restricted to that root
+and any roots above it; if no widget is hit, the blocking root still receives the pointer event so
+it can implement “click outside to close”.
+
 ### 3) Rendering order matches root order
 
 The display list is built so that overlay roots paint after base roots, preserving expected composition.

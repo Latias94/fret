@@ -1,5 +1,5 @@
 use fret_core::{AppWindowId, Axis, Color, Px};
-use fret_ui::{Column, DockSpace, FixedPanel, Scroll, Split, UiTree};
+use fret_ui::{ColoredPanel, Column, DockSpace, FixedPanel, Scroll, Split, UiLayerId, UiTree};
 
 pub struct DemoUiConfig {
     pub split_fraction: f32,
@@ -15,7 +15,7 @@ impl Default for DemoUiConfig {
     }
 }
 
-pub fn build_demo_ui(window: AppWindowId, config: DemoUiConfig) -> (UiTree, fret_core::NodeId) {
+pub fn build_demo_ui(window: AppWindowId, config: DemoUiConfig) -> (UiTree, UiLayerId) {
     let mut ui = UiTree::new();
     ui.set_window(window);
 
@@ -33,7 +33,16 @@ pub fn build_demo_ui(window: AppWindowId, config: DemoUiConfig) -> (UiTree, fret
 
     populate_property_panel(&mut ui, column, config.property_count);
 
-    (ui, root)
+    let modal_root = ui.create_node(ColoredPanel::new(Color {
+        r: 0.02,
+        g: 0.02,
+        b: 0.02,
+        a: 0.45,
+    }));
+    let modal_layer = ui.push_overlay_root(modal_root, true);
+    ui.set_layer_visible(modal_layer, false);
+
+    (ui, modal_layer)
 }
 
 fn populate_property_panel(ui: &mut UiTree, parent: fret_core::NodeId, count: usize) {

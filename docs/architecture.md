@@ -19,6 +19,14 @@ See `docs/adr/0027-framework-scope-and-responsibilities.md`.
 
 Framework cross-crate contracts are tracked as ADRs:
 
+Current focus (Proposed ADRs we want to decide early to avoid later rewrites):
+
+- `docs/adr/0028-declarative-elements-and-element-state.md` (declarative/composable UI model)
+- `docs/adr/0029-text-pipeline-and-atlas-strategy.md` (text shaping/atlas strategy)
+- `docs/adr/0030-shape-rendering-and-sdf-semantics.md` (shape semantics over SDF)
+- `docs/adr/0031-app-owned-models-and-leasing-updates.md` (ownership + borrow-friendly updates)
+- `docs/adr/0032-style-tokens-and-theme-resolution.md` (typed theming and style resolution)
+
 - `docs/adr/0001-app-effects.md`
 - `docs/adr/0002-display-list.md`
 - `docs/adr/0003-platform-boundary.md`
@@ -44,6 +52,11 @@ Framework cross-crate contracts are tracked as ADRs:
 - `docs/adr/0023-command-metadata-menus-and-palette.md`
 - `docs/adr/0025-viewport-input-forwarding.md`
 - `docs/adr/0027-framework-scope-and-responsibilities.md`
+- `docs/adr/0028-declarative-elements-and-element-state.md`
+- `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
+- `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
+- `docs/adr/0031-app-owned-models-and-leasing-updates.md`
+- `docs/adr/0032-style-tokens-and-theme-resolution.md`
 
 Editor-application notes (not framework commitments) live as deferred ADRs:
 
@@ -110,6 +123,8 @@ Editors are long-lived, complex, and stateful. Retained mode provides:
 
 - The UI is a tree of nodes with stable IDs.
 - Each window may be composed from multiple roots (base UI + overlays/popups/modals) with an explicit z-order. (ADR 0011)
+  - Roots are layered in the UI runtime and painted in root order.
+  - Modal roots can block input from reaching lower roots.
 - Each node has:
   - layout state (rect, constraints, last measured size),
   - event state (hover, focus, capture),

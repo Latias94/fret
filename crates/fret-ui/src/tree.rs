@@ -2,6 +2,7 @@ use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 use fret_app::App;
 use fret_core::{AppWindowId, Event, NodeId, Point, PointerEvent, Rect, Scene, Size};
 use slotmap::SlotMap;
+use std::collections::HashMap;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct InvalidationFlags {
@@ -24,6 +25,17 @@ impl InvalidationFlags {
         self.paint = false;
         self.hit_test = false;
     }
+}
+
+slotmap::new_key_type! {
+    pub struct UiLayerId;
+}
+
+#[derive(Debug, Clone)]
+struct UiLayer {
+    root: NodeId,
+    visible: bool,
+    blocks_underlay_input: bool,
 }
 
 pub struct Node {
@@ -55,7 +67,10 @@ impl Node {
 #[derive(Default)]
 pub struct UiTree {
     nodes: SlotMap<NodeId, Node>,
-    roots: Vec<NodeId>,
+    layers: SlotMap<UiLayerId, UiLayer>,
+    layer_order: Vec<UiLayerId>,
+    root_to_layer: HashMap<NodeId, UiLayerId>,
+    base_layer: Option<UiLayerId>,
     focus: Option<NodeId>,
     captured: Option<NodeId>,
     window: Option<AppWindowId>,
@@ -74,10 +89,72 @@ impl UiTree {
         self.nodes.insert(Node::new(widget))
     }
 
-    pub fn set_root(&mut self, root: NodeId) {
-        if !self.roots.contains(&root) {
-            self.roots.push(root);
+    pub fn set_base_root(&mut self, root: NodeId) -> UiLayerId {
+        if let Some(id) = self.base_layer {
+            self.update_layer_root(id, root);
+            return id;
         }
+
+        let id = self.layers.insert(UiLayer {
+            root,
+            visible: true,
+            blocks_underlay_input: false,
+        });
+        self.root_to_layer.insert(root, id);
+        self.layer_order.insert(0, id);
+        self.base_layer = Some(id);
+        id
+    }
+
+    pub fn push_overlay_root(&mut self, root: NodeId, blocks_underlay_input: bool) -> UiLayerId {
+        let id = self.layers.insert(UiLayer {
+            root,
+            visible: true,
+            blocks_underlay_input,
+        });
+        self.root_to_layer.insert(root, id);
+        self.layer_order.push(id);
+        id
+    }
+
+    pub fn set_layer_visible(&mut self, layer: UiLayerId, visible: bool) {
+        let Some(l) = self.layers.get_mut(layer) else {
+            return;
+        };
+        l.visible = visible;
+
+        if !visible {
+            if self
+                .captured
+                .is_some_and(|n| self.node_layer(n).is_some_and(|lid| lid == layer))
+            {
+                self.captured = None;
+            }
+            if self
+                .focus
+                .is_some_and(|n| self.node_layer(n).is_some_and(|lid| lid == layer))
+            {
+                self.focus = None;
+            }
+        }
+    }
+
+    pub fn is_layer_visible(&self, layer: UiLayerId) -> bool {
+        self.layers.get(layer).is_some_and(|l| l.visible)
+    }
+
+    fn update_layer_root(&mut self, layer: UiLayerId, root: NodeId) {
+        let Some(l) = self.layers.get_mut(layer) else {
+            return;
+        };
+
+        self.root_to_layer.remove(&l.root);
+        l.root = root;
+        self.root_to_layer.insert(root, layer);
+    }
+
+    pub fn set_root(&mut self, root: NodeId) {
+        let _ = self.set_base_root(root);
     }
 
     pub fn add_child(&mut self, parent: NodeId, child: NodeId) {
@@ -92,18 +169,60 @@ impl UiTree {
         }
     }
 
+    pub fn layout_all(&mut self, app: &mut App, bounds: Rect) {
+        let roots: Vec<NodeId> = self
+            .visible_layers_in_paint_order()
+            .map(|layer| self.layers[layer].root)
+            .collect();
+        for root in roots {
+            let _ = self.layout_in(app, root, bounds);
+        }
+    }
+
+    pub fn paint_all(&mut self, app: &mut App, bounds: Rect, scene: &mut Scene) {
+        let roots: Vec<NodeId> = self
+            .visible_layers_in_paint_order()
+            .map(|layer| self.layers[layer].root)
+            .collect();
+        for root in roots {
+            self.paint(app, root, bounds, scene);
+        }
+    }
+
     pub fn dispatch_event(&mut self, app: &mut App, event: &Event) {
-        let root = self.roots.first().copied();
-        let Some(root) = root else {
+        let Some(base_root) = self
+            .base_layer
+            .and_then(|id| self.layers.get(id).map(|l| l.root))
+        else {
             return;
         };
+
+        let (active_layers, barrier_root) = self.active_input_layers();
+
+        if self
+            .captured
+            .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
+        {
+            self.captured = None;
+        }
+        if self
+            .focus
+            .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
+        {
+            self.focus = None;
+        }
+
+        let default_root = barrier_root.unwrap_or(base_root);
 
         let target = if let Some(captured) = self.captured {
             Some(captured)
         } else if let Event::Pointer(pe) = event {
-            self.hit_test(root, pointer_position(pe)).or(Some(root))
+            let pos = pointer_position(pe);
+            self.hit_test_layers(&active_layers, pos)
+                .or(barrier_root)
+                .or(Some(default_root))
         } else {
-            self.focus.or(Some(root))
+            self.focus.or(Some(default_root))
         };
 
         let Some(mut node_id) = target else {
@@ -290,6 +409,15 @@ impl UiTree {
         self.hit_test_node(root, position)
     }
 
+    fn hit_test_layers(&self, layers: &[NodeId], position: Point) -> Option<NodeId> {
+        for &root in layers {
+            if let Some(hit) = self.hit_test(root, position) {
+                return Some(hit);
+            }
+        }
+        None
+    }
+
     fn hit_test_node(&self, node: NodeId, position: Point) -> Option<NodeId> {
         let n = self.nodes.get(node)?;
         if !n.bounds.contains(position) {
@@ -315,6 +443,55 @@ impl UiTree {
                 break;
             }
         }
+    }
+
+    fn visible_layers_in_paint_order(&self) -> impl Iterator<Item = UiLayerId> + '_ {
+        self.layer_order
+            .iter()
+            .copied()
+            .filter(|id| self.layers.get(*id).is_some_and(|l| l.visible))
+    }
+
+    fn active_input_layers(&self) -> (Vec<NodeId>, Option<NodeId>) {
+        let visible: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+        if visible.is_empty() {
+            return (Vec::new(), None);
+        }
+
+        let mut barrier_index: Option<usize> = None;
+        for (idx, layer) in visible.iter().enumerate() {
+            if self.layers[*layer].blocks_underlay_input {
+                barrier_index = Some(idx);
+            }
+        }
+
+        let range_start = barrier_index.unwrap_or(0);
+        let mut roots: Vec<NodeId> = Vec::new();
+        for layer in visible[range_start..].iter().rev() {
+            roots.push(self.layers[*layer].root);
+        }
+
+        let barrier_root = barrier_index.map(|idx| self.layers[visible[idx]].root);
+        (roots, barrier_root)
+    }
+
+    fn node_in_any_layer(&self, node: NodeId, layer_roots: &[NodeId]) -> bool {
+        let Some(node_root) = self.node_root(node) else {
+            return false;
+        };
+        layer_roots.iter().any(|r| *r == node_root)
+    }
+
+    fn node_layer(&self, node: NodeId) -> Option<UiLayerId> {
+        let root = self.node_root(node)?;
+        self.root_to_layer.get(&root).copied()
+    }
+
+    fn node_root(&self, mut node: NodeId) -> Option<NodeId> {
+        while let Some(parent) = self.nodes.get(node).and_then(|n| n.parent) {
+            node = parent;
+        }
+        self.nodes.contains_key(node).then_some(node)
     }
 }
 
