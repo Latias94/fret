@@ -44,6 +44,10 @@ Creation is explicit:
 
 - `prepare(text, style, constraints) -> (TextBlobId, TextMetrics)`
 - `measure(text, style, constraints) -> TextMetrics` (measurement-only; default implementation may delegate to `prepare` + `release`)
+- Geometry queries on prepared text blobs (single-line first; see ADR 0045):
+  - `caret_x(blob, index) -> Px`
+  - `hit_test_x(blob, x) -> usize`
+  - `selection_rects(blob, range, out)`
 - `release(TextBlobId)` (best-effort)
 
 Scale factor note:
