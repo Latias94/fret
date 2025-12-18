@@ -64,6 +64,10 @@ Key contracts are captured in ADRs under `docs/adr/`.
 - P1: Overlay layer (gizmo, selection rect, grid) rendered by UI over the viewport.
 - P1: Input forwarding and capture rules (mouse/keyboard routed to viewport when focused).
 
+Notes:
+
+- A minimal overlay prototype exists (viewport hover crosshair in dock panels).
+
 ### M6 — Text System Upgrade
 
 - P1: Basic text for inspector/property panels (layout + glyph atlas).

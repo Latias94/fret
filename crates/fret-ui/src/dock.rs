@@ -27,11 +27,19 @@ enum DockDropTarget {
     Float { window: fret_core::AppWindowId },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct ViewportHover {
+    window: fret_core::AppWindowId,
+    panel: PanelId,
+    position: Point,
+}
+
 pub struct DockManager {
     pub graph: DockGraph,
     pub panels: SlotMap<PanelId, DockPanel>,
     drag: Option<DockDrag>,
     hover: Option<DockDropTarget>,
+    viewport_hover: Option<ViewportHover>,
 }
 
 impl Default for DockManager {
@@ -41,6 +49,7 @@ impl Default for DockManager {
             panels: SlotMap::with_key(),
             drag: None,
             hover: None,
+            viewport_hover: None,
         }
     }
 }
@@ -148,6 +157,35 @@ impl Widget for DockSpace {
                                 }
                             }
                             return;
+                        }
+
+                        if dock.drag.map_or(true, |d| !d.dragging) {
+                            let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
+                            let hovered_panel = if dock_bounds.contains(*position) {
+                                let layout = compute_layout_map(&dock.graph, root, dock_bounds);
+                                hit_test_active_viewport_panel(
+                                    &dock.graph,
+                                    &dock.panels,
+                                    &layout,
+                                    *position,
+                                )
+                            } else {
+                                None
+                            };
+
+                            let next = hovered_panel.map(|panel| ViewportHover {
+                                window: self.window,
+                                panel,
+                                position: *position,
+                            });
+
+                            if dock.viewport_hover != next {
+                                dock.viewport_hover = next;
+                                pending_redraws.push(self.window);
+                            } else if next.is_some() {
+                                dock.viewport_hover = next;
+                                pending_redraws.push(self.window);
+                            }
                         }
 
                         let Some(mut drag) = dock.drag else {
@@ -293,7 +331,7 @@ impl Widget for DockSpace {
         let layout = compute_layout_map(&dock.graph, root, dock_bounds);
 
         paint_chrome(chrome, cx.scene);
-        paint_dock(dock, &layout, cx.scene);
+        paint_dock(dock, self.window, &layout, cx.scene);
         paint_split_handles(&dock.graph, &layout, cx.scene);
 
         paint_drop_overlay(dock.hover, self.window, chrome, &layout, cx.scene);
@@ -312,6 +350,7 @@ fn compute_layout_map(
 
 fn paint_dock(
     dock: &DockManager,
+    window: fret_core::AppWindowId,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     scene: &mut Scene,
 ) {
@@ -399,6 +438,11 @@ fn paint_dock(
                     target,
                     opacity: 1.0,
                 });
+                if let Some(h) = dock.viewport_hover {
+                    if h.window == window && Some(h.panel) == active_panel {
+                        paint_viewport_crosshair(content, h.position, scene);
+                    }
+                }
                 scene.push(SceneOp::PopClip);
             } else {
                 scene.push(SceneOp::Quad {
@@ -412,6 +456,72 @@ fn paint_dock(
             }
         }
     }
+}
+
+fn paint_viewport_crosshair(content: Rect, position: Point, scene: &mut Scene) {
+    if !content.contains(position) {
+        return;
+    }
+
+    let thickness = Px(1.5);
+    let len = Px(12.0);
+    let x = position.x;
+    let y = position.y;
+
+    let h = Rect {
+        origin: Point::new(Px(x.0 - len.0), Px(y.0 - thickness.0 * 0.5)),
+        size: Size::new(Px(len.0 * 2.0), thickness),
+    };
+    let v = Rect {
+        origin: Point::new(Px(x.0 - thickness.0 * 0.5), Px(y.0 - len.0)),
+        size: Size::new(thickness, Px(len.0 * 2.0)),
+    };
+
+    let color = Color {
+        r: 0.95,
+        g: 0.95,
+        b: 0.97,
+        a: 0.65,
+    };
+
+    for rect in [h, v] {
+        scene.push(SceneOp::Quad {
+            order: fret_core::DrawOrder(4),
+            rect,
+            background: color,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: fret_core::Corners::all(Px(0.0)),
+        });
+    }
+}
+
+fn hit_test_active_viewport_panel(
+    graph: &DockGraph,
+    panels: &SlotMap<PanelId, DockPanel>,
+    layout: &std::collections::HashMap<DockNodeId, Rect>,
+    position: Point,
+) -> Option<PanelId> {
+    for (&node_id, &rect) in layout.iter() {
+        let Some(DockNode::Tabs { tabs, active }) = graph.node(node_id) else {
+            continue;
+        };
+        let Some(panel_id) = tabs.get(*active).copied() else {
+            continue;
+        };
+        let Some(panel) = panels.get(panel_id) else {
+            continue;
+        };
+        if panel.viewport.is_none() {
+            continue;
+        }
+
+        let (_tab_bar, content) = split_tab_bar(rect);
+        if content.contains(position) {
+            return Some(panel_id);
+        }
+    }
+    None
 }
 
 fn split_tab_bar(rect: Rect) -> (Rect, Rect) {
