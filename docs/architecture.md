@@ -12,6 +12,7 @@ Key cross-crate contracts are tracked as ADRs:
 - `docs/adr/0002-display-list.md`
 - `docs/adr/0003-platform-boundary.md`
 - `docs/adr/0004-resource-handles.md`
+- `docs/adr/0005-retained-ui-tree.md`
 
 ## Goals
 
@@ -76,6 +77,16 @@ Editors are long-lived, complex, and stateful. Retained mode provides:
   - `NeedsLayout`
   - `NeedsPaint`
   - `NeedsHitTestRebuild`
+
+### Layout as the source of truth
+
+Fret uses a retained `UiTree` where **layout writes node bounds**, and both hit-testing and paint follow those bounds.
+
+- Containers position children via an explicit API (e.g. `layout_in(child, rect)`).
+- Hit-testing uses the last layout bounds (not last paint).
+- Painting children should use stored bounds to stay consistent with scrolling/clipping.
+
+Reference: `docs/adr/0005-retained-ui-tree.md`.
 
 ## App Runtime: Globals, Models, and Commands
 
@@ -185,6 +196,17 @@ Each OS window owns a presentable surface (swapchain). Multi-window is required 
 - Winit is treated as an implementation detail behind `fret-platform`.
 - For `wgpu`, prefer owning the window handle (e.g. `Arc<Window>`) when creating a `Surface`, so the surface can be stored with a `'static` lifetime and managed safely.
 - Web/wasm requires creating surfaces from canvases; this should live in the platform layer.
+
+### Platform runner shape
+
+The preferred desktop integration is a `winit` runner that:
+
+- owns multi-window lifecycle and per-window `wgpu::Surface`,
+- drains `App::flush_effects()` and executes platform actions,
+- translates winit events into `fret-core` events,
+- schedules redraws (idle sleep + short burst after activity).
+
+This is implemented in `crates/fret-platform/src/winit_runner.rs` and used by `fret-demo`.
 
 ## Resource Handles & Engine Viewports
 
@@ -298,9 +320,9 @@ Key properties:
 
 ### Contexts
 
-- `EventCx`: focus, capture, request redraw, dispatch commands, open/close windows (via services).
-- `LayoutCx`: query constraints, call `layout_child`, measure text, access scale factor and theme metrics.
-- `PaintCx`: push primitives into a `Scene` (`fill_rounded_rect`, `draw_text`, `push_clip`, `draw_image`, ...).
+- `EventCx`: focus/capture, invalidation, request redraw, dispatch commands, stop propagation.
+- `LayoutCx`: container-driven child layout (`layout_in`), access to `bounds` and children.
+- `PaintCx`: pushes primitives into `Scene` and can paint children using stored bounds (e.g. `child_bounds`).
 
 ### Models
 

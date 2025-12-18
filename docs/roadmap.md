@@ -29,8 +29,10 @@ This roadmap focuses on building a retained-mode editor-grade UI framework with 
 
 - P0: `Widget` trait and node tree with stable `NodeId`.
 - P0: Invalidation flags: `NeedsLayout`, `NeedsPaint`, `NeedsHitTestRebuild`.
-- P0: Event routing: hit-test, focus, capture, bubble. (in progress; pointer events wired in demo)
-- P1: Base widgets: `Root`, `Stack`, `Flex` (taffy-backed), `Scroll`, `Split` (non-taffy).
+- P0: Event routing: hit-test, focus, capture, bubble. (prototype implemented; see ADR 0005)
+- P1: Base widgets: `Root`, `Stack`, `Split`, `Clip`, `Scroll`, `Column` (non-taffy). (prototype implemented)
+- P1: Scrollbar UX: draggable thumb + track clicking. (prototype implemented)
+- P1: Layout contract: `layout_in(child, rect)` stores child bounds for hit-test/paint. (prototype implemented)
 - P1: Theme/tokens (shadcn-inspired typed tokens).
 
 ### M3 — Display List Contract + Renderer MVP
@@ -97,6 +99,7 @@ This roadmap focuses on building a retained-mode editor-grade UI framework with 
 - Winit integration (multi-window, event loop).
 - Translates platform events -> core events.
 - Owns platform services: clipboard, drag-and-drop, IME plumbing.
+- `WinitRunner`: drains `App::flush_effects()` and owns surfaces + redraw scheduling. (prototype implemented)
 
 ### `fret-render` (P0)
 
