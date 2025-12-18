@@ -26,8 +26,13 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Text geometry queries (caret/hit-test, multiline affinity)**: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
 - **Shortcut arbitration / AltGr / multi-stroke bindings**: `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0020-focus-and-command-routing.md`
 - **Renderer (ordering, batching, shapes/SDF)**: `docs/adr/0009-renderer-ordering-and-batching.md`, `docs/adr/0030-shape-rendering-and-sdf-semantics.md`, `docs/adr/0002-display-list.md`
+- **Editor interaction affordances (selection/docking highlights)**: `docs/adr/0030-shape-rendering-and-sdf-semantics.md`, `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`, `docs/adr/0011-overlays-and-multi-root.md`
 - **Engine viewports (embedded 3D)**: `docs/adr/0010-wgpu-context-ownership.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`, `docs/adr/0025-viewport-input-forwarding.md`, `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
 - **Editor-scale performance**: `docs/adr/0042-virtualization-and-large-lists.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
+
+Note: P0 explicitly defers “dashed borders” as a general `SceneOp::Quad` feature. Implement dashed selection rectangles
+and docking drop-zone highlights as component-level overlay primitives that expand into multiple short `SceneOp::Quad`
+segments (see ADR 0030 and ADR 0039 for the rationale and semantics).
 
 ## Code Entry Points (Where To Start Reading Code)
 

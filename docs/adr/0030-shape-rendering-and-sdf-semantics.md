@@ -58,6 +58,13 @@ Implementation note:
 - The quad shader should use an `fwidth`-derived width (e.g. `aa = fwidth(sdf)`) and a smooth transition
   (e.g. `1 - smoothstep(-aa, aa, sdf)`) instead of a constant like `0.5`.
 
+Reference note:
+
+- GPUI’s quad shader uses a constant edge threshold (`antialias_threshold = 0.5`) in its implementation.
+  That can be acceptable when the SDF is defined in device-pixel units and the pipeline avoids transforms
+  that distort derivatives. Fret’s contract assumes we will need transforms/animation/variable DPI and thus
+  requires derivative-based AA to keep semantics stable across backends.
+
 ### 3) Border semantics are standardized
 
 `SceneOp::Quad` borders must have stable semantics:
@@ -96,6 +103,29 @@ Medium term:
 
 - add shader-based soft/rounded clip as a renderer feature, without changing `fret-core` semantics.
 
+### 6) Dashed borders are deferred (P0) and treated as an interaction primitive
+
+Dashed borders are common in editor UX (selection rectangles, docking drop-zone highlights, drag previews),
+but they are also a high-entropy feature: once “dashed border” becomes a general `Quad` capability, we must lock
+edge cases early (rounded corners, per-edge widths, dash phase, pixel snapping, transforms, clip interaction).
+
+Therefore, **P0 does not standardize dashed borders as part of `SceneOp::Quad` semantics**.
+
+Recommended P0 approach for editor interactions:
+
+- implement dashed rectangles as a **component-level overlay primitive** that expands into multiple `SceneOp::Quad`
+  segments (short solid rectangles) along each edge.
+- semantics are explicitly interaction-oriented and stable:
+  - dash pattern is defined in device-pixel terms (or equivalently scale-aware logical pixels),
+  - the pattern **restarts per edge** (not perimeter-continuous),
+  - no “evenly divide the perimeter” adjustment (to avoid resizing-induced pattern jumps).
+
+Future (P1+) options (not locked by this ADR):
+
+- add a dedicated stroke/path primitive (preferred) instead of bloating `Quad`, e.g. `StrokeRect`/`StrokePath`,
+  so dashed semantics live with stroke semantics rather than fill semantics.
+- implement dashed borders in the renderer (shader or geometry), inspired by GPUI’s `fs_quad` perimeter parameterization.
+
 ## Consequences
 
 - We can grow from “simple MVP quads” to a full editor visual language without reworking `SceneOp` contracts.
@@ -104,11 +134,17 @@ Medium term:
 
 ## Open Questions (To Decide Before Implementation)
 
-1) **Border alignment default**:
-   - inside vs center vs outside (and interaction with pixel snapping).
+1) **Additional border alignments (beyond inside)**:
+   - do we support center/outside alignment modes in `SceneOp::Quad`, and if so, how are they expressed without
+     coupling to a specific shader technique?
 2) **Shadow model**:
    - do we support multiple shadows per quad, and how do we batch them?
 3) **Transform interaction**:
    - how do transforms affect SDF AA and clip/shadow sampling?
 4) **Performance targets**:
    - expected primitive counts for a full editor UI and required batching strategy.
+5) **Dashed border semantics**:
+   - if we later support dashed borders as a renderer feature, do we choose:
+     - per-edge restart vs perimeter-continuous mode,
+     - phase anchoring rules (stable under resize vs evenly distributed),
+     - constraints for rounded corners and per-edge widths.

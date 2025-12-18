@@ -94,6 +94,18 @@ Regardless of authoring layer:
 - `fret-components` can be built as a cohesive ecosystem with predictable ergonomics (ADR 0037).
 - Debug tooling can show meaningful structure (components/views) even though elements are rebuilt each frame.
 
+### Interaction-first primitives live in components by default
+
+Some editor UX affordances are better modeled as **component-level primitives** that expand into existing scene ops,
+instead of immediately becoming new core primitives. This keeps `fret-core` contracts small and stable.
+
+Examples:
+
+- Dashed selection rectangles / docking drop-zone highlights: implement as a component that emits multiple short
+  `SceneOp::Quad` segments (ADR 0030), rather than requiring “dashed borders” on `SceneOp::Quad` in P0.
+  This yields stable, interaction-oriented semantics (per-edge restart, stable phase under resize) without committing
+  the renderer to a specific dashed-border shader model early.
+
 ## Alternatives Considered
 
 ### A) Retained widgets only (no element/view split)

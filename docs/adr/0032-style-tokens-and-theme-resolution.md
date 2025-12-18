@@ -52,6 +52,13 @@ Introduce a runtime service (conceptually `Theme` / `StyleSystem`) that:
 - supports per-window overrides (useful for multi-monitor setups),
 - supports user-provided theme files layered by scope (ADR 0014).
 
+Color boundary rule:
+
+- Theme files are authored in sRGB (human-friendly), but the resolved values exposed to UI/layout/scene building
+  must be **linear** colors to match the `fret-core` display list contract (ADR 0002 / ADR 0040).
+  The sRGB→linear conversion happens at theme resolution time (CPU-side or shader-side), not by passing sRGB
+  values through `SceneOp`.
+
 ### 3) Theme content remains app-owned
 
 Fret provides:
@@ -100,7 +107,8 @@ Theme changes must:
    - Widgets must not accept arbitrary CSS-like strings.
 
 3) **Color space**: standardized by ADR 0040.
-   - Theme colors are authored as sRGB values.
+   - Theme colors are authored as sRGB values (theme files).
+   - Theme resolution produces linear colors for `SceneOp`.
    - Renderer composites in linear and performs the correct conversion to the surface format (ADR 0040).
 
 Additional locked behavior:
