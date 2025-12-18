@@ -27,9 +27,21 @@ Introduce an `App`-owned effects queue:
 
 ### Initial effect set
 
+The minimal P0 set is:
+
 - `Effect::Redraw(AppWindowId)`
 - `Effect::Window(WindowRequest)`
 - `Effect::Command(CommandId)` (reserved; may become a separate command bus later)
+
+Current code already includes additional effects to support editor-grade UX (docking, viewports, scheduling).
+Treat `crates/fret-app/src/app.rs` as the canonical source of truth for the full enum.
+
+Examples of “non-minimal” effects already in use:
+
+- `Effect::Dock(DockOp)` (docking emits operations, app applies them)
+- `Effect::ViewportInput(ViewportInputEvent)` (engine viewport input forwarding)
+- `Effect::RequestAnimationFrame(AppWindowId)` / `Effect::SetTimer { .. }` / `Effect::CancelTimer { .. }` (scheduling)
+- `Effect::ImeAllow { .. }` / `Effect::ImeSetCursorArea { .. }` (IME enablement and candidate window positioning)
 
 ## Consequences
 

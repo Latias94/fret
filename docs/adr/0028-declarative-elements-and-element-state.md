@@ -1,6 +1,6 @@
 # ADR 0028: Declarative Element Tree and Cross-Frame Element State (GPUI-Style)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -31,6 +31,13 @@ References:
   - `repo-ref/zed/crates/gpui/src/view.rs` (`AnyView::cached`)
 - GPUI ownership model inspiration:
   - https://zed.dev/blog/gpui-ownership
+
+Implementation anchors (Fret MVP2 skeleton):
+
+- Element IDs + window-scoped cross-frame state store (`(GlobalElementId, TypeId)`):
+  - `crates/fret-ui/src/elements.rs`
+- MVP demo widget (keyed vs unkeyed reorder + debug warning):
+  - `crates/fret-demo/src/elements_mvp2.rs`
 
 ## Decision
 
@@ -92,14 +99,109 @@ Caching is an optimization; correctness relies on IDs + state store, not caching
 
 ## Open Questions (To Decide Before Implementation)
 
-1) **ElementId shape**:
-   - which variants are supported (string, integer, UUID, callsite, named child, focus handle)?
-2) **Keying rules**:
-   - what is the exact rule for “lists must use explicit keys”, and how do we enforce/diagnose violations?
-3) **State store lifetime and GC**:
-   - how do we prune element state that is no longer referenced by the current frame?
-4) **Interop with existing `UiTree`**:
-   - do we evolve `fret-ui::UiTree` into the element execution engine, or introduce a parallel `ElementRuntime`?
-5) **Debuggability**:
-   - do we add inspector hooks that expose GlobalElementId paths and state types?
+### Locked P0 Choices
 
+#### 1) `ElementId` variants (minimal set, future-proof)
+
+`ElementId` supports:
+
+- `Callsite` (implicit default for rapid authoring; derived from `Location::caller()`),
+- `Key(u64)` (explicit numeric keys),
+- `Name(Arc<str>)` (explicit human-readable keys).
+
+More variants (UUID, composite keys) can be added later, but these three cover:
+
+- stable identity for dynamic trees/lists,
+- stable identity for persisted panels and debug tooling,
+- “just works” ergonomics for static trees.
+
+#### 2) Keying rule: dynamic collections must use explicit keys
+
+Any element container that renders a dynamic collection (where children count/order can change at runtime)
+must assign an explicit key to each child.
+
+Diagnostics policy:
+
+- in debug builds, if a container renders a dynamic list without explicit keys and the child sequence changes
+  between frames, emit an inspector-visible warning and include the offending `GlobalElementId` path.
+
+#### 3) State store lifetime: mark/sweep with a small lag
+
+Element state is stored by `(GlobalElementId, TypeId)`.
+
+Each rendered frame:
+
+- marks all `GlobalElementId`s that were actually visited during element execution,
+- after present, sweeps state entries that have not been seen for `gc_lag_frames = 2` frames.
+
+Rationale:
+
+- avoids thrash for transient overlay rebuilds,
+- still bounds memory for large editors.
+
+Interaction state (focus/capture/hover) is not “lagged”: it is cleared immediately when its target element
+is not present in the current frame’s element tree.
+
+#### 4) Interop with the existing `UiTree`: evolve, do not fork
+
+The element execution model should be implemented by evolving the existing UI runtime structures
+(`UiTree` layout/hit-test/event routing) instead of introducing a parallel runtime.
+
+Rationale:
+
+- minimizes duplicated semantics (focus, capture, overlays),
+- avoids long-lived “two UI runtimes” migrations.
+
+##### Bridge sketch (the missing “reconciliation”)
+
+Even though the element tree is rebuilt every frame, we still need a stable runtime substrate to:
+
+- preserve focus/capture/IME targets,
+- preserve per-node layout and hit-test metadata,
+- avoid a parallel “second UI runtime” during migration.
+
+The bridge is **identity mapping**, not a React-style structural diff engine:
+
+- During element execution, each element has a stable `GlobalElementId`.
+- The UI runtime maintains a map: `GlobalElementId -> NodeId` (where `NodeId` is the retained `UiTree` key).
+- When an element is built:
+  - if a `NodeId` exists for its `GlobalElementId`, reuse that node,
+  - otherwise create a new `UiTree` node and record the mapping.
+- Each frame:
+  - mark all visited `GlobalElementId`s,
+  - after present, sweep nodes that were not visited for `gc_lag_frames = 2` frames (align with state-store GC lag).
+
+This yields:
+
+- “write the UI every frame” ergonomics,
+- retained semantics (stable focus/capture targets),
+- predictable behavior without a heavyweight reconciliation algorithm.
+
+##### Where input state lives (TextInput example)
+
+For a `<TextInput>`-like element, split state deliberately:
+
+- **Model state (app-owned)**: the text buffer content and domain policies (validation, undo, etc.).
+- **Element-local state (cross-frame element state store)**: selection range, caret position, scroll offsets,
+  IME composition range, “last click” timing, etc.
+
+The element-local state is stored under `(GlobalElementId, TypeId)` and is what keeps cursor/selection stable
+across frames even though element objects are dropped after paint.
+
+##### “Delete second item, third becomes second”: explicit keys
+
+The runtime cannot infer “move vs destroy” from structural position alone.
+
+Therefore:
+
+- dynamic lists/trees must provide explicit keys,
+- keyed identity keeps `GlobalElementId` stable under insert/remove/reorder, so both element-local state and `NodeId`
+  reuse stay attached to the correct item.
+
+#### 5) Debuggability: inspector exposes element identity and state types
+
+The UI inspector hooks (ADR 0036) must be able to show:
+
+- `GlobalElementId` paths,
+- element source locations (when available),
+- state types stored under an element (TypeId names in debug builds).

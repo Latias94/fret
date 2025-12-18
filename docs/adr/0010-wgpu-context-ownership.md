@@ -28,6 +28,13 @@ This enables both hosting topologies:
 - **Editor-hosted**: Fret constructs the `WgpuContext` and passes it to the engine.
 - **Engine-hosted**: the engine constructs the `WgpuContext` and passes it to Fret.
 
+Recommended default for an engine editor:
+
+- Prefer **engine-hosted GPU context** when the editor is tightly coupled to a specific engine, because the
+  engine typically needs to choose adapter/features/limits and may require special device configuration.
+- Prefer **editor-hosted GPU context** for standalone tools, small apps, or when the engine integration is
+  intentionally minimal and can accept a host-selected device.
+
 ### 2) Surface creation is owned by the platform layer, but depends on the same `Instance`
 
 On desktop, the platform layer owns OS windows and their presentable surfaces.
@@ -43,6 +50,19 @@ that the renderer/device belong to. Therefore:
 Engine-rendered textures are registered as `RenderTargetId` via renderer-owned registries.
 This stays unchanged across both hosting topologies.
 
+### 4) Capability negotiation is explicit (avoid “wrong device” dead-ends)
+
+For the editor-hosted topology to remain viable for real engines, `WgpuContext` creation must support
+engine-provided requirements *before* the device is created:
+
+- adapter selection hints (power preference, required backend, multi-GPU policy),
+- required `Features` and `Limits`,
+- required surface formats/present modes (if the engine needs HDR or specific swapchain behavior),
+- optional labels/diagnostics hooks.
+
+Fret should treat these as **inputs to context creation**, not post-hoc assertions, to avoid a late rewrite
+where the engine is forced to “take over” GPU ownership.
+
 ## Consequences
 
 - Both editor-hosted and engine-hosted integrations remain first-class, avoiding lock-in.
@@ -54,5 +74,5 @@ This stays unchanged across both hosting topologies.
 
 - Define an explicit “context injection” API for runners (desktop/web) rather than hard-wiring context creation.
 - Add guidance for advanced engines (multiple devices, multiple queues, headless rendering).
-- Document synchronization expectations when sharing a `Device/Queue` between engine and UI.
-
+- Document and codify synchronization expectations when sharing a `Device/Queue` between engine and UI
+  (see ADR 0015 and ADR 0034).

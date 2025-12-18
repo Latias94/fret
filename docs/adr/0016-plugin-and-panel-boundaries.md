@@ -50,7 +50,12 @@ Plugins can only interact with GPU data via stable handles:
 Plugins must provide stable identifiers for persistence:
 
 - `PanelKind` is the persistent identity used in layout files,
-- runtime IDs remain ephemeral (`PanelId`).
+- `PanelKey` (kind + optional instance) identifies panel instances during runtime and in persistence.
+
+Note:
+
+- runtime-only IDs still exist for other structures (e.g. `DockNodeId`), but panels themselves should not require
+  a separate ephemeral ID in order to support persistence and plugin registration.
 
 ## Consequences
 

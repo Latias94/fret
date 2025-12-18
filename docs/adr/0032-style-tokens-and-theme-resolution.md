@@ -1,6 +1,6 @@
 # ADR 0032: Style Tokens and Theme Resolution (Typed, Editor-Grade)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -87,10 +87,23 @@ Theme changes must:
 
 ## Open Questions (To Decide Before Implementation)
 
-1) **Token schema**:
-   - do we encode tokens as Rust enums only, or also support stable string keys for theme files?
-2) **Per-component overrides**:
-   - do widgets accept “style props” that override tokens, and how are they merged?
-3) **Color spaces**:
-   - sRGB vs linear blending assumptions and where conversions happen (ties into renderer).
+### Locked P0 Choices
 
+1) **Token schema**: typed tokens + stable string keys.
+   - In Rust APIs: tokens are typed (newtypes/enums) to keep widget code correct and discoverable.
+   - In theme files: tokens are addressed by **stable, namespaced string keys** (e.g. `color.panel.background`).
+   - Plugin/component ecosystems must namespace keys to avoid collisions (e.g. `plugin.my_tool.*`).
+
+2) **Per-component overrides**: allowed, but only as structured “style props”.
+   - Widgets may accept optional overrides for a small, well-defined subset (colors, spacing, typography).
+   - Overrides merge as: `component overrides` > `window overrides` > `project theme` > `user theme` > `default theme`.
+   - Widgets must not accept arbitrary CSS-like strings.
+
+3) **Color space**: standardized by ADR 0040.
+   - Theme colors are authored as sRGB values.
+   - Renderer composites in linear and performs the correct conversion to the surface format (ADR 0040).
+
+Additional locked behavior:
+
+- Theme resolution is **window-aware** (DPI scale factor + density mode are inputs).
+- Theme changes produce a single “theme revision” increment that participates in layout/paint caching keys.

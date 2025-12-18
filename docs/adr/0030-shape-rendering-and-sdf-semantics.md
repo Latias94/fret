@@ -1,6 +1,6 @@
 # ADR 0030: Shape Rendering and Analytic SDF Semantics (Rounded Rects, Borders, Shadows)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -18,6 +18,9 @@ For an editor UI, we need scalable, consistent primitives:
 - eventual drop shadows/blur and soft/rounded clipping.
 
 We must keep `fret-core` backend-agnostic: the scene describes *what* to draw; SDF is only *how* `fret-render` draws it.
+
+Important: “SDF” in this ADR refers to **analytic SDF for shape primitives** (rounded rects, borders, shadows).
+Text rendering follows a separate glyph atlas pipeline and should not be conflated with shape SDF (see ADR 0029).
 
 References:
 
@@ -50,13 +53,24 @@ To avoid later rewrites due to DPI scaling and animation artifacts, we define:
 
 This is necessary for consistent edges across different scale factors and transforms.
 
+Implementation note:
+
+- The quad shader should use an `fwidth`-derived width (e.g. `aa = fwidth(sdf)`) and a smooth transition
+  (e.g. `1 - smoothstep(-aa, aa, sdf)`) instead of a constant like `0.5`.
+
 ### 3) Border semantics are standardized
 
 `SceneOp::Quad` borders must have stable semantics:
 
-- alignment policy (inside/center/outside) is explicitly defined (default: inside or center, TBD),
+- alignment policy (inside/center/outside) is explicitly defined (**default: inside**),
 - per-edge widths are supported,
 - corner joins are consistent with rounded corners.
+
+Locked P0 border rules:
+
+- **Default alignment: inside**. Borders never extend outside the quad’s bounds.
+- Corner radii are treated as outer radii. The inner radii are derived by subtracting the adjacent border widths
+  and clamping at 0 (implementation detail, but the visual expectation is stable).
 
 If we do not define these semantics early, higher-level UI components (docking chrome, inspectors) will “bake in”
 assumptions that later become incompatible.
@@ -98,4 +112,3 @@ Medium term:
    - how do transforms affect SDF AA and clip/shadow sampling?
 4) **Performance targets**:
    - expected primitive counts for a full editor UI and required batching strategy.
-

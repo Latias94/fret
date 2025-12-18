@@ -4,11 +4,13 @@ Fret is a Rust GUI framework aimed at building a game editor with a **Unity/Unre
 
 This document intentionally focuses on decisions that minimize future rewrites.
 
+If you are new to the repository, start with `docs/README.md`.
+
 ## Scope
 
 Fret is a **UI framework** for building engine editors, not “the editor itself”.
 
-- Framework scope (in Fret): windowing/event loop boundary, retained UI runtime, docking UX infrastructure,
+- Framework scope (in Fret): windowing/event loop boundary, UI runtime, docking UX infrastructure,
   command/keymap system, display list + renderer, viewport embedding contracts.
 - Editor app / engine scope (out of Fret): asset pipeline, scene/ECS model, selection/gizmo/tool systems,
   undo/redo history policy, project/build/indexing.
@@ -17,57 +19,28 @@ See `docs/adr/0027-framework-scope-and-responsibilities.md`.
 
 ## Architecture Decision Records (ADRs)
 
-Framework cross-crate contracts are tracked as ADRs:
+Framework cross-crate contracts are tracked as ADRs.
 
-Current focus (Proposed ADRs we want to decide early to avoid later rewrites):
+Current focus (hard-to-change ADRs that should be treated as “locked contracts” unless explicitly revised):
 
 - `docs/adr/0028-declarative-elements-and-element-state.md` (declarative/composable UI model)
+- `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md` (component authoring ergonomics)
 - `docs/adr/0029-text-pipeline-and-atlas-strategy.md` (text shaping/atlas strategy)
 - `docs/adr/0030-shape-rendering-and-sdf-semantics.md` (shape semantics over SDF)
 - `docs/adr/0031-app-owned-models-and-leasing-updates.md` (ownership + borrow-friendly updates)
 - `docs/adr/0032-style-tokens-and-theme-resolution.md` (typed theming and style resolution)
+- `docs/adr/0033-semantics-tree-and-accessibility-bridge.md` (semantics tree + A11y bridge boundary)
+- `docs/adr/0034-timers-animation-and-redraw-scheduling.md` (timers/animation/scheduling)
+- `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md` (layout constraints + optional Flex/Grid)
+- `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md` (tracing + inspector hooks)
+- `docs/adr/0037-workspace-boundaries-and-components-repository.md` (workspace boundaries + `fret-components` repo)
+- `docs/adr/0038-engine-render-hook-and-submission-coordinator.md` (engine integration without queue ownership)
 
-- `docs/adr/0001-app-effects.md`
-- `docs/adr/0002-display-list.md`
-- `docs/adr/0003-platform-boundary.md`
-- `docs/adr/0004-resource-handles.md`
-- `docs/adr/0005-retained-ui-tree.md`
-- `docs/adr/0006-text-system.md`
-- `docs/adr/0007-viewport-surfaces.md`
-- `docs/adr/0008-threading-logging-errors.md`
-- `docs/adr/0009-renderer-ordering-and-batching.md`
-- `docs/adr/0010-wgpu-context-ownership.md`
-- `docs/adr/0011-overlays-and-multi-root.md`
-- `docs/adr/0012-keyboard-ime-and-text-input.md`
-- `docs/adr/0013-docking-ops-and-persistence.md`
-- `docs/adr/0014-settings-and-configuration-files.md`
-- `docs/adr/0015-frame-lifecycle-and-submission-order.md`
-- `docs/adr/0016-plugin-and-panel-boundaries.md`
-- `docs/adr/0017-multi-window-display-and-dpi.md`
-- `docs/adr/0018-key-codes-and-shortcuts.md`
-- `docs/adr/0019-scene-state-stack-and-layers.md`
-- `docs/adr/0020-focus-and-command-routing.md`
-- `docs/adr/0021-keymap-file-format.md`
-- `docs/adr/0022-when-expressions.md`
-- `docs/adr/0023-command-metadata-menus-and-palette.md`
-- `docs/adr/0025-viewport-input-forwarding.md`
-- `docs/adr/0027-framework-scope-and-responsibilities.md`
-- `docs/adr/0028-declarative-elements-and-element-state.md`
-- `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
-- `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
-- `docs/adr/0031-app-owned-models-and-leasing-updates.md`
-- `docs/adr/0032-style-tokens-and-theme-resolution.md`
-
-Editor-application notes (not framework commitments) live as deferred ADRs:
-
-- `docs/adr/0024-undo-redo-and-edit-transactions.md`
-- `docs/adr/0026-asset-database-and-import-pipeline.md`
-
-For a module-oriented index, see `docs/adr/README.md`.
+For the full, module-oriented ADR index, see `docs/adr/README.md`.
 
 ## Goals
 
-- Retained-mode UI core suitable for large editor applications.
+- UI runtime core suitable for large editor applications.
 - Docking + tear-off windows (Imgui viewports-style UX).
 - Multiple engine viewports in one window (and across windows).
 - WGPU-based rendering pipeline, compatible with future WebGPU/wasm.
@@ -82,7 +55,7 @@ For a module-oriented index, see `docs/adr/README.md`.
 ## High-Level Layering
 
 1. **Platform layer**: OS windows, event loop, input events, clipboard, IME, drag-and-drop.
-2. **UI core**: retained widget tree, layout, hit-testing, focus/keyboard routing, docking model, display list.
+2. **UI core**: UI runtime (layout, hit-testing, focus/keyboard routing, docking model, display list).
 3. **Renderer**: translates the display list to GPU work (wgpu), manages atlas/resources, presents to surfaces.
 
 The renderer must support both hosting topologies via a **host-provided GPU context**:
@@ -96,39 +69,73 @@ In both cases, surface creation must use the same `wgpu::Instance` as the device
 
 - `crates/fret-core`: platform-agnostic core (IDs, geometry, docking model, layout/input contracts).
 - `crates/fret-app`: app runtime (global services, models/entities, scheduling, command/action dispatch).
-- `crates/fret-platform`: winit-based platform implementation (multi-window, event loop).
+- `crates/fret-platform`: winit-backed platform IO helpers (window creation, event translation, clipboard/IME/DnD).
+- `crates/fret-runner-winit-wgpu`: desktop runner wiring winit + wgpu + renderer (composition + presentation).
 - `crates/fret-render`: wgpu-based renderer building blocks (context/device bootstrap, rendering backends).
-- `crates/fret-ui`: retained UI runtime (widget tree, layout, hit-testing, focus routing, display list builder).
+- `crates/fret-ui`: UI runtime (layout, hit-testing, focus routing, display list builder).
 - `crates/fret`: public facade crate (re-exports).
-- `crates/fret-demo`: minimal runnable demo (winit + wgpu surface clear).
+- `crates/fret-demo`: runnable demo app (docking + persistence + viewports prototypes).
+
+## Repository Layout (Future)
+
+To keep the framework stable while allowing editor-grade components to scale, the planned split is:
+
+- Core repo: `fret` (framework + backends + demos).
+- Components repo: `fret-components` (multiple `fret-components-*` crates that depend on `fret-ui` but not on platform/render).
+
+`fret-components` is expected to provide an “editor kit” (primitives + patterns), including:
+
+- shadcn-inspired UI primitives/composites,
+- tree/inspector/table/command UI patterns,
+- optional specialized visualization (charts).
+
+Backend split direction (planned):
+
+- `fret-platform-winit` (desktop), `fret-platform-web` (wasm) under the core repo.
+- `fret-render-wgpu` (wgpu/WebGPU) under the core repo.
+
+Current workspace note:
+
+- Today these backends live as `crates/fret-platform` (winit) and `crates/fret-render` (wgpu).
+
+See `docs/adr/0037-workspace-boundaries-and-components-repository.md`.
 
 ## Versioning Notes (Upstream References)
 
 Winit and wgpu evolve quickly, and API changes can make it easy to read the “wrong” source.
 
-- Prefer reading the exact version used by this workspace (via `Cargo.lock`), or check out the matching git tag upstream (e.g. `winit v0.30.12`).
-- The platform layer should treat winit as an implementation detail to keep upgrades localized.
+- Prefer reading the exact versions used by this workspace (via `Cargo.lock`), or check out matching git tags upstream.
+- For convenience, see `docs/repo-ref.md` for pinned local reference checkouts under `repo-ref/`.
 
-## Core Model: Retained Tree + Invalidation
+## UI Runtime Model: Stable Identity + Invalidation
 
-### Why retained-mode
+### Why “retained semantics”
 
-Editors are long-lived, complex, and stateful. Retained mode provides:
+Editors are long-lived, complex, and stateful. Even with declarative authoring (ADR 0028), the runtime must
+provide retained **semantics**:
 
 - stable widget identity (important for docking, drag state, selection),
 - predictable performance via incremental updates and caching,
 - easier cross-window coordination.
 
+Current status:
+
+- The current prototype is a retained widget tree (`UiTree`).
+- The planned long-term direction is a GPUI-style declarative element tree rebuilt each frame, with externalized
+  cross-frame element state (ADR 0028).
+
 ### Proposed structure
 
-- The UI is a tree of nodes with stable IDs.
+- The UI is described as a tree with stable identity:
+  - retained widgets: `NodeId`,
+  - declarative elements: `GlobalElementId` + explicit keys (ADR 0028).
 - Each window may be composed from multiple roots (base UI + overlays/popups/modals) with an explicit z-order. (ADR 0011)
   - Roots are layered in the UI runtime and painted in root order.
   - Modal roots can block input from reaching lower roots.
-- Each node has:
-  - layout state (rect, constraints, last measured size),
+- The runtime maintains:
+  - layout state (bounds),
   - event state (hover, focus, capture),
-  - paint cache (optional display list fragments).
+  - optional caching hooks (layout/paint/scene fragments) as an optimization.
 - Changes are propagated via **invalidation flags**:
   - `NeedsLayout`
   - `NeedsPaint`
@@ -136,7 +143,7 @@ Editors are long-lived, complex, and stateful. Retained mode provides:
 
 ### Layout as the source of truth
 
-Fret uses a retained `UiTree` where **layout writes node bounds**, and both hit-testing and paint follow those bounds.
+Fret’s UI runtime uses the rule “**layout writes bounds**”, and both hit-testing and paint follow those bounds.
 
 - Containers position children via an explicit API (e.g. `layout_in(child, rect)`).
 - Hit-testing uses the last layout bounds (not last paint).
@@ -146,282 +153,88 @@ Reference: `docs/adr/0005-retained-ui-tree.md`.
 
 ## App Runtime: Globals, Models, and Commands
 
-Large editors need a predictable data-flow model to avoid coupling UI widgets directly to each other.
+- `App` owns global services and long-lived state (“models”), avoiding pervasive `Rc<RefCell<_>>`.
+- Model updates use borrow-friendly update/lease APIs so handlers can mutate both `&mut App` and `&mut T` safely.
+- Widgets enqueue side effects (redraw, window ops, timers) as data; the runner drains them centrally.
+- Commands/keymap are first-class and routed through focus scopes.
 
-### Global services
-
-Fret provides an `App`-level service container (similar to GPUI’s `Global`) for:
-
-- theme and style tokens,
-- dock manager,
-- keymap / command registry.
-
-Applications can also store app-owned services/models here (project state, selection context, asset caches),
-but those are outside the Fret framework scope (ADR 0027).
-
-### Models (entities)
-
-Shared application state lives in **models** (a.k.a. entities). Widgets subscribe to model changes and invalidate themselves.
-
-#### App-owned entities and typed handles (Zed/GPUI-inspired)
-
-One key constraint in Rust UI runtimes is avoiding borrow conflicts between `&mut App` and `&mut ModelState`.
-
-We adopt an **App-owned entity** approach:
-
-- All model state is owned by `App` (single owner).
-- Callers hold a typed, cloneable handle `Model<T>` that does not directly own the state.
-- Mutations happen via explicit update closures, and can emit effects (redraw, commands, window requests).
-
-To keep this ergonomic without pervasive `Rc<RefCell<...>>`, the update path should support **leasing**:
-
-- Temporarily move the model state out of the store while the closure runs.
-- This allows passing `&mut App` and `&mut T` to the same closure without aliasing.
-- A dropped/poisoned lease must not permanently remove the model; restore on unwind.
-
-Guideline:
-
-- Put long-lived shared state in models (dock graph, settings, and any app-owned editor state such as selection/project).
-- Put small and short-lived UI interaction state inside the widget tree (hover, local focus helpers, transient form state).
-
-### Commands / Actions
-
-Editors are command-driven (menus, shortcuts, palette, toolbar). Commands must be first-class:
-
-- `CommandId` identifies a logical operation (`dock.toggle_zoom`, `edit.undo`, `scene.play`).
-- Input maps to commands via a keymap.
-- Commands are routed through focus and can be handled by the focused widget, bubble to parents, or fall back to global handlers.
+References: `docs/adr/0001-app-effects.md`, `docs/adr/0031-app-owned-models-and-leasing-updates.md`, `docs/adr/0020-focus-and-command-routing.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0023-command-metadata-menus-and-palette.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`.
 
 ## Docking: Multi-Window, Tear-Off, and Cross-Window Drag
 
-Docking is managed by a **global Dock Manager** (app-level service), not by a single window.
+- Docking is app-owned state (global dock manager), not a single-window concern.
+- Layout is pure data + explicit operations + versioned persistence (splits, tabs, tear-off roots).
+- Multi-window tear-off and cross-window drag are first-class (requires platform window lifecycle + overlays).
 
-### Dock data model
-
-- A Dock Graph describes splits and tab stacks.
-  - `Split`: axis + children + fractional sizes.
-  - `Tabs`: ordered `PanelId`s + an active index.
-- **Floating/tear-off** is represented as additional `AppWindowId` roots in the same `DockGraph` (each OS window has a root node). Window geometry/persistence lives outside the core graph.
-
-### Interaction model (inspired by Godot)
-
-- Drag state is global (lives in the app-level `DockManager`).
-- Each window renders drop targets/hints during drag.
-- On drop:
-  - either attach to a drop zone within a window,
-  - or create/merge into a floating window.
-
-Platform actions (such as creating a new OS window for tear-off) should be requested by the dock UI and executed by the platform layer. The current direction is an `App`-owned effects queue (e.g. `Effect::Window(WindowRequest::Create(...))`) so platform code can drain and execute requests in one place.
-
-Reference: Godot’s dock windows are explicitly created and managed (`editor/docks/editor_dock_manager.cpp`).
-
-Practical note:
-
-- `DockSpace` reserves a top "chrome" region (future menu/toolbar area). Dropping a dragged tab onto this region triggers a tear-off window.
+References: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0017-multi-window-display-and-dpi.md`, `docs/adr/0011-overlays-and-multi-root.md`.
 
 ## Rendering: Scene/Display List + SDF Quads
 
-The renderer consumes a **display list** (or “Scene”) built from the retained tree.
+- `fret-ui` emits an ordered `Scene`/display list; draw order correctness is guaranteed by contract.
+- The renderer may batch only when order is preserved (adjacent batching).
+- Rounded rects/borders/shadows evolve behind stable semantics; SDF is an implementation detail.
+- Text is handled via opaque `TextBlobId` + metrics boundary.
 
-`Scene.ops` order is authoritative for compositing; the renderer may batch only when it preserves
-operation order (see ADR 0009).
-
-Current state:
-
-- `fret-render` implements a minimal quad renderer (instanced quads + SDF rounded corners) and a scissor-based clip stack.
-- `fret-demo` builds a `Scene` via `UiTree` and presents it via wgpu.
-
-### SDF usage
-
-- Use shader-based SDF for:
-  - rounded rect panels,
-  - borders,
-  - splitters,
-  - soft clipping for UI chrome.
-
-This matches the proven approach in GPUI’s shaders, where many UI primitives are expressed as quads with SDF evaluation in the fragment stage.
-
-### Atlas
-
-- Single/multi-texture atlas for:
-  - glyph bitmaps,
-  - icons,
-  - small UI images.
-- Avoid per-item texture binds; use instancing + atlas tiles.
+References: `docs/adr/0002-display-list.md`, `docs/adr/0009-renderer-ordering-and-batching.md`, `docs/adr/0030-shape-rendering-and-sdf-semantics.md`, `docs/adr/0006-text-system.md`, `docs/adr/0029-text-pipeline-and-atlas-strategy.md`.
 
 ## Windowing & Surfaces
 
-Each OS window owns a presentable surface (swapchain). Multi-window is required for tear-off docks.
+- Each OS window owns a presentable surface; multi-window is required for tear-off docking.
+- Platform backends are implementation details (`winit` now; web later) behind the `fret-platform-*` boundary.
+- The runner is responsible for window lifecycle, event translation, scheduling (timers/raf), and draining effects.
 
-- Winit is treated as an implementation detail behind `fret-platform`.
-- For `wgpu`, prefer owning the window handle (e.g. `Arc<Window>`) when creating a `Surface`, so the surface can be stored with a `'static` lifetime and managed safely.
-- Web/wasm requires creating surfaces from canvases; this should live in the platform layer.
-
-### Platform runner shape
-
-The preferred desktop integration is a `winit` runner that:
-
-- owns multi-window lifecycle and per-window `wgpu::Surface`,
-- drains `App::flush_effects()` and executes platform actions,
-- translates winit events into `fret-core` events,
-- schedules redraws (idle sleep + short burst after activity).
-
-This is implemented in `crates/fret-platform/src/winit_runner.rs` and used by `fret-demo`.
+References: `docs/adr/0003-platform-boundary.md`, `docs/adr/0017-multi-window-display-and-dpi.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`.
 
 ## Resource Handles & Engine Viewports
 
-The core UI must never depend on `wgpu` types directly.
+- UI code never touches `wgpu` types: it deals only in stable IDs/handles (`ImageId`, `FontId`, `RenderTargetId`, `TextBlobId`).
+- The renderer owns GPU resources and resolves handles.
+- Engine viewports are registered as render targets and painted via scene ops.
 
-- `fret-core` defines stable IDs: `ImageId`, `FontId`, `RenderTargetId`, etc.
-- `fret-render` owns the actual GPU resources and resolves IDs to `wgpu` resources.
-- Engine viewports integrate by registering external textures/render targets into the renderer, returning a stable handle that UI widgets can paint.
-
-Integration stance:
-
-- Treat the GPU context as **host-provided**, supporting both editor-hosted and engine-hosted topologies (ADR 0010).
-- Prefer shared-device workflows when possible (enables zero-copy viewport presentation), but do not hard-require it for the framework to function.
+References: `docs/adr/0004-resource-handles.md`, `docs/adr/0007-viewport-surfaces.md`, `docs/adr/0010-wgpu-context-ownership.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`, `docs/adr/0025-viewport-input-forwarding.md`.
 
 ## Layout Engine
 
-The core retained `UiTree` does **not** depend on a specific layout engine.
+- Layout stays editor-friendly: explicit layout for docking/splits, optional Flex/Grid via a layout engine.
+- `fret-core` must remain layout-engine-free; layout engines are implementation details in `fret-ui`/`fret-components-*`.
 
-- Start with small, explicit layout widgets (`Split`, `Stack`, `Column`, `Scroll`) to validate contracts.
-- Add an optional `Flex`/`Grid` widget backed by `taffy` later without changing `UiTree`.
-- Dock splits and pane sizing are specialized and should not depend on flex rules.
+Reference: `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`.
 
 ## Theme & Styling (shadcn-inspired)
 
-We use design tokens instead of a CSS parser:
+Use typed style tokens and explicit theme resolution instead of a CSS parser; theme content remains app-owned.
 
-- typed token structs (`Color`, `Radius`, `Spacing`, `TypographyScale`),
-- a theme registry (optional JSON import/export),
-- builder helpers for ergonomics (similar to Tailwind/shadcn style APIs), without coupling the core to a stringly-typed system.
-
-This mirrors the strengths of `gpui-component`’s theme approach while keeping the core stable.
+Reference: `docs/adr/0032-style-tokens-and-theme-resolution.md`.
 
 ## Text Strategy
 
-- Short-term: simplified text for property panels.
-- Long-term: integrate `cosmic-text` for editor-grade text shaping/layout; keep the rendering backend decoupled so we can iterate on subpixel/gamma and caching later.
-- Performance stance (Zed-style): cache shaped glyph runs and atlas uploads; treat text and UI primitives as GPU-driven “game-like” rendering.
+- Keep a stable text boundary in `fret-core` (metrics + `TextBlobId`), and evolve implementation behind it.
+
+References: `docs/adr/0006-text-system.md`, `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0029-text-pipeline-and-atlas-strategy.md`.
 
 ## Async & Scheduling
 
-Fret should not hard-require a specific async runtime.
+- No hard dependency on a specific async runtime; background work communicates via messages/effects.
+- Default scheduling is event-driven (idle when nothing is dirty), with explicit continuous mode when requested.
+- Side effects are drained centrally in a bounded loop to keep multi-window behavior deterministic.
 
-- Provide a small `Executor` abstraction in `fret-app`.
-- Default implementation can be a lightweight executor and `EventLoopProxy` wakeups.
-- Optional feature flags can enable integration with Tokio/async-std if needed.
-
-### Frame scheduling (120fps-inspired)
-
-Avoid unconditional continuous redraw. The platform layer should:
-
-- redraw only when there are **dirty windows** (state changed, animation tick, or input),
-- optionally keep presenting for a short “burst” after user input (e.g. ~1s) to avoid variable refresh-rate downshifts,
-- handle per-platform sync differences (e.g. “scheduled” vs “completed” semantics on macOS/Metal).
-
-On the renderer side, anticipate **multi-buffering** for dynamic GPU resources (instance buffers, staging uploads) to avoid frame N / N+1 races when presentation becomes more asynchronous.
-This matches the failure mode described in Zed’s 120fps work: a single reused instance buffer can cause corruption once rendering becomes effectively “in flight”.
-
-### Effects flush loop (ownership/handles)
-
-Model updates and widget events should enqueue side effects instead of performing platform operations directly.
-
-`App::flush_effects()` should be the single place that:
-
-- drains window create/close requests,
-- drains redraw requests,
-- resolves dropped handles (refcounts reaching zero),
-- triggers platform wakeups/redraw.
-
-This keeps borrow scopes small and makes multi-window coordination predictable.
-
-Implementation detail:
-
-- `App` deduplicates redraw requests (`Effect::Redraw` is treated as a request, not an immediate effect).
-- The platform runner drains effects in a bounded fixed-point loop because effect application can enqueue new effects via callbacks.
+References: `docs/adr/0001-app-effects.md`, `docs/adr/0008-threading-logging-errors.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`.
 
 ## Settings & Configuration (settings-ui-inspired)
 
-For editor-grade products, settings quickly become a cross-cutting concern. Prefer:
+- Fret provides file-based settings infrastructure (loading/layering/change propagation); schema and UI remain app-owned.
 
-- centralized, strongly typed **app-owned** settings models (e.g. `UserSettings` / `ProjectSettings`),
-- “files as the organizing principle” (both in code and in UI),
-- avoiding macro glue that entangles “pre-UI” crates with UI component crates.
-
-Fret should provide the **infrastructure** (file watching/loading, scope layering, change propagation),
-while the actual schema/content and settings UI remain application concerns (ADR 0027).
+Reference: `docs/adr/0014-settings-and-configuration-files.md`.
 
 ## Plugin & Component Boundaries
 
-To support an editor ecosystem, plugins must be able to register:
+- Plugins contribute UI-level integration points (panels/commands/menus); discovery/policy and editor-domain logic remain app-owned.
 
-- panels (dockable views),
-- commands and key bindings,
-- menus/toolbars,
-- (app-owned) domain UI such as inspector editors for engine types.
+References: `docs/adr/0016-plugin-and-panel-boundaries.md`, `docs/adr/0037-workspace-boundaries-and-components-repository.md`.
 
-Recommended shape:
+## Next Reading
 
-- `Plugin` registers into an `AppRegistry` during startup.
-- Panels are created via factories and referenced by stable `PanelId` / `PanelKind`.
-- Fret should only define UI-level integration points (panels/commands/menus); plugin discovery/policy remains app-owned (ADR 0027).
-
-## Proposed Public API (Sketch)
-
-The goal is a stable retained-mode core with optional sugar layers.
-
-### Widgets
-
-```rust
-pub trait Widget {
-    fn event(&mut self, cx: &mut EventCx, event: &Event);
-    fn layout(&mut self, cx: &mut LayoutCx) -> Size;
-    fn paint(&mut self, cx: &mut PaintCx);
-}
-```
-
-Key properties:
-
-- Widgets have stable identity via `NodeId`.
-- Containers layout and paint their children via context helpers (not by direct borrowing).
-
-### Contexts
-
-- `EventCx`: focus/capture, invalidation, request redraw, dispatch commands, stop propagation.
-- `LayoutCx`: container-driven child layout (`layout_in`), access to `bounds` and children.
-- `PaintCx`: pushes primitives into `Scene` and can paint children using stored bounds (e.g. `child_bounds`).
-
-### Models
-
-```rust
-// Example: app-owned editor state stored in the Fret model store.
-let selection: Model<Selection> = app.models().insert(Selection::default());
-selection.update(&mut app, |sel, _cx| sel.set_active(entity_id));
-```
-
-## Early Architecture Decisions (ADR-style)
-
-1. **Rendering backend**: `wgpu` (portable, WebGPU/wasm-friendly).
-2. **UI model**: retained tree with invalidation + caching.
-3. **Docking**: global Dock Manager + floating windows as first-class nodes.
-4. **Layout**: `taffy` for general UI; custom layout for dock splits.
-5. **Clipping**: prefer shader-based clipping/SDF over stencil-heavy approaches (simpler cross-backend behavior).
-6. **Viewport integration**: host-provided `WgpuContext` (engine-hosted or editor-hosted); shared-device is preferred for zero-copy, but not required by the framework (ADR 0010).
-
-## Open Questions (Deferred, but interfaces should anticipate them)
-
-- Vector paths: triangulation (e.g. lyon) vs GPU rasterization; keep `Scene` primitives flexible.
-- IME and text input: represent composition events in the input layer; do not bake IME into widgets.
-- Accessibility/semantics: keep a parallel semantics tree hook in `fret-ui`.
-- SVG rendering: likely `resvg` on CPU into atlas; keep it as an optional module.
-
-## Roadmap (Execution Order)
-
-1. Multi-window platform shell (winit) + redraw scheduling.
-2. Core retained tree + hit-testing + focus/capture.
-3. Dock graph + drag/drop + tear-off windows.
-4. Renderer: instanced quads + SDF rounding/borders + rectangular clipping.
-5. Atlas + basic text/icon rendering.
-6. Engine viewport embedding (texture panels) + overlay composition primitives (apps build gizmos/selection/tools).
+- Roadmap and current status markers: `docs/roadmap.md`
+- Module-oriented ADR index: `docs/adr/README.md`
+- Pinned upstream references: `docs/repo-ref.md`
+- Current focus ADRs (decision gates): `docs/adr/0028-declarative-elements-and-element-state.md`, `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`, `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`, `docs/adr/0031-app-owned-models-and-leasing-updates.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`, `docs/adr/0037-workspace-boundaries-and-components-repository.md`

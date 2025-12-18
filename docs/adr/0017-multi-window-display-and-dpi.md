@@ -44,6 +44,11 @@ Persistence is split:
 - dock/layout graph is platform-agnostic and stored in logical terms (ADR 0013),
 - OS window placement (position, size, monitor association) is stored separately and treated as best-effort.
 
+Implementation note:
+
+- The v1 layout schema allows storing placement as optional metadata per logical window (`DockLayoutWindowV1.placement`)
+  without making the dock graph depend on platform geometry.
+
 ### 3) Cross-monitor movement is supported by explicit scale factor events
 
 When a window’s scale factor changes, the platform backend emits a scale-factor event and the UI:
@@ -61,3 +66,10 @@ When a window’s scale factor changes, the platform backend emits a scale-facto
 
 - Define an optional “monitor identity” field for best-effort window placement restoration.
 - Add explicit policies for fractional scaling and snapping/pixel alignment.
+
+## Implementation Notes
+
+Prototype implementation (desktop runner + demo):
+
+- Window move events are forwarded as data: `crates/fret-runner-winit-wgpu/src/runner.rs`
+- Demo persists/restores `DockLayoutWindowV1.placement`: `crates/fret-demo/src/main.rs`

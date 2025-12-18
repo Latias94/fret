@@ -47,6 +47,22 @@ Implementation note (MVP): the UI runtime models modal blocking as a per-root fl
 and any roots above it; if no widget is hit, the blocking root still receives the pointer event so
 it can implement “click outside to close”.
 
+#### Ownership vs z-order (the “logical parent” problem)
+
+Overlays like menus, popovers, and tooltips often:
+
+- render in a top overlay root (z-order),
+- but are logically owned by a deep widget (e.g. a button in a panel).
+
+The contract is:
+
+- visual stacking is determined by roots/z-order,
+- logical ownership is modeled explicitly by the widget/element that created the overlay (e.g. a menu state owned by the button/view model),
+- dismissal rules (“click outside”) are implemented at the overlay root by checking pointer hits against the overlay bounds and the owner’s policy.
+
+To support anchored positioning (menus near a button, IME near caret), the UI runtime must provide a way to compute
+window-space bounds for an element/node after layout (see ADR 0012 / ADR 0028).
+
 ### 3) Rendering order matches root order
 
 The display list is built so that overlay roots paint after base roots, preserving expected composition.

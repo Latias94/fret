@@ -1,6 +1,6 @@
 # ADR 0031: App-Owned Models and Borrow-Friendly Updates (GPUI-Inspired)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -43,10 +43,10 @@ Adopt an **App-owned model store** with **typed handles** and **leasing update A
 
 ### 2) Models are accessed via typed handles
 
-Introduce a typed handle (names TBD):
+Introduce a typed handle:
 
 - `Model<T>` is a cloneable reference to an app-owned `T`.
-- Internally it contains a stable `ModelId`/generation + `TypeId` (or equivalent).
+- Internally it contains a stable `ModelId` (slotmap key) plus the phantom `T`.
 
 This ensures identity is stable and does not depend on pointer addresses.
 
@@ -95,12 +95,36 @@ This keeps UI correctness (focus/IME, docking) predictable and portable.
 
 ## Open Questions (To Decide Before Implementation)
 
-1) **Identity model**:
-   - single global `ModelId` space vs per-type arenas?
-2) **Read APIs**:
-   - do we support `App::read(model, |&T| ...)` patterns, or only `update`?
-3) **Change tracking**:
-   - do we need revision numbers for caching (e.g. `AnyView::cached`-style)?
-4) **Unwind safety**:
-   - what is the exact panic strategy in debug vs release?
+### Locked P0 Choices
 
+1) **Identity model**: single global `ModelId` space.
+   - Use a generation-checked id (e.g. slotmap-like) so stale handles are detected.
+   - Typed handles remain `Model<T>`; the store is type-erased internally.
+
+2) **Read APIs**: support both `read` and `update`.
+   - `App::read(model, |app, &T| -> R)` for read-only access.
+   - `App::update(model, |app, &mut T| -> R)` for mutation.
+
+3) **Change tracking**: each model carries a monotonically increasing `revision: u64`.
+   - `revision` increments after each successful `update`.
+   - `revision` is exposed for caching keys (e.g. element/view caching) without leaking internal borrows.
+
+4) **Re-entrancy and nested updates**:
+   - Nested `read`/`update` is allowed for **different** model ids.
+   - Re-entrant `update` of the **same** model id in the same call stack is forbidden and must trigger a debug assertion
+     (and return an error in release if desired).
+
+5) **Unwind safety**:
+   - The lease must be implemented with an RAII guard that restores the model to the store in `Drop`.
+   - No special panic policy is imposed by the framework; the model store remains internally consistent under unwinding.
+
+## Implementation Notes
+
+The MVP1 implementation exists and is intentionally small:
+
+- Types: `ModelId`, `Model<T>`, `ModelStore`, `ModelUpdateError`, `ModelCx`
+- APIs: `App::read`, `App::update`, `App::update_model`, `App::model_revision`
+
+Code anchors:
+
+- `crates/fret-app/src/app.rs`

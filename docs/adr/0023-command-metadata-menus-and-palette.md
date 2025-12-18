@@ -48,6 +48,13 @@ Commands also have structured metadata used by UI surfaces:
 - `when` (optional gating expression; ADR 0022)
 - `scope` (widget/window/app; ADR 0020)
 
+Implementation anchors (current workspace):
+
+- Command registry + `CommandMeta` shape: `crates/fret-app/src/app.rs`
+- Keymap reverse lookup for UI display (best-effort): `crates/fret-app/src/keymap.rs`
+- Demo command palette overlay: `crates/fret-demo/src/command_palette.rs`
+- Minimal menu model types (data-only): `crates/fret-app/src/menu.rs`
+
 ### 2) Menus and toolbars are derived from command metadata
 
 Menu items reference commands; they do not duplicate logic.
@@ -100,4 +107,3 @@ place for debugging and logging.
 - Decide how to represent parameterized commands (e.g. “Open Recent: <path>”).
 - Define localization strategy for titles/descriptions (if needed).
 - Add UI for key binding conflicts and command enablement debugging.
-

@@ -23,6 +23,13 @@ To keep the architecture stable and friendly to refactoring, we want to define e
 
 This keeps platform and GPU objects single-threaded where required and avoids pervasive locks in UI code.
 
+### Async policy (no forced runtime)
+
+- Fret does **not** require a specific async runtime (no hard dependency on Tokio/async-std).
+- Platform runners may block on startup GPU initialization using a small helper (e.g. `pollster`) and then run a
+  synchronous event loop.
+- Long-running work should be executed on worker threads and communicate results back as data-only messages/effects.
+
 ### Logging
 
 - Use `tracing` for structured logs and spans across crates.
@@ -31,11 +38,12 @@ This keeps platform and GPU objects single-threaded where required and avoids pe
 ### Errors
 
 - Library crates define typed errors with `thiserror` (recoverable, local context).
-- Binary/runner boundaries use `anyhow` for context-rich error propagation.
+- Binary/demo boundaries may use `anyhow` for context-rich error propagation.
+- Public APIs should avoid exposing `anyhow::Error` to downstream users.
+- Prefer error enums with a small number of stable variants, and use `#[source]` for underlying platform/backend errors.
 
 ## Consequences
 
 - The codebase remains compatible with wasm environments (where threading is constrained).
 - Multi-window behavior stays deterministic because side effects are serialized through the main thread.
 - Debugging is improved by consistent structured logging.
-

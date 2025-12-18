@@ -48,7 +48,7 @@ The UI layer produces these operations; the app layer applies them to the graph.
 
 ### 3) Stable panel identity for persistence and plugins
 
-Runtime-only `PanelId` is insufficient for persistence.
+Runtime-only identities (such as tab index position or ephemeral runtime handles) are insufficient for persistence.
 
 Introduce:
 
@@ -65,7 +65,7 @@ The canonical persistence format is a versioned, backend-agnostic representation
 
 Key properties:
 
-- Stores `PanelKind` (stable identity), not runtime `PanelId`.
+- Stores `PanelKind` / `PanelKey` (stable identity), not runtime-only transient identities.
 - Stores window roots as logical window entries.
 - Stores split/tabs structure as a graph/tree of nodes.
 
@@ -181,3 +181,12 @@ Notes:
 - Finalize the concrete v1 schema field naming and define a strict parser.
 - Implement migrators for future schema changes.
 - Add support for multi-monitor placement metadata (optional, platform-dependent).
+
+## Implementation Notes (Current Prototype)
+
+- Stable identity: implemented as `PanelKind`/`PanelKey` in `crates/fret-core/src/panels.rs`.
+- Persistence v1: implemented as `DockLayoutV1` in `crates/fret-core/src/dock_layout.rs`.
+- Transaction vocabulary: `DockOp` exists in `crates/fret-core/src/dock_op.rs`.
+  - The demo applies `DockOp` via the runner’s effect drain path (`Effect::Dock`), which is the intended integration point.
+  - Floating windows are requested via `DockOp::RequestFloatPanelToNewWindow` (window creation remains app/runner-owned).
+  - Closing a floating OS window merges its panels back into the main window by default via `DockOp::MergeWindowInto`.

@@ -77,7 +77,13 @@ Reserved future extension:
 
 ## Future Work
 
-- Finalize the concrete `KeyCode` enum values (recommended: align with winit physical key codes / USB HID usage set).
+- Expand the concrete `KeyCode` set (recommended: align with winit physical key codes / USB HID usage set).
 - Define a canonical keymap file format (see ADR 0014) including platform-specific bindings.
 - Add optional left/right modifier locations if needed by advanced users.
 
+## Implementation Notes
+
+Prototype implementation exists (subset of common keys, aligned with winit names):
+
+- `crates/fret-core/src/input.rs`
+- `crates/fret-runner-winit-wgpu/src/runner.rs` (`map_physical_key`)

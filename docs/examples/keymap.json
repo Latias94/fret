@@ -1,0 +1,40 @@
+{
+  "keymap_version": 1,
+  "bindings": [
+    {
+      "command": "command_palette.toggle",
+      "platform": "macos",
+      "keys": { "mods": ["meta"], "key": "KeyP" }
+    },
+    {
+      "command": "command_palette.toggle",
+      "platform": "windows",
+      "keys": { "mods": ["ctrl"], "key": "KeyP" }
+    },
+    {
+      "command": "command_palette.toggle",
+      "platform": "linux",
+      "keys": { "mods": ["ctrl"], "key": "KeyP" }
+    },
+    {
+      "command": "demo.toggle_modal",
+      "platform": "all",
+      "keys": { "mods": [], "key": "F1" }
+    },
+    {
+      "command": "demo.toggle_dnd_overlay",
+      "platform": "all",
+      "keys": { "mods": [], "key": "F2" }
+    },
+    {
+      "command": "text.clear",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "KeyL" }
+    },
+    {
+      "command": null,
+      "platform": "all",
+      "keys": { "mods": [], "key": "F2" }
+    }
+  ]
+}

@@ -159,3 +159,7 @@ Resolution rule:
 - Decide whether to support multi-stroke chords and how they interact with text input.
 - Provide a canonical list of `KeyCode` tokens and migration rules when upstream (`winit`) changes.
 
+## Implementation Notes (Current Prototype)
+
+- Demo keymap loading: `crates/fret-demo/src/main.rs` reads `./.fret/keymap.json` if present and layers it over defaults.
+- Sample file: `docs/examples/keymap.json`

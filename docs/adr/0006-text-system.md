@@ -37,13 +37,19 @@ The renderer side (`fret-render`) owns the implementation details:
 Core types live in `fret-core::text` and are backend-agnostic.
 
 - `TextStyle`: font, size, and other style attributes.
-- `TextConstraints`: wrapping and maximum width.
+- `TextConstraints`: wrapping and maximum width, plus the window scale factor for rasterization/caching.
 - `TextMetrics`: measurement results required for layout.
 
 Creation is explicit:
 
 - `prepare(text, style, constraints) -> (TextBlobId, TextMetrics)`
 - `release(TextBlobId)` (best-effort)
+
+Scale factor note:
+
+- The UI coordinate system remains logical pixels (ADR 0017).
+- `TextConstraints.scale_factor` exists so the text implementation can rasterize and cache glyphs at the
+  correct device scale without forcing the UI layer to “lie” about sizes.
 
 ## Consequences
 

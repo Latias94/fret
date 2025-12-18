@@ -21,6 +21,11 @@ it often produces:
 Zed’s Settings UI experience shows that the core move is to treat **files as the organizing principle**
 and keep the model strongly typed.
 
+References:
+
+- Zed settings UI writeup:
+  - https://zed.dev/blog/settings-ui
+
 ## Decision
 
 ### 1) Files are the organizing principle

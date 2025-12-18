@@ -1,6 +1,6 @@
 # ADR 0029: Text Pipeline, Atlas Strategy, and Quality Targets (GPUI-Inspired)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -56,7 +56,7 @@ Adopt a GPUI-like abstraction (names TBD):
 
 Initial implementation strategy:
 
-- Use `cosmic-text` as the default cross-platform implementation for shaping/line breaking.
+- Use `cosmic-text` as the default cross-platform implementation for shaping/line breaking on Windows/macOS/Linux.
 - Keep the interface compatible with future native backends (e.g. DirectWrite, CoreText) without changing `fret-core`.
 
 ### 3) Atlas strategy: separate monochrome vs polychrome
@@ -69,7 +69,21 @@ Text and icon rendering must anticipate two classes of glyphs:
 We should keep these as separate atlas resources (different formats/sampling paths), to avoid performance and
 quality regressions.
 
-### 4) Define quality targets early (gamma/contrast/subpixel)
+### 4) Text glyphs are coverage bitmaps (not SDF) in the mainline path
+
+Even though Fret uses analytic SDF for shape primitives (ADR 0030), text should follow GPUI’s proven approach:
+
+- rasterize glyphs to **coverage bitmaps** (alpha masks / subpixel-positioned variants if needed),
+- store them in atlases and apply shader-side quality adjustments (gamma/contrast),
+- do not rely on SDF/MSDF for general text rendering.
+
+Rationale:
+
+- small-size text quality is dominated by hinting/rasterization decisions that SDF tends to lose,
+- emoji/color glyph support naturally wants RGBA tiles anyway,
+- atlas + quality shader knobs scale better for “code editor grade” text than SDF does.
+
+### 5) Define quality targets early (gamma/contrast/subpixel)
 
 Text quality is not just shaping—it is also sampling and compositing. We should define targets:
 
@@ -79,7 +93,13 @@ Text quality is not just shaping—it is also sampling and compositing. We shoul
 
 These targets define shader and cache key requirements, so they must be decided before building a full text stack.
 
-### 5) Caching and invalidation are explicit
+Locked P0 text quality baseline:
+
+- Raster: grayscale coverage masks (alpha), premultiplied blending.
+- Positioning: enable subpixel positioning by rasterizing X-offset variants (`x4`) for small text; Y variants are deferred.
+- Emoji/color glyphs: reserve the RGBA atlas path; implementation can start partial, but the pipeline contract stays stable.
+
+### 6) Caching and invalidation are explicit
 
 Define stable caching keys for `TextBlobId` creation, at minimum:
 
@@ -87,7 +107,7 @@ Define stable caching keys for `TextBlobId` creation, at minimum:
 - text content (or hash),
 - wrap constraints / max width,
 - shaping options (ligatures, fallback policy),
-- DPI scale factor considerations (if rasterization depends on it).
+- DPI scale factor considerations (rasterization depends on it; see `TextConstraints.scale_factor` in ADR 0006).
 
 Invalidation must be explicit and compatible with the effects flush loop (ADR 0001 / ADR 0004).
 
@@ -109,4 +129,3 @@ Invalidation must be explicit and compatible with the effects flush loop (ADR 00
    - how do we map OS font discovery to stable `FontId` and caching?
 5) **Shader contracts**:
    - what parameters become part of the glyph sampling shader interface (gamma ratios, contrast factors)?
-

@@ -23,6 +23,7 @@ References:
   - Display list ordering (ADR 0002 + ADR 0009)
   - Viewports via `RenderTargetId` (ADR 0007)
   - Host-provided GPU context (ADR 0010)
+  - Timers/animation/redraw scheduling (`TickId` vs `FrameId`) (ADR 0034)
 
 ## Decision
 
@@ -50,7 +51,19 @@ Within a frame, command buffers must be submitted in this order:
 
 When using a single `wgpu::Queue`, submission order provides correct GPU-side ordering.
 
-### 3) Initial synchronization constraint (P0 correctness)
+### 3) `TickId` and `FrameId` are distinct (avoid “event loop turns” vs “renders” confusion)
+
+For correctness and debugging, Fret treats:
+
+- `TickId`: increments on each event-loop turn (platform events + effects draining),
+- `FrameId`: increments only when a render/present actually occurs.
+
+This prevents subtle bugs in multi-window + docking scenarios where some ticks do not render (event-driven mode),
+and avoids “echo” problems for multi-window handling that rely on a global frame counter (ImGui-style patterns).
+
+See ADR 0034 for scheduling semantics and how redraw requests are coalesced.
+
+### 4) Initial synchronization constraint (P0 correctness)
 
 For the first stable architecture, Fret assumes:
 
@@ -69,6 +82,5 @@ and an integration adapter; this is deferred until the core contracts are proven
 
 - Define a formal “engine hook” API:
   - `engine_render(frame_cx) -> Vec<wgpu::CommandBuffer>` or a closure-based submission model.
-- Add an explicit “frame index” / “frame id” for tracing and resource pooling.
+- Use `FrameId` consistently for tracing and resource pooling (defined in ADR 0034).
 - Document multi-queue integration requirements when needed.
-
