@@ -26,6 +26,10 @@ pub struct WinitRunnerConfig {
     pub new_window_anchor_offset: (f64, f64),
     /// When the main window requests close, exit the event loop.
     pub exit_on_main_window_close: bool,
+    /// Line-based wheel delta unit to logical pixels.
+    pub wheel_line_delta_px: f32,
+    /// Pixel-based wheel delta scale in logical pixels.
+    pub wheel_pixel_delta_scale: f32,
     pub frame_interval: Duration,
     pub activity_timeout: Duration,
     pub clear_color: ClearColor,
@@ -40,6 +44,8 @@ impl Default for WinitRunnerConfig {
             default_window_size: LogicalSize::new(640.0, 480.0),
             new_window_anchor_offset: (-40.0, -20.0),
             exit_on_main_window_close: true,
+            wheel_line_delta_px: 20.0,
+            wheel_pixel_delta_scale: 1.0,
             frame_interval: Duration::from_millis(8),
             activity_timeout: Duration::from_secs(1),
             clear_color: ClearColor::default(),
@@ -334,6 +340,22 @@ impl<D: WinitDriver> WinitRunner<D> {
         );
         self.mark_activity(window);
     }
+
+    fn map_wheel_delta(&self, window: &Window, delta: MouseScrollDelta) -> Point {
+        match delta {
+            MouseScrollDelta::LineDelta(x, y) => Point::new(
+                Px(x * self.config.wheel_line_delta_px),
+                Px(y * self.config.wheel_line_delta_px),
+            ),
+            MouseScrollDelta::PixelDelta(p) => {
+                let logical = p.to_logical::<f32>(window.scale_factor());
+                Point::new(
+                    Px(logical.x * self.config.wheel_pixel_delta_scale),
+                    Px(logical.y * self.config.wheel_pixel_delta_scale),
+                )
+            }
+        }
+    }
 }
 
 impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
@@ -452,13 +474,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 let Some(state) = self.windows.get(app_window) else {
                     return;
                 };
-                let delta = match delta {
-                    MouseScrollDelta::LineDelta(x, y) => Point::new(Px(x * 20.0), Px(y * 20.0)),
-                    MouseScrollDelta::PixelDelta(p) => {
-                        let logical = p.to_logical::<f32>(state.window.scale_factor());
-                        Point::new(Px(logical.x), Px(logical.y))
-                    }
-                };
+                let delta = self.map_wheel_delta(&state.window, delta);
                 let pos = state.cursor_pos;
                 self.dispatch_pointer_event(
                     app_window,
