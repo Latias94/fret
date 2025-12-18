@@ -159,6 +159,10 @@ impl Default for TextInput {
 }
 
 impl Widget for TextInput {
+    fn is_focusable(&self) -> bool {
+        true
+    }
+
     fn is_text_input(&self) -> bool {
         true
     }

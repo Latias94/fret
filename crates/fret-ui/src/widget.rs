@@ -149,6 +149,9 @@ pub trait Widget {
     fn command(&mut self, _cx: &mut CommandCx<'_>, _command: &CommandId) -> bool {
         false
     }
+    fn is_focusable(&self) -> bool {
+        false
+    }
     fn is_text_input(&self) -> bool {
         false
     }

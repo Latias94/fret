@@ -365,6 +365,10 @@ impl UiTree {
 
         let (active_layers, barrier_root) = self.active_input_layers();
 
+        if self.dispatch_focus_traversal(app, command, &active_layers, barrier_root, base_root) {
+            return true;
+        }
+
         if self
             .focus
             .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
@@ -437,6 +441,79 @@ impl UiTree {
         }
 
         handled
+    }
+
+    fn dispatch_focus_traversal(
+        &mut self,
+        app: &mut App,
+        command: &fret_app::CommandId,
+        active_layers: &[NodeId],
+        barrier_root: Option<NodeId>,
+        base_root: NodeId,
+    ) -> bool {
+        let direction = match command.as_str() {
+            "focus.next" => Some(true),
+            "focus.previous" => Some(false),
+            _ => None,
+        };
+        let Some(forward) = direction else {
+            return false;
+        };
+
+        let scope_root = barrier_root.unwrap_or(base_root);
+
+        let mut focusables: Vec<NodeId> = Vec::new();
+        self.collect_focusables(scope_root, active_layers, &mut focusables);
+        if focusables.is_empty() {
+            return true;
+        }
+
+        let next = match self.focus.and_then(|f| focusables.iter().position(|n| *n == f)) {
+            Some(idx) => {
+                if forward {
+                    focusables[(idx + 1) % focusables.len()]
+                } else {
+                    focusables[(idx + focusables.len() - 1) % focusables.len()]
+                }
+            }
+            None => {
+                if forward {
+                    focusables[0]
+                } else {
+                    focusables[focusables.len() - 1]
+                }
+            }
+        };
+
+        self.focus = Some(next);
+        if let Some(window) = self.window {
+            app.request_redraw(window);
+        }
+        true
+    }
+
+    fn collect_focusables(&self, node: NodeId, active_layers: &[NodeId], out: &mut Vec<NodeId>) {
+        if !self.node_in_any_layer(node, active_layers) {
+            return;
+        }
+
+        if self.is_node_focusable(node) {
+            out.push(node);
+        }
+
+        let Some(n) = self.nodes.get(node) else {
+            return;
+        };
+        for &child in &n.children {
+            self.collect_focusables(child, active_layers, out);
+        }
+    }
+
+    fn is_node_focusable(&self, node: NodeId) -> bool {
+        self.nodes
+            .get(node)
+            .and_then(|n| n.widget.as_ref())
+            .is_some_and(|w| w.is_focusable())
     }
 
     fn focus_is_text_input(&mut self) -> bool {

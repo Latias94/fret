@@ -52,6 +52,9 @@ pub fn build_demo_ui(window: AppWindowId, config: DemoUiConfig) -> (UiTree, Demo
     let text_input = ui.create_node(TextInput::new().with_text("Click here, then type (IME supported)"));
     ui.add_child(column, text_input);
 
+    let text_input2 = ui.create_node(TextInput::new().with_text("Another TextInput (Tab to switch focus)"));
+    ui.add_child(column, text_input2);
+
     let ime_probe = ui.create_node(ImeProbe::new());
     ui.add_child(column, ime_probe);
 

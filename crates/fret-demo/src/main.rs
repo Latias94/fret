@@ -296,10 +296,40 @@ impl WinitDriver for DemoDriver {
                 .with_category("Edit")
                 .with_keywords(["text", "input"]),
         );
+        app.commands_mut().register(
+            CommandId::from("focus.next"),
+            CommandMeta::new("Focus Next")
+                .with_description("Move focus to the next focusable control")
+                .with_category("View"),
+        );
+        app.commands_mut().register(
+            CommandId::from("focus.previous"),
+            CommandMeta::new("Focus Previous")
+                .with_description("Move focus to the previous focusable control")
+                .with_category("View"),
+        );
 
         let default_keymap = Keymap::from_v1(KeymapFileV1 {
             keymap_version: 1,
             bindings: vec![
+                BindingV1 {
+                    command: Some("focus.next".into()),
+                    platform: Some("all".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "Tab".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("focus.previous".into()),
+                    platform: Some("all".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["shift".into()],
+                        key: "Tab".into(),
+                    },
+                },
                 BindingV1 {
                     command: Some("command_palette.toggle".into()),
                     platform: Some("macos".into()),

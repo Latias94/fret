@@ -271,6 +271,10 @@ impl Default for CommandPalette {
 }
 
 impl Widget for CommandPalette {
+    fn is_focusable(&self) -> bool {
+        true
+    }
+
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
         self.last_bounds = cx.bounds;
 

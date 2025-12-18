@@ -17,6 +17,16 @@
       "keys": { "mods": ["ctrl"], "key": "KeyP" }
     },
     {
+      "command": "focus.next",
+      "platform": "all",
+      "keys": { "mods": [], "key": "Tab" }
+    },
+    {
+      "command": "focus.previous",
+      "platform": "all",
+      "keys": { "mods": ["shift"], "key": "Tab" }
+    },
+    {
       "command": "demo.toggle_modal",
       "platform": "all",
       "keys": { "mods": [], "key": "F1" }

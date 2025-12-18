@@ -68,6 +68,10 @@ Goal: make large editor UIs usable with keyboard navigation, and lock focus-scop
   - a modal overlay control.
 - Focus traversal never escapes a modal overlay.
 
+Status:
+
+- Prototype implemented in `fret-demo` (Tab / Shift+Tab bindings, focusable traversal across multiple TextInputs).
+
 References:
 
 - `docs/adr/0011-overlays-and-multi-root.md`
