@@ -1,0 +1,432 @@
+use crate::{App, CommandId};
+use fret_core::{KeyCode, Modifiers};
+use serde::Deserialize;
+use std::{collections::{HashMap, HashSet}, path::Path};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Platform {
+    Macos,
+    Windows,
+    Linux,
+    Web,
+}
+
+impl Platform {
+    pub fn current() -> Self {
+        #[cfg(target_os = "macos")]
+        return Self::Macos;
+        #[cfg(target_os = "windows")]
+        return Self::Windows;
+        #[cfg(all(unix, not(target_os = "macos")))]
+        return Self::Linux;
+        #[cfg(target_arch = "wasm32")]
+        return Self::Web;
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Macos => "macos",
+            Self::Windows => "windows",
+            Self::Linux => "linux",
+            Self::Web => "web",
+        }
+    }
+}
+
+impl Default for Platform {
+    fn default() -> Self {
+        Self::current()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InputContext {
+    pub platform: Platform,
+    pub ui_has_modal: bool,
+    pub focus_is_text_input: bool,
+}
+
+impl Default for InputContext {
+    fn default() -> Self {
+        Self {
+            platform: Platform::current(),
+            ui_has_modal: false,
+            focus_is_text_input: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct KeyChord {
+    pub key: KeyCode,
+    pub mods: Modifiers,
+}
+
+impl KeyChord {
+    pub fn new(key: KeyCode, mods: Modifiers) -> Self {
+        Self { key, mods }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlatformFilter {
+    All,
+    Macos,
+    Windows,
+    Linux,
+    Web,
+}
+
+impl PlatformFilter {
+    fn matches(self, platform: Platform) -> bool {
+        match self {
+            Self::All => true,
+            Self::Macos => platform == Platform::Macos,
+            Self::Windows => platform == Platform::Windows,
+            Self::Linux => platform == Platform::Linux,
+            Self::Web => platform == Platform::Web,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Binding {
+    pub platform: PlatformFilter,
+    pub chord: KeyChord,
+    pub when: Option<crate::when_expr::WhenExpr>,
+    pub command: Option<CommandId>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DefaultKeybinding {
+    pub platform: PlatformFilter,
+    pub chord: KeyChord,
+    pub when: Option<crate::when_expr::WhenExpr>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Keymap {
+    bindings: Vec<Binding>,
+}
+
+impl Keymap {
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    pub fn push_binding(&mut self, binding: Binding) {
+        self.bindings.push(binding);
+    }
+
+    /// Last-wins resolution. If a later binding matches and its `command` is `None`, the key is
+    /// explicitly unbound and resolution stops.
+    pub fn resolve(&self, ctx: &InputContext, chord: KeyChord) -> Option<CommandId> {
+        for b in self.bindings.iter().rev() {
+            if b.chord != chord {
+                continue;
+            }
+            if !b.platform.matches(ctx.platform) {
+                continue;
+            }
+            if let Some(expr) = b.when.as_ref() {
+                if !expr.eval(ctx) {
+                    continue;
+                }
+            }
+            return b.command.clone();
+        }
+        None
+    }
+
+    pub fn extend(&mut self, other: Keymap) {
+        self.bindings.extend(other.bindings);
+    }
+
+    /// Best-effort reverse lookup for UI display (command palette / menus).
+    ///
+    /// This applies the same platform + `when` matching rules as `resolve`, then finds any chord
+    /// whose effective command equals `command` under the provided context.
+    pub fn shortcut_for_command(
+        &self,
+        ctx: &InputContext,
+        command: &CommandId,
+    ) -> Option<KeyChord> {
+        let mut chord_order: Vec<KeyChord> = Vec::new();
+        let mut seen: HashSet<KeyChord> = HashSet::new();
+        let mut effective: HashMap<KeyChord, Option<CommandId>> = HashMap::new();
+
+        for b in &self.bindings {
+            if !b.platform.matches(ctx.platform) {
+                continue;
+            }
+            if let Some(expr) = b.when.as_ref() {
+                if !expr.eval(ctx) {
+                    continue;
+                }
+            }
+            if seen.insert(b.chord) {
+                chord_order.push(b.chord);
+            }
+            effective.insert(b.chord, b.command.clone());
+        }
+
+        for chord in chord_order {
+            if effective.get(&chord).is_some_and(|c| c.as_ref() == Some(command)) {
+                return Some(chord);
+            }
+        }
+        None
+    }
+
+    pub fn from_file(path: &Path) -> Result<Self, KeymapError> {
+        let bytes = std::fs::read(path).map_err(|source| KeymapError::ReadFailed { source })?;
+        let parsed: KeymapFileV1 =
+            serde_json::from_slice(&bytes).map_err(|source| KeymapError::ParseFailed { source })?;
+        Self::from_v1(parsed)
+    }
+
+    pub fn from_v1(file: KeymapFileV1) -> Result<Self, KeymapError> {
+        if file.keymap_version != 1 {
+            return Err(KeymapError::UnsupportedVersion(file.keymap_version));
+        }
+
+        let mut out = Keymap::empty();
+        for (index, b) in file.bindings.into_iter().enumerate() {
+            let platform = match b.platform.as_deref().unwrap_or("all") {
+                "all" => PlatformFilter::All,
+                "macos" => PlatformFilter::Macos,
+                "windows" => PlatformFilter::Windows,
+                "linux" => PlatformFilter::Linux,
+                "web" => PlatformFilter::Web,
+                other => return Err(KeymapError::UnknownPlatform { index, value: other.into() }),
+            };
+
+            let chord = parse_keys(index, b.keys)?;
+
+            let when = if let Some(when) = b.when.as_deref() {
+                Some(
+                    crate::when_expr::WhenExpr::parse(when)
+                        .map_err(|e| KeymapError::WhenParseFailed { index, error: e })?,
+                )
+            } else {
+                None
+            };
+
+            let command = match b.command {
+                Some(cmd) => Some(CommandId::new(cmd)),
+                None => None,
+            };
+
+            out.push_binding(Binding {
+                platform,
+                chord,
+                when,
+                command,
+            });
+        }
+
+        Ok(out)
+    }
+}
+
+pub fn format_chord(platform: Platform, chord: KeyChord) -> String {
+    let mut parts: Vec<&'static str> = Vec::new();
+
+    match platform {
+        Platform::Macos => {
+            if chord.mods.meta {
+                parts.push("Cmd");
+            }
+            if chord.mods.ctrl {
+                parts.push("Ctrl");
+            }
+            if chord.mods.alt {
+                parts.push("Alt");
+            }
+            if chord.mods.shift {
+                parts.push("Shift");
+            }
+        }
+        Platform::Windows | Platform::Linux | Platform::Web => {
+            if chord.mods.ctrl {
+                parts.push("Ctrl");
+            }
+            if chord.mods.alt {
+                parts.push("Alt");
+            }
+            if chord.mods.shift {
+                parts.push("Shift");
+            }
+            if chord.mods.meta {
+                parts.push("Meta");
+            }
+        }
+    }
+
+    let key = key_label(chord.key).to_string();
+    if parts.is_empty() {
+        return key;
+    }
+    format!("{}+{}", parts.join("+"), key)
+}
+
+fn key_label(key: KeyCode) -> &'static str {
+    match key {
+        KeyCode::Escape => "Esc",
+        KeyCode::Enter => "Enter",
+        KeyCode::Tab => "Tab",
+        KeyCode::Backspace => "Backspace",
+        KeyCode::Space => "Space",
+
+        KeyCode::ArrowUp => "Up",
+        KeyCode::ArrowDown => "Down",
+        KeyCode::ArrowLeft => "Left",
+        KeyCode::ArrowRight => "Right",
+
+        KeyCode::Home => "Home",
+        KeyCode::End => "End",
+        KeyCode::PageUp => "PageUp",
+        KeyCode::PageDown => "PageDown",
+        KeyCode::Insert => "Insert",
+        KeyCode::Delete => "Delete",
+
+        KeyCode::Digit0 => "0",
+        KeyCode::Digit1 => "1",
+        KeyCode::Digit2 => "2",
+        KeyCode::Digit3 => "3",
+        KeyCode::Digit4 => "4",
+        KeyCode::Digit5 => "5",
+        KeyCode::Digit6 => "6",
+        KeyCode::Digit7 => "7",
+        KeyCode::Digit8 => "8",
+        KeyCode::Digit9 => "9",
+
+        KeyCode::KeyA => "A",
+        KeyCode::KeyB => "B",
+        KeyCode::KeyC => "C",
+        KeyCode::KeyD => "D",
+        KeyCode::KeyE => "E",
+        KeyCode::KeyF => "F",
+        KeyCode::KeyG => "G",
+        KeyCode::KeyH => "H",
+        KeyCode::KeyI => "I",
+        KeyCode::KeyJ => "J",
+        KeyCode::KeyK => "K",
+        KeyCode::KeyL => "L",
+        KeyCode::KeyM => "M",
+        KeyCode::KeyN => "N",
+        KeyCode::KeyO => "O",
+        KeyCode::KeyP => "P",
+        KeyCode::KeyQ => "Q",
+        KeyCode::KeyR => "R",
+        KeyCode::KeyS => "S",
+        KeyCode::KeyT => "T",
+        KeyCode::KeyU => "U",
+        KeyCode::KeyV => "V",
+        KeyCode::KeyW => "W",
+        KeyCode::KeyX => "X",
+        KeyCode::KeyY => "Y",
+        KeyCode::KeyZ => "Z",
+
+        KeyCode::Minus => "-",
+        KeyCode::Equal => "=",
+        KeyCode::BracketLeft => "[",
+        KeyCode::BracketRight => "]",
+        KeyCode::Backslash => "\\",
+        KeyCode::Semicolon => ";",
+        KeyCode::Quote => "'",
+        KeyCode::Backquote => "`",
+        KeyCode::Comma => ",",
+        KeyCode::Period => ".",
+        KeyCode::Slash => "/",
+
+        KeyCode::F1 => "F1",
+        KeyCode::F2 => "F2",
+        KeyCode::F3 => "F3",
+        KeyCode::F4 => "F4",
+        KeyCode::F5 => "F5",
+        KeyCode::F6 => "F6",
+        KeyCode::F7 => "F7",
+        KeyCode::F8 => "F8",
+        KeyCode::F9 => "F9",
+        KeyCode::F10 => "F10",
+        KeyCode::F11 => "F11",
+        KeyCode::F12 => "F12",
+
+        _ => "Unknown",
+    }
+}
+
+fn parse_keys(index: usize, keys: KeySpecV1) -> Result<KeyChord, KeymapError> {
+    let key = KeyCode::from_token(&keys.key).ok_or_else(|| KeymapError::UnknownKeyToken {
+        index,
+        token: keys.key.clone(),
+    })?;
+
+    let mut mods = Modifiers::default();
+    for m in keys.mods {
+        match m.as_str() {
+            "shift" => mods.shift = true,
+            "ctrl" => mods.ctrl = true,
+            "alt" => mods.alt = true,
+            "meta" => mods.meta = true,
+            other => {
+                return Err(KeymapError::UnknownModifier {
+                    index,
+                    value: other.into(),
+                })
+            }
+        }
+    }
+    Ok(KeyChord::new(key, mods))
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum KeymapError {
+    #[error("failed to read keymap file")]
+    ReadFailed { source: std::io::Error },
+    #[error("failed to parse keymap json")]
+    ParseFailed { source: serde_json::Error },
+    #[error("unsupported keymap_version {0}")]
+    UnsupportedVersion(u32),
+    #[error("unknown platform value at binding[{index}]: {value}")]
+    UnknownPlatform { index: usize, value: String },
+    #[error("unknown key token at binding[{index}]: {token}")]
+    UnknownKeyToken { index: usize, token: String },
+    #[error("unknown modifier at binding[{index}]: {value}")]
+    UnknownModifier { index: usize, value: String },
+    #[error("failed to parse when at binding[{index}]: {error}")]
+    WhenParseFailed { index: usize, error: String },
+}
+
+#[derive(Debug, Deserialize)]
+pub struct KeymapFileV1 {
+    pub keymap_version: u32,
+    pub bindings: Vec<BindingV1>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BindingV1 {
+    pub command: Option<String>,
+    pub platform: Option<String>,
+    pub when: Option<String>,
+    pub keys: KeySpecV1,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct KeySpecV1 {
+    pub mods: Vec<String>,
+    pub key: String,
+}
+
+#[derive(Debug, Default)]
+pub struct KeymapService {
+    pub keymap: Keymap,
+}
+
+impl KeymapService {
+    pub fn global(app: &mut App) -> &mut Self {
+        app.global_mut::<KeymapService>()
+            .expect("KeymapService must be installed in App globals")
+    }
+}

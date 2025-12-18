@@ -1,17 +1,31 @@
+mod command_palette;
 mod demo_ui;
+mod dnd_probe;
+mod elements_mvp2;
+mod ime_probe;
+mod property_row;
 
-use demo_ui::{DemoUiConfig, build_demo_ui};
+use demo_ui::{DemoLayers, DemoUiConfig, build_demo_ui};
 
-use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
-use fret_core::{Axis, Color, DockNode, DropZone, Rect, RenderTargetId, Scene};
-use fret_platform::winit_runner::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
+use fret_app::{
+    App, CommandId, CommandMeta, CreateWindowKind, CreateWindowRequest, Effect, Keymap, KeymapFileV1,
+    KeymapService, WindowRequest,
+    keymap::{BindingV1, KeySpecV1},
+};
+use fret_core::{
+    Axis, Color, DockLayoutNodeV1, DockLayoutV1, DockNode, DockOp, PanelKey, Rect, RenderTargetId,
+    Scene,
+};
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
+use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui::{DockManager, DockPanel, UiTree, ViewportPanel};
+use std::{collections::HashMap, fs::File, path::Path};
 use winit::event_loop::EventLoop;
 
 struct DemoWindowState {
     ui: UiTree,
-    modal_layer: fret_ui::UiLayerId,
+    layers: DemoLayers,
+    palette_previous_focus: Option<fret_core::NodeId>,
 }
 
 #[derive(Default)]
@@ -22,9 +36,41 @@ struct DemoDriver {
     scene_texture: Option<wgpu::Texture>,
     scene_pixels: Option<Vec<u8>>,
     queue: Option<wgpu::Queue>,
+    logical_windows: HashMap<fret_core::AppWindowId, String>,
+    window_placements: HashMap<fret_core::AppWindowId, fret_core::DockWindowPlacementV1>,
+    next_floating_index: u32,
+    loaded_layout: Option<DockLayoutV1>,
 }
 
 impl DemoDriver {
+    fn layout_path() -> &'static Path {
+        Path::new("./.fret/layout.json")
+    }
+
+    fn keymap_path() -> &'static Path {
+        Path::new("./.fret/keymap.json")
+    }
+
+    fn load_layout_file() -> Option<DockLayoutV1> {
+        let path = Self::layout_path();
+        let file = File::open(path).ok()?;
+        serde_json::from_reader(file).ok()
+    }
+
+    fn load_keymap_file() -> Result<Keymap, fret_app::KeymapError> {
+        Keymap::from_file(Self::keymap_path())
+    }
+
+    fn save_layout_file(layout: &DockLayoutV1) -> std::io::Result<()> {
+        if let Some(parent) = Self::layout_path().parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let file = File::create(Self::layout_path())?;
+        serde_json::to_writer_pretty(file, layout)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        Ok(())
+    }
+
     fn ensure_main_tabs(
         dock: &mut DockManager,
         main: fret_core::AppWindowId,
@@ -102,6 +148,44 @@ impl DemoDriver {
             },
         );
     }
+
+    fn next_floating_logical_id(&mut self) -> String {
+        let n = self.next_floating_index.max(1);
+        self.next_floating_index = n.saturating_add(1);
+        format!("floating-{n}")
+    }
+
+    fn window_list_for_export(
+        &mut self,
+        dock: &DockManager,
+    ) -> Vec<(fret_core::AppWindowId, String)> {
+        let mut out: Vec<(fret_core::AppWindowId, String)> = Vec::new();
+        for (&window, logical) in &self.logical_windows {
+            if dock.graph.window_root(window).is_some() {
+                out.push((window, logical.clone()));
+            }
+        }
+        out
+    }
+
+    fn ensure_layout_panels(dock: &mut DockManager, layout: &DockLayoutV1) {
+        for node in &layout.nodes {
+            if let DockLayoutNodeV1::Tabs { tabs, .. } = node {
+                for key in tabs {
+                    dock.ensure_panel(key, || DockPanel {
+                        title: format!("Missing: {}", key.kind.0),
+                        color: Color {
+                            r: 0.18,
+                            g: 0.18,
+                            b: 0.20,
+                            a: 1.0,
+                        },
+                        viewport: None,
+                    });
+                }
+            }
+        }
+    }
 }
 
 impl WinitDriver for DemoDriver {
@@ -176,69 +260,217 @@ impl WinitDriver for DemoDriver {
 
     fn init(&mut self, app: &mut App, main_window: fret_core::AppWindowId) {
         self.main_window = Some(main_window);
+        self.logical_windows.insert(main_window, "main".to_string());
+
+        app.commands_mut().register(
+            CommandId::from("command_palette.toggle"),
+            CommandMeta::new("Toggle Command Palette")
+                .with_description("Opens/closes the command palette overlay")
+                .with_category("View")
+                .with_keywords(["palette", "command", "search"]),
+        );
+        app.commands_mut().register(
+            CommandId::from("command_palette.close"),
+            CommandMeta::new("Close Command Palette")
+                .with_description("Closes the command palette overlay")
+                .with_category("View")
+                .with_keywords(["palette", "command"]),
+        );
+
+        app.commands_mut().register(
+            CommandId::from("demo.toggle_modal"),
+            CommandMeta::new("Toggle Modal Overlay")
+                .with_description("Demo-only: toggles the modal overlay layer")
+                .with_category("Demo"),
+        );
+        app.commands_mut().register(
+            CommandId::from("demo.toggle_dnd_overlay"),
+            CommandMeta::new("Toggle DnD Overlay")
+                .with_description("Demo-only: toggles the external drag overlay layer")
+                .with_category("Demo"),
+        );
+        app.commands_mut().register(
+            CommandId::from("text.clear"),
+            CommandMeta::new("Clear Text Input")
+                .with_description("Clears the focused text input")
+                .with_category("Edit")
+                .with_keywords(["text", "input"]),
+        );
+
+        let default_keymap = Keymap::from_v1(KeymapFileV1 {
+            keymap_version: 1,
+            bindings: vec![
+                BindingV1 {
+                    command: Some("command_palette.toggle".into()),
+                    platform: Some("macos".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["meta".into()],
+                        key: "KeyP".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("command_palette.toggle".into()),
+                    platform: Some("windows".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyP".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("command_palette.toggle".into()),
+                    platform: Some("linux".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyP".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("demo.toggle_modal".into()),
+                    platform: Some("all".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "F1".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("demo.toggle_dnd_overlay".into()),
+                    platform: Some("all".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "F2".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.clear".into()),
+                    platform: Some("all".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyL".into(),
+                    },
+                },
+            ],
+        })
+        .expect("default keymap must parse");
+
+        let mut merged = default_keymap;
+        match Self::load_keymap_file() {
+            Ok(user) => merged.extend(user),
+            Err(e) => {
+                tracing::info!(error = ?e, path = %Self::keymap_path().display(), "no user keymap loaded");
+            }
+        }
+        app.set_global(KeymapService { keymap: merged });
 
         let mut dock = DockManager::default();
-        let panel_scene = dock.create_panel(DockPanel {
-            title: "Scene".to_string(),
-            color: Color {
-                r: 0.12,
-                g: 0.16,
-                b: 0.22,
-                a: 1.0,
-            },
-            viewport: self.scene_target.zip(self.scene_target_size).map(
-                |(target, target_px_size)| ViewportPanel {
-                    target,
-                    target_px_size,
-                    fit: fret_core::ViewportFit::Contain,
+        let key_scene = PanelKey::new("core.scene");
+        dock.insert_panel(
+            key_scene.clone(),
+            DockPanel {
+                title: "Scene".to_string(),
+                color: Color {
+                    r: 0.12,
+                    g: 0.16,
+                    b: 0.22,
+                    a: 1.0,
                 },
-            ),
-        });
-        let panel_inspector = dock.create_panel(DockPanel {
-            title: "Inspector".to_string(),
-            color: Color {
-                r: 0.16,
-                g: 0.14,
-                b: 0.20,
-                a: 1.0,
+                viewport: self.scene_target.zip(self.scene_target_size).map(
+                    |(target, target_px_size)| ViewportPanel {
+                        target,
+                        target_px_size,
+                        fit: fret_core::ViewportFit::Contain,
+                    },
+                ),
             },
-            viewport: None,
-        });
-        let panel_hierarchy = dock.create_panel(DockPanel {
-            title: "Hierarchy".to_string(),
-            color: Color {
-                r: 0.15,
-                g: 0.18,
-                b: 0.14,
-                a: 1.0,
+        );
+        let key_inspector = PanelKey::new("core.inspector");
+        dock.insert_panel(
+            key_inspector.clone(),
+            DockPanel {
+                title: "Inspector".to_string(),
+                color: Color {
+                    r: 0.16,
+                    g: 0.14,
+                    b: 0.20,
+                    a: 1.0,
+                },
+                viewport: None,
             },
-            viewport: None,
-        });
+        );
+        let key_hierarchy = PanelKey::new("core.hierarchy");
+        dock.insert_panel(
+            key_hierarchy.clone(),
+            DockPanel {
+                title: "Hierarchy".to_string(),
+                color: Color {
+                    r: 0.15,
+                    g: 0.18,
+                    b: 0.14,
+                    a: 1.0,
+                },
+                viewport: None,
+            },
+        );
 
-        let tabs_left = dock.graph.insert_node(DockNode::Tabs {
-            tabs: vec![panel_hierarchy],
-            active: 0,
-        });
-        let tabs_scene = dock.graph.insert_node(DockNode::Tabs {
-            tabs: vec![panel_scene],
-            active: 0,
-        });
-        let tabs_inspector = dock.graph.insert_node(DockNode::Tabs {
-            tabs: vec![panel_inspector],
-            active: 0,
-        });
-        let right = dock.graph.insert_node(DockNode::Split {
-            axis: Axis::Vertical,
-            children: vec![tabs_scene, tabs_inspector],
-            fractions: vec![0.72, 0.28],
-        });
-        let root_dock = dock.graph.insert_node(DockNode::Split {
-            axis: Axis::Horizontal,
-            children: vec![tabs_left, right],
-            fractions: vec![0.26, 0.74],
-        });
+        if let Some(layout) = Self::load_layout_file() {
+            Self::ensure_layout_panels(&mut dock, &layout);
+            self.loaded_layout = Some(layout.clone());
 
-        dock.graph.set_window_root(main_window, root_dock);
+            if let Some(main_entry) = layout
+                .windows
+                .iter()
+                .find(|w| w.logical_window_id == "main")
+            {
+                if let Some(root) = dock
+                    .graph
+                    .import_subtree_from_layout_v1(&layout, main_entry.root)
+                {
+                    dock.graph.set_window_root(main_window, root);
+                }
+            }
+
+            for w in &layout.windows {
+                if w.logical_window_id == "main" {
+                    continue;
+                }
+                app.push_effect(Effect::Window(WindowRequest::Create(CreateWindowRequest {
+                    kind: CreateWindowKind::DockRestore {
+                        logical_window_id: w.logical_window_id.clone(),
+                    },
+                    anchor: None,
+                })));
+            }
+        } else {
+            let tabs_left = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![key_hierarchy],
+                active: 0,
+            });
+            let tabs_scene = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![key_scene],
+                active: 0,
+            });
+            let tabs_inspector = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![key_inspector],
+                active: 0,
+            });
+            let right = dock.graph.insert_node(DockNode::Split {
+                axis: Axis::Vertical,
+                children: vec![tabs_scene, tabs_inspector],
+                fractions: vec![0.72, 0.28],
+            });
+            let root_dock = dock.graph.insert_node(DockNode::Split {
+                axis: Axis::Horizontal,
+                children: vec![tabs_left, right],
+                fractions: vec![0.26, 0.74],
+            });
+            dock.graph.set_window_root(main_window, root_dock);
+        }
+
         app.set_global(dock);
     }
 
@@ -247,8 +479,12 @@ impl WinitDriver for DemoDriver {
         _app: &mut App,
         window: fret_core::AppWindowId,
     ) -> Self::WindowState {
-        let (ui, modal_layer) = build_demo_ui(window, DemoUiConfig::default());
-        Self::WindowState { ui, modal_layer }
+        let (ui, layers) = build_demo_ui(window, DemoUiConfig::default());
+        Self::WindowState {
+            ui,
+            layers,
+            palette_previous_focus: None,
+        }
     }
 
     fn handle_event(
@@ -258,22 +494,188 @@ impl WinitDriver for DemoDriver {
         state: &mut Self::WindowState,
         event: &fret_core::Event,
     ) {
+        if let fret_core::Event::ExternalDrag(drag) = event {
+            tracing::info!(window = ?window, ?drag, "external drag event received");
+            match &drag.kind {
+                fret_core::ExternalDragKind::EnterFiles(_)
+                | fret_core::ExternalDragKind::OverFiles(_) => {
+                    if !state.ui.is_layer_visible(state.layers.external_dnd) {
+                        state.ui.set_layer_visible(state.layers.external_dnd, true);
+                        app.request_redraw(window);
+                    }
+                }
+                fret_core::ExternalDragKind::DropFiles(_) | fret_core::ExternalDragKind::Leave => {
+                    if state.ui.is_layer_visible(state.layers.external_dnd) {
+                        state.ui.set_layer_visible(state.layers.external_dnd, false);
+                        app.request_redraw(window);
+                    }
+                }
+            }
+        }
+
+        match event {
+            fret_core::Event::WindowResized { width, height } => {
+                let entry = self.window_placements.entry(window).or_insert(
+                    fret_core::DockWindowPlacementV1 {
+                        width: 640,
+                        height: 480,
+                        x: None,
+                        y: None,
+                        monitor_hint: None,
+                    },
+                );
+                entry.width = width.0.max(1.0).round() as u32;
+                entry.height = height.0.max(1.0).round() as u32;
+            }
+            fret_core::Event::WindowMoved { x, y } => {
+                let entry = self.window_placements.entry(window).or_insert(
+                    fret_core::DockWindowPlacementV1 {
+                        width: 640,
+                        height: 480,
+                        x: None,
+                        y: None,
+                        monitor_hint: None,
+                    },
+                );
+                entry.x = Some(*x);
+                entry.y = Some(*y);
+            }
+            _ => {}
+        }
+
         if let fret_core::Event::Pointer(pe) = event {
             if let fret_core::PointerEvent::Down { button, .. } = pe {
-                if state.ui.is_layer_visible(state.modal_layer) {
-                    state.ui.set_layer_visible(state.modal_layer, false);
+                if state.ui.is_layer_visible(state.layers.command_palette) {
+                    // Command palette uses its own backdrop to dismiss; avoid demo-only right-click modal.
+                    state.ui.dispatch_event(app, event);
+                    return;
+                }
+                if state.ui.is_layer_visible(state.layers.modal) {
+                    state.ui.set_layer_visible(state.layers.modal, false);
                     app.request_redraw(window);
                     return;
                 }
 
                 if *button == fret_core::MouseButton::Right {
-                    state.ui.set_layer_visible(state.modal_layer, true);
+                    state.ui.set_layer_visible(state.layers.modal, true);
                     app.request_redraw(window);
                     return;
                 }
             }
         }
         state.ui.dispatch_event(app, event);
+    }
+
+    fn handle_command(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        command: CommandId,
+    ) {
+        if state.ui.dispatch_command(app, &command) {
+            return;
+        }
+
+        match command.as_str() {
+            "command_palette.toggle" => {
+                let vis = state.ui.is_layer_visible(state.layers.command_palette);
+                if vis {
+                    state.ui.set_layer_visible(state.layers.command_palette, false);
+                    if let Some(prev) = state.palette_previous_focus.take() {
+                        state.ui.set_focus(Some(prev));
+                    }
+                } else {
+                    state.palette_previous_focus = state.ui.focus();
+                    state.ui.set_layer_visible(state.layers.command_palette, true);
+                    state.ui.set_focus(Some(state.layers.command_palette_node));
+                }
+                app.request_redraw(window);
+            }
+            "command_palette.close" => {
+                if state.ui.is_layer_visible(state.layers.command_palette) {
+                    state.ui.set_layer_visible(state.layers.command_palette, false);
+                    if let Some(prev) = state.palette_previous_focus.take() {
+                        state.ui.set_focus(Some(prev));
+                    }
+                    app.request_redraw(window);
+                }
+            }
+            "demo.toggle_modal" => {
+                let vis = state.ui.is_layer_visible(state.layers.modal);
+                state.ui.set_layer_visible(state.layers.modal, !vis);
+                app.request_redraw(window);
+            }
+            "demo.toggle_dnd_overlay" => {
+                let vis = state.ui.is_layer_visible(state.layers.external_dnd);
+                state.ui.set_layer_visible(state.layers.external_dnd, !vis);
+                app.request_redraw(window);
+            }
+            _ => {}
+        }
+    }
+
+    fn dock_op(&mut self, app: &mut App, op: DockOp) {
+        if let DockOp::RequestFloatPanelToNewWindow {
+            source_window,
+            panel,
+            anchor,
+        } = &op
+        {
+            app.push_effect(Effect::Window(WindowRequest::Create(CreateWindowRequest {
+                kind: CreateWindowKind::DockFloating {
+                    source_window: *source_window,
+                    panel: panel.clone(),
+                },
+                anchor: *anchor,
+            })));
+            return;
+        }
+
+        let mut close_if_empty: Option<fret_core::AppWindowId> = None;
+        let mut redraw: Vec<fret_core::AppWindowId> = Vec::new();
+
+        {
+            let Some(dock) = app.global_mut::<DockManager>() else {
+                return;
+            };
+
+            let _ = dock.graph.apply_op(&op);
+
+            if let DockOp::MovePanel { source_window, .. } = &op {
+                if dock
+                    .graph
+                    .collect_panels_in_window(*source_window)
+                    .is_empty()
+                    && Some(*source_window) != self.main_window
+                {
+                    close_if_empty = Some(*source_window);
+                }
+            }
+            if let DockOp::FloatPanelToWindow { source_window, .. } = &op {
+                if dock
+                    .graph
+                    .collect_panels_in_window(*source_window)
+                    .is_empty()
+                    && Some(*source_window) != self.main_window
+                {
+                    close_if_empty = Some(*source_window);
+                }
+            }
+
+            for (&w, _) in &self.logical_windows {
+                if dock.graph.window_root(w).is_some() {
+                    redraw.push(w);
+                }
+            }
+        }
+
+        if let Some(window) = close_if_empty {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        }
+        for w in redraw {
+            app.request_redraw(w);
+        }
     }
 
     fn viewport_input(&mut self, app: &mut App, event: fret_core::ViewportInputEvent) {
@@ -299,19 +701,21 @@ impl WinitDriver for DemoDriver {
         _window: fret_core::AppWindowId,
         state: &mut Self::WindowState,
         bounds: Rect,
+        scale_factor: f32,
+        text: &mut dyn fret_core::TextService,
         scene: &mut Scene,
     ) {
         scene.clear();
-        state.ui.layout_all(app, bounds);
-        state.ui.paint_all(app, bounds, scene);
+        state.ui.layout_all(app, text, bounds, scale_factor);
+        state.ui.paint_all(app, text, bounds, scene, scale_factor);
     }
 
     fn window_create_spec(
         &mut self,
         app: &mut App,
-        request: CreateWindowRequest,
+        request: &CreateWindowRequest,
     ) -> Option<WindowCreateSpec> {
-        match request.kind {
+        match &request.kind {
             CreateWindowKind::DockFloating { panel, .. } => {
                 let title = app
                     .global::<DockManager>()
@@ -323,36 +727,84 @@ impl WinitDriver for DemoDriver {
                     winit::dpi::LogicalSize::new(640.0, 480.0),
                 ))
             }
+            CreateWindowKind::DockRestore { logical_window_id } => {
+                let mut spec = WindowCreateSpec::new(
+                    format!("fret-demo - {logical_window_id}"),
+                    winit::dpi::LogicalSize::new(640.0, 480.0),
+                );
+
+                if let Some(layout) = self.loaded_layout.as_ref() {
+                    if let Some(entry) = layout
+                        .windows
+                        .iter()
+                        .find(|w| w.logical_window_id == *logical_window_id)
+                    {
+                        if let Some(p) = entry.placement.as_ref() {
+                            spec.size =
+                                winit::dpi::LogicalSize::new(p.width as f64, p.height as f64);
+                            if let (Some(x), Some(y)) = (p.x, p.y) {
+                                spec.position = Some(winit::dpi::Position::Logical(
+                                    winit::dpi::LogicalPosition::new(x as f64, y as f64),
+                                ));
+                            }
+                        }
+                    }
+                }
+
+                Some(spec)
+            }
         }
     }
 
     fn window_created(
         &mut self,
         app: &mut App,
-        request: CreateWindowRequest,
+        request: &CreateWindowRequest,
         new_window: fret_core::AppWindowId,
     ) {
-        match request.kind {
+        match &request.kind {
             CreateWindowKind::DockFloating {
                 source_window,
                 panel,
             } => {
-                let empty = {
-                    let Some(dock) = app.global_mut::<DockManager>() else {
-                        return;
-                    };
-                    dock.graph
-                        .float_panel_to_window(source_window, panel, new_window);
-                    dock.graph
-                        .collect_panels_in_window(source_window)
-                        .is_empty()
+                self.dock_op(
+                    app,
+                    DockOp::FloatPanelToWindow {
+                        source_window: *source_window,
+                        panel: panel.clone(),
+                        new_window,
+                    },
+                );
+
+                if !self.logical_windows.contains_key(&new_window) {
+                    let id = self.next_floating_logical_id();
+                    self.logical_windows.insert(new_window, id);
+                }
+
+                app.request_redraw(*source_window);
+                app.request_redraw(new_window);
+            }
+            CreateWindowKind::DockRestore { logical_window_id } => {
+                self.logical_windows
+                    .insert(new_window, logical_window_id.clone());
+
+                let Some(layout) = self.loaded_layout.as_ref() else {
+                    return;
+                };
+                let Some(entry) = layout
+                    .windows
+                    .iter()
+                    .find(|w| w.logical_window_id == *logical_window_id)
+                else {
+                    return;
                 };
 
-                app.request_redraw(source_window);
-                app.request_redraw(new_window);
-
-                if empty && Some(source_window) != self.main_window {
-                    app.push_effect(Effect::Window(WindowRequest::Close(source_window)));
+                let Some(dock) = app.global_mut::<DockManager>() else {
+                    return;
+                };
+                if let Some(root) = dock.graph.import_subtree_from_layout_v1(layout, entry.root) {
+                    dock.graph.set_window_root(new_window, root);
+                    app.request_redraw(new_window);
                 }
             }
         }
@@ -363,6 +815,15 @@ impl WinitDriver for DemoDriver {
             return true;
         };
         if window == main {
+            if let Some(dock) = app.global::<DockManager>() {
+                let windows = self.window_list_for_export(dock);
+                let layout = dock.graph.export_layout_v1_with_placement(&windows, |w| {
+                    self.window_placements.get(&w).cloned()
+                });
+                if let Err(e) = Self::save_layout_file(&layout) {
+                    tracing::error!(error = ?e, "failed to save layout.json");
+                }
+            }
             return true;
         }
 
@@ -371,18 +832,12 @@ impl WinitDriver for DemoDriver {
         };
 
         let target_tabs = Self::ensure_main_tabs(dock, main);
-        let panels = dock.graph.collect_panels_in_window(window);
-        for panel in panels {
-            dock.graph.move_panel_between_windows(
-                window,
-                panel,
-                main,
-                target_tabs,
-                DropZone::Center,
-                None,
-            );
-        }
-        dock.graph.remove_window_root(window);
+        let _ = dock.graph.apply_op(&DockOp::MergeWindowInto {
+            source_window: window,
+            target_window: main,
+            target_tabs,
+        });
+        self.logical_windows.remove(&window);
 
         app.request_redraw(main);
         true
@@ -390,11 +845,39 @@ impl WinitDriver for DemoDriver {
 }
 
 fn main() -> anyhow::Result<()> {
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive("fret=info".parse().unwrap())
+                .add_directive("fret_platform=info".parse().unwrap())
+                .add_directive("fret_render=info".parse().unwrap()),
+        )
+        .try_init();
+
     let event_loop = EventLoop::new()?;
-    let config = WinitRunnerConfig {
+    let mut config = WinitRunnerConfig {
         main_window_title: "fret-demo".to_string(),
         ..Default::default()
     };
+
+    if let Some(layout) = DemoDriver::load_layout_file() {
+        if let Some(main_entry) = layout
+            .windows
+            .iter()
+            .find(|w| w.logical_window_id == "main")
+        {
+            if let Some(p) = main_entry.placement.as_ref() {
+                config.main_window_size =
+                    winit::dpi::LogicalSize::new(p.width as f64, p.height as f64);
+                if let (Some(x), Some(y)) = (p.x, p.y) {
+                    config.main_window_position = Some(winit::dpi::Position::Logical(
+                        winit::dpi::LogicalPosition::new(x as f64, y as f64),
+                    ));
+                }
+            }
+        }
+    }
+
     let app = App::new();
     let driver = DemoDriver::default();
     let mut runner = WinitRunner::new(config, app, driver);

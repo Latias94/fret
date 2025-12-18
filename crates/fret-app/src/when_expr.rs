@@ -1,0 +1,283 @@
+use crate::keymap::InputContext;
+
+#[derive(Debug, Clone)]
+pub struct WhenExpr(Expr);
+
+impl WhenExpr {
+    pub fn parse(input: &str) -> Result<Self, String> {
+        let mut p = Parser::new(input);
+        let expr = p.parse_expr()?;
+        p.skip_ws();
+        if !p.eof() {
+            return Err(format!("unexpected trailing input at byte {}", p.pos));
+        }
+        Ok(Self(expr))
+    }
+
+    pub fn eval(&self, ctx: &InputContext) -> bool {
+        self.0.eval(ctx)
+    }
+}
+
+#[derive(Debug, Clone)]
+enum Expr {
+    Bool(bool),
+    Str(String),
+    Ident(String),
+    Not(Box<Expr>),
+    And(Box<Expr>, Box<Expr>),
+    Or(Box<Expr>, Box<Expr>),
+    Eq(Value, Value, bool /* is_equal */),
+}
+
+#[derive(Debug, Clone)]
+enum Value {
+    Bool(bool),
+    Str(String),
+    Ident(String),
+}
+
+impl Expr {
+    fn eval(&self, ctx: &InputContext) -> bool {
+        match self {
+            Expr::Bool(v) => *v,
+            Expr::Str(_) => false,
+            Expr::Ident(name) => eval_ident_bool(ctx, name),
+            Expr::Not(e) => !e.eval(ctx),
+            Expr::And(a, b) => a.eval(ctx) && b.eval(ctx),
+            Expr::Or(a, b) => a.eval(ctx) || b.eval(ctx),
+            Expr::Eq(a, b, is_equal) => {
+                let left = eval_value(ctx, a);
+                let right = eval_value(ctx, b);
+                match (left, right) {
+                    (Some(Lit::Bool(a)), Some(Lit::Bool(b))) => (a == b) == *is_equal,
+                    (Some(Lit::Str(a)), Some(Lit::Str(b))) => (a == b) == *is_equal,
+                    _ => false,
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+enum Lit {
+    Bool(bool),
+    Str(String),
+}
+
+fn eval_value(ctx: &InputContext, v: &Value) -> Option<Lit> {
+    match v {
+        Value::Bool(b) => Some(Lit::Bool(*b)),
+        Value::Str(s) => Some(Lit::Str(s.clone())),
+        Value::Ident(id) => {
+            if let Some(b) = eval_ident_bool_opt(ctx, id) {
+                return Some(Lit::Bool(b));
+            }
+            if let Some(s) = eval_ident_str_opt(ctx, id) {
+                return Some(Lit::Str(s.to_string()));
+            }
+            None
+        }
+    }
+}
+
+fn eval_ident_bool(ctx: &InputContext, name: &str) -> bool {
+    eval_ident_bool_opt(ctx, name).unwrap_or(false)
+}
+
+fn eval_ident_bool_opt(ctx: &InputContext, name: &str) -> Option<bool> {
+    match name {
+        "ui.has_modal" => Some(ctx.ui_has_modal),
+        "focus.is_text_input" => Some(ctx.focus_is_text_input),
+        _ => None,
+    }
+}
+
+fn eval_ident_str_opt<'a>(ctx: &'a InputContext, name: &str) -> Option<&'a str> {
+    match name {
+        "platform" => Some(ctx.platform.as_str()),
+        _ => None,
+    }
+}
+
+struct Parser<'a> {
+    input: &'a str,
+    pos: usize,
+}
+
+impl<'a> Parser<'a> {
+    fn new(input: &'a str) -> Self {
+        Self { input, pos: 0 }
+    }
+
+    fn eof(&self) -> bool {
+        self.pos >= self.input.len()
+    }
+
+    fn skip_ws(&mut self) {
+        while let Some(c) = self.peek_char() {
+            if c.is_whitespace() {
+                self.pos += c.len_utf8();
+            } else {
+                break;
+            }
+        }
+    }
+
+    fn peek_char(&self) -> Option<char> {
+        self.input[self.pos..].chars().next()
+    }
+
+    fn eat(&mut self, s: &str) -> bool {
+        if self.input[self.pos..].starts_with(s) {
+            self.pos += s.len();
+            true
+        } else {
+            false
+        }
+    }
+
+    fn parse_expr(&mut self) -> Result<Expr, String> {
+        self.parse_or()
+    }
+
+    fn parse_or(&mut self) -> Result<Expr, String> {
+        let mut left = self.parse_and()?;
+        loop {
+            self.skip_ws();
+            if self.eat("||") {
+                let right = self.parse_and()?;
+                left = Expr::Or(Box::new(left), Box::new(right));
+                continue;
+            }
+            break;
+        }
+        Ok(left)
+    }
+
+    fn parse_and(&mut self) -> Result<Expr, String> {
+        let mut left = self.parse_unary()?;
+        loop {
+            self.skip_ws();
+            if self.eat("&&") {
+                let right = self.parse_unary()?;
+                left = Expr::And(Box::new(left), Box::new(right));
+                continue;
+            }
+            break;
+        }
+        Ok(left)
+    }
+
+    fn parse_unary(&mut self) -> Result<Expr, String> {
+        self.skip_ws();
+        if self.eat("!") {
+            let inner = self.parse_unary()?;
+            return Ok(Expr::Not(Box::new(inner)));
+        }
+        self.parse_comparison()
+    }
+
+    fn parse_comparison(&mut self) -> Result<Expr, String> {
+        let left_expr = self.parse_primary()?;
+        self.skip_ws();
+
+        if self.eat("==") {
+            let right_expr = self.parse_primary()?;
+            let left = expr_to_value(left_expr)?;
+            let right = expr_to_value(right_expr)?;
+            return Ok(Expr::Eq(left, right, true));
+        }
+        if self.eat("!=") {
+            let right_expr = self.parse_primary()?;
+            let left = expr_to_value(left_expr)?;
+            let right = expr_to_value(right_expr)?;
+            return Ok(Expr::Eq(left, right, false));
+        }
+
+        Ok(left_expr)
+    }
+
+    fn parse_primary(&mut self) -> Result<Expr, String> {
+        self.skip_ws();
+        if self.eat("(") {
+            let expr = self.parse_expr()?;
+            self.skip_ws();
+            if !self.eat(")") {
+                return Err(format!("expected ')' at byte {}", self.pos));
+            }
+            return Ok(expr);
+        }
+
+        if self.eat("true") {
+            return Ok(Expr::Bool(true));
+        }
+        if self.eat("false") {
+            return Ok(Expr::Bool(false));
+        }
+
+        if self.eat("\"") {
+            let s = self.parse_string()?;
+            return Ok(Expr::Str(s));
+        }
+
+        let ident = self.parse_ident()?;
+        Ok(Expr::Ident(ident))
+    }
+
+    fn parse_string(&mut self) -> Result<String, String> {
+        let mut out = String::new();
+        while !self.eof() {
+            let c = self
+                .peek_char()
+                .ok_or_else(|| "unterminated string literal".to_string())?;
+            if c == '"' {
+                self.pos += 1;
+                return Ok(out);
+            }
+            if c == '\\' {
+                self.pos += 1;
+                let esc = self
+                    .peek_char()
+                    .ok_or_else(|| "unterminated escape".to_string())?;
+                self.pos += esc.len_utf8();
+                match esc {
+                    '"' => out.push('"'),
+                    '\\' => out.push('\\'),
+                    'n' => out.push('\n'),
+                    't' => out.push('\t'),
+                    _ => return Err(format!("unsupported escape \\{esc}")),
+                }
+                continue;
+            }
+            self.pos += c.len_utf8();
+            out.push(c);
+        }
+        Err("unterminated string literal".into())
+    }
+
+    fn parse_ident(&mut self) -> Result<String, String> {
+        self.skip_ws();
+        let start = self.pos;
+        while let Some(c) = self.peek_char() {
+            if c.is_ascii_alphanumeric() || c == '_' || c == '.' {
+                self.pos += c.len_utf8();
+            } else {
+                break;
+            }
+        }
+        if self.pos == start {
+            return Err(format!("expected identifier at byte {}", self.pos));
+        }
+        Ok(self.input[start..self.pos].to_string())
+    }
+}
+
+fn expr_to_value(expr: Expr) -> Result<Value, String> {
+    match expr {
+        Expr::Bool(b) => Ok(Value::Bool(b)),
+        Expr::Str(s) => Ok(Value::Str(s)),
+        Expr::Ident(s) => Ok(Value::Ident(s)),
+        _ => Err("only literal/identifier values are allowed in ==/!=".into()),
+    }
+}

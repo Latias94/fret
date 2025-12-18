@@ -2,46 +2,86 @@ use std::{
     any::{Any, TypeId},
     collections::{HashMap, HashSet},
     marker::PhantomData,
+    sync::Arc,
+    time::Duration,
 };
 
-use fret_core::{AppWindowId, NodeId};
+use fret_core::{AppWindowId, FrameId, NodeId, Rect, TickId, TimerToken, WindowAnchor};
 use slotmap::SlotMap;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct CommandId(pub &'static str);
+use crate::drag::DragSession;
+use crate::{keymap::DefaultKeybinding, when_expr::WhenExpr};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CommandId(pub Arc<str>);
+
+impl CommandId {
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<&'static str> for CommandId {
+    fn from(value: &'static str) -> Self {
+        Self(Arc::<str>::from(value))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Effect {
     Redraw(AppWindowId),
     Window(WindowRequest),
-    Command(CommandId),
+    Command {
+        window: Option<AppWindowId>,
+        command: CommandId,
+    },
     ViewportInput(fret_core::ViewportInputEvent),
+    Dock(fret_core::DockOp),
+    ImeAllow {
+        window: AppWindowId,
+        enabled: bool,
+    },
+    ImeSetCursorArea {
+        window: AppWindowId,
+        rect: Rect,
+    },
+    RequestAnimationFrame(AppWindowId),
+    SetTimer {
+        window: Option<AppWindowId>,
+        token: TimerToken,
+        after: Duration,
+        repeat: Option<Duration>,
+    },
+    CancelTimer {
+        token: TimerToken,
+    },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum WindowRequest {
     Create(CreateWindowRequest),
     Close(AppWindowId),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CreateWindowRequest {
     pub kind: CreateWindowKind,
     pub anchor: Option<WindowAnchor>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum CreateWindowKind {
     DockFloating {
         source_window: AppWindowId,
-        panel: fret_core::PanelId,
+        panel: fret_core::PanelKey,
     },
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct WindowAnchor {
-    pub window: AppWindowId,
-    pub position: fret_core::Point,
+    DockRestore {
+        logical_window_id: String,
+    },
 }
 
 pub struct App {
@@ -50,6 +90,10 @@ pub struct App {
     commands: CommandRegistry,
     redraw_requests: HashSet<AppWindowId>,
     effects: Vec<Effect>,
+    drag: Option<DragSession>,
+    tick_id: TickId,
+    frame_id: FrameId,
+    next_timer_token: u64,
 }
 
 impl Default for App {
@@ -66,6 +110,10 @@ impl App {
             commands: CommandRegistry::default(),
             redraw_requests: HashSet::new(),
             effects: Vec::new(),
+            drag: None,
+            tick_id: TickId::default(),
+            frame_id: FrameId::default(),
+            next_timer_token: 1,
         }
     }
 
@@ -85,6 +133,65 @@ impl App {
             .and_then(|value| value.downcast_mut::<T>())
     }
 
+    pub fn with_global_mut<T: Any, R>(
+        &mut self,
+        init: impl FnOnce() -> T,
+        f: impl FnOnce(&mut T, &mut App) -> R,
+    ) -> R {
+        #[derive(Debug)]
+        struct GlobalLeaseMarker;
+
+        struct Guard<T: Any> {
+            type_id: TypeId,
+            value: Option<T>,
+            globals: *mut HashMap<TypeId, Box<dyn Any>>,
+        }
+
+        impl<T: Any> Drop for Guard<T> {
+            fn drop(&mut self) {
+                let Some(value) = self.value.take() else {
+                    return;
+                };
+                // Safety: this guard is only constructed from `App::with_global_mut`, and it
+                // outlives the closure execution; `globals` remains valid for the duration.
+                unsafe {
+                    (*self.globals).insert(self.type_id, Box::new(value));
+                }
+            }
+        }
+
+        let type_id = TypeId::of::<T>();
+        let existing = self
+            .globals
+            .insert(type_id, Box::new(GlobalLeaseMarker) as Box<dyn Any>);
+
+        let existing = match existing {
+            None => None,
+            Some(v) => {
+                if v.is::<GlobalLeaseMarker>() {
+                    panic!("global already leased: {type_id:?}");
+                }
+                Some(*v.downcast::<T>().expect("global type id must match"))
+            }
+        };
+
+        let mut guard = Guard::<T> {
+            type_id,
+            value: Some(existing.unwrap_or_else(init)),
+            globals: &mut self.globals as *mut _,
+        };
+
+        // Safety: we keep `T` out of `self.globals` until `guard` drops and reinserts it,
+        // so it is safe to pass both `&mut T` and `&mut App` to the callback.
+        let result = {
+            let value = guard.value.as_mut().expect("guard value exists");
+            f(value, self)
+        };
+
+        drop(guard);
+        result
+    }
+
     pub fn models(&self) -> &ModelStore {
         &self.models
     }
@@ -101,8 +208,59 @@ impl App {
         &mut self.commands
     }
 
+    pub fn begin_drag<T: Any>(
+        &mut self,
+        source_window: AppWindowId,
+        start: fret_core::Point,
+        payload: T,
+    ) {
+        self.drag = Some(DragSession::new(source_window, start, payload));
+    }
+
+    pub fn drag(&self) -> Option<&DragSession> {
+        self.drag.as_ref()
+    }
+
+    pub fn drag_mut(&mut self) -> Option<&mut DragSession> {
+        self.drag.as_mut()
+    }
+
+    pub fn end_drag(&mut self) -> Option<DragSession> {
+        self.drag.take()
+    }
+
+    pub fn cancel_drag(&mut self) {
+        self.drag = None;
+    }
+
     pub fn request_redraw(&mut self, window: AppWindowId) {
         self.redraw_requests.insert(window);
+    }
+
+    /// Runner-owned monotonic tick id (increments once per event-loop turn).
+    pub fn tick_id(&self) -> TickId {
+        self.tick_id
+    }
+
+    /// Runner-owned monotonic frame id (increments on each render/present).
+    pub fn frame_id(&self) -> FrameId {
+        self.frame_id
+    }
+
+    /// Runner-only.
+    pub fn set_tick_id(&mut self, tick_id: TickId) {
+        self.tick_id = tick_id;
+    }
+
+    /// Runner-only.
+    pub fn set_frame_id(&mut self, frame_id: FrameId) {
+        self.frame_id = frame_id;
+    }
+
+    pub fn next_timer_token(&mut self) -> TimerToken {
+        let token = TimerToken(self.next_timer_token);
+        self.next_timer_token = self.next_timer_token.saturating_add(1);
+        token
     }
 
     pub fn push_effect(&mut self, effect: Effect) {
@@ -120,18 +278,40 @@ impl App {
         effects
     }
 
+    pub fn read<T: Any, R>(
+        &mut self,
+        model: Model<T>,
+        f: impl FnOnce(&mut App, &T) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        let lease = self.models.lease(model)?;
+        let value = lease.value_ref();
+        Ok(f(self, value))
+    }
+
+    pub fn update<T: Any, R>(
+        &mut self,
+        model: Model<T>,
+        f: impl FnOnce(&mut App, &mut T) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        let mut lease = self.models.lease(model)?;
+        let result = f(self, lease.value_mut());
+        lease.mark_dirty();
+        Ok(result)
+    }
+
+    pub fn model_revision<T: Any>(&self, model: Model<T>) -> Option<u64> {
+        self.models.revision(model)
+    }
+
     pub fn update_model<T: Any, R>(
         &mut self,
         model: Model<T>,
         f: impl FnOnce(&mut T, &mut ModelCx<'_>) -> R,
     ) -> Result<R, ModelUpdateError> {
-        let mut lease = self.models.lease(model)?;
-        let result = {
-            let mut cx = ModelCx { app: self };
-            f(lease.value_mut(), &mut cx)
-        };
-        drop(lease);
-        Ok(result)
+        self.update(model, |app, state| {
+            let mut cx = ModelCx { app };
+            f(state, &mut cx)
+        })
     }
 }
 
@@ -157,6 +337,17 @@ impl<T> Model<T> {
         self.id
     }
 
+    pub fn read<R>(
+        self,
+        app: &mut App,
+        f: impl FnOnce(&mut App, &T) -> R,
+    ) -> Result<R, ModelUpdateError>
+    where
+        T: Any,
+    {
+        app.read(self, f)
+    }
+
     pub fn update<R>(
         self,
         app: &mut App,
@@ -166,6 +357,13 @@ impl<T> Model<T> {
         T: Any,
     {
         app.update_model(self, f)
+    }
+
+    pub fn revision(self, app: &App) -> Option<u64>
+    where
+        T: Any,
+    {
+        app.model_revision(self)
     }
 
     pub fn get<'a>(self, app: &'a App) -> Option<&'a T>
@@ -192,6 +390,7 @@ pub struct ModelStore {
 
 struct ModelEntry {
     value: Option<Box<dyn Any>>,
+    revision: u64,
 }
 
 impl Default for ModelStore {
@@ -213,13 +412,24 @@ struct ModelLease<T: Any> {
     store: *mut ModelStore,
     id: ModelId,
     value: Option<Box<T>>,
+    dirty: bool,
 }
 
 impl<T: Any> ModelLease<T> {
+    fn value_ref(&self) -> &T {
+        self.value
+            .as_deref()
+            .expect("leased model must contain a value")
+    }
+
     fn value_mut(&mut self) -> &mut T {
         self.value
             .as_deref_mut()
             .expect("leased model must contain a value")
+    }
+
+    fn mark_dirty(&mut self) {
+        self.dirty = true;
     }
 }
 
@@ -234,6 +444,9 @@ impl<T: Any> Drop for ModelLease<T> {
             if let Some(entry) = store.storage.get_mut(self.id) {
                 if entry.value.is_none() {
                     entry.value = Some(value);
+                    if self.dirty {
+                        entry.revision = entry.revision.saturating_add(1);
+                    }
                 }
             }
         }
@@ -244,6 +457,7 @@ impl ModelStore {
     pub fn insert<T: Any>(&mut self, value: T) -> Model<T> {
         let id = self.storage.insert(ModelEntry {
             value: Some(Box::new(value)),
+            revision: 0,
         });
         Model {
             id,
@@ -259,17 +473,8 @@ impl ModelStore {
             .downcast_ref::<T>()
     }
 
-    pub fn update<T: Any>(&mut self, model: Model<T>, f: impl FnOnce(&mut T)) {
-        let Some(entry) = self.storage.get_mut(model.id) else {
-            return;
-        };
-        let Some(any) = entry.value.as_deref_mut() else {
-            return;
-        };
-        let Some(value) = any.downcast_mut::<T>() else {
-            return;
-        };
-        f(value);
+    pub fn revision<T: Any>(&self, model: Model<T>) -> Option<u64> {
+        self.storage.get(model.id).map(|e| e.revision)
     }
 
     fn lease<T: Any>(&mut self, model: Model<T>) -> Result<ModelLease<T>, ModelUpdateError> {
@@ -286,6 +491,7 @@ impl ModelStore {
                 store: self as *mut ModelStore,
                 id: model.id,
                 value: Some(value),
+                dirty: false,
             }),
             Err(boxed) => {
                 if let Some(entry) = self.storage.get_mut(model.id) {
@@ -306,8 +512,77 @@ pub struct CommandRegistry {
 
 #[derive(Debug, Clone)]
 pub struct CommandMeta {
-    pub title: &'static str,
-    pub description: Option<&'static str>,
+    pub title: Arc<str>,
+    pub description: Option<Arc<str>>,
+    pub category: Option<Arc<str>>,
+    pub keywords: Vec<Arc<str>>,
+    pub default_keybindings: Vec<DefaultKeybinding>,
+    pub when: Option<WhenExpr>,
+    pub scope: CommandScope,
+    pub hidden: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommandScope {
+    /// Routed through the focused UI node (with bubbling), per ADR 0020.
+    Widget,
+    /// Handled at the window/app driver boundary (e.g. create/close windows, toggle overlays).
+    Window,
+    /// Global, cross-window command handled by the app.
+    App,
+}
+
+impl CommandMeta {
+    pub fn new(title: impl Into<Arc<str>>) -> Self {
+        Self {
+            title: title.into(),
+            description: None,
+            category: None,
+            keywords: Vec::new(),
+            default_keybindings: Vec::new(),
+            when: None,
+            scope: CommandScope::Window,
+            hidden: false,
+        }
+    }
+
+    pub fn with_description(mut self, description: impl Into<Arc<str>>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+
+    pub fn with_category(mut self, category: impl Into<Arc<str>>) -> Self {
+        self.category = Some(category.into());
+        self
+    }
+
+    pub fn with_keywords(mut self, keywords: impl IntoIterator<Item = impl Into<Arc<str>>>) -> Self {
+        self.keywords = keywords.into_iter().map(Into::into).collect();
+        self
+    }
+
+    pub fn with_default_keybindings(
+        mut self,
+        bindings: impl IntoIterator<Item = DefaultKeybinding>,
+    ) -> Self {
+        self.default_keybindings = bindings.into_iter().collect();
+        self
+    }
+
+    pub fn with_when(mut self, when: WhenExpr) -> Self {
+        self.when = Some(when);
+        self
+    }
+
+    pub fn with_scope(mut self, scope: CommandScope) -> Self {
+        self.scope = scope;
+        self
+    }
+
+    pub fn hidden(mut self) -> Self {
+        self.hidden = true;
+        self
+    }
 }
 
 impl CommandRegistry {
@@ -317,6 +592,10 @@ impl CommandRegistry {
 
     pub fn get(&self, id: CommandId) -> Option<&CommandMeta> {
         self.commands.get(&id)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&CommandId, &CommandMeta)> {
+        self.commands.iter()
     }
 }
 

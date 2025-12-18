@@ -1,5 +1,10 @@
+use crate::command_palette::{CommandPalette, OverlayAnchor, OverlayBackdrop};
+use crate::dnd_probe::DndProbe;
+use crate::elements_mvp2::ElementsMvp2Demo;
+use crate::ime_probe::ImeProbe;
+use crate::property_row::PropertyRow;
 use fret_core::{AppWindowId, Axis, Color, Px};
-use fret_ui::{ColoredPanel, Column, DockSpace, FixedPanel, Scroll, Split, UiLayerId, UiTree};
+use fret_ui::{ColoredPanel, Column, DockSpace, Scroll, Split, Text, TextInput, UiLayerId, UiTree};
 
 pub struct DemoUiConfig {
     pub split_fraction: f32,
@@ -15,7 +20,14 @@ impl Default for DemoUiConfig {
     }
 }
 
-pub fn build_demo_ui(window: AppWindowId, config: DemoUiConfig) -> (UiTree, UiLayerId) {
+pub struct DemoLayers {
+    pub modal: UiLayerId,
+    pub external_dnd: UiLayerId,
+    pub command_palette: UiLayerId,
+    pub command_palette_node: fret_core::NodeId,
+}
+
+pub fn build_demo_ui(window: AppWindowId, config: DemoUiConfig) -> (UiTree, DemoLayers) {
     let mut ui = UiTree::new();
     ui.set_window(window);
 
@@ -31,6 +43,21 @@ pub fn build_demo_ui(window: AppWindowId, config: DemoUiConfig) -> (UiTree, UiLa
     let column = ui.create_node(Column::new().with_padding(Px(10.0)).with_spacing(Px(8.0)));
     ui.add_child(scroll, column);
 
+    let dnd_probe = ui.create_node(DndProbe::new());
+    ui.add_child(column, dnd_probe);
+
+    let text_header = ui.create_node(Text::new("Text MVP (labels + single-line TextInput)"));
+    ui.add_child(column, text_header);
+
+    let text_input = ui.create_node(TextInput::new().with_text("Click here, then type (IME supported)"));
+    ui.add_child(column, text_input);
+
+    let ime_probe = ui.create_node(ImeProbe::new());
+    ui.add_child(column, ime_probe);
+
+    let elements_demo = ui.create_node(ElementsMvp2Demo::new());
+    ui.add_child(column, elements_demo);
+
     populate_property_panel(&mut ui, column, config.property_count);
 
     let modal_root = ui.create_node(ColoredPanel::new(Color {
@@ -39,17 +66,56 @@ pub fn build_demo_ui(window: AppWindowId, config: DemoUiConfig) -> (UiTree, UiLa
         b: 0.02,
         a: 0.45,
     }));
-    let modal_layer = ui.push_overlay_root(modal_root, true);
-    ui.set_layer_visible(modal_layer, false);
+    let modal = ui.push_overlay_root(modal_root, true);
+    ui.set_layer_visible(modal, false);
 
-    (ui, modal_layer)
+    let dnd_root = ui.create_node(ColoredPanel::new(Color {
+        r: 0.08,
+        g: 0.20,
+        b: 0.10,
+        a: 0.22,
+    }));
+    let external_dnd = ui.push_overlay_root_ex(dnd_root, false, false);
+    ui.set_layer_visible(external_dnd, false);
+
+    let palette_root = ui.create_node(fret_ui::Stack::new());
+    let command_palette = ui.push_overlay_root(palette_root, true);
+    ui.set_layer_visible(command_palette, false);
+
+    let backdrop = ui.create_node(OverlayBackdrop::new(
+        Color {
+            r: 0.02,
+            g: 0.02,
+            b: 0.02,
+            a: 0.55,
+        },
+        fret_app::CommandId::from("command_palette.close"),
+    ));
+    ui.add_child(palette_root, backdrop);
+
+    let anchor = ui.create_node(OverlayAnchor::new(Px(640.0), Px(360.0)).with_top(Px(64.0)));
+    ui.add_child(palette_root, anchor);
+
+    let command_palette_node = ui.create_node(CommandPalette::new());
+    ui.add_child(anchor, command_palette_node);
+
+    (
+        ui,
+        DemoLayers {
+            modal,
+            external_dnd,
+            command_palette,
+            command_palette_node,
+        },
+    )
 }
 
 fn populate_property_panel(ui: &mut UiTree, parent: fret_core::NodeId, count: usize) {
     for i in 0..count {
         let shade = 0.14 + (i % 2) as f32 * 0.02;
         let height = if i % 7 == 0 { Px(72.0) } else { Px(44.0) };
-        let item = ui.create_node(FixedPanel::new(
+        let item = ui.create_node(PropertyRow::new(
+            format!("Property {i}"),
             height,
             Color {
                 r: shade,

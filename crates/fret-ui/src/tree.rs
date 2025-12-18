@@ -1,6 +1,6 @@
-use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
-use fret_app::App;
-use fret_core::{AppWindowId, Event, NodeId, Point, PointerEvent, Rect, Scene, Size};
+use crate::widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use fret_app::{App, Effect, InputContext, KeyChord, KeymapService, Platform};
+use fret_core::{AppWindowId, Event, NodeId, Point, PointerEvent, Rect, Scene, Size, TextService};
 use slotmap::SlotMap;
 use std::collections::HashMap;
 
@@ -36,6 +36,7 @@ struct UiLayer {
     root: NodeId,
     visible: bool,
     blocks_underlay_input: bool,
+    hit_testable: bool,
 }
 
 pub struct Node {
@@ -85,6 +86,14 @@ impl UiTree {
         self.window = Some(window);
     }
 
+    pub fn focus(&self) -> Option<NodeId> {
+        self.focus
+    }
+
+    pub fn set_focus(&mut self, focus: Option<NodeId>) {
+        self.focus = focus;
+    }
+
     pub fn create_node(&mut self, widget: impl Widget + 'static) -> NodeId {
         self.nodes.insert(Node::new(widget))
     }
@@ -99,6 +108,7 @@ impl UiTree {
             root,
             visible: true,
             blocks_underlay_input: false,
+            hit_testable: true,
         });
         self.root_to_layer.insert(root, id);
         self.layer_order.insert(0, id);
@@ -107,10 +117,20 @@ impl UiTree {
     }
 
     pub fn push_overlay_root(&mut self, root: NodeId, blocks_underlay_input: bool) -> UiLayerId {
+        self.push_overlay_root_ex(root, blocks_underlay_input, true)
+    }
+
+    pub fn push_overlay_root_ex(
+        &mut self,
+        root: NodeId,
+        blocks_underlay_input: bool,
+        hit_testable: bool,
+    ) -> UiLayerId {
         let id = self.layers.insert(UiLayer {
             root,
             visible: true,
             blocks_underlay_input,
+            hit_testable,
         });
         self.root_to_layer.insert(root, id);
         self.layer_order.push(id);
@@ -169,23 +189,36 @@ impl UiTree {
         }
     }
 
-    pub fn layout_all(&mut self, app: &mut App, bounds: Rect) {
+    pub fn layout_all(
+        &mut self,
+        app: &mut App,
+        text: &mut dyn TextService,
+        bounds: Rect,
+        scale_factor: f32,
+    ) {
         let roots: Vec<NodeId> = self
             .visible_layers_in_paint_order()
             .map(|layer| self.layers[layer].root)
             .collect();
         for root in roots {
-            let _ = self.layout_in(app, root, bounds);
+            let _ = self.layout_in(app, text, root, bounds, scale_factor);
         }
     }
 
-    pub fn paint_all(&mut self, app: &mut App, bounds: Rect, scene: &mut Scene) {
+    pub fn paint_all(
+        &mut self,
+        app: &mut App,
+        text: &mut dyn TextService,
+        bounds: Rect,
+        scene: &mut Scene,
+        scale_factor: f32,
+    ) {
         let roots: Vec<NodeId> = self
             .visible_layers_in_paint_order()
             .map(|layer| self.layers[layer].root)
             .collect();
         for root in roots {
-            self.paint(app, root, bounds, scene);
+            self.paint(app, text, root, bounds, scene, scale_factor);
         }
     }
 
@@ -197,7 +230,36 @@ impl UiTree {
             return;
         };
 
+        let mut needs_redraw = false;
+
         let (active_layers, barrier_root) = self.active_input_layers();
+
+        if let Event::KeyDown {
+            key,
+            modifiers,
+            repeat,
+        } = event
+        {
+            if *repeat {
+                // MVP: avoid repeated command triggers on key repeat. Widgets still receive KeyDown.
+            } else if let Some(service) = app.global::<KeymapService>() {
+                let ctx = InputContext {
+                    platform: Platform::current(),
+                    ui_has_modal: barrier_root.is_some(),
+                    focus_is_text_input: self.focus_is_text_input(),
+                };
+                if let Some(command) = service
+                    .keymap
+                    .resolve(&ctx, KeyChord::new(*key, *modifiers))
+                {
+                    app.push_effect(Effect::Command {
+                        window: self.window,
+                        command,
+                    });
+                    return;
+                }
+            }
+        }
 
         if self
             .captured
@@ -216,8 +278,7 @@ impl UiTree {
 
         let target = if let Some(captured) = self.captured {
             Some(captured)
-        } else if let Event::Pointer(pe) = event {
-            let pos = pointer_position(pe);
+        } else if let Some(pos) = event_position(event) {
             self.hit_test_layers(&active_layers, pos)
                 .or(barrier_root)
                 .or(Some(default_root))
@@ -246,7 +307,6 @@ impl UiTree {
                         focus: tree.focus,
                         captured: tree.captured,
                         invalidations: Vec::new(),
-                        commands: Vec::new(),
                         requested_focus: None,
                         requested_capture: None,
                         stop_propagation: false,
@@ -260,6 +320,11 @@ impl UiTree {
                         parent,
                     )
                 });
+
+            if !invalidations.is_empty() || requested_focus.is_some() || requested_capture.is_some()
+            {
+                needs_redraw = true;
+            }
 
             for (id, inv) in invalidations {
                 self.mark_invalidation(id, inv);
@@ -282,22 +347,144 @@ impl UiTree {
                 None => break,
             };
         }
+
+        if needs_redraw {
+            if let Some(window) = self.window {
+                app.request_redraw(window);
+            }
+        }
     }
 
-    pub fn layout(&mut self, app: &mut App, root: NodeId, available: Size) -> Size {
+    pub fn dispatch_command(&mut self, app: &mut App, command: &fret_app::CommandId) -> bool {
+        let Some(base_root) = self
+            .base_layer
+            .and_then(|id| self.layers.get(id).map(|l| l.root))
+        else {
+            return false;
+        };
+
+        let (active_layers, barrier_root) = self.active_input_layers();
+
+        if self
+            .focus
+            .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
+        {
+            self.focus = None;
+        }
+
+        let default_root = barrier_root.unwrap_or(base_root);
+        let node_id = self.focus.or(Some(default_root));
+        let Some(mut node_id) = node_id else {
+            return false;
+        };
+
+        let mut handled = false;
+        let mut needs_redraw = false;
+
+        loop {
+            let (did_handle, invalidations, requested_focus, stop_propagation, parent) =
+                self.with_widget_mut(node_id, |widget, tree| {
+                    let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                    let mut cx = CommandCx {
+                        app,
+                        node: node_id,
+                        window: tree.window,
+                        focus: tree.focus,
+                        invalidations: Vec::new(),
+                        requested_focus: None,
+                        stop_propagation: false,
+                    };
+                    let did_handle = widget.command(&mut cx, command);
+                    (
+                        did_handle,
+                        cx.invalidations,
+                        cx.requested_focus,
+                        cx.stop_propagation,
+                        parent,
+                    )
+                });
+
+            if did_handle {
+                handled = true;
+            }
+
+            if !invalidations.is_empty() || requested_focus.is_some() {
+                needs_redraw = true;
+            }
+
+            for (id, inv) in invalidations {
+                self.mark_invalidation(id, inv);
+            }
+
+            if let Some(focus) = requested_focus {
+                self.focus = Some(focus);
+            }
+
+            if did_handle || stop_propagation {
+                break;
+            }
+
+            node_id = match parent {
+                Some(parent) => parent,
+                None => break,
+            };
+        }
+
+        if needs_redraw {
+            if let Some(window) = self.window {
+                app.request_redraw(window);
+            }
+        }
+
+        handled
+    }
+
+    fn focus_is_text_input(&mut self) -> bool {
+        let Some(focus) = self.focus else {
+            return false;
+        };
+        if self.nodes.get(focus).and_then(|n| n.widget.as_ref()).is_none() {
+            return false;
+        }
+        self.with_widget_mut(focus, |widget, _tree| widget.is_text_input())
+    }
+
+    pub fn layout(
+        &mut self,
+        app: &mut App,
+        text: &mut dyn TextService,
+        root: NodeId,
+        available: Size,
+        scale_factor: f32,
+    ) -> Size {
         let bounds = Rect::new(
             Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
             available,
         );
-        self.layout_in(app, root, bounds)
+        self.layout_in(app, text, root, bounds, scale_factor)
     }
 
-    pub fn layout_in(&mut self, app: &mut App, root: NodeId, bounds: Rect) -> Size {
-        self.layout_node(app, root, bounds)
+    pub fn layout_in(
+        &mut self,
+        app: &mut App,
+        text: &mut dyn TextService,
+        root: NodeId,
+        bounds: Rect,
+        scale_factor: f32,
+    ) -> Size {
+        self.layout_node(app, text, root, bounds, scale_factor)
     }
 
-    pub fn paint(&mut self, app: &mut App, root: NodeId, bounds: Rect, scene: &mut Scene) {
-        self.paint_node(app, root, bounds, scene);
+    pub fn paint(
+        &mut self,
+        app: &mut App,
+        text: &mut dyn TextService,
+        root: NodeId,
+        bounds: Rect,
+        scene: &mut Scene,
+        scale_factor: f32,
+    ) {
+        self.paint_node(app, text, root, bounds, scene, scale_factor);
     }
 
     fn with_widget_mut<R>(
@@ -318,7 +505,14 @@ impl UiTree {
         result
     }
 
-    fn layout_node(&mut self, app: &mut App, node: NodeId, bounds: Rect) -> Size {
+    fn layout_node(
+        &mut self,
+        app: &mut App,
+        text: &mut dyn TextService,
+        node: NodeId,
+        bounds: Rect,
+        scale_factor: f32,
+    ) -> Size {
         let (prev_bounds, measured, invalidated) = match self.nodes.get(node) {
             Some(n) => (n.bounds, n.measured_size, n.invalidation.layout),
             None => return Size::default(),
@@ -335,8 +529,10 @@ impl UiTree {
 
         let tree_ptr: *mut UiTree = self;
         let app_ptr: *mut App = app;
+        let text_ptr: *mut dyn TextService = text;
+        let sf = scale_factor;
         let mut layout_child = move |child: NodeId, bounds: Rect| -> Size {
-            unsafe { (&mut *tree_ptr).layout_node(&mut *app_ptr, child, bounds) }
+            unsafe { (&mut *tree_ptr).layout_node(&mut *app_ptr, &mut *text_ptr, child, bounds, sf) }
         };
 
         let size = self.with_widget_mut(node, |widget, tree| {
@@ -349,9 +545,12 @@ impl UiTree {
                 app,
                 node,
                 window: tree.window,
+                focus: tree.focus,
                 children: &children,
                 bounds,
                 available: bounds.size,
+                scale_factor: sf,
+                text: unsafe { &mut *text_ptr },
                 layout_child: &mut layout_child,
             };
             widget.layout(&mut cx)
@@ -365,13 +564,32 @@ impl UiTree {
         size
     }
 
-    fn paint_node(&mut self, app: &mut App, node: NodeId, bounds: Rect, scene: &mut Scene) {
+    fn paint_node(
+        &mut self,
+        app: &mut App,
+        text: &mut dyn TextService,
+        node: NodeId,
+        bounds: Rect,
+        scene: &mut Scene,
+        scale_factor: f32,
+    ) {
         let tree_ref: *const UiTree = self as *const UiTree;
         let tree_ptr: *mut UiTree = self;
         let app_ptr: *mut App = app;
+        let text_ptr: *mut dyn TextService = text;
         let scene_ptr: *mut Scene = scene;
+        let sf = scale_factor;
         let mut paint_child = move |child: NodeId, bounds: Rect| {
-            unsafe { (&mut *tree_ptr).paint_node(&mut *app_ptr, child, bounds, &mut *scene_ptr) };
+            unsafe {
+                (&mut *tree_ptr).paint_node(
+                    &mut *app_ptr,
+                    &mut *text_ptr,
+                    child,
+                    bounds,
+                    &mut *scene_ptr,
+                    sf,
+                )
+            };
         };
         let child_bounds = move |child: NodeId| -> Option<Rect> {
             unsafe { (&*tree_ref).nodes.get(child).map(|n| n.bounds) }
@@ -391,8 +609,11 @@ impl UiTree {
                 app,
                 node,
                 window: tree.window,
+                focus: tree.focus,
                 children: &children,
                 bounds,
+                scale_factor: sf,
+                text: unsafe { &mut *text_ptr },
                 scene,
                 paint_child: &mut paint_child,
                 child_bounds: &child_bounds,
@@ -468,7 +689,10 @@ impl UiTree {
         let range_start = barrier_index.unwrap_or(0);
         let mut roots: Vec<NodeId> = Vec::new();
         for layer in visible[range_start..].iter().rev() {
-            roots.push(self.layers[*layer].root);
+            let l = &self.layers[*layer];
+            if l.hit_testable {
+                roots.push(l.root);
+            }
         }
 
         let barrier_root = barrier_index.map(|idx| self.layers[visible[idx]].root);
@@ -501,5 +725,13 @@ fn pointer_position(pe: &PointerEvent) -> Point {
         | PointerEvent::Down { position, .. }
         | PointerEvent::Up { position, .. }
         | PointerEvent::Wheel { position, .. } => *position,
+    }
+}
+
+fn event_position(event: &Event) -> Option<Point> {
+    match event {
+        Event::Pointer(pe) => Some(pointer_position(pe)),
+        Event::ExternalDrag(e) => Some(e.position),
+        _ => None,
     }
 }

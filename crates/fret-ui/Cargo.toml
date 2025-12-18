@@ -8,3 +8,4 @@ fret-app = { path = "../fret-app" }
 fret-core = { path = "../fret-core" }
 slotmap.workspace = true
 taffy.workspace = true
+tracing.workspace = true
