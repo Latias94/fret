@@ -43,6 +43,7 @@ Core types live in `fret-core::text` and are backend-agnostic.
 Creation is explicit:
 
 - `prepare(text, style, constraints) -> (TextBlobId, TextMetrics)`
+- `measure(text, style, constraints) -> TextMetrics` (measurement-only; default implementation may delegate to `prepare` + `release`)
 - `release(TextBlobId)` (best-effort)
 
 Scale factor note:

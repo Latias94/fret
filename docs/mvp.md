@@ -130,6 +130,10 @@ Goal: make `TextInput` usable enough for editor UIs by locking the state model a
   - copy/cut/paste over selection,
   - IME candidate window anchored at caret (macOS/Windows).
 
+Status:
+
+- Prototype implemented in `fret-demo` (caret + selection; mouse drag selection; arrow/word nav + delete commands; repeatable key-repeat for text editing commands; IME cursor-area follows caret).
+
 References:
 
 - `docs/adr/0012-keyboard-ime-and-text-input.md`

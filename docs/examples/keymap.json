@@ -114,6 +114,128 @@
       "keys": { "mods": ["ctrl"], "key": "KeyV" }
     },
     {
+      "command": "text.move_left",
+      "when": "focus.is_text_input",
+      "keys": { "mods": [], "key": "ArrowLeft" }
+    },
+    {
+      "command": "text.move_right",
+      "when": "focus.is_text_input",
+      "keys": { "mods": [], "key": "ArrowRight" }
+    },
+    {
+      "command": "text.move_home",
+      "when": "focus.is_text_input",
+      "keys": { "mods": [], "key": "Home" }
+    },
+    {
+      "command": "text.move_end",
+      "when": "focus.is_text_input",
+      "keys": { "mods": [], "key": "End" }
+    },
+    {
+      "command": "text.select_left",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["shift"], "key": "ArrowLeft" }
+    },
+    {
+      "command": "text.select_right",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["shift"], "key": "ArrowRight" }
+    },
+    {
+      "command": "text.select_home",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["shift"], "key": "Home" }
+    },
+    {
+      "command": "text.select_end",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["shift"], "key": "End" }
+    },
+    {
+      "command": "text.delete_backward",
+      "when": "focus.is_text_input",
+      "keys": { "mods": [], "key": "Backspace" }
+    },
+    {
+      "command": "text.delete_forward",
+      "when": "focus.is_text_input",
+      "keys": { "mods": [], "key": "Delete" }
+    },
+    {
+      "command": "text.move_word_left",
+      "platform": "macos",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["alt"], "key": "ArrowLeft" }
+    },
+    {
+      "command": "text.move_word_right",
+      "platform": "macos",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["alt"], "key": "ArrowRight" }
+    },
+    {
+      "command": "text.delete_word_backward",
+      "platform": "macos",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["alt"], "key": "Backspace" }
+    },
+    {
+      "command": "text.delete_word_forward",
+      "platform": "macos",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["alt"], "key": "Delete" }
+    },
+    {
+      "command": "text.move_word_left",
+      "platform": "windows",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "ArrowLeft" }
+    },
+    {
+      "command": "text.move_word_right",
+      "platform": "windows",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "ArrowRight" }
+    },
+    {
+      "command": "text.delete_word_backward",
+      "platform": "windows",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "Backspace" }
+    },
+    {
+      "command": "text.delete_word_forward",
+      "platform": "windows",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "Delete" }
+    },
+    {
+      "command": "text.move_word_left",
+      "platform": "linux",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "ArrowLeft" }
+    },
+    {
+      "command": "text.move_word_right",
+      "platform": "linux",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "ArrowRight" }
+    },
+    {
+      "command": "text.delete_word_backward",
+      "platform": "linux",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "Backspace" }
+    },
+    {
+      "command": "text.delete_word_forward",
+      "platform": "linux",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "Delete" }
+    },
+    {
       "command": null,
       "platform": "all",
       "keys": { "mods": [], "key": "F2" }
