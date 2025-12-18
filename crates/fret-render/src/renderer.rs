@@ -4,6 +4,8 @@ use fret_core::{
     scene::{Color, Scene, SceneOp},
 };
 
+use crate::targets::{RenderTargetDescriptor, RenderTargetRegistry};
+
 #[derive(Debug, Clone, Copy)]
 pub struct ClearColor(pub wgpu::Color);
 
@@ -145,6 +147,8 @@ pub struct Renderer {
     instance_buffers: Vec<wgpu::Buffer>,
     instance_buffer_index: usize,
     instance_capacity: usize,
+
+    render_targets: RenderTargetRegistry,
 }
 
 impl Renderer {
@@ -208,7 +212,27 @@ impl Renderer {
             instance_buffers,
             instance_buffer_index: 0,
             instance_capacity,
+            render_targets: RenderTargetRegistry::default(),
         }
+    }
+
+    pub fn register_render_target(
+        &mut self,
+        desc: RenderTargetDescriptor,
+    ) -> fret_core::RenderTargetId {
+        self.render_targets.register(desc)
+    }
+
+    pub fn update_render_target(
+        &mut self,
+        id: fret_core::RenderTargetId,
+        desc: RenderTargetDescriptor,
+    ) -> bool {
+        self.render_targets.update(id, desc)
+    }
+
+    pub fn unregister_render_target(&mut self, id: fret_core::RenderTargetId) -> bool {
+        self.render_targets.unregister(id)
     }
 
     fn ensure_pipeline(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
@@ -414,8 +438,14 @@ impl Renderer {
                         border_color: color_to_linear_rgba_premul(*border_color),
                     });
                 }
-                SceneOp::Image { .. } | SceneOp::Text { .. } | SceneOp::ViewportSurface { .. } => {
+                SceneOp::Image { .. } | SceneOp::Text { .. } => {
                     // Not implemented yet.
+                }
+                SceneOp::ViewportSurface { target, .. } => {
+                    if self.render_targets.get(*target).is_none() {
+                        continue;
+                    }
+                    // Not implemented yet; target registry exists to fix the contract early.
                 }
             }
         }

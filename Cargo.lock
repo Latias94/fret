@@ -507,6 +507,7 @@ dependencies = [
  "anyhow",
  "bytemuck",
  "fret-core",
+ "slotmap",
  "wgpu",
 ]
 

@@ -2,6 +2,8 @@
 
 This roadmap focuses on building a retained-mode editor-grade UI framework with docking, tear-off windows, and multiple engine viewports. The goal is to keep early work aligned with long-term constraints (multi-window, wgpu/WebGPU, plugins) to minimize future rewrites.
 
+Key contracts are captured in ADRs under `docs/adr/`.
+
 ## Priorities
 
 - **P0**: Foundational architecture that is hard to change later (windowing, retained tree, event routing, display list contract, renderer resource ownership, dock manager).
@@ -45,6 +47,7 @@ This roadmap focuses on building a retained-mode editor-grade UI framework with 
   - clip rect stack (initially via scissor; later refine). (MVP done for quads + scissor)
 - P0: Dynamic GPU buffer strategy (anticipate multi-buffering/pools for async presentation).
 - P1: Atlas allocation and uploads (images, glyphs).
+- P0: Render target registry for engine viewports (contract skeleton). (done)
 
 ### M4 — Docking (Multi-Window + Tear-off)
 
@@ -64,6 +67,7 @@ This roadmap focuses on building a retained-mode editor-grade UI framework with 
 ### M6 — Text System Upgrade
 
 - P1: Basic text for inspector/property panels (layout + glyph atlas).
+- P0: Text system boundary (`TextBlobId` + metrics contract). (done; see ADR 0006)
 - P2: `cosmic-text` integration for editor-grade text shaping/layout.
 - P2: Shaped-run caching + incremental atlas uploads for large documents.
 - P2: IME events end-to-end, composition UI.

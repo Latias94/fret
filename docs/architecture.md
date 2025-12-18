@@ -13,6 +13,9 @@ Key cross-crate contracts are tracked as ADRs:
 - `docs/adr/0003-platform-boundary.md`
 - `docs/adr/0004-resource-handles.md`
 - `docs/adr/0005-retained-ui-tree.md`
+- `docs/adr/0006-text-system.md`
+- `docs/adr/0007-viewport-surfaces.md`
+- `docs/adr/0008-threading-logging-errors.md`
 
 ## Goals
 

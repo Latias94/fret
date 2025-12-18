@@ -2,9 +2,11 @@ use anyhow::Context as _;
 
 mod renderer;
 mod surface;
+mod targets;
 
 pub use renderer::{ClearColor, Renderer};
 pub use surface::SurfaceState;
+pub use targets::{RenderTargetColorSpace, RenderTargetDescriptor, RenderTargetRegistry};
 
 pub struct WgpuContext {
     pub instance: wgpu::Instance,
