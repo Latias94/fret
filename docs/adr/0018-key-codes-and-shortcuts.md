@@ -38,7 +38,7 @@ Properties:
 Shortcut matching uses:
 
 - `PhysicalKey` (Fret `KeyCode` / future `PhysicalKey`),
-- `Modifiers` (shift/ctrl/alt/meta),
+- `Modifiers` (shift/ctrl/alt/altgr/meta),
 - `repeat` flag only for UI behaviors that explicitly opt into repeats.
 
 ### 2) Text input is not derived from key presses
@@ -63,7 +63,8 @@ For editor-grade shortcuts, left/right modifier distinction is occasionally need
 
 Initial contract:
 
-- `Modifiers` stays coarse (shift/ctrl/alt/meta).
+- `Modifiers` stays coarse (shift/ctrl/alt/altgr/meta). AltGr is semantically distinct from `ctrl+alt`
+  for shortcut matching (see ADR 0043).
 
 Reserved future extension:
 

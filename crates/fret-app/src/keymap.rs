@@ -234,6 +234,9 @@ pub fn format_chord(platform: Platform, chord: KeyChord) -> String {
 
     match platform {
         Platform::Macos => {
+            if chord.mods.alt_gr {
+                parts.push("AltGr");
+            }
             if chord.mods.meta {
                 parts.push("Cmd");
             }
@@ -250,6 +253,9 @@ pub fn format_chord(platform: Platform, chord: KeyChord) -> String {
         Platform::Windows | Platform::Linux | Platform::Web => {
             if chord.mods.ctrl {
                 parts.push("Ctrl");
+            }
+            if chord.mods.alt_gr {
+                parts.push("AltGr");
             }
             if chord.mods.alt {
                 parts.push("Alt");
@@ -369,6 +375,7 @@ fn parse_keys(index: usize, keys: KeySpecV1) -> Result<KeyChord, KeymapError> {
             "shift" => mods.shift = true,
             "ctrl" => mods.ctrl = true,
             "alt" => mods.alt = true,
+            "altgr" => mods.alt_gr = true,
             "meta" => mods.meta = true,
             other => {
                 return Err(KeymapError::UnknownModifier {

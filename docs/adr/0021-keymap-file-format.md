@@ -53,7 +53,12 @@ The canonical representation is a string token that maps 1:1 to the framework’
 
 Modifiers are stored as an explicit set:
 
-- `"shift"`, `"ctrl"`, `"alt"`, `"meta"`
+- `"shift"`, `"ctrl"`, `"alt"`, `"altgr"`, `"meta"`
+
+Notes:
+
+- `altgr` is semantically distinct from `ctrl+alt` and is required for international layouts.
+  See `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`.
 
 ### 3) Binding shape (single-stroke, extensible)
 

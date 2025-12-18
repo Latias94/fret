@@ -17,7 +17,7 @@ use winit::{
     dpi::{LogicalSize, PhysicalPosition, Position},
     event::{ElementState, MouseButton as WinitMouseButton, MouseScrollDelta, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow},
-    keyboard::ModifiersState,
+    keyboard::{Key, ModifiersState, NamedKey},
     window::{Window, WindowId},
 };
 
@@ -210,6 +210,8 @@ pub struct WinitRunner<D: WinitDriver> {
     main_window: Option<fret_core::AppWindowId>,
 
     modifiers: Modifiers,
+    raw_modifiers: ModifiersState,
+    alt_gr_down: bool,
 
     tick_id: fret_core::TickId,
     frame_id: fret_core::FrameId,
@@ -228,6 +230,8 @@ struct TimerEntry {
 
 impl<D: WinitDriver> WinitRunner<D> {
     pub fn new(config: WinitRunnerConfig, app: App, driver: D) -> Self {
+        let raw_modifiers = ModifiersState::empty();
+        let alt_gr_down = false;
         Self {
             config,
             app,
@@ -237,7 +241,9 @@ impl<D: WinitDriver> WinitRunner<D> {
             windows: SlotMap::with_key(),
             winit_to_app: HashMap::new(),
             main_window: None,
-            modifiers: Modifiers::default(),
+            modifiers: map_modifiers(raw_modifiers, alt_gr_down),
+            raw_modifiers,
+            alt_gr_down,
             tick_id: fret_core::TickId::default(),
             frame_id: fret_core::FrameId::default(),
             raf_windows: HashSet::new(),
@@ -669,7 +675,8 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 }
             }
             WindowEvent::ModifiersChanged(mods) => {
-                self.modifiers = map_modifiers(mods.state());
+                self.raw_modifiers = mods.state();
+                self.modifiers = map_modifiers(self.raw_modifiers, self.alt_gr_down);
             }
             WindowEvent::Focused(false) => {
                 if let Some(state) = self.windows.get_mut(app_window) {
@@ -692,6 +699,10 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 self.drain_effects(event_loop);
             }
             WindowEvent::KeyboardInput { event, .. } => {
+                if is_alt_gr_key(&event.logical_key) {
+                    self.alt_gr_down = event.state == ElementState::Pressed;
+                    self.modifiers = map_modifiers(self.raw_modifiers, self.alt_gr_down);
+                }
                 if let Some(state) = self.windows.get_mut(app_window) {
                     let key = map_physical_key(event.physical_key);
                     let repeat = event.repeat;
@@ -1042,13 +1053,25 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
     }
 }
 
-fn map_modifiers(state: ModifiersState) -> Modifiers {
-    Modifiers {
+fn is_alt_gr_key(key: &Key) -> bool {
+    matches!(key, Key::Named(NamedKey::AltGraph))
+}
+
+fn map_modifiers(state: ModifiersState, alt_gr_down: bool) -> Modifiers {
+    let mut mods = Modifiers {
         shift: state.shift_key(),
         ctrl: state.control_key(),
         alt: state.alt_key(),
+        alt_gr: alt_gr_down,
         meta: state.super_key(),
+    };
+
+    if mods.alt_gr {
+        mods.ctrl = false;
+        mods.alt = false;
     }
+
+    mods
 }
 
 fn map_mouse_button(button: WinitMouseButton) -> Option<MouseButton> {

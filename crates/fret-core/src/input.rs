@@ -250,6 +250,10 @@ pub struct Modifiers {
     pub shift: bool,
     pub ctrl: bool,
     pub alt: bool,
+    /// Alternate Graphics (AltGr / AltGraph) modifier.
+    ///
+    /// This is semantically distinct from `ctrl+alt` for editor-grade shortcut matching.
+    pub alt_gr: bool,
     pub meta: bool,
 }
 
