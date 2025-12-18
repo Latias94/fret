@@ -1167,6 +1167,39 @@ impl fret_core::TextService for Renderer {
         }
     }
 
+    fn caret_rect(
+        &mut self,
+        blob: fret_core::TextBlobId,
+        index: usize,
+        _affinity: fret_core::CaretAffinity,
+    ) -> fret_core::Rect {
+        let x = self
+            .text_system
+            .caret_x(blob, index)
+            .unwrap_or(fret_core::Px(0.0));
+        let h = self
+            .text_system
+            .blob(blob)
+            .map(|b| b.metrics.size.height)
+            .unwrap_or(fret_core::Px(16.0));
+        fret_core::Rect::new(
+            fret_core::Point::new(x, fret_core::Px(0.0)),
+            fret_core::Size::new(fret_core::Px(1.0), h),
+        )
+    }
+
+    fn hit_test_point(
+        &mut self,
+        blob: fret_core::TextBlobId,
+        point: fret_core::Point,
+    ) -> fret_core::HitTestResult {
+        let index = self.text_system.hit_test_x(blob, point.x).unwrap_or(0);
+        fret_core::HitTestResult {
+            index,
+            affinity: fret_core::CaretAffinity::Downstream,
+        }
+    }
+
     fn release(&mut self, blob: fret_core::TextBlobId) {
         self.text_system.release(blob);
     }

@@ -23,6 +23,7 @@ References:
 - Text boundary (`TextBlobId` + `TextMetrics`): `docs/adr/0006-text-system.md`
 - Text pipeline strategy (GPUI-inspired): `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
 - Text editing state + command vocabulary: `docs/adr/0044-text-editing-state-and-commands.md`
+- Multiline geometry semantics (caret affinity, local coordinates): `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
 - Zed/GPUI text system (design reference):
   - `repo-ref/zed/crates/gpui/src/text_system.rs`
 
@@ -71,15 +72,24 @@ layout glyph clusters), and cache them on the blob where appropriate.
 
 ## API Shape (Core Contract)
 
-`fret-core::TextService` provides default geometry query hooks:
+`fret-core::TextService` provides default geometry query hooks.
+
+Single-line primitives (usable by any widget; also used as building blocks for multiline):
 
 - `caret_x(blob, index) -> Px`
 - `hit_test_x(blob, x) -> usize`
 - `selection_rects(blob, range, out)`
 - `caret_stops(blob, out)` (escape hatch for UI event handlers)
 
-These methods are initially defined for **single-line** text. Multi-line geometry queries are reserved for a follow-up
-extension once we introduce multi-line layout objects (MVP11 scope).
+Multiline-safe primitives (the long-term contract; see ADR 0046):
+
+- `caret_rect(blob, index, affinity) -> Rect`
+- `hit_test_point(blob, point) -> HitTestResult { index, affinity }`
+
+Notes:
+
+- For single-line blobs, implementations may ignore `affinity` and treat `point.y` as 0.
+- For multiline blobs, `affinity` disambiguates caret placement at line breaks.
 
 ## Consequences
 

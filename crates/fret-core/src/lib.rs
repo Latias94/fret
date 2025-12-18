@@ -28,6 +28,8 @@ pub use input::{
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputKind};
 pub use panels::{PanelKey, PanelKind};
 pub use scene::{Color, DrawOrder, Scene, SceneOp};
-pub use text::{TextConstraints, TextMetrics, TextService, TextStyle, TextWrap};
+pub use text::{
+    CaretAffinity, HitTestResult, TextConstraints, TextMetrics, TextService, TextStyle, TextWrap,
+};
 pub use viewport::{ViewportFit, ViewportMapped, ViewportMapping};
 pub use window::WindowAnchor;

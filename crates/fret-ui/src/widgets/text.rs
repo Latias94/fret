@@ -924,7 +924,20 @@ impl Widget for TextInput {
             enabled: true,
         });
 
-        let caret = self.caret_rect(cx, cx.bounds, cx.scale_factor);
+        let caret_local = self
+            .text_blob
+            .map(|blob| {
+                cx.text
+                    .caret_rect(blob, self.caret, fret_core::CaretAffinity::Downstream)
+            })
+            .unwrap_or_else(|| self.caret_rect(cx, cx.bounds, cx.scale_factor));
+        let caret = Rect::new(
+            fret_core::Point::new(
+                cx.bounds.origin.x + Px(8.0) + caret_local.origin.x,
+                cx.bounds.origin.y + Px(6.0) + caret_local.origin.y,
+            ),
+            caret_local.size,
+        );
         if self.last_sent_cursor.map_or(true, |r| r != caret) {
             self.last_sent_cursor = Some(caret);
             cx.app.push_effect(fret_app::Effect::ImeSetCursorArea {

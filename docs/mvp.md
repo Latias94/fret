@@ -149,30 +149,29 @@ This MVP is primarily a **contract / API boundary** milestone; performance work 
 
 **Scope**
 
-- Extend the text boundary (ADR 0006 / ADR 0029) to support:
-  - hit-testing from x/y to caret position (byte offset),
-  - caret/selection geometry queries (rects) for painting selection and IME cursor-area,
-  - multi-line constraints (wrap + line breaks) for future editor widgets.
-- Decide the lifetime model:
-  - “layout object” handle (e.g. `TextLayoutId`/`TextLayout`) vs “stateless query methods”.
-- Define caching expectations:
-  - avoid allocating new blobs/atlas entries for measurement-only queries,
-  - allow shaped-run caches and incremental atlas uploads.
+- Lock the geometry query boundary for:
+  - caret placement for mouse + keyboard editing,
+  - selection painting geometry,
+  - IME cursor-area placement (candidate window anchoring),
+  - future multiline and long-document widgets.
+- Define the multiline semantics that cannot change later (line breaks, caret affinity, coordinate spaces).
 
 **Definition of Done**
 
-- An ADR (or ADR updates) fully specifies the geometry query API, including:
-  - index representation (byte offsets at char boundaries; ADR 0044),
-  - coordinate spaces (logical px; scale_factor behavior),
-  - behavior for IME preedit cursor within composed text.
-- A demo plan exists for validating it with:
-  - a multi-line text widget (not necessarily a code editor yet),
-  - accurate selection painting and caret positioning at arbitrary x/y.
+- ADRs are accepted and indexed:
+  - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
+  - `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
+- A minimal validation plan exists:
+  - wrapped/multiline widget demo (not a code editor yet),
+  - y-aware hit testing + caret rect behavior at line breaks,
+  - IME cursor-area follows caret rect (window coordinates).
 
 References:
 
 - `docs/adr/0006-text-system.md`
 - `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
+- `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
+- `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
 - Zed/GPUI text system patterns:
   - `repo-ref/zed/crates/gpui/src/text_system.rs`
 

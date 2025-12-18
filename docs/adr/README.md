@@ -23,7 +23,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Docking + multi-window tear-off**: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0017-multi-window-display-and-dpi.md`, `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
 - **Text input / IME**: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0020-focus-and-command-routing.md`
 - **Text editing commands + selection model**: `docs/adr/0044-text-editing-state-and-commands.md`
-- **Text geometry queries (caret/hit-test)**: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
+- **Text geometry queries (caret/hit-test, multiline affinity)**: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
 - **Shortcut arbitration / AltGr / multi-stroke bindings**: `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0020-focus-and-command-routing.md`
 - **Renderer (ordering, batching, shapes/SDF)**: `docs/adr/0009-renderer-ordering-and-batching.md`, `docs/adr/0030-shape-rendering-and-sdf-semantics.md`, `docs/adr/0002-display-list.md`
 - **Engine viewports (embedded 3D)**: `docs/adr/0010-wgpu-context-ownership.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`, `docs/adr/0025-viewport-input-forwarding.md`, `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
@@ -46,6 +46,8 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 
 - `docs/adr/0028-declarative-elements-and-element-state.md` (authoring/runtime model)
 - `docs/adr/0029-text-pipeline-and-atlas-strategy.md` (text implementation strategy)
+- `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md` (text geometry query boundary)
+- `docs/adr/0046-multiline-text-layout-and-geometry-queries.md` (multiline geometry semantics)
 - `docs/adr/0030-shape-rendering-and-sdf-semantics.md` (shape semantics over SDF)
 - `docs/adr/0031-app-owned-models-and-leasing-updates.md` (GPUI-style ownership + updates)
 - `docs/adr/0032-style-tokens-and-theme-resolution.md` (typed styling + theming)
@@ -86,6 +88,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0004-resource-handles.md`
 - `docs/adr/0006-text-system.md`
 - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
+- `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
 - `docs/adr/0012-keyboard-ime-and-text-input.md`
 - `docs/adr/0018-key-codes-and-shortcuts.md`
 - `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`
@@ -105,6 +108,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0042-virtualization-and-large-lists.md`
 - `docs/adr/0044-text-editing-state-and-commands.md`
 - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
+- `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
 
 ## Renderer (`fret-render`)
 

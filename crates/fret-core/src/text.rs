@@ -1,6 +1,6 @@
 use crate::{
     TextBlobId,
-    geometry::{Px, Rect},
+    geometry::{Point, Px, Rect},
     ids::FontId,
 };
 
@@ -42,6 +42,18 @@ pub struct TextStyle {
 pub struct TextMetrics {
     pub size: crate::Size,
     pub baseline: Px,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CaretAffinity {
+    Upstream,
+    Downstream,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct HitTestResult {
+    pub index: usize,
+    pub affinity: CaretAffinity,
 }
 
 pub trait TextService {
@@ -92,6 +104,27 @@ pub trait TextService {
     /// This is primarily intended for UI hit-testing in event handlers, which do not have access
     /// to the text service.
     fn caret_stops(&mut self, _blob: TextBlobId, _out: &mut Vec<(usize, Px)>) {}
+
+    /// Returns the caret rectangle (in logical px) for the given `index`.
+    ///
+    /// Coordinate space: rect is relative to the text origin (x=0, y=0 at the top of the text box).
+    ///
+    /// Notes:
+    /// - Single-line implementations may ignore affinity.
+    /// - Multi-line implementations should use affinity to disambiguate positions at line breaks.
+    fn caret_rect(&mut self, _blob: TextBlobId, _index: usize, _affinity: CaretAffinity) -> Rect {
+        Rect::default()
+    }
+
+    /// Hit-test a point in the text's local coordinate space and return a caret index and affinity.
+    ///
+    /// Coordinate space: `point` is relative to the text origin (x=0, y=0 at the top of the text box).
+    fn hit_test_point(&mut self, _blob: TextBlobId, _point: Point) -> HitTestResult {
+        HitTestResult {
+            index: 0,
+            affinity: CaretAffinity::Downstream,
+        }
+    }
 
     fn release(&mut self, blob: TextBlobId);
 }
