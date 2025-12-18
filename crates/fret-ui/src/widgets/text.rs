@@ -262,10 +262,8 @@ impl TextInput {
         let padding = Px(8.0);
 
         let caret_x = self
-            .caret_stops
-            .iter()
-            .find(|(i, _)| *i == self.caret)
-            .map(|(_, x)| *x)
+            .text_blob
+            .map(|blob| cx.text.caret_x(blob, self.caret))
             .unwrap_or(Px(0.0));
 
         let mut x = bounds.origin.x + padding + caret_x;
@@ -719,17 +717,6 @@ impl Widget for TextInput {
             scale_factor: cx.scale_factor,
         };
 
-        self.caret_stops.clear();
-        self.caret_stops.push((0, Px(0.0)));
-        let mut idx = 0;
-        while idx < self.text.len() {
-            idx = Self::next_boundary(&self.text, idx);
-            let m = cx
-                .text
-                .measure(&self.text[..idx], self.style, base_constraints);
-            self.caret_stops.push((idx, m.size.width));
-        }
-
         let old_text_blob = self.text_blob.take();
         let old_prefix_blob = self.prefix_blob.take();
         let old_suffix_blob = self.suffix_blob.take();
@@ -744,11 +731,12 @@ impl Widget for TextInput {
         self.preedit_blob = None;
         self.preedit_metrics = None;
 
-        if self.preedit.is_empty() {
-            let (blob, metrics) = cx.text.prepare(&self.text, self.style, base_constraints);
-            self.text_blob = Some(blob);
-            self.text_metrics = Some(metrics);
-        } else {
+        let (blob, metrics) = cx.text.prepare(&self.text, self.style, base_constraints);
+        self.text_blob = Some(blob);
+        self.text_metrics = Some(metrics);
+        cx.text.caret_stops(blob, &mut self.caret_stops);
+
+        if !self.preedit.is_empty() {
             let (prefix_blob, prefix_metrics) =
                 cx.text
                     .prepare(&self.text[..self.caret], self.style, base_constraints);
@@ -764,15 +752,6 @@ impl Widget for TextInput {
             self.suffix_metrics = Some(suffix_metrics);
             self.preedit_blob = Some(pre_blob);
             self.preedit_metrics = Some(pre_metrics);
-
-            let baseline_source =
-                self.prefix_metrics
-                    .or(self.suffix_metrics)
-                    .unwrap_or(TextMetrics {
-                        size: Size::default(),
-                        baseline: Px(16.0),
-                    });
-            self.text_metrics = Some(baseline_source);
         }
 
         if let Some(b) = old_text_blob {
@@ -821,16 +800,12 @@ impl Widget for TextInput {
         if self.has_selection() && self.preedit.is_empty() {
             let (a, b) = self.selection_range();
             let start_x = self
-                .caret_stops
-                .iter()
-                .find(|(i, _)| *i == a)
-                .map(|(_, x)| *x)
+                .text_blob
+                .map(|blob| cx.text.caret_x(blob, a))
                 .unwrap_or(Px(0.0));
             let end_x = self
-                .caret_stops
-                .iter()
-                .find(|(i, _)| *i == b)
-                .map(|(_, x)| *x)
+                .text_blob
+                .map(|blob| cx.text.caret_x(blob, b))
                 .unwrap_or(Px(0.0));
 
             cx.scene.push(SceneOp::Quad {
@@ -884,10 +859,8 @@ impl Widget for TextInput {
             }
         } else {
             let prefix_w = self
-                .caret_stops
-                .iter()
-                .find(|(i, _)| *i == self.caret)
-                .map(|(_, x)| *x)
+                .text_blob
+                .map(|blob| cx.text.caret_x(blob, self.caret))
                 .unwrap_or(Px(0.0));
             let pre_w = self
                 .preedit_metrics

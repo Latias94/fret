@@ -1,4 +1,8 @@
-use crate::{TextBlobId, geometry::Px, ids::FontId};
+use crate::{
+    TextBlobId,
+    geometry::{Px, Rect},
+    ids::FontId,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TextWrap {
@@ -58,6 +62,36 @@ pub trait TextService {
         self.release(blob);
         metrics
     }
+
+    /// Returns the X offset (in logical px) of the caret at `index` within the prepared text blob.
+    ///
+    /// Coordinate space: relative to the text origin (x=0 at the beginning of the line).
+    ///
+    /// Notes:
+    /// - `index` is a byte offset into the UTF-8 text, clamped to valid char boundaries (ADR 0044).
+    /// - Implementations may clamp to the nearest representable caret position.
+    fn caret_x(&mut self, _blob: TextBlobId, _index: usize) -> Px {
+        Px(0.0)
+    }
+
+    /// Performs hit-testing for a single-line text blob and returns the nearest caret byte index.
+    ///
+    /// Coordinate space: `x` is relative to the text origin (x=0 at the beginning of the line).
+    fn hit_test_x(&mut self, _blob: TextBlobId, _x: Px) -> usize {
+        0
+    }
+
+    /// Computes selection rectangles for a single-line selection range.
+    ///
+    /// Coordinate space: rects are relative to the text origin (x=0, y=0 at top of text box).
+    fn selection_rects(&mut self, _blob: TextBlobId, _range: (usize, usize), _out: &mut Vec<Rect>) {
+    }
+
+    /// Extracts the precomputed caret stop table (byte index -> x offset) for a single-line blob.
+    ///
+    /// This is primarily intended for UI hit-testing in event handlers, which do not have access
+    /// to the text service.
+    fn caret_stops(&mut self, _blob: TextBlobId, _out: &mut Vec<(usize, Px)>) {}
 
     fn release(&mut self, blob: TextBlobId);
 }

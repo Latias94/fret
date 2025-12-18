@@ -650,7 +650,9 @@ impl Renderer {
             return;
         }
 
-        let new_capacity = needed.next_power_of_two().max(self.text_vertex_capacity * 2);
+        let new_capacity = needed
+            .next_power_of_two()
+            .max(self.text_vertex_capacity * 2);
         self.text_vertex_buffers = (0..self.text_vertex_buffers.len())
             .map(|i| {
                 device.create_buffer(&wgpu::BufferDescriptor {
@@ -1114,6 +1116,55 @@ impl fret_core::TextService for Renderer {
         constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
         self.text_system.prepare(text, style, constraints)
+    }
+
+    fn measure(
+        &mut self,
+        text: &str,
+        style: fret_core::TextStyle,
+        constraints: fret_core::TextConstraints,
+    ) -> fret_core::TextMetrics {
+        self.text_system.measure(text, style, constraints)
+    }
+
+    fn caret_x(&mut self, blob: fret_core::TextBlobId, index: usize) -> fret_core::Px {
+        self.text_system
+            .caret_x(blob, index)
+            .unwrap_or(fret_core::Px(0.0))
+    }
+
+    fn hit_test_x(&mut self, blob: fret_core::TextBlobId, x: fret_core::Px) -> usize {
+        self.text_system.hit_test_x(blob, x).unwrap_or(0)
+    }
+
+    fn selection_rects(
+        &mut self,
+        blob: fret_core::TextBlobId,
+        range: (usize, usize),
+        out: &mut Vec<fret_core::Rect>,
+    ) {
+        out.clear();
+        let (a, b) = (range.0.min(range.1), range.0.max(range.1));
+        let (Some(ax), Some(bx)) = (
+            self.text_system.caret_x(blob, a),
+            self.text_system.caret_x(blob, b),
+        ) else {
+            return;
+        };
+        let Some(metrics) = self.text_system.blob(blob).map(|b| b.metrics) else {
+            return;
+        };
+        out.push(fret_core::Rect::new(
+            fret_core::Point::new(ax, fret_core::Px(0.0)),
+            fret_core::Size::new(fret_core::Px((bx.0 - ax.0).max(0.0)), metrics.size.height),
+        ));
+    }
+
+    fn caret_stops(&mut self, blob: fret_core::TextBlobId, out: &mut Vec<(usize, fret_core::Px)>) {
+        out.clear();
+        if let Some(stops) = self.text_system.caret_stops(blob) {
+            out.extend_from_slice(stops);
+        }
     }
 
     fn release(&mut self, blob: fret_core::TextBlobId) {
