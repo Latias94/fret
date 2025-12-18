@@ -37,6 +37,15 @@ struct QuadInstance {
     border_color: [f32; 4],
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+struct ViewportVertex {
+    pos_px: [f32; 2],
+    uv: [f32; 2],
+    opacity: f32,
+    _pad: [f32; 3],
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct ScissorRect {
     x: u32,
@@ -136,6 +145,13 @@ struct DrawCall {
     instance_count: u32,
 }
 
+struct ViewportDraw {
+    scissor: ScissorRect,
+    first_vertex: u32,
+    vertex_count: u32,
+    target: fret_core::RenderTargetId,
+}
+
 pub struct Renderer {
     uniform_buffer: wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
@@ -144,9 +160,18 @@ pub struct Renderer {
     quad_pipeline_format: Option<wgpu::TextureFormat>,
     quad_pipeline: Option<wgpu::RenderPipeline>,
 
+    viewport_pipeline_format: Option<wgpu::TextureFormat>,
+    viewport_pipeline: Option<wgpu::RenderPipeline>,
+    viewport_bind_group_layout: wgpu::BindGroupLayout,
+    viewport_sampler: wgpu::Sampler,
+
     instance_buffers: Vec<wgpu::Buffer>,
     instance_buffer_index: usize,
     instance_capacity: usize,
+
+    viewport_vertex_buffers: Vec<wgpu::Buffer>,
+    viewport_vertex_buffer_index: usize,
+    viewport_vertex_capacity: usize,
 
     render_targets: RenderTargetRegistry,
 }
@@ -190,6 +215,40 @@ impl Renderer {
             }],
         });
 
+        let viewport_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("fret viewport texture bind group layout"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                ],
+            });
+
+        let viewport_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("fret viewport sampler"),
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
+
         const FRAMES_IN_FLIGHT: usize = 3;
         let instance_capacity = 1024;
         let instance_buffers = (0..FRAMES_IN_FLIGHT)
@@ -203,15 +262,34 @@ impl Renderer {
             })
             .collect();
 
+        let viewport_vertex_capacity = 64 * 6;
+        let viewport_vertex_buffers = (0..FRAMES_IN_FLIGHT)
+            .map(|i| {
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(&format!("fret viewport vertices #{i}")),
+                    size: (viewport_vertex_capacity * std::mem::size_of::<ViewportVertex>()) as u64,
+                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                })
+            })
+            .collect();
+
         Self {
             uniform_buffer,
             uniform_bind_group,
             uniform_bind_group_layout,
             quad_pipeline_format: None,
             quad_pipeline: None,
+            viewport_pipeline_format: None,
+            viewport_pipeline: None,
+            viewport_bind_group_layout,
+            viewport_sampler,
             instance_buffers,
             instance_buffer_index: 0,
             instance_capacity,
+            viewport_vertex_buffers,
+            viewport_vertex_buffer_index: 0,
+            viewport_vertex_capacity,
             render_targets: RenderTargetRegistry::default(),
         }
     }
@@ -233,6 +311,81 @@ impl Renderer {
 
     pub fn unregister_render_target(&mut self, id: fret_core::RenderTargetId) -> bool {
         self.render_targets.unregister(id)
+    }
+
+    fn ensure_viewport_pipeline(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
+        if self.viewport_pipeline_format == Some(format) && self.viewport_pipeline.is_some() {
+            return;
+        }
+
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("fret viewport shader"),
+            source: wgpu::ShaderSource::Wgsl(VIEWPORT_SHADER.into()),
+        });
+
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("fret viewport pipeline layout"),
+            bind_group_layouts: &[&self.uniform_bind_group_layout, &self.viewport_bind_group_layout],
+            push_constant_ranges: &[],
+        });
+
+        let vertex_stride = std::mem::size_of::<ViewportVertex>() as wgpu::BufferAddress;
+        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("fret viewport pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: Some("vs_main"),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: vertex_stride,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &[
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 0,
+                            shader_location: 0,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 8,
+                            shader_location: 1,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32,
+                            offset: 16,
+                            shader_location: 2,
+                        },
+                    ],
+                }],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            }),
+            multiview: None,
+            cache: None,
+        });
+
+        self.viewport_pipeline_format = Some(format);
+        self.viewport_pipeline = Some(pipeline);
     }
 
     fn ensure_pipeline(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
@@ -339,6 +492,26 @@ impl Renderer {
         self.instance_capacity = new_capacity;
     }
 
+    fn ensure_viewport_vertex_capacity(&mut self, device: &wgpu::Device, needed: usize) {
+        if needed <= self.viewport_vertex_capacity {
+            return;
+        }
+
+        let new_capacity = needed.next_power_of_two().max(self.viewport_vertex_capacity * 2);
+        self.viewport_vertex_buffers = (0..self.viewport_vertex_buffers.len())
+            .map(|i| {
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(&format!("fret viewport vertices (resized) #{i}")),
+                    size: (new_capacity * std::mem::size_of::<ViewportVertex>()) as u64,
+                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                })
+            })
+            .collect();
+        self.viewport_vertex_buffer_index = 0;
+        self.viewport_vertex_capacity = new_capacity;
+    }
+
     pub fn render_scene(
         &mut self,
         device: &wgpu::Device,
@@ -350,6 +523,7 @@ impl Renderer {
         scale_factor: f32,
         viewport_size: (u32, u32),
     ) -> wgpu::CommandBuffer {
+        self.ensure_viewport_pipeline(device, format);
         self.ensure_pipeline(device, format);
 
         let uniform = ViewportUniform {
@@ -360,6 +534,8 @@ impl Renderer {
 
         let mut instances: Vec<QuadInstance> = Vec::new();
         let mut draws: Vec<DrawCall> = Vec::new();
+        let mut viewport_vertices: Vec<ViewportVertex> = Vec::new();
+        let mut viewport_draws: Vec<ViewportDraw> = Vec::new();
 
         let mut scissor_stack: Vec<ScissorRect> =
             vec![ScissorRect::full(viewport_size.0, viewport_size.1)];
@@ -441,11 +617,76 @@ impl Renderer {
                 SceneOp::Image { .. } | SceneOp::Text { .. } => {
                     // Not implemented yet.
                 }
-                SceneOp::ViewportSurface { target, .. } => {
+                SceneOp::ViewportSurface {
+                    rect,
+                    target,
+                    opacity,
+                    ..
+                } => {
+                    if *opacity <= 0.0 {
+                        continue;
+                    }
                     if self.render_targets.get(*target).is_none() {
                         continue;
                     }
-                    // Not implemented yet; target registry exists to fix the contract early.
+                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
+                    if w <= 0.0 || h <= 0.0 {
+                        continue;
+                    }
+
+                    let first_vertex = viewport_vertices.len() as u32;
+                    let o = opacity.clamp(0.0, 1.0);
+
+                    let x0 = x;
+                    let y0 = y;
+                    let x1 = x + w;
+                    let y1 = y + h;
+
+                    viewport_vertices.extend_from_slice(&[
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [0.0, 0.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y0],
+                            uv: [1.0, 0.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [1.0, 1.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [0.0, 0.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [1.0, 1.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y1],
+                            uv: [0.0, 1.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                    ]);
+
+                    viewport_draws.push(ViewportDraw {
+                        scissor: current_scissor,
+                        first_vertex,
+                        vertex_count: 6,
+                        target: *target,
+                    });
                 }
             }
         }
@@ -460,11 +701,21 @@ impl Renderer {
         }
 
         self.ensure_instance_capacity(device, instances.len());
-        let instance_buffer = &self.instance_buffers[self.instance_buffer_index];
-        self.instance_buffer_index =
-            (self.instance_buffer_index + 1) % self.instance_buffers.len();
+        self.ensure_viewport_vertex_capacity(device, viewport_vertices.len());
+
+        let instance_buffer_index = self.instance_buffer_index;
+        self.instance_buffer_index = (self.instance_buffer_index + 1) % self.instance_buffers.len();
+        let instance_buffer = &self.instance_buffers[instance_buffer_index];
         if !instances.is_empty() {
             queue.write_buffer(instance_buffer, 0, bytemuck::cast_slice(&instances));
+        }
+
+        let viewport_vertex_buffer_index = self.viewport_vertex_buffer_index;
+        self.viewport_vertex_buffer_index =
+            (self.viewport_vertex_buffer_index + 1) % self.viewport_vertex_buffers.len();
+        let viewport_vertex_buffer = &self.viewport_vertex_buffers[viewport_vertex_buffer_index];
+        if !viewport_vertices.is_empty() {
+            queue.write_buffer(viewport_vertex_buffer, 0, bytemuck::cast_slice(&viewport_vertices));
         }
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -488,12 +739,55 @@ impl Renderer {
                 occlusion_query_set: None,
             });
 
-            let pipeline = self
+            if !viewport_draws.is_empty() {
+                let pipeline = self
+                    .viewport_pipeline
+                    .as_ref()
+                    .expect("viewport pipeline must exist");
+                pass.set_pipeline(pipeline);
+                pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
+
+                for draw in &viewport_draws {
+                    if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                        continue;
+                    }
+                    let Some(view) = self.render_targets.get(draw.target) else {
+                        continue;
+                    };
+
+                    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("fret viewport texture bind group"),
+                        layout: &self.viewport_bind_group_layout,
+                        entries: &[
+                            wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: wgpu::BindingResource::Sampler(&self.viewport_sampler),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 1,
+                                resource: wgpu::BindingResource::TextureView(view),
+                            },
+                        ],
+                    });
+
+                    pass.set_bind_group(1, &bind_group, &[]);
+                    pass.set_scissor_rect(
+                        draw.scissor.x,
+                        draw.scissor.y,
+                        draw.scissor.w,
+                        draw.scissor.h,
+                    );
+                    pass.draw(draw.first_vertex..(draw.first_vertex + draw.vertex_count), 0..1);
+                }
+            }
+
+            let quad_pipeline = self
                 .quad_pipeline
                 .as_ref()
                 .expect("quad pipeline must exist");
 
-            pass.set_pipeline(pipeline);
+            pass.set_pipeline(quad_pipeline);
             pass.set_bind_group(0, &self.uniform_bind_group, &[]);
             pass.set_vertex_buffer(0, instance_buffer.slice(..));
 
@@ -629,5 +923,51 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let alpha = saturate(antialias_threshold - sdf);
 
   return vec4<f32>(input.color.rgb, input.color.a) * alpha;
+}
+"#;
+
+const VIEWPORT_SHADER: &str = r#"
+struct Viewport {
+  viewport_size: vec2<f32>,
+  _pad: vec2<f32>,
+};
+
+@group(0) @binding(0) var<uniform> viewport: Viewport;
+
+@group(1) @binding(0) var viewport_sampler: sampler;
+@group(1) @binding(1) var viewport_texture: texture_2d<f32>;
+
+struct VsIn {
+  @location(0) pos_px: vec2<f32>,
+  @location(1) uv: vec2<f32>,
+  @location(2) opacity: f32,
+};
+
+struct VsOut {
+  @builtin(position) clip_pos: vec4<f32>,
+  @location(0) uv: vec2<f32>,
+  @location(1) opacity: f32,
+};
+
+fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
+  let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
+  let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
+  return vec2<f32>(ndc_x, ndc_y);
+}
+
+@vertex
+fn vs_main(input: VsIn) -> VsOut {
+  var out: VsOut;
+  let clip_xy = to_clip_space(input.pos_px);
+  out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
+  out.uv = input.uv;
+  out.opacity = input.opacity;
+  return out;
+}
+
+@fragment
+fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
+  let tex = textureSample(viewport_texture, viewport_sampler, input.uv);
+  return vec4<f32>(tex.rgb * input.opacity, tex.a * input.opacity);
 }
 "#;

@@ -482,7 +482,9 @@ dependencies = [
  "fret-app",
  "fret-core",
  "fret-platform",
+ "fret-render",
  "fret-ui",
+ "wgpu",
  "winit",
 ]
 

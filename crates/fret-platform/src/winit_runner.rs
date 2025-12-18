@@ -90,6 +90,8 @@ pub trait WinitDriver {
 
     fn init(&mut self, _app: &mut App, _main_window: fret_core::AppWindowId) {}
 
+    fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, _renderer: &mut Renderer) {}
+
     fn create_window_state(&mut self, app: &mut App, window: fret_core::AppWindowId)
         -> Self::WindowState;
 
@@ -388,6 +390,9 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
 
         self.context = Some(context);
         self.renderer = Some(renderer);
+        if let (Some(context), Some(renderer)) = (self.context.as_ref(), self.renderer.as_mut()) {
+            self.driver.gpu_ready(&mut self.app, context, renderer);
+        }
 
         let main_window = match self.insert_window(window, surface) {
             Ok(id) => id,

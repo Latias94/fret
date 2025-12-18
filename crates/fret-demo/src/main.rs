@@ -3,8 +3,9 @@ mod demo_ui;
 use demo_ui::{build_demo_ui, DemoUiConfig};
 
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
-use fret_core::{Axis, Color, DockNode, DropZone, Rect, Scene};
+use fret_core::{Axis, Color, DockNode, DropZone, Rect, RenderTargetId, Scene};
 use fret_platform::winit_runner::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
+use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_ui::{DockManager, DockPanel, UiTree};
 use winit::event_loop::EventLoop;
 
@@ -16,6 +17,8 @@ struct DemoWindowState {
 #[derive(Default)]
 struct DemoDriver {
     main_window: Option<fret_core::AppWindowId>,
+    scene_target: Option<RenderTargetId>,
+    scene_texture: Option<wgpu::Texture>,
 }
 
 impl DemoDriver {
@@ -34,6 +37,70 @@ impl DemoDriver {
 impl WinitDriver for DemoDriver {
     type WindowState = DemoWindowState;
 
+    fn gpu_ready(&mut self, _app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
+        let size = 512u32;
+        let format = wgpu::TextureFormat::Rgba8UnormSrgb;
+        let texture = context.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("fret-demo scene render target"),
+            size: wgpu::Extent3d {
+                width: size,
+                height: size,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING
+                | wgpu::TextureUsages::COPY_DST
+                | wgpu::TextureUsages::RENDER_ATTACHMENT,
+            view_formats: &[],
+        });
+
+        let mut pixels: Vec<u8> = vec![0; (size * size * 4) as usize];
+        for y in 0..size {
+            for x in 0..size {
+                let idx = ((y * size + x) * 4) as usize;
+                let check = ((x / 32) ^ (y / 32)) & 1;
+                let (r, g, b) = if check == 0 {
+                    (24u8, 28u8, 40u8)
+                } else {
+                    (42u8, 55u8, 90u8)
+                };
+                pixels[idx] = r;
+                pixels[idx + 1] = g;
+                pixels[idx + 2] = b;
+                pixels[idx + 3] = 255u8;
+            }
+        }
+
+        context.queue.write_texture(
+            texture.as_image_copy(),
+            &pixels,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(4 * size),
+                rows_per_image: Some(size),
+            },
+            wgpu::Extent3d {
+                width: size,
+                height: size,
+                depth_or_array_layers: 1,
+            },
+        );
+
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let target = renderer.register_render_target(RenderTargetDescriptor {
+            view,
+            size: (size, size),
+            format,
+            color_space: RenderTargetColorSpace::Srgb,
+        });
+
+        self.scene_target = Some(target);
+        self.scene_texture = Some(texture);
+    }
+
     fn init(&mut self, app: &mut App, main_window: fret_core::AppWindowId) {
         self.main_window = Some(main_window);
 
@@ -46,6 +113,7 @@ impl WinitDriver for DemoDriver {
                 b: 0.22,
                 a: 1.0,
             },
+            viewport: self.scene_target,
         });
         let panel_inspector = dock.create_panel(DockPanel {
             title: "Inspector".to_string(),
@@ -55,6 +123,7 @@ impl WinitDriver for DemoDriver {
                 b: 0.20,
                 a: 1.0,
             },
+            viewport: None,
         });
         let panel_hierarchy = dock.create_panel(DockPanel {
             title: "Hierarchy".to_string(),
@@ -64,6 +133,7 @@ impl WinitDriver for DemoDriver {
                 b: 0.14,
                 a: 1.0,
             },
+            viewport: None,
         });
 
         let tabs_left = dock.graph.insert_node(DockNode::Tabs {

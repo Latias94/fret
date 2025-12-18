@@ -10,6 +10,7 @@ use crate::widget::{EventCx, LayoutCx, PaintCx, Widget};
 pub struct DockPanel {
     pub title: String,
     pub color: Color,
+    pub viewport: Option<fret_core::RenderTargetId>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -390,14 +391,25 @@ fn paint_dock(
 
         let active_panel = tabs.get(*active).copied();
         if let Some(panel) = active_panel.and_then(|p| dock.panel(p)) {
-            scene.push(SceneOp::Quad {
-                order: fret_core::DrawOrder(3),
-                rect: content,
-                background: panel.color,
-                border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
-                corner_radii: fret_core::Corners::all(Px(6.0)),
-            });
+            if let Some(target) = panel.viewport {
+                scene.push(SceneOp::PushClipRect { rect: content });
+                scene.push(SceneOp::ViewportSurface {
+                    order: fret_core::DrawOrder(3),
+                    rect: content,
+                    target,
+                    opacity: 1.0,
+                });
+                scene.push(SceneOp::PopClip);
+            } else {
+                scene.push(SceneOp::Quad {
+                    order: fret_core::DrawOrder(3),
+                    rect: content,
+                    background: panel.color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: fret_core::Corners::all(Px(6.0)),
+                });
+            }
         }
     }
 }
