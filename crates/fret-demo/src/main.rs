@@ -20,6 +20,8 @@ struct DemoDriver {
     scene_target: Option<RenderTargetId>,
     scene_target_size: Option<(u32, u32)>,
     scene_texture: Option<wgpu::Texture>,
+    scene_pixels: Option<Vec<u8>>,
+    queue: Option<wgpu::Queue>,
 }
 
 impl DemoDriver {
@@ -36,6 +38,70 @@ impl DemoDriver {
             tabs
         })
     }
+
+    fn stamp_scene(&mut self, target: RenderTargetId, target_px: (u32, u32)) {
+        let (Some(scene_target), Some((w, h)), Some(texture), Some(queue), Some(pixels)) = (
+            self.scene_target,
+            self.scene_target_size,
+            self.scene_texture.as_ref(),
+            self.queue.as_ref(),
+            self.scene_pixels.as_mut(),
+        ) else {
+            return;
+        };
+        if target != scene_target {
+            return;
+        }
+
+        let (x, y) = target_px;
+        let cx = x.min(w.saturating_sub(1));
+        let cy = y.min(h.saturating_sub(1));
+
+        let mark = [240u8, 240u8, 245u8, 255u8];
+        let ring = [255u8, 90u8, 70u8, 255u8];
+        let r: i32 = 7;
+        let r2 = r * r;
+        let r_inner = (r - 1).max(0);
+        let r_inner2 = r_inner * r_inner;
+
+        for dy in -r..=r {
+            for dx in -r..=r {
+                let d2 = dx * dx + dy * dy;
+                if d2 > r2 {
+                    continue;
+                }
+
+                let px = cx as i32 + dx;
+                let py = cy as i32 + dy;
+                if px < 0 || py < 0 || px >= w as i32 || py >= h as i32 {
+                    continue;
+                }
+
+                let is_cross = dx == 0 || dy == 0;
+                let is_ring = d2 >= r_inner2;
+                if is_cross || is_ring {
+                    let rgba = if is_ring { ring } else { mark };
+                    let idx = ((py as u32 * w + px as u32) * 4) as usize;
+                    pixels[idx..idx + 4].copy_from_slice(&rgba);
+                }
+            }
+        }
+
+        queue.write_texture(
+            texture.as_image_copy(),
+            pixels,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(4 * w),
+                rows_per_image: Some(h),
+            },
+            wgpu::Extent3d {
+                width: w,
+                height: h,
+                depth_or_array_layers: 1,
+            },
+        );
+    }
 }
 
 impl WinitDriver for DemoDriver {
@@ -44,6 +110,7 @@ impl WinitDriver for DemoDriver {
     fn gpu_ready(&mut self, _app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
         let size = 512u32;
         let format = wgpu::TextureFormat::Rgba8UnormSrgb;
+        self.queue = Some(context.queue.clone());
         let texture = context.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("fret-demo scene render target"),
             size: wgpu::Extent3d {
@@ -104,6 +171,7 @@ impl WinitDriver for DemoDriver {
         self.scene_target = Some(target);
         self.scene_target_size = Some((size, size));
         self.scene_texture = Some(texture);
+        self.scene_pixels = Some(pixels);
     }
 
     fn init(&mut self, app: &mut App, main_window: fret_core::AppWindowId) {
@@ -193,10 +261,16 @@ impl WinitDriver for DemoDriver {
         state.ui.dispatch_event(app, event);
     }
 
-    fn viewport_input(&mut self, _app: &mut App, event: fret_core::ViewportInputEvent) {
+    fn viewport_input(&mut self, app: &mut App, event: fret_core::ViewportInputEvent) {
         match event.kind {
-            fret_core::ViewportInputKind::PointerDown { .. }
-            | fret_core::ViewportInputKind::PointerUp { .. }
+            fret_core::ViewportInputKind::PointerDown { button, .. } => {
+                println!("viewport_input: {event:?}");
+                if button == fret_core::MouseButton::Left {
+                    self.stamp_scene(event.target, event.target_px);
+                    app.request_redraw(event.window);
+                }
+            }
+            fret_core::ViewportInputKind::PointerUp { .. }
             | fret_core::ViewportInputKind::Wheel { .. } => {
                 println!("viewport_input: {event:?}");
             }

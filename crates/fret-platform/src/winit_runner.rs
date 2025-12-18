@@ -33,6 +33,24 @@ pub struct WinitRunnerConfig {
     pub frame_interval: Duration,
     pub activity_timeout: Duration,
     pub clear_color: ClearColor,
+    pub wgpu_init: WgpuInit,
+}
+
+pub enum WgpuInit {
+    /// Create a `WgpuContext` internally using a surface-compatible adapter.
+    CreateDefault,
+    /// Use a host-provided GPU context. The platform layer will create surfaces via
+    /// `context.instance` and assumes the adapter/device are compatible with those surfaces.
+    Provided(WgpuContext),
+    /// Create the GPU context via a host callback given the main window.
+    ///
+    /// The callback may choose an adapter that is compatible with the window surface.
+    Factory(
+        Box<
+            dyn FnOnce(Arc<Window>) -> anyhow::Result<(WgpuContext, wgpu::Surface<'static>)>
+                + 'static,
+        >,
+    ),
 }
 
 impl Default for WinitRunnerConfig {
@@ -49,6 +67,7 @@ impl Default for WinitRunnerConfig {
             frame_interval: Duration::from_millis(8),
             activity_timeout: Duration::from_secs(1),
             clear_color: ClearColor::default(),
+            wgpu_init: WgpuInit::CreateDefault,
         }
     }
 }
@@ -387,9 +406,24 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
         };
 
         let (context, surface) =
-            match pollster::block_on(WgpuContext::new_with_surface(window.clone())) {
-                Ok(v) => v,
-                Err(_) => return,
+            match std::mem::replace(&mut self.config.wgpu_init, WgpuInit::CreateDefault) {
+                WgpuInit::CreateDefault => {
+                    match pollster::block_on(WgpuContext::new_with_surface(window.clone())) {
+                        Ok(v) => v,
+                        Err(_) => return,
+                    }
+                }
+                WgpuInit::Provided(context) => {
+                    let surface = match context.create_surface(window.clone()) {
+                        Ok(v) => v,
+                        Err(_) => return,
+                    };
+                    (context, surface)
+                }
+                WgpuInit::Factory(factory) => match factory(window.clone()) {
+                    Ok(v) => v,
+                    Err(_) => return,
+                },
             };
         let renderer = Renderer::new(&context.device);
 
