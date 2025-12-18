@@ -17,7 +17,7 @@ impl WinitWindows {
         event_loop: &ActiveEventLoop,
         title: &str,
         size: (u32, u32),
-    ) -> anyhow::Result<AppWindowId> {
+    ) -> Result<AppWindowId, winit::error::OsError> {
         let window = event_loop.create_window(
             Window::default_attributes()
                 .with_title(title)

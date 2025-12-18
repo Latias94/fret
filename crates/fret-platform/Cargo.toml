@@ -4,11 +4,6 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-anyhow.workspace = true
-fret-core = { path = "../fret-core" }
-fret-app = { path = "../fret-app" }
-fret-render = { path = "../fret-render" }
-pollster.workspace = true
 slotmap.workspace = true
-wgpu.workspace = true
 winit.workspace = true
+fret-core = { path = "../fret-core" }
