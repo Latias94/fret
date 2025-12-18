@@ -392,7 +392,29 @@ impl UiTree {
             if self.replaying_pending_shortcut {
                 // Pending shortcut replay bypasses shortcut matching and sequence state.
             } else if *repeat {
-                // MVP: avoid repeated command triggers on key repeat. Widgets still receive KeyDown.
+                // Allow key-repeat only for explicitly repeatable commands (e.g. text editing).
+                if let Some(service) = app.global::<KeymapService>() {
+                    let ctx = InputContext {
+                        platform: Platform::current(),
+                        ui_has_modal: barrier_root.is_some(),
+                        focus_is_text_input: self.focus_is_text_input(),
+                    };
+                    let chord = KeyChord::new(*key, *modifiers);
+                    if let Some(command) = service.keymap.resolve(&ctx, chord) {
+                        if app
+                            .commands()
+                            .get(command.clone())
+                            .is_some_and(|m| m.repeatable)
+                        {
+                            self.suppress_text_input_until_key_up = Some(*key);
+                            app.push_effect(Effect::Command {
+                                window: self.window,
+                                command,
+                            });
+                            return;
+                        }
+                    }
+                }
             } else if let Some(service) = app.global::<KeymapService>() {
                 let ctx = InputContext {
                     platform: Platform::current(),

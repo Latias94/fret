@@ -8,8 +8,8 @@ mod property_row;
 use demo_ui::{DemoLayers, DemoUiConfig, build_demo_ui};
 
 use fret_app::{
-    App, CommandId, CommandMeta, CreateWindowKind, CreateWindowRequest, Effect, Keymap,
-    KeymapFileV1, KeymapService, WindowRequest,
+    App, CommandId, CommandMeta, CommandScope, CreateWindowKind, CreateWindowRequest, Effect,
+    Keymap, KeymapFileV1, KeymapService, WindowRequest,
     keymap::{BindingV1, KeySpecV1},
 };
 use fret_core::{
@@ -294,32 +294,124 @@ impl WinitDriver for DemoDriver {
             CommandMeta::new("Clear Text Input")
                 .with_description("Clears the focused text input")
                 .with_category("Edit")
-                .with_keywords(["text", "input"]),
+                .with_keywords(["text", "input"])
+                .with_scope(CommandScope::Widget),
         );
         app.commands_mut().register(
             CommandId::from("text.select_all"),
             CommandMeta::new("Select All")
                 .with_description("Select all text in the focused text input")
-                .with_category("Edit"),
+                .with_category("Edit")
+                .with_scope(CommandScope::Widget),
         );
         app.commands_mut().register(
             CommandId::from("text.copy"),
             CommandMeta::new("Copy")
                 .with_description("Copy selected text")
-                .with_category("Edit"),
+                .with_category("Edit")
+                .with_scope(CommandScope::Widget),
         );
         app.commands_mut().register(
             CommandId::from("text.cut"),
             CommandMeta::new("Cut")
                 .with_description("Cut selected text")
-                .with_category("Edit"),
+                .with_category("Edit")
+                .with_scope(CommandScope::Widget),
         );
         app.commands_mut().register(
             CommandId::from("text.paste"),
             CommandMeta::new("Paste")
                 .with_description("Paste clipboard text")
-                .with_category("Edit"),
+                .with_category("Edit")
+                .with_scope(CommandScope::Widget),
         );
+
+        for (id, title, desc) in [
+            (
+                "text.move_left",
+                "Move Left",
+                "Move caret left by one character",
+            ),
+            (
+                "text.move_right",
+                "Move Right",
+                "Move caret right by one character",
+            ),
+            (
+                "text.move_word_left",
+                "Move Word Left",
+                "Move caret left by one word",
+            ),
+            (
+                "text.move_word_right",
+                "Move Word Right",
+                "Move caret right by one word",
+            ),
+            ("text.move_home", "Move Home", "Move caret to the start"),
+            ("text.move_end", "Move End", "Move caret to the end"),
+            (
+                "text.select_left",
+                "Select Left",
+                "Extend selection left by one character",
+            ),
+            (
+                "text.select_right",
+                "Select Right",
+                "Extend selection right by one character",
+            ),
+            (
+                "text.select_word_left",
+                "Select Word Left",
+                "Extend selection left by one word",
+            ),
+            (
+                "text.select_word_right",
+                "Select Word Right",
+                "Extend selection right by one word",
+            ),
+            (
+                "text.select_home",
+                "Select Home",
+                "Extend selection to the start",
+            ),
+            (
+                "text.select_end",
+                "Select End",
+                "Extend selection to the end",
+            ),
+            (
+                "text.delete_backward",
+                "Delete Backward",
+                "Delete backward (or delete selection)",
+            ),
+            (
+                "text.delete_forward",
+                "Delete Forward",
+                "Delete forward (or delete selection)",
+            ),
+            (
+                "text.delete_word_backward",
+                "Delete Word Backward",
+                "Delete backward by one word (or delete selection)",
+            ),
+            (
+                "text.delete_word_forward",
+                "Delete Word Forward",
+                "Delete forward by one word (or delete selection)",
+            ),
+        ] {
+            let repeatable = id.starts_with("text.move")
+                || id.starts_with("text.select")
+                || id.starts_with("text.delete");
+            let mut meta = CommandMeta::new(title)
+                .with_description(desc)
+                .with_category("Edit")
+                .with_scope(CommandScope::Widget);
+            if repeatable {
+                meta = meta.repeatable();
+            }
+            app.commands_mut().register(CommandId::from(id), meta);
+        }
         app.commands_mut().register(
             CommandId::from("focus.next"),
             CommandMeta::new("Focus Next")
@@ -514,6 +606,258 @@ impl WinitDriver for DemoDriver {
                     keys: KeySpecV1 {
                         mods: vec!["ctrl".into()],
                         key: "KeyV".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.move_left".into()),
+                    platform: Some("all".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "ArrowLeft".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.move_right".into()),
+                    platform: Some("all".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "ArrowRight".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.move_home".into()),
+                    platform: Some("all".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "Home".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.move_end".into()),
+                    platform: Some("all".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "End".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_left".into()),
+                    platform: Some("all".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["shift".into()],
+                        key: "ArrowLeft".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_right".into()),
+                    platform: Some("all".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["shift".into()],
+                        key: "ArrowRight".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_home".into()),
+                    platform: Some("all".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["shift".into()],
+                        key: "Home".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_end".into()),
+                    platform: Some("all".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["shift".into()],
+                        key: "End".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.delete_backward".into()),
+                    platform: Some("all".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "Backspace".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.delete_forward".into()),
+                    platform: Some("all".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "Delete".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.move_word_left".into()),
+                    platform: Some("macos".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["alt".into()],
+                        key: "ArrowLeft".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.move_word_right".into()),
+                    platform: Some("macos".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["alt".into()],
+                        key: "ArrowRight".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_word_left".into()),
+                    platform: Some("macos".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["alt".into(), "shift".into()],
+                        key: "ArrowLeft".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_word_right".into()),
+                    platform: Some("macos".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["alt".into(), "shift".into()],
+                        key: "ArrowRight".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.delete_word_backward".into()),
+                    platform: Some("macos".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["alt".into()],
+                        key: "Backspace".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.delete_word_forward".into()),
+                    platform: Some("macos".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["alt".into()],
+                        key: "Delete".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.move_word_left".into()),
+                    platform: Some("windows".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "ArrowLeft".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.move_word_right".into()),
+                    platform: Some("windows".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "ArrowRight".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_word_left".into()),
+                    platform: Some("windows".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into(), "shift".into()],
+                        key: "ArrowLeft".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_word_right".into()),
+                    platform: Some("windows".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into(), "shift".into()],
+                        key: "ArrowRight".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.delete_word_backward".into()),
+                    platform: Some("windows".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "Backspace".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.delete_word_forward".into()),
+                    platform: Some("windows".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "Delete".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.move_word_left".into()),
+                    platform: Some("linux".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "ArrowLeft".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.move_word_right".into()),
+                    platform: Some("linux".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "ArrowRight".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_word_left".into()),
+                    platform: Some("linux".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into(), "shift".into()],
+                        key: "ArrowLeft".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_word_right".into()),
+                    platform: Some("linux".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into(), "shift".into()],
+                        key: "ArrowRight".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.delete_word_backward".into()),
+                    platform: Some("linux".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "Backspace".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.delete_word_forward".into()),
+                    platform: Some("linux".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "Delete".into(),
                     },
                 },
             ],

@@ -526,6 +526,7 @@ pub struct CommandMeta {
     pub when: Option<WhenExpr>,
     pub scope: CommandScope,
     pub hidden: bool,
+    pub repeatable: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -549,6 +550,7 @@ impl CommandMeta {
             when: None,
             scope: CommandScope::Window,
             hidden: false,
+            repeatable: false,
         }
     }
 
@@ -590,6 +592,11 @@ impl CommandMeta {
 
     pub fn hidden(mut self) -> Self {
         self.hidden = true;
+        self
+    }
+
+    pub fn repeatable(mut self) -> Self {
+        self.repeatable = true;
         self
     }
 }

@@ -48,5 +48,16 @@ pub trait TextService {
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics);
 
+    fn measure(
+        &mut self,
+        text: &str,
+        style: TextStyle,
+        constraints: TextConstraints,
+    ) -> TextMetrics {
+        let (blob, metrics) = self.prepare(text, style, constraints);
+        self.release(blob);
+        metrics
+    }
+
     fn release(&mut self, blob: TextBlobId);
 }
