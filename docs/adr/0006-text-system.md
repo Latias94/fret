@@ -53,6 +53,7 @@ Creation is explicit:
 
 ## Notes / Future Work
 
+- Implementation direction reference (GPUI-inspired pipeline and atlas strategy):
+  - `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
 - IME: represent composition events as data in the platform input layer and keep it separate from shaping.
 - Resource lifetime: `TextBlobId` may be refcounted/interned; `release` can be delayed and drained via the app/runner loop.
-

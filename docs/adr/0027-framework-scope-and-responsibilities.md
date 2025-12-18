@@ -23,6 +23,8 @@ References / inspiration:
   - https://zed.dev/blog/gpui-ownership
 - Zed performance work (frame scheduling + in-flight resources):
   - https://zed.dev/blog/120fps
+- Zed settings UX and strong-typed configuration motivation:
+  - https://zed.dev/blog/settings-ui
 
 ## Decision
 
@@ -32,12 +34,16 @@ References / inspiration:
 
 - **Platform boundary**: multi-window lifecycle, event translation, clipboard/IME plumbing hooks
   (ADR 0003).
+- **App-owned model infrastructure**: typed handles + borrow-friendly update APIs for shared state
+  (ADR 0031).
 - **Retained UI runtime**: tree, layout, invalidation, hit-testing, focus/capture, event routing
   (ADR 0005, ADR 0020).
 - **Docking UX infrastructure**: dock data model + operations + persistence contract, tear-off windows,
   drag previews as overlays (ADR 0011, ADR 0013, ADR 0017).
 - **Commands / keymap / discoverability**: command metadata, scope-aware routing, keymap file format,
   `when` gating (ADR 0020, ADR 0021, ADR 0022, ADR 0023).
+- **Styling infrastructure**: style tokens and theme resolution rules (theme content remains app-owned)
+  (ADR 0032).
 - **Rendering infrastructure**: backend-agnostic display list + ordering semantics + GPU resource handle
   boundary (ADR 0002, ADR 0004, ADR 0009).
 - **Viewport embedding contracts**: render target handles + host-provided WGPU context topologies +
@@ -82,4 +88,3 @@ not as a hard dependency of `fret-core` / `fret-ui` / `fret-render`.
 - Decide whether to create a dedicated “example editor” crate tree (and where its docs live).
 - Define minimal plugin integration points that remain UI-only (panels/commands/menus), while leaving
   engine/editor plugin policy app-owned.
-

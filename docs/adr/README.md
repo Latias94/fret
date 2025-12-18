@@ -9,6 +9,16 @@ Notes:
 
 See `docs/adr/0027-framework-scope-and-responsibilities.md` for the framework vs editor-app scope boundary.
 
+## Current Focus (Proposed, “Decide Early”)
+
+These ADRs are intentionally prioritized because they tend to cause large rewrites if decided late:
+
+- `docs/adr/0028-declarative-elements-and-element-state.md` (authoring/runtime model)
+- `docs/adr/0029-text-pipeline-and-atlas-strategy.md` (text implementation strategy)
+- `docs/adr/0030-shape-rendering-and-sdf-semantics.md` (shape semantics over SDF)
+- `docs/adr/0031-app-owned-models-and-leasing-updates.md` (GPUI-style ownership + updates)
+- `docs/adr/0032-style-tokens-and-theme-resolution.md` (typed styling + theming)
+
 ## Organization Policy
 
 - Keep ADRs in a single directory (`docs/adr/`) so links remain stable.
@@ -23,6 +33,7 @@ See `docs/adr/0027-framework-scope-and-responsibilities.md` for the framework vs
 - `docs/adr/0021-keymap-file-format.md`
 - `docs/adr/0022-when-expressions.md`
 - `docs/adr/0023-command-metadata-menus-and-palette.md`
+- `docs/adr/0031-app-owned-models-and-leasing-updates.md`
 
 ## Core Contracts (`fret-core`)
 
@@ -39,10 +50,13 @@ See `docs/adr/0027-framework-scope-and-responsibilities.md` for the framework vs
 - `docs/adr/0011-overlays-and-multi-root.md`
 - `docs/adr/0013-docking-ops-and-persistence.md`
 - `docs/adr/0020-focus-and-command-routing.md`
+- `docs/adr/0028-declarative-elements-and-element-state.md`
+- `docs/adr/0032-style-tokens-and-theme-resolution.md`
 
 ## Renderer (`fret-render`)
 
 - `docs/adr/0009-renderer-ordering-and-batching.md`
+- `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
 
 ## Platform (`fret-platform`)
 
@@ -65,3 +79,4 @@ See `docs/adr/0027-framework-scope-and-responsibilities.md` for the framework vs
 
 - `docs/adr/0008-threading-logging-errors.md`
 - `docs/adr/0027-framework-scope-and-responsibilities.md`
+- `docs/adr/0029-text-pipeline-and-atlas-strategy.md`

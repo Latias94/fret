@@ -20,6 +20,8 @@ References:
 
 - Fret display list contract (ordered ops):
   - `docs/adr/0002-display-list.md`
+- Shape rendering semantics (SDF/border/shadow evolution):
+  - `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
 - Zed/GPUI quad SDF + batching style (illustrative renderer design):
   - `repo-ref/zed/crates/gpui/src/platform/blade/shaders.wgsl`
 
