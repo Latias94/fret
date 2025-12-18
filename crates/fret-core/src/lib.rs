@@ -15,4 +15,4 @@ pub use input::{Event, ImeEvent, KeyCode, Modifiers, MouseButton, PointerEvent};
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputKind};
 pub use scene::{Color, DrawOrder, Scene, SceneOp};
 pub use text::{TextConstraints, TextMetrics, TextService, TextStyle, TextWrap};
-pub use viewport::{ViewportFit, ViewportMapping, ViewportMapped};
+pub use viewport::{ViewportFit, ViewportMapped, ViewportMapping};

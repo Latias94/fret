@@ -28,4 +28,3 @@ impl Widget for FixedPanel {
         });
     }
 }
-

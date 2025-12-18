@@ -55,4 +55,3 @@ impl RenderTargetRegistry {
         self.targets.get(id).map(|t| &t.view)
     }
 }
-

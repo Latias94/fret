@@ -6,10 +6,39 @@ Key contracts are captured in ADRs under `docs/adr/`.
 
 ## Priorities
 
-- **P0**: Foundational architecture that is hard to change later (windowing, retained tree, event routing, display list contract, renderer resource ownership, dock manager).
-- **P1**: Editor usability essentials (theme/tokens, docking UX, panels, menus, shortcuts, basic text).
+- **P0**: Foundational architecture that is hard to change later (windowing, host-provided GPU context, retained tree, multi-root overlays, event routing, display list ordering semantics, renderer resource ownership, dock manager, persistence contracts).
+- **P1**: Editor usability essentials (theme/tokens, docking UX polish, panels, menus, shortcuts, basic text).
 - **P2**: Editor completeness (code editor-grade text, IME, accessibility hooks, advanced rendering effects).
 - **P3**: Portability extensions (wasm/WebGPU, mobile).
+
+## Refactors to Do Early (Avoid Big Rewrites)
+
+These items are intentionally scheduled early because they define “hard-to-change” semantics:
+
+- P0: Renderer must preserve `Scene.ops` ordering across primitive kinds (ADR 0009).
+- P0: Multi-root overlays (menus, drag previews, popups, modals) must be first-class (ADR 0011).
+- P0: Keyboard/IME split: physical keys for shortcuts, text input for editing (ADR 0012).
+- P0: Canonical physical key representation for shortcuts + keymap persistence (ADR 0018).
+- P0: Focus + command routing semantics (widget/window/app scopes) are fixed early (ADR 0020).
+- P0: Keymap file format + conflict/override semantics are fixed early (ADR 0021).
+- P0: `when` expression model is shared by keymap + command gating (ADR 0022).
+- P0: Unified command metadata powers menus + palette + shortcuts (ADR 0023).
+- P0: Host-provided `WgpuContext` so both editor-hosted and engine-hosted topologies are supported (ADR 0010).
+- P0: Canonical frame lifecycle + explicit engine/UI submission ordering (ADR 0015).
+- P0: Dock persistence and stable panel identity (`PanelKind`) with versioned layout format (ADR 0013).
+- P0: Scene state stack extension points (transform/opacity/layers) are reserved early (ADR 0019).
+- P0: Resource lifetime/eviction/budgets are defined at the handle boundary (ADR 0004).
+- P0: Plugin and panel boundaries are app-owned and renderer-free (ADR 0016).
+- P0: Multi-window DPI semantics are explicit and portable (ADR 0017).
+- P0: Viewport input forwarding contract is fixed early (ADR 0025).
+
+## Example Editor App Notes (Out of Scope for Fret Framework)
+
+These are important for building a full engine editor, but they are *application* concerns and
+should not be treated as Fret framework deliverables (see ADR 0027):
+
+- `docs/adr/0024-undo-redo-and-edit-transactions.md`
+- `docs/adr/0026-asset-database-and-import-pipeline.md`
 
 ## Milestones
 
@@ -32,6 +61,7 @@ Key contracts are captured in ADRs under `docs/adr/`.
 - P0: `Widget` trait and node tree with stable `NodeId`.
 - P0: Invalidation flags: `NeedsLayout`, `NeedsPaint`, `NeedsHitTestRebuild`.
 - P0: Event routing: hit-test, focus, capture, bubble. (prototype implemented; see ADR 0005)
+- P0: Multi-root overlays + z-order + modal blocking model. (see ADR 0011)
 - P1: Base widgets: `Root`, `Stack`, `Split`, `Clip`, `Scroll`, `Column` (non-taffy). (prototype implemented)
 - P1: Scrollbar UX: draggable thumb + track clicking. (prototype implemented)
 - P1: Layout contract: `layout_in(child, rect)` stores child bounds for hit-test/paint. (prototype implemented)
@@ -41,6 +71,7 @@ Key contracts are captured in ADRs under `docs/adr/`.
 ### M3 — Display List Contract + Renderer MVP
 
 - P0: Backend-agnostic `Scene/DisplayList` contract in `fret-core`.
+- P0: `Scene.ops` ordering is authoritative; renderer batching preserves order. (see ADR 0009)
 - P0: Renderer consumes display list and draws:
   - instanced quads,
   - rounded rect via SDF, borders (pending),
@@ -59,10 +90,10 @@ Key contracts are captured in ADRs under `docs/adr/`.
 
 ### M5 — Engine Viewports
 
-- P0: Shared `wgpu::Device/Queue` integration path.
+- P0: Host-provided `WgpuContext` to support both editor-hosted and engine-hosted integration. (see ADR 0010)
 - P0: Viewport widget that displays an engine texture/render target.
 - P0: Viewport mapping + input event contract (window -> uv/px). (prototype implemented)
-- P1: Overlay layer (gizmo, selection rect, grid) rendered by UI over the viewport.
+- P1: Overlay composition primitives: UI can render overlays over the viewport; editor apps can build gizmos/selection on top.
 - P1: Input forwarding and capture rules (mouse/keyboard routed to viewport when focused).
 
 Notes:
@@ -83,6 +114,12 @@ Notes:
 - P2: Platform layer for web canvas surfaces.
 - P2: Input/clipboard limitations documented and handled.
 - P3: Mobile planning (out of scope for early phases).
+
+### M8 — Settings, Keymap, and Persistence
+
+- P0: File-based configuration model + strong types. (see ADR 0014)
+- P0: Dock layout persistence format with versioning. (see ADR 0013)
+- P1: Settings UI primitives (token-driven) for inspector + app settings.
 
 ## Module Breakdown (Crates)
 

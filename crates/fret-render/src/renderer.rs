@@ -152,6 +152,11 @@ struct ViewportDraw {
     target: fret_core::RenderTargetId,
 }
 
+enum OrderedDraw {
+    Quad(DrawCall),
+    Viewport(ViewportDraw),
+}
+
 pub struct Renderer {
     uniform_buffer: wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
@@ -325,7 +330,10 @@ impl Renderer {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret viewport pipeline layout"),
-            bind_group_layouts: &[&self.uniform_bind_group_layout, &self.viewport_bind_group_layout],
+            bind_group_layouts: &[
+                &self.uniform_bind_group_layout,
+                &self.viewport_bind_group_layout,
+            ],
             push_constant_ranges: &[],
         });
 
@@ -497,7 +505,9 @@ impl Renderer {
             return;
         }
 
-        let new_capacity = needed.next_power_of_two().max(self.viewport_vertex_capacity * 2);
+        let new_capacity = needed
+            .next_power_of_two()
+            .max(self.viewport_vertex_capacity * 2);
         self.viewport_vertex_buffers = (0..self.viewport_vertex_buffers.len())
             .map(|i| {
                 device.create_buffer(&wgpu::BufferDescriptor {
@@ -533,9 +543,8 @@ impl Renderer {
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
 
         let mut instances: Vec<QuadInstance> = Vec::new();
-        let mut draws: Vec<DrawCall> = Vec::new();
         let mut viewport_vertices: Vec<ViewportVertex> = Vec::new();
-        let mut viewport_draws: Vec<ViewportDraw> = Vec::new();
+        let mut ordered_draws: Vec<OrderedDraw> = Vec::new();
 
         let mut scissor_stack: Vec<ScissorRect> =
             vec![ScissorRect::full(viewport_size.0, viewport_size.1)];
@@ -543,7 +552,23 @@ impl Renderer {
         let mut current_scissor = *scissor_stack
             .last()
             .expect("scissor stack must be non-empty");
-        let mut current_draw_first: u32 = 0;
+
+        let mut quad_batch: Option<(ScissorRect, u32)> = None;
+
+        macro_rules! flush_quad_batch {
+            () => {{
+                if let Some((scissor, first_instance)) = quad_batch.take() {
+                    let instance_count = (instances.len() as u32).saturating_sub(first_instance);
+                    if instance_count > 0 {
+                        ordered_draws.push(OrderedDraw::Quad(DrawCall {
+                            scissor,
+                            first_instance,
+                            instance_count,
+                        }));
+                    }
+                }
+            }};
+        }
 
         for op in &scene.ops {
             match op {
@@ -555,16 +580,7 @@ impl Renderer {
 
                     let combined = intersect_scissor(current_scissor, new_scissor);
                     if combined != current_scissor {
-                        let instance_count =
-                            (instances.len() as u32).saturating_sub(current_draw_first);
-                        if instance_count > 0 {
-                            draws.push(DrawCall {
-                                scissor: current_scissor,
-                                first_instance: current_draw_first,
-                                instance_count,
-                            });
-                            current_draw_first = instances.len() as u32;
-                        }
+                        flush_quad_batch!();
                     }
 
                     current_scissor = combined;
@@ -577,16 +593,7 @@ impl Renderer {
                             .last()
                             .expect("scissor stack must be non-empty");
                         if new_scissor != current_scissor {
-                            let instance_count =
-                                (instances.len() as u32).saturating_sub(current_draw_first);
-                            if instance_count > 0 {
-                                draws.push(DrawCall {
-                                    scissor: current_scissor,
-                                    first_instance: current_draw_first,
-                                    instance_count,
-                                });
-                                current_draw_first = instances.len() as u32;
-                            }
+                            flush_quad_batch!();
                             current_scissor = new_scissor;
                         }
                     }
@@ -606,6 +613,17 @@ impl Renderer {
                     if w <= 0.0 || h <= 0.0 {
                         continue;
                     }
+
+                    let needs_new_batch = match quad_batch {
+                        Some((scissor, _)) => scissor != current_scissor,
+                        None => true,
+                    };
+
+                    if needs_new_batch {
+                        flush_quad_batch!();
+                        quad_batch = Some((current_scissor, instances.len() as u32));
+                    }
+
                     instances.push(QuadInstance {
                         rect: [x, y, w, h],
                         color: color_to_linear_rgba_premul(*background),
@@ -615,7 +633,9 @@ impl Renderer {
                     });
                 }
                 SceneOp::Image { .. } | SceneOp::Text { .. } => {
-                    // Not implemented yet.
+                    // Not implemented yet. Flush to preserve ordering when these primitives are
+                    // implemented later.
+                    flush_quad_batch!();
                 }
                 SceneOp::ViewportSurface {
                     rect,
@@ -623,6 +643,7 @@ impl Renderer {
                     opacity,
                     ..
                 } => {
+                    flush_quad_batch!();
                     if *opacity <= 0.0 {
                         continue;
                     }
@@ -681,24 +702,17 @@ impl Renderer {
                         },
                     ]);
 
-                    viewport_draws.push(ViewportDraw {
+                    ordered_draws.push(OrderedDraw::Viewport(ViewportDraw {
                         scissor: current_scissor,
                         first_vertex,
                         vertex_count: 6,
                         target: *target,
-                    });
+                    }));
                 }
             }
         }
 
-        let instance_count = (instances.len() as u32).saturating_sub(current_draw_first);
-        if instance_count > 0 {
-            draws.push(DrawCall {
-                scissor: current_scissor,
-                first_instance: current_draw_first,
-                instance_count,
-            });
-        }
+        flush_quad_batch!();
 
         self.ensure_instance_capacity(device, instances.len());
         self.ensure_viewport_vertex_capacity(device, viewport_vertices.len());
@@ -715,7 +729,11 @@ impl Renderer {
             (self.viewport_vertex_buffer_index + 1) % self.viewport_vertex_buffers.len();
         let viewport_vertex_buffer = &self.viewport_vertex_buffers[viewport_vertex_buffer_index];
         if !viewport_vertices.is_empty() {
-            queue.write_buffer(viewport_vertex_buffer, 0, bytemuck::cast_slice(&viewport_vertices));
+            queue.write_buffer(
+                viewport_vertex_buffer,
+                0,
+                bytemuck::cast_slice(&viewport_vertices),
+            );
         }
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -739,72 +757,93 @@ impl Renderer {
                 occlusion_query_set: None,
             });
 
-            if !viewport_draws.is_empty() {
-                let pipeline = self
-                    .viewport_pipeline
-                    .as_ref()
-                    .expect("viewport pipeline must exist");
-                pass.set_pipeline(pipeline);
-                pass.set_bind_group(0, &self.uniform_bind_group, &[]);
-                pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
-
-                for draw in &viewport_draws {
-                    if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                        continue;
-                    }
-                    let Some(view) = self.render_targets.get(draw.target) else {
-                        continue;
-                    };
-
-                    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                        label: Some("fret viewport texture bind group"),
-                        layout: &self.viewport_bind_group_layout,
-                        entries: &[
-                            wgpu::BindGroupEntry {
-                                binding: 0,
-                                resource: wgpu::BindingResource::Sampler(&self.viewport_sampler),
-                            },
-                            wgpu::BindGroupEntry {
-                                binding: 1,
-                                resource: wgpu::BindingResource::TextureView(view),
-                            },
-                        ],
-                    });
-
-                    pass.set_bind_group(1, &bind_group, &[]);
-                    pass.set_scissor_rect(
-                        draw.scissor.x,
-                        draw.scissor.y,
-                        draw.scissor.w,
-                        draw.scissor.h,
-                    );
-                    pass.draw(draw.first_vertex..(draw.first_vertex + draw.vertex_count), 0..1);
-                }
+            enum ActivePipeline {
+                None,
+                Quad,
+                Viewport,
             }
 
             let quad_pipeline = self
                 .quad_pipeline
                 .as_ref()
                 .expect("quad pipeline must exist");
+            let viewport_pipeline = self
+                .viewport_pipeline
+                .as_ref()
+                .expect("viewport pipeline must exist");
 
-            pass.set_pipeline(quad_pipeline);
-            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
-            pass.set_vertex_buffer(0, instance_buffer.slice(..));
+            let mut active_pipeline = ActivePipeline::None;
 
-            for draw in draws {
-                if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                    continue;
+            for item in &ordered_draws {
+                match item {
+                    OrderedDraw::Quad(draw) => {
+                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                            continue;
+                        }
+
+                        if !matches!(active_pipeline, ActivePipeline::Quad) {
+                            pass.set_pipeline(quad_pipeline);
+                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                            pass.set_vertex_buffer(0, instance_buffer.slice(..));
+                            active_pipeline = ActivePipeline::Quad;
+                        }
+
+                        pass.set_scissor_rect(
+                            draw.scissor.x,
+                            draw.scissor.y,
+                            draw.scissor.w,
+                            draw.scissor.h,
+                        );
+                        pass.draw(
+                            0..6,
+                            draw.first_instance..(draw.first_instance + draw.instance_count),
+                        );
+                    }
+                    OrderedDraw::Viewport(draw) => {
+                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                            continue;
+                        }
+                        let Some(view) = self.render_targets.get(draw.target) else {
+                            continue;
+                        };
+
+                        if !matches!(active_pipeline, ActivePipeline::Viewport) {
+                            pass.set_pipeline(viewport_pipeline);
+                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                            pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
+                            active_pipeline = ActivePipeline::Viewport;
+                        }
+
+                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("fret viewport texture bind group"),
+                            layout: &self.viewport_bind_group_layout,
+                            entries: &[
+                                wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: wgpu::BindingResource::Sampler(
+                                        &self.viewport_sampler,
+                                    ),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 1,
+                                    resource: wgpu::BindingResource::TextureView(view),
+                                },
+                            ],
+                        });
+
+                        pass.set_bind_group(1, &bind_group, &[]);
+                        pass.set_scissor_rect(
+                            draw.scissor.x,
+                            draw.scissor.y,
+                            draw.scissor.w,
+                            draw.scissor.h,
+                        );
+                        pass.draw(
+                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                            0..1,
+                        );
+                    }
                 }
-                pass.set_scissor_rect(
-                    draw.scissor.x,
-                    draw.scissor.y,
-                    draw.scissor.w,
-                    draw.scissor.h,
-                );
-                pass.draw(
-                    0..6,
-                    draw.first_instance..(draw.first_instance + draw.instance_count),
-                );
             }
         }
 
@@ -968,6 +1007,7 @@ fn vs_main(input: VsIn) -> VsOut {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let tex = textureSample(viewport_texture, viewport_sampler, input.uv);
-  return vec4<f32>(tex.rgb * input.opacity, tex.a * input.opacity);
+  let a = tex.a * input.opacity;
+  return vec4<f32>(tex.rgb * a, a);
 }
 "#;

@@ -1,4 +1,4 @@
-use crate::{geometry::Px, ids::FontId, TextBlobId};
+use crate::{TextBlobId, geometry::Px, ids::FontId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextWrap {
@@ -43,4 +43,3 @@ pub trait TextService {
 
     fn release(&mut self, blob: TextBlobId);
 }
-

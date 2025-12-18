@@ -34,7 +34,10 @@ impl Default for Column {
 impl Widget for Column {
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
         let pad = self.padding.0.max(0.0);
-        let inner_origin = Point::new(Px(cx.bounds.origin.x.0 + pad), Px(cx.bounds.origin.y.0 + pad));
+        let inner_origin = Point::new(
+            Px(cx.bounds.origin.x.0 + pad),
+            Px(cx.bounds.origin.y.0 + pad),
+        );
         let inner_width = Px((cx.available.width.0 - pad * 2.0).max(0.0));
 
         let mut y = inner_origin.y;

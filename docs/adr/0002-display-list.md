@@ -15,6 +15,14 @@ We need a renderer-facing representation that:
 
 Define a minimal display list called `Scene` in `fret-core`, consisting of ordered `SceneOp` primitives.
 
+### Ordering semantics
+
+`Scene.ops` order is **authoritative** for compositing. The renderer must preserve operation order
+across primitive kinds (quads, viewports, text, images).
+
+Batching and instancing are allowed only when they do not change visible ordering (typically by
+batching adjacent operations). See `docs/adr/0009-renderer-ordering-and-batching.md`.
+
 ### Coordinate system
 
 - All `Rect/Point/Size` in `SceneOp` are **logical pixels** in a top-left origin coordinate space.
@@ -46,4 +54,3 @@ Define a minimal display list called `Scene` in `fret-core`, consisting of order
 
 - Define text shaping ownership (what lives in `fret-core` vs `fret-render`).
 - Decide whether to add vector paths (triangulation vs texture atlas vs GPU raster).
-

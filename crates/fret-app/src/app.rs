@@ -32,7 +32,10 @@ pub struct CreateWindowRequest {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CreateWindowKind {
-    DockFloating { source_window: AppWindowId, panel: fret_core::PanelId },
+    DockFloating {
+        source_window: AppWindowId,
+        panel: fret_core::PanelId,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -271,7 +274,10 @@ impl ModelStore {
 
     fn lease<T: Any>(&mut self, model: Model<T>) -> Result<ModelLease<T>, ModelUpdateError> {
         let boxed = {
-            let entry = self.storage.get_mut(model.id).ok_or(ModelUpdateError::NotFound)?;
+            let entry = self
+                .storage
+                .get_mut(model.id)
+                .ok_or(ModelUpdateError::NotFound)?;
             entry.value.take().ok_or(ModelUpdateError::AlreadyLeased)?
         };
 

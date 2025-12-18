@@ -52,4 +52,3 @@ fn populate_property_panel(ui: &mut UiTree, parent: fret_core::NodeId, count: us
         ui.add_child(parent, item);
     }
 }
-

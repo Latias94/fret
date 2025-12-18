@@ -52,10 +52,7 @@ impl ViewportMapping {
                 let y = self.content_rect.origin.y.0 + (ch - dh) * 0.5;
 
                 ViewportMapped {
-                    draw_rect: Rect::new(
-                        Point::new(Px(x), Px(y)),
-                        Size::new(Px(dw), Px(dh)),
-                    ),
+                    draw_rect: Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(dw), Px(dh))),
                 }
             }
         }
@@ -75,9 +72,12 @@ impl ViewportMapping {
     pub fn window_point_to_target_px(self, p: Point) -> Option<(u32, u32)> {
         let (u, v) = self.window_point_to_uv(p)?;
         let (tw, th) = self.target_px_size;
-        let x = (u * tw as f32).floor().clamp(0.0, (tw.saturating_sub(1)) as f32) as u32;
-        let y = (v * th as f32).floor().clamp(0.0, (th.saturating_sub(1)) as f32) as u32;
+        let x = (u * tw as f32)
+            .floor()
+            .clamp(0.0, (tw.saturating_sub(1)) as f32) as u32;
+        let y = (v * th as f32)
+            .floor()
+            .clamp(0.0, (th.saturating_sub(1)) as f32) as u32;
         Some((x, y))
     }
 }
-

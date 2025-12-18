@@ -12,6 +12,9 @@ An editor needs multiple engine viewports:
 
 Fret must support a wgpu-based game engine integration without leaking `wgpu` types into `fret-core` / `fret-ui`.
 
+Note: overlays are a **composition capability** of the UI framework; the actual tool systems (gizmos, picking,
+selection policies) are app-owned (see ADR 0027).
+
 ## Decision
 
 Use `RenderTargetId` (from `fret-core`) as the stable handle for “engine frames”:
@@ -19,15 +22,15 @@ Use `RenderTargetId` (from `fret-core`) as the stable handle for “engine frame
 - UI emits `SceneOp::ViewportSurface { target: RenderTargetId, rect, opacity, ... }`.
 - The renderer owns the registry that resolves `RenderTargetId` to GPU resources.
 
-### Primary integration path (recommended)
+### Supported integration topologies
+
+Both topologies are first-class (see ADR 0010):
 
 **Editor-hosted GPU context**:
 
 - Fret creates `wgpu::Instance/Adapter/Device/Queue` in the platform layer.
 - The engine is given shared access to `Device/Queue` and produces render targets on it.
 - Viewports are displayed with zero-copy sampling of the engine-produced texture.
-
-### Secondary integration path (optional)
 
 **Engine-hosted GPU context**:
 
@@ -47,11 +50,19 @@ Minimum required metadata:
 - format / color space expectations (sRGB vs linear),
 - sample count (MSAA resolve requirements, if any).
 
+Recommended additional metadata (reserved for future-proofing):
+
+- whether the target is pre-tonemapped SDR or HDR,
+- whether alpha is meaningful (opaque vs premultiplied content),
+- a resolved view when MSAA is used (sample the resolved view in UI),
+- sampling constraints (filterable vs non-filterable).
+
 ### Invariants
 
 - `RenderTargetId` is opaque to `fret-ui`.
 - Missing targets are best-effort: if a target is not found, the renderer skips the op.
 - The engine must update or re-register targets on resize.
+- The renderer must preserve `Scene.ops` ordering when mixing viewport surfaces with UI overlays (ADR 0009).
 
 ## Consequences
 
@@ -62,5 +73,4 @@ Minimum required metadata:
 ## Future Work
 
 - Resolve targets: support MSAA render targets by registering a resolved view.
-- Overlay ordering: define how viewport surfaces interact with clip stacks and draw order.
-
+- Overlay ordering: viewport surfaces must compose correctly with UI overlays; ordering is defined by `Scene.ops` semantics (see ADR 0009).
