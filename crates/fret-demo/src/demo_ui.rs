@@ -2,6 +2,7 @@ use crate::command_palette::{CommandPalette, OverlayBackdrop, OverlayPanelLayout
 use crate::dnd_probe::DndProbe;
 use crate::elements_mvp2::ElementsMvp2Demo;
 use crate::ime_probe::ImeProbe;
+use crate::multiline_probe::MultilineProbe;
 use crate::property_row::PropertyRow;
 use fret_core::{AppWindowId, Axis, Color, Px};
 use fret_ui::{ColoredPanel, Column, DockSpace, Scroll, Split, Text, TextInput, UiLayerId, UiTree};
@@ -49,14 +50,24 @@ pub fn build_demo_ui(window: AppWindowId, config: DemoUiConfig) -> (UiTree, Demo
     let text_header = ui.create_node(Text::new("Text MVP (labels + single-line TextInput)"));
     ui.add_child(column, text_header);
 
-    let text_input = ui.create_node(TextInput::new().with_text("Click here, then type (IME supported)"));
+    let text_input =
+        ui.create_node(TextInput::new().with_text("Click here, then type (IME supported)"));
     ui.add_child(column, text_input);
 
-    let text_input2 = ui.create_node(TextInput::new().with_text("Another TextInput (Tab to switch focus)"));
+    let text_input2 =
+        ui.create_node(TextInput::new().with_text("Another TextInput (Tab to switch focus)"));
     ui.add_child(column, text_input2);
 
     let ime_probe = ui.create_node(ImeProbe::new());
     ui.add_child(column, ime_probe);
+
+    let multiline_header = ui.create_node(Text::new(
+        "Multiline MVP (wrap + hit test + caret rect + selection rects)",
+    ));
+    ui.add_child(column, multiline_header);
+
+    let multiline_probe = ui.create_node(MultilineProbe::new());
+    ui.add_child(column, multiline_probe);
 
     let elements_demo = ui.create_node(ElementsMvp2Demo::new());
     ui.add_child(column, elements_demo);
@@ -81,7 +92,8 @@ pub fn build_demo_ui(window: AppWindowId, config: DemoUiConfig) -> (UiTree, Demo
     let external_dnd = ui.push_overlay_root_ex(dnd_root, false, false);
     ui.set_layer_visible(external_dnd, false);
 
-    let palette_root = ui.create_node(OverlayPanelLayout::new(Px(640.0), Px(360.0)).with_top(Px(64.0)));
+    let palette_root =
+        ui.create_node(OverlayPanelLayout::new(Px(640.0), Px(360.0)).with_top(Px(64.0)));
     let command_palette = ui.push_overlay_root(palette_root, true);
     ui.set_layer_visible(command_palette, false);
 
