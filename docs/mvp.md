@@ -10,6 +10,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
   - MVP 5: Text MVP landed (single-line input + IME cursor-area loop)
   - MVP 6: Commands + keymap MVP landed (bind/route/persist; `when` gating)
 - MVP 7: MVP done in demo (command palette overlay; shortcut display; menu model types added)
+  - Keymap v2 sequences + pending bindings are prototype implemented (ADR 0043 / ADR 0021).
 
 ## MVP 7 — Command UI Surfaces (Palette + Menu Skeleton)
 
@@ -103,6 +104,36 @@ References:
 - `docs/adr/0003-platform-boundary.md`
 - `docs/adr/0012-keyboard-ime-and-text-input.md`
 - `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
+
+## MVP 10 — Text Editing Baseline (Caret + Selection + Navigation)
+
+Goal: make `TextInput` usable enough for editor UIs by locking the state model and core editing commands early.
+
+**Scope**
+
+- Replace the MVP “select_all bool” with a real selection model:
+  - caret position (byte index or grapheme cluster index; pick one and lock it),
+  - selection range (start/end), including mouse drag selection.
+- Core navigation/edit commands routed via commands (not hard-coded keys):
+  - `text.move_left/right`, `text.move_word_left/right`, `text.move_home/end`,
+  - `text.delete_backward/forward`, `text.delete_word_backward/forward`,
+  - `text.select_*` variants (shift-modified movement).
+- IME correctness:
+  - inline preedit rendering in the widget (already MVP for single-line),
+  - `ImeSetCursorArea` updated from the actual caret rect after layout/paint (so candidate windows track the caret).
+
+**Definition of Done**
+
+- `fret-demo` `TextInput` supports:
+  - caret movement with arrow keys,
+  - selection expansion with shift+arrows,
+  - copy/cut/paste over selection,
+  - IME candidate window anchored at caret (macOS/Windows).
+
+References:
+
+- `docs/adr/0012-keyboard-ime-and-text-input.md`
+- `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
 
 ## Parking Lot (Explicitly Deferred)
 

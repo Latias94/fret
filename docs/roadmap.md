@@ -175,7 +175,7 @@ Notes:
 
 Immediate next step:
 
-- Move to MVP8 (focus traversal + focus scopes) now that MVP7 lands a command palette surface (see `docs/mvp.md`).
+- Move to MVP10 (text editing baseline) now that command UI + focus + clipboard + pending bindings are in place (see `docs/mvp.md`).
 
 ### M7 — Portability (wasm/WebGPU)
 
@@ -189,6 +189,7 @@ Immediate next step:
 - P0: Dock layout persistence format with versioning. (see ADR 0013)
 - P1: Settings UI primitives (token-driven) for inspector + app settings.
 - P0: Keymap MVP (bind + route + persist) is implemented in `fret-demo` (see `docs/mvp-archive.md` / ADR 0021 / ADR 0022).
+- P0: Keymap v2 sequences + pending bindings (ADR 0043) are prototype implemented.
 
 ### M9 — Command UI + Focus + Clipboard (Editor Usability Core)
 
