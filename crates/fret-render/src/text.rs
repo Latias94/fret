@@ -3,7 +3,8 @@ use cosmic_text::{
     SwashCache,
 };
 use fret_core::{
-    Size, TextBlobId, TextConstraints, TextMetrics, TextStyle, TextWrap, geometry::Px,
+    CaretAffinity, HitTestResult, Point, Rect, Size, TextBlobId, TextConstraints, TextMetrics,
+    TextStyle, TextWrap, geometry::Px,
 };
 use slotmap::SlotMap;
 use std::{collections::HashMap, hash::Hash, sync::Arc};
@@ -20,6 +21,17 @@ pub struct GlyphQuad {
 pub struct TextBlob {
     pub glyphs: Vec<GlyphQuad>,
     pub metrics: TextMetrics,
+    pub lines: Vec<TextLine>,
+    pub caret_stops: Vec<(usize, Px)>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TextLine {
+    pub start: usize,
+    pub end: usize,
+    pub width: Px,
+    pub y_top: Px,
+    pub height: Px,
     pub caret_stops: Vec<(usize, Px)>,
 }
 
@@ -320,109 +332,125 @@ impl TextSystem {
         let font_size_px = (style.size.0 * scale).max(1.0);
 
         let attrs = Attrs::new().family(Family::SansSerif);
-        let mut attrs_list = AttrsList::new(&attrs);
-        attrs_list.add_span(0..text.len(), &attrs);
-
-        let line = ShapeLine::new(
+        let (layout, line_starts) = layout_text(
             &mut self.font_system,
-            text,
-            &attrs_list,
-            Shaping::Advanced,
-            4,
-        );
-
-        let mut layout_lines = Vec::with_capacity(1);
-        let max_width = constraints.max_width.map(|w| w.0 * scale);
-        let wrap = match constraints.wrap {
-            TextWrap::None => cosmic_text::Wrap::None,
-            TextWrap::Word => cosmic_text::Wrap::Word,
-        };
-
-        line.layout_to_buffer(
             &mut self.scratch,
+            text,
+            &attrs,
             font_size_px,
-            max_width,
-            wrap,
-            None,
-            &mut layout_lines,
-            None,
+            constraints,
+            scale,
         );
 
-        let layout = layout_lines.first();
-        let (w_px, ascent_px, descent_px, glyphs_src) = match layout {
-            Some(layout) => (
-                layout.w,
-                layout.max_ascent,
-                layout.max_descent,
-                layout.glyphs.as_slice(),
-            ),
-            None => (0.0, 0.0, 0.0, &[][..]),
-        };
-
-        let metrics = TextMetrics {
-            size: Size::new(Px(w_px / scale), Px((ascent_px + descent_px) / scale)),
-            baseline: Px(ascent_px / scale),
-        };
-
-        let caret_stops = build_single_line_caret_stops(text, glyphs_src, w_px, scale);
+        let metrics = layout.metrics;
 
         let mut glyphs: Vec<GlyphQuad> = Vec::new();
+        let mut lines: Vec<TextLine> = Vec::with_capacity(layout.lines.len().max(1));
 
-        for g in glyphs_src {
-            if g.glyph_id == 0 {
-                continue;
-            }
+        for (i, l) in layout.lines.iter().enumerate() {
+            let base_offset = line_starts[i];
 
-            let (cache_key, _, _) = CacheKey::new(
-                g.font_id,
-                g.glyph_id as u16,
-                font_size_px,
-                (0.0, 0.0),
-                CacheKeyFlags::empty(),
+            let line_height_px = l
+                .line_height_opt
+                .unwrap_or_else(|| (l.max_ascent + l.max_descent).max(0.0))
+                .max(0.0);
+
+            let y_top_px = layout.line_tops_px[i];
+
+            let local_start = layout.local_starts[i];
+            let local_end = layout.local_ends[i];
+
+            let mut boundaries_local: Vec<usize> = utf8_char_boundaries(&text[base_offset..layout.paragraph_ends[i]])
+                .into_iter()
+                .filter(|b| *b >= local_start && *b <= local_end)
+                .collect();
+            boundaries_local.push(local_start);
+            boundaries_local.push(local_end);
+            boundaries_local.sort_unstable();
+            boundaries_local.dedup();
+
+            let caret_stops = build_line_caret_stops(
+                base_offset,
+                &boundaries_local,
+                l.glyphs.as_slice(),
+                local_start,
+                local_end,
+                l.w,
+                scale,
             );
 
-            let Some(image) = self
-                .swash_cache
-                .get_image(&mut self.font_system, cache_key)
-                .clone()
-            else {
-                continue;
-            };
-
-            if image.placement.width == 0 || image.placement.height == 0 {
-                continue;
-            }
-
-            let (atlas_w, atlas_h) = (self.atlas.width as f32, self.atlas.height as f32);
-            let (ex, ey, ew, eh) = match self.atlas.get_or_insert(
-                cache_key,
-                image.placement.width,
-                image.placement.height,
-                image.data,
-            ) {
-                Some(e) => (e.x, e.y, e.w, e.h),
-                None => continue,
-            };
-
-            let x0_px = g.x as f32 + image.placement.left as f32;
-            let y0_px = g.y as f32 - image.placement.top as f32;
-            let w_px = image.placement.width as f32;
-            let h_px = image.placement.height as f32;
-
-            let u0 = ex as f32 / atlas_w;
-            let v0 = ey as f32 / atlas_h;
-            let u1 = (ex + ew) as f32 / atlas_w;
-            let v1 = (ey + eh) as f32 / atlas_h;
-
-            glyphs.push(GlyphQuad {
-                rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
-                uv: [u0, v0, u1, v1],
+            lines.push(TextLine {
+                start: base_offset + local_start,
+                end: base_offset + local_end,
+                width: Px(l.w / scale),
+                y_top: Px(y_top_px / scale),
+                height: Px(line_height_px / scale),
+                caret_stops,
             });
+
+            for g in &l.glyphs {
+                if g.glyph_id == 0 {
+                    continue;
+                }
+
+                let (cache_key, _, _) = CacheKey::new(
+                    g.font_id,
+                    g.glyph_id,
+                    font_size_px,
+                    (0.0, 0.0),
+                    CacheKeyFlags::empty(),
+                );
+
+                let Some(image) = self
+                    .swash_cache
+                    .get_image(&mut self.font_system, cache_key)
+                    .clone()
+                else {
+                    continue;
+                };
+
+                if image.placement.width == 0 || image.placement.height == 0 {
+                    continue;
+                }
+
+                let (atlas_w, atlas_h) = (self.atlas.width as f32, self.atlas.height as f32);
+                let (ex, ey, ew, eh) = match self.atlas.get_or_insert(
+                    cache_key,
+                    image.placement.width,
+                    image.placement.height,
+                    image.data,
+                ) {
+                    Some(e) => (e.x, e.y, e.w, e.h),
+                    None => continue,
+                };
+
+                let line_offset_px = y_top_px;
+                let x0_px = g.x + image.placement.left as f32;
+                let y0_px = (line_offset_px + g.y) - image.placement.top as f32;
+                let w_px = image.placement.width as f32;
+                let h_px = image.placement.height as f32;
+
+                let u0 = ex as f32 / atlas_w;
+                let v0 = ey as f32 / atlas_h;
+                let u1 = (ex + ew) as f32 / atlas_w;
+                let v1 = (ey + eh) as f32 / atlas_h;
+
+                glyphs.push(GlyphQuad {
+                    rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
+                    uv: [u0, v0, u1, v1],
+                });
+            }
         }
+
+        let caret_stops = lines
+            .first()
+            .map(|l| l.caret_stops.clone())
+            .unwrap_or_else(|| vec![(0, Px(0.0))]);
 
         let id = self.blobs.insert(TextBlob {
             glyphs,
             metrics,
+            lines,
             caret_stops,
         });
         self.blob_cache.insert(key.clone(), id);
@@ -440,48 +468,29 @@ impl TextSystem {
         let font_size_px = (style.size.0 * scale).max(1.0);
 
         let attrs = Attrs::new().family(Family::SansSerif);
-        let mut attrs_list = AttrsList::new(&attrs);
-        attrs_list.add_span(0..text.len(), &attrs);
-
-        let line = ShapeLine::new(
+        layout_text(
             &mut self.font_system,
-            text,
-            &attrs_list,
-            Shaping::Advanced,
-            4,
-        );
-
-        let mut layout_lines = Vec::with_capacity(1);
-        let max_width = constraints.max_width.map(|w| w.0 * scale);
-        let wrap = match constraints.wrap {
-            TextWrap::None => cosmic_text::Wrap::None,
-            TextWrap::Word => cosmic_text::Wrap::Word,
-        };
-
-        line.layout_to_buffer(
             &mut self.scratch,
+            text,
+            &attrs,
             font_size_px,
-            max_width,
-            wrap,
-            None,
-            &mut layout_lines,
-            None,
-        );
-
-        let layout = layout_lines.first();
-        let (w_px, ascent_px, descent_px) = match layout {
-            Some(layout) => (layout.w, layout.max_ascent, layout.max_descent),
-            None => (0.0, 0.0, 0.0),
-        };
-
-        TextMetrics {
-            size: Size::new(Px(w_px / scale), Px((ascent_px + descent_px) / scale)),
-            baseline: Px(ascent_px / scale),
-        }
+            constraints,
+            scale,
+        )
+        .0
+        .metrics
     }
 
     pub fn caret_x(&self, blob: TextBlobId, index: usize) -> Option<Px> {
-        let blob = self.blobs.get(blob)?;
+        let blob_id = blob;
+        let blob = self.blobs.get(blob_id)?;
+        if blob.lines.len() > 1 {
+            return Some(
+                self.caret_rect(blob_id, index, CaretAffinity::Downstream)?
+                    .origin
+                    .x,
+            );
+        }
         let stops = blob.caret_stops.as_slice();
         if stops.is_empty() {
             return Some(Px(0.0));
@@ -500,7 +509,11 @@ impl TextSystem {
     }
 
     pub fn hit_test_x(&self, blob: TextBlobId, x: Px) -> Option<usize> {
-        let blob = self.blobs.get(blob)?;
+        let blob_id = blob;
+        let blob = self.blobs.get(blob_id)?;
+        if blob.lines.len() > 1 {
+            return Some(self.hit_test_point(blob_id, Point::new(x, Px(0.0)))?.index);
+        }
         let stops = blob.caret_stops.as_slice();
         if stops.is_empty() {
             return Some(0);
@@ -521,6 +534,22 @@ impl TextSystem {
         Some(self.blobs.get(blob)?.caret_stops.as_slice())
     }
 
+    pub fn caret_rect(&self, blob: TextBlobId, index: usize, affinity: CaretAffinity) -> Option<Rect> {
+        let blob = self.blobs.get(blob)?;
+        caret_rect_from_lines(&blob.lines, index, affinity)
+    }
+
+    pub fn hit_test_point(&self, blob: TextBlobId, point: Point) -> Option<HitTestResult> {
+        let blob = self.blobs.get(blob)?;
+        hit_test_point_from_lines(&blob.lines, point)
+    }
+
+    pub fn selection_rects(&self, blob: TextBlobId, range: (usize, usize), out: &mut Vec<Rect>) -> Option<()> {
+        let blob = self.blobs.get(blob)?;
+        selection_rects_from_lines(&blob.lines, range, out);
+        Some(())
+    }
+
     pub fn release(&mut self, blob: TextBlobId) {
         let Some(key) = self.blob_key_by_id.remove(&blob) else {
             return;
@@ -530,41 +559,306 @@ impl TextSystem {
     }
 }
 
-fn build_single_line_caret_stops(
+#[derive(Debug, Clone)]
+struct PreparedLayout {
+    metrics: TextMetrics,
+    lines: Vec<cosmic_text::LayoutLine>,
+    line_tops_px: Vec<f32>,
+    local_starts: Vec<usize>,
+    local_ends: Vec<usize>,
+    paragraph_ends: Vec<usize>,
+}
+
+fn layout_text(
+    font_system: &mut FontSystem,
+    scratch: &mut ShapeBuffer,
     text: &str,
+    attrs: &Attrs,
+    font_size_px: f32,
+    constraints: TextConstraints,
+    scale: f32,
+) -> (PreparedLayout, Vec<usize>) {
+    let max_width_px = constraints.max_width.map(|w| w.0 * scale);
+    let wrap = match constraints.wrap {
+        TextWrap::None => cosmic_text::Wrap::None,
+        TextWrap::Word => cosmic_text::Wrap::Word,
+    };
+
+    let mut all_lines: Vec<cosmic_text::LayoutLine> = Vec::new();
+    let mut line_tops_px: Vec<f32> = Vec::new();
+    let mut local_starts: Vec<usize> = Vec::new();
+    let mut local_ends: Vec<usize> = Vec::new();
+    let mut paragraph_ends: Vec<usize> = Vec::new();
+    let mut line_starts_global: Vec<usize> = Vec::new();
+
+    let mut max_w_px = 0.0_f32;
+    let mut total_h_px = 0.0_f32;
+    let mut first_ascent_px: Option<f32> = None;
+
+    let mut push_slice = |base_offset: usize, slice: &str, paragraph_end: usize| {
+        let mut attrs_list = AttrsList::new(attrs);
+        attrs_list.add_span(0..slice.len(), attrs);
+
+        let shape_line = ShapeLine::new(font_system, slice, &attrs_list, Shaping::Advanced, 4);
+        let mut layout_lines: Vec<cosmic_text::LayoutLine> = Vec::new();
+        shape_line.layout_to_buffer(
+            scratch,
+            font_size_px,
+            max_width_px,
+            wrap,
+            None,
+            &mut layout_lines,
+            None,
+        );
+
+        if layout_lines.is_empty() {
+            layout_lines.push(cosmic_text::LayoutLine {
+                w: 0.0,
+                max_ascent: 0.0,
+                max_descent: 0.0,
+                line_height_opt: None,
+                glyphs: Vec::new(),
+            });
+        }
+
+        let layout_count = layout_lines.len();
+        let mut expected_start_local: usize = 0;
+
+        for (idx, ll) in layout_lines.into_iter().enumerate() {
+            let mut local_end = ll
+                .glyphs
+                .iter()
+                .map(|g| g.end)
+                .max()
+                .unwrap_or(expected_start_local);
+            if idx + 1 == layout_count {
+                local_end = slice.len();
+            }
+
+            let local_start = expected_start_local;
+            expected_start_local = local_end;
+
+            let ascent_px = ll.max_ascent.max(0.0);
+            let descent_px = ll.max_descent.max(0.0);
+            let height_px = ll
+                .line_height_opt
+                .unwrap_or_else(|| ascent_px + descent_px)
+                .max(0.0);
+
+            first_ascent_px.get_or_insert(ascent_px);
+            max_w_px = max_w_px.max(ll.w);
+
+            line_tops_px.push(total_h_px);
+            local_starts.push(local_start);
+            local_ends.push(local_end);
+            paragraph_ends.push(paragraph_end);
+            line_starts_global.push(base_offset);
+
+            total_h_px += height_px;
+            all_lines.push(ll);
+        }
+    };
+
+    let mut slice_start = 0usize;
+    for (i, ch) in text.char_indices() {
+        if ch != '\n' {
+            continue;
+        }
+        push_slice(slice_start, &text[slice_start..i], i);
+        slice_start = i + 1;
+    }
+    push_slice(slice_start, &text[slice_start..text.len()], text.len());
+
+    let first_ascent_px = first_ascent_px.unwrap_or(0.0);
+    let metrics = TextMetrics {
+        size: Size::new(Px(max_w_px / scale), Px(total_h_px / scale)),
+        baseline: Px(first_ascent_px / scale),
+    };
+
+    (
+        PreparedLayout {
+            metrics,
+            lines: all_lines,
+            line_tops_px,
+            local_starts,
+            local_ends,
+            paragraph_ends,
+        },
+        line_starts_global,
+    )
+}
+
+fn utf8_char_boundaries(text: &str) -> Vec<usize> {
+    let mut out: Vec<usize> = Vec::with_capacity(text.chars().count().saturating_add(2));
+    out.push(0);
+    for (i, _) in text.char_indices() {
+        out.push(i);
+    }
+    out.push(text.len());
+    out.sort_unstable();
+    out.dedup();
+    out
+}
+
+fn build_line_caret_stops(
+    base_offset: usize,
+    boundaries_local: &[usize],
     glyphs: &[cosmic_text::LayoutGlyph],
+    local_start: usize,
+    local_end: usize,
     line_w_px: f32,
     scale: f32,
 ) -> Vec<(usize, Px)> {
-    let mut boundaries: Vec<usize> = Vec::with_capacity(text.chars().count().saturating_add(2));
-    boundaries.push(0);
-    for (i, _) in text.char_indices() {
-        if i != 0 {
-            boundaries.push(i);
-        }
-    }
-    boundaries.push(text.len());
-    boundaries.sort_unstable();
-    boundaries.dedup();
-
-    let mut out: Vec<(usize, Px)> = Vec::with_capacity(boundaries.len());
-    for idx in boundaries {
-        if idx == 0 {
-            out.push((0, Px(0.0)));
+    let mut out: Vec<(usize, Px)> = Vec::with_capacity(boundaries_local.len());
+    for &idx_local in boundaries_local {
+        let idx_global = base_offset + idx_local;
+        if idx_local <= local_start {
+            out.push((idx_global, Px(0.0)));
             continue;
         }
-        if idx >= text.len() {
-            out.push((text.len(), Px(line_w_px / scale)));
+        if idx_local >= local_end {
+            out.push((idx_global, Px(line_w_px / scale)));
             continue;
         }
 
         let mut x_end = 0.0_f32;
         for g in glyphs {
-            if g.end <= idx {
+            if g.end <= idx_local {
                 x_end = x_end.max(g.x + g.w);
             }
         }
-        out.push((idx, Px(x_end / scale)));
+        out.push((idx_global, Px(x_end / scale)));
     }
+    out.sort_by_key(|(idx, _)| *idx);
+    out.dedup_by_key(|(idx, _)| *idx);
     out
+}
+
+fn caret_x_from_stops(stops: &[(usize, Px)], index: usize) -> Px {
+    if stops.is_empty() {
+        return Px(0.0);
+    }
+    if let Ok(pos) = stops.binary_search_by_key(&index, |(idx, _)| *idx) {
+        return stops[pos].1;
+    }
+    match stops.partition_point(|(idx, _)| *idx <= index) {
+        0 => stops[0].1,
+        n => stops[n.saturating_sub(1)].1,
+    }
+}
+
+fn hit_test_x_from_stops(stops: &[(usize, Px)], x: Px) -> usize {
+    if stops.is_empty() {
+        return 0;
+    }
+    let mut best = stops[0].0;
+    let mut best_dist = (stops[0].1.0 - x.0).abs();
+    for (idx, px) in stops {
+        let dist = (px.0 - x.0).abs();
+        if dist < best_dist {
+            best = *idx;
+            best_dist = dist;
+        }
+    }
+    best
+}
+
+fn caret_rect_from_lines(lines: &[TextLine], index: usize, affinity: CaretAffinity) -> Option<Rect> {
+    if lines.is_empty() {
+        return None;
+    }
+
+    let mut candidates: Vec<usize> = Vec::new();
+    for (i, line) in lines.iter().enumerate() {
+        if index >= line.start && index <= line.end {
+            candidates.push(i);
+        }
+    }
+
+    let line_idx = match candidates.as_slice() {
+        [] => {
+            if index <= lines[0].start {
+                0
+            } else {
+                lines.len().saturating_sub(1)
+            }
+        }
+        [only] => *only,
+        many => match affinity {
+            CaretAffinity::Upstream => many[0],
+            CaretAffinity::Downstream => many[many.len().saturating_sub(1)],
+        },
+    };
+
+    let line = &lines[line_idx];
+    let x = caret_x_from_stops(&line.caret_stops, index);
+    Some(Rect::new(
+        Point::new(x, line.y_top),
+        Size::new(Px(1.0), line.height),
+    ))
+}
+
+fn hit_test_point_from_lines(lines: &[TextLine], point: Point) -> Option<HitTestResult> {
+    if lines.is_empty() {
+        return None;
+    }
+
+    let mut line_idx = 0usize;
+    for (i, line) in lines.iter().enumerate() {
+        let y0 = line.y_top.0;
+        let y1 = (line.y_top.0 + line.height.0).max(y0);
+        if point.y.0 >= y0 && point.y.0 < y1 {
+            line_idx = i;
+            break;
+        }
+        if point.y.0 >= y1 {
+            line_idx = i;
+        }
+    }
+
+    let line = &lines[line_idx];
+    let index = hit_test_x_from_stops(&line.caret_stops, point.x);
+
+    let mut affinity = CaretAffinity::Downstream;
+    if line_idx + 1 < lines.len() && index == line.end && lines[line_idx + 1].start == index {
+        affinity = CaretAffinity::Upstream;
+    }
+
+    Some(HitTestResult { index, affinity })
+}
+
+fn selection_rects_from_lines(lines: &[TextLine], range: (usize, usize), out: &mut Vec<Rect>) {
+    out.clear();
+    if lines.is_empty() {
+        return;
+    }
+
+    let (a, b) = (range.0.min(range.1), range.0.max(range.1));
+    if a == b {
+        return;
+    }
+
+    for line in lines {
+        let start = a.max(line.start);
+        let end = b.min(line.end);
+        if start >= end {
+            continue;
+        }
+
+        let x0 = if start <= line.start {
+            Px(0.0)
+        } else {
+            caret_x_from_stops(&line.caret_stops, start)
+        };
+        let x1 = if end >= line.end {
+            line.width
+        } else {
+            caret_x_from_stops(&line.caret_stops, end)
+        };
+
+        out.push(Rect::new(
+            Point::new(x0, line.y_top),
+            Size::new(Px((x1.0 - x0.0).max(0.0)), line.height),
+        ));
+    }
 }

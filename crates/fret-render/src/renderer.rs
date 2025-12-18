@@ -1143,21 +1143,7 @@ impl fret_core::TextService for Renderer {
         range: (usize, usize),
         out: &mut Vec<fret_core::Rect>,
     ) {
-        out.clear();
-        let (a, b) = (range.0.min(range.1), range.0.max(range.1));
-        let (Some(ax), Some(bx)) = (
-            self.text_system.caret_x(blob, a),
-            self.text_system.caret_x(blob, b),
-        ) else {
-            return;
-        };
-        let Some(metrics) = self.text_system.blob(blob).map(|b| b.metrics) else {
-            return;
-        };
-        out.push(fret_core::Rect::new(
-            fret_core::Point::new(ax, fret_core::Px(0.0)),
-            fret_core::Size::new(fret_core::Px((bx.0 - ax.0).max(0.0)), metrics.size.height),
-        ));
+        let _ = self.text_system.selection_rects(blob, range, out);
     }
 
     fn caret_stops(&mut self, blob: fret_core::TextBlobId, out: &mut Vec<(usize, fret_core::Px)>) {
@@ -1171,21 +1157,11 @@ impl fret_core::TextService for Renderer {
         &mut self,
         blob: fret_core::TextBlobId,
         index: usize,
-        _affinity: fret_core::CaretAffinity,
+        affinity: fret_core::CaretAffinity,
     ) -> fret_core::Rect {
-        let x = self
-            .text_system
-            .caret_x(blob, index)
-            .unwrap_or(fret_core::Px(0.0));
-        let h = self
-            .text_system
-            .blob(blob)
-            .map(|b| b.metrics.size.height)
-            .unwrap_or(fret_core::Px(16.0));
-        fret_core::Rect::new(
-            fret_core::Point::new(x, fret_core::Px(0.0)),
-            fret_core::Size::new(fret_core::Px(1.0), h),
-        )
+        self.text_system
+            .caret_rect(blob, index, affinity)
+            .unwrap_or_default()
     }
 
     fn hit_test_point(
@@ -1193,11 +1169,12 @@ impl fret_core::TextService for Renderer {
         blob: fret_core::TextBlobId,
         point: fret_core::Point,
     ) -> fret_core::HitTestResult {
-        let index = self.text_system.hit_test_x(blob, point.x).unwrap_or(0);
-        fret_core::HitTestResult {
-            index,
-            affinity: fret_core::CaretAffinity::Downstream,
-        }
+        self.text_system
+            .hit_test_point(blob, point)
+            .unwrap_or(fret_core::HitTestResult {
+                index: 0,
+                affinity: fret_core::CaretAffinity::Downstream,
+            })
     }
 
     fn release(&mut self, blob: fret_core::TextBlobId) {
