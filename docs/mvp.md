@@ -138,6 +138,7 @@ References:
 
 - `docs/adr/0012-keyboard-ime-and-text-input.md`
 - `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
+- `docs/adr/0044-text-editing-state-and-commands.md`
 
 ## Parking Lot (Explicitly Deferred)
 
