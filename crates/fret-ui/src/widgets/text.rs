@@ -1,6 +1,6 @@
 use fret_core::{
-    Color, DrawOrder, Event, FontId, ImeEvent, MouseButton, Px, Rect, SceneOp, Size, TextConstraints,
-    TextMetrics, TextStyle, TextWrap,
+    Color, DrawOrder, Event, FontId, ImeEvent, MouseButton, Px, Rect, SceneOp, Size,
+    TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 
 use crate::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
@@ -65,7 +65,10 @@ impl Widget for Text {
             return;
         };
 
-        let origin = fret_core::geometry::Point::new(cx.bounds.origin.x, cx.bounds.origin.y + metrics.baseline);
+        let origin = fret_core::geometry::Point::new(
+            cx.bounds.origin.x,
+            cx.bounds.origin.y + metrics.baseline,
+        );
         cx.scene.push(SceneOp::Text {
             order: DrawOrder(0),
             origin,
@@ -79,6 +82,7 @@ impl Widget for Text {
 pub struct TextInput {
     text: String,
     preedit: String,
+    select_all: bool,
     style: TextStyle,
     base_blob: Option<fret_core::TextBlobId>,
     base_metrics: Option<TextMetrics>,
@@ -97,6 +101,7 @@ impl TextInput {
         Self {
             text: String::new(),
             preedit: String::new(),
+            select_all: false,
             style: TextStyle {
                 font: FontId::default(),
                 size: Px(13.0),
@@ -126,10 +131,7 @@ impl TextInput {
     }
 
     fn caret_rect(&self, bounds: Rect, scale_factor: f32) -> Rect {
-        let base_w = self
-            .base_metrics
-            .map(|m| m.size.width)
-            .unwrap_or(Px(0.0));
+        let base_w = self.base_metrics.map(|m| m.size.width).unwrap_or(Px(0.0));
         let preedit_w = if self.preedit.is_empty() {
             Px(0.0)
         } else {
@@ -140,10 +142,7 @@ impl TextInput {
 
         let padding = Px(8.0);
         let x = bounds.origin.x + padding + base_w + preedit_w;
-        let h = self
-            .base_metrics
-            .map(|m| m.size.height)
-            .unwrap_or(Px(16.0));
+        let h = self.base_metrics.map(|m| m.size.height).unwrap_or(Px(16.0));
         let hairline = Px((1.0 / scale_factor.max(1.0)).max(1.0 / 8.0));
         Rect::new(
             fret_core::geometry::Point::new(x, bounds.origin.y + Px(6.0)),
@@ -183,6 +182,7 @@ impl Widget for TextInput {
                     window,
                     enabled: true,
                 });
+                self.select_all = false;
                 self.last_sent_cursor = None;
                 cx.invalidate_self(Invalidation::Layout);
                 cx.request_redraw();
@@ -192,7 +192,12 @@ impl Widget for TextInput {
                     return;
                 }
                 if *key == fret_core::KeyCode::Backspace && self.preedit.is_empty() {
-                    let _ = self.text.pop();
+                    if self.select_all {
+                        self.text.clear();
+                        self.select_all = false;
+                    } else {
+                        let _ = self.text.pop();
+                    }
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
@@ -211,9 +216,30 @@ impl Widget for TextInput {
                 self.last_text_input_text = Some(text.clone());
 
                 if self.preedit.is_empty() {
+                    if self.select_all {
+                        self.text.clear();
+                        self.select_all = false;
+                    }
                     self.text.push_str(text);
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
+                }
+            }
+            Event::ClipboardText(text) => {
+                if !focused {
+                    return;
+                }
+                if self.preedit.is_empty() {
+                    if self.select_all {
+                        self.text.clear();
+                        self.select_all = false;
+                    }
+                    let sanitized = text.replace('\n', " ").replace('\r', " ");
+                    if !sanitized.is_empty() {
+                        self.text.push_str(&sanitized);
+                        cx.invalidate_self(Invalidation::Layout);
+                        cx.request_redraw();
+                    }
                 }
             }
             Event::Ime(ime) => {
@@ -240,6 +266,10 @@ impl Widget for TextInput {
                         self.last_ime_commit_tick = Some(tick);
                         self.last_ime_commit_text = Some(text.clone());
 
+                        if self.select_all {
+                            self.text.clear();
+                            self.select_all = false;
+                        }
                         self.text.push_str(text);
                         self.preedit.clear();
                         cx.invalidate_self(Invalidation::Layout);
@@ -265,8 +295,44 @@ impl Widget for TextInput {
             "text.clear" => {
                 self.text.clear();
                 self.preedit.clear();
+                self.select_all = false;
                 cx.invalidate_self(Invalidation::Layout);
                 cx.request_redraw();
+                true
+            }
+            "text.select_all" => {
+                self.select_all = true;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.copy" => {
+                if self.select_all && !self.text.is_empty() {
+                    cx.app.push_effect(fret_app::Effect::ClipboardSetText {
+                        text: self.text.clone(),
+                    });
+                }
+                true
+            }
+            "text.cut" => {
+                if self.select_all && !self.text.is_empty() {
+                    cx.app.push_effect(fret_app::Effect::ClipboardSetText {
+                        text: self.text.clone(),
+                    });
+                    self.text.clear();
+                    self.preedit.clear();
+                    self.select_all = false;
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
+                }
+                true
+            }
+            "text.paste" => {
+                let Some(window) = cx.window else {
+                    return true;
+                };
+                cx.app
+                    .push_effect(fret_app::Effect::ClipboardGetText { window });
                 true
             }
             _ => false,
@@ -290,8 +356,7 @@ impl Widget for TextInput {
             self.preedit_metrics = None;
         } else {
             let (pre_blob, pre_metrics) =
-                cx.text
-                    .prepare(&self.preedit, self.style, base_constraints);
+                cx.text.prepare(&self.preedit, self.style, base_constraints);
             self.preedit_blob = Some(pre_blob);
             self.preedit_metrics = Some(pre_metrics);
         }
@@ -325,13 +390,40 @@ impl Widget for TextInput {
         });
 
         let padding = Px(8.0);
+        if self.select_all && !self.text.is_empty() {
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(0),
+                rect: Rect::new(
+                    fret_core::geometry::Point::new(
+                        cx.bounds.origin.x + padding,
+                        cx.bounds.origin.y + Px(6.0),
+                    ),
+                    Size::new(
+                        Px((cx.bounds.size.width.0 - padding.0 * 2.0).max(0.0)),
+                        Px((cx.bounds.size.height.0 - 12.0).max(0.0)),
+                    ),
+                ),
+                background: Color {
+                    r: 0.22,
+                    g: 0.24,
+                    b: 0.34,
+                    a: 1.0,
+                },
+                border: fret_core::geometry::Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: fret_core::geometry::Corners::all(Px(4.0)),
+            });
+        }
         let base_origin = if let Some(metrics) = self.base_metrics {
             fret_core::geometry::Point::new(
                 cx.bounds.origin.x + padding,
                 cx.bounds.origin.y + Px(6.0) + metrics.baseline,
             )
         } else {
-            fret_core::geometry::Point::new(cx.bounds.origin.x + padding, cx.bounds.origin.y + Px(16.0))
+            fret_core::geometry::Point::new(
+                cx.bounds.origin.x + padding,
+                cx.bounds.origin.y + Px(16.0),
+            )
         };
 
         if let Some(base_blob) = self.base_blob {
@@ -349,10 +441,8 @@ impl Widget for TextInput {
         }
 
         if let (Some(pre_blob), Some(base_m)) = (self.preedit_blob, self.base_metrics) {
-            let pre_origin = fret_core::geometry::Point::new(
-                base_origin.x + base_m.size.width,
-                base_origin.y,
-            );
+            let pre_origin =
+                fret_core::geometry::Point::new(base_origin.x + base_m.size.width, base_origin.y);
             cx.scene.push(SceneOp::Text {
                 order: DrawOrder(0),
                 origin: pre_origin,

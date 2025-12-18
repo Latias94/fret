@@ -42,6 +42,78 @@
       "keys": { "mods": ["ctrl"], "key": "KeyL" }
     },
     {
+      "command": "text.select_all",
+      "platform": "macos",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["meta"], "key": "KeyA" }
+    },
+    {
+      "command": "text.copy",
+      "platform": "macos",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["meta"], "key": "KeyC" }
+    },
+    {
+      "command": "text.cut",
+      "platform": "macos",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["meta"], "key": "KeyX" }
+    },
+    {
+      "command": "text.paste",
+      "platform": "macos",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["meta"], "key": "KeyV" }
+    },
+    {
+      "command": "text.select_all",
+      "platform": "windows",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "KeyA" }
+    },
+    {
+      "command": "text.copy",
+      "platform": "windows",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "KeyC" }
+    },
+    {
+      "command": "text.cut",
+      "platform": "windows",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "KeyX" }
+    },
+    {
+      "command": "text.paste",
+      "platform": "windows",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "KeyV" }
+    },
+    {
+      "command": "text.select_all",
+      "platform": "linux",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "KeyA" }
+    },
+    {
+      "command": "text.copy",
+      "platform": "linux",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "KeyC" }
+    },
+    {
+      "command": "text.cut",
+      "platform": "linux",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "KeyX" }
+    },
+    {
+      "command": "text.paste",
+      "platform": "linux",
+      "when": "focus.is_text_input",
+      "keys": { "mods": ["ctrl"], "key": "KeyV" }
+    },
+    {
       "command": null,
       "platform": "all",
       "keys": { "mods": [], "key": "F2" }

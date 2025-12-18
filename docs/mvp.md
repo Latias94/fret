@@ -93,6 +93,10 @@ Goal: land the platform boundary for clipboard and make `TextInput` production-u
 - `fret-demo` `TextInput` supports copy/cut/paste/select-all across platforms.
 - Clipboard plumbing is effect-driven (UI has no direct platform handle).
 
+Status:
+
+- Prototype implemented in `fret-demo` (Cmd/Ctrl+A/C/X/V bindings; effect-driven clipboard read/write; paste delivered as `Event::ClipboardText`).
+
 References:
 
 - `docs/adr/0001-app-effects.md`

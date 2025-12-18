@@ -8,8 +8,8 @@ mod property_row;
 use demo_ui::{DemoLayers, DemoUiConfig, build_demo_ui};
 
 use fret_app::{
-    App, CommandId, CommandMeta, CreateWindowKind, CreateWindowRequest, Effect, Keymap, KeymapFileV1,
-    KeymapService, WindowRequest,
+    App, CommandId, CommandMeta, CreateWindowKind, CreateWindowRequest, Effect, Keymap,
+    KeymapFileV1, KeymapService, WindowRequest,
     keymap::{BindingV1, KeySpecV1},
 };
 use fret_core::{
@@ -297,6 +297,30 @@ impl WinitDriver for DemoDriver {
                 .with_keywords(["text", "input"]),
         );
         app.commands_mut().register(
+            CommandId::from("text.select_all"),
+            CommandMeta::new("Select All")
+                .with_description("Select all text in the focused text input")
+                .with_category("Edit"),
+        );
+        app.commands_mut().register(
+            CommandId::from("text.copy"),
+            CommandMeta::new("Copy")
+                .with_description("Copy selected text")
+                .with_category("Edit"),
+        );
+        app.commands_mut().register(
+            CommandId::from("text.cut"),
+            CommandMeta::new("Cut")
+                .with_description("Cut selected text")
+                .with_category("Edit"),
+        );
+        app.commands_mut().register(
+            CommandId::from("text.paste"),
+            CommandMeta::new("Paste")
+                .with_description("Paste clipboard text")
+                .with_category("Edit"),
+        );
+        app.commands_mut().register(
             CommandId::from("focus.next"),
             CommandMeta::new("Focus Next")
                 .with_description("Move focus to the next focusable control")
@@ -382,6 +406,114 @@ impl WinitDriver for DemoDriver {
                     keys: KeySpecV1 {
                         mods: vec!["ctrl".into()],
                         key: "KeyL".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_all".into()),
+                    platform: Some("macos".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["meta".into()],
+                        key: "KeyA".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.copy".into()),
+                    platform: Some("macos".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["meta".into()],
+                        key: "KeyC".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.cut".into()),
+                    platform: Some("macos".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["meta".into()],
+                        key: "KeyX".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.paste".into()),
+                    platform: Some("macos".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["meta".into()],
+                        key: "KeyV".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_all".into()),
+                    platform: Some("windows".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyA".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.copy".into()),
+                    platform: Some("windows".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyC".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.cut".into()),
+                    platform: Some("windows".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyX".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.paste".into()),
+                    platform: Some("windows".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyV".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_all".into()),
+                    platform: Some("linux".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyA".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.copy".into()),
+                    platform: Some("linux".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyC".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.cut".into()),
+                    platform: Some("linux".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyX".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.paste".into()),
+                    platform: Some("linux".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyV".into(),
                     },
                 },
             ],
@@ -611,20 +743,26 @@ impl WinitDriver for DemoDriver {
             "command_palette.toggle" => {
                 let vis = state.ui.is_layer_visible(state.layers.command_palette);
                 if vis {
-                    state.ui.set_layer_visible(state.layers.command_palette, false);
+                    state
+                        .ui
+                        .set_layer_visible(state.layers.command_palette, false);
                     if let Some(prev) = state.palette_previous_focus.take() {
                         state.ui.set_focus(Some(prev));
                     }
                 } else {
                     state.palette_previous_focus = state.ui.focus();
-                    state.ui.set_layer_visible(state.layers.command_palette, true);
+                    state
+                        .ui
+                        .set_layer_visible(state.layers.command_palette, true);
                     state.ui.set_focus(Some(state.layers.command_palette_node));
                 }
                 app.request_redraw(window);
             }
             "command_palette.close" => {
                 if state.ui.is_layer_visible(state.layers.command_palette) {
-                    state.ui.set_layer_visible(state.layers.command_palette, false);
+                    state
+                        .ui
+                        .set_layer_visible(state.layers.command_palette, false);
                     if let Some(prev) = state.palette_previous_focus.take() {
                         state.ui.set_focus(Some(prev));
                     }
