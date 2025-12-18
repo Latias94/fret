@@ -47,6 +47,7 @@ Commands also have structured metadata used by UI surfaces:
 - `default_keybindings` (optional; expressed using the same shape as ADR 0021)
 - `when` (optional gating expression; ADR 0022)
 - `scope` (widget/window/app; ADR 0020)
+- `repeatable` (optional; allows key-repeat to re-dispatch the command, e.g. text editing/navigation)
 
 Implementation anchors (current workspace):
 

@@ -61,6 +61,8 @@ Keyboard input is processed in this order:
 1. **Modal gate**: if a modal root is active, only that root (and its descendants) can receive keyboard input,
    unless a specific command is marked “global override” (e.g. emergency close).
 2. **Shortcut resolution**: `KeyDown` can be matched against the keymap to produce a `CommandId`.
+   - Key repeat behavior is explicit: repeated `KeyDown` may re-dispatch a command only if the command is marked
+     `repeatable` (e.g. text navigation/deletion). Otherwise repeated keydowns fall through to widgets.
 3. **Text input**: `TextInput` and `ImeEvent` are routed to the focused text-editing widget (if any).
 4. **Fallback**: unhandled `KeyDown/KeyUp` events are delivered to the focused node as normal widget events.
 
@@ -106,4 +108,3 @@ Forwarding rules must respect modal gating (e.g. a modal dialog prevents viewpor
 - Specify the concrete command handler API and how handlers are registered (app/window/widget scopes).
 - Define a canonical keymap file format and conflict resolution strategy (see ADR 0014 + ADR 0018).
 - Define focus traversal (tab order, focus scopes) across roots and widgets.
-
