@@ -10,6 +10,7 @@ pub enum Invalidation {
 
 pub struct EventCx<'a> {
     pub app: &'a mut App,
+    pub text: &'a mut dyn TextService,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
     pub children: &'a [NodeId],

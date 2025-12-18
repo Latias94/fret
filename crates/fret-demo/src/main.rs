@@ -996,6 +996,7 @@ impl WinitDriver for DemoDriver {
     fn handle_event(
         &mut self,
         app: &mut App,
+        text: &mut dyn fret_core::TextService,
         window: fret_core::AppWindowId,
         state: &mut Self::WindowState,
         event: &fret_core::Event,
@@ -1053,7 +1054,7 @@ impl WinitDriver for DemoDriver {
             if let fret_core::PointerEvent::Down { button, .. } = pe {
                 if state.ui.is_layer_visible(state.layers.command_palette) {
                     // Command palette uses its own backdrop to dismiss; avoid demo-only right-click modal.
-                    state.ui.dispatch_event(app, event);
+                    state.ui.dispatch_event(app, text, event);
                     return;
                 }
                 if state.ui.is_layer_visible(state.layers.modal) {
@@ -1069,7 +1070,7 @@ impl WinitDriver for DemoDriver {
                 }
             }
         }
-        state.ui.dispatch_event(app, event);
+        state.ui.dispatch_event(app, text, event);
     }
 
     fn handle_command(

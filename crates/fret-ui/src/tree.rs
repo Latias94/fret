@@ -134,6 +134,7 @@ impl UiTree {
     fn replay_captured_keystrokes(
         &mut self,
         app: &mut App,
+        text_service: &mut dyn TextService,
         ctx: &InputContext,
         keystrokes: Vec<CapturedKeystroke>,
     ) {
@@ -156,18 +157,18 @@ impl UiTree {
                 modifiers: stroke.chord.mods,
                 repeat: false,
             };
-            self.dispatch_event(app, &down);
+            self.dispatch_event(app, text_service, &down);
 
             if let Some(text) = stroke.text {
-                let text = Event::TextInput(text);
-                self.dispatch_event(app, &text);
+                let event = Event::TextInput(text);
+                self.dispatch_event(app, text_service, &event);
             }
 
             let up = Event::KeyUp {
                 key: stroke.chord.key,
                 modifiers: stroke.chord.mods,
             };
-            self.dispatch_event(app, &up);
+            self.dispatch_event(app, text_service, &up);
         }
 
         self.replaying_pending_shortcut = prev;
@@ -313,7 +314,7 @@ impl UiTree {
         }
     }
 
-    pub fn dispatch_event(&mut self, app: &mut App, event: &Event) {
+    pub fn dispatch_event(&mut self, app: &mut App, text: &mut dyn TextService, event: &Event) {
         let Some(base_root) = self
             .base_layer
             .and_then(|id| self.layers.get(id).map(|l| l.root))
@@ -348,7 +349,7 @@ impl UiTree {
                         ui_has_modal: barrier_root.is_some(),
                         focus_is_text_input: self.focus_is_text_input(),
                     };
-                    self.replay_captured_keystrokes(app, &ctx, pending.keystrokes);
+                    self.replay_captured_keystrokes(app, text, &ctx, pending.keystrokes);
                 }
                 return;
             }
@@ -382,6 +383,7 @@ impl UiTree {
         }
 
         let mut needs_redraw = false;
+        let text_ptr: *mut dyn TextService = text;
 
         if let Event::KeyDown {
             key,
@@ -463,7 +465,7 @@ impl UiTree {
                     if let Some(token) = pending.timer {
                         app.push_effect(Effect::CancelTimer { token });
                     }
-                    self.replay_captured_keystrokes(app, &ctx, pending.keystrokes);
+                    self.replay_captured_keystrokes(app, text, &ctx, pending.keystrokes);
                     return;
                 }
 
@@ -535,6 +537,7 @@ impl UiTree {
                         .unwrap_or_default();
                     let mut cx = EventCx {
                         app,
+                        text: unsafe { &mut *text_ptr },
                         node: node_id,
                         window: tree.window,
                         children: &children,
