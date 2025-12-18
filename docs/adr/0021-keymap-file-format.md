@@ -157,6 +157,7 @@ Resolution rule:
 
 - Define the `when` expression language and available context keys.
 - Decide whether to support multi-stroke chords and how they interact with text input.
+- Lock shortcut arbitration + AltGr semantics + pending bindings (see `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`).
 - Provide a canonical list of `KeyCode` tokens and migration rules when upstream (`winit`) changes.
 
 ## Implementation Notes (Current Prototype)

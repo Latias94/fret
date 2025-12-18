@@ -40,6 +40,7 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Multi-root overlays (menus, drag previews, popups, modals) must be first-class (ADR 0011).
 - P0: Keyboard/IME split: physical keys for shortcuts, text input for editing (ADR 0012).
 - P0: Canonical physical key representation for shortcuts + keymap persistence (ADR 0018).
+- P0: Shortcut arbitration + AltGr semantics + pending bindings (avoid keymap/API breaking changes) (ADR 0043).
 - P0: Focus + command routing semantics (widget/window/app scopes) are fixed early (ADR 0020).
 - P0: Keymap file format + conflict/override semantics are fixed early (ADR 0021).
 - P0: `when` expression model is shared by keymap + command gating (ADR 0022).
