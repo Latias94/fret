@@ -42,6 +42,8 @@ Locked P0 behavior:
 - `Event::TextInput` **must not include control characters** (e.g. backspace, tab, newline).
 - Editing/navigation keys (Backspace/Delete/Enter/Tab/Arrows) are handled via `KeyDown` + commands (ADR 0020 / ADR 0023),
   not by interpreting `TextInput` as an “everything input stream”.
+- If a `KeyDown` is resolved to a command binding (keymap hit), any subsequent `TextInput` emitted for the same keystroke
+  must be suppressed so shortcuts do not insert characters into focused text fields.
 
 ### 3) IME candidate window positioning is an explicit feedback path (cursor area)
 

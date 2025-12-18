@@ -1,6 +1,8 @@
 use crate::widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 use fret_app::{App, Effect, InputContext, KeyChord, KeymapService, Platform};
-use fret_core::{AppWindowId, Event, NodeId, Point, PointerEvent, Rect, Scene, Size, TextService};
+use fret_core::{
+    AppWindowId, Event, KeyCode, NodeId, Point, PointerEvent, Rect, Scene, Size, TextService,
+};
 use slotmap::SlotMap;
 use std::collections::HashMap;
 
@@ -75,6 +77,7 @@ pub struct UiTree {
     focus: Option<NodeId>,
     captured: Option<NodeId>,
     window: Option<AppWindowId>,
+    suppress_text_input_until_key_up: Option<KeyCode>,
 }
 
 impl UiTree {
@@ -230,6 +233,19 @@ impl UiTree {
             return;
         };
 
+        if let Event::TextInput(_) = event {
+            if self.suppress_text_input_until_key_up.is_some() {
+                self.suppress_text_input_until_key_up = None;
+                return;
+            }
+        }
+
+        if let Event::KeyUp { key, .. } = event {
+            if self.suppress_text_input_until_key_up == Some(*key) {
+                self.suppress_text_input_until_key_up = None;
+            }
+        }
+
         let mut needs_redraw = false;
 
         let (active_layers, barrier_root) = self.active_input_layers();
@@ -252,6 +268,7 @@ impl UiTree {
                     .keymap
                     .resolve(&ctx, KeyChord::new(*key, *modifiers))
                 {
+                    self.suppress_text_input_until_key_up = Some(*key);
                     app.push_effect(Effect::Command {
                         window: self.window,
                         command,
