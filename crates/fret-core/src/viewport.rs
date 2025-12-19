@@ -69,6 +69,13 @@ impl ViewportMapping {
         Some((x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
     }
 
+    pub fn window_point_to_uv_clamped(self, p: Point) -> (f32, f32) {
+        let mapped = self.map();
+        let x = (p.x.0 - mapped.draw_rect.origin.x.0) / mapped.draw_rect.size.width.0.max(1.0);
+        let y = (p.y.0 - mapped.draw_rect.origin.y.0) / mapped.draw_rect.size.height.0.max(1.0);
+        (x.clamp(0.0, 1.0), y.clamp(0.0, 1.0))
+    }
+
     pub fn window_point_to_target_px(self, p: Point) -> Option<(u32, u32)> {
         let (u, v) = self.window_point_to_uv(p)?;
         let (tw, th) = self.target_px_size;
@@ -79,5 +86,17 @@ impl ViewportMapping {
             .floor()
             .clamp(0.0, (th.saturating_sub(1)) as f32) as u32;
         Some((x, y))
+    }
+
+    pub fn window_point_to_target_px_clamped(self, p: Point) -> (u32, u32) {
+        let (u, v) = self.window_point_to_uv_clamped(p);
+        let (tw, th) = self.target_px_size;
+        let x = (u * tw as f32)
+            .floor()
+            .clamp(0.0, (tw.saturating_sub(1)) as f32) as u32;
+        let y = (v * th as f32)
+            .floor()
+            .clamp(0.0, (th.saturating_sub(1)) as f32) as u32;
+        (x, y)
     }
 }

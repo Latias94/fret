@@ -52,6 +52,18 @@ pub struct DockManager {
     hover: Option<DockDropTarget>,
     viewport_hover: Option<ViewportHover>,
     viewport_context_menu: Option<ViewportInputEvent>,
+    viewport_overlays: HashMap<(fret_core::AppWindowId, RenderTargetId), ViewportOverlay>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViewportOverlay {
+    pub marquee: Option<ViewportMarquee>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViewportMarquee {
+    pub a_uv: (f32, f32),
+    pub b_uv: (f32, f32),
 }
 
 impl Default for DockManager {
@@ -62,6 +74,7 @@ impl Default for DockManager {
             hover: None,
             viewport_hover: None,
             viewport_context_menu: None,
+            viewport_overlays: HashMap::new(),
         }
     }
 }
@@ -77,6 +90,20 @@ impl DockManager {
 
     pub fn panel(&self, key: &PanelKey) -> Option<&DockPanel> {
         self.panels.get(key)
+    }
+
+    pub fn set_viewport_overlay(
+        &mut self,
+        window: fret_core::AppWindowId,
+        target: RenderTargetId,
+        overlay: Option<ViewportOverlay>,
+    ) {
+        let key = (window, target);
+        if let Some(overlay) = overlay {
+            self.viewport_overlays.insert(key, overlay);
+        } else {
+            self.viewport_overlays.remove(&key);
+        }
     }
 }
 
@@ -101,6 +128,7 @@ pub struct DockSpace {
     divider_drag: Option<DividerDragState>,
     panel_content: HashMap<PanelKey, NodeId>,
     panel_last_sizes: HashMap<PanelKey, Size>,
+    viewport_capture: Option<ViewportHit>,
 }
 
 impl DockSpace {
@@ -111,6 +139,7 @@ impl DockSpace {
             divider_drag: None,
             panel_content: HashMap::new(),
             panel_last_sizes: HashMap::new(),
+            viewport_capture: None,
         }
     }
 
@@ -128,6 +157,7 @@ impl Widget for DockSpace {
         let mut invalidate_layout = false;
         let mut open_viewport_menu: Option<(Point, ViewportInputEvent)> = None;
         let mut request_focus: Option<NodeId> = None;
+        let mut request_pointer_capture: Option<Option<NodeId>> = None;
 
         #[derive(Clone)]
         struct DockDragSnapshot {
@@ -215,17 +245,23 @@ impl Widget for DockSpace {
                                         open_viewport_menu = Some((*position, e));
                                         invalidate_paint = true;
                                     }
-                                } else if let Some(e) = viewport_input_from_hit(
-                                    self.window,
-                                    hit,
-                                    *position,
-                                    ViewportInputKind::PointerDown {
-                                        button: *button,
-                                        modifiers: *modifiers,
-                                    },
-                                ) {
-                                    pending_effects.push(Effect::ViewportInput(e));
-                                    pending_redraws.push(self.window);
+                                } else {
+                                    if *button == fret_core::MouseButton::Left {
+                                        self.viewport_capture = Some(hit.clone());
+                                        request_pointer_capture = Some(Some(cx.node));
+                                    }
+                                    if let Some(e) = viewport_input_from_hit(
+                                        self.window,
+                                        hit,
+                                        *position,
+                                        ViewportInputKind::PointerDown {
+                                            button: *button,
+                                            modifiers: *modifiers,
+                                        },
+                                    ) {
+                                        pending_effects.push(Effect::ViewportInput(e));
+                                        pending_redraws.push(self.window);
+                                    }
                                 }
                             }
                         }
@@ -260,49 +296,68 @@ impl Widget for DockSpace {
                             return;
                         }
 
-                        let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                        if allow_viewport_hover && dock_bounds.contains(*position) {
-                            let layout = compute_layout_map(&dock.graph, root, dock_bounds);
-                            let hit = hit_test_active_viewport_panel(
-                                &dock.graph,
-                                &dock.panels,
-                                &layout,
-                                *position,
-                            );
-
-                            let next_hover = hit.as_ref().map(|hit| ViewportHover {
+                        if let Some(hit) = self.viewport_capture.clone() {
+                            dock.viewport_hover = Some(ViewportHover {
                                 window: self.window,
                                 panel: hit.panel.clone(),
                                 position: *position,
                             });
-                            if dock.viewport_hover != next_hover {
-                                dock.viewport_hover = next_hover;
-                                pending_redraws.push(self.window);
-                            } else if next_hover.is_some() {
-                                dock.viewport_hover = next_hover;
-                                pending_redraws.push(self.window);
-                            }
-
-                            if let Some(hit) = hit {
-                                if let Some(e) = viewport_input_from_hit(
-                                    self.window,
-                                    hit,
-                                    *position,
-                                    ViewportInputKind::PointerMove {
-                                        buttons: *buttons,
-                                        modifiers: *modifiers,
-                                    },
-                                ) {
-                                    pending_effects.push(Effect::ViewportInput(e));
-                                }
-                            }
-                        } else if dock
-                            .viewport_hover
-                            .as_ref()
-                            .is_some_and(|h| h.window == self.window)
-                        {
-                            dock.viewport_hover = None;
+                            let e = viewport_input_from_hit_clamped(
+                                self.window,
+                                hit,
+                                *position,
+                                ViewportInputKind::PointerMove {
+                                    buttons: *buttons,
+                                    modifiers: *modifiers,
+                                },
+                            );
+                            pending_effects.push(Effect::ViewportInput(e));
                             pending_redraws.push(self.window);
+                        } else {
+                            let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
+                            if allow_viewport_hover && dock_bounds.contains(*position) {
+                                let layout = compute_layout_map(&dock.graph, root, dock_bounds);
+                                let hit = hit_test_active_viewport_panel(
+                                    &dock.graph,
+                                    &dock.panels,
+                                    &layout,
+                                    *position,
+                                );
+
+                                let next_hover = hit.as_ref().map(|hit| ViewportHover {
+                                    window: self.window,
+                                    panel: hit.panel.clone(),
+                                    position: *position,
+                                });
+                                if dock.viewport_hover != next_hover {
+                                    dock.viewport_hover = next_hover;
+                                    pending_redraws.push(self.window);
+                                } else if next_hover.is_some() {
+                                    dock.viewport_hover = next_hover;
+                                    pending_redraws.push(self.window);
+                                }
+
+                                if let Some(hit) = hit {
+                                    if let Some(e) = viewport_input_from_hit(
+                                        self.window,
+                                        hit,
+                                        *position,
+                                        ViewportInputKind::PointerMove {
+                                            buttons: *buttons,
+                                            modifiers: *modifiers,
+                                        },
+                                    ) {
+                                        pending_effects.push(Effect::ViewportInput(e));
+                                    }
+                                }
+                            } else if dock
+                                .viewport_hover
+                                .as_ref()
+                                .is_some_and(|h| h.window == self.window)
+                            {
+                                dock.viewport_hover = None;
+                                pending_redraws.push(self.window);
+                            }
                         }
 
                         if let Some(drag) = dock_drag.as_ref() {
@@ -377,7 +432,29 @@ impl Widget for DockSpace {
                         button,
                         modifiers,
                     } => {
-                        if *button == fret_core::MouseButton::Left {
+                        let released_capture = *button == fret_core::MouseButton::Left
+                            && self.viewport_capture.is_some();
+                        if released_capture {
+                            if let Some(hit) = self.viewport_capture.take() {
+                                let e = viewport_input_from_hit_clamped(
+                                    self.window,
+                                    hit,
+                                    *position,
+                                    ViewportInputKind::PointerUp {
+                                        button: *button,
+                                        modifiers: *modifiers,
+                                    },
+                                );
+                                pending_effects.push(Effect::ViewportInput(e));
+                                pending_redraws.push(self.window);
+                            }
+                            dock.hover = None;
+                            dock.viewport_hover = None;
+                            request_pointer_capture = Some(None);
+                            invalidate_paint = true;
+                        }
+
+                        if !released_capture && *button == fret_core::MouseButton::Left {
                             if let Some(divider) = self.divider_drag.take() {
                                 pending_effects.push(Effect::Dock(DockOp::SetSplitFractionTwo {
                                     split: divider.split,
@@ -387,7 +464,10 @@ impl Widget for DockSpace {
                             }
                         }
 
-                        if *button == fret_core::MouseButton::Left && dock_drag.is_some() {
+                        if !released_capture
+                            && *button == fret_core::MouseButton::Left
+                            && dock_drag.is_some()
+                        {
                             let drag = dock_drag.unwrap();
 
                             if drag.dragging {
@@ -439,7 +519,7 @@ impl Widget for DockSpace {
                             dock.hover = None;
                             end_dock_drag = true;
                             invalidate_paint = true;
-                        } else {
+                        } else if !released_capture {
                             let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
                             if dock_bounds.contains(*position) {
                                 let layout = compute_layout_map(&dock.graph, root, dock_bounds);
@@ -475,6 +555,13 @@ impl Widget for DockSpace {
         if let Some((start, panel)) = begin_drag {
             cx.app
                 .begin_drag(self.window, start, DockPanelDragPayload { panel });
+        }
+
+        if let Some(request) = request_pointer_capture {
+            match request {
+                Some(node) => cx.capture_pointer(node),
+                None => cx.release_pointer_capture(),
+            }
         }
 
         if let Some((position, dragging)) = update_drag {
@@ -819,6 +906,9 @@ fn paint_dock(
                         paint_viewport_crosshair(draw_rect, h.position, scene);
                     }
                 }
+                if let Some(overlay) = dock.viewport_overlays.get(&(window, vp.target)) {
+                    paint_viewport_overlay(draw_rect, *overlay, scene);
+                }
                 scene.push(SceneOp::PopClip);
             } else {
                 scene.push(SceneOp::Quad {
@@ -872,6 +962,82 @@ fn paint_viewport_crosshair(content: Rect, position: Point, scene: &mut Scene) {
     }
 }
 
+fn paint_viewport_overlay(content: Rect, overlay: ViewportOverlay, scene: &mut Scene) {
+    if let Some(m) = overlay.marquee {
+        paint_viewport_marquee(content, m, scene);
+    }
+}
+
+fn paint_viewport_marquee(content: Rect, marquee: ViewportMarquee, scene: &mut Scene) {
+    let (au, av) = marquee.a_uv;
+    let (bu, bv) = marquee.b_uv;
+    let x0 = content.origin.x.0 + content.size.width.0 * au;
+    let y0 = content.origin.y.0 + content.size.height.0 * av;
+    let x1 = content.origin.x.0 + content.size.width.0 * bu;
+    let y1 = content.origin.y.0 + content.size.height.0 * bv;
+
+    let left = x0.min(x1);
+    let right = x0.max(x1);
+    let top = y0.min(y1);
+    let bottom = y0.max(y1);
+
+    let rect = Rect::new(
+        Point::new(Px(left), Px(top)),
+        Size::new(Px((right - left).max(0.0)), Px((bottom - top).max(0.0))),
+    );
+    if rect.size.width.0 <= 1.0 || rect.size.height.0 <= 1.0 {
+        return;
+    }
+
+    let fill = Color {
+        r: 0.20,
+        g: 0.45,
+        b: 0.95,
+        a: 0.14,
+    };
+    let stroke = Color {
+        r: 0.20,
+        g: 0.45,
+        b: 0.95,
+        a: 0.85,
+    };
+    let t = Px(1.5);
+
+    scene.push(SceneOp::Quad {
+        order: fret_core::DrawOrder(6),
+        rect,
+        background: fill,
+        border: Edges::all(Px(0.0)),
+        border_color: Color::TRANSPARENT,
+        corner_radii: fret_core::Corners::all(Px(0.0)),
+    });
+
+    let top_rect = Rect::new(rect.origin, Size::new(rect.size.width, t));
+    let bottom_rect = Rect::new(
+        Point::new(
+            rect.origin.x,
+            Px(rect.origin.y.0 + rect.size.height.0 - t.0),
+        ),
+        Size::new(rect.size.width, t),
+    );
+    let left_rect = Rect::new(rect.origin, Size::new(t, rect.size.height));
+    let right_rect = Rect::new(
+        Point::new(Px(rect.origin.x.0 + rect.size.width.0 - t.0), rect.origin.y),
+        Size::new(t, rect.size.height),
+    );
+
+    for r in [top_rect, bottom_rect, left_rect, right_rect] {
+        scene.push(SceneOp::Quad {
+            order: fret_core::DrawOrder(7),
+            rect: r,
+            background: stroke,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: fret_core::Corners::all(Px(0.0)),
+        });
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct ViewportHit {
     panel: PanelKey,
@@ -900,6 +1066,28 @@ fn viewport_input_from_hit(
         target_px,
         kind,
     })
+}
+
+fn viewport_input_from_hit_clamped(
+    window: fret_core::AppWindowId,
+    hit: ViewportHit,
+    position: Point,
+    kind: ViewportInputKind,
+) -> ViewportInputEvent {
+    let mapping = ViewportMapping {
+        content_rect: hit.content,
+        target_px_size: hit.viewport.target_px_size,
+        fit: hit.viewport.fit,
+    };
+    let uv = mapping.window_point_to_uv_clamped(position);
+    let target_px = mapping.window_point_to_target_px_clamped(position);
+    ViewportInputEvent {
+        window,
+        target: hit.viewport.target,
+        uv,
+        target_px,
+        kind,
+    }
 }
 
 fn hit_test_active_viewport_panel(

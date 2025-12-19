@@ -6,11 +6,13 @@ mod elements_mvp2;
 mod ime_probe;
 mod inspector_edit;
 mod property;
+mod viewport_tools;
 mod world;
 
 use demo_ui::{DemoLayers, DemoUiConfig, build_demo_ui};
 use editor_shell::DemoSelection;
 use inspector_edit::InspectorEditService;
+use viewport_tools::ViewportToolManager;
 use world::DemoWorld;
 
 use fret_app::{
@@ -25,6 +27,7 @@ use fret_core::{
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui::Invalidation;
+use fret_ui::dock::{ViewportMarquee, ViewportOverlay};
 use fret_ui::{ContextMenuService, DockManager, DockPanel, UiTree, ViewportPanel};
 use std::{collections::HashMap, fs::File, path::Path};
 use winit::event_loop::EventLoop;
@@ -52,6 +55,7 @@ struct DemoDriver {
     loaded_layout: Option<DockLayoutV1>,
     selection: Option<Model<DemoSelection>>,
     world: Option<Model<DemoWorld>>,
+    viewport_tools: Option<Model<ViewportToolManager>>,
 }
 
 impl DemoDriver {
@@ -1147,6 +1151,9 @@ impl WinitDriver for DemoDriver {
         if self.world.is_none() {
             self.world = Some(app.models_mut().insert(DemoWorld::default()));
         }
+        if self.viewport_tools.is_none() {
+            self.viewport_tools = Some(app.models_mut().insert(ViewportToolManager::default()));
+        }
     }
 
     fn create_window_state(
@@ -1170,6 +1177,9 @@ impl WinitDriver for DemoDriver {
                 model
             }
         };
+        if self.viewport_tools.is_none() {
+            self.viewport_tools = Some(app.models_mut().insert(ViewportToolManager::default()));
+        }
         let inspector_edit_buffer = app.models_mut().insert(String::new());
         let (ui, layers) = build_demo_ui(
             window,
@@ -1505,6 +1515,86 @@ impl WinitDriver for DemoDriver {
     }
 
     fn viewport_input(&mut self, app: &mut App, event: fret_core::ViewportInputEvent) {
+        if let Some(tool) = self.viewport_tools {
+            let window = event.window;
+            let target = event.target;
+
+            let handled = app.with_global_mut(DockManager::default, |dock, app| match event.kind {
+                fret_core::ViewportInputKind::PointerDown { button, .. } => {
+                    if button != fret_core::MouseButton::Left {
+                        return false;
+                    }
+                    let start_uv = event.uv;
+                    let _ = tool.update(app, |t, _cx| {
+                        t.marquee = Some(viewport_tools::ViewportMarqueeState {
+                            window,
+                            target,
+                            start_uv,
+                            current_uv: start_uv,
+                        });
+                    });
+                    dock.set_viewport_overlay(
+                        window,
+                        target,
+                        Some(ViewportOverlay {
+                            marquee: Some(ViewportMarquee {
+                                a_uv: start_uv,
+                                b_uv: start_uv,
+                            }),
+                        }),
+                    );
+                    app.push_effect(Effect::RequestAnimationFrame(window));
+                    true
+                }
+                fret_core::ViewportInputKind::PointerMove { buttons, .. } => {
+                    if !buttons.left {
+                        return false;
+                    }
+                    let current_uv = event.uv;
+                    let mut next: Option<viewport_tools::ViewportMarqueeState> = None;
+                    let _ = tool.update(app, |t, _cx| {
+                        if let Some(m) = t.marquee.as_mut() {
+                            if m.window == window && m.target == target {
+                                m.current_uv = current_uv;
+                                next = Some(*m);
+                            }
+                        }
+                    });
+                    let Some(m) = next else {
+                        return false;
+                    };
+                    dock.set_viewport_overlay(
+                        window,
+                        target,
+                        Some(ViewportOverlay {
+                            marquee: Some(ViewportMarquee {
+                                a_uv: m.start_uv,
+                                b_uv: m.current_uv,
+                            }),
+                        }),
+                    );
+                    app.push_effect(Effect::RequestAnimationFrame(window));
+                    true
+                }
+                fret_core::ViewportInputKind::PointerUp { button, .. } => {
+                    if button != fret_core::MouseButton::Left {
+                        return false;
+                    }
+                    let _ = tool.update(app, |t, _cx| {
+                        t.marquee = None;
+                    });
+                    dock.set_viewport_overlay(window, target, None);
+                    app.request_redraw(window);
+                    true
+                }
+                _ => false,
+            });
+
+            if handled {
+                return;
+            }
+        }
+
         match event.kind {
             fret_core::ViewportInputKind::PointerDown { button, .. } => {
                 println!("viewport_input: {event:?}");
