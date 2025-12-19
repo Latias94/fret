@@ -4,7 +4,7 @@ pub mod tree;
 pub mod widget;
 pub mod widgets;
 
-pub use dock::{DockManager, DockPanel, DockSpace, ViewportPanel};
+pub use dock::{DockManager, DockPanel, DockPanelContentService, DockSpace, ViewportPanel};
 pub use elements::{ElementCx, ElementRuntime, GlobalElementId};
 pub use tree::{UiLayerId, UiTree};
 pub use widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};

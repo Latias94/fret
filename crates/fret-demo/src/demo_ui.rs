@@ -1,20 +1,16 @@
 use crate::command_palette::{CommandPalette, OverlayBackdrop, OverlayPanelLayout};
 use crate::dnd_probe::DndProbe;
-use crate::editor_shell::{DemoSelection, HierarchyPanel, InspectorPanel};
 use crate::elements_mvp2::ElementsMvp2Demo;
-use crate::hierarchy::DemoHierarchy;
 use crate::ime_probe::ImeProbe;
 use crate::inspector_edit_layout::{InspectorEditHint, InspectorEditLayout};
 use fret_app::Model;
-use fret_core::{AppWindowId, Axis, Color, PanelKey, Px};
+use fret_core::{AppWindowId, Axis, Color, Px};
 use fret_ui::{
     BoundTextInput, ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel, Scroll, Split, Stack,
     Text, TextArea, TextInput, UiLayerId, UiTree, VirtualList, VirtualListDataSource,
     VirtualListRow,
 };
 use std::borrow::Cow;
-
-use crate::world::DemoWorld;
 
 #[derive(Debug, Clone)]
 struct LazyEntityList {
@@ -73,9 +69,6 @@ pub struct DemoLayers {
 pub fn build_demo_ui(
     window: AppWindowId,
     config: DemoUiConfig,
-    selection: Model<DemoSelection>,
-    hierarchy: Model<DemoHierarchy>,
-    world: Model<DemoWorld>,
     inspector_edit_buffer: Model<String>,
 ) -> (UiTree, DemoLayers) {
     let mut ui = UiTree::new();
@@ -84,20 +77,8 @@ pub fn build_demo_ui(
     let root = ui.create_node(Split::new(Axis::Horizontal, config.split_fraction));
     ui.set_root(root);
 
-    let key_hierarchy = PanelKey::new("core.hierarchy");
-    let key_inspector = PanelKey::new("core.inspector");
-
-    let hierarchy = ui.create_node(HierarchyPanel::new(selection, hierarchy));
-    let inspector = ui.create_node(InspectorPanel::new(selection, world));
-
-    let dock = ui.create_node(
-        DockSpace::new(window)
-            .with_panel_content(key_hierarchy, hierarchy)
-            .with_panel_content(key_inspector, inspector),
-    );
+    let dock = ui.create_node(DockSpace::new(window));
     ui.add_child(root, dock);
-    ui.add_child(dock, hierarchy);
-    ui.add_child(dock, inspector);
 
     let scroll = ui.create_node(Scroll::new());
     ui.add_child(root, scroll);

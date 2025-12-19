@@ -14,7 +14,7 @@ mod viewport_tools;
 mod world;
 
 use demo_ui::{DemoLayers, DemoUiConfig, build_demo_ui};
-use editor_shell::DemoSelection;
+use editor_shell::{DemoSelection, HierarchyPanel, InspectorPanel};
 use hierarchy::DemoHierarchy;
 use inspector_edit::{InspectorEditKind, InspectorEditService, parse_value};
 use property_edit::PropertyEditService;
@@ -37,7 +37,9 @@ use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, Wgpu
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui::Invalidation;
 use fret_ui::dock::{ViewportMarquee, ViewportOverlay};
-use fret_ui::{ContextMenuService, DockManager, DockPanel, UiTree, ViewportPanel};
+use fret_ui::{
+    ContextMenuService, DockManager, DockPanel, DockPanelContentService, UiTree, ViewportPanel,
+};
 use std::{collections::HashMap, fs::File, path::Path};
 use winit::event_loop::EventLoop;
 
@@ -1270,14 +1272,21 @@ impl WinitDriver for DemoDriver {
             self.viewport_tools = Some(app.models_mut().insert(ViewportToolManager::default()));
         }
         let inspector_edit_buffer = app.models_mut().insert(String::new());
-        let (ui, layers) = build_demo_ui(
-            window,
-            DemoUiConfig::default(),
-            selection,
-            hierarchy,
-            world,
-            inspector_edit_buffer,
-        );
+        let (mut ui, layers) =
+            build_demo_ui(window, DemoUiConfig::default(), inspector_edit_buffer);
+
+        let key_hierarchy = PanelKey::new("core.hierarchy");
+        let key_inspector = PanelKey::new("core.inspector");
+
+        let hierarchy_node = ui.create_node(HierarchyPanel::new(selection, hierarchy));
+        let inspector_node = ui.create_node(InspectorPanel::new(selection, world));
+        ui.add_child(layers.dockspace_node, hierarchy_node);
+        ui.add_child(layers.dockspace_node, inspector_node);
+
+        app.with_global_mut(DockPanelContentService::default, |s, _app| {
+            s.set(window, key_hierarchy, hierarchy_node);
+            s.set(window, key_inspector, inspector_node);
+        });
         Self::WindowState {
             ui,
             layers,

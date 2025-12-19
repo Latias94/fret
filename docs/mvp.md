@@ -357,7 +357,7 @@ identity stable across persistence and plugins.
 
 Status:
 
-- MVP done in `fret-demo` (panel content mounted under `DockSpace` and laid out per active tab).
+- MVP done in `fret-demo` (panel content is app-owned and mounted under `DockSpace` via `DockPanelContentService`).
 
 References:
 

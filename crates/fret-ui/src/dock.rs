@@ -55,6 +55,34 @@ pub struct DockManager {
     viewport_overlays: HashMap<(fret_core::AppWindowId, RenderTargetId), ViewportOverlay>,
 }
 
+#[derive(Default)]
+pub struct DockPanelContentService {
+    per_window: HashMap<fret_core::AppWindowId, HashMap<PanelKey, NodeId>>,
+}
+
+impl DockPanelContentService {
+    pub fn set(&mut self, window: fret_core::AppWindowId, panel: PanelKey, node: NodeId) {
+        self.per_window
+            .entry(window)
+            .or_default()
+            .insert(panel, node);
+    }
+
+    pub fn get(&self, window: fret_core::AppWindowId, panel: &PanelKey) -> Option<NodeId> {
+        self.per_window
+            .get(&window)
+            .and_then(|m| m.get(panel))
+            .copied()
+    }
+
+    pub fn panel_nodes(&self, window: fret_core::AppWindowId) -> Vec<(PanelKey, NodeId)> {
+        self.per_window
+            .get(&window)
+            .map(|m| m.iter().map(|(k, v)| (k.clone(), *v)).collect())
+            .unwrap_or_default()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ViewportOverlay {
     pub marquee: Option<ViewportMarquee>,
@@ -155,6 +183,17 @@ impl DockSpace {
         self.panel_content.insert(panel, root);
         self
     }
+
+    fn panel_nodes(&self, app: &fret_app::App) -> HashMap<PanelKey, NodeId> {
+        let mut out: HashMap<PanelKey, NodeId> = HashMap::new();
+        if let Some(service) = app.global::<DockPanelContentService>() {
+            for (panel, node) in service.panel_nodes(self.window) {
+                out.insert(panel, node);
+            }
+        }
+        out.extend(self.panel_content.iter().map(|(k, v)| (k.clone(), *v)));
+        out
+    }
 }
 
 impl Widget for DockSpace {
@@ -165,6 +204,7 @@ impl Widget for DockSpace {
         let mut invalidate_layout = false;
         let mut open_viewport_menu: Option<(Point, ViewportInputEvent)> = None;
         let mut request_focus: Option<NodeId> = None;
+        let mut request_focus_panel: Option<PanelKey> = None;
         let mut request_pointer_capture: Option<Option<NodeId>> = None;
 
         #[derive(Clone)]
@@ -223,7 +263,7 @@ impl Widget for DockSpace {
                                     tabs: tabs_node,
                                     active: tab_index,
                                 }));
-                                request_focus = self.panel_content.get(&panel_key).copied();
+                                request_focus_panel = Some(panel_key.clone());
                                 invalidate_layout = true;
                                 begin_drag = Some((*position, panel_key));
                                 dock.hover = None;
@@ -584,6 +624,13 @@ impl Widget for DockSpace {
             }
         }
 
+        if request_focus.is_none() {
+            if let Some(panel) = request_focus_panel {
+                let panel_nodes = self.panel_nodes(cx.app);
+                request_focus = panel_nodes.get(&panel).copied();
+            }
+        }
+
         if let Some((start, panel)) = begin_drag {
             cx.app
                 .begin_drag(self.window, start, DockPanelDragPayload { panel });
@@ -727,8 +774,9 @@ impl Widget for DockSpace {
             return cx.available;
         };
 
+        let panel_nodes = self.panel_nodes(cx.app);
         let mut laid_out: HashSet<NodeId> = HashSet::new();
-        for (panel, node) in &self.panel_content {
+        for (panel, node) in &panel_nodes {
             let bounds = match active_bounds.get(panel).copied() {
                 Some(rect) => {
                     self.panel_last_sizes.insert(panel.clone(), rect.size);
@@ -773,8 +821,9 @@ impl Widget for DockSpace {
             paint_dock(dock, self.window, &layout, cx.scene);
         }
 
+        let panel_nodes = self.panel_nodes(cx.app);
         for (panel, rect) in active_bounds {
-            let Some(node) = self.panel_content.get(&panel) else {
+            let Some(node) = panel_nodes.get(&panel) else {
                 continue;
             };
             if let Some(bounds) = cx.child_bounds(*node) {
