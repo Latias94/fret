@@ -16,10 +16,16 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
   - `TreeView` (hierarchy-style tree over `VirtualList`)
 - MVP 12: MVP done in demo (context menu overlay + submenu + keyboard nav + focus restore)
 - MVP 13: MVP done in demo (Hierarchy selection model → Inspector panel)
-- MVP 16: MVP done in demo (DockSpace hosts Hierarchy + Inspector content)
-- Viewport tools: prototype started in demo (viewport marquee overlay + viewport→selection sync back to Hierarchy)
-- MVP 17: prototype started in demo (property tree + editor registry + mixed values; bool/string/f32/vec3 editors)
-- MVP 18: prototype started in demo (ToolManager with capture + marquee select + pan/orbit drag interactions)
+- MVP 14: MVP done in demo (primitive inspector editing baseline)
+- MVP 15: MVP done in demo (Hierarchy drag & drop: reorder + reparent)
+- MVP 16: MVP done in demo (DockSpace hosts app-owned panel content via `DockPanelContentService`)
+- MVP 17: prototype implemented in demo (property tree + editor registry + mixed values; bool/string/f32/vec3 editors)
+- MVP 18: prototype implemented in demo (ToolManager with capture + marquee select + pan/orbit drag interactions)
+- Next (recommended, Unity-like feel):
+  - MVP 19: viewport click-to-select + selection highlight overlay
+  - MVP 20: translate gizmo stub (overlay + drag phases)
+  - MVP 21: dock UX polish (drag hints + dock context menu + debounced persistence)
+  - MVP 22: undo/redo P0 (command stack + coalescing boundary)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -432,6 +438,117 @@ References:
 - `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
 - `docs/adr/0025-viewport-input-forwarding.md`
 - `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
+
+## MVP 19 — Viewport Picking P0 (Click-to-Select + Highlight)
+
+Goal: make the “click in viewport → selection updates everywhere” loop feel like a real editor.
+
+**Scope**
+
+- Add viewport click-to-select behavior under the `Select` tool mode (ADR 0049):
+  - left click selects a single entity,
+  - modifier rules match Hierarchy selection semantics (Ctrl/Cmd toggle; Shift additive).
+- Add a simple selection highlight overlay drawn over the viewport:
+  - “picked entity marker” is sufficient (no full outline rendering required).
+- Keep the picking source swappable:
+  - demo can use a stub picker (e.g. “pick nearest demo entity in screen-space”),
+  - engine-integrated picking can replace it later without changing UI/tool contracts.
+
+**Non-goals**
+
+- Correct 3D ray casting, depth-tested selection, or GPU ID buffers.
+- Multi-viewport multi-camera correctness.
+
+**Definition of Done**
+
+- Clicking in a focused viewport updates the app-owned selection model (and thus Hierarchy + Inspector) in the same frame.
+- The viewport shows an unambiguous highlight for the selected entity/entities.
+
+References:
+
+- `docs/adr/0031-app-owned-models-and-leasing-updates.md`
+- `docs/adr/0025-viewport-input-forwarding.md`
+- `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
+
+## MVP 20 — Translate Gizmo Stub (Overlay + Drag Phases)
+
+Goal: validate the core interaction model for editor gizmos (capture + hover + drag + commit) before committing to real
+math and snapping rules.
+
+**Scope**
+
+- Provide a `Move`/`Translate` tool mode with a minimal gizmo:
+  - overlay-only handle rendering is enough (axes lines + center handle),
+  - drag updates the selected entity transform in the demo model.
+- Drag phases must be explicit:
+  - `Begin`/`Update`/`Commit`/`Cancel` so undo coalescing is straightforward later (ADR 0024).
+- Input capture and modal gating follow the viewport tools contract (ADR 0049).
+
+**Non-goals**
+
+- Precise 3D manipulation, snapping, and axis constraints.
+- Full undo/redo UI (only the operational boundary is validated).
+
+**Definition of Done**
+
+- Dragging the gizmo updates the selected entity transform smoothly and deterministically.
+- Cancel returns the entity to the previous transform without leaving UI/tool state inconsistent.
+
+References:
+
+- `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
+- `docs/adr/0024-undo-redo-and-edit-transactions.md`
+
+## MVP 21 — Dock UX Polish (Hints + Context Menu + Debounced Persistence)
+
+Goal: upgrade docking UX toward Unity/Godot expectations without changing core docking contracts.
+
+**Scope**
+
+- Godot-style dock drag hint overlay and tab drop indicators (visual guidance).
+- Dock context menu actions:
+  - float/dock, close, move tab left/right (subset is fine).
+- Debounced layout persistence to reduce disk churn during interactive operations.
+
+**Non-goals**
+
+- Full workspace management UI (layouts list, reset-to-default presets).
+
+**Definition of Done**
+
+- Docking actions are visually guided and feel “product-like” (no invisible drop zones).
+- Layout save is delayed during drags and still persists correctly at the end.
+
+References:
+
+- `docs/adr/0013-docking-ops-and-persistence.md`
+- `docs/adr/0011-overlays-and-multi-root.md`
+
+## MVP 22 — Undo/Redo P0 (Command Stack + Coalescing Boundary)
+
+Goal: establish the editor-app boundary for undo/redo early so all subsequent tools/editors can align to it.
+
+**Scope**
+
+- A command stack that supports:
+  - undo/redo,
+  - a coalescing boundary for “drag-like continuous edits”.
+- Integrate at least two edit sources:
+  - inspector property edits,
+  - hierarchy drag & drop ops.
+
+**Non-goals**
+
+- Multi-document histories and advanced merge policies (Godot-style).
+
+**Definition of Done**
+
+- Undo/redo works for at least one inspector edit and one hierarchy docking/tree op.
+- Continuous edits (e.g. gizmo drag) can be coalesced into a single history entry.
+
+References:
+
+- `docs/adr/0024-undo-redo-and-edit-transactions.md`
 
 ## Parking Lot (Explicitly Deferred)
 

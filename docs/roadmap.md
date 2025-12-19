@@ -94,8 +94,10 @@ should not be treated as Fret framework deliverables (see ADR 0027):
 These are not framework commitments (ADR 0027), but they are essential to reaching Unity/Godot-like “feel” early and to
 validate that the framework contracts are sufficient.
 
-- Inspector P0: engine-agnostic property protocol + custom editor registry + minimal built-in editors (ADR 0048).
-- Viewport tools P0: input capture + tool routing + overlay rendering over viewport surfaces (ADR 0049, built on ADR 0025).
+- Inspector P0: engine-agnostic property protocol + custom editor registry + minimal built-in editors (ADR 0048). (prototype implemented in demo; see `docs/mvp.md` MVP 17)
+- Viewport tools P0: input capture + tool routing + overlay rendering over viewport surfaces (ADR 0049, built on ADR 0025). (prototype implemented in demo; see `docs/mvp.md` MVP 18)
+- Viewport picking P0: click-to-select + selection highlight overlays (demo-driven; see `docs/mvp.md` MVP 19).
+- Gizmo P0: translate tool with explicit drag phases and capture rules (demo-driven; see `docs/mvp.md` MVP 20).
 
 ## Milestones
 
@@ -153,6 +155,7 @@ validate that the framework contracts are sufficient.
 
 - P0: `DockManager` (App-level) owns dock graph for all windows.
 - P0: Dock UX in a `DockSpace` widget (split + tabs + drag drop zones, tab insert/reorder, split handle dragging). (MVP done in demo; multi-window tear-off supported)
+- P0: Dock panel content wiring (panel kind/key → UI root per window). (MVP done in demo; `DockPanelContentService`)
 - P0: Floating windows are first-class: tear-off and merge back. (MVP done in demo via `DockOp` + `WindowRequest`)
 - P0: Cross-window drag state and drop target rendering. (done; app-scoped internal `DragSession` + drop overlay)
 - P0: Dock persistence (layout.json v1) + stable panel identity. (MVP done in demo; persists/restores)
@@ -161,10 +164,10 @@ Remaining work (still P0, but can iterate after MVP2):
 
 - Persist/restore window placement (monitor + DPI-aware geometry) separate from the logical dock layout. (prototype implemented; stored as `DockLayoutWindowV1.placement`)
 - Improve hit-testing + drop-zone heuristics and polish the UX (snap thresholds, preview animations).
-- “Product UI” affordances to match Unity/Godot:
-  - dock drag hint overlay and tab drop indicators (Godot-style),
-  - dock context menu actions (float, close, move left/right, etc.),
-  - debounced layout persistence (delay disk writes during interactive drags).
+  - “Product UI” affordances to match Unity/Godot:
+    - dock drag hint overlay and tab drop indicators (Godot-style),
+    - dock context menu actions (float, close, move left/right, etc.),
+    - debounced layout persistence (delay disk writes during interactive drags).
 
 ### M5 — Engine Viewports
 
