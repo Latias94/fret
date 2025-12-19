@@ -5,7 +5,8 @@ use crate::ime_probe::ImeProbe;
 use crate::property_row::PropertyRow;
 use fret_core::{AppWindowId, Axis, Color, Px};
 use fret_ui::{
-    ColoredPanel, Column, DockSpace, Scroll, Split, Text, TextArea, TextInput, UiLayerId, UiTree,
+    ColoredPanel, Column, DockSpace, FixedPanel, Scroll, Split, Text, TextArea, TextInput,
+    UiLayerId, UiTree, VirtualList,
 };
 
 pub struct DemoUiConfig {
@@ -80,6 +81,29 @@ Goal: foundation for Console/Inspector/code editor.",
         .with_min_height(Px(220.0)),
     );
     ui.add_child(column, multiline);
+
+    let list_header = ui.create_node(Text::new(
+        "VirtualList MVP (Hierarchy/Project-scale list: scroll + selection + virtualization)",
+    ));
+    ui.add_child(column, list_header);
+
+    let list_panel = ui.create_node(FixedPanel::new(
+        Px(260.0),
+        Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.0,
+        },
+    ));
+    ui.add_child(column, list_panel);
+
+    let mut items: Vec<String> = Vec::new();
+    for i in 0..20_000 {
+        items.push(format!("Entity {i:05}"));
+    }
+    let list = ui.create_node(VirtualList::new(items));
+    ui.add_child(list_panel, list);
 
     let elements_demo = ui.create_node(ElementsMvp2Demo::new());
     ui.add_child(column, elements_demo);
