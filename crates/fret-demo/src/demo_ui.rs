@@ -60,6 +60,7 @@ pub struct DemoLayers {
     pub command_palette_node: fret_core::NodeId,
     pub context_menu: UiLayerId,
     pub context_menu_node: fret_core::NodeId,
+    pub dockspace_node: fret_core::NodeId,
 }
 
 pub fn build_demo_ui(
@@ -242,6 +243,7 @@ Goal: foundation for Console/Inspector/code editor.",
             command_palette_node,
             context_menu,
             context_menu_node,
+            dockspace_node: dock,
         },
     )
 }

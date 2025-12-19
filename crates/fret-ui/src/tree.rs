@@ -1018,6 +1018,10 @@ impl UiTree {
         }
     }
 
+    pub fn invalidate(&mut self, node: NodeId, inv: Invalidation) {
+        self.mark_invalidation(node, inv);
+    }
+
     fn visible_layers_in_paint_order(&self) -> impl Iterator<Item = UiLayerId> + '_ {
         self.layer_order
             .iter()

@@ -19,6 +19,7 @@ use fret_core::{
 };
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
+use fret_ui::Invalidation;
 use fret_ui::{ContextMenuService, DockManager, DockPanel, UiTree, ViewportPanel};
 use std::{collections::HashMap, fs::File, path::Path};
 use winit::event_loop::EventLoop;
@@ -1222,6 +1223,12 @@ impl WinitDriver for DemoDriver {
         }
 
         match command.as_str() {
+            "demo.dock.invalidate_layout" => {
+                state
+                    .ui
+                    .invalidate(state.layers.dockspace_node, Invalidation::Layout);
+                app.request_redraw(window);
+            }
             "command_palette.toggle" => {
                 let vis = state.ui.is_layer_visible(state.layers.command_palette);
                 if vis {
@@ -1364,7 +1371,10 @@ impl WinitDriver for DemoDriver {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
         }
         for w in redraw {
-            app.request_redraw(w);
+            app.push_effect(Effect::Command {
+                window: Some(w),
+                command: CommandId::from("demo.dock.invalidate_layout"),
+            });
         }
     }
 
@@ -1529,7 +1539,10 @@ impl WinitDriver for DemoDriver {
         });
         self.logical_windows.remove(&window);
 
-        app.request_redraw(main);
+        app.push_effect(Effect::Command {
+            window: Some(main),
+            command: CommandId::from("demo.dock.invalidate_layout"),
+        });
         true
     }
 }

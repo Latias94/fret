@@ -190,3 +190,7 @@ Notes:
   - The demo applies `DockOp` via the runner’s effect drain path (`Effect::Dock`), which is the intended integration point.
   - Floating windows are requested via `DockOp::RequestFloatPanelToNewWindow` (window creation remains app/runner-owned).
   - Closing a floating OS window merges its panels back into the main window by default via `DockOp::MergeWindowInto`.
+  - **Layout invalidation is part of the integration contract**: after applying any `DockOp` that changes geometry
+    (tabs, splits, window merge/tear-off), the host must invalidate the dock host widget for `Layout` (ADR 0005),
+    not only request a redraw. Otherwise hit-testing and panel content bounds may remain stale until another input
+    incidentally triggers layout.
