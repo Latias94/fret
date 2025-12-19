@@ -1,0 +1,129 @@
+# ADR 0047: Virtual List Data Source and Stable Item Keys
+
+Status: Proposed
+
+## Context
+
+ADR 0042 locks a hard constraint for editor-grade UIs: **no unbounded children in layout engines** and
+virtualization must be first-class for large lists/tables/editors.
+
+We now have a working prototype (`VirtualList`, `TreeView`) that validates the rendering approach,
+but its current API shape is intentionally “demo-grade” (e.g. a list owns a `Vec` of items).
+
+Before we scale widget count and start building Unity-style panels (Hierarchy/Project/Console/Inspector),
+we must lock a *data source contract* that:
+
+- keeps work bounded to the visible range (+ overscan),
+- preserves selection/focus across reorders/filters (stable identity),
+- works with both the retained `UiTree` widgets and the declarative elements model (ADR 0028),
+- stays compatible with app-owned state and borrow-friendly updates (ADR 0031),
+- can evolve to variable-height rows (future work in ADR 0042) without breaking API.
+
+References:
+
+- ADR 0042: `docs/adr/0042-virtualization-and-large-lists.md`
+- GPUI component library patterns (pinned in repo):
+  - `repo-ref/gpui-component/crates/ui/src/virtual_list.rs`
+  - `repo-ref/gpui-component/crates/ui/src/list/list.rs`
+  - `repo-ref/gpui-component/crates/ui/src/table/state.rs`
+
+## Decision
+
+### 1) Stable item identity is mandatory: `ItemKey`
+
+Virtualized surfaces must identify items by a **stable key**, not by index.
+
+Requirements:
+
+- The key must be **unique within the list**.
+- The key must be **stable across frames** and across reorder/filter operations.
+- Keys must be cheap to compare and hash (editor lists can be huge).
+
+Baseline recommendation:
+
+- Use `u64`-like IDs for editor data (ECS entity ids, asset ids, etc.).
+- Keep the contract generic over a `Key: Copy + Eq + Hash` so apps can plug in their own IDs.
+
+### 2) Virtualization is driven by a data source / delegate contract
+
+Virtualization containers compute:
+
+- viewport constraints,
+- scroll offset,
+- visible range (+ overscan),
+
+and then ask a data source to provide the item views for that range.
+
+The contract must support two authoring backends:
+
+- **Retained widgets** (`UiTree`): build rows as widgets or draw ops.
+- **Declarative elements** (ADR 0028): build rows as elements.
+
+The *conceptual* API is:
+
+```text
+DataSource {
+  type Key
+
+  len() -> usize
+  key(index) -> Key
+
+  // Called only for visible items (+ overscan).
+  render_range(range) -> Vec<Row>
+
+  // Optional: selection/focus helpers.
+  index_of_key(key) -> Option<usize>
+}
+```
+
+Notes:
+
+- `render_range` must be side-effect-free w.r.t. identity. It may read app state, but it must not
+  implicitly “shift identity” when indices change; identity is defined by `key(index)`.
+- `index_of_key` may be O(n) for small lists, but large lists should provide an indexed lookup.
+
+### 3) Selection and focus are key-based (index is a view detail)
+
+Editor selection and focus must survive:
+
+- reorder and sorting,
+- filtering,
+- partial loading,
+- collapsing/expanding in trees (the visible set changes).
+
+Therefore:
+
+- selection state stores keys (and an anchor key for shift-range selection),
+- the virtualized view resolves keys → indices when needed (scrolling, focus movement),
+- if a selected key becomes non-visible (e.g. filtered out), the view may:
+  - keep it selected but not rendered, and/or
+  - fall back to a visible ancestor (tree collapse) at the component layer.
+
+This ADR does not lock the full selection model (single/multi/range), but it locks that **keys are
+the stable identity**.
+
+### 4) Variable-size rows are reserved behind the same contract
+
+To align with ADR 0042 (future variable-height items), the data source contract must be compatible with:
+
+- an optional size cache keyed by `(ItemKey, style inputs, DPI scale, text metrics revisions)`,
+- a two-phase “estimate → measure visible → update cache → relayout if needed” loop.
+
+For MVP 13, we can ship **fixed row height** only, but we must not paint ourselves into a corner.
+
+## Consequences
+
+- We can build Hierarchy/Project/Console panels without allocating all rows as nodes.
+- Selection and focus behavior stays stable across list mutations.
+- The contract can be implemented for both retained widgets and declarative elements without rewriting.
+- Future table/grid/code-editor virtualization can reuse the same “key + range rendering” foundation.
+
+## MVP 13 Implementation Plan (Non-Normative)
+
+1. Introduce a `VirtualListDataSource`/delegate API (or equivalent) that provides:
+   - `len`, `key`, `render_range`, optional `index_of_key`.
+2. Update `VirtualList`/`TreeView` to use the data source contract (no owned `Vec` in the core widget).
+3. Add a demo that renders 100k+ rows from a lazy data source and validates:
+   - scroll performance,
+   - selection stability across reorder/filter.
+

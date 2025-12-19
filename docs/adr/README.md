@@ -29,6 +29,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Editor interaction affordances (selection/docking highlights)**: `docs/adr/0030-shape-rendering-and-sdf-semantics.md`, `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`, `docs/adr/0011-overlays-and-multi-root.md`
 - **Engine viewports (embedded 3D)**: `docs/adr/0010-wgpu-context-ownership.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`, `docs/adr/0025-viewport-input-forwarding.md`, `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
 - **Editor-scale performance**: `docs/adr/0042-virtualization-and-large-lists.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
+- **Editor-scale lists contract (keys + data source)**: `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
 
 Note: P0 explicitly defers “dashed borders” as a general `SceneOp::Quad` feature. Implement dashed selection rectangles
 and docking drop-zone highlights as component-level overlay primitives that expand into multiple short `SceneOp::Quad`
@@ -111,6 +112,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
 - `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - `docs/adr/0042-virtualization-and-large-lists.md`
+- `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
 - `docs/adr/0044-text-editing-state-and-commands.md`
 - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
 - `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
