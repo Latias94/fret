@@ -119,7 +119,7 @@ should not be treated as Fret framework deliverables (see ADR 0027):
 - P1: Scrollbar UX: draggable thumb + track clicking. (prototype implemented)
 - P1: Layout contract: `layout_in(child, rect)` stores child bounds for hit-test/paint. (prototype implemented)
 - P1: Optional `Flex`/`Grid` widget backed by `taffy` (defer until needed; no `UiTree` refactor).
-- P0: Virtualization contract for editor-scale lists/tables/editors (no unbounded children in layout engines). (ADR 0042)
+- P0: Virtualization contract for editor-scale lists/tables/editors (no unbounded children in layout engines). (ADR 0042) (prototype implemented: `fret-ui` `VirtualList`)
 - P1: Theme/tokens (typed tokens; theme content app-owned) (ADR 0032).
 - P1: Spin up `fret-components` repo workspace and establish the “editor kit” structure (ADR 0037):
   - `fret-components-ui` (shadcn-inspired primitives/composites),
