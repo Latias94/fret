@@ -659,11 +659,15 @@ impl Widget for TextArea {
             cmd,
             "text.move_up" | "text.move_down" | "text.select_up" | "text.select_down"
         );
+        let is_line_home_end = matches!(
+            cmd,
+            "text.move_home" | "text.move_end" | "text.select_home" | "text.select_end"
+        );
         if cmd != "text.copy" && !is_vertical {
             self.preferred_x = None;
         }
         let had_preedit = !self.preedit.is_empty();
-        if had_preedit && is_vertical {
+        if had_preedit && (is_vertical || is_line_home_end) {
             return true;
         }
         if had_preedit && cmd != "text.copy" {
@@ -671,6 +675,21 @@ impl Widget for TextArea {
             cx.invalidate_self(Invalidation::Layout);
             cx.request_redraw();
         }
+
+        let hit_test_line = |this: &mut Self, cx: &mut CommandCx<'_>, at_line_end: bool| -> bool {
+            let Some(blob) = this.blob else {
+                return true;
+            };
+
+            let caret_index = this.caret_display_index();
+            let caret_rect = cx.text.caret_rect(blob, caret_index, this.affinity);
+            let y = Px(caret_rect.origin.y.0 + caret_rect.size.height.0 * 0.5);
+            let x = if at_line_end { Px(1.0e6) } else { Px(-1.0e6) };
+            let hit = cx.text.hit_test_point(blob, fret_core::Point::new(x, y));
+            this.caret = this.map_display_index_to_base(hit.index);
+            this.affinity = hit.affinity;
+            true
+        };
 
         match cmd {
             "text.clear" => {
@@ -745,17 +764,15 @@ impl Widget for TextArea {
                 true
             }
             "text.move_home" => {
-                self.caret = 0;
+                hit_test_line(self, cx, false);
                 self.selection_anchor = self.caret;
-                self.affinity = CaretAffinity::Downstream;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.move_end" => {
-                self.caret = self.text.len();
+                hit_test_line(self, cx, true);
                 self.selection_anchor = self.caret;
-                self.affinity = CaretAffinity::Downstream;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -823,15 +840,13 @@ impl Widget for TextArea {
                 true
             }
             "text.select_home" => {
-                self.caret = 0;
-                self.affinity = CaretAffinity::Downstream;
+                hit_test_line(self, cx, false);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.select_end" => {
-                self.caret = self.text.len();
-                self.affinity = CaretAffinity::Downstream;
+                hit_test_line(self, cx, true);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
