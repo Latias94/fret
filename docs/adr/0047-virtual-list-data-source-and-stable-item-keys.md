@@ -157,3 +157,9 @@ content geometry changes.
 
 Also, prepared per-row resources (notably text blobs) should be updated incrementally as the visible
 window changes, rather than rebuilt from scratch every tick.
+
+Note:
+
+- “Progressive fill” (limiting per-frame text preparation during fast scroll) is a valid UX lever,
+  but it is not considered part of the baseline contract. Prefer solving stutter via caching and
+  avoiding hot-path allocations first, then consider progressive fill as a last-mile polish option.

@@ -139,4 +139,5 @@ Practical follow-ups (still compatible with this ADR):
 
 - cache prepared text blobs by `(ItemKey, width, style, DPI, text metrics revision)`,
 - avoid allocating formatted strings in hot paths (prefer borrowed labels or interned strings),
-- add a per-frame “prepare budget” while dragging the scrollbar thumb (progressive fill).
+- treat “per-frame prepare budgets / progressive fill” as an optional UX optimization; prefer robust
+  caching and prepaint-time virtualization first.
