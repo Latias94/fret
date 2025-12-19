@@ -1,7 +1,7 @@
 use fret_app::Effect;
 use fret_core::{
-    CaretAffinity, Color, Corners, DrawOrder, Edges, Event, MouseButton, Px, Rect, SceneOp, Size,
-    TextConstraints, TextMetrics, TextStyle, TextWrap,
+    CaretAffinity, Color, Corners, DrawOrder, Edges, Event, ImeEvent, MouseButton, Px, Rect,
+    SceneOp, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 
 use crate::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};
@@ -75,6 +75,10 @@ pub struct TextArea {
     selection_rects: Vec<Rect>,
     last_bounds: Rect,
     last_sent_cursor: Option<Rect>,
+    last_text_input_tick: Option<fret_core::TickId>,
+    last_text_input_text: Option<String>,
+    last_ime_commit_tick: Option<fret_core::TickId>,
+    last_ime_commit_text: Option<String>,
 }
 
 impl Default for TextArea {
@@ -96,6 +100,10 @@ impl Default for TextArea {
             selection_rects: Vec::new(),
             last_bounds: Rect::default(),
             last_sent_cursor: None,
+            last_text_input_tick: None,
+            last_text_input_text: None,
+            last_ime_commit_tick: None,
+            last_ime_commit_text: None,
         }
     }
 }
@@ -136,6 +144,118 @@ impl TextArea {
         let a = self.selection_anchor.min(self.caret);
         let b = self.selection_anchor.max(self.caret);
         (a, b)
+    }
+
+    fn clamp_to_boundary(text: &str, idx: usize) -> usize {
+        if idx >= text.len() {
+            return text.len();
+        }
+        if text.is_char_boundary(idx) {
+            return idx;
+        }
+        let mut i = idx;
+        while i > 0 && !text.is_char_boundary(i) {
+            i -= 1;
+        }
+        i
+    }
+
+    fn prev_boundary(text: &str, idx: usize) -> usize {
+        let idx = Self::clamp_to_boundary(text, idx);
+        if idx == 0 {
+            return 0;
+        }
+        let slice = &text[..idx];
+        slice.char_indices().last().map(|(i, _)| i).unwrap_or(0)
+    }
+
+    fn next_boundary(text: &str, idx: usize) -> usize {
+        let idx = Self::clamp_to_boundary(text, idx);
+        if idx >= text.len() {
+            return text.len();
+        }
+        let ch = text[idx..].chars().next().unwrap();
+        idx + ch.len_utf8()
+    }
+
+    fn is_word_char(ch: char) -> bool {
+        ch.is_alphanumeric() || ch == '_'
+    }
+
+    fn move_word_left(text: &str, idx: usize) -> usize {
+        let mut i = Self::prev_boundary(text, idx);
+        while i > 0 {
+            let prev = Self::prev_boundary(text, i);
+            let ch = text[prev..i].chars().next().unwrap_or(' ');
+            if !ch.is_whitespace() {
+                break;
+            }
+            i = prev;
+        }
+        while i > 0 {
+            let prev = Self::prev_boundary(text, i);
+            let ch = text[prev..i].chars().next().unwrap_or(' ');
+            if !Self::is_word_char(ch) {
+                break;
+            }
+            i = prev;
+        }
+        i
+    }
+
+    fn move_word_right(text: &str, idx: usize) -> usize {
+        let mut i = Self::next_boundary(text, idx);
+        while i < text.len() {
+            let next = Self::next_boundary(text, i);
+            let ch = text[i..next].chars().next().unwrap_or(' ');
+            if !ch.is_whitespace() {
+                break;
+            }
+            i = next;
+        }
+        while i < text.len() {
+            let next = Self::next_boundary(text, i);
+            let ch = text[i..next].chars().next().unwrap_or(' ');
+            if !Self::is_word_char(ch) {
+                break;
+            }
+            i = next;
+        }
+        i
+    }
+
+    fn delete_selection_if_any(&mut self) -> bool {
+        let (a, b) = self.selection_range();
+        if a == b {
+            return false;
+        }
+        self.text.replace_range(a..b, "");
+        self.caret = a;
+        self.selection_anchor = self.caret;
+        self.affinity = CaretAffinity::Downstream;
+        true
+    }
+
+    fn replace_selection(&mut self, insert: &str) {
+        let (a, b) = self.selection_range();
+        if a != b {
+            self.text.replace_range(a..b, insert);
+            self.caret = a + insert.len();
+            self.selection_anchor = self.caret;
+        } else {
+            self.text.insert_str(self.caret, insert);
+            self.caret += insert.len();
+            self.selection_anchor = self.caret;
+        }
+        self.affinity = CaretAffinity::Downstream;
+    }
+
+    fn request_clipboard_paste(&mut self, cx: &mut CommandCx<'_>) -> bool {
+        let Some(window) = cx.window else {
+            return true;
+        };
+        cx.app.push_effect(Effect::ClipboardGetText { window });
+        true
     }
 
     fn inner_bounds(&self) -> Rect {
@@ -211,6 +331,58 @@ impl Widget for TextArea {
                     cx.release_pointer_capture();
                 }
             }
+            Event::TextInput(text) => {
+                if cx.focus != Some(cx.node) {
+                    return;
+                }
+                let tick = cx.app.tick_id();
+                if self.last_ime_commit_tick == Some(tick)
+                    && self.last_ime_commit_text.as_deref() == Some(text.as_str())
+                {
+                    return;
+                }
+                self.last_text_input_tick = Some(tick);
+                self.last_text_input_text = Some(text.clone());
+
+                self.replace_selection(text);
+                cx.invalidate_self(Invalidation::Layout);
+                cx.request_redraw();
+            }
+            Event::ClipboardText(text) => {
+                if cx.focus != Some(cx.node) {
+                    return;
+                }
+                let normalized = text.replace("\r\n", "\n").replace('\r', "\n");
+                if !normalized.is_empty() {
+                    self.replace_selection(&normalized);
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
+                }
+            }
+            Event::Ime(ime) => {
+                if cx.focus != Some(cx.node) {
+                    return;
+                }
+                match ime {
+                    ImeEvent::Enabled => {}
+                    ImeEvent::Disabled => {}
+                    ImeEvent::Commit(text) => {
+                        let tick = cx.app.tick_id();
+                        if self.last_text_input_tick == Some(tick)
+                            && self.last_text_input_text.as_deref() == Some(text.as_str())
+                        {
+                            return;
+                        }
+                        self.last_ime_commit_tick = Some(tick);
+                        self.last_ime_commit_text = Some(text.clone());
+
+                        self.replace_selection(text);
+                        cx.invalidate_self(Invalidation::Layout);
+                        cx.request_redraw();
+                    }
+                    ImeEvent::Preedit { .. } => {}
+                }
+            }
             _ => {}
         }
     }
@@ -221,9 +393,19 @@ impl Widget for TextArea {
         }
 
         match command.as_str() {
+            "text.clear" => {
+                self.text.clear();
+                self.caret = 0;
+                self.selection_anchor = 0;
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Layout);
+                cx.request_redraw();
+                true
+            }
             "text.select_all" => {
                 self.selection_anchor = 0;
                 self.caret = self.text.len();
+                self.affinity = CaretAffinity::Downstream;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -237,12 +419,188 @@ impl Widget for TextArea {
                 }
                 true
             }
+            "text.cut" => {
+                let (a, b) = self.selection_range();
+                if a != b {
+                    cx.app.push_effect(Effect::ClipboardSetText {
+                        text: self.text[a..b].to_string(),
+                    });
+                    self.delete_selection_if_any();
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
+                }
+                true
+            }
+            "text.paste" => self.request_clipboard_paste(cx),
+            "text.move_left" => {
+                self.caret = Self::prev_boundary(&self.text, self.caret);
+                self.selection_anchor = self.caret;
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.move_right" => {
+                self.caret = Self::next_boundary(&self.text, self.caret);
+                self.selection_anchor = self.caret;
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.move_word_left" => {
+                self.caret = Self::move_word_left(&self.text, self.caret);
+                self.selection_anchor = self.caret;
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.move_word_right" => {
+                self.caret = Self::move_word_right(&self.text, self.caret);
+                self.selection_anchor = self.caret;
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.move_home" => {
+                self.caret = 0;
+                self.selection_anchor = self.caret;
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.move_end" => {
+                self.caret = self.text.len();
+                self.selection_anchor = self.caret;
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.select_left" => {
+                self.caret = Self::prev_boundary(&self.text, self.caret);
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.select_right" => {
+                self.caret = Self::next_boundary(&self.text, self.caret);
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.select_word_left" => {
+                self.caret = Self::move_word_left(&self.text, self.caret);
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.select_word_right" => {
+                self.caret = Self::move_word_right(&self.text, self.caret);
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.select_home" => {
+                self.caret = 0;
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.select_end" => {
+                self.caret = self.text.len();
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.delete_backward" => {
+                if self.delete_selection_if_any() {
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
+                    return true;
+                }
+                if self.caret == 0 {
+                    return true;
+                }
+                let prev = Self::prev_boundary(&self.text, self.caret);
+                self.text.replace_range(prev..self.caret, "");
+                self.caret = prev;
+                self.selection_anchor = self.caret;
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Layout);
+                cx.request_redraw();
+                true
+            }
+            "text.delete_forward" => {
+                if self.delete_selection_if_any() {
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
+                    return true;
+                }
+                if self.caret >= self.text.len() {
+                    return true;
+                }
+                let next = Self::next_boundary(&self.text, self.caret);
+                self.text.replace_range(self.caret..next, "");
+                self.selection_anchor = self.caret;
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Layout);
+                cx.request_redraw();
+                true
+            }
+            "text.delete_word_backward" => {
+                if self.delete_selection_if_any() {
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
+                    return true;
+                }
+                if self.caret == 0 {
+                    return true;
+                }
+                let prev = Self::move_word_left(&self.text, self.caret);
+                self.text.replace_range(prev..self.caret, "");
+                self.caret = prev;
+                self.selection_anchor = self.caret;
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Layout);
+                cx.request_redraw();
+                true
+            }
+            "text.delete_word_forward" => {
+                if self.delete_selection_if_any() {
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
+                    return true;
+                }
+                if self.caret >= self.text.len() {
+                    return true;
+                }
+                let next = Self::move_word_right(&self.text, self.caret);
+                self.text.replace_range(self.caret..next, "");
+                self.selection_anchor = self.caret;
+                self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Layout);
+                cx.request_redraw();
+                true
+            }
             _ => false,
         }
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
         self.last_bounds = cx.bounds;
+
+        self.caret = Self::clamp_to_boundary(&self.text, self.caret);
+        self.selection_anchor = Self::clamp_to_boundary(&self.text, self.selection_anchor);
 
         let inner = self.inner_bounds();
         let constraints = TextConstraints {
