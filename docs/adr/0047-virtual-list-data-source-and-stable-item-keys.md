@@ -127,3 +127,33 @@ For MVP 13, we can ship **fixed row height** only, but we must not paint ourselv
    - scroll performance,
    - selection stability across reorder/filter.
 
+## Prototype Notes (Non-Normative)
+
+These notes track real implementation findings and follow-ups for reaching “editor-grade” smoothness.
+
+### `index_of_key` must be efficient for large datasets
+
+If the data source implements `index_of_key` as a linear scan, key-based selection can become O(n)
+in hot paths (e.g. repeated keyboard navigation or syncing selection after updates).
+
+For editor-scale surfaces, the data source should usually provide O(1) or O(log n) lookup (e.g. a
+hash map, btree, or a stable direct-mapping key like `u64 -> usize` when valid).
+
+### Prefer borrowed row text to avoid allocations
+
+If `row_at` allocates a new `String` per visible row (e.g. via `format!`) during scroll, it can
+produce stutter even if virtualization is correct.
+
+Preferred patterns:
+
+- `Cow::Borrowed(&str)` for stable labels (most common for editor hierarchies),
+- interned strings or shared buffers for computed labels,
+- avoid per-frame formatting in the scroll hot path.
+
+### Reduce work on scroll: paint-only + incremental resource updates
+
+Scrolling should typically request **Paint only**, not a full layout pass, unless scrollbars or
+content geometry changes.
+
+Also, prepared per-row resources (notably text blobs) should be updated incrementally as the visible
+window changes, rather than rebuilt from scratch every tick.

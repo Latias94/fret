@@ -102,3 +102,41 @@ The caching key must include:
 - Add a virtualized table/grid contract (column sizing, pinned headers, selection).
 - Define offscreen focus/semantics policies for assistive technologies.
 
+## Implementation Notes (Non-Normative)
+
+These notes record performance lessons from prototype implementations. They are not part of the
+normative contract.
+
+### Avoid scroll-driven full layout invalidation
+
+In a retained UI tree, invalidating `Layout` on every scroll tick tends to be the primary source of
+stutter, especially when lists are nested (a small inner list can become smooth while the outer list
+still forces large parts of the tree to relayout).
+
+A recommended direction (mirrors GPUI patterns) is:
+
+- keep layout stable for the list container,
+- treat scroll offset as paint/prepaint-time translation + clip,
+- request **Paint only** while scrolling unless the scrollbars/layout geometry actually changes.
+
+### Incremental visible-window updates
+
+Rebuilding all visible row resources (e.g. releasing + re-shaping all visible text) on every visible
+range change can dominate frame time on large datasets.
+
+Prefer incremental updates:
+
+- retain prepared resources for rows that stay within the new visible window,
+- only create resources for newly-visible rows,
+- release resources for rows that leave the window.
+
+### Text is often the bottleneck (not the list math)
+
+For uniform-height lists, visible range computation is O(1) and usually not the bottleneck.
+Stutter commonly comes from text shaping/rasterization and per-row allocations during scroll.
+
+Practical follow-ups (still compatible with this ADR):
+
+- cache prepared text blobs by `(ItemKey, width, style, DPI, text metrics revision)`,
+- avoid allocating formatted strings in hot paths (prefer borrowed labels or interned strings),
+- add a per-frame “prepare budget” while dragging the scrollbar thumb (progressive fill).
