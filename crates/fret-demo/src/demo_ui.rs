@@ -6,8 +6,39 @@ use crate::property_row::PropertyRow;
 use fret_core::{AppWindowId, Axis, Color, Px};
 use fret_ui::{
     ColoredPanel, Column, DockSpace, FixedPanel, Scroll, Split, Text, TextArea, TextInput,
-    TreeNode, TreeView, UiLayerId, UiTree, VirtualList,
+    TreeNode, TreeView, UiLayerId, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
 };
+use std::borrow::Cow;
+
+#[derive(Debug, Clone)]
+struct LazyEntityList {
+    count: usize,
+}
+
+impl VirtualListDataSource for LazyEntityList {
+    type Key = u64;
+
+    fn len(&self) -> usize {
+        self.count
+    }
+
+    fn key_at(&self, index: usize) -> Self::Key {
+        index as u64
+    }
+
+    fn row_at(&self, index: usize) -> VirtualListRow<'_> {
+        VirtualListRow::new(Cow::Owned(format!("Entity {index:06}")))
+    }
+
+    fn index_of_key(&self, key: Self::Key) -> Option<usize> {
+        let index = key as usize;
+        if index < self.count {
+            Some(index)
+        } else {
+            None
+        }
+    }
+}
 
 pub struct DemoUiConfig {
     pub split_fraction: f32,
@@ -98,11 +129,7 @@ Goal: foundation for Console/Inspector/code editor.",
     ));
     ui.add_child(column, list_panel);
 
-    let mut items: Vec<String> = Vec::new();
-    for i in 0..20_000 {
-        items.push(format!("Entity {i:05}"));
-    }
-    let list = ui.create_node(VirtualList::new(items));
+    let list = ui.create_node(VirtualList::new(LazyEntityList { count: 100_000 }));
     ui.add_child(list_panel, list);
 
     let tree_header = ui.create_node(Text::new(

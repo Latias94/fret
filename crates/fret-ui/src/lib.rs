@@ -10,5 +10,6 @@ pub use tree::{UiLayerId, UiTree};
 pub use widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 pub use widgets::{
     Clip, ColoredPanel, Column, FixedPanel, Scroll, Split, Stack, Text, TextArea, TextAreaStyle,
-    TextInput, TreeNode, TreeView, TreeViewStyle, VirtualList, VirtualListRow, VirtualListStyle,
+    TextInput, TreeNode, TreeView, TreeViewStyle, VecStringDataSource, VirtualList,
+    VirtualListDataSource, VirtualListRow, VirtualListStyle,
 };

@@ -1,8 +1,12 @@
 use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 use fret_core::{Event, KeyCode, Modifiers, MouseButton, Px};
-use std::collections::{HashMap, HashSet};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
-use super::virtual_list::{VirtualList, VirtualListRow, VirtualListStyle};
+use super::virtual_list::{VirtualList, VirtualListDataSource, VirtualListRow, VirtualListStyle};
 
 #[derive(Debug, Clone)]
 pub struct TreeNode {
@@ -47,9 +51,32 @@ impl Default for TreeViewStyle {
 struct FlatRow {
     id: u64,
     depth: usize,
-    label: String,
+    text: String,
     has_children: bool,
-    expanded: bool,
+}
+
+#[derive(Debug, Clone)]
+struct TreeViewDataSource {
+    rows: Rc<Vec<FlatRow>>,
+    indent_width: Px,
+}
+
+impl VirtualListDataSource for TreeViewDataSource {
+    type Key = u64;
+
+    fn len(&self) -> usize {
+        self.rows.len()
+    }
+
+    fn key_at(&self, index: usize) -> Self::Key {
+        self.rows[index].id
+    }
+
+    fn row_at(&self, index: usize) -> VirtualListRow<'_> {
+        let row = &self.rows[index];
+        VirtualListRow::new(Cow::Borrowed(row.text.as_str()))
+            .with_indent_x(Px(row.depth as f32 * self.indent_width.0))
+    }
 }
 
 #[derive(Debug)]
@@ -61,10 +88,10 @@ pub struct TreeView {
     parent_by_id: HashMap<u64, Option<u64>>,
     first_child_by_id: HashMap<u64, u64>,
 
-    flat: Vec<FlatRow>,
+    flat: Rc<Vec<FlatRow>>,
     id_to_index: HashMap<u64, usize>,
 
-    list: VirtualList,
+    list: VirtualList<TreeViewDataSource>,
     style: TreeViewStyle,
     dirty: bool,
 }
@@ -72,15 +99,20 @@ pub struct TreeView {
 impl TreeView {
     pub fn new(roots: Vec<TreeNode>) -> Self {
         let style = TreeViewStyle::default();
+        let flat = Rc::new(Vec::new());
         let mut view = Self {
             roots,
             expanded: HashSet::new(),
             selected: None,
             parent_by_id: HashMap::new(),
             first_child_by_id: HashMap::new(),
-            flat: Vec::new(),
+            flat: flat.clone(),
             id_to_index: HashMap::new(),
-            list: VirtualList::new(Vec::new()).with_style(style.list.clone()),
+            list: VirtualList::new(TreeViewDataSource {
+                rows: flat,
+                indent_width: style.indent_width,
+            })
+            .with_style(style.list.clone()),
             style,
             dirty: true,
         };
@@ -110,28 +142,18 @@ impl TreeView {
         for root in &self.roots {
             push_flat(&mut flat, &self.expanded, root, 0);
         }
-        self.flat = flat;
+        let flat = Rc::new(flat);
+        self.flat = flat.clone();
 
         self.id_to_index.clear();
         for (i, row) in self.flat.iter().enumerate() {
             self.id_to_index.insert(row.id, i);
         }
 
-        let rows: Vec<VirtualListRow> = self
-            .flat
-            .iter()
-            .map(|row| {
-                let glyph = if row.has_children {
-                    if row.expanded { "▾ " } else { "▸ " }
-                } else {
-                    "  "
-                };
-                let text = format!("{glyph}{}", row.label);
-                VirtualListRow::new(text)
-                    .with_indent_x(Px(row.depth as f32 * self.style.indent_width.0))
-            })
-            .collect();
-        self.list.set_rows(rows);
+        self.list.set_data(TreeViewDataSource {
+            rows: flat,
+            indent_width: self.style.indent_width,
+        });
 
         self.sync_list_selection_from_selected();
         self.dirty = false;
@@ -164,24 +186,18 @@ impl TreeView {
     }
 
     fn sync_selected_from_list(&mut self) {
-        let Some(index) = self.list.selected() else {
-            return;
-        };
-        let Some(row) = self.flat.get(index) else {
-            return;
-        };
-        self.selected = Some(row.id);
+        self.selected = self.list.selected_key();
     }
 
     fn sync_list_selection_from_selected(&mut self) {
         let Some(mut id) = self.selected else {
-            self.list.set_selected(None);
+            self.list.set_selected_key(None);
             return;
         };
 
         loop {
             if let Some(&index) = self.id_to_index.get(&id) {
-                self.list.set_selected(Some(index));
+                self.list.set_selected_key(Some(id));
                 self.list.ensure_visible(index);
                 self.selected = Some(id);
                 return;
@@ -190,7 +206,7 @@ impl TreeView {
             let parent = self.parent_by_id.get(&id).copied().flatten();
             let Some(next) = parent else {
                 self.selected = None;
-                self.list.set_selected(None);
+                self.list.set_selected_key(None);
                 return;
             };
             id = next;
@@ -235,6 +251,7 @@ impl TreeView {
 
         cx.request_focus(cx.node);
         self.selected = Some(row.id);
+        self.list.set_selected_key(Some(row.id));
         if self.toggle_expanded(row.id) {
             self.dirty = true;
             self.rebuild();
@@ -303,20 +320,19 @@ impl TreeView {
     }
 }
 
-fn push_flat(
-    out: &mut Vec<FlatRow>,
-    expanded: &HashSet<u64>,
-    node: &TreeNode,
-    depth: usize,
-) {
+fn push_flat(out: &mut Vec<FlatRow>, expanded: &HashSet<u64>, node: &TreeNode, depth: usize) {
     let has_children = !node.children.is_empty();
     let is_expanded = has_children && expanded.contains(&node.id);
+    let glyph = if has_children {
+        if is_expanded { "▾ " } else { "▸ " }
+    } else {
+        "  "
+    };
     out.push(FlatRow {
         id: node.id,
         depth,
-        label: node.label.clone(),
+        text: format!("{glyph}{}", node.label),
         has_children,
-        expanded: is_expanded,
     });
 
     if is_expanded {

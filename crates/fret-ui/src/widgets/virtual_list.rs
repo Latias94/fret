@@ -3,6 +3,7 @@ use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp,
     Size, TextConstraints, TextStyle, TextWrap,
 };
+use std::{borrow::Cow, hash::Hash};
 
 #[derive(Debug, Clone)]
 pub struct VirtualListStyle {
@@ -62,13 +63,13 @@ impl Default for VirtualListStyle {
 }
 
 #[derive(Debug, Clone)]
-pub struct VirtualListRow {
-    pub text: String,
+pub struct VirtualListRow<'a> {
+    pub text: Cow<'a, str>,
     pub indent_x: Px,
 }
 
-impl VirtualListRow {
-    pub fn new(text: impl Into<String>) -> Self {
+impl<'a> VirtualListRow<'a> {
+    pub fn new(text: impl Into<Cow<'a, str>>) -> Self {
         Self {
             text: text.into(),
             indent_x: Px(0.0),
@@ -81,6 +82,51 @@ impl VirtualListRow {
     }
 }
 
+pub trait VirtualListDataSource {
+    type Key: Copy + Eq + Hash;
+
+    fn len(&self) -> usize;
+    fn key_at(&self, index: usize) -> Self::Key;
+    fn row_at(&self, index: usize) -> VirtualListRow<'_>;
+
+    fn index_of_key(&self, key: Self::Key) -> Option<usize> {
+        let len = self.len();
+        for i in 0..len {
+            if self.key_at(i) == key {
+                return Some(i);
+            }
+        }
+        None
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct VecStringDataSource {
+    items: Vec<String>,
+}
+
+impl VecStringDataSource {
+    pub fn new(items: Vec<String>) -> Self {
+        Self { items }
+    }
+}
+
+impl VirtualListDataSource for VecStringDataSource {
+    type Key = usize;
+
+    fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    fn key_at(&self, index: usize) -> Self::Key {
+        index
+    }
+
+    fn row_at(&self, index: usize) -> VirtualListRow<'_> {
+        VirtualListRow::new(self.items[index].as_str())
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct VisibleRange {
     start: usize,
@@ -88,15 +134,17 @@ struct VisibleRange {
 }
 
 #[derive(Debug)]
-struct PreparedRow {
+struct PreparedRow<K> {
     index: usize,
+    key: K,
+    indent_x: Px,
     blob: fret_core::TextBlobId,
     metrics: fret_core::TextMetrics,
 }
 
 #[derive(Debug)]
-pub struct VirtualList {
-    rows: Vec<VirtualListRow>,
+pub struct VirtualList<D: VirtualListDataSource> {
+    data: D,
     row_height: Px,
     style: VirtualListStyle,
 
@@ -106,21 +154,32 @@ pub struct VirtualList {
     drag_offset_start_y: Px,
 
     hovered: Option<usize>,
-    selected: Option<usize>,
+    selected_key: Option<D::Key>,
+    selected_index: Option<usize>,
 
     last_bounds: Rect,
     last_content_height: Px,
     last_viewport_height: Px,
     last_visible: VisibleRange,
-    prepared: Vec<PreparedRow>,
+    prepared: Vec<PreparedRow<D::Key>>,
     last_prepared_width: Px,
     prepared_dirty: bool,
 }
 
-impl VirtualList {
-    pub fn new(items: Vec<String>) -> Self {
+impl VirtualList<VecStringDataSource> {
+    pub fn from_items(items: Vec<String>) -> Self {
+        Self::new(VecStringDataSource::new(items))
+    }
+
+    pub fn set_items(&mut self, items: Vec<String>) {
+        self.set_data(VecStringDataSource::new(items));
+    }
+}
+
+impl<D: VirtualListDataSource> VirtualList<D> {
+    pub fn new(data: D) -> Self {
         Self {
-            rows: items.into_iter().map(VirtualListRow::new).collect(),
+            data,
             row_height: Px(20.0),
             style: VirtualListStyle::default(),
             offset_y: Px(0.0),
@@ -128,7 +187,8 @@ impl VirtualList {
             drag_pointer_start_y: Px(0.0),
             drag_offset_start_y: Px(0.0),
             hovered: None,
-            selected: None,
+            selected_key: None,
+            selected_index: None,
             last_bounds: Rect::default(),
             last_content_height: Px(0.0),
             last_viewport_height: Px(0.0),
@@ -162,32 +222,40 @@ impl VirtualList {
     }
 
     pub fn row_count(&self) -> usize {
-        self.rows.len()
+        self.data.len()
     }
 
-    pub fn selected(&self) -> Option<usize> {
-        self.selected
+    pub fn selected_key(&self) -> Option<D::Key> {
+        self.selected_key
     }
 
-    pub fn set_selected(&mut self, index: Option<usize>) {
-        self.selected = index;
+    pub fn set_selected_key(&mut self, key: Option<D::Key>) {
+        self.selected_key = key;
+        self.selected_index = self
+            .selected_key
+            .and_then(|selected_key| self.data.index_of_key(selected_key));
     }
 
-    pub fn set_rows(&mut self, rows: Vec<VirtualListRow>) {
-        self.rows = rows;
+    pub fn data(&self) -> &D {
+        &self.data
+    }
+
+    pub fn set_data(&mut self, data: D) {
+        self.data = data;
         self.hovered = None;
         self.prepared_dirty = true;
-
-        if let Some(selected) = self.selected {
-            if selected >= self.rows.len() {
-                self.selected = None;
-            }
+        self.selected_index = self
+            .selected_key
+            .and_then(|selected_key| self.data.index_of_key(selected_key));
+        if self.selected_key.is_some() && self.selected_index.is_none() {
+            self.selected_key = None;
         }
         self.clamp_offset();
     }
 
-    pub fn set_items(&mut self, items: Vec<String>) {
-        self.set_rows(items.into_iter().map(VirtualListRow::new).collect());
+    fn set_selected_index(&mut self, index: usize) {
+        self.selected_index = Some(index);
+        self.selected_key = Some(self.data.key_at(index));
     }
 
     fn max_offset(&self) -> Px {
@@ -215,7 +283,7 @@ impl VirtualList {
     }
 
     fn row_index_from_y(&self, local_y: Px) -> Option<usize> {
-        if self.rows.is_empty() || self.row_height.0 <= 0.0 {
+        if self.data.len() == 0 || self.row_height.0 <= 0.0 {
             return None;
         }
         let y = (local_y.0 + self.offset_y.0).max(0.0);
@@ -224,7 +292,7 @@ impl VirtualList {
             return None;
         }
         let idx = idx as usize;
-        if idx >= self.rows.len() {
+        if idx >= self.data.len() {
             return None;
         }
         Some(idx)
@@ -315,7 +383,7 @@ impl VirtualList {
     }
 
     fn compute_visible_range(&self) -> VisibleRange {
-        if self.rows.is_empty() || self.row_height.0 <= 0.0 || self.last_viewport_height.0 <= 0.0 {
+        if self.data.len() == 0 || self.row_height.0 <= 0.0 || self.last_viewport_height.0 <= 0.0 {
             return VisibleRange { start: 0, end: 0 };
         }
 
@@ -323,7 +391,7 @@ impl VirtualList {
         let viewport_rows = (self.last_viewport_height.0 / self.row_height.0).ceil() as usize;
         let overscan = 2usize;
         let start = start.saturating_sub(overscan);
-        let end = (start + viewport_rows + overscan * 2).min(self.rows.len());
+        let end = (start + viewport_rows + overscan * 2).min(self.data.len());
         VisibleRange { start, end }
     }
 
@@ -341,7 +409,9 @@ impl VirtualList {
         }
 
         for i in visible.start..visible.end {
-            let indent_x = self.rows[i].indent_x.0;
+            let key = self.data.key_at(i);
+            let row = self.data.row_at(i);
+            let indent_x = row.indent_x.0;
             let max_width = Px((width.0 - self.style.padding_x.0 * 2.0 - indent_x).max(0.0));
             let constraints = TextConstraints {
                 max_width: Some(max_width),
@@ -350,9 +420,11 @@ impl VirtualList {
             };
             let (blob, metrics) =
                 cx.text
-                    .prepare(&self.rows[i].text, self.style.text_style, constraints);
+                    .prepare(row.text.as_ref(), self.style.text_style, constraints);
             self.prepared.push(PreparedRow {
                 index: i,
+                key,
+                indent_x: row.indent_x,
                 blob,
                 metrics,
             });
@@ -380,14 +452,14 @@ impl VirtualList {
             return false;
         }
 
-        if self.rows.is_empty() {
+        if self.data.len() == 0 {
             return false;
         }
 
         let current = self
-            .selected
+            .selected_index
             .unwrap_or(0)
-            .min(self.rows.len().saturating_sub(1));
+            .min(self.data.len().saturating_sub(1));
         let viewport_rows = if self.row_height.0 <= 0.0 {
             1
         } else {
@@ -398,21 +470,21 @@ impl VirtualList {
 
         let next = match key {
             KeyCode::ArrowUp => current.saturating_sub(1),
-            KeyCode::ArrowDown => (current + 1).min(self.rows.len().saturating_sub(1)),
+            KeyCode::ArrowDown => (current + 1).min(self.data.len().saturating_sub(1)),
             KeyCode::Home => 0,
-            KeyCode::End => self.rows.len().saturating_sub(1),
+            KeyCode::End => self.data.len().saturating_sub(1),
             KeyCode::PageUp => current.saturating_sub(viewport_rows),
-            KeyCode::PageDown => (current + viewport_rows).min(self.rows.len().saturating_sub(1)),
+            KeyCode::PageDown => (current + viewport_rows).min(self.data.len().saturating_sub(1)),
             _ => return false,
         };
 
-        self.selected = Some(next);
+        self.set_selected_index(next);
         self.ensure_visible(next);
         true
     }
 }
 
-impl Widget for VirtualList {
+impl<D: VirtualListDataSource> Widget for VirtualList<D> {
     fn is_focusable(&self) -> bool {
         true
     }
@@ -464,7 +536,7 @@ impl Widget for VirtualList {
                     cx.request_focus(cx.node);
                     let local_y = Px(position.y.0 - content.origin.y.0);
                     if let Some(idx) = self.row_index_from_y(local_y) {
-                        self.selected = Some(idx);
+                        self.set_selected_index(idx);
                         self.ensure_visible(idx);
                         cx.invalidate_self(Invalidation::Layout);
                         cx.invalidate_self(Invalidation::Paint);
@@ -541,7 +613,7 @@ impl Widget for VirtualList {
             self.last_prepared_width = Px(0.0);
         }
 
-        let count = self.rows.len();
+        let count = self.data.len();
         self.last_content_height = Px(count as f32 * self.row_height.0);
         self.last_viewport_height = cx.available.height;
         self.clamp_offset();
@@ -578,7 +650,7 @@ impl Widget for VirtualList {
                 Size::new(content.size.width, row_h),
             );
 
-            let is_selected = self.selected == Some(row.index);
+            let is_selected = self.selected_key == Some(row.key);
             let is_hovered = self.hovered == Some(row.index);
 
             if is_selected || is_hovered {
@@ -597,12 +669,7 @@ impl Widget for VirtualList {
                 });
             }
 
-            let indent_x = self
-                .rows
-                .get(row.index)
-                .map(|r| r.indent_x.0)
-                .unwrap_or(0.0);
-            let text_x = Px(row_rect.origin.x.0 + self.style.padding_x.0 + indent_x);
+            let text_x = Px(row_rect.origin.x.0 + self.style.padding_x.0 + row.indent_x.0);
             let inner_y = row_rect.origin.y.0 + ((row_h.0 - row.metrics.size.height.0) * 0.5);
             let text_y = Px(inner_y + row.metrics.baseline.0);
             cx.scene.push(SceneOp::Text {
