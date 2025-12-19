@@ -6,6 +6,7 @@ mod scroll;
 mod split;
 mod stack;
 mod text;
+mod text_area;
 
 pub use clip::Clip;
 pub use column::Column;
@@ -15,3 +16,4 @@ pub use scroll::Scroll;
 pub use split::Split;
 pub use stack::Stack;
 pub use text::{Text, TextInput};
+pub use text_area::{TextArea, TextAreaStyle};
