@@ -112,6 +112,15 @@ Use:
 - Decide a minimal “tool API” surface for plugins (editor-layer), inspired by Godot.
 - Integrate property edits + gizmo edits into a shared transaction/coalescing scheme (ADR 0024).
 
+## Implementation Notes (Current Prototype)
+
+- Demo tool manager + interaction state: `crates/fret-demo/src/viewport_tools.rs`
+- Demo tool routing from `Effect::ViewportInput`:
+  - driver handler: `crates/fret-demo/src/main.rs` (`viewport_input`)
+  - cancel path: `crates/fret-demo/src/main.rs` (Escape clears interaction + overlay)
+- Overlay rendering path (framework-owned hosting, editor-owned state):
+  - host: `crates/fret-ui/src/dock.rs` (`DockManager::set_viewport_overlay`, `paint_viewport_marquee`)
+
 ## References
 
 - Viewport input forwarding: `docs/adr/0025-viewport-input-forwarding.md`
@@ -120,4 +129,3 @@ Use:
 - Scheduling primitives: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
 - Godot editor viewport plugin hooks:
   - `repo-ref/godot/editor/plugins/editor_plugin.h`
-

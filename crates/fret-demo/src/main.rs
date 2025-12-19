@@ -15,7 +15,9 @@ use demo_ui::{DemoLayers, DemoUiConfig, build_demo_ui};
 use editor_shell::DemoSelection;
 use inspector_edit::InspectorEditService;
 use property_edit::PropertyEditService;
-use viewport_tools::ViewportToolManager;
+use viewport_tools::{
+    MarqueeSelectInteraction, ViewportInteraction, ViewportToolManager, ViewportToolMode,
+};
 use world::DemoWorld;
 
 use fret_app::{
@@ -1359,9 +1361,15 @@ impl WinitDriver for DemoDriver {
                 && !modifiers.meta
             {
                 if let Some(tool) = self.viewport_tools {
-                    let mut cancel: Option<viewport_tools::ViewportMarqueeState> = None;
+                    let mut cancel: Option<MarqueeSelectInteraction> = None;
                     let _ = tool.update(app, |t, _cx| {
-                        cancel = t.marquee.take();
+                        cancel = match t.interaction.take() {
+                            Some(ViewportInteraction::MarqueeSelect(m)) => Some(m),
+                            other => {
+                                t.interaction = other;
+                                None
+                            }
+                        };
                     });
                     if let Some(m) = cancel {
                         app.with_global_mut(DockManager::default, |dock, _app| {
@@ -1637,18 +1645,33 @@ impl WinitDriver for DemoDriver {
                     if button != fret_core::MouseButton::Left {
                         return false;
                     }
+                    let mut active = ViewportToolMode::Select;
+                    let mut has_interaction = false;
                     let start_uv = event.uv;
                     let _ = tool.update(app, |t, _cx| {
-                        t.marquee = Some(viewport_tools::ViewportMarqueeState {
-                            window,
-                            target,
-                            start_modifiers: modifiers,
-                            start_uv,
-                            current_uv: start_uv,
-                            start_target_px: event.target_px,
-                            current_target_px: event.target_px,
-                        });
+                        active = t.active;
+                        has_interaction = t.interaction.is_some();
+                        if has_interaction {
+                            return;
+                        }
+
+                        if active == ViewportToolMode::Select {
+                            t.interaction = Some(ViewportInteraction::MarqueeSelect(
+                                MarqueeSelectInteraction {
+                                    window,
+                                    target,
+                                    start_modifiers: modifiers,
+                                    start_uv,
+                                    current_uv: start_uv,
+                                    start_target_px: event.target_px,
+                                    current_target_px: event.target_px,
+                                },
+                            ));
+                        }
                     });
+                    if has_interaction || active != ViewportToolMode::Select {
+                        return false;
+                    }
                     dock.set_viewport_overlay(
                         window,
                         target,
@@ -1667,14 +1690,16 @@ impl WinitDriver for DemoDriver {
                         return false;
                     }
                     let current_uv = event.uv;
-                    let mut next: Option<viewport_tools::ViewportMarqueeState> = None;
+                    let mut next: Option<MarqueeSelectInteraction> = None;
                     let _ = tool.update(app, |t, _cx| {
-                        if let Some(m) = t.marquee.as_mut() {
-                            if m.window == window && m.target == target {
-                                m.current_uv = current_uv;
-                                m.current_target_px = event.target_px;
-                                next = Some(*m);
-                            }
+                        let Some(ViewportInteraction::MarqueeSelect(m)) = t.interaction.as_mut()
+                        else {
+                            return;
+                        };
+                        if m.window == window && m.target == target {
+                            m.current_uv = current_uv;
+                            m.current_target_px = event.target_px;
+                            next = Some(*m);
                         }
                     });
                     let Some(m) = next else {
@@ -1693,13 +1718,26 @@ impl WinitDriver for DemoDriver {
                     app.push_effect(Effect::RequestAnimationFrame(window));
                     true
                 }
-                fret_core::ViewportInputKind::PointerUp { button, modifiers } => {
+                fret_core::ViewportInputKind::PointerUp {
+                    button,
+                    modifiers: _,
+                } => {
                     if button != fret_core::MouseButton::Left {
                         return false;
                     }
-                    let mut commit: Option<viewport_tools::ViewportMarqueeState> = None;
+                    let mut commit: Option<MarqueeSelectInteraction> = None;
                     let _ = tool.update(app, |t, _cx| {
-                        commit = t.marquee.take();
+                        commit = match t.interaction.take() {
+                            Some(ViewportInteraction::MarqueeSelect(m))
+                                if m.window == window && m.target == target =>
+                            {
+                                Some(m)
+                            }
+                            other => {
+                                t.interaction = other;
+                                None
+                            }
+                        };
                     });
                     dock.set_viewport_overlay(window, target, None);
                     app.request_redraw(window);
@@ -1758,7 +1796,7 @@ impl WinitDriver for DemoDriver {
                         out
                     };
 
-                    self.apply_selection_delta(app, lead, ids, modifiers);
+                    self.apply_selection_delta(app, lead, ids, m.start_modifiers);
                     true
                 }
                 _ => false,
