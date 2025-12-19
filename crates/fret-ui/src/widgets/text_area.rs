@@ -97,6 +97,7 @@ pub struct TextArea {
     caret: usize,
     selection_anchor: usize,
     affinity: CaretAffinity,
+    preferred_x: Option<Px>,
     selection_rects: Vec<Rect>,
     last_bounds: Rect,
     last_sent_cursor: Option<Rect>,
@@ -131,6 +132,7 @@ impl Default for TextArea {
             caret: 0,
             selection_anchor: 0,
             affinity: CaretAffinity::Downstream,
+            preferred_x: None,
             selection_rects: Vec::new(),
             last_bounds: Rect::default(),
             last_sent_cursor: None,
@@ -653,7 +655,18 @@ impl Widget for TextArea {
         }
 
         let cmd = command.as_str();
-        if !self.preedit.is_empty() && cmd != "text.copy" {
+        let is_vertical = matches!(
+            cmd,
+            "text.move_up" | "text.move_down" | "text.select_up" | "text.select_down"
+        );
+        if cmd != "text.copy" && !is_vertical {
+            self.preferred_x = None;
+        }
+        let had_preedit = !self.preedit.is_empty();
+        if had_preedit && is_vertical {
+            return true;
+        }
+        if had_preedit && cmd != "text.copy" {
             self.clear_preedit();
             cx.invalidate_self(Invalidation::Layout);
             cx.request_redraw();
@@ -747,6 +760,40 @@ impl Widget for TextArea {
                 cx.request_redraw();
                 true
             }
+            "text.move_up" => {
+                let Some(blob) = self.blob else {
+                    return true;
+                };
+                let caret_index = self.caret_display_index();
+                let caret_rect = cx.text.caret_rect(blob, caret_index, self.affinity);
+                let x = self.preferred_x.unwrap_or(caret_rect.origin.x);
+                let y = Px(caret_rect.origin.y.0 - 1.0);
+                let hit = cx.text.hit_test_point(blob, fret_core::Point::new(x, y));
+                self.caret = hit.index;
+                self.selection_anchor = self.caret;
+                self.affinity = hit.affinity;
+                self.preferred_x = Some(x);
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.move_down" => {
+                let Some(blob) = self.blob else {
+                    return true;
+                };
+                let caret_index = self.caret_display_index();
+                let caret_rect = cx.text.caret_rect(blob, caret_index, self.affinity);
+                let x = self.preferred_x.unwrap_or(caret_rect.origin.x);
+                let y = Px(caret_rect.origin.y.0 + caret_rect.size.height.0 + 1.0);
+                let hit = cx.text.hit_test_point(blob, fret_core::Point::new(x, y));
+                self.caret = hit.index;
+                self.selection_anchor = self.caret;
+                self.affinity = hit.affinity;
+                self.preferred_x = Some(x);
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
             "text.select_left" => {
                 self.caret = Self::prev_boundary(&self.text, self.caret);
                 self.affinity = CaretAffinity::Downstream;
@@ -785,6 +832,38 @@ impl Widget for TextArea {
             "text.select_end" => {
                 self.caret = self.text.len();
                 self.affinity = CaretAffinity::Downstream;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.select_up" => {
+                let Some(blob) = self.blob else {
+                    return true;
+                };
+                let caret_index = self.caret_display_index();
+                let caret_rect = cx.text.caret_rect(blob, caret_index, self.affinity);
+                let x = self.preferred_x.unwrap_or(caret_rect.origin.x);
+                let y = Px(caret_rect.origin.y.0 - 1.0);
+                let hit = cx.text.hit_test_point(blob, fret_core::Point::new(x, y));
+                self.caret = hit.index;
+                self.affinity = hit.affinity;
+                self.preferred_x = Some(x);
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.select_down" => {
+                let Some(blob) = self.blob else {
+                    return true;
+                };
+                let caret_index = self.caret_display_index();
+                let caret_rect = cx.text.caret_rect(blob, caret_index, self.affinity);
+                let x = self.preferred_x.unwrap_or(caret_rect.origin.x);
+                let y = Px(caret_rect.origin.y.0 + caret_rect.size.height.0 + 1.0);
+                let hit = cx.text.hit_test_point(blob, fret_core::Point::new(x, y));
+                self.caret = hit.index;
+                self.affinity = hit.affinity;
+                self.preferred_x = Some(x);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true

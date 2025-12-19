@@ -616,6 +616,20 @@ impl Widget for TextInput {
                 cx.request_redraw();
                 true
             }
+            "text.move_up" => {
+                self.caret = 0;
+                self.selection_anchor = self.caret;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.move_down" => {
+                self.caret = self.text.len();
+                self.selection_anchor = self.caret;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
             "text.select_left" => {
                 self.caret = Self::prev_boundary(&self.text, self.caret);
                 cx.invalidate_self(Invalidation::Paint);
@@ -647,6 +661,18 @@ impl Widget for TextInput {
                 true
             }
             "text.select_end" => {
+                self.caret = self.text.len();
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.select_up" => {
+                self.caret = 0;
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                true
+            }
+            "text.select_down" => {
                 self.caret = self.text.len();
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
