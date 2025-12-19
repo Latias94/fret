@@ -343,6 +343,7 @@ impl TextSystem {
         );
 
         let metrics = layout.metrics;
+        let first_ascent_px = metrics.baseline.0 * scale;
 
         let mut glyphs: Vec<GlyphQuad> = Vec::new();
         let mut lines: Vec<TextLine> = Vec::with_capacity(layout.lines.len().max(1));
@@ -360,10 +361,11 @@ impl TextSystem {
             let local_start = layout.local_starts[i];
             let local_end = layout.local_ends[i];
 
-            let mut boundaries_local: Vec<usize> = utf8_char_boundaries(&text[base_offset..layout.paragraph_ends[i]])
-                .into_iter()
-                .filter(|b| *b >= local_start && *b <= local_end)
-                .collect();
+            let mut boundaries_local: Vec<usize> =
+                utf8_char_boundaries(&text[base_offset..layout.paragraph_ends[i]])
+                    .into_iter()
+                    .filter(|b| *b >= local_start && *b <= local_end)
+                    .collect();
             boundaries_local.push(local_start);
             boundaries_local.push(local_end);
             boundaries_local.sort_unstable();
@@ -424,7 +426,8 @@ impl TextSystem {
                     None => continue,
                 };
 
-                let line_offset_px = y_top_px;
+                let line_baseline_px = y_top_px + l.max_ascent.max(0.0);
+                let line_offset_px = line_baseline_px - first_ascent_px;
                 let x0_px = g.x + image.placement.left as f32;
                 let y0_px = (line_offset_px + g.y) - image.placement.top as f32;
                 let w_px = image.placement.width as f32;
@@ -534,7 +537,12 @@ impl TextSystem {
         Some(self.blobs.get(blob)?.caret_stops.as_slice())
     }
 
-    pub fn caret_rect(&self, blob: TextBlobId, index: usize, affinity: CaretAffinity) -> Option<Rect> {
+    pub fn caret_rect(
+        &self,
+        blob: TextBlobId,
+        index: usize,
+        affinity: CaretAffinity,
+    ) -> Option<Rect> {
         let blob = self.blobs.get(blob)?;
         caret_rect_from_lines(&blob.lines, index, affinity)
     }
@@ -544,7 +552,12 @@ impl TextSystem {
         hit_test_point_from_lines(&blob.lines, point)
     }
 
-    pub fn selection_rects(&self, blob: TextBlobId, range: (usize, usize), out: &mut Vec<Rect>) -> Option<()> {
+    pub fn selection_rects(
+        &self,
+        blob: TextBlobId,
+        range: (usize, usize),
+        out: &mut Vec<Rect>,
+    ) -> Option<()> {
         let blob = self.blobs.get(blob)?;
         selection_rects_from_lines(&blob.lines, range, out);
         Some(())
@@ -763,7 +776,11 @@ fn hit_test_x_from_stops(stops: &[(usize, Px)], x: Px) -> usize {
     best
 }
 
-fn caret_rect_from_lines(lines: &[TextLine], index: usize, affinity: CaretAffinity) -> Option<Rect> {
+fn caret_rect_from_lines(
+    lines: &[TextLine],
+    index: usize,
+    affinity: CaretAffinity,
+) -> Option<Rect> {
     if lines.is_empty() {
         return None;
     }
