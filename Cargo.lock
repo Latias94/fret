@@ -684,6 +684,7 @@ dependencies = [
  "bytemuck",
  "cosmic-text",
  "fret-core",
+ "naga",
  "slotmap",
  "thiserror 2.0.17",
  "wgpu",

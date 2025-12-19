@@ -1286,15 +1286,44 @@ fn saturate(x: f32) -> f32 {
 
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
-  let sdf = quad_sdf(input.pixel_pos, input.rect_origin, input.rect_size, input.corner_radii);
+  let outer_sdf = quad_sdf(input.pixel_pos, input.rect_origin, input.rect_size, input.corner_radii);
 
-  // TODO: border rendering (dash / per-edge widths) and stroke alignment.
   // NOTE: AA must scale with derivatives. A fixed threshold (e.g. 0.5) breaks under DPI changes
   // and transforms. See ADR 0030.
-  let aa = max(fwidth(sdf), 1e-4);
-  let alpha = 1.0 - smoothstep(-aa, aa, sdf);
+  let aa_outer = max(fwidth(outer_sdf), 1e-4);
+  let alpha_outer = 1.0 - smoothstep(-aa_outer, aa_outer, outer_sdf);
 
-  return vec4<f32>(input.color.rgb, input.color.a) * alpha;
+  let border_sum = input.border.x + input.border.y + input.border.z + input.border.w;
+  if (border_sum <= 0.0) {
+    return vec4<f32>(input.color.rgb, input.color.a) * alpha_outer;
+  }
+
+  // Border alignment: inside. Inner radii are derived by subtracting adjacent border widths.
+  let inner_origin = input.rect_origin + vec2<f32>(input.border.x, input.border.y);
+  let inner_size = input.rect_size - vec2<f32>(input.border.x + input.border.z, input.border.y + input.border.w);
+
+  let inner_radii = max(
+    vec4<f32>(0.0),
+    vec4<f32>(
+      input.corner_radii.x - max(input.border.x, input.border.y), // TL
+      input.corner_radii.y - max(input.border.z, input.border.y), // TR
+      input.corner_radii.z - max(input.border.z, input.border.w), // BR
+      input.corner_radii.w - max(input.border.x, input.border.w)  // BL
+    )
+  );
+
+  var alpha_inner = 0.0;
+  if (inner_size.x > 0.0 && inner_size.y > 0.0) {
+    let inner_sdf = quad_sdf(input.pixel_pos, inner_origin, inner_size, inner_radii);
+    let aa_inner = max(fwidth(inner_sdf), 1e-4);
+    alpha_inner = 1.0 - smoothstep(-aa_inner, aa_inner, inner_sdf);
+  }
+
+  let border_cov = saturate(alpha_outer - alpha_inner);
+  let fill = vec4<f32>(input.color.rgb, input.color.a) * alpha_inner;
+  let border = vec4<f32>(input.border_color.rgb, input.border_color.a) * border_cov;
+
+  return fill + border;
 }
 "#;
 
@@ -1391,3 +1420,20 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   return vec4<f32>(input.color.rgb * coverage, input.color.a * coverage);
 }
 "#;
+
+#[cfg(test)]
+mod tests {
+    use super::{QUAD_SHADER, TEXT_SHADER, VIEWPORT_SHADER};
+
+    #[test]
+    fn shaders_parse_as_wgsl() {
+        for (name, src) in [
+            ("viewport", VIEWPORT_SHADER),
+            ("quad", QUAD_SHADER),
+            ("text", TEXT_SHADER),
+        ] {
+            naga::front::wgsl::parse_str(src)
+                .unwrap_or_else(|err| panic!("WGSL parse failed for {name} shader: {err}"));
+        }
+    }
+}
