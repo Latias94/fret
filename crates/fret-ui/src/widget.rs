@@ -64,6 +64,7 @@ impl<'a> EventCx<'a> {
 
 pub struct CommandCx<'a> {
     pub app: &'a mut App,
+    pub text: &'a mut dyn TextService,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
     pub focus: Option<NodeId>,

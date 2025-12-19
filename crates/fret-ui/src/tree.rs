@@ -592,7 +592,12 @@ impl UiTree {
         }
     }
 
-    pub fn dispatch_command(&mut self, app: &mut App, command: &fret_app::CommandId) -> bool {
+    pub fn dispatch_command(
+        &mut self,
+        app: &mut App,
+        text: &mut dyn TextService,
+        command: &fret_app::CommandId,
+    ) -> bool {
         let Some(base_root) = self
             .base_layer
             .and_then(|id| self.layers.get(id).map(|l| l.root))
@@ -621,13 +626,16 @@ impl UiTree {
 
         let mut handled = false;
         let mut needs_redraw = false;
+        let text_ptr: *mut dyn TextService = text;
 
         loop {
             let (did_handle, invalidations, requested_focus, stop_propagation, parent) = self
                 .with_widget_mut(node_id, |widget, tree| {
                     let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                    let text = unsafe { &mut *text_ptr };
                     let mut cx = CommandCx {
                         app,
+                        text,
                         node: node_id,
                         window: tree.window,
                         focus: tree.focus,

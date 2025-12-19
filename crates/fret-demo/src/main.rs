@@ -349,6 +349,8 @@ impl WinitDriver for DemoDriver {
             ),
             ("text.move_home", "Move Home", "Move caret to the start"),
             ("text.move_end", "Move End", "Move caret to the end"),
+            ("text.move_up", "Move Up", "Move caret up by one line"),
+            ("text.move_down", "Move Down", "Move caret down by one line"),
             (
                 "text.select_left",
                 "Select Left",
@@ -378,6 +380,16 @@ impl WinitDriver for DemoDriver {
                 "text.select_end",
                 "Select End",
                 "Extend selection to the end",
+            ),
+            (
+                "text.select_up",
+                "Select Up",
+                "Extend selection up by one line",
+            ),
+            (
+                "text.select_down",
+                "Select Down",
+                "Extend selection down by one line",
             ),
             (
                 "text.delete_backward",
@@ -645,6 +657,24 @@ impl WinitDriver for DemoDriver {
                     },
                 },
                 BindingV1 {
+                    command: Some("text.move_up".into()),
+                    platform: Some("all".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "ArrowUp".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.move_down".into()),
+                    platform: Some("all".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "ArrowDown".into(),
+                    },
+                },
+                BindingV1 {
                     command: Some("text.select_left".into()),
                     platform: Some("all".into()),
                     when: Some("focus.is_text_input".into()),
@@ -660,6 +690,24 @@ impl WinitDriver for DemoDriver {
                     keys: KeySpecV1 {
                         mods: vec!["shift".into()],
                         key: "ArrowRight".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_up".into()),
+                    platform: Some("all".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["shift".into()],
+                        key: "ArrowUp".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_down".into()),
+                    platform: Some("all".into()),
+                    when: Some("focus.is_text_input".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["shift".into()],
+                        key: "ArrowDown".into(),
                     },
                 },
                 BindingV1 {
@@ -1076,11 +1124,12 @@ impl WinitDriver for DemoDriver {
     fn handle_command(
         &mut self,
         app: &mut App,
+        text: &mut dyn fret_core::TextService,
         window: fret_core::AppWindowId,
         state: &mut Self::WindowState,
         command: CommandId,
     ) {
-        if state.ui.dispatch_command(app, &command) {
+        if state.ui.dispatch_command(app, text, &command) {
             return;
         }
 

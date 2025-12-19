@@ -135,13 +135,20 @@ pub trait WinitDriver {
     fn handle_command(
         &mut self,
         _app: &mut App,
+        _text: &mut dyn TextService,
         _window: fret_core::AppWindowId,
         _state: &mut Self::WindowState,
         _command: fret_app::CommandId,
     ) {
     }
 
-    fn handle_global_command(&mut self, _app: &mut App, _command: fret_app::CommandId) {}
+    fn handle_global_command(
+        &mut self,
+        _app: &mut App,
+        _text: &mut dyn TextService,
+        _command: fret_app::CommandId,
+    ) {
+    }
 
     fn create_window_state(
         &mut self,
@@ -488,9 +495,11 @@ impl<D: WinitDriver> WinitRunner<D> {
                     }
                     Effect::Command { window, command } => match window {
                         Some(window) => {
+                            let text_ptr = self.text_service_mut_ptr();
                             if let Some(state) = self.windows.get_mut(window) {
                                 self.driver.handle_command(
                                     &mut self.app,
+                                    unsafe { &mut *text_ptr },
                                     window,
                                     &mut state.user,
                                     command,
@@ -498,7 +507,12 @@ impl<D: WinitDriver> WinitRunner<D> {
                             }
                         }
                         None => {
-                            self.driver.handle_global_command(&mut self.app, command);
+                            let text_ptr = self.text_service_mut_ptr();
+                            self.driver.handle_global_command(
+                                &mut self.app,
+                                unsafe { &mut *text_ptr },
+                                command,
+                            );
                         }
                     },
                     Effect::ClipboardSetText { text } => {
