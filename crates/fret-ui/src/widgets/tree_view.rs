@@ -186,7 +186,7 @@ impl TreeView {
     }
 
     fn sync_selected_from_list(&mut self) {
-        self.selected = self.list.selected_key();
+        self.selected = self.list.selected_lead_key();
     }
 
     fn sync_list_selection_from_selected(&mut self) {

@@ -3,7 +3,7 @@ use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp,
     Size, TextConstraints, TextStyle, TextWrap,
 };
-use std::{borrow::Cow, hash::Hash};
+use std::{borrow::Cow, collections::HashSet, hash::Hash};
 
 #[derive(Debug, Clone)]
 pub struct VirtualListStyle {
@@ -154,8 +154,10 @@ pub struct VirtualList<D: VirtualListDataSource> {
     drag_offset_start_y: Px,
 
     hovered: Option<usize>,
-    selected_key: Option<D::Key>,
-    selected_index: Option<usize>,
+    selected_keys: HashSet<D::Key>,
+    selection_anchor: Option<D::Key>,
+    selection_lead: Option<D::Key>,
+    selection_lead_index: Option<usize>,
 
     last_bounds: Rect,
     last_content_height: Px,
@@ -187,8 +189,10 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             drag_pointer_start_y: Px(0.0),
             drag_offset_start_y: Px(0.0),
             hovered: None,
-            selected_key: None,
-            selected_index: None,
+            selected_keys: HashSet::new(),
+            selection_anchor: None,
+            selection_lead: None,
+            selection_lead_index: None,
             last_bounds: Rect::default(),
             last_content_height: Px(0.0),
             last_viewport_height: Px(0.0),
@@ -225,15 +229,33 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         self.data.len()
     }
 
-    pub fn selected_key(&self) -> Option<D::Key> {
-        self.selected_key
+    pub fn selected_lead_key(&self) -> Option<D::Key> {
+        self.selection_lead
+    }
+
+    pub fn selected_keys(&self) -> &HashSet<D::Key> {
+        &self.selected_keys
+    }
+
+    pub fn clear_selection(&mut self) {
+        self.selected_keys.clear();
+        self.selection_anchor = None;
+        self.selection_lead = None;
+        self.selection_lead_index = None;
     }
 
     pub fn set_selected_key(&mut self, key: Option<D::Key>) {
-        self.selected_key = key;
-        self.selected_index = self
-            .selected_key
-            .and_then(|selected_key| self.data.index_of_key(selected_key));
+        self.selected_keys.clear();
+        if let Some(key) = key {
+            self.selected_keys.insert(key);
+            self.selection_anchor = Some(key);
+            self.selection_lead = Some(key);
+            self.selection_lead_index = self.data.index_of_key(key);
+        } else {
+            self.selection_anchor = None;
+            self.selection_lead = None;
+            self.selection_lead_index = None;
+        }
     }
 
     pub fn data(&self) -> &D {
@@ -244,18 +266,89 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         self.data = data;
         self.hovered = None;
         self.prepared_dirty = true;
-        self.selected_index = self
-            .selected_key
-            .and_then(|selected_key| self.data.index_of_key(selected_key));
-        if self.selected_key.is_some() && self.selected_index.is_none() {
-            self.selected_key = None;
+        self.selected_keys
+            .retain(|key| self.data.index_of_key(*key).is_some());
+        if let Some(anchor) = self.selection_anchor {
+            if self.data.index_of_key(anchor).is_none() {
+                self.selection_anchor = None;
+            }
+        }
+        if let Some(lead) = self.selection_lead {
+            self.selection_lead_index = self.data.index_of_key(lead);
+            if self.selection_lead_index.is_none() {
+                self.selection_lead = None;
+            }
+        } else {
+            self.selection_lead_index = None;
         }
         self.clamp_offset();
     }
 
-    fn set_selected_index(&mut self, index: usize) {
-        self.selected_index = Some(index);
-        self.selected_key = Some(self.data.key_at(index));
+    fn lead_index(&self) -> Option<usize> {
+        self.selection_lead_index
+            .or_else(|| self.selection_lead.and_then(|k| self.data.index_of_key(k)))
+    }
+
+    fn set_lead_index(&mut self, index: usize) {
+        let key = self.data.key_at(index);
+        self.selection_lead_index = Some(index);
+        self.selection_lead = Some(key);
+    }
+
+    fn select_range(&mut self, a: usize, b: usize, extend: bool) {
+        let start = a.min(b);
+        let end = a.max(b);
+        if !extend {
+            self.selected_keys.clear();
+        }
+        for i in start..=end {
+            self.selected_keys.insert(self.data.key_at(i));
+        }
+    }
+
+    fn apply_click_selection(&mut self, index: usize, modifiers: Modifiers) {
+        let clicked = self.data.key_at(index);
+
+        if modifiers.shift {
+            let anchor_key = self
+                .selection_anchor
+                .or(self.selection_lead)
+                .unwrap_or(clicked);
+            let anchor_index = self.data.index_of_key(anchor_key).unwrap_or(index);
+            let extend = modifiers.ctrl || modifiers.meta;
+            self.select_range(anchor_index, index, extend);
+            self.selection_lead = Some(clicked);
+            self.selection_lead_index = Some(index);
+            return;
+        }
+
+        if modifiers.ctrl || modifiers.meta {
+            let prev_lead = self.selection_lead;
+            if self.selected_keys.contains(&clicked) {
+                self.selected_keys.remove(&clicked);
+                if self.selected_keys.is_empty() {
+                    self.selection_anchor = None;
+                    self.selection_lead = None;
+                    self.selection_lead_index = None;
+                } else if prev_lead == Some(clicked) {
+                    let fallback = self.selected_keys.iter().next().copied();
+                    self.selection_lead = fallback;
+                    self.selection_lead_index = fallback.and_then(|k| self.data.index_of_key(k));
+                }
+            } else {
+                self.selected_keys.insert(clicked);
+                self.selection_lead = Some(clicked);
+                self.selection_lead_index = Some(index);
+            }
+            self.selection_anchor = Some(clicked);
+            return;
+        }
+
+        self.selected_keys.clear();
+        self.selected_keys.insert(clicked);
+        self.selection_anchor = Some(clicked);
+        self.selection_lead = Some(clicked);
+        self.selection_lead_index = Some(index);
     }
 
     fn max_offset(&self) -> Px {
@@ -522,7 +615,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         }
 
         let current = self
-            .selected_index
+            .lead_index()
             .unwrap_or(0)
             .min(self.data.len().saturating_sub(1));
         let viewport_rows = if self.row_height.0 <= 0.0 {
@@ -543,7 +636,24 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             _ => return false,
         };
 
-        self.set_selected_index(next);
+        if modifiers.shift {
+            if self.selection_anchor.is_none() {
+                self.selection_anchor = self
+                    .selection_lead
+                    .or_else(|| Some(self.data.key_at(current)));
+            }
+            let anchor_key = self.selection_anchor.or(self.selection_lead);
+            let anchor_index = anchor_key
+                .and_then(|k| self.data.index_of_key(k))
+                .unwrap_or(current);
+            self.select_range(anchor_index, next, false);
+            self.set_lead_index(next);
+        } else {
+            self.selected_keys.clear();
+            self.selected_keys.insert(self.data.key_at(next));
+            self.selection_anchor = Some(self.data.key_at(next));
+            self.set_lead_index(next);
+        }
         self.ensure_visible(next);
         true
     }
@@ -565,7 +675,9 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
                     cx.stop_propagation();
                 }
                 fret_core::PointerEvent::Down {
-                    position, button, ..
+                    position,
+                    button,
+                    modifiers,
                 } => {
                     if *button != MouseButton::Left {
                         return;
@@ -599,7 +711,7 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
                     cx.request_focus(cx.node);
                     let local_y = Px(position.y.0 - content.origin.y.0);
                     if let Some(idx) = self.row_index_from_y(local_y) {
-                        self.set_selected_index(idx);
+                        self.apply_click_selection(idx, *modifiers);
                         self.ensure_visible(idx);
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
@@ -699,7 +811,7 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
                 Size::new(content.size.width, row_h),
             );
 
-            let is_selected = self.selected_key == Some(row.key);
+            let is_selected = self.selected_keys.contains(&row.key);
             let is_hovered = self.hovered == Some(row.index);
 
             if is_selected || is_hovered {
