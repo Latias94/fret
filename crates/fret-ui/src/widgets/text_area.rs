@@ -16,6 +16,8 @@ pub struct TextAreaStyle {
     pub text_color: Color,
     pub selection_color: Color,
     pub caret_color: Color,
+    pub preedit_bg_color: Color,
+    pub preedit_underline_color: Color,
 }
 
 impl Default for TextAreaStyle {
@@ -54,6 +56,18 @@ impl Default for TextAreaStyle {
                 b: 0.92,
                 a: 1.0,
             },
+            preedit_bg_color: Color {
+                r: 0.24,
+                g: 0.34,
+                b: 0.52,
+                a: 0.22,
+            },
+            preedit_underline_color: Color {
+                r: 0.65,
+                g: 0.82,
+                b: 1.0,
+                a: 0.95,
+            },
         }
     }
 }
@@ -75,6 +89,10 @@ pub struct TextArea {
     drag_offset_start_y: Px,
     last_content_height: Px,
     last_viewport_height: Px,
+
+    preedit: String,
+    preedit_cursor: Option<(usize, usize)>,
+    preedit_rects: Vec<Rect>,
 
     caret: usize,
     selection_anchor: usize,
@@ -107,6 +125,9 @@ impl Default for TextArea {
             drag_offset_start_y: Px(0.0),
             last_content_height: Px(0.0),
             last_viewport_height: Px(0.0),
+            preedit: String::new(),
+            preedit_cursor: None,
+            preedit_rects: Vec::new(),
             caret: 0,
             selection_anchor: 0,
             affinity: CaretAffinity::Downstream,
@@ -130,6 +151,8 @@ impl TextArea {
         self.text = text.into();
         self.caret = self.text.len();
         self.selection_anchor = self.caret;
+        self.preedit.clear();
+        self.preedit_cursor = None;
         self
     }
 
@@ -155,6 +178,70 @@ impl TextArea {
 
     pub fn offset_y(&self) -> Px {
         self.offset_y
+    }
+
+    fn clear_preedit(&mut self) {
+        if self.preedit.is_empty() {
+            return;
+        }
+        self.preedit.clear();
+        self.preedit_cursor = None;
+        self.affinity = CaretAffinity::Downstream;
+    }
+
+    fn preedit_cursor_end(&self) -> usize {
+        self.preedit_cursor
+            .map(|(_, end)| end.min(self.preedit.len()))
+            .unwrap_or(self.preedit.len())
+    }
+
+    fn layout_text(&self) -> Option<String> {
+        if self.preedit.is_empty() {
+            return None;
+        }
+        let prefix = self.text.get(..self.caret)?;
+        let suffix = self.text.get(self.caret..)?;
+        Some(format!("{prefix}{}{suffix}", self.preedit))
+    }
+
+    fn caret_display_index(&self) -> usize {
+        if self.preedit.is_empty() {
+            self.caret
+        } else {
+            self.caret + self.preedit_cursor_end()
+        }
+    }
+
+    fn map_display_index_to_base(&self, display_index: usize) -> usize {
+        if self.preedit.is_empty() {
+            return display_index;
+        }
+
+        let anchor = self.caret;
+        let preedit_len = self.preedit.len();
+        if display_index <= anchor {
+            display_index
+        } else if display_index >= anchor + preedit_len {
+            display_index - preedit_len
+        } else {
+            anchor
+        }
+    }
+
+    fn content_bounds(&self) -> Rect {
+        const SCROLLBAR_W: Px = Px(10.0);
+        let inner = self.inner_bounds();
+        if self.last_content_height.0 > self.last_viewport_height.0 {
+            Rect::new(
+                inner.origin,
+                Size::new(
+                    Px((inner.size.width.0 - SCROLLBAR_W.0).max(0.0)),
+                    inner.size.height,
+                ),
+            )
+        } else {
+            inner
+        }
     }
 
     fn selection_range(&self) -> (usize, usize) {
@@ -249,6 +336,7 @@ impl TextArea {
         self.text.replace_range(a..b, "");
         self.caret = a;
         self.selection_anchor = self.caret;
+        self.clear_preedit();
         self.affinity = CaretAffinity::Downstream;
         true
     }
@@ -264,6 +352,7 @@ impl TextArea {
             self.caret += insert.len();
             self.selection_anchor = self.caret;
         }
+        self.clear_preedit();
         self.affinity = CaretAffinity::Downstream;
     }
 
@@ -358,8 +447,14 @@ impl TextArea {
             return;
         };
         let hit = cx.text.hit_test_point(blob, point);
-        self.caret = hit.index;
-        self.affinity = hit.affinity;
+        if self.preedit.is_empty() {
+            self.caret = hit.index;
+            self.affinity = hit.affinity;
+        } else {
+            self.caret = self.map_display_index_to_base(hit.index);
+            self.clear_preedit();
+            self.affinity = CaretAffinity::Downstream;
+        }
     }
 }
 
@@ -412,13 +507,17 @@ impl Widget for TextArea {
                 cx.capture_pointer(cx.node);
                 self.dragging_thumb = false;
 
-                let inner = self.inner_bounds();
+                let had_preedit = !self.preedit.is_empty();
+                let inner = self.content_bounds();
                 let local =
                     fret_core::Point::new(position.x - inner.origin.x, position.y - inner.origin.y);
                 let local = fret_core::Point::new(local.x, Px(local.y.0 + self.offset_y.0));
                 self.set_caret_from_point(cx, local);
                 self.selection_anchor = self.caret;
 
+                if had_preedit {
+                    cx.invalidate_self(Invalidation::Layout);
+                }
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
             }
@@ -454,12 +553,16 @@ impl Widget for TextArea {
                     return;
                 }
 
-                let inner = self.inner_bounds();
+                let had_preedit = !self.preedit.is_empty();
+                let inner = self.content_bounds();
                 let local =
                     fret_core::Point::new(position.x - inner.origin.x, position.y - inner.origin.y);
                 let local = fret_core::Point::new(local.x, Px(local.y.0 + self.offset_y.0));
                 self.set_caret_from_point(cx, local);
 
+                if had_preedit {
+                    cx.invalidate_self(Invalidation::Layout);
+                }
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
             }
@@ -471,6 +574,9 @@ impl Widget for TextArea {
             }
             Event::TextInput(text) => {
                 if cx.focus != Some(cx.node) {
+                    return;
+                }
+                if !self.preedit.is_empty() {
                     return;
                 }
                 let tick = cx.app.tick_id();
@@ -490,6 +596,7 @@ impl Widget for TextArea {
                 if cx.focus != Some(cx.node) {
                     return;
                 }
+                self.clear_preedit();
                 let normalized = text.replace("\r\n", "\n").replace('\r', "\n");
                 if !normalized.is_empty() {
                     self.replace_selection(&normalized);
@@ -503,7 +610,11 @@ impl Widget for TextArea {
                 }
                 match ime {
                     ImeEvent::Enabled => {}
-                    ImeEvent::Disabled => {}
+                    ImeEvent::Disabled => {
+                        self.clear_preedit();
+                        cx.invalidate_self(Invalidation::Layout);
+                        cx.request_redraw();
+                    }
                     ImeEvent::Commit(text) => {
                         let tick = cx.app.tick_id();
                         if self.last_text_input_tick == Some(tick)
@@ -518,7 +629,18 @@ impl Widget for TextArea {
                         cx.invalidate_self(Invalidation::Layout);
                         cx.request_redraw();
                     }
-                    ImeEvent::Preedit { .. } => {}
+                    ImeEvent::Preedit { text, cursor } => {
+                        if text.is_empty() {
+                            self.clear_preedit();
+                        } else {
+                            self.preedit = text.clone();
+                            self.preedit_cursor = *cursor;
+                            self.selection_anchor = self.caret;
+                            self.affinity = CaretAffinity::Downstream;
+                        }
+                        cx.invalidate_self(Invalidation::Layout);
+                        cx.request_redraw();
+                    }
                 }
             }
             _ => {}
@@ -530,7 +652,14 @@ impl Widget for TextArea {
             return false;
         }
 
-        match command.as_str() {
+        let cmd = command.as_str();
+        if !self.preedit.is_empty() && cmd != "text.copy" {
+            self.clear_preedit();
+            cx.invalidate_self(Invalidation::Layout);
+            cx.request_redraw();
+        }
+
+        match cmd {
             "text.clear" => {
                 self.text.clear();
                 self.caret = 0;
@@ -740,15 +869,28 @@ impl Widget for TextArea {
         self.caret = Self::clamp_to_boundary(&self.text, self.caret);
         self.selection_anchor = Self::clamp_to_boundary(&self.text, self.selection_anchor);
 
+        const SCROLLBAR_W: Px = Px(10.0);
+
         let inner = self.inner_bounds();
-        let constraints = TextConstraints {
+        let layout_text_owned = self.layout_text();
+        let layout_text = layout_text_owned.as_deref().unwrap_or(&self.text);
+
+        let mut constraints = TextConstraints {
             max_width: Some(inner.size.width),
             wrap: self.wrap,
             scale_factor: cx.scale_factor,
         };
 
         let old_blob = self.blob.take();
-        let (blob, metrics) = cx.text.prepare(&self.text, self.text_style, constraints);
+
+        let (mut blob, mut metrics) = cx.text.prepare(layout_text, self.text_style, constraints);
+        let show_scrollbar = metrics.size.height.0 > inner.size.height.0;
+        if show_scrollbar {
+            cx.text.release(blob);
+            constraints.max_width = Some(Px((inner.size.width.0 - SCROLLBAR_W.0).max(0.0)));
+            (blob, metrics) = cx.text.prepare(layout_text, self.text_style, constraints);
+        }
+
         self.blob = Some(blob);
         self.metrics = Some(metrics);
 
@@ -789,16 +931,30 @@ impl Widget for TextArea {
             return;
         };
 
-        let inner = self.inner_bounds();
+        let padded_inner = self.inner_bounds();
         self.last_content_height = metrics.size.height;
-        self.last_viewport_height = inner.size.height;
+        self.last_viewport_height = padded_inner.size.height;
         self.clamp_offset(self.last_content_height, self.last_viewport_height);
 
+        let inner = self.content_bounds();
         cx.scene.push(SceneOp::PushClipRect { rect: inner });
+
+        let map_base_to_display = |idx: usize| -> usize {
+            if self.preedit.is_empty() {
+                idx
+            } else if idx <= self.caret {
+                idx
+            } else {
+                idx + self.preedit.len()
+            }
+        };
 
         cx.text.selection_rects(
             blob,
-            (self.selection_anchor, self.caret),
+            (
+                map_base_to_display(self.selection_anchor),
+                map_base_to_display(self.caret),
+            ),
             &mut self.selection_rects,
         );
         for r in &self.selection_rects {
@@ -819,6 +975,32 @@ impl Widget for TextArea {
             });
         }
 
+        if !self.preedit.is_empty() {
+            let start = self.caret;
+            let end = self.caret + self.preedit.len();
+            cx.text
+                .selection_rects(blob, (start, end), &mut self.preedit_rects);
+            for r in &self.preedit_rects {
+                let rect = Rect::new(
+                    fret_core::Point::new(
+                        inner.origin.x + r.origin.x,
+                        Px(inner.origin.y.0 + r.origin.y.0 - self.offset_y.0),
+                    ),
+                    r.size,
+                );
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(0),
+                    rect,
+                    background: self.style.preedit_bg_color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+        } else {
+            self.preedit_rects.clear();
+        }
+
         let text_origin = fret_core::Point::new(
             inner.origin.x,
             Px(inner.origin.y.0 + metrics.baseline.0 - self.offset_y.0),
@@ -831,7 +1013,13 @@ impl Widget for TextArea {
         });
 
         if cx.focus == Some(cx.node) {
-            let caret = cx.text.caret_rect(blob, self.caret, self.affinity);
+            let caret_index = self.caret_display_index();
+            let affinity = if self.preedit.is_empty() {
+                self.affinity
+            } else {
+                CaretAffinity::Downstream
+            };
+            let caret = cx.text.caret_rect(blob, caret_index, affinity);
             let hairline = Px((1.0 / cx.scale_factor.max(1.0)).max(1.0 / 8.0));
             let caret_top = caret.origin.y.0;
             let caret_bottom = caret.origin.y.0 + caret.size.height.0;
@@ -869,6 +1057,28 @@ impl Widget for TextArea {
                     cx.app.push_effect(Effect::ImeSetCursorArea {
                         window,
                         rect: caret_rect,
+                    });
+                }
+            }
+
+            if !self.preedit_rects.is_empty() {
+                for r in &self.preedit_rects {
+                    if r.size.width.0 <= 0.0 || r.size.height.0 <= 0.0 {
+                        continue;
+                    }
+                    let y = inner.origin.y.0 + r.origin.y.0 - self.offset_y.0 + r.size.height.0
+                        - hairline.0;
+                    let underline = Rect::new(
+                        fret_core::Point::new(inner.origin.x + r.origin.x, Px(y)),
+                        Size::new(Px(r.size.width.0.max(hairline.0)), hairline),
+                    );
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(0),
+                        rect: underline,
+                        background: self.style.preedit_underline_color,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
                     });
                 }
             }
