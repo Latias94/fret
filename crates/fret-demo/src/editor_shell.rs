@@ -1,3 +1,4 @@
+use crate::hierarchy::{DemoHierarchy, HierarchyDropKind, HierarchyDropTarget};
 use crate::inspector_edit::{InspectorEditKind, InspectorEditRequest, InspectorEditService};
 use crate::inspector_protocol::{
     InspectorEditorKind, InspectorEditorRegistry, PropertyLeaf, PropertyMeta, PropertyNode,
@@ -8,7 +9,7 @@ use crate::property_edit::{PropertyEditKind, PropertyEditRequest, PropertyEditSe
 use crate::world::DemoWorld;
 use fret_app::{App, Model};
 use fret_core::{Color, Corners, Edges, Event, Px, Size, TextStyle};
-use fret_ui::{EventCx, LayoutCx, PaintCx, TreeNode, TreeView, VirtualList, Widget};
+use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, TreeView, VirtualList, Widget};
 use std::borrow::Cow;
 
 #[derive(Debug, Default, Clone)]
@@ -279,23 +280,87 @@ impl fret_ui::VirtualListDataSource for InspectorDataSource {
 pub struct HierarchyPanel {
     tree: TreeView,
     selection: Model<DemoSelection>,
+    hierarchy: Model<DemoHierarchy>,
+    drag: Option<HierarchyDragState>,
     last_selected: Option<u64>,
     last_selected_keys: Vec<u64>,
     last_revision: Option<u64>,
+    last_hierarchy_revision: Option<u64>,
+    did_init_expanded: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum HierarchyDropPreviewKind {
+    InsertLineAbove,
+    InsertLineBelow,
+    HighlightRow,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct HierarchyDropPreview {
+    target: HierarchyDropTarget,
+    kind: HierarchyDropPreviewKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct HierarchyDragState {
+    id: u64,
+    start: fret_core::Point,
+    dragging: bool,
+    preview: Option<HierarchyDropPreview>,
 }
 
 impl HierarchyPanel {
-    pub fn new(selection: Model<DemoSelection>, roots: Vec<TreeNode>, expanded: Vec<u64>) -> Self {
+    pub fn new(selection: Model<DemoSelection>, hierarchy: Model<DemoHierarchy>) -> Self {
         Self {
-            tree: TreeView::new(roots).with_expanded(expanded),
+            tree: TreeView::new(Vec::new()),
             selection,
+            hierarchy,
+            drag: None,
             last_selected: None,
             last_selected_keys: Vec::new(),
             last_revision: None,
+            last_hierarchy_revision: None,
+            did_init_expanded: false,
         }
     }
 
+    fn maybe_sync_hierarchy(&mut self, app: &App) {
+        let revision = self.hierarchy.revision(app);
+        if revision == self.last_hierarchy_revision {
+            return;
+        }
+        let roots = self
+            .hierarchy
+            .get(app)
+            .map(|h| h.roots.clone())
+            .unwrap_or_default();
+        self.tree.set_roots(roots);
+
+        if !self.did_init_expanded {
+            let mut ids: Vec<u64> = Vec::new();
+            for root in self
+                .hierarchy
+                .get(app)
+                .map(|h| h.roots.iter())
+                .into_iter()
+                .flatten()
+            {
+                ids.push(root.id);
+                for child in &root.children {
+                    ids.push(child.id);
+                }
+            }
+            self.tree.set_expanded(ids);
+            self.did_init_expanded = true;
+        }
+
+        self.last_hierarchy_revision = revision;
+    }
+
     fn maybe_sync_from_model(&mut self, app: &App) {
+        self.maybe_sync_hierarchy(app);
+
         let revision = self.selection.revision(app);
         if revision == self.last_revision {
             return;
@@ -337,6 +402,116 @@ impl HierarchyPanel {
 
         cx.request_redraw();
     }
+
+    fn begin_drag_candidate(&mut self, position: fret_core::Point) {
+        let Some(id) = self.tree.row_id_at(position) else {
+            return;
+        };
+        self.drag = Some(HierarchyDragState {
+            id,
+            start: position,
+            dragging: false,
+            preview: None,
+        });
+    }
+
+    fn update_drag_preview(&mut self, app: &App, position: fret_core::Point) {
+        let Some(drag) = self.drag.as_mut() else {
+            return;
+        };
+        if !drag.dragging {
+            return;
+        }
+
+        let content = self.tree.content_bounds();
+        if !content.contains(position) {
+            drag.preview = None;
+            return;
+        }
+
+        let Some(h) = self.hierarchy.get(app) else {
+            drag.preview = None;
+            return;
+        };
+
+        let preview = if let Some(target_id) = self.tree.row_id_at(position) {
+            if target_id == drag.id || h.is_descendant_of(drag.id, target_id) {
+                None
+            } else if let Some(rect) = self.tree.row_rect(target_id) {
+                let rel_y = (position.y.0 - rect.origin.y.0) / rect.size.height.0.max(1.0);
+                if rel_y < 0.25 {
+                    Some(HierarchyDropPreview {
+                        target: HierarchyDropTarget {
+                            kind: HierarchyDropKind::InsertAbove,
+                            target_id: Some(target_id),
+                        },
+                        kind: HierarchyDropPreviewKind::InsertLineAbove,
+                    })
+                } else if rel_y > 0.75 {
+                    Some(HierarchyDropPreview {
+                        target: HierarchyDropTarget {
+                            kind: HierarchyDropKind::InsertBelow,
+                            target_id: Some(target_id),
+                        },
+                        kind: HierarchyDropPreviewKind::InsertLineBelow,
+                    })
+                } else {
+                    Some(HierarchyDropPreview {
+                        target: HierarchyDropTarget {
+                            kind: HierarchyDropKind::ReparentInto,
+                            target_id: Some(target_id),
+                        },
+                        kind: HierarchyDropPreviewKind::HighlightRow,
+                    })
+                }
+            } else {
+                None
+            }
+        } else if self.tree.content_bounds().contains(position) {
+            Some(HierarchyDropPreview {
+                target: HierarchyDropTarget {
+                    kind: HierarchyDropKind::AppendRoot,
+                    target_id: None,
+                },
+                kind: HierarchyDropPreviewKind::InsertLineBelow,
+            })
+        } else {
+            None
+        };
+
+        drag.preview = preview;
+    }
+
+    fn commit_drag(&mut self, cx: &mut EventCx<'_>) -> bool {
+        let Some(drag) = self.drag.take() else {
+            return false;
+        };
+        if !drag.dragging {
+            return false;
+        }
+
+        let Some(preview) = drag.preview else {
+            return true;
+        };
+
+        let Some(op) = self
+            .hierarchy
+            .get(cx.app)
+            .and_then(|h| h.move_op_for_drop(drag.id, preview.target))
+        else {
+            return true;
+        };
+
+        let _ = self.hierarchy.update(cx.app, |h, _cx| {
+            let _ = h.apply_move(op);
+        });
+        self.last_hierarchy_revision = self.hierarchy.revision(cx.app);
+
+        cx.invalidate_self(Invalidation::Layout);
+        cx.invalidate_self(Invalidation::Paint);
+        cx.request_redraw();
+        true
+    }
 }
 
 impl Widget for HierarchyPanel {
@@ -345,8 +520,66 @@ impl Widget for HierarchyPanel {
     }
 
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
-        self.tree.event(cx, event);
-        self.sync_selection_model(cx);
+        match event {
+            Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button: fret_core::MouseButton::Left,
+                ..
+            }) => {
+                self.tree.event(cx, event);
+                self.sync_selection_model(cx);
+                if cx.stop_propagation {
+                    return;
+                }
+                self.begin_drag_candidate(*position);
+            }
+            Event::Pointer(fret_core::PointerEvent::Move {
+                position, buttons, ..
+            }) => {
+                if buttons.left {
+                    if let Some(mut drag) = self.drag.take() {
+                        if !drag.dragging {
+                            let dx = position.x.0 - drag.start.x.0;
+                            let dy = position.y.0 - drag.start.y.0;
+                            let dist2 = dx * dx + dy * dy;
+                            if dist2 > 16.0 {
+                                drag.dragging = true;
+                                cx.capture_pointer(cx.node);
+                            }
+                        }
+
+                        self.drag = Some(drag);
+                        self.update_drag_preview(cx.app, *position);
+
+                        if self.drag.as_ref().is_some_and(|d| d.dragging) {
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                            cx.stop_propagation();
+                            return;
+                        }
+                    }
+                }
+                self.tree.event(cx, event);
+                self.sync_selection_model(cx);
+            }
+            Event::Pointer(fret_core::PointerEvent::Up {
+                button: fret_core::MouseButton::Left,
+                ..
+            }) => {
+                if self.drag.is_some() {
+                    let _ = self.commit_drag(cx);
+                    cx.release_pointer_capture();
+                    cx.stop_propagation();
+                    return;
+                }
+                self.tree.event(cx, event);
+                self.sync_selection_model(cx);
+            }
+            _ => {
+                self.tree.event(cx, event);
+                self.sync_selection_model(cx);
+            }
+        }
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
@@ -359,6 +592,75 @@ impl Widget for HierarchyPanel {
         // Selection changes may request only a redraw (paint), so sync here as well.
         self.maybe_sync_from_model(cx.app);
         self.tree.paint(cx);
+
+        let Some(drag) = self.drag.as_ref() else {
+            return;
+        };
+        if !drag.dragging {
+            return;
+        }
+        let Some(preview) = drag.preview else {
+            return;
+        };
+
+        let stroke = Color {
+            r: 0.20,
+            g: 0.75,
+            b: 1.0,
+            a: 0.9,
+        };
+        let t = Px(2.0);
+
+        match preview.kind {
+            HierarchyDropPreviewKind::HighlightRow => {
+                let Some(target) = preview.target.target_id else {
+                    return;
+                };
+                let Some(rect) = self.tree.row_rect(target) else {
+                    return;
+                };
+                cx.scene.push(fret_core::SceneOp::Quad {
+                    order: fret_core::DrawOrder(50),
+                    rect,
+                    background: Color::TRANSPARENT,
+                    border: Edges::all(t),
+                    border_color: stroke,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+            HierarchyDropPreviewKind::InsertLineAbove
+            | HierarchyDropPreviewKind::InsertLineBelow => {
+                let y = if let Some(target) = preview.target.target_id {
+                    let Some(rect) = self.tree.row_rect(target) else {
+                        return;
+                    };
+                    if preview.kind == HierarchyDropPreviewKind::InsertLineAbove {
+                        rect.origin.y
+                    } else {
+                        Px(rect.origin.y.0 + rect.size.height.0 - t.0)
+                    }
+                } else {
+                    let Some(last) = self.tree.last_row_rect() else {
+                        return;
+                    };
+                    Px(last.origin.y.0 + last.size.height.0 - t.0)
+                };
+
+                let content = self.tree.content_bounds();
+                let line = fret_core::Rect::new(
+                    fret_core::Point::new(content.origin.x, y),
+                    fret_core::Size::new(content.size.width, t),
+                );
+                cx.scene.push(fret_core::SceneOp::Quad {
+                    order: fret_core::DrawOrder(50),
+                    rect: line,
+                    background: stroke,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+        }
     }
 }
 

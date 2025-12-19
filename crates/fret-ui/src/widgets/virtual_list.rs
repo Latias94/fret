@@ -425,6 +425,18 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         self.row_index_from_y(local_y)
     }
 
+    pub fn row_rect(&self, index: usize) -> Option<Rect> {
+        if index >= self.data.len() {
+            return None;
+        }
+        let content = self.content_bounds();
+        let y = content.origin.y.0 + index as f32 * self.row_height.0 - self.offset_y.0;
+        Some(Rect::new(
+            fret_core::Point::new(content.origin.x, Px(y)),
+            Size::new(content.size.width, self.row_height),
+        ))
+    }
+
     pub fn ensure_visible(&mut self, index: usize) {
         if self.row_height.0 <= 0.0 || self.last_viewport_height.0 <= 0.0 {
             return;

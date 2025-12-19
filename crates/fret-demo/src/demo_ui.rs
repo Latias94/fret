@@ -2,12 +2,13 @@ use crate::command_palette::{CommandPalette, OverlayBackdrop, OverlayPanelLayout
 use crate::dnd_probe::DndProbe;
 use crate::editor_shell::{DemoSelection, HierarchyPanel, InspectorPanel};
 use crate::elements_mvp2::ElementsMvp2Demo;
+use crate::hierarchy::DemoHierarchy;
 use crate::ime_probe::ImeProbe;
 use fret_app::Model;
 use fret_core::{AppWindowId, Axis, Color, PanelKey, Px};
 use fret_ui::{
     BoundTextInput, ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel, Scroll, Split, Stack,
-    Text, TextArea, TextInput, TreeNode, UiLayerId, UiTree, VirtualList, VirtualListDataSource,
+    Text, TextArea, TextInput, UiLayerId, UiTree, VirtualList, VirtualListDataSource,
     VirtualListRow,
 };
 use std::borrow::Cow;
@@ -72,6 +73,7 @@ pub fn build_demo_ui(
     window: AppWindowId,
     config: DemoUiConfig,
     selection: Model<DemoSelection>,
+    hierarchy: Model<DemoHierarchy>,
     world: Model<DemoWorld>,
     inspector_edit_buffer: Model<String>,
 ) -> (UiTree, DemoLayers) {
@@ -84,41 +86,7 @@ pub fn build_demo_ui(
     let key_hierarchy = PanelKey::new("core.hierarchy");
     let key_inspector = PanelKey::new("core.inspector");
 
-    let mut next_id: u64 = 1;
-    let mut expand: Vec<u64> = Vec::new();
-    let mut roots: Vec<TreeNode> = Vec::new();
-    for r in 0..200u64 {
-        let root_id = next_id;
-        next_id += 1;
-        expand.push(root_id);
-
-        let mut children: Vec<TreeNode> = Vec::new();
-        for c in 0..20u64 {
-            let child_id = next_id;
-            next_id += 1;
-            expand.push(child_id);
-
-            let mut grandchildren: Vec<TreeNode> = Vec::new();
-            if c < 3 {
-                for g in 0..5u64 {
-                    let grand_id = next_id;
-                    next_id += 1;
-                    grandchildren.push(TreeNode::new(
-                        grand_id,
-                        format!("Grandchild {r:03}-{c:02}-{g:02}"),
-                    ));
-                }
-            }
-
-            children.push(
-                TreeNode::new(child_id, format!("Child {r:03}-{c:02}"))
-                    .with_children(grandchildren),
-            );
-        }
-        roots.push(TreeNode::new(root_id, format!("Root {r:03}")).with_children(children));
-    }
-
-    let hierarchy = ui.create_node(HierarchyPanel::new(selection, roots, expand));
+    let hierarchy = ui.create_node(HierarchyPanel::new(selection, hierarchy));
     let inspector = ui.create_node(InspectorPanel::new(selection, world));
 
     let dock = ui.create_node(

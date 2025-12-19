@@ -125,6 +125,50 @@ impl TreeView {
         view
     }
 
+    pub fn set_roots(&mut self, roots: Vec<TreeNode>) {
+        self.roots = roots;
+        self.dirty = true;
+        self.rebuild();
+    }
+
+    pub fn row_id_at(&mut self, position: fret_core::Point) -> Option<u64> {
+        if self.dirty {
+            self.rebuild();
+        }
+        let index = self.list.row_index_at(position)?;
+        self.flat.get(index).map(|r| r.id)
+    }
+
+    pub fn row_rect(&mut self, id: u64) -> Option<fret_core::Rect> {
+        if self.dirty {
+            self.rebuild();
+        }
+        let index = *self.id_to_index.get(&id)?;
+        self.list.row_rect(index)
+    }
+
+    pub fn last_row_rect(&mut self) -> Option<fret_core::Rect> {
+        if self.dirty {
+            self.rebuild();
+        }
+        let n = self.list.row_count();
+        if n == 0 {
+            return None;
+        }
+        self.list.row_rect(n - 1)
+    }
+
+    pub fn content_bounds(&self) -> fret_core::Rect {
+        self.list.content_bounds()
+    }
+
+    pub fn parent_of(&mut self, id: u64) -> Option<u64> {
+        if self.dirty {
+            self.rebuild();
+        }
+        self.parent_by_id.get(&id).copied().flatten()
+    }
+
     pub fn with_expanded(mut self, ids: impl IntoIterator<Item = u64>) -> Self {
         for id in ids {
             self.expanded.insert(id);
@@ -132,6 +176,15 @@ impl TreeView {
         self.dirty = true;
         self.rebuild();
         self
+    }
+
+    pub fn set_expanded(&mut self, ids: impl IntoIterator<Item = u64>) {
+        self.expanded.clear();
+        for id in ids {
+            self.expanded.insert(id);
+        }
+        self.dirty = true;
+        self.rebuild();
     }
 
     pub fn selected(&self) -> Option<u64> {

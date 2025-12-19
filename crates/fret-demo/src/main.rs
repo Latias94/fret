@@ -3,6 +3,7 @@ mod demo_ui;
 mod dnd_probe;
 mod editor_shell;
 mod elements_mvp2;
+mod hierarchy;
 mod ime_probe;
 mod inspector_edit;
 mod inspector_protocol;
@@ -13,6 +14,7 @@ mod world;
 
 use demo_ui::{DemoLayers, DemoUiConfig, build_demo_ui};
 use editor_shell::DemoSelection;
+use hierarchy::DemoHierarchy;
 use inspector_edit::{InspectorEditService, parse_value};
 use property_edit::PropertyEditService;
 use viewport_tools::{
@@ -60,6 +62,7 @@ struct DemoDriver {
     next_floating_index: u32,
     loaded_layout: Option<DockLayoutV1>,
     selection: Option<Model<DemoSelection>>,
+    hierarchy: Option<Model<DemoHierarchy>>,
     world: Option<Model<DemoWorld>>,
     viewport_tools: Option<Model<ViewportToolManager>>,
 }
@@ -1222,6 +1225,9 @@ impl WinitDriver for DemoDriver {
         if self.selection.is_none() {
             self.selection = Some(app.models_mut().insert(DemoSelection::default()));
         }
+        if self.hierarchy.is_none() {
+            self.hierarchy = Some(app.models_mut().insert(DemoHierarchy::default()));
+        }
         if self.world.is_none() {
             self.world = Some(app.models_mut().insert(DemoWorld::default()));
         }
@@ -1243,6 +1249,14 @@ impl WinitDriver for DemoDriver {
                 model
             }
         };
+        let hierarchy = match self.hierarchy {
+            Some(model) => model,
+            None => {
+                let model = app.models_mut().insert(DemoHierarchy::default());
+                self.hierarchy = Some(model);
+                model
+            }
+        };
         let world = match self.world {
             Some(model) => model,
             None => {
@@ -1259,6 +1273,7 @@ impl WinitDriver for DemoDriver {
             window,
             DemoUiConfig::default(),
             selection,
+            hierarchy,
             world,
             inspector_edit_buffer,
         );
