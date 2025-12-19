@@ -1,3 +1,4 @@
+use fret_app::Effect;
 use fret_core::{
     CaretAffinity, Color, Corners, DrawOrder, Edges, Event, MouseButton, Px, Rect, SceneOp, Size,
     TextConstraints, TextStyle, TextWrap,
@@ -15,6 +16,7 @@ pub struct MultilineProbe {
     affinity: CaretAffinity,
     selection_rects: Vec<Rect>,
     last_bounds: Rect,
+    last_sent_cursor: Option<Rect>,
 }
 
 impl Default for MultilineProbe {
@@ -39,6 +41,7 @@ This is wrapped text (TextWrap::Word) and exercises:\n\
             affinity: CaretAffinity::Downstream,
             selection_rects: Vec::new(),
             last_bounds: Rect::default(),
+            last_sent_cursor: None,
         }
     }
 }
@@ -78,6 +81,10 @@ impl Widget for MultilineProbe {
         true
     }
 
+    fn is_text_input(&self) -> bool {
+        true
+    }
+
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
         match event {
             Event::Pointer(fret_core::PointerEvent::Down {
@@ -97,6 +104,9 @@ impl Widget for MultilineProbe {
 
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
+            }
+            Event::Ime(ime) => {
+                tracing::debug!(?ime, "multiline probe ime");
             }
             Event::Pointer(fret_core::PointerEvent::Move {
                 position, buttons, ..
@@ -218,6 +228,25 @@ impl Widget for MultilineProbe {
             ),
             Size::new(Px(hairline.0.max(1.0)), caret.size.height),
         );
+
+        if cx.focus == Some(cx.node) {
+            if let Some(window) = cx.window {
+                cx.app.push_effect(Effect::ImeAllow {
+                    window,
+                    enabled: true,
+                });
+                if self.last_sent_cursor.map_or(true, |r| r != caret_rect) {
+                    self.last_sent_cursor = Some(caret_rect);
+                    cx.app.push_effect(Effect::ImeSetCursorArea {
+                        window,
+                        rect: caret_rect,
+                    });
+                }
+            }
+        } else {
+            self.last_sent_cursor = None;
+        }
+
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: caret_rect,
