@@ -30,11 +30,13 @@ impl Default for ViewportToolManager {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ViewportInteractionKind {
     MarqueeSelect,
+    PanOrbit,
 }
 
 #[derive(Debug, Clone)]
 pub enum ViewportInteraction {
     MarqueeSelect(MarqueeSelectInteraction),
+    PanOrbit(PanOrbitInteraction),
 }
 
 impl ViewportInteraction {
@@ -42,6 +44,7 @@ impl ViewportInteraction {
     pub fn kind(&self) -> ViewportInteractionKind {
         match self {
             ViewportInteraction::MarqueeSelect(_) => ViewportInteractionKind::MarqueeSelect,
+            ViewportInteraction::PanOrbit(_) => ViewportInteractionKind::PanOrbit,
         }
     }
 
@@ -49,6 +52,7 @@ impl ViewportInteraction {
     pub fn window_target(&self) -> (AppWindowId, RenderTargetId) {
         match self {
             ViewportInteraction::MarqueeSelect(m) => (m.window, m.target),
+            ViewportInteraction::PanOrbit(m) => (m.window, m.target),
         }
     }
 }
@@ -62,4 +66,23 @@ pub struct MarqueeSelectInteraction {
     pub current_uv: (f32, f32),
     pub start_target_px: (u32, u32),
     pub current_target_px: (u32, u32),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PanOrbitKind {
+    Orbit,
+    Pan,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PanOrbitInteraction {
+    pub window: AppWindowId,
+    pub target: RenderTargetId,
+    pub kind: PanOrbitKind,
+    pub start_modifiers: Modifiers,
+    pub start_uv: (f32, f32),
+    pub current_uv: (f32, f32),
+    pub start_target_px: (u32, u32),
+    pub current_target_px: (u32, u32),
+    pub dragging: bool,
 }

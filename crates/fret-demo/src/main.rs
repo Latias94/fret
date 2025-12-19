@@ -16,7 +16,8 @@ use editor_shell::DemoSelection;
 use inspector_edit::InspectorEditService;
 use property_edit::PropertyEditService;
 use viewport_tools::{
-    MarqueeSelectInteraction, ViewportInteraction, ViewportToolManager, ViewportToolMode,
+    MarqueeSelectInteraction, PanOrbitInteraction, PanOrbitKind, ViewportInteraction,
+    ViewportToolManager, ViewportToolMode,
 };
 use world::DemoWorld;
 
@@ -1361,19 +1362,22 @@ impl WinitDriver for DemoDriver {
                 && !modifiers.meta
             {
                 if let Some(tool) = self.viewport_tools {
-                    let mut cancel: Option<MarqueeSelectInteraction> = None;
+                    let mut cancel: Option<(fret_core::AppWindowId, RenderTargetId)> = None;
                     let _ = tool.update(app, |t, _cx| {
                         cancel = match t.interaction.take() {
-                            Some(ViewportInteraction::MarqueeSelect(m)) => Some(m),
+                            Some(ViewportInteraction::MarqueeSelect(m)) => {
+                                Some((m.window, m.target))
+                            }
+                            Some(ViewportInteraction::PanOrbit(m)) => Some((m.window, m.target)),
                             other => {
                                 t.interaction = other;
                                 None
                             }
                         };
                     });
-                    if let Some(m) = cancel {
+                    if let Some((w, target)) = cancel {
                         app.with_global_mut(DockManager::default, |dock, _app| {
-                            dock.set_viewport_overlay(m.window, m.target, None);
+                            dock.set_viewport_overlay(w, target, None);
                         });
                         for &w in self.logical_windows.keys() {
                             app.request_redraw(w);
@@ -1641,164 +1645,297 @@ impl WinitDriver for DemoDriver {
             let target = event.target;
 
             let handled = app.with_global_mut(DockManager::default, |dock, app| match event.kind {
-                fret_core::ViewportInputKind::PointerDown { button, modifiers } => {
-                    if button != fret_core::MouseButton::Left {
-                        return false;
-                    }
-                    let mut active = ViewportToolMode::Select;
-                    let mut has_interaction = false;
-                    let start_uv = event.uv;
-                    let _ = tool.update(app, |t, _cx| {
-                        active = t.active;
-                        has_interaction = t.interaction.is_some();
-                        if has_interaction {
-                            return;
-                        }
+                fret_core::ViewportInputKind::PointerDown { button, modifiers } => match button {
+                    fret_core::MouseButton::Left => {
+                        let mut active = ViewportToolMode::Select;
+                        let mut has_interaction = false;
+                        let start_uv = event.uv;
+                        let _ = tool.update(app, |t, _cx| {
+                            active = t.active;
+                            has_interaction = t.interaction.is_some();
+                            if has_interaction {
+                                return;
+                            }
 
-                        if active == ViewportToolMode::Select {
-                            t.interaction = Some(ViewportInteraction::MarqueeSelect(
-                                MarqueeSelectInteraction {
+                            if active == ViewportToolMode::Select {
+                                t.interaction = Some(ViewportInteraction::MarqueeSelect(
+                                    MarqueeSelectInteraction {
+                                        window,
+                                        target,
+                                        start_modifiers: modifiers,
+                                        start_uv,
+                                        current_uv: start_uv,
+                                        start_target_px: event.target_px,
+                                        current_target_px: event.target_px,
+                                    },
+                                ));
+                            }
+                        });
+                        if has_interaction || active != ViewportToolMode::Select {
+                            return false;
+                        }
+                        dock.set_viewport_overlay(
+                            window,
+                            target,
+                            Some(ViewportOverlay {
+                                marquee: Some(ViewportMarquee {
+                                    a_uv: start_uv,
+                                    b_uv: start_uv,
+                                }),
+                                drag_line: None,
+                            }),
+                        );
+                        app.push_effect(Effect::RequestAnimationFrame(window));
+                        true
+                    }
+                    fret_core::MouseButton::Right | fret_core::MouseButton::Middle => {
+                        let kind = if button == fret_core::MouseButton::Right {
+                            PanOrbitKind::Orbit
+                        } else {
+                            PanOrbitKind::Pan
+                        };
+
+                        let start_uv = event.uv;
+                        let mut started = false;
+                        let _ = tool.update(app, |t, _cx| {
+                            if t.interaction.is_some() {
+                                return;
+                            }
+                            t.interaction =
+                                Some(ViewportInteraction::PanOrbit(PanOrbitInteraction {
                                     window,
                                     target,
+                                    kind,
                                     start_modifiers: modifiers,
                                     start_uv,
                                     current_uv: start_uv,
                                     start_target_px: event.target_px,
                                     current_target_px: event.target_px,
-                                },
-                            ));
-                        }
-                    });
-                    if has_interaction || active != ViewportToolMode::Select {
-                        return false;
+                                    dragging: false,
+                                }));
+                            started = true;
+                        });
+                        started
                     }
-                    dock.set_viewport_overlay(
-                        window,
-                        target,
-                        Some(ViewportOverlay {
-                            marquee: Some(ViewportMarquee {
-                                a_uv: start_uv,
-                                b_uv: start_uv,
-                            }),
-                        }),
-                    );
-                    app.push_effect(Effect::RequestAnimationFrame(window));
-                    true
-                }
+                    _ => false,
+                },
                 fret_core::ViewportInputKind::PointerMove { buttons, .. } => {
-                    if !buttons.left {
-                        return false;
-                    }
-                    let current_uv = event.uv;
-                    let mut next: Option<MarqueeSelectInteraction> = None;
-                    let _ = tool.update(app, |t, _cx| {
-                        let Some(ViewportInteraction::MarqueeSelect(m)) = t.interaction.as_mut()
-                        else {
-                            return;
+                    if buttons.left {
+                        let current_uv = event.uv;
+                        let mut next: Option<MarqueeSelectInteraction> = None;
+                        let _ = tool.update(app, |t, _cx| {
+                            let Some(ViewportInteraction::MarqueeSelect(m)) =
+                                t.interaction.as_mut()
+                            else {
+                                return;
+                            };
+                            if m.window == window && m.target == target {
+                                m.current_uv = current_uv;
+                                m.current_target_px = event.target_px;
+                                next = Some(*m);
+                            }
+                        });
+                        let Some(m) = next else {
+                            return false;
                         };
-                        if m.window == window && m.target == target {
-                            m.current_uv = current_uv;
-                            m.current_target_px = event.target_px;
-                            next = Some(*m);
-                        }
-                    });
-                    let Some(m) = next else {
-                        return false;
-                    };
-                    dock.set_viewport_overlay(
-                        window,
-                        target,
-                        Some(ViewportOverlay {
-                            marquee: Some(ViewportMarquee {
-                                a_uv: m.start_uv,
-                                b_uv: m.current_uv,
+                        dock.set_viewport_overlay(
+                            window,
+                            target,
+                            Some(ViewportOverlay {
+                                marquee: Some(ViewportMarquee {
+                                    a_uv: m.start_uv,
+                                    b_uv: m.current_uv,
+                                }),
+                                drag_line: None,
                             }),
-                        }),
-                    );
-                    app.push_effect(Effect::RequestAnimationFrame(window));
-                    true
+                        );
+                        app.push_effect(Effect::RequestAnimationFrame(window));
+                        return true;
+                    }
+
+                    if buttons.right || buttons.middle {
+                        let current_uv = event.uv;
+                        let mut next: Option<PanOrbitInteraction> = None;
+                        let _ = tool.update(app, |t, _cx| {
+                            let Some(ViewportInteraction::PanOrbit(m)) = t.interaction.as_mut()
+                            else {
+                                return;
+                            };
+
+                            let want_right =
+                                m.kind == PanOrbitKind::Orbit && buttons.right && !buttons.middle;
+                            let want_middle =
+                                m.kind == PanOrbitKind::Pan && buttons.middle && !buttons.right;
+
+                            if m.window == window
+                                && m.target == target
+                                && (want_right || want_middle)
+                            {
+                                m.current_uv = current_uv;
+                                m.current_target_px = event.target_px;
+
+                                let dx = m.start_target_px.0.abs_diff(m.current_target_px.0);
+                                let dy = m.start_target_px.1.abs_diff(m.current_target_px.1);
+                                if !m.dragging && (dx > 3 || dy > 3) {
+                                    m.dragging = true;
+                                }
+
+                                next = Some(*m);
+                            }
+                        });
+
+                        let Some(m) = next else {
+                            return false;
+                        };
+                        if !m.dragging {
+                            return true;
+                        }
+
+                        let color = match m.kind {
+                            PanOrbitKind::Orbit => Color {
+                                r: 1.0,
+                                g: 0.82,
+                                b: 0.28,
+                                a: 0.85,
+                            },
+                            PanOrbitKind::Pan => Color {
+                                r: 0.25,
+                                g: 0.92,
+                                b: 0.55,
+                                a: 0.85,
+                            },
+                        };
+
+                        dock.set_viewport_overlay(
+                            window,
+                            target,
+                            Some(ViewportOverlay {
+                                marquee: None,
+                                drag_line: Some(fret_ui::dock::ViewportDragLine {
+                                    a_uv: m.start_uv,
+                                    b_uv: m.current_uv,
+                                    color,
+                                }),
+                            }),
+                        );
+                        app.push_effect(Effect::RequestAnimationFrame(window));
+                        return true;
+                    }
+
+                    false
                 }
                 fret_core::ViewportInputKind::PointerUp {
                     button,
                     modifiers: _,
-                } => {
-                    if button != fret_core::MouseButton::Left {
-                        return false;
-                    }
-                    let mut commit: Option<MarqueeSelectInteraction> = None;
-                    let _ = tool.update(app, |t, _cx| {
-                        commit = match t.interaction.take() {
-                            Some(ViewportInteraction::MarqueeSelect(m))
-                                if m.window == window && m.target == target =>
-                            {
-                                Some(m)
-                            }
-                            other => {
-                                t.interaction = other;
-                                None
-                            }
+                } => match button {
+                    fret_core::MouseButton::Left => {
+                        let mut commit: Option<MarqueeSelectInteraction> = None;
+                        let _ = tool.update(app, |t, _cx| {
+                            commit = match t.interaction.take() {
+                                Some(ViewportInteraction::MarqueeSelect(m))
+                                    if m.window == window && m.target == target =>
+                                {
+                                    Some(m)
+                                }
+                                other => {
+                                    t.interaction = other;
+                                    None
+                                }
+                            };
+                        });
+                        dock.set_viewport_overlay(window, target, None);
+                        app.request_redraw(window);
+
+                        let Some(m) = commit else {
+                            return true;
                         };
-                    });
-                    dock.set_viewport_overlay(window, target, None);
-                    app.request_redraw(window);
 
-                    let Some(m) = commit else {
-                        return true;
-                    };
+                        let dx = m.start_target_px.0.abs_diff(m.current_target_px.0);
+                        let dy = m.start_target_px.1.abs_diff(m.current_target_px.1);
 
-                    let dx = m.start_target_px.0.abs_diff(m.current_target_px.0);
-                    let dy = m.start_target_px.1.abs_diff(m.current_target_px.1);
+                        let lead: Option<u64>;
+                        let ids: Vec<u64> = if dx <= 3 && dy <= 3 {
+                            let grid_w: u64 = 64;
+                            let grid_h: u64 = 36;
+                            let x = ((m.current_uv.0 * grid_w as f32).floor() as u64)
+                                .min(grid_w.saturating_sub(1));
+                            let y = ((m.current_uv.1 * grid_h as f32).floor() as u64)
+                                .min(grid_h.saturating_sub(1));
+                            let id = 1 + y * grid_w + x;
+                            lead = Some(id);
+                            vec![id]
+                        } else {
+                            let (u0, v0) = (
+                                m.start_uv.0.min(m.current_uv.0),
+                                m.start_uv.1.min(m.current_uv.1),
+                            );
+                            let (u1, v1) = (
+                                m.start_uv.0.max(m.current_uv.0),
+                                m.start_uv.1.max(m.current_uv.1),
+                            );
+                            let grid_w: u64 = 64;
+                            let grid_h: u64 = 36;
+                            let x0 =
+                                ((u0 * grid_w as f32).floor() as u64).min(grid_w.saturating_sub(1));
+                            let x1 =
+                                ((u1 * grid_w as f32).floor() as u64).min(grid_w.saturating_sub(1));
+                            let y0 =
+                                ((v0 * grid_h as f32).floor() as u64).min(grid_h.saturating_sub(1));
+                            let y1 =
+                                ((v1 * grid_h as f32).floor() as u64).min(grid_h.saturating_sub(1));
 
-                    let lead: Option<u64>;
-                    let ids: Vec<u64> = if dx <= 3 && dy <= 3 {
-                        let grid_w: u64 = 64;
-                        let grid_h: u64 = 36;
-                        let x = ((m.current_uv.0 * grid_w as f32).floor() as u64)
-                            .min(grid_w.saturating_sub(1));
-                        let y = ((m.current_uv.1 * grid_h as f32).floor() as u64)
-                            .min(grid_h.saturating_sub(1));
-                        let id = 1 + y * grid_w + x;
-                        lead = Some(id);
-                        vec![id]
-                    } else {
-                        let (u0, v0) = (
-                            m.start_uv.0.min(m.current_uv.0),
-                            m.start_uv.1.min(m.current_uv.1),
-                        );
-                        let (u1, v1) = (
-                            m.start_uv.0.max(m.current_uv.0),
-                            m.start_uv.1.max(m.current_uv.1),
-                        );
-                        let grid_w: u64 = 64;
-                        let grid_h: u64 = 36;
-                        let x0 =
-                            ((u0 * grid_w as f32).floor() as u64).min(grid_w.saturating_sub(1));
-                        let x1 =
-                            ((u1 * grid_w as f32).floor() as u64).min(grid_w.saturating_sub(1));
-                        let y0 =
-                            ((v0 * grid_h as f32).floor() as u64).min(grid_h.saturating_sub(1));
-                        let y1 =
-                            ((v1 * grid_h as f32).floor() as u64).min(grid_h.saturating_sub(1));
-
-                        let mut out: Vec<u64> = Vec::new();
-                        for y in y0..=y1 {
-                            for x in x0..=x1 {
-                                out.push(1 + y * grid_w + x);
+                            let mut out: Vec<u64> = Vec::new();
+                            for y in y0..=y1 {
+                                for x in x0..=x1 {
+                                    out.push(1 + y * grid_w + x);
+                                    if out.len() >= 2048 {
+                                        break;
+                                    }
+                                }
                                 if out.len() >= 2048 {
                                     break;
                                 }
                             }
-                            if out.len() >= 2048 {
-                                break;
-                            }
-                        }
-                        lead = out.last().copied();
-                        out
-                    };
+                            lead = out.last().copied();
+                            out
+                        };
 
-                    self.apply_selection_delta(app, lead, ids, m.start_modifiers);
-                    true
-                }
+                        self.apply_selection_delta(app, lead, ids, m.start_modifiers);
+                        true
+                    }
+                    fret_core::MouseButton::Right | fret_core::MouseButton::Middle => {
+                        let mut end: Option<PanOrbitInteraction> = None;
+                        let _ = tool.update(app, |t, _cx| {
+                            end = match t.interaction.take() {
+                                Some(ViewportInteraction::PanOrbit(m))
+                                    if m.window == window && m.target == target =>
+                                {
+                                    Some(m)
+                                }
+                                other => {
+                                    t.interaction = other;
+                                    None
+                                }
+                            };
+                        });
+
+                        let Some(m) = end else {
+                            return false;
+                        };
+                        let want_right = m.kind == PanOrbitKind::Orbit
+                            && button == fret_core::MouseButton::Right;
+                        let want_middle =
+                            m.kind == PanOrbitKind::Pan && button == fret_core::MouseButton::Middle;
+                        if !want_right && !want_middle {
+                            return false;
+                        }
+
+                        dock.set_viewport_overlay(window, target, None);
+                        app.request_redraw(window);
+                        true
+                    }
+                    _ => false,
+                },
                 _ => false,
             });
 

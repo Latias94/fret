@@ -58,12 +58,20 @@ pub struct DockManager {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ViewportOverlay {
     pub marquee: Option<ViewportMarquee>,
+    pub drag_line: Option<ViewportDragLine>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ViewportMarquee {
     pub a_uv: (f32, f32),
     pub b_uv: (f32, f32),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViewportDragLine {
+    pub a_uv: (f32, f32),
+    pub b_uv: (f32, f32),
+    pub color: Color,
 }
 
 impl Default for DockManager {
@@ -128,7 +136,7 @@ pub struct DockSpace {
     divider_drag: Option<DividerDragState>,
     panel_content: HashMap<PanelKey, NodeId>,
     panel_last_sizes: HashMap<PanelKey, Size>,
-    viewport_capture: Option<ViewportHit>,
+    viewport_capture: Option<ViewportCaptureState>,
 }
 
 impl DockSpace {
@@ -231,37 +239,35 @@ impl Widget for DockSpace {
                                 &layout,
                                 *position,
                             ) {
-                                if *button == fret_core::MouseButton::Right {
+                                if *button == fret_core::MouseButton::Left
+                                    || *button == fret_core::MouseButton::Right
+                                    || *button == fret_core::MouseButton::Middle
+                                {
                                     if let Some(e) = viewport_input_from_hit(
                                         self.window,
-                                        hit,
+                                        hit.clone(),
                                         *position,
                                         ViewportInputKind::PointerDown {
                                             button: *button,
                                             modifiers: *modifiers,
                                         },
                                     ) {
-                                        dock.viewport_context_menu = Some(e);
-                                        open_viewport_menu = Some((*position, e));
-                                        invalidate_paint = true;
-                                    }
-                                } else {
-                                    if *button == fret_core::MouseButton::Left {
-                                        self.viewport_capture = Some(hit.clone());
-                                        request_pointer_capture = Some(Some(cx.node));
-                                    }
-                                    if let Some(e) = viewport_input_from_hit(
-                                        self.window,
-                                        hit,
-                                        *position,
-                                        ViewportInputKind::PointerDown {
-                                            button: *button,
-                                            modifiers: *modifiers,
-                                        },
-                                    ) {
+                                        if *button == fret_core::MouseButton::Right {
+                                            dock.viewport_context_menu = Some(e);
+                                        }
                                         pending_effects.push(Effect::ViewportInput(e));
                                         pending_redraws.push(self.window);
                                     }
+
+                                    self.viewport_capture = Some(ViewportCaptureState {
+                                        hit,
+                                        button: *button,
+                                        start: *position,
+                                        moved: false,
+                                        open_context_menu_on_up: *button
+                                            == fret_core::MouseButton::Right,
+                                    });
+                                    request_pointer_capture = Some(Some(cx.node));
                                 }
                             }
                         }
@@ -296,7 +302,21 @@ impl Widget for DockSpace {
                             return;
                         }
 
-                        if let Some(hit) = self.viewport_capture.clone() {
+                        if let Some(capture) = self.viewport_capture.as_mut() {
+                            if capture.open_context_menu_on_up
+                                && !capture.moved
+                                && capture.button == fret_core::MouseButton::Right
+                                && buttons.right
+                            {
+                                let dx = position.x.0 - capture.start.x.0;
+                                let dy = position.y.0 - capture.start.y.0;
+                                let dist2 = dx * dx + dy * dy;
+                                if dist2 > 16.0 {
+                                    capture.moved = true;
+                                }
+                            }
+
+                            let hit = capture.hit.clone();
                             dock.viewport_hover = Some(ViewportHover {
                                 window: self.window,
                                 panel: hit.panel.clone(),
@@ -432,22 +452,34 @@ impl Widget for DockSpace {
                         button,
                         modifiers,
                     } => {
-                        let released_capture = *button == fret_core::MouseButton::Left
-                            && self.viewport_capture.is_some();
+                        let released_capture = self
+                            .viewport_capture
+                            .as_ref()
+                            .is_some_and(|c| c.button == *button);
                         if released_capture {
-                            if let Some(hit) = self.viewport_capture.take() {
-                                let e = viewport_input_from_hit_clamped(
-                                    self.window,
-                                    hit,
-                                    *position,
-                                    ViewportInputKind::PointerUp {
-                                        button: *button,
-                                        modifiers: *modifiers,
-                                    },
-                                );
-                                pending_effects.push(Effect::ViewportInput(e));
-                                pending_redraws.push(self.window);
+                            let capture = self.viewport_capture.take().unwrap();
+                            let e = viewport_input_from_hit_clamped(
+                                self.window,
+                                capture.hit.clone(),
+                                *position,
+                                ViewportInputKind::PointerUp {
+                                    button: *button,
+                                    modifiers: *modifiers,
+                                },
+                            );
+                            if *button == fret_core::MouseButton::Right {
+                                dock.viewport_context_menu = Some(e);
                             }
+                            pending_effects.push(Effect::ViewportInput(e));
+                            pending_redraws.push(self.window);
+
+                            if capture.open_context_menu_on_up
+                                && !capture.moved
+                                && *button == fret_core::MouseButton::Right
+                            {
+                                open_viewport_menu = Some((*position, e));
+                            }
+
                             dock.hover = None;
                             dock.viewport_hover = None;
                             request_pointer_capture = Some(None);
@@ -966,6 +998,9 @@ fn paint_viewport_overlay(content: Rect, overlay: ViewportOverlay, scene: &mut S
     if let Some(m) = overlay.marquee {
         paint_viewport_marquee(content, m, scene);
     }
+    if let Some(line) = overlay.drag_line {
+        paint_viewport_drag_line(content, line, scene);
+    }
 }
 
 fn paint_viewport_marquee(content: Rect, marquee: ViewportMarquee, scene: &mut Scene) {
@@ -1039,12 +1074,71 @@ fn paint_viewport_marquee(content: Rect, marquee: ViewportMarquee, scene: &mut S
     }
 }
 
+fn paint_viewport_drag_line(content: Rect, line: ViewportDragLine, scene: &mut Scene) {
+    let (au, av) = line.a_uv;
+    let (bu, bv) = line.b_uv;
+    let x0 = content.origin.x.0 + content.size.width.0 * au;
+    let y0 = content.origin.y.0 + content.size.height.0 * av;
+    let x1 = content.origin.x.0 + content.size.width.0 * bu;
+    let y1 = content.origin.y.0 + content.size.height.0 * bv;
+
+    let color = line.color;
+    let t = Px(1.5);
+
+    let h = Rect::new(
+        Point::new(Px(x0.min(x1)), Px(y0 - t.0 * 0.5)),
+        Size::new(Px((x1 - x0).abs().max(0.0)), t),
+    );
+    let v = Rect::new(
+        Point::new(Px(x1 - t.0 * 0.5), Px(y0.min(y1))),
+        Size::new(t, Px((y1 - y0).abs().max(0.0))),
+    );
+
+    for rect in [h, v] {
+        if rect.size.width.0 <= 0.0 || rect.size.height.0 <= 0.0 {
+            continue;
+        }
+        scene.push(SceneOp::Quad {
+            order: fret_core::DrawOrder(8),
+            rect,
+            background: color,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: fret_core::Corners::all(Px(0.0)),
+        });
+    }
+
+    let p = Px(6.0);
+    for (x, y) in [(x0, y0), (x1, y1)] {
+        scene.push(SceneOp::Quad {
+            order: fret_core::DrawOrder(9),
+            rect: Rect::new(
+                Point::new(Px(x - p.0 * 0.5), Px(y - p.0 * 0.5)),
+                Size::new(p, p),
+            ),
+            background: color,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: fret_core::Corners::all(Px(2.0)),
+        });
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct ViewportHit {
     panel: PanelKey,
     viewport: ViewportPanel,
     content: Rect,
     draw_rect: Rect,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct ViewportCaptureState {
+    hit: ViewportHit,
+    button: fret_core::MouseButton,
+    start: Point,
+    moved: bool,
+    open_context_menu_on_up: bool,
 }
 
 fn viewport_input_from_hit(

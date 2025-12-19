@@ -118,6 +118,9 @@ Use:
 - Demo tool routing from `Effect::ViewportInput`:
   - driver handler: `crates/fret-demo/src/main.rs` (`viewport_input`)
   - cancel path: `crates/fret-demo/src/main.rs` (Escape clears interaction + overlay)
+- Prototype tool interactions:
+  - selection marquee: left-drag
+  - navigation stub: right-drag orbit, middle-drag pan (drag thresholded so right-click context menu still works)
 - Overlay rendering path (framework-owned hosting, editor-owned state):
   - host: `crates/fret-ui/src/dock.rs` (`DockManager::set_viewport_overlay`, `paint_viewport_marquee`)
 
