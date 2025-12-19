@@ -33,6 +33,17 @@ impl PropertyPath {
         }
         true
     }
+
+    pub fn starts_with(&self, prefix: &PropertyPath) -> bool {
+        if prefix.0.len() > self.0.len() {
+            return false;
+        }
+        self.0
+            .iter()
+            .take(prefix.0.len())
+            .zip(prefix.0.iter())
+            .all(|(a, b)| a == b)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -130,6 +130,14 @@ Notes:
 - Decide how to encode richer type tags (e.g. namespaced strings vs UUIDs).
 - Decide optional validation/error reporting channel for failed edits.
 
+## Implementation Notes (Current Prototype)
+
+- Demo protocol types + editor registry: `crates/fret-demo/src/inspector_protocol.rs`
+- Demo property edit request plumbing (commit-only for now): `crates/fret-demo/src/property_edit.rs`
+- Demo inspector uses property tree + registry to build rows and routes edits through commands/services:
+  - Inspector panel: `crates/fret-demo/src/editor_shell.rs`
+  - Commit handler: `crates/fret-demo/src/main.rs` (`property_edit.commit`, `inspector_edit.commit`)
+
 ## References
 
 - Framework/editor boundary: `docs/adr/0027-framework-scope-and-responsibilities.md`
@@ -140,4 +148,3 @@ Notes:
   - `repo-ref/Fyrox/editor/src/plugin.rs`
 - Godot inspector plugin chain:
   - `repo-ref/godot/editor/inspector/editor_inspector.cpp`
-

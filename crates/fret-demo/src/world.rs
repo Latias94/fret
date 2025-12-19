@@ -111,6 +111,17 @@ impl DemoWorld {
         false
     }
 
+    pub fn apply_property_value(
+        &mut self,
+        targets: &[u64],
+        path: &PropertyPath,
+        value: PropertyValue,
+    ) {
+        for &id in targets {
+            let _ = self.set_property(id, path, value.clone());
+        }
+    }
+
     pub fn apply_edit(&mut self, request: &InspectorEditRequest, input: &str) {
         let value = match request.kind {
             InspectorEditKind::String => PropertyValue::String(input.to_string()),
@@ -138,8 +149,6 @@ impl DemoWorld {
             }
         };
 
-        for &id in &request.targets {
-            let _ = self.set_property(id, &request.path, value.clone());
-        }
+        self.apply_property_value(&request.targets, &request.path, value);
     }
 }

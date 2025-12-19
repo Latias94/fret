@@ -1,5 +1,10 @@
 use crate::inspector_edit::{InspectorEditKind, InspectorEditRequest, InspectorEditService};
+use crate::inspector_protocol::{
+    InspectorEditorKind, InspectorEditorRegistry, PropertyLeaf, PropertyMeta, PropertyNode,
+    PropertyTree, PropertyTypeTag,
+};
 use crate::property::PropertyPath;
+use crate::property_edit::{PropertyEditKind, PropertyEditRequest, PropertyEditService};
 use crate::world::DemoWorld;
 use fret_app::{App, Model};
 use fret_core::{Color, Corners, Edges, Event, Px, Size, TextStyle};
@@ -29,6 +34,7 @@ enum InspectorRowAction {
     ToggleBool {
         targets: Vec<u64>,
         path: PropertyPath,
+        current: Option<bool>,
     },
     EditValue {
         request: InspectorEditRequest,
@@ -62,21 +68,6 @@ impl InspectorDataSource {
             return Self { rows };
         };
 
-        #[derive(Default)]
-        struct InspectorEditorRegistry {
-            vec3_overrides: Vec<PropertyPath>,
-        }
-
-        impl InspectorEditorRegistry {
-            fn register_vec3(&mut self, path: PropertyPath) {
-                self.vec3_overrides.push(path);
-            }
-
-            fn is_vec3(&self, path: &PropertyPath) -> bool {
-                self.vec3_overrides.iter().any(|p| p == path)
-            }
-        }
-
         fn mixed_value(
             world: &DemoWorld,
             targets: &[u64],
@@ -100,104 +91,155 @@ impl InspectorDataSource {
         let path_scale = PropertyPath::new().field("transform").field("scale");
 
         let mut registry = InspectorEditorRegistry::default();
-        registry.register_vec3(path_pos.clone());
+        registry.register_path_prefix(
+            PropertyTypeTag::new("f32"),
+            path_rot.clone(),
+            InspectorEditorKind::AngleDegreesPopup,
+        );
 
-        rows.push(InspectorRow::Header {
-            label: format!("GameObject ({})", targets.len()),
-        });
-
-        let name_val = mixed_value(world, &targets, &path_name);
-        rows.push(InspectorRow::Property {
-            label: "Name".to_string(),
-            value: name_val.as_display_string(),
-            action: Some(InspectorRowAction::EditValue {
-                request: InspectorEditRequest {
-                    targets: targets.clone(),
-                    path: path_name.clone(),
-                    kind: InspectorEditKind::String,
-                    initial_text: match name_val {
-                        crate::property::PropertyValue::String(v) => v,
-                        _ => String::new(),
-                    },
+        let tree = PropertyTree {
+            roots: vec![
+                PropertyNode::Group {
+                    label: format!("GameObject ({})", targets.len()),
+                    children: vec![
+                        PropertyNode::Leaf(PropertyLeaf {
+                            path: path_name.clone(),
+                            label: "Name".to_string(),
+                            type_tag: PropertyTypeTag::new("string"),
+                            value: mixed_value(world, &targets, &path_name),
+                            meta: PropertyMeta::default(),
+                        }),
+                        PropertyNode::Leaf(PropertyLeaf {
+                            path: path_active.clone(),
+                            label: "Active".to_string(),
+                            type_tag: PropertyTypeTag::new("bool"),
+                            value: mixed_value(world, &targets, &path_active),
+                            meta: PropertyMeta::default(),
+                        }),
+                    ],
                 },
-            }),
-        });
-
-        let active_val = mixed_value(world, &targets, &path_active);
-        let active_action = match active_val {
-            crate::property::PropertyValue::Bool(_) => Some(InspectorRowAction::ToggleBool {
-                targets: targets.clone(),
-                path: path_active.clone(),
-            }),
-            _ => None,
+                PropertyNode::Group {
+                    label: "Transform".to_string(),
+                    children: vec![
+                        PropertyNode::Leaf(PropertyLeaf {
+                            path: path_pos.clone(),
+                            label: "Position".to_string(),
+                            type_tag: PropertyTypeTag::new("vec3"),
+                            value: mixed_value(world, &targets, &path_pos),
+                            meta: PropertyMeta::default(),
+                        }),
+                        PropertyNode::Leaf(PropertyLeaf {
+                            path: path_rot.clone(),
+                            label: "Rotation Y".to_string(),
+                            type_tag: PropertyTypeTag::new("f32"),
+                            value: mixed_value(world, &targets, &path_rot),
+                            meta: PropertyMeta::default(),
+                        }),
+                        PropertyNode::Leaf(PropertyLeaf {
+                            path: path_scale.clone(),
+                            label: "Scale".to_string(),
+                            type_tag: PropertyTypeTag::new("f32"),
+                            value: mixed_value(world, &targets, &path_scale),
+                            meta: PropertyMeta::default(),
+                        }),
+                    ],
+                },
+            ],
         };
-        rows.push(InspectorRow::Property {
-            label: "Active".to_string(),
-            value: active_val.as_display_string(),
-            action: active_action,
-        });
 
-        rows.push(InspectorRow::Header {
-            label: "Transform".to_string(),
-        });
-
-        let pos_val = mixed_value(world, &targets, &path_pos);
-        let pos_kind = if registry.is_vec3(&path_pos) {
-            InspectorEditKind::Vec3
-        } else {
-            InspectorEditKind::F32
-        };
-        rows.push(InspectorRow::Property {
-            label: "Position".to_string(),
-            value: pos_val.as_display_string(),
-            action: Some(InspectorRowAction::EditValue {
-                request: InspectorEditRequest {
-                    targets: targets.clone(),
-                    path: path_pos.clone(),
-                    kind: pos_kind,
-                    initial_text: match pos_val {
-                        crate::property::PropertyValue::Vec3([x, y, z]) => {
-                            format!("{x:.3}, {y:.3}, {z:.3}")
+        fn flatten(
+            out: &mut Vec<InspectorRow>,
+            node: &PropertyNode,
+            registry: &InspectorEditorRegistry,
+            targets: &[u64],
+        ) {
+            match node {
+                PropertyNode::Group { label, children } => {
+                    out.push(InspectorRow::Header {
+                        label: label.clone(),
+                    });
+                    for c in children {
+                        flatten(out, c, registry, targets);
+                    }
+                }
+                PropertyNode::Leaf(leaf) => {
+                    let value = registry.display_value(leaf);
+                    let kind = registry.resolve_kind(leaf);
+                    let action = match kind {
+                        InspectorEditorKind::BoolToggle => match &leaf.value {
+                            crate::property::PropertyValue::Bool(v) => {
+                                Some(InspectorRowAction::ToggleBool {
+                                    targets: targets.to_vec(),
+                                    path: leaf.path.clone(),
+                                    current: Some(*v),
+                                })
+                            }
+                            crate::property::PropertyValue::Mixed => {
+                                Some(InspectorRowAction::ToggleBool {
+                                    targets: targets.to_vec(),
+                                    path: leaf.path.clone(),
+                                    current: None,
+                                })
+                            }
+                            _ => None,
+                        },
+                        InspectorEditorKind::TextPopup => Some(InspectorRowAction::EditValue {
+                            request: InspectorEditRequest {
+                                targets: targets.to_vec(),
+                                path: leaf.path.clone(),
+                                kind: InspectorEditKind::String,
+                                initial_text: match &leaf.value {
+                                    crate::property::PropertyValue::String(v) => v.clone(),
+                                    _ => String::new(),
+                                },
+                            },
+                        }),
+                        InspectorEditorKind::NumberPopup
+                        | InspectorEditorKind::AngleDegreesPopup => {
+                            Some(InspectorRowAction::EditValue {
+                                request: InspectorEditRequest {
+                                    targets: targets.to_vec(),
+                                    path: leaf.path.clone(),
+                                    kind: InspectorEditKind::F32,
+                                    initial_text: match &leaf.value {
+                                        crate::property::PropertyValue::F32(v) => match kind {
+                                            InspectorEditorKind::AngleDegreesPopup => {
+                                                format!("{v:.1}")
+                                            }
+                                            _ => format!("{v:.3}"),
+                                        },
+                                        _ => String::new(),
+                                    },
+                                },
+                            })
                         }
-                        _ => String::new(),
-                    },
-                },
-            }),
-        });
+                        InspectorEditorKind::Vec3Popup => Some(InspectorRowAction::EditValue {
+                            request: InspectorEditRequest {
+                                targets: targets.to_vec(),
+                                path: leaf.path.clone(),
+                                kind: InspectorEditKind::Vec3,
+                                initial_text: match &leaf.value {
+                                    crate::property::PropertyValue::Vec3([x, y, z]) => {
+                                        format!("{x:.3}, {y:.3}, {z:.3}")
+                                    }
+                                    _ => String::new(),
+                                },
+                            },
+                        }),
+                    };
 
-        let rot_val = mixed_value(world, &targets, &path_rot);
-        rows.push(InspectorRow::Property {
-            label: "Rotation Y".to_string(),
-            value: rot_val.as_display_string(),
-            action: Some(InspectorRowAction::EditValue {
-                request: InspectorEditRequest {
-                    targets: targets.clone(),
-                    path: path_rot.clone(),
-                    kind: InspectorEditKind::F32,
-                    initial_text: match rot_val {
-                        crate::property::PropertyValue::F32(v) => format!("{v:.3}"),
-                        _ => String::new(),
-                    },
-                },
-            }),
-        });
+                    out.push(InspectorRow::Property {
+                        label: leaf.label.clone(),
+                        value,
+                        action,
+                    });
+                }
+            }
+        }
 
-        let scale_val = mixed_value(world, &targets, &path_scale);
-        rows.push(InspectorRow::Property {
-            label: "Scale".to_string(),
-            value: scale_val.as_display_string(),
-            action: Some(InspectorRowAction::EditValue {
-                request: InspectorEditRequest {
-                    targets,
-                    path: path_scale,
-                    kind: InspectorEditKind::F32,
-                    initial_text: match scale_val {
-                        crate::property::PropertyValue::F32(v) => format!("{v:.3}"),
-                        _ => String::new(),
-                    },
-                },
-            }),
-        });
+        for n in &tree.roots {
+            flatten(&mut rows, n, &registry, &targets);
+        }
 
         Self { rows }
     }
@@ -437,20 +479,25 @@ impl Widget for InspectorPanel {
             };
             if let Some(action) = self.list.data().action_at(row_index) {
                 match action {
-                    InspectorRowAction::ToggleBool { targets, path } => {
-                        let _ = self.world.update(cx.app, |w, _cx| {
-                            for id in targets {
-                                let cur = w.get_property(id, &path);
-                                if let Some(crate::property::PropertyValue::Bool(v)) = cur {
-                                    let _ = w.set_property(
-                                        id,
-                                        &path,
-                                        crate::property::PropertyValue::Bool(!v),
-                                    );
-                                }
-                            }
-                        });
-                        cx.request_redraw();
+                    InspectorRowAction::ToggleBool {
+                        targets,
+                        path,
+                        current,
+                    } => {
+                        let next = current.map(|v| !v).unwrap_or(true);
+                        cx.app
+                            .with_global_mut(PropertyEditService::default, |s, _app| {
+                                s.set(
+                                    window,
+                                    PropertyEditRequest {
+                                        targets,
+                                        path,
+                                        value: crate::property::PropertyValue::Bool(next),
+                                        kind: PropertyEditKind::Commit,
+                                    },
+                                );
+                            });
+                        cx.dispatch_command(fret_app::CommandId::from("property_edit.commit"));
                         cx.stop_propagation();
                         return;
                     }

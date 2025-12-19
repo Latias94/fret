@@ -5,13 +5,16 @@ mod editor_shell;
 mod elements_mvp2;
 mod ime_probe;
 mod inspector_edit;
+mod inspector_protocol;
 mod property;
+mod property_edit;
 mod viewport_tools;
 mod world;
 
 use demo_ui::{DemoLayers, DemoUiConfig, build_demo_ui};
 use editor_shell::DemoSelection;
 use inspector_edit::InspectorEditService;
+use property_edit::PropertyEditService;
 use viewport_tools::ViewportToolManager;
 use world::DemoWorld;
 
@@ -339,6 +342,7 @@ impl WinitDriver for DemoDriver {
         self.logical_windows.insert(main_window, "main".to_string());
 
         app.set_global(InspectorEditService::default());
+        app.set_global(PropertyEditService::default());
 
         app.commands_mut().register(
             CommandId::from("command_palette.toggle"),
@@ -388,6 +392,13 @@ impl WinitDriver for DemoDriver {
             CommandId::from("inspector_edit.commit"),
             CommandMeta::new("Commit Inspector Edit")
                 .with_description("Internal: commits the inspector value editor popup")
+                .with_category("Inspector")
+                .hidden(),
+        );
+        app.commands_mut().register(
+            CommandId::from("property_edit.commit"),
+            CommandMeta::new("Commit Property Edit")
+                .with_description("Internal: commits a property edit request")
                 .with_category("Inspector")
                 .hidden(),
         );
@@ -1469,6 +1480,24 @@ impl WinitDriver for DemoDriver {
                     state.ui.set_focus(Some(prev));
                 }
                 app.request_redraw(window);
+            }
+            "property_edit.commit" => {
+                let Some(request) = app
+                    .global_mut::<PropertyEditService>()
+                    .and_then(|s| s.take(window))
+                else {
+                    return;
+                };
+
+                if let Some(world) = self.world {
+                    let _ = world.update(app, |w, _cx| {
+                        w.apply_property_value(&request.targets, &request.path, request.value);
+                    });
+                }
+
+                for &w in self.logical_windows.keys() {
+                    app.request_redraw(w);
+                }
             }
             "command_palette.close" => {
                 if state.ui.is_layer_visible(state.layers.command_palette) {
