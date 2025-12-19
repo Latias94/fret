@@ -69,6 +69,13 @@ pub struct TextArea {
     blob: Option<fret_core::TextBlobId>,
     metrics: Option<TextMetrics>,
 
+    offset_y: Px,
+    dragging_thumb: bool,
+    drag_pointer_start_y: Px,
+    drag_offset_start_y: Px,
+    last_content_height: Px,
+    last_viewport_height: Px,
+
     caret: usize,
     selection_anchor: usize,
     affinity: CaretAffinity,
@@ -94,6 +101,12 @@ impl Default for TextArea {
             style: TextAreaStyle::default(),
             blob: None,
             metrics: None,
+            offset_y: Px(0.0),
+            dragging_thumb: false,
+            drag_pointer_start_y: Px(0.0),
+            drag_offset_start_y: Px(0.0),
+            last_content_height: Px(0.0),
+            last_viewport_height: Px(0.0),
             caret: 0,
             selection_anchor: 0,
             affinity: CaretAffinity::Downstream,
@@ -138,6 +151,10 @@ impl TextArea {
     pub fn with_style(mut self, style: TextAreaStyle) -> Self {
         self.style = style;
         self
+    }
+
+    pub fn offset_y(&self) -> Px {
+        self.offset_y
     }
 
     fn selection_range(&self) -> (usize, usize) {
@@ -258,6 +275,73 @@ impl TextArea {
         true
     }
 
+    fn max_offset(&self) -> Px {
+        Px((self.last_content_height.0 - self.last_viewport_height.0).max(0.0))
+    }
+
+    fn clamp_offset(&mut self, content_height: Px, viewport_height: Px) {
+        let max = Px((content_height.0 - viewport_height.0).max(0.0));
+        self.offset_y = Px(self.offset_y.0.clamp(0.0, max.0));
+    }
+
+    fn scrollbar_geometry(&self, bounds: Rect) -> Option<(Rect, Rect)> {
+        let viewport_h = self.last_viewport_height;
+        if viewport_h.0 <= 0.0 {
+            return None;
+        }
+
+        let content_h = self.last_content_height;
+        if content_h.0 <= viewport_h.0 {
+            return None;
+        }
+
+        let w = Px(10.0);
+        let track = Rect::new(
+            fret_core::Point::new(
+                Px(bounds.origin.x.0 + bounds.size.width.0 - w.0),
+                bounds.origin.y,
+            ),
+            Size::new(w, bounds.size.height),
+        );
+
+        let ratio = (viewport_h.0 / content_h.0).clamp(0.0, 1.0);
+        let min_thumb = 24.0;
+        let thumb_h = Px((viewport_h.0 * ratio).max(min_thumb).min(viewport_h.0));
+
+        let max_offset = self.max_offset().0;
+        let t = if max_offset <= 0.0 {
+            0.0
+        } else {
+            (self.offset_y.0 / max_offset).clamp(0.0, 1.0)
+        };
+        let travel = (viewport_h.0 - thumb_h.0).max(0.0);
+        let thumb_y = Px(track.origin.y.0 + travel * t);
+
+        let thumb = Rect::new(
+            fret_core::Point::new(track.origin.x, thumb_y),
+            Size::new(w, thumb_h),
+        );
+
+        Some((track, thumb))
+    }
+
+    fn set_offset_from_thumb_y(&mut self, bounds: Rect, thumb_top_y: Px) {
+        let Some((track, thumb)) = self.scrollbar_geometry(bounds) else {
+            return;
+        };
+
+        let viewport_h = self.last_viewport_height.0;
+        let travel = (viewport_h - thumb.size.height.0).max(0.0);
+        if travel <= 0.0 {
+            self.offset_y = Px(0.0);
+            return;
+        }
+
+        let t = ((thumb_top_y.0 - track.origin.y.0) / travel).clamp(0.0, 1.0);
+        let max = self.max_offset().0;
+        self.offset_y = Px(max * t);
+    }
+
     fn inner_bounds(&self) -> Rect {
         let p = self.style.padding;
         Rect::new(
@@ -290,18 +374,48 @@ impl Widget for TextArea {
 
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
         match event {
+            Event::Pointer(fret_core::PointerEvent::Wheel { delta, .. }) => {
+                self.offset_y = Px((self.offset_y.0 - delta.y.0).max(0.0));
+                self.clamp_offset(self.last_content_height, self.last_viewport_height);
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                cx.stop_propagation();
+            }
             Event::Pointer(fret_core::PointerEvent::Down {
                 button, position, ..
             }) => {
                 if *button != MouseButton::Left {
                     return;
                 }
+
+                if let Some((track, thumb)) = self.scrollbar_geometry(self.last_bounds) {
+                    if track.contains(*position) {
+                        if thumb.contains(*position) {
+                            self.dragging_thumb = true;
+                            self.drag_pointer_start_y = position.y;
+                            self.drag_offset_start_y = self.offset_y;
+                            cx.capture_pointer(cx.node);
+                        } else {
+                            let centered = Px(position.y.0 - thumb.size.height.0 * 0.5);
+                            self.set_offset_from_thumb_y(self.last_bounds, centered);
+                            self.clamp_offset(self.last_content_height, self.last_viewport_height);
+                        }
+
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+
                 cx.request_focus(cx.node);
                 cx.capture_pointer(cx.node);
+                self.dragging_thumb = false;
 
                 let inner = self.inner_bounds();
                 let local =
                     fret_core::Point::new(position.x - inner.origin.x, position.y - inner.origin.y);
+                let local = fret_core::Point::new(local.x, Px(local.y.0 + self.offset_y.0));
                 self.set_caret_from_point(cx, local);
                 self.selection_anchor = self.caret;
 
@@ -318,9 +432,32 @@ impl Widget for TextArea {
                     return;
                 }
 
+                if self.dragging_thumb {
+                    let dy = position.y.0 - self.drag_pointer_start_y.0;
+                    let Some((_, thumb)) = self.scrollbar_geometry(self.last_bounds) else {
+                        return;
+                    };
+
+                    let max_offset = self.max_offset().0;
+                    let travel = (self.last_viewport_height.0 - thumb.size.height.0).max(0.0);
+                    if travel <= 0.0 || max_offset <= 0.0 {
+                        return;
+                    }
+
+                    let offset_delta = dy / travel * max_offset;
+                    self.offset_y = Px(self.drag_offset_start_y.0 + offset_delta);
+                    self.clamp_offset(self.last_content_height, self.last_viewport_height);
+
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
                 let inner = self.inner_bounds();
                 let local =
                     fret_core::Point::new(position.x - inner.origin.x, position.y - inner.origin.y);
+                let local = fret_core::Point::new(local.x, Px(local.y.0 + self.offset_y.0));
                 self.set_caret_from_point(cx, local);
 
                 cx.invalidate_self(Invalidation::Paint);
@@ -328,6 +465,7 @@ impl Widget for TextArea {
             }
             Event::Pointer(fret_core::PointerEvent::Up { button, .. }) => {
                 if *button == MouseButton::Left && cx.captured == Some(cx.node) {
+                    self.dragging_thumb = false;
                     cx.release_pointer_capture();
                 }
             }
@@ -622,6 +760,10 @@ impl Widget for TextArea {
             return Size::new(cx.available.width, self.min_height);
         };
 
+        self.last_content_height = metrics.size.height;
+        self.last_viewport_height = inner.size.height;
+        self.clamp_offset(self.last_content_height, self.last_viewport_height);
+
         Size::new(
             cx.available.width,
             Px((metrics.size.height.0 + self.style.padding.0 * 2.0).max(self.min_height.0)),
@@ -648,6 +790,11 @@ impl Widget for TextArea {
         };
 
         let inner = self.inner_bounds();
+        self.last_content_height = metrics.size.height;
+        self.last_viewport_height = inner.size.height;
+        self.clamp_offset(self.last_content_height, self.last_viewport_height);
+
+        cx.scene.push(SceneOp::PushClipRect { rect: inner });
 
         cx.text.selection_rects(
             blob,
@@ -656,7 +803,10 @@ impl Widget for TextArea {
         );
         for r in &self.selection_rects {
             let rect = Rect::new(
-                fret_core::Point::new(inner.origin.x + r.origin.x, inner.origin.y + r.origin.y),
+                fret_core::Point::new(
+                    inner.origin.x + r.origin.x,
+                    Px(inner.origin.y.0 + r.origin.y.0 - self.offset_y.0),
+                ),
                 r.size,
             );
             cx.scene.push(SceneOp::Quad {
@@ -669,7 +819,10 @@ impl Widget for TextArea {
             });
         }
 
-        let text_origin = fret_core::Point::new(inner.origin.x, inner.origin.y + metrics.baseline);
+        let text_origin = fret_core::Point::new(
+            inner.origin.x,
+            Px(inner.origin.y.0 + metrics.baseline.0 - self.offset_y.0),
+        );
         cx.scene.push(SceneOp::Text {
             order: DrawOrder(0),
             origin: text_origin,
@@ -680,10 +833,28 @@ impl Widget for TextArea {
         if cx.focus == Some(cx.node) {
             let caret = cx.text.caret_rect(blob, self.caret, self.affinity);
             let hairline = Px((1.0 / cx.scale_factor.max(1.0)).max(1.0 / 8.0));
+            let caret_top = caret.origin.y.0;
+            let caret_bottom = caret.origin.y.0 + caret.size.height.0;
+            let viewport_top = self.offset_y.0;
+            let viewport_bottom = self.offset_y.0 + inner.size.height.0;
+            let mut desired_offset = self.offset_y.0;
+            if caret_top < viewport_top {
+                desired_offset = caret_top;
+            } else if caret_bottom > viewport_bottom {
+                desired_offset = caret_bottom - inner.size.height.0;
+            }
+            if (desired_offset - self.offset_y.0).abs() > 0.01 {
+                self.offset_y = Px(desired_offset);
+                self.clamp_offset(self.last_content_height, self.last_viewport_height);
+                if let Some(window) = cx.window {
+                    cx.app.request_redraw(window);
+                }
+            }
+
             let caret_rect = Rect::new(
                 fret_core::Point::new(
                     inner.origin.x + caret.origin.x,
-                    inner.origin.y + caret.origin.y,
+                    Px(inner.origin.y.0 + caret.origin.y.0 - self.offset_y.0),
                 ),
                 Size::new(Px(hairline.0.max(1.0)), caret.size.height),
             );
@@ -712,6 +883,49 @@ impl Widget for TextArea {
             });
         } else {
             self.last_sent_cursor = None;
+        }
+
+        cx.scene.push(SceneOp::PopClip);
+
+        if let Some((track, thumb)) = self.scrollbar_geometry(cx.bounds) {
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(100),
+                rect: track,
+                background: Color {
+                    r: 0.10,
+                    g: 0.10,
+                    b: 0.11,
+                    a: 0.9,
+                },
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(6.0)),
+            });
+
+            let thumb_bg = if self.dragging_thumb {
+                Color {
+                    r: 0.55,
+                    g: 0.55,
+                    b: 0.58,
+                    a: 0.9,
+                }
+            } else {
+                Color {
+                    r: 0.42,
+                    g: 0.42,
+                    b: 0.45,
+                    a: 0.9,
+                }
+            };
+
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(101),
+                rect: thumb,
+                background: thumb_bg,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(6.0)),
+            });
         }
     }
 }
