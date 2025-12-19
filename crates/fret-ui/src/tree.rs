@@ -702,9 +702,14 @@ impl UiTree {
         };
 
         let scope_root = barrier_root.unwrap_or(base_root);
+        let scope_bounds = self
+            .nodes
+            .get(scope_root)
+            .map(|n| n.bounds)
+            .unwrap_or_default();
 
         let mut focusables: Vec<NodeId> = Vec::new();
-        self.collect_focusables(scope_root, active_layers, &mut focusables);
+        self.collect_focusables(scope_root, active_layers, scope_bounds, &mut focusables);
         if focusables.is_empty() {
             return true;
         }
@@ -736,28 +741,47 @@ impl UiTree {
         true
     }
 
-    fn collect_focusables(&self, node: NodeId, active_layers: &[NodeId], out: &mut Vec<NodeId>) {
+    fn rects_intersect(a: Rect, b: Rect) -> bool {
+        let ax0 = a.origin.x.0;
+        let ay0 = a.origin.y.0;
+        let ax1 = ax0 + a.size.width.0;
+        let ay1 = ay0 + a.size.height.0;
+
+        let bx0 = b.origin.x.0;
+        let by0 = b.origin.y.0;
+        let bx1 = bx0 + b.size.width.0;
+        let by1 = by0 + b.size.height.0;
+
+        ax0 < bx1 && ax1 > bx0 && ay0 < by1 && ay1 > by0
+    }
+
+    fn collect_focusables(
+        &self,
+        node: NodeId,
+        active_layers: &[NodeId],
+        scope_bounds: Rect,
+        out: &mut Vec<NodeId>,
+    ) {
         if !self.node_in_any_layer(node, active_layers) {
             return;
-        }
-
-        if self.is_node_focusable(node) {
-            out.push(node);
         }
 
         let Some(n) = self.nodes.get(node) else {
             return;
         };
-        for &child in &n.children {
-            self.collect_focusables(child, active_layers, out);
+        if n.bounds.size.width.0 <= 0.0 || n.bounds.size.height.0 <= 0.0 {
+            return;
         }
-    }
+        if !Self::rects_intersect(n.bounds, scope_bounds) {
+            return;
+        }
 
-    fn is_node_focusable(&self, node: NodeId) -> bool {
-        self.nodes
-            .get(node)
-            .and_then(|n| n.widget.as_ref())
-            .is_some_and(|w| w.is_focusable())
+        if n.widget.as_ref().is_some_and(|w| w.is_focusable()) {
+            out.push(node);
+        }
+        for &child in &n.children {
+            self.collect_focusables(child, active_layers, scope_bounds, out);
+        }
     }
 
     fn focus_is_text_input(&mut self) -> bool {

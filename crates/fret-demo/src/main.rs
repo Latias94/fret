@@ -1115,10 +1115,17 @@ impl WinitDriver for DemoDriver {
 
     fn create_window_state(
         &mut self,
-        _app: &mut App,
+        app: &mut App,
         window: fret_core::AppWindowId,
     ) -> Self::WindowState {
-        let selection = self.selection.expect("selection model initialized");
+        let selection = match self.selection {
+            Some(model) => model,
+            None => {
+                let model = app.models_mut().insert(DemoSelection::default());
+                self.selection = Some(model);
+                model
+            }
+        };
         let (ui, layers) = build_demo_ui(window, DemoUiConfig::default(), selection);
         Self::WindowState {
             ui,

@@ -4,7 +4,7 @@ use crate::editor_shell::{DemoSelection, HierarchyPanel, InspectorPanel};
 use crate::elements_mvp2::ElementsMvp2Demo;
 use crate::ime_probe::ImeProbe;
 use fret_app::Model;
-use fret_core::{AppWindowId, Axis, Color, Px};
+use fret_core::{AppWindowId, Axis, Color, PanelKey, Px};
 use fret_ui::{
     ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel, Scroll, Split, Text, TextArea,
     TextInput, TreeNode, UiLayerId, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
@@ -73,8 +73,55 @@ pub fn build_demo_ui(
     let root = ui.create_node(Split::new(Axis::Horizontal, config.split_fraction));
     ui.set_root(root);
 
-    let dock = ui.create_node(DockSpace::new(window));
+    let key_hierarchy = PanelKey::new("core.hierarchy");
+    let key_inspector = PanelKey::new("core.inspector");
+
+    let mut next_id: u64 = 1;
+    let mut expand: Vec<u64> = Vec::new();
+    let mut roots: Vec<TreeNode> = Vec::new();
+    for r in 0..200u64 {
+        let root_id = next_id;
+        next_id += 1;
+        if r < 3 {
+            expand.push(root_id);
+        }
+
+        let mut children: Vec<TreeNode> = Vec::new();
+        for c in 0..20u64 {
+            let child_id = next_id;
+            next_id += 1;
+
+            let mut grandchildren: Vec<TreeNode> = Vec::new();
+            if c < 3 {
+                for g in 0..5u64 {
+                    let grand_id = next_id;
+                    next_id += 1;
+                    grandchildren.push(TreeNode::new(
+                        grand_id,
+                        format!("Grandchild {r:03}-{c:02}-{g:02}"),
+                    ));
+                }
+            }
+
+            children.push(
+                TreeNode::new(child_id, format!("Child {r:03}-{c:02}"))
+                    .with_children(grandchildren),
+            );
+        }
+        roots.push(TreeNode::new(root_id, format!("Root {r:03}")).with_children(children));
+    }
+
+    let hierarchy = ui.create_node(HierarchyPanel::new(selection, roots, expand));
+    let inspector = ui.create_node(InspectorPanel::new(selection));
+
+    let dock = ui.create_node(
+        DockSpace::new(window)
+            .with_panel_content(key_hierarchy, hierarchy)
+            .with_panel_content(key_inspector, inspector),
+    );
     ui.add_child(root, dock);
+    ui.add_child(dock, hierarchy);
+    ui.add_child(dock, inspector);
 
     let scroll = ui.create_node(Scroll::new());
     ui.add_child(root, scroll);
@@ -119,64 +166,9 @@ Goal: foundation for Console/Inspector/code editor.",
     ui.add_child(column, multiline);
 
     let editor_header = ui.create_node(Text::new(
-        "Editor Shell MVP (Hierarchy selection → Inspector via app-owned model)",
+        "Editor Shell MVP (Hierarchy → Inspector) is mounted into DockSpace panels",
     ));
     ui.add_child(column, editor_header);
-
-    let mut next_id: u64 = 1;
-    let mut expand: Vec<u64> = Vec::new();
-    let mut roots: Vec<TreeNode> = Vec::new();
-    for r in 0..200u64 {
-        let root_id = next_id;
-        next_id += 1;
-        if r < 3 {
-            expand.push(root_id);
-        }
-
-        let mut children: Vec<TreeNode> = Vec::new();
-        for c in 0..20u64 {
-            let child_id = next_id;
-            next_id += 1;
-
-            let mut grandchildren: Vec<TreeNode> = Vec::new();
-            if c < 3 {
-                for g in 0..5u64 {
-                    let grand_id = next_id;
-                    next_id += 1;
-                    grandchildren.push(TreeNode::new(
-                        grand_id,
-                        format!("Grandchild {r:03}-{c:02}-{g:02}"),
-                    ));
-                }
-            }
-
-            children.push(
-                TreeNode::new(child_id, format!("Child {r:03}-{c:02}"))
-                    .with_children(grandchildren),
-            );
-        }
-        roots.push(TreeNode::new(root_id, format!("Root {r:03}")).with_children(children));
-    }
-
-    let editor_panel = ui.create_node(FixedPanel::new(
-        Px(320.0),
-        Color {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.0,
-        },
-    ));
-    ui.add_child(column, editor_panel);
-
-    let editor_split = ui.create_node(Split::new(Axis::Horizontal, 0.46));
-    ui.add_child(editor_panel, editor_split);
-
-    let hierarchy = ui.create_node(HierarchyPanel::new(selection, roots, expand));
-    ui.add_child(editor_split, hierarchy);
-
-    let inspector = ui.create_node(InspectorPanel::new(selection));
-    ui.add_child(editor_split, inspector);
 
     let list_header = ui.create_node(Text::new(
         "VirtualList MVP (Hierarchy/Project-scale list: scroll + selection + virtualization)",

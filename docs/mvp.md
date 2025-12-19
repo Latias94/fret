@@ -16,6 +16,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
   - `TreeView` (hierarchy-style tree over `VirtualList`)
 - MVP 12: MVP done in demo (context menu overlay + submenu + keyboard nav + focus restore)
 - MVP 13: MVP done in demo (Hierarchy selection model → Inspector panel)
+- MVP 16: MVP done in demo (DockSpace hosts Hierarchy + Inspector content)
 
 ## MVP 7 — Command UI Surfaces (Palette + Menu Skeleton)
 
@@ -343,6 +344,10 @@ identity stable across persistence and plugins.
 
 - `fret-demo` shows Hierarchy + Inspector as real dock panels (tabs), not only in the side demo column.
 - Switching dock tabs preserves per-panel UI state (selection, scroll) via stable panel identity.
+
+Status:
+
+- MVP done in `fret-demo` (panel content mounted under `DockSpace` and laid out per active tab).
 
 References:
 

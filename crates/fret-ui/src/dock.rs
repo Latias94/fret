@@ -1,10 +1,14 @@
 use fret_app::{CommandId, Effect, InputContext, Menu, MenuItem};
 use fret_core::{
-    Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, Edges, PanelKey, RenderTargetId,
-    Scene, SceneOp, ViewportFit, ViewportInputEvent, ViewportInputKind, ViewportMapping,
+    Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, Edges, NodeId, PanelKey,
+    RenderTargetId, Scene, SceneOp, ViewportFit, ViewportInputEvent, ViewportInputKind,
+    ViewportMapping,
     geometry::{Point, Px, Rect, Size},
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use crate::{
     widget::{EventCx, LayoutCx, PaintCx, Widget},
@@ -95,6 +99,8 @@ pub struct DockSpace {
     pub window: fret_core::AppWindowId,
     last_bounds: Rect,
     divider_drag: Option<DividerDragState>,
+    panel_content: HashMap<PanelKey, NodeId>,
+    panel_last_sizes: HashMap<PanelKey, Size>,
 }
 
 impl DockSpace {
@@ -103,7 +109,14 @@ impl DockSpace {
             window,
             last_bounds: Rect::default(),
             divider_drag: None,
+            panel_content: HashMap::new(),
+            panel_last_sizes: HashMap::new(),
         }
+    }
+
+    pub fn with_panel_content(mut self, panel: PanelKey, root: NodeId) -> Self {
+        self.panel_content.insert(panel, root);
+        self
     }
 }
 
@@ -112,7 +125,9 @@ impl Widget for DockSpace {
         let mut pending_effects: Vec<Effect> = Vec::new();
         let mut pending_redraws: Vec<fret_core::AppWindowId> = Vec::new();
         let mut invalidate_paint = false;
+        let mut invalidate_layout = false;
         let mut open_viewport_menu: Option<(Point, ViewportInputEvent)> = None;
+        let mut request_focus: Option<NodeId> = None;
 
         #[derive(Clone)]
         struct DockDragSnapshot {
@@ -170,6 +185,8 @@ impl Widget for DockSpace {
                                     tabs: tabs_node,
                                     active: tab_index,
                                 }));
+                                request_focus = self.panel_content.get(&panel_key).copied();
+                                invalidate_layout = true;
                                 begin_drag = Some((*position, panel_key));
                                 dock.hover = None;
                                 invalidate_paint = true;
@@ -366,6 +383,7 @@ impl Widget for DockSpace {
                                     split: divider.split,
                                     first_fraction: divider.fraction,
                                 }));
+                                invalidate_layout = true;
                             }
                         }
 
@@ -383,6 +401,7 @@ impl Widget for DockSpace {
                                             zone: target.zone,
                                             insert_index: target.insert_index,
                                         }));
+                                        invalidate_layout = true;
                                     }
                                     Some(DockDropTarget::Float { .. }) => {
                                         pending_effects.push(Effect::Dock(
@@ -395,6 +414,7 @@ impl Widget for DockSpace {
                                                 }),
                                             },
                                         ));
+                                        invalidate_layout = true;
                                     }
                                     None => {
                                         let (chrome, _dock_bounds) =
@@ -410,6 +430,7 @@ impl Widget for DockSpace {
                                                     }),
                                                 },
                                             ));
+                                            invalidate_layout = true;
                                         }
                                     }
                                 }
@@ -520,6 +541,12 @@ impl Widget for DockSpace {
             return;
         }
 
+        if let Some(node) = request_focus {
+            cx.request_focus(node);
+        }
+        if invalidate_layout {
+            cx.invalidate(cx.node, crate::widget::Invalidation::Layout);
+        }
         if invalidate_paint {
             cx.invalidate(cx.node, crate::widget::Invalidation::Paint);
         }
@@ -565,26 +592,83 @@ impl Widget for DockSpace {
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+        self.last_bounds = cx.bounds;
+        let hidden = hidden_bounds(Size::new(Px(0.0), Px(0.0)));
+
+        let Some(active_bounds) = (|| {
+            let dock = cx.app.global::<DockManager>()?;
+            let root = dock.graph.window_root(self.window)?;
+            let (_chrome, dock_bounds) = dock_space_regions(cx.bounds);
+            let layout = compute_layout_map(&dock.graph, root, dock_bounds);
+            Some(active_panel_content_bounds(&dock.graph, &layout))
+        })() else {
+            for &child in cx.children {
+                let _ = cx.layout_in(child, hidden);
+            }
+            return cx.available;
+        };
+
+        let mut laid_out: HashSet<NodeId> = HashSet::new();
+        for (panel, node) in &self.panel_content {
+            let bounds = match active_bounds.get(panel).copied() {
+                Some(rect) => {
+                    self.panel_last_sizes.insert(panel.clone(), rect.size);
+                    rect
+                }
+                None => hidden_bounds(
+                    self.panel_last_sizes
+                        .get(panel)
+                        .copied()
+                        .unwrap_or(Size::new(Px(0.0), Px(0.0))),
+                ),
+            };
+            let _ = cx.layout_in(*node, bounds);
+            laid_out.insert(*node);
+        }
+
+        for &child in cx.children {
+            if laid_out.contains(&child) {
+                continue;
+            }
+            let _ = cx.layout_in(child, hidden);
+        }
+
         cx.available
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
         self.last_bounds = cx.bounds;
-        let Some(dock) = cx.app.global::<DockManager>() else {
+        let Some((chrome, layout, active_bounds, hover)) = (|| {
+            let dock = cx.app.global::<DockManager>()?;
+            let root = dock.graph.window_root(self.window)?;
+            let (chrome, dock_bounds) = dock_space_regions(cx.bounds);
+            let layout = compute_layout_map(&dock.graph, root, dock_bounds);
+            let active_bounds = active_panel_content_bounds(&dock.graph, &layout);
+            Some((chrome, layout, active_bounds, dock.hover.clone()))
+        })() else {
             return;
         };
-        let Some(root) = dock.graph.window_root(self.window) else {
-            return;
-        };
-
-        let (chrome, dock_bounds) = dock_space_regions(cx.bounds);
-        let layout = compute_layout_map(&dock.graph, root, dock_bounds);
 
         paint_chrome(chrome, cx.scene);
-        paint_dock(dock, self.window, &layout, cx.scene);
-        paint_split_handles(&dock.graph, &layout, cx.scene);
+        if let Some(dock) = cx.app.global::<DockManager>() {
+            paint_dock(dock, self.window, &layout, cx.scene);
+        }
 
-        paint_drop_overlay(dock.hover.clone(), self.window, chrome, &layout, cx.scene);
+        for (panel, rect) in active_bounds {
+            let Some(node) = self.panel_content.get(&panel) else {
+                continue;
+            };
+            if let Some(bounds) = cx.child_bounds(*node) {
+                cx.paint(*node, bounds);
+            } else {
+                cx.paint(*node, rect);
+            }
+        }
+
+        if let Some(dock) = cx.app.global::<DockManager>() {
+            paint_split_handles(&dock.graph, &layout, cx.scene);
+        }
+        paint_drop_overlay(hover, self.window, chrome, &layout, cx.scene);
     }
 }
 
@@ -596,6 +680,32 @@ fn compute_layout_map(
     let mut layout = std::collections::HashMap::new();
     graph.compute_layout(root, bounds, &mut layout);
     layout
+}
+
+fn hidden_bounds(size: Size) -> Rect {
+    Rect {
+        origin: Point::new(Px(-1_000_000.0), Px(-1_000_000.0)),
+        size,
+    }
+}
+
+fn active_panel_content_bounds(
+    graph: &DockGraph,
+    layout: &std::collections::HashMap<DockNodeId, Rect>,
+) -> std::collections::HashMap<PanelKey, Rect> {
+    let mut out: std::collections::HashMap<PanelKey, Rect> = std::collections::HashMap::new();
+
+    for (&node_id, &rect) in layout.iter() {
+        let Some(DockNode::Tabs { tabs, active }) = graph.node(node_id) else {
+            continue;
+        };
+        let (_tab_bar, content) = split_tab_bar(rect);
+        if let Some(panel) = tabs.get(*active) {
+            out.insert(panel.clone(), content);
+        }
+    }
+
+    out
 }
 
 fn paint_dock(
