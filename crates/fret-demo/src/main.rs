@@ -13,7 +13,7 @@ mod world;
 
 use demo_ui::{DemoLayers, DemoUiConfig, build_demo_ui};
 use editor_shell::DemoSelection;
-use inspector_edit::InspectorEditService;
+use inspector_edit::{InspectorEditService, parse_value};
 use property_edit::PropertyEditService;
 use viewport_tools::{
     MarqueeSelectInteraction, PanOrbitInteraction, PanOrbitKind, ViewportInteraction,
@@ -1473,11 +1473,24 @@ impl WinitDriver for DemoDriver {
                     .cloned()
                     .unwrap_or_default();
 
-                if let Some(world) = self.world {
-                    let _ = world.update(app, |w, _cx| {
-                        w.apply_edit(&request, input.as_str());
-                    });
-                }
+                let Some(value) = parse_value(request.kind, input.as_str()) else {
+                    return;
+                };
+                app.with_global_mut(PropertyEditService::default, |s, _app| {
+                    s.set(
+                        window,
+                        crate::property_edit::PropertyEditRequest {
+                            targets: request.targets,
+                            path: request.path,
+                            value,
+                            kind: crate::property_edit::PropertyEditKind::Commit,
+                        },
+                    );
+                });
+                app.push_effect(Effect::Command {
+                    window: Some(window),
+                    command: CommandId::from("property_edit.commit"),
+                });
 
                 for &w in self.logical_windows.keys() {
                     app.request_redraw(w);

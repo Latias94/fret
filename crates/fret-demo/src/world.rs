@@ -1,4 +1,3 @@
-use crate::inspector_edit::{InspectorEditKind, InspectorEditRequest};
 use crate::property::{PropertyPath, PropertyValue};
 use std::collections::HashMap;
 
@@ -120,35 +119,5 @@ impl DemoWorld {
         for &id in targets {
             let _ = self.set_property(id, path, value.clone());
         }
-    }
-
-    pub fn apply_edit(&mut self, request: &InspectorEditRequest, input: &str) {
-        let value = match request.kind {
-            InspectorEditKind::String => PropertyValue::String(input.to_string()),
-            InspectorEditKind::F32 => match input.trim().parse::<f32>() {
-                Ok(v) => PropertyValue::F32(v),
-                Err(_) => return,
-            },
-            InspectorEditKind::Vec3 => {
-                let parts: Vec<&str> = input
-                    .split(|c| c == ',' || c == ' ')
-                    .map(str::trim)
-                    .filter(|s| !s.is_empty())
-                    .collect();
-                if parts.len() != 3 {
-                    return;
-                }
-                let mut v = [0.0f32; 3];
-                for (i, p) in parts.iter().enumerate() {
-                    let Ok(f) = p.parse::<f32>() else {
-                        return;
-                    };
-                    v[i] = f;
-                }
-                PropertyValue::Vec3(v)
-            }
-        };
-
-        self.apply_property_value(&request.targets, &request.path, value);
     }
 }
