@@ -134,9 +134,8 @@ struct VisibleRange {
 }
 
 #[derive(Debug)]
-struct PreparedRow<K> {
+struct PreparedRow {
     index: usize,
-    key: K,
     indent_x: Px,
     blob: fret_core::TextBlobId,
     metrics: fret_core::TextMetrics,
@@ -161,7 +160,7 @@ pub struct VirtualList<D: VirtualListDataSource> {
     last_content_height: Px,
     last_viewport_height: Px,
     last_visible: VisibleRange,
-    prepared: Vec<PreparedRow<D::Key>>,
+    prepared: Vec<PreparedRow>,
     last_prepared_width: Px,
     prepared_dirty: bool,
 }
@@ -389,7 +388,6 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         width: Px,
         index: usize,
     ) {
-        let key = self.data.key_at(index);
         let row = self.data.row_at(index);
         let indent_x = row.indent_x.0;
         let max_width = Px((width.0 - self.style.padding_x.0 * 2.0 - indent_x).max(0.0));
@@ -401,7 +399,6 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         let (blob, metrics) = text.prepare(row.text.as_ref(), self.style.text_style, constraints);
         self.prepared.push(PreparedRow {
             index,
-            key,
             indent_x: row.indent_x,
             blob,
             metrics,
@@ -421,58 +418,27 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         VisibleRange { start, end }
     }
 
-    fn rebuild_prepared_rows(
+    fn ensure_prepared_for_visible(
         &mut self,
         text: &mut dyn fret_core::TextService,
         scale_factor: f32,
         width: Px,
-    ) {
-        for row in self.prepared.drain(..) {
-            text.release(row.blob);
+        visible: VisibleRange,
+        mut budget: usize,
+    ) -> bool {
+        if self.prepared_dirty || width != self.last_prepared_width {
+            for row in self.prepared.drain(..) {
+                text.release(row.blob);
+            }
+            self.prepared_dirty = false;
+            self.last_visible = VisibleRange { start: 0, end: 0 };
+            self.last_prepared_width = width;
         }
-
-        let visible = self.compute_visible_range();
-        self.last_visible = visible;
-        self.last_prepared_width = width;
 
         if visible.start >= visible.end {
-            return;
-        }
-
-        for i in visible.start..visible.end {
-            self.prepare_row(text, scale_factor, width, i);
-        }
-        self.prepared.sort_by_key(|r| r.index);
-    }
-
-    fn ensure_prepared(
-        &mut self,
-        text: &mut dyn fret_core::TextService,
-        scale_factor: f32,
-        width: Px,
-    ) {
-        if self.prepared_dirty {
-            self.prepared_dirty = false;
-            self.rebuild_prepared_rows(text, scale_factor, width);
-            return;
-        }
-
-        let visible = self.compute_visible_range();
-        if visible == self.last_visible && width == self.last_prepared_width {
-            return;
-        }
-
-        if width != self.last_prepared_width || visible.start >= visible.end {
-            self.rebuild_prepared_rows(text, scale_factor, width);
-            return;
-        }
-
-        let old = self.last_visible;
-        let overlap_start = old.start.max(visible.start);
-        let overlap_end = old.end.min(visible.end);
-        if overlap_start >= overlap_end {
-            self.rebuild_prepared_rows(text, scale_factor, width);
-            return;
+            self.last_visible = visible;
+            self.last_prepared_width = width;
+            return true;
         }
 
         self.prepared.retain_mut(|row| {
@@ -484,16 +450,23 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             }
         });
 
+        let mut complete = true;
         for i in visible.start..visible.end {
             if self.prepared.iter().any(|r| r.index == i) {
                 continue;
             }
+            if budget == 0 {
+                complete = false;
+                continue;
+            }
             self.prepare_row(text, scale_factor, width, i);
+            budget -= 1;
         }
         self.prepared.sort_by_key(|r| r.index);
 
         self.last_visible = visible;
         self.last_prepared_width = width;
+        complete
     }
 
     fn update_hover(&mut self, content: Rect, position: fret_core::Point) -> bool {
@@ -688,19 +661,41 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
         });
 
         let content = self.content_bounds();
-        self.ensure_prepared(cx.text, cx.scale_factor, content.size.width);
         cx.scene.push(SceneOp::PushClipRect { rect: content });
 
+        let visible = self.compute_visible_range();
+        let big_jump = {
+            let old = self.last_visible;
+            let overlap_start = old.start.max(visible.start);
+            let overlap_end = old.end.min(visible.end);
+            overlap_start >= overlap_end
+        };
+        let budget = if self.prepared.is_empty() {
+            usize::MAX
+        } else if self.dragging_thumb || big_jump {
+            8
+        } else {
+            32
+        };
+        let complete = self.ensure_prepared_for_visible(
+            cx.text,
+            cx.scale_factor,
+            content.size.width,
+            visible,
+            budget,
+        );
+
         let row_h = self.row_height;
-        for row in &self.prepared {
-            let y = content.origin.y.0 + row.index as f32 * row_h.0 - self.offset_y.0;
+        for i in visible.start..visible.end {
+            let y = content.origin.y.0 + i as f32 * row_h.0 - self.offset_y.0;
             let row_rect = Rect::new(
                 fret_core::Point::new(content.origin.x, Px(y)),
                 Size::new(content.size.width, row_h),
             );
 
-            let is_selected = self.selected_key == Some(row.key);
-            let is_hovered = self.hovered == Some(row.index);
+            let key = self.data.key_at(i);
+            let is_selected = self.selected_key == Some(key);
+            let is_hovered = self.hovered == Some(i);
 
             if is_selected || is_hovered {
                 let bg = if is_selected {
@@ -717,6 +712,14 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
                     corner_radii: Corners::all(Px(0.0)),
                 });
             }
+        }
+
+        for row in &self.prepared {
+            let y = content.origin.y.0 + row.index as f32 * row_h.0 - self.offset_y.0;
+            let row_rect = Rect::new(
+                fret_core::Point::new(content.origin.x, Px(y)),
+                Size::new(content.size.width, row_h),
+            );
 
             let text_x = Px(row_rect.origin.x.0 + self.style.padding_x.0 + row.indent_x.0);
             let inner_y = row_rect.origin.y.0 + ((row_h.0 - row.metrics.size.height.0) * 0.5);
@@ -730,6 +733,12 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
         }
 
         cx.scene.push(SceneOp::PopClip);
+
+        if !complete {
+            if let Some(window) = cx.window {
+                cx.app.request_redraw(window);
+            }
+        }
 
         if let Some((track, thumb)) = self.scrollbar_geometry() {
             cx.scene.push(SceneOp::Quad {
