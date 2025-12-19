@@ -382,6 +382,32 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         self.offset_y = Px(max * t);
     }
 
+    fn prepare_row(
+        &mut self,
+        text: &mut dyn fret_core::TextService,
+        scale_factor: f32,
+        width: Px,
+        index: usize,
+    ) {
+        let key = self.data.key_at(index);
+        let row = self.data.row_at(index);
+        let indent_x = row.indent_x.0;
+        let max_width = Px((width.0 - self.style.padding_x.0 * 2.0 - indent_x).max(0.0));
+        let constraints = TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::None,
+            scale_factor,
+        };
+        let (blob, metrics) = text.prepare(row.text.as_ref(), self.style.text_style, constraints);
+        self.prepared.push(PreparedRow {
+            index,
+            key,
+            indent_x: row.indent_x,
+            blob,
+            metrics,
+        });
+    }
+
     fn compute_visible_range(&self) -> VisibleRange {
         if self.data.len() == 0 || self.row_height.0 <= 0.0 || self.last_viewport_height.0 <= 0.0 {
             return VisibleRange { start: 0, end: 0 };
@@ -395,9 +421,14 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         VisibleRange { start, end }
     }
 
-    fn rebuild_prepared_rows(&mut self, cx: &mut LayoutCx<'_>, width: Px) {
+    fn rebuild_prepared_rows(
+        &mut self,
+        text: &mut dyn fret_core::TextService,
+        scale_factor: f32,
+        width: Px,
+    ) {
         for row in self.prepared.drain(..) {
-            cx.text.release(row.blob);
+            text.release(row.blob);
         }
 
         let visible = self.compute_visible_range();
@@ -409,26 +440,60 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         }
 
         for i in visible.start..visible.end {
-            let key = self.data.key_at(i);
-            let row = self.data.row_at(i);
-            let indent_x = row.indent_x.0;
-            let max_width = Px((width.0 - self.style.padding_x.0 * 2.0 - indent_x).max(0.0));
-            let constraints = TextConstraints {
-                max_width: Some(max_width),
-                wrap: TextWrap::None,
-                scale_factor: cx.scale_factor,
-            };
-            let (blob, metrics) =
-                cx.text
-                    .prepare(row.text.as_ref(), self.style.text_style, constraints);
-            self.prepared.push(PreparedRow {
-                index: i,
-                key,
-                indent_x: row.indent_x,
-                blob,
-                metrics,
-            });
+            self.prepare_row(text, scale_factor, width, i);
         }
+        self.prepared.sort_by_key(|r| r.index);
+    }
+
+    fn ensure_prepared(
+        &mut self,
+        text: &mut dyn fret_core::TextService,
+        scale_factor: f32,
+        width: Px,
+    ) {
+        if self.prepared_dirty {
+            self.prepared_dirty = false;
+            self.rebuild_prepared_rows(text, scale_factor, width);
+            return;
+        }
+
+        let visible = self.compute_visible_range();
+        if visible == self.last_visible && width == self.last_prepared_width {
+            return;
+        }
+
+        if width != self.last_prepared_width || visible.start >= visible.end {
+            self.rebuild_prepared_rows(text, scale_factor, width);
+            return;
+        }
+
+        let old = self.last_visible;
+        let overlap_start = old.start.max(visible.start);
+        let overlap_end = old.end.min(visible.end);
+        if overlap_start >= overlap_end {
+            self.rebuild_prepared_rows(text, scale_factor, width);
+            return;
+        }
+
+        self.prepared.retain_mut(|row| {
+            if row.index >= visible.start && row.index < visible.end {
+                true
+            } else {
+                text.release(row.blob);
+                false
+            }
+        });
+
+        for i in visible.start..visible.end {
+            if self.prepared.iter().any(|r| r.index == i) {
+                continue;
+            }
+            self.prepare_row(text, scale_factor, width, i);
+        }
+        self.prepared.sort_by_key(|r| r.index);
+
+        self.last_visible = visible;
+        self.last_prepared_width = width;
     }
 
     fn update_hover(&mut self, content: Rect, position: fret_core::Point) -> bool {
@@ -495,7 +560,6 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
                 fret_core::PointerEvent::Wheel { delta, .. } => {
                     self.offset_y = Px((self.offset_y.0 - delta.y.0).max(0.0));
                     self.clamp_offset();
-                    cx.invalidate_self(Invalidation::Layout);
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();
@@ -520,7 +584,6 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
                                 self.clamp_offset();
                             }
 
-                            cx.invalidate_self(Invalidation::Layout);
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
                             cx.stop_propagation();
@@ -538,7 +601,6 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
                     if let Some(idx) = self.row_index_from_y(local_y) {
                         self.set_selected_index(idx);
                         self.ensure_visible(idx);
-                        cx.invalidate_self(Invalidation::Layout);
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                     }
@@ -560,7 +622,6 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
                         let offset_delta = dy / travel * max_offset;
                         self.offset_y = Px(self.drag_offset_start_y.0 + offset_delta);
                         self.clamp_offset();
-                        cx.invalidate_self(Invalidation::Layout);
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();
@@ -591,7 +652,6 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
                     return;
                 }
                 if self.handle_keyboard_nav(*key, *modifiers) {
-                    cx.invalidate_self(Invalidation::Layout);
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();
@@ -604,31 +664,19 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
         self.last_bounds = cx.bounds;
 
-        if self.prepared_dirty {
-            for row in self.prepared.drain(..) {
-                cx.text.release(row.blob);
-            }
-            self.prepared_dirty = false;
-            self.last_visible = VisibleRange { start: 0, end: 0 };
-            self.last_prepared_width = Px(0.0);
-        }
-
         let count = self.data.len();
         self.last_content_height = Px(count as f32 * self.row_height.0);
         self.last_viewport_height = cx.available.height;
         self.clamp_offset();
-
-        let content = self.content_bounds();
-        let visible = self.compute_visible_range();
-        if visible != self.last_visible || content.size.width != self.last_prepared_width {
-            self.rebuild_prepared_rows(cx, content.size.width);
-        }
 
         cx.available
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
         self.last_bounds = cx.bounds;
+        self.last_viewport_height = cx.bounds.size.height;
+        self.last_content_height = Px(self.data.len() as f32 * self.row_height.0);
+        self.clamp_offset();
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
@@ -640,6 +688,7 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
         });
 
         let content = self.content_bounds();
+        self.ensure_prepared(cx.text, cx.scale_factor, content.size.width);
         cx.scene.push(SceneOp::PushClipRect { rect: content });
 
         let row_h = self.row_height;
