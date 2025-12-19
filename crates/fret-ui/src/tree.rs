@@ -323,6 +323,12 @@ impl UiTree {
         };
 
         let (active_layers, barrier_root) = self.active_input_layers();
+        let focus_is_text_input = self.focus_is_text_input();
+        let input_ctx = InputContext {
+            platform: Platform::current(),
+            ui_has_modal: barrier_root.is_some(),
+            focus_is_text_input,
+        };
 
         if !self.replaying_pending_shortcut && !self.pending_shortcut.keystrokes.is_empty() {
             if self.pending_shortcut.focus.is_some() && self.pending_shortcut.focus != self.focus {
@@ -344,12 +350,7 @@ impl UiTree {
                         command,
                     });
                 } else {
-                    let ctx = InputContext {
-                        platform: Platform::current(),
-                        ui_has_modal: barrier_root.is_some(),
-                        focus_is_text_input: self.focus_is_text_input(),
-                    };
-                    self.replay_captured_keystrokes(app, text, &ctx, pending.keystrokes);
+                    self.replay_captured_keystrokes(app, text, &input_ctx, pending.keystrokes);
                 }
                 return;
             }
@@ -396,13 +397,8 @@ impl UiTree {
             } else if *repeat {
                 // Allow key-repeat only for explicitly repeatable commands (e.g. text editing).
                 if let Some(service) = app.global::<KeymapService>() {
-                    let ctx = InputContext {
-                        platform: Platform::current(),
-                        ui_has_modal: barrier_root.is_some(),
-                        focus_is_text_input: self.focus_is_text_input(),
-                    };
                     let chord = KeyChord::new(*key, *modifiers);
-                    if let Some(command) = service.keymap.resolve(&ctx, chord) {
+                    if let Some(command) = service.keymap.resolve(&input_ctx, chord) {
                         if app
                             .commands()
                             .get(command.clone())
@@ -418,12 +414,6 @@ impl UiTree {
                     }
                 }
             } else if let Some(service) = app.global::<KeymapService>() {
-                let ctx = InputContext {
-                    platform: Platform::current(),
-                    ui_has_modal: barrier_root.is_some(),
-                    focus_is_text_input: self.focus_is_text_input(),
-                };
-
                 let chord = KeyChord::new(*key, *modifiers);
 
                 if !self.pending_shortcut.keystrokes.is_empty() {
@@ -437,14 +427,14 @@ impl UiTree {
                         .iter()
                         .map(|s| s.chord)
                         .collect();
-                    let matched = service.keymap.match_sequence(&ctx, &sequence);
+                    let matched = service.keymap.match_sequence(&input_ctx, &sequence);
 
                     if matched.has_continuation {
                         self.pending_shortcut.fallback = matched.exact.and_then(|c| c);
                         self.pending_shortcut.focus = self.focus;
                         self.pending_shortcut.barrier_root = barrier_root;
                         self.pending_shortcut.capture_next_text_input_key =
-                            (self.focus_is_text_input() && !modifiers.ctrl && !modifiers.meta)
+                            (focus_is_text_input && !modifiers.ctrl && !modifiers.meta)
                                 .then_some(*key);
                         self.suppress_text_input_until_key_up = Some(*key);
                         self.schedule_pending_shortcut_timeout(app);
@@ -465,13 +455,13 @@ impl UiTree {
                     if let Some(token) = pending.timer {
                         app.push_effect(Effect::CancelTimer { token });
                     }
-                    self.replay_captured_keystrokes(app, text, &ctx, pending.keystrokes);
+                    self.replay_captured_keystrokes(app, text, &input_ctx, pending.keystrokes);
                     return;
                 }
 
                 let matched = service
                     .keymap
-                    .match_sequence(&ctx, std::slice::from_ref(&chord));
+                    .match_sequence(&input_ctx, std::slice::from_ref(&chord));
                 if matched.has_continuation {
                     self.pending_shortcut.keystrokes =
                         vec![CapturedKeystroke { chord, text: None }];
@@ -479,14 +469,13 @@ impl UiTree {
                     self.pending_shortcut.barrier_root = barrier_root;
                     self.pending_shortcut.fallback = matched.exact.and_then(|c| c);
                     self.pending_shortcut.capture_next_text_input_key =
-                        (self.focus_is_text_input() && !modifiers.ctrl && !modifiers.meta)
-                            .then_some(*key);
+                        (focus_is_text_input && !modifiers.ctrl && !modifiers.meta).then_some(*key);
                     self.suppress_text_input_until_key_up = Some(*key);
                     self.schedule_pending_shortcut_timeout(app);
                     return;
                 }
 
-                if let Some(command) = service.keymap.resolve(&ctx, chord) {
+                if let Some(command) = service.keymap.resolve(&input_ctx, chord) {
                     self.suppress_text_input_until_key_up = Some(*key);
                     app.push_effect(Effect::Command {
                         window: self.window,
@@ -540,6 +529,7 @@ impl UiTree {
                         text: unsafe { &mut *text_ptr },
                         node: node_id,
                         window: tree.window,
+                        input_ctx: input_ctx.clone(),
                         children: &children,
                         focus: tree.focus,
                         captured: tree.captured,
@@ -606,6 +596,11 @@ impl UiTree {
         };
 
         let (active_layers, barrier_root) = self.active_input_layers();
+        let input_ctx = InputContext {
+            platform: Platform::current(),
+            ui_has_modal: barrier_root.is_some(),
+            focus_is_text_input: self.focus_is_text_input(),
+        };
 
         if self.dispatch_focus_traversal(app, command, &active_layers, barrier_root, base_root) {
             return true;
@@ -638,6 +633,7 @@ impl UiTree {
                         text,
                         node: node_id,
                         window: tree.window,
+                        input_ctx: input_ctx.clone(),
                         focus: tree.focus,
                         invalidations: Vec::new(),
                         requested_focus: None,

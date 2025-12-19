@@ -1,11 +1,14 @@
 use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use fret_app::{CommandId, InputContext, Menu, MenuItem};
 use fret_core::{Event, KeyCode, Modifiers, MouseButton, Px};
 use std::{
     borrow::Cow,
     collections::{HashMap, HashSet},
     rc::Rc,
+    sync::Arc,
 };
 
+use super::context_menu::{ContextMenuRequest, ContextMenuService};
 use super::virtual_list::{VirtualList, VirtualListDataSource, VirtualListRow, VirtualListStyle};
 
 #[derive(Debug, Clone)]
@@ -84,6 +87,7 @@ pub struct TreeView {
     roots: Vec<TreeNode>,
     expanded: HashSet<u64>,
     selected: Option<u64>,
+    context_menu_target: Option<u64>,
 
     parent_by_id: HashMap<u64, Option<u64>>,
     first_child_by_id: HashMap<u64, u64>,
@@ -104,6 +108,7 @@ impl TreeView {
             roots,
             expanded: HashSet::new(),
             selected: None,
+            context_menu_target: None,
             parent_by_id: HashMap::new(),
             first_child_by_id: HashMap::new(),
             flat: flat.clone(),
@@ -250,8 +255,6 @@ impl TreeView {
         }
 
         cx.request_focus(cx.node);
-        self.selected = Some(row.id);
-        self.list.set_selected_key(Some(row.id));
         if self.toggle_expanded(row.id) {
             self.dirty = true;
             self.rebuild();
@@ -260,6 +263,108 @@ impl TreeView {
             cx.request_redraw();
             cx.stop_propagation();
         }
+    }
+
+    fn open_context_menu_at(
+        &mut self,
+        cx: &mut EventCx<'_>,
+        position: fret_core::Point,
+        row_id: u64,
+    ) {
+        let Some(window) = cx.window else {
+            return;
+        };
+
+        self.context_menu_target = Some(row_id);
+
+        let inv_ctx = InputContext {
+            platform: cx.input_ctx.platform,
+            ui_has_modal: cx.input_ctx.ui_has_modal,
+            focus_is_text_input: false,
+        };
+
+        let menu = Menu {
+            title: Arc::from("Hierarchy"),
+            items: vec![
+                MenuItem::Command {
+                    command: CommandId::from("tree_view.expand"),
+                    when: None,
+                },
+                MenuItem::Command {
+                    command: CommandId::from("tree_view.collapse"),
+                    when: None,
+                },
+                MenuItem::Separator,
+                MenuItem::Command {
+                    command: CommandId::from("tree_view.expand_all"),
+                    when: None,
+                },
+                MenuItem::Command {
+                    command: CommandId::from("tree_view.collapse_all"),
+                    when: None,
+                },
+            ],
+        };
+
+        cx.app
+            .with_global_mut(ContextMenuService::default, |service, _app| {
+                service.set_request(
+                    window,
+                    ContextMenuRequest {
+                        position,
+                        menu,
+                        input_ctx: inv_ctx,
+                    },
+                );
+            });
+        cx.dispatch_command(CommandId::from("context_menu.open"));
+        cx.request_redraw();
+    }
+
+    fn expand_target(&mut self, id: u64) -> bool {
+        if !self.first_child_by_id.contains_key(&id) {
+            return false;
+        }
+        if self.expanded.insert(id) {
+            self.dirty = true;
+            self.rebuild();
+        }
+        true
+    }
+
+    fn collapse_target(&mut self, id: u64) -> bool {
+        if self.expanded.remove(&id) {
+            self.dirty = true;
+            self.rebuild();
+            return true;
+        }
+        false
+    }
+
+    fn expand_all(&mut self) {
+        fn visit(expanded: &mut HashSet<u64>, node: &TreeNode) {
+            if !node.children.is_empty() {
+                expanded.insert(node.id);
+                for child in &node.children {
+                    visit(expanded, child);
+                }
+            }
+        }
+
+        for root in &self.roots {
+            visit(&mut self.expanded, root);
+        }
+        self.dirty = true;
+        self.rebuild();
+    }
+
+    fn collapse_all(&mut self) {
+        if self.expanded.is_empty() {
+            return;
+        }
+        self.expanded.clear();
+        self.dirty = true;
+        self.rebuild();
     }
 
     fn maybe_handle_tree_keys(&mut self, cx: &mut EventCx<'_>, key: KeyCode, modifiers: Modifiers) {
@@ -350,13 +455,33 @@ impl Widget for TreeView {
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
         match event {
             Event::Pointer(fret_core::PointerEvent::Down {
-                position, button, ..
+                position,
+                button,
+                modifiers: _,
             }) => {
                 if *button == MouseButton::Left {
                     self.maybe_handle_disclosure_click(cx, *position);
                     if cx.stop_propagation {
                         return;
                     }
+                } else if *button == MouseButton::Right {
+                    if self.dirty {
+                        self.rebuild();
+                    }
+                    let Some(index) = self.list.row_index_at(*position) else {
+                        return;
+                    };
+                    let Some(row) = self.flat.get(index) else {
+                        return;
+                    };
+                    let row_id = row.id;
+
+                    cx.request_focus(cx.node);
+                    self.selected = Some(row_id);
+                    self.sync_list_selection_from_selected();
+                    self.open_context_menu_at(cx, *position, row_id);
+                    cx.stop_propagation();
+                    return;
                 }
             }
             Event::KeyDown { key, modifiers, .. } => {
@@ -370,6 +495,34 @@ impl Widget for TreeView {
 
         self.list.event(cx, event);
         self.sync_selected_from_list();
+    }
+
+    fn command(&mut self, cx: &mut crate::widget::CommandCx<'_>, command: &CommandId) -> bool {
+        let Some(target) = self.context_menu_target.or(self.selected) else {
+            return false;
+        };
+
+        let did = match command.as_str() {
+            "tree_view.expand" => self.expand_target(target),
+            "tree_view.collapse" => self.collapse_target(target),
+            "tree_view.expand_all" => {
+                self.expand_all();
+                true
+            }
+            "tree_view.collapse_all" => {
+                self.collapse_all();
+                true
+            }
+            _ => return false,
+        };
+
+        if did {
+            cx.invalidate_self(Invalidation::Layout);
+            cx.invalidate_self(Invalidation::Paint);
+            cx.request_redraw();
+            cx.stop_propagation();
+        }
+        did
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> fret_core::Size {

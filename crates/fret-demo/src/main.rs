@@ -18,7 +18,7 @@ use fret_core::{
 };
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
-use fret_ui::{DockManager, DockPanel, UiTree, ViewportPanel};
+use fret_ui::{ContextMenuService, DockManager, DockPanel, UiTree, ViewportPanel};
 use std::{collections::HashMap, fs::File, path::Path};
 use winit::event_loop::EventLoop;
 
@@ -26,6 +26,7 @@ struct DemoWindowState {
     ui: UiTree,
     layers: DemoLayers,
     palette_previous_focus: Option<fret_core::NodeId>,
+    context_menu_previous_focus: Option<fret_core::NodeId>,
 }
 
 #[derive(Default)]
@@ -275,6 +276,67 @@ impl WinitDriver for DemoDriver {
                 .with_description("Closes the command palette overlay")
                 .with_category("View")
                 .with_keywords(["palette", "command"]),
+        );
+
+        app.commands_mut().register(
+            CommandId::from("context_menu.open"),
+            CommandMeta::new("Open Context Menu")
+                .with_description("Internal: opens a context menu overlay")
+                .with_category("View")
+                .hidden(),
+        );
+        app.commands_mut().register(
+            CommandId::from("context_menu.close"),
+            CommandMeta::new("Close Context Menu")
+                .with_description("Closes the context menu overlay")
+                .with_category("View")
+                .hidden(),
+        );
+
+        app.commands_mut().register(
+            CommandId::from("tree_view.expand"),
+            CommandMeta::new("Expand")
+                .with_description("Expand the selected tree node")
+                .with_category("Hierarchy")
+                .with_scope(CommandScope::Widget),
+        );
+        app.commands_mut().register(
+            CommandId::from("tree_view.collapse"),
+            CommandMeta::new("Collapse")
+                .with_description("Collapse the selected tree node")
+                .with_category("Hierarchy")
+                .with_scope(CommandScope::Widget),
+        );
+        app.commands_mut().register(
+            CommandId::from("tree_view.expand_all"),
+            CommandMeta::new("Expand All")
+                .with_description("Expand all tree nodes")
+                .with_category("Hierarchy")
+                .with_scope(CommandScope::Widget),
+        );
+        app.commands_mut().register(
+            CommandId::from("tree_view.collapse_all"),
+            CommandMeta::new("Collapse All")
+                .with_description("Collapse all tree nodes")
+                .with_category("Hierarchy")
+                .with_scope(CommandScope::Widget),
+        );
+
+        app.commands_mut().register(
+            CommandId::from("virtual_list.copy_label"),
+            CommandMeta::new("Copy Label")
+                .with_description("Copies the label of the selected list row")
+                .with_category("List")
+                .with_scope(CommandScope::Widget)
+                .hidden(),
+        );
+        app.commands_mut().register(
+            CommandId::from("virtual_list.clear_selection"),
+            CommandMeta::new("Clear Selection")
+                .with_description("Clears the list selection")
+                .with_category("List")
+                .with_scope(CommandScope::Widget)
+                .hidden(),
         );
 
         app.commands_mut().register(
@@ -1038,6 +1100,7 @@ impl WinitDriver for DemoDriver {
             ui,
             layers,
             palette_previous_focus: None,
+            context_menu_previous_focus: None,
         }
     }
 
@@ -1099,7 +1162,7 @@ impl WinitDriver for DemoDriver {
         }
 
         if let fret_core::Event::Pointer(pe) = event {
-            if let fret_core::PointerEvent::Down { button, .. } = pe {
+            if let fret_core::PointerEvent::Down { .. } = pe {
                 if state.ui.is_layer_visible(state.layers.command_palette) {
                     // Command palette uses its own backdrop to dismiss; avoid demo-only right-click modal.
                     state.ui.dispatch_event(app, text, event);
@@ -1107,12 +1170,6 @@ impl WinitDriver for DemoDriver {
                 }
                 if state.ui.is_layer_visible(state.layers.modal) {
                     state.ui.set_layer_visible(state.layers.modal, false);
-                    app.request_redraw(window);
-                    return;
-                }
-
-                if *button == fret_core::MouseButton::Right {
-                    state.ui.set_layer_visible(state.layers.modal, true);
                     app.request_redraw(window);
                     return;
                 }
@@ -1162,6 +1219,46 @@ impl WinitDriver for DemoDriver {
                     }
                     app.request_redraw(window);
                 }
+            }
+            "context_menu.open" => {
+                if state.ui.is_layer_visible(state.layers.command_palette) {
+                    return;
+                }
+
+                let has_request = app
+                    .global::<ContextMenuService>()
+                    .and_then(|s| s.request(window))
+                    .is_some();
+                if !has_request {
+                    return;
+                }
+
+                state.context_menu_previous_focus = state.ui.focus();
+                state.ui.set_layer_visible(state.layers.context_menu, true);
+                state.ui.set_focus(Some(state.layers.context_menu_node));
+                app.request_redraw(window);
+            }
+            "context_menu.close" => {
+                if state.ui.is_layer_visible(state.layers.context_menu) {
+                    state.ui.set_layer_visible(state.layers.context_menu, false);
+                }
+
+                app.with_global_mut(ContextMenuService::default, |service, app| {
+                    let action = service.take_pending_action(window);
+                    service.clear(window);
+                    if let Some(command) = action {
+                        app.push_effect(Effect::Command {
+                            window: Some(window),
+                            command,
+                        });
+                    }
+                });
+
+                if let Some(prev) = state.context_menu_previous_focus.take() {
+                    state.ui.set_focus(Some(prev));
+                }
+
+                app.request_redraw(window);
             }
             "demo.toggle_modal" => {
                 let vis = state.ui.is_layer_visible(state.layers.modal);

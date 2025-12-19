@@ -1,3 +1,4 @@
+use fret_app::InputContext;
 use fret_app::{App, CommandId};
 use fret_core::{AppWindowId, Event, NodeId, Rect, Scene, Size, TextService};
 
@@ -13,6 +14,7 @@ pub struct EventCx<'a> {
     pub text: &'a mut dyn TextService,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
+    pub input_ctx: InputContext,
     pub children: &'a [NodeId],
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
@@ -67,6 +69,7 @@ pub struct CommandCx<'a> {
     pub text: &'a mut dyn TextService,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
+    pub input_ctx: InputContext,
     pub focus: Option<NodeId>,
     pub invalidations: Vec<(NodeId, Invalidation)>,
     pub requested_focus: Option<NodeId>,

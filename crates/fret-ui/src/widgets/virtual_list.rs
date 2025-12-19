@@ -1,9 +1,12 @@
 use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use fret_app::{CommandId, Effect, InputContext, Menu, MenuItem};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp,
     Size, TextConstraints, TextStyle, TextWrap,
 };
-use std::{borrow::Cow, collections::HashSet, hash::Hash};
+use std::{borrow::Cow, collections::HashSet, hash::Hash, sync::Arc};
+
+use super::context_menu::{ContextMenuRequest, ContextMenuService};
 
 #[derive(Debug, Clone)]
 pub struct VirtualListStyle {
@@ -158,6 +161,7 @@ pub struct VirtualList<D: VirtualListDataSource> {
     selection_anchor: Option<D::Key>,
     selection_lead: Option<D::Key>,
     selection_lead_index: Option<usize>,
+    context_menu_target: Option<D::Key>,
 
     last_bounds: Rect,
     last_content_height: Px,
@@ -193,6 +197,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             selection_anchor: None,
             selection_lead: None,
             selection_lead_index: None,
+            context_menu_target: None,
             last_bounds: Rect::default(),
             last_content_height: Px(0.0),
             last_viewport_height: Px(0.0),
@@ -679,28 +684,28 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
                     button,
                     modifiers,
                 } => {
-                    if *button != MouseButton::Left {
-                        return;
-                    }
+                    if *button == MouseButton::Left {
+                        if let Some((track, thumb)) = self.scrollbar_geometry() {
+                            if track.contains(*position) {
+                                if thumb.contains(*position) {
+                                    self.dragging_thumb = true;
+                                    self.drag_pointer_start_y = position.y;
+                                    self.drag_offset_start_y = self.offset_y;
+                                    cx.capture_pointer(cx.node);
+                                } else {
+                                    let centered = Px(position.y.0 - thumb.size.height.0 * 0.5);
+                                    self.set_offset_from_thumb_y(centered);
+                                    self.clamp_offset();
+                                }
 
-                    if let Some((track, thumb)) = self.scrollbar_geometry() {
-                        if track.contains(*position) {
-                            if thumb.contains(*position) {
-                                self.dragging_thumb = true;
-                                self.drag_pointer_start_y = position.y;
-                                self.drag_offset_start_y = self.offset_y;
-                                cx.capture_pointer(cx.node);
-                            } else {
-                                let centered = Px(position.y.0 - thumb.size.height.0 * 0.5);
-                                self.set_offset_from_thumb_y(centered);
-                                self.clamp_offset();
+                                cx.invalidate_self(Invalidation::Paint);
+                                cx.request_redraw();
+                                cx.stop_propagation();
+                                return;
                             }
-
-                            cx.invalidate_self(Invalidation::Paint);
-                            cx.request_redraw();
-                            cx.stop_propagation();
-                            return;
                         }
+                    } else if *button != MouseButton::Right {
+                        return;
                     }
 
                     let content = self.content_bounds();
@@ -711,10 +716,63 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
                     cx.request_focus(cx.node);
                     let local_y = Px(position.y.0 - content.origin.y.0);
                     if let Some(idx) = self.row_index_from_y(local_y) {
-                        self.apply_click_selection(idx, *modifiers);
-                        self.ensure_visible(idx);
-                        cx.invalidate_self(Invalidation::Paint);
-                        cx.request_redraw();
+                        let key = self.data.key_at(idx);
+                        if *button == MouseButton::Left {
+                            self.apply_click_selection(idx, *modifiers);
+                            self.ensure_visible(idx);
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                        } else {
+                            self.set_selected_key(Some(key));
+                            self.context_menu_target = Some(key);
+                            self.ensure_visible(idx);
+
+                            if let Some(window) = cx.window {
+                                let inv_ctx = InputContext {
+                                    platform: cx.input_ctx.platform,
+                                    ui_has_modal: cx.input_ctx.ui_has_modal,
+                                    focus_is_text_input: false,
+                                };
+
+                                let menu = Menu {
+                                    title: Arc::from("List"),
+                                    items: vec![
+                                        MenuItem::Command {
+                                            command: CommandId::from("virtual_list.copy_label"),
+                                            when: None,
+                                        },
+                                        MenuItem::Separator,
+                                        MenuItem::Submenu {
+                                            title: Arc::from("Selection"),
+                                            when: None,
+                                            items: vec![MenuItem::Command {
+                                                command: CommandId::from(
+                                                    "virtual_list.clear_selection",
+                                                ),
+                                                when: None,
+                                            }],
+                                        },
+                                    ],
+                                };
+
+                                cx.app.with_global_mut(
+                                    ContextMenuService::default,
+                                    |service, _app| {
+                                        service.set_request(
+                                            window,
+                                            ContextMenuRequest {
+                                                position: *position,
+                                                menu,
+                                                input_ctx: inv_ctx,
+                                            },
+                                        );
+                                    },
+                                );
+                                cx.dispatch_command(CommandId::from("context_menu.open"));
+                                cx.request_redraw();
+                            }
+                            cx.invalidate_self(Invalidation::Paint);
+                        }
                     }
                     cx.stop_propagation();
                 }
@@ -770,6 +828,31 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
                 }
             }
             _ => {}
+        }
+    }
+
+    fn command(&mut self, cx: &mut crate::widget::CommandCx<'_>, command: &CommandId) -> bool {
+        match command.as_str() {
+            "virtual_list.copy_label" => {
+                let Some(key) = self.context_menu_target.or(self.selection_lead) else {
+                    return false;
+                };
+                let Some(index) = self.data.index_of_key(key) else {
+                    return false;
+                };
+                let text = self.data.row_at(index).text.into_owned();
+                cx.app.push_effect(Effect::ClipboardSetText { text });
+                cx.stop_propagation();
+                true
+            }
+            "virtual_list.clear_selection" => {
+                self.clear_selection();
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                cx.stop_propagation();
+                true
+            }
+            _ => false,
         }
     }
 

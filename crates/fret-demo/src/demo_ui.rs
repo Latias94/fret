@@ -5,8 +5,9 @@ use crate::ime_probe::ImeProbe;
 use crate::property_row::PropertyRow;
 use fret_core::{AppWindowId, Axis, Color, Px};
 use fret_ui::{
-    ColoredPanel, Column, DockSpace, FixedPanel, Scroll, Split, Text, TextArea, TextInput,
-    TreeNode, TreeView, UiLayerId, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
+    ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel, Scroll, Split, Text, TextArea,
+    TextInput, TreeNode, TreeView, UiLayerId, UiTree, VirtualList, VirtualListDataSource,
+    VirtualListRow,
 };
 use std::borrow::Cow;
 
@@ -59,6 +60,8 @@ pub struct DemoLayers {
     pub external_dnd: UiLayerId,
     pub command_palette: UiLayerId,
     pub command_palette_node: fret_core::NodeId,
+    pub context_menu: UiLayerId,
+    pub context_menu_node: fret_core::NodeId,
 }
 
 pub fn build_demo_ui(window: AppWindowId, config: DemoUiConfig) -> (UiTree, DemoLayers) {
@@ -228,6 +231,10 @@ Goal: foundation for Console/Inspector/code editor.",
     let command_palette_node = ui.create_node(CommandPalette::new());
     ui.add_child(palette_root, command_palette_node);
 
+    let context_menu_node = ui.create_node(ContextMenu::new());
+    let context_menu = ui.push_overlay_root(context_menu_node, true);
+    ui.set_layer_visible(context_menu, false);
+
     (
         ui,
         DemoLayers {
@@ -235,6 +242,8 @@ Goal: foundation for Console/Inspector/code editor.",
             external_dnd,
             command_palette,
             command_palette_node,
+            context_menu,
+            context_menu_node,
         },
     )
 }

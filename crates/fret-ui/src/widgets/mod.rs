@@ -1,5 +1,6 @@
 mod clip;
 mod column;
+mod context_menu;
 mod fixed_panel;
 mod panel;
 mod scroll;
@@ -12,6 +13,7 @@ mod virtual_list;
 
 pub use clip::Clip;
 pub use column::Column;
+pub use context_menu::{ContextMenu, ContextMenuRequest, ContextMenuService, ContextMenuStyle};
 pub use fixed_panel::FixedPanel;
 pub use panel::ColoredPanel;
 pub use scroll::Scroll;
