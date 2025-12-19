@@ -6,6 +6,7 @@ mod elements_mvp2;
 mod hierarchy;
 mod ime_probe;
 mod inspector_edit;
+mod inspector_edit_layout;
 mod inspector_protocol;
 mod property;
 mod property_edit;
@@ -15,7 +16,7 @@ mod world;
 use demo_ui::{DemoLayers, DemoUiConfig, build_demo_ui};
 use editor_shell::DemoSelection;
 use hierarchy::DemoHierarchy;
-use inspector_edit::{InspectorEditService, parse_value};
+use inspector_edit::{InspectorEditKind, InspectorEditService, parse_value};
 use property_edit::PropertyEditService;
 use viewport_tools::{
     MarqueeSelectInteraction, PanOrbitInteraction, PanOrbitKind, ViewportInteraction,
@@ -1489,6 +1490,15 @@ impl WinitDriver for DemoDriver {
                     .unwrap_or_default();
 
                 let Some(value) = parse_value(request.kind, input.as_str()) else {
+                    app.with_global_mut(InspectorEditService::default, |s, _app| {
+                        let msg = match request.kind {
+                            InspectorEditKind::String => "Invalid value",
+                            InspectorEditKind::F32 => "Invalid number",
+                            InspectorEditKind::Vec3 => "Invalid vec3 (expected: x, y, z)",
+                        };
+                        s.set_error(window, msg);
+                    });
+                    app.request_redraw(window);
                     return;
                 };
                 app.with_global_mut(PropertyEditService::default, |s, _app| {

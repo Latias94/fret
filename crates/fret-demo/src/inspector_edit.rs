@@ -1,6 +1,7 @@
 use crate::property::PropertyPath;
 use crate::property::PropertyValue;
 use fret_core::AppWindowId;
+use fret_core::{Px, Rect};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,23 +45,36 @@ pub struct InspectorEditRequest {
     pub path: PropertyPath,
     pub kind: InspectorEditKind,
     pub initial_text: String,
+    pub anchor: Option<Rect>,
+    pub preferred_width: Option<Px>,
 }
 
 #[derive(Default)]
 pub struct InspectorEditService {
     requests: HashMap<AppWindowId, InspectorEditRequest>,
+    error: HashMap<AppWindowId, String>,
 }
 
 impl InspectorEditService {
     pub fn set_request(&mut self, window: AppWindowId, request: InspectorEditRequest) {
         self.requests.insert(window, request);
+        self.error.remove(&window);
     }
 
     pub fn get(&self, window: AppWindowId) -> Option<&InspectorEditRequest> {
         self.requests.get(&window)
     }
 
+    pub fn set_error(&mut self, window: AppWindowId, message: impl Into<String>) {
+        self.error.insert(window, message.into());
+    }
+
+    pub fn error(&self, window: AppWindowId) -> Option<&str> {
+        self.error.get(&window).map(|s| s.as_str())
+    }
+
     pub fn clear(&mut self, window: AppWindowId) {
         self.requests.remove(&window);
+        self.error.remove(&window);
     }
 }

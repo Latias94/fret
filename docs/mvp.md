@@ -291,6 +291,10 @@ Goal: make the Inspector minimally editable so the “select → inspect → edi
 - `fret-demo` Inspector can edit at least one bool + one number + one string property for the selected entity model.
 - Editing never breaks focus traversal, clipboard, or IME for text fields.
 
+Status:
+
+- MVP done in `fret-demo` (see `crates/fret-demo/src/editor_shell.rs` and `crates/fret-demo/src/inspector_edit.rs`).
+
 References:
 
 - `docs/adr/0031-app-owned-models-and-leasing-updates.md`

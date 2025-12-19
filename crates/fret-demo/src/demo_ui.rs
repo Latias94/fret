@@ -4,6 +4,7 @@ use crate::editor_shell::{DemoSelection, HierarchyPanel, InspectorPanel};
 use crate::elements_mvp2::ElementsMvp2Demo;
 use crate::hierarchy::DemoHierarchy;
 use crate::ime_probe::ImeProbe;
+use crate::inspector_edit_layout::{InspectorEditHint, InspectorEditLayout};
 use fret_app::Model;
 use fret_core::{AppWindowId, Axis, Color, PanelKey, Px};
 use fret_ui::{
@@ -208,8 +209,7 @@ Goal: foundation for Console/Inspector/code editor.",
     let context_menu = ui.push_overlay_root(context_menu_node, true);
     ui.set_layer_visible(context_menu, false);
 
-    let inspector_root =
-        ui.create_node(OverlayPanelLayout::new(Px(520.0), Px(160.0)).with_top(Px(96.0)));
+    let inspector_root = ui.create_node(InspectorEditLayout::new(Px(420.0), Px(110.0)));
     let inspector_edit = ui.push_overlay_root(inspector_root, true);
     ui.set_layer_visible(inspector_edit, false);
 
@@ -220,7 +220,7 @@ Goal: foundation for Console/Inspector/code editor.",
             b: 0.02,
             a: 0.55,
         },
-        fret_app::CommandId::from("inspector_edit.close"),
+        fret_app::CommandId::from("inspector_edit.commit"),
     ));
     ui.add_child(inspector_root, inspector_backdrop);
 
@@ -239,8 +239,8 @@ Goal: foundation for Console/Inspector/code editor.",
         ui.create_node(Column::new().with_padding(Px(12.0)).with_spacing(Px(8.0)));
     ui.add_child(inspector_panel, inspector_column);
 
-    let inspector_label = ui.create_node(Text::new("Edit value (Enter=commit, Esc=cancel)"));
-    ui.add_child(inspector_column, inspector_label);
+    let inspector_hint = ui.create_node(InspectorEditHint::new(window));
+    ui.add_child(inspector_column, inspector_hint);
 
     let inspector_edit_input_node = ui.create_node(
         BoundTextInput::new(inspector_edit_buffer)

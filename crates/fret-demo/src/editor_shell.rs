@@ -193,6 +193,8 @@ impl InspectorDataSource {
                                     crate::property::PropertyValue::String(v) => v.clone(),
                                     _ => String::new(),
                                 },
+                                anchor: None,
+                                preferred_width: None,
                             },
                         }),
                         InspectorEditorKind::NumberPopup
@@ -211,6 +213,8 @@ impl InspectorDataSource {
                                         },
                                         _ => String::new(),
                                     },
+                                    anchor: None,
+                                    preferred_width: Some(Px(240.0)),
                                 },
                             })
                         }
@@ -225,6 +229,8 @@ impl InspectorDataSource {
                                     }
                                     _ => String::new(),
                                 },
+                                anchor: None,
+                                preferred_width: Some(Px(320.0)),
                             },
                         }),
                     };
@@ -804,6 +810,8 @@ impl Widget for InspectorPanel {
                         return;
                     }
                     InspectorRowAction::EditValue { request } => {
+                        let mut request = request;
+                        request.anchor = self.list.row_rect(row_index);
                         cx.app
                             .with_global_mut(InspectorEditService::default, |service, _app| {
                                 service.set_request(window, request);
