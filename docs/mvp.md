@@ -11,6 +11,11 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
   - MVP 6: Commands + keymap MVP landed (bind/route/persist; `when` gating)
 - MVP 7: MVP done in demo (command palette overlay; shortcut display; menu model types added)
   - Keymap v2 sequences + pending bindings are prototype implemented (ADR 0043 / ADR 0021).
+- Editor-scale list widgets: prototype implemented
+  - `VirtualList` (virtualization + stable keys + multi-selection) (ADR 0042 / ADR 0047)
+  - `TreeView` (hierarchy-style tree over `VirtualList`)
+- MVP 12: MVP done in demo (context menu overlay + submenu + keyboard nav + focus restore)
+- MVP 13: MVP done in demo (Hierarchy selection model → Inspector panel)
 
 ## MVP 7 — Command UI Surfaces (Palette + Menu Skeleton)
 
@@ -176,6 +181,175 @@ References:
 - Zed/GPUI text system patterns:
   - `repo-ref/zed/crates/gpui/src/text_system.rs`
 
+## MVP 12 — Context Menus (Overlay + Menu Rendering)
+
+Goal: make editor UIs feel “native” by supporting right-click workflows (Hierarchy/Project/Viewport) with correct
+overlay + focus semantics.
+
+**Scope**
+
+- Context menu widget rendered as a multi-root overlay (ADR 0011):
+  - click outside dismiss
+  - `Escape` dismiss
+  - arrow key navigation + `Enter` activate
+  - submenu support (`Right` opens, `Left` closes)
+- Menu content is derived from the data-only menu model (ADR 0023) and `when` gating (ADR 0022).
+- Focus behavior:
+  - focus enters the menu while open
+  - focus restores to the previous node on close (ADR 0020)
+- Basic integration points in demo:
+  - `TreeView` right-click opens a Hierarchy-style menu (expand/collapse)
+  - `VirtualList` right-click opens a small list menu
+  - viewport surface right-click opens a viewport menu (demo-only)
+
+**Non-goals**
+
+- Native OS menu bars.
+- Perfect sizing/positioning (multi-monitor, avoid-caret heuristics).
+
+**Definition of Done**
+
+- `fret-demo` shows a context menu on right-click for at least one widget surface.
+- Menu supports keyboard navigation and closing rules consistently across platforms.
+- Menu items execute commands through the existing command routing model.
+
+References:
+
+- `docs/adr/0011-overlays-and-multi-root.md`
+- `docs/adr/0020-focus-and-command-routing.md`
+- `docs/adr/0022-when-expressions.md`
+- `docs/adr/0023-command-metadata-menus-and-palette.md`
+
+## MVP 13 — Unity-Style Editor Shell Wiring (Hierarchy + Inspector)
+
+Goal: validate the “editor app” programming model on top of Fret by wiring a minimal Unity-like workflow:
+select in Hierarchy → inspect/edit properties → see changes reflected.
+
+**Scope**
+
+- Minimal editor shell wiring in `fret-demo`:
+  - Hierarchy (`TreeView`) updates an app-owned selection model
+  - Inspector panel renders based on that selection model
+- App-owned selection model in `fret-app` model store (ADR 0031):
+  - selected entity id(s) (stable identity)
+  - selection changes trigger UI invalidation without widget-owned global state
+- Inspector rendering is data-driven:
+  - read-only text rows are sufficient for this MVP
+
+Notes:
+
+- Dock panel content wiring is intentionally deferred to MVP 16; this MVP validates the model/update flow first.
+
+**Definition of Done**
+
+- Clicking an entity in Hierarchy updates Inspector content (same frame).
+- Right-click context menu works in Hierarchy without breaking selection semantics.
+- Dock persistence continues to work (no regressions).
+
+Status:
+
+- MVP done in `fret-demo` (see `crates/fret-demo/src/editor_shell.rs`).
+
+References:
+
+- `docs/adr/0031-app-owned-models-and-leasing-updates.md`
+- `docs/adr/0013-docking-ops-and-persistence.md`
+- `docs/adr/0042-virtualization-and-large-lists.md`
+
+## MVP 14 — Inspector Editing Baseline (Primitive Fields)
+
+Goal: make the Inspector minimally editable so the “select → inspect → edit” loop feels real.
+
+**Scope**
+
+- Field editors (P0 primitives only):
+  - bool checkbox/toggle,
+  - number input (int/float) with parse/validation,
+  - string input (single-line `TextInput`).
+- Commit semantics:
+  - edits apply on `Enter` / focus loss,
+  - invalid input is visually indicated but does not crash.
+- Command integration (no hard-coded key handling):
+  - `inspector.commit`, `inspector.revert`, `inspector.increment`, `inspector.decrement` (optional).
+- Focus correctness:
+  - field editing behaves well with Tab traversal and context menus (ADR 0020 / MVP 8 / MVP 12).
+
+**Non-goals**
+
+- Undo/redo policy (editor-app scope; see ADR 0024).
+- Drag-to-scrub numeric fields (Unity-style) until internal drag sessions are revisited.
+
+**Definition of Done**
+
+- `fret-demo` Inspector can edit at least one bool + one number + one string property for the selected entity model.
+- Editing never breaks focus traversal, clipboard, or IME for text fields.
+
+References:
+
+- `docs/adr/0031-app-owned-models-and-leasing-updates.md`
+- `docs/adr/0020-focus-and-command-routing.md`
+- `docs/adr/0044-text-editing-state-and-commands.md`
+
+## MVP 15 — Hierarchy Drag & Drop (Reorder + Reparent)
+
+Goal: unlock core Unity hierarchy workflows (reorder and reparent via drag & drop) and validate internal drag sessions
+across dock panels.
+
+**Scope**
+
+- Internal drag session for tree items (ADR 0041):
+  - start drag on row (thresholded),
+  - hover insertion preview (above/below/into),
+  - drop commits an app-owned dock/tree op (no widget-owned global state).
+- UX semantics:
+  - right-click still selects before opening context menu,
+  - disclosure click does not change selection (Unity-style).
+
+**Non-goals**
+
+- External OS drag & drop (files) integration.
+- Multi-window cross-process DnD.
+
+**Definition of Done**
+
+- `fret-demo` Hierarchy supports dragging an entity to reorder within the same parent and reparent into another entity.
+- Drop preview is rendered as an overlay without breaking scene ordering constraints.
+
+References:
+
+- `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
+- `docs/adr/0011-overlays-and-multi-root.md`
+- `docs/adr/0042-virtualization-and-large-lists.md`
+
+## MVP 16 — Dock Panel Content Wiring (Panel → UI Root)
+
+Goal: move “editor shell” widgets into the docking system by making dock panels host UI content, while keeping panel
+identity stable across persistence and plugins.
+
+**Scope**
+
+- Define a `PanelKind` → “panel content builder” contract at the demo/app layer (ADR 0016):
+  - a panel kind maps to a UI root node (or element root) per window
+  - panel content is app-owned; `fret-ui` provides only the hosting/lifecycle hooks
+- Extend `DockSpace` hosting so that each visible dock panel can mount its content node and receive input/focus.
+- Ensure focus/command routing works across dock tabs and panel content without bespoke glue.
+
+**Non-goals**
+
+- Cross-window panel mirroring.
+- Plugin loading/runtime registry (panel builder can be hard-coded in demo).
+
+**Definition of Done**
+
+- `fret-demo` shows Hierarchy + Inspector as real dock panels (tabs), not only in the side demo column.
+- Switching dock tabs preserves per-panel UI state (selection, scroll) via stable panel identity.
+
+References:
+
+- `docs/adr/0016-plugin-and-panel-boundaries.md`
+- `docs/adr/0013-docking-ops-and-persistence.md`
+- `docs/adr/0020-focus-and-command-routing.md`
+
 ## Parking Lot (Explicitly Deferred)
 
 - External OS drag & drop hover semantics on macOS/winit (see `docs/known-issues.md`).
@@ -188,4 +362,7 @@ References:
 - Command palette demo widget: `crates/fret-demo/src/command_palette.rs`
 - Focus + routing: `crates/fret-ui/src/tree.rs`
 - Overlay/multi-root: `crates/fret-ui/src/tree.rs`, `docs/adr/0011-overlays-and-multi-root.md`
+- Context menu: `crates/fret-ui/src/widgets/context_menu.rs`
+- Virtualized lists: `crates/fret-ui/src/widgets/virtual_list.rs`, `crates/fret-ui/src/widgets/tree_view.rs`
+- Editor shell wiring: `crates/fret-demo/src/editor_shell.rs`
 - Desktop runner: `crates/fret-runner-winit-wgpu/src/runner.rs`

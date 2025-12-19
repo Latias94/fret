@@ -1,15 +1,16 @@
 mod command_palette;
 mod demo_ui;
 mod dnd_probe;
+mod editor_shell;
 mod elements_mvp2;
 mod ime_probe;
-mod property_row;
 
 use demo_ui::{DemoLayers, DemoUiConfig, build_demo_ui};
+use editor_shell::DemoSelection;
 
 use fret_app::{
     App, CommandId, CommandMeta, CommandScope, CreateWindowKind, CreateWindowRequest, Effect,
-    Keymap, KeymapFileV1, KeymapService, WindowRequest,
+    Keymap, KeymapFileV1, KeymapService, Model, WindowRequest,
     keymap::{BindingV1, KeySpecV1},
 };
 use fret_core::{
@@ -41,6 +42,7 @@ struct DemoDriver {
     window_placements: HashMap<fret_core::AppWindowId, fret_core::DockWindowPlacementV1>,
     next_floating_index: u32,
     loaded_layout: Option<DockLayoutV1>,
+    selection: Option<Model<DemoSelection>>,
 }
 
 impl DemoDriver {
@@ -1105,6 +1107,10 @@ impl WinitDriver for DemoDriver {
         }
 
         app.set_global(dock);
+
+        if self.selection.is_none() {
+            self.selection = Some(app.models_mut().insert(DemoSelection::default()));
+        }
     }
 
     fn create_window_state(
@@ -1112,7 +1118,8 @@ impl WinitDriver for DemoDriver {
         _app: &mut App,
         window: fret_core::AppWindowId,
     ) -> Self::WindowState {
-        let (ui, layers) = build_demo_ui(window, DemoUiConfig::default());
+        let selection = self.selection.expect("selection model initialized");
+        let (ui, layers) = build_demo_ui(window, DemoUiConfig::default(), selection);
         Self::WindowState {
             ui,
             layers,

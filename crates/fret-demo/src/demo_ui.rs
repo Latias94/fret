@@ -1,13 +1,13 @@
 use crate::command_palette::{CommandPalette, OverlayBackdrop, OverlayPanelLayout};
 use crate::dnd_probe::DndProbe;
+use crate::editor_shell::{DemoSelection, HierarchyPanel, InspectorPanel};
 use crate::elements_mvp2::ElementsMvp2Demo;
 use crate::ime_probe::ImeProbe;
-use crate::property_row::PropertyRow;
+use fret_app::Model;
 use fret_core::{AppWindowId, Axis, Color, Px};
 use fret_ui::{
     ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel, Scroll, Split, Text, TextArea,
-    TextInput, TreeNode, TreeView, UiLayerId, UiTree, VirtualList, VirtualListDataSource,
-    VirtualListRow,
+    TextInput, TreeNode, UiLayerId, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
 };
 use std::borrow::Cow;
 
@@ -43,14 +43,12 @@ impl VirtualListDataSource for LazyEntityList {
 
 pub struct DemoUiConfig {
     pub split_fraction: f32,
-    pub property_count: usize,
 }
 
 impl Default for DemoUiConfig {
     fn default() -> Self {
         Self {
             split_fraction: 0.72,
-            property_count: 28,
         }
     }
 }
@@ -64,7 +62,11 @@ pub struct DemoLayers {
     pub context_menu_node: fret_core::NodeId,
 }
 
-pub fn build_demo_ui(window: AppWindowId, config: DemoUiConfig) -> (UiTree, DemoLayers) {
+pub fn build_demo_ui(
+    window: AppWindowId,
+    config: DemoUiConfig,
+    selection: Model<DemoSelection>,
+) -> (UiTree, DemoLayers) {
     let mut ui = UiTree::new();
     ui.set_window(window);
 
@@ -116,40 +118,10 @@ Goal: foundation for Console/Inspector/code editor.",
     );
     ui.add_child(column, multiline);
 
-    let list_header = ui.create_node(Text::new(
-        "VirtualList MVP (Hierarchy/Project-scale list: scroll + selection + virtualization)",
+    let editor_header = ui.create_node(Text::new(
+        "Editor Shell MVP (Hierarchy selection → Inspector via app-owned model)",
     ));
-    ui.add_child(column, list_header);
-
-    let list_panel = ui.create_node(FixedPanel::new(
-        Px(260.0),
-        Color {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.0,
-        },
-    ));
-    ui.add_child(column, list_panel);
-
-    let list = ui.create_node(VirtualList::new(LazyEntityList { count: 100_000 }));
-    ui.add_child(list_panel, list);
-
-    let tree_header = ui.create_node(Text::new(
-        "TreeView MVP (Hierarchy-style tree: expand/collapse + selection + virtualization)",
-    ));
-    ui.add_child(column, tree_header);
-
-    let tree_panel = ui.create_node(FixedPanel::new(
-        Px(260.0),
-        Color {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.0,
-        },
-    ));
-    ui.add_child(column, tree_panel);
+    ui.add_child(column, editor_header);
 
     let mut next_id: u64 = 1;
     let mut expand: Vec<u64> = Vec::new();
@@ -186,13 +158,47 @@ Goal: foundation for Console/Inspector/code editor.",
         roots.push(TreeNode::new(root_id, format!("Root {r:03}")).with_children(children));
     }
 
-    let tree = ui.create_node(TreeView::new(roots).with_expanded(expand));
-    ui.add_child(tree_panel, tree);
+    let editor_panel = ui.create_node(FixedPanel::new(
+        Px(320.0),
+        Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.0,
+        },
+    ));
+    ui.add_child(column, editor_panel);
+
+    let editor_split = ui.create_node(Split::new(Axis::Horizontal, 0.46));
+    ui.add_child(editor_panel, editor_split);
+
+    let hierarchy = ui.create_node(HierarchyPanel::new(selection, roots, expand));
+    ui.add_child(editor_split, hierarchy);
+
+    let inspector = ui.create_node(InspectorPanel::new(selection));
+    ui.add_child(editor_split, inspector);
+
+    let list_header = ui.create_node(Text::new(
+        "VirtualList MVP (Hierarchy/Project-scale list: scroll + selection + virtualization)",
+    ));
+    ui.add_child(column, list_header);
+
+    let list_panel = ui.create_node(FixedPanel::new(
+        Px(260.0),
+        Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.0,
+        },
+    ));
+    ui.add_child(column, list_panel);
+
+    let list = ui.create_node(VirtualList::new(LazyEntityList { count: 100_000 }));
+    ui.add_child(list_panel, list);
 
     let elements_demo = ui.create_node(ElementsMvp2Demo::new());
     ui.add_child(column, elements_demo);
-
-    populate_property_panel(&mut ui, column, config.property_count);
 
     let modal_root = ui.create_node(ColoredPanel::new(Color {
         r: 0.02,
@@ -246,22 +252,4 @@ Goal: foundation for Console/Inspector/code editor.",
             context_menu_node,
         },
     )
-}
-
-fn populate_property_panel(ui: &mut UiTree, parent: fret_core::NodeId, count: usize) {
-    for i in 0..count {
-        let shade = 0.14 + (i % 2) as f32 * 0.02;
-        let height = if i % 7 == 0 { Px(72.0) } else { Px(44.0) };
-        let item = ui.create_node(PropertyRow::new(
-            format!("Property {i}"),
-            height,
-            Color {
-                r: shade,
-                g: shade + 0.01,
-                b: shade + 0.02,
-                a: 1.0,
-            },
-        ));
-        ui.add_child(parent, item);
-    }
 }
