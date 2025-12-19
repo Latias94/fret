@@ -1,4 +1,7 @@
-use fret_core::{Color, Corners, DrawOrder, Edges, Px, SceneOp, Size, TextConstraints, TextMetrics, TextStyle, TextWrap};
+use fret_core::{
+    Color, Corners, DrawOrder, Edges, Px, SceneOp, Size, TextConstraints, TextMetrics, TextStyle,
+    TextWrap,
+};
 use fret_ui::{LayoutCx, PaintCx, Widget};
 
 #[derive(Debug)]

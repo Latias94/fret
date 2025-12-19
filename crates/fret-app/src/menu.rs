@@ -33,4 +33,3 @@ pub enum MenuItem {
         items: Vec<MenuItem>,
     },
 }
-
