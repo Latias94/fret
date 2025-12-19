@@ -2,10 +2,11 @@ use crate::command_palette::{CommandPalette, OverlayBackdrop, OverlayPanelLayout
 use crate::dnd_probe::DndProbe;
 use crate::elements_mvp2::ElementsMvp2Demo;
 use crate::ime_probe::ImeProbe;
-use crate::multiline_probe::MultilineProbe;
 use crate::property_row::PropertyRow;
 use fret_core::{AppWindowId, Axis, Color, Px};
-use fret_ui::{ColoredPanel, Column, DockSpace, Scroll, Split, Text, TextInput, UiLayerId, UiTree};
+use fret_ui::{
+    ColoredPanel, Column, DockSpace, Scroll, Split, Text, TextArea, TextInput, UiLayerId, UiTree,
+};
 
 pub struct DemoUiConfig {
     pub split_fraction: f32,
@@ -66,8 +67,19 @@ pub fn build_demo_ui(window: AppWindowId, config: DemoUiConfig) -> (UiTree, Demo
     ));
     ui.add_child(column, multiline_header);
 
-    let multiline_probe = ui.create_node(MultilineProbe::new());
-    ui.add_child(column, multiline_probe);
+    let multiline = ui.create_node(
+        TextArea::new(
+            "Multiline text: click/drag to place caret and select.\n\
+This is wrapped text (TextWrap::Word) and exercises:\n\
+- TextService::hit_test_point\n\
+- TextService::caret_rect\n\
+- TextService::selection_rects\n\
+\n\
+Goal: foundation for Console/Inspector/code editor.",
+        )
+        .with_min_height(Px(220.0)),
+    );
+    ui.add_child(column, multiline);
 
     let elements_demo = ui.create_node(ElementsMvp2Demo::new());
     ui.add_child(column, elements_demo);
