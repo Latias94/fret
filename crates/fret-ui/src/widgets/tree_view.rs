@@ -142,6 +142,31 @@ impl TreeView {
         self.list.selected_keys()
     }
 
+    pub fn set_selected_keys(&mut self, keys: impl IntoIterator<Item = u64>, lead: Option<u64>) {
+        if self.dirty {
+            self.rebuild();
+        }
+
+        let mut visible: Vec<u64> = keys
+            .into_iter()
+            .filter(|id| self.id_to_index.contains_key(id))
+            .collect();
+        visible.sort_unstable();
+        visible.dedup();
+
+        let lead = lead.filter(|id| self.id_to_index.contains_key(id));
+        let lead = lead.or_else(|| visible.first().copied());
+        self.selected = lead;
+
+        self.list.set_selected_keys(visible, lead);
+
+        if let Some(lead) = lead {
+            if let Some(index) = self.id_to_index.get(&lead).copied() {
+                self.list.ensure_visible(index);
+            }
+        }
+    }
+
     fn rebuild(&mut self) {
         self.parent_by_id.clear();
         self.first_child_by_id.clear();

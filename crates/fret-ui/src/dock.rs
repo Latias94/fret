@@ -985,7 +985,8 @@ fn paint_viewport_marquee(content: Rect, marquee: ViewportMarquee, scene: &mut S
         Point::new(Px(left), Px(top)),
         Size::new(Px((right - left).max(0.0)), Px((bottom - top).max(0.0))),
     );
-    if rect.size.width.0 <= 1.0 || rect.size.height.0 <= 1.0 {
+    // Render even for very thin drags (so users still see feedback); only skip true clicks.
+    if rect.size.width.0 <= 1.0 && rect.size.height.0 <= 1.0 {
         return;
     }
 

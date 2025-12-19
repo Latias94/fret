@@ -239,6 +239,7 @@ pub struct HierarchyPanel {
     selection: Model<DemoSelection>,
     last_selected: Option<u64>,
     last_selected_keys: Vec<u64>,
+    last_revision: Option<u64>,
 }
 
 impl HierarchyPanel {
@@ -248,7 +249,33 @@ impl HierarchyPanel {
             selection,
             last_selected: None,
             last_selected_keys: Vec::new(),
+            last_revision: None,
         }
+    }
+
+    fn maybe_sync_from_model(&mut self, app: &App) {
+        let revision = self.selection.revision(app);
+        if revision == self.last_revision {
+            return;
+        }
+
+        let next = self.selection.get(app).cloned().unwrap_or_default();
+        let lead = next.lead_entity;
+        let selected = next.selected_entities;
+
+        let mut cur: Vec<u64> = self.tree.selected_keys().iter().copied().collect();
+        cur.sort_unstable();
+
+        if lead == self.tree.selected() && cur == selected {
+            self.last_revision = revision;
+            return;
+        }
+
+        self.tree.set_selected_keys(selected.clone(), lead);
+        self.last_selected = self.tree.selected();
+        self.last_selected_keys = self.tree.selected_keys().iter().copied().collect();
+        self.last_selected_keys.sort_unstable();
+        self.last_revision = revision;
     }
 
     fn sync_selection_model(&mut self, cx: &mut EventCx<'_>) {
@@ -264,6 +291,7 @@ impl HierarchyPanel {
             state.lead_entity = next;
             state.selected_entities = selected;
         });
+        self.last_revision = self.selection.revision(cx.app);
 
         cx.request_redraw();
     }
@@ -280,10 +308,14 @@ impl Widget for HierarchyPanel {
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+        // Ensure selection changes originating outside the hierarchy (viewport tools) are reflected.
+        self.maybe_sync_from_model(cx.app);
         self.tree.layout(cx)
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
+        // Selection changes may request only a redraw (paint), so sync here as well.
+        self.maybe_sync_from_model(cx.app);
         self.tree.paint(cx);
     }
 }

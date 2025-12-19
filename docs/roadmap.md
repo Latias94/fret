@@ -176,7 +176,7 @@ Remaining work (still P0, but can iterate after MVP2):
 
 Notes:
 
-- A minimal overlay prototype exists (viewport hover crosshair in dock panels).
+- A minimal overlay prototype exists (viewport hover crosshair + marquee selection rectangle in dock panels).
 
 ### M6 — Text System Upgrade
 

@@ -90,14 +90,13 @@ pub fn build_demo_ui(
     for r in 0..200u64 {
         let root_id = next_id;
         next_id += 1;
-        if r < 3 {
-            expand.push(root_id);
-        }
+        expand.push(root_id);
 
         let mut children: Vec<TreeNode> = Vec::new();
         for c in 0..20u64 {
             let child_id = next_id;
             next_id += 1;
+            expand.push(child_id);
 
             let mut grandchildren: Vec<TreeNode> = Vec::new();
             if c < 3 {

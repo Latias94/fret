@@ -202,6 +202,66 @@ impl DemoDriver {
             }
         }
     }
+
+    fn selection_model(&self) -> Option<Model<DemoSelection>> {
+        self.selection
+    }
+
+    fn set_selection(&mut self, app: &mut App, lead: Option<u64>, mut selected: Vec<u64>) {
+        selected.sort_unstable();
+        selected.dedup();
+
+        let Some(model) = self.selection_model() else {
+            return;
+        };
+        let _ = model.update(app, |s, _cx| {
+            s.lead_entity = lead;
+            s.selected_entities = selected;
+        });
+
+        for &w in self.logical_windows.keys() {
+            app.request_redraw(w);
+        }
+    }
+
+    fn apply_selection_delta(
+        &mut self,
+        app: &mut App,
+        lead: Option<u64>,
+        delta: Vec<u64>,
+        modifiers: fret_core::Modifiers,
+    ) {
+        let Some(model) = self.selection_model() else {
+            return;
+        };
+        let cur = model.get(app).cloned().unwrap_or_default();
+        let mut selected = cur.selected_entities;
+
+        if modifiers.ctrl || modifiers.meta {
+            use std::collections::HashSet;
+            let mut set: HashSet<u64> = selected.into_iter().collect();
+            for id in delta {
+                if set.contains(&id) {
+                    set.remove(&id);
+                } else {
+                    set.insert(id);
+                }
+            }
+            selected = set.into_iter().collect();
+        } else if modifiers.shift {
+            selected.extend(delta);
+        } else {
+            selected = delta;
+        }
+
+        selected.sort_unstable();
+        selected.dedup();
+
+        let lead = lead.filter(|id| selected.binary_search(id).is_ok());
+        let lead = lead.or_else(|| selected.last().copied());
+
+        self.set_selection(app, lead, selected);
+    }
 }
 
 impl WinitDriver for DemoDriver {
@@ -1280,6 +1340,30 @@ impl WinitDriver for DemoDriver {
                 }
             }
         }
+
+        if let fret_core::Event::KeyDown { key, modifiers, .. } = event {
+            if *key == fret_core::KeyCode::Escape
+                && !modifiers.ctrl
+                && !modifiers.alt
+                && !modifiers.meta
+            {
+                if let Some(tool) = self.viewport_tools {
+                    let mut cancel: Option<viewport_tools::ViewportMarqueeState> = None;
+                    let _ = tool.update(app, |t, _cx| {
+                        cancel = t.marquee.take();
+                    });
+                    if let Some(m) = cancel {
+                        app.with_global_mut(DockManager::default, |dock, _app| {
+                            dock.set_viewport_overlay(m.window, m.target, None);
+                        });
+                        for &w in self.logical_windows.keys() {
+                            app.request_redraw(w);
+                        }
+                        return;
+                    }
+                }
+            }
+        }
         state.ui.dispatch_event(app, text, event);
     }
 
@@ -1520,7 +1604,7 @@ impl WinitDriver for DemoDriver {
             let target = event.target;
 
             let handled = app.with_global_mut(DockManager::default, |dock, app| match event.kind {
-                fret_core::ViewportInputKind::PointerDown { button, .. } => {
+                fret_core::ViewportInputKind::PointerDown { button, modifiers } => {
                     if button != fret_core::MouseButton::Left {
                         return false;
                     }
@@ -1529,8 +1613,11 @@ impl WinitDriver for DemoDriver {
                         t.marquee = Some(viewport_tools::ViewportMarqueeState {
                             window,
                             target,
+                            start_modifiers: modifiers,
                             start_uv,
                             current_uv: start_uv,
+                            start_target_px: event.target_px,
+                            current_target_px: event.target_px,
                         });
                     });
                     dock.set_viewport_overlay(
@@ -1556,6 +1643,7 @@ impl WinitDriver for DemoDriver {
                         if let Some(m) = t.marquee.as_mut() {
                             if m.window == window && m.target == target {
                                 m.current_uv = current_uv;
+                                m.current_target_px = event.target_px;
                                 next = Some(*m);
                             }
                         }
@@ -1576,15 +1664,72 @@ impl WinitDriver for DemoDriver {
                     app.push_effect(Effect::RequestAnimationFrame(window));
                     true
                 }
-                fret_core::ViewportInputKind::PointerUp { button, .. } => {
+                fret_core::ViewportInputKind::PointerUp { button, modifiers } => {
                     if button != fret_core::MouseButton::Left {
                         return false;
                     }
+                    let mut commit: Option<viewport_tools::ViewportMarqueeState> = None;
                     let _ = tool.update(app, |t, _cx| {
-                        t.marquee = None;
+                        commit = t.marquee.take();
                     });
                     dock.set_viewport_overlay(window, target, None);
                     app.request_redraw(window);
+
+                    let Some(m) = commit else {
+                        return true;
+                    };
+
+                    let dx = m.start_target_px.0.abs_diff(m.current_target_px.0);
+                    let dy = m.start_target_px.1.abs_diff(m.current_target_px.1);
+
+                    let lead: Option<u64>;
+                    let ids: Vec<u64> = if dx <= 3 && dy <= 3 {
+                        let grid_w: u64 = 64;
+                        let grid_h: u64 = 36;
+                        let x = ((m.current_uv.0 * grid_w as f32).floor() as u64)
+                            .min(grid_w.saturating_sub(1));
+                        let y = ((m.current_uv.1 * grid_h as f32).floor() as u64)
+                            .min(grid_h.saturating_sub(1));
+                        let id = 1 + y * grid_w + x;
+                        lead = Some(id);
+                        vec![id]
+                    } else {
+                        let (u0, v0) = (
+                            m.start_uv.0.min(m.current_uv.0),
+                            m.start_uv.1.min(m.current_uv.1),
+                        );
+                        let (u1, v1) = (
+                            m.start_uv.0.max(m.current_uv.0),
+                            m.start_uv.1.max(m.current_uv.1),
+                        );
+                        let grid_w: u64 = 64;
+                        let grid_h: u64 = 36;
+                        let x0 =
+                            ((u0 * grid_w as f32).floor() as u64).min(grid_w.saturating_sub(1));
+                        let x1 =
+                            ((u1 * grid_w as f32).floor() as u64).min(grid_w.saturating_sub(1));
+                        let y0 =
+                            ((v0 * grid_h as f32).floor() as u64).min(grid_h.saturating_sub(1));
+                        let y1 =
+                            ((v1 * grid_h as f32).floor() as u64).min(grid_h.saturating_sub(1));
+
+                        let mut out: Vec<u64> = Vec::new();
+                        for y in y0..=y1 {
+                            for x in x0..=x1 {
+                                out.push(1 + y * grid_w + x);
+                                if out.len() >= 2048 {
+                                    break;
+                                }
+                            }
+                            if out.len() >= 2048 {
+                                break;
+                            }
+                        }
+                        lead = out.last().copied();
+                        out
+                    };
+
+                    self.apply_selection_delta(app, lead, ids, modifiers);
                     true
                 }
                 _ => false,

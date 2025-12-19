@@ -17,6 +17,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 12: MVP done in demo (context menu overlay + submenu + keyboard nav + focus restore)
 - MVP 13: MVP done in demo (Hierarchy selection model → Inspector panel)
 - MVP 16: MVP done in demo (DockSpace hosts Hierarchy + Inspector content)
+- Viewport tools: prototype started in demo (viewport marquee overlay + viewport→selection sync back to Hierarchy)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)

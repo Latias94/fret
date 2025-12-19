@@ -263,6 +263,26 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         }
     }
 
+    pub fn set_selected_keys(
+        &mut self,
+        keys: impl IntoIterator<Item = D::Key>,
+        lead: Option<D::Key>,
+    ) {
+        self.selected_keys.clear();
+        for k in keys {
+            if self.data.index_of_key(k).is_some() {
+                self.selected_keys.insert(k);
+            }
+        }
+
+        let lead = lead.filter(|k| self.selected_keys.contains(k));
+        let lead = lead.or_else(|| self.selected_keys.iter().next().copied());
+
+        self.selection_anchor = lead;
+        self.selection_lead = lead;
+        self.selection_lead_index = lead.and_then(|k| self.data.index_of_key(k));
+    }
+
     pub fn data(&self) -> &D {
         &self.data
     }
