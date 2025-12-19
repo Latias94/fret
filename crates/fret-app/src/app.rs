@@ -39,6 +39,13 @@ pub enum Effect {
         window: Option<AppWindowId>,
         command: CommandId,
     },
+    /// Framework-level UI invalidation hook (GPUI-style notify).
+    ///
+    /// This is intentionally UI-runtime-agnostic: the runner/driver decides which UI tree nodes
+    /// to invalidate for `Layout` within the given window.
+    UiInvalidateLayout {
+        window: AppWindowId,
+    },
     ClipboardSetText {
         text: String,
     },

@@ -1136,6 +1136,17 @@ impl WinitDriver for DemoDriver {
         }
     }
 
+    fn invalidate_ui_layout(
+        &mut self,
+        _app: &mut App,
+        _window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+    ) {
+        state
+            .ui
+            .invalidate(state.layers.dockspace_node, Invalidation::Layout);
+    }
+
     fn handle_event(
         &mut self,
         app: &mut App,
@@ -1223,12 +1234,6 @@ impl WinitDriver for DemoDriver {
         }
 
         match command.as_str() {
-            "demo.dock.invalidate_layout" => {
-                state
-                    .ui
-                    .invalidate(state.layers.dockspace_node, Invalidation::Layout);
-                app.request_redraw(window);
-            }
             "command_palette.toggle" => {
                 let vis = state.ui.is_layer_visible(state.layers.command_palette);
                 if vis {
@@ -1371,10 +1376,7 @@ impl WinitDriver for DemoDriver {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
         }
         for w in redraw {
-            app.push_effect(Effect::Command {
-                window: Some(w),
-                command: CommandId::from("demo.dock.invalidate_layout"),
-            });
+            app.push_effect(Effect::UiInvalidateLayout { window: w });
         }
     }
 
@@ -1539,10 +1541,7 @@ impl WinitDriver for DemoDriver {
         });
         self.logical_windows.remove(&window);
 
-        app.push_effect(Effect::Command {
-            window: Some(main),
-            command: CommandId::from("demo.dock.invalidate_layout"),
-        });
+        app.push_effect(Effect::UiInvalidateLayout { window: main });
         true
     }
 }
