@@ -6,10 +6,13 @@ use crate::ime_probe::ImeProbe;
 use fret_app::Model;
 use fret_core::{AppWindowId, Axis, Color, PanelKey, Px};
 use fret_ui::{
-    ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel, Scroll, Split, Text, TextArea,
-    TextInput, TreeNode, UiLayerId, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
+    BoundTextInput, ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel, Scroll, Split, Stack,
+    Text, TextArea, TextInput, TreeNode, UiLayerId, UiTree, VirtualList, VirtualListDataSource,
+    VirtualListRow,
 };
 use std::borrow::Cow;
+
+use crate::world::DemoWorld;
 
 #[derive(Debug, Clone)]
 struct LazyEntityList {
@@ -60,6 +63,8 @@ pub struct DemoLayers {
     pub command_palette_node: fret_core::NodeId,
     pub context_menu: UiLayerId,
     pub context_menu_node: fret_core::NodeId,
+    pub inspector_edit: UiLayerId,
+    pub inspector_edit_input_node: fret_core::NodeId,
     pub dockspace_node: fret_core::NodeId,
 }
 
@@ -67,6 +72,8 @@ pub fn build_demo_ui(
     window: AppWindowId,
     config: DemoUiConfig,
     selection: Model<DemoSelection>,
+    world: Model<DemoWorld>,
+    inspector_edit_buffer: Model<String>,
 ) -> (UiTree, DemoLayers) {
     let mut ui = UiTree::new();
     ui.set_window(window);
@@ -113,7 +120,7 @@ pub fn build_demo_ui(
     }
 
     let hierarchy = ui.create_node(HierarchyPanel::new(selection, roots, expand));
-    let inspector = ui.create_node(InspectorPanel::new(selection));
+    let inspector = ui.create_node(InspectorPanel::new(selection, world));
 
     let dock = ui.create_node(
         DockSpace::new(window)
@@ -234,6 +241,47 @@ Goal: foundation for Console/Inspector/code editor.",
     let context_menu = ui.push_overlay_root(context_menu_node, true);
     ui.set_layer_visible(context_menu, false);
 
+    let inspector_root =
+        ui.create_node(OverlayPanelLayout::new(Px(520.0), Px(160.0)).with_top(Px(96.0)));
+    let inspector_edit = ui.push_overlay_root(inspector_root, true);
+    ui.set_layer_visible(inspector_edit, false);
+
+    let inspector_backdrop = ui.create_node(OverlayBackdrop::new(
+        Color {
+            r: 0.02,
+            g: 0.02,
+            b: 0.02,
+            a: 0.55,
+        },
+        fret_app::CommandId::from("inspector_edit.close"),
+    ));
+    ui.add_child(inspector_root, inspector_backdrop);
+
+    let inspector_panel = ui.create_node(Stack::new());
+    ui.add_child(inspector_root, inspector_panel);
+
+    let inspector_panel_bg = ui.create_node(ColoredPanel::new(Color {
+        r: 0.10,
+        g: 0.10,
+        b: 0.12,
+        a: 1.0,
+    }));
+    ui.add_child(inspector_panel, inspector_panel_bg);
+
+    let inspector_column =
+        ui.create_node(Column::new().with_padding(Px(12.0)).with_spacing(Px(8.0)));
+    ui.add_child(inspector_panel, inspector_column);
+
+    let inspector_label = ui.create_node(Text::new("Edit value (Enter=commit, Esc=cancel)"));
+    ui.add_child(inspector_column, inspector_label);
+
+    let inspector_edit_input_node = ui.create_node(
+        BoundTextInput::new(inspector_edit_buffer)
+            .with_submit_command(fret_app::CommandId::from("inspector_edit.commit"))
+            .with_cancel_command(fret_app::CommandId::from("inspector_edit.close")),
+    );
+    ui.add_child(inspector_column, inspector_edit_input_node);
+
     (
         ui,
         DemoLayers {
@@ -243,6 +291,8 @@ Goal: foundation for Console/Inspector/code editor.",
             command_palette_node,
             context_menu,
             context_menu_node,
+            inspector_edit,
+            inspector_edit_input_node,
             dockspace_node: dock,
         },
     )

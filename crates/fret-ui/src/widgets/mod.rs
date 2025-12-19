@@ -19,7 +19,7 @@ pub use panel::ColoredPanel;
 pub use scroll::Scroll;
 pub use split::Split;
 pub use stack::Stack;
-pub use text::{Text, TextInput};
+pub use text::{BoundTextInput, Text, TextInput};
 pub use text_area::{TextArea, TextAreaStyle};
 pub use tree_view::{TreeNode, TreeView, TreeViewStyle};
 pub use virtual_list::{

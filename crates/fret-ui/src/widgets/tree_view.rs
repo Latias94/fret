@@ -138,6 +138,10 @@ impl TreeView {
         self.selected
     }
 
+    pub fn selected_keys(&self) -> &HashSet<u64> {
+        self.list.selected_keys()
+    }
+
     fn rebuild(&mut self) {
         self.parent_by_id.clear();
         self.first_child_by_id.clear();
@@ -160,7 +164,7 @@ impl TreeView {
             indent_width: self.style.indent_width,
         });
 
-        self.sync_list_selection_from_selected();
+        self.sync_selected_from_list();
         self.dirty = false;
     }
 

@@ -4,9 +4,14 @@ mod dnd_probe;
 mod editor_shell;
 mod elements_mvp2;
 mod ime_probe;
+mod inspector_edit;
+mod property;
+mod world;
 
 use demo_ui::{DemoLayers, DemoUiConfig, build_demo_ui};
 use editor_shell::DemoSelection;
+use inspector_edit::InspectorEditService;
+use world::DemoWorld;
 
 use fret_app::{
     App, CommandId, CommandMeta, CommandScope, CreateWindowKind, CreateWindowRequest, Effect,
@@ -29,6 +34,8 @@ struct DemoWindowState {
     layers: DemoLayers,
     palette_previous_focus: Option<fret_core::NodeId>,
     context_menu_previous_focus: Option<fret_core::NodeId>,
+    inspector_edit_previous_focus: Option<fret_core::NodeId>,
+    inspector_edit_buffer: Model<String>,
 }
 
 #[derive(Default)]
@@ -44,6 +51,7 @@ struct DemoDriver {
     next_floating_index: u32,
     loaded_layout: Option<DockLayoutV1>,
     selection: Option<Model<DemoSelection>>,
+    world: Option<Model<DemoWorld>>,
 }
 
 impl DemoDriver {
@@ -266,6 +274,8 @@ impl WinitDriver for DemoDriver {
         self.main_window = Some(main_window);
         self.logical_windows.insert(main_window, "main".to_string());
 
+        app.set_global(InspectorEditService::default());
+
         app.commands_mut().register(
             CommandId::from("command_palette.toggle"),
             CommandMeta::new("Toggle Command Palette")
@@ -293,6 +303,28 @@ impl WinitDriver for DemoDriver {
             CommandMeta::new("Close Context Menu")
                 .with_description("Closes the context menu overlay")
                 .with_category("View")
+                .hidden(),
+        );
+
+        app.commands_mut().register(
+            CommandId::from("inspector_edit.open"),
+            CommandMeta::new("Open Inspector Edit")
+                .with_description("Internal: opens the inspector value editor popup")
+                .with_category("Inspector")
+                .hidden(),
+        );
+        app.commands_mut().register(
+            CommandId::from("inspector_edit.close"),
+            CommandMeta::new("Close Inspector Edit")
+                .with_description("Internal: closes the inspector value editor popup")
+                .with_category("Inspector")
+                .hidden(),
+        );
+        app.commands_mut().register(
+            CommandId::from("inspector_edit.commit"),
+            CommandMeta::new("Commit Inspector Edit")
+                .with_description("Internal: commits the inspector value editor popup")
+                .with_category("Inspector")
                 .hidden(),
         );
 
@@ -1112,6 +1144,9 @@ impl WinitDriver for DemoDriver {
         if self.selection.is_none() {
             self.selection = Some(app.models_mut().insert(DemoSelection::default()));
         }
+        if self.world.is_none() {
+            self.world = Some(app.models_mut().insert(DemoWorld::default()));
+        }
     }
 
     fn create_window_state(
@@ -1127,12 +1162,29 @@ impl WinitDriver for DemoDriver {
                 model
             }
         };
-        let (ui, layers) = build_demo_ui(window, DemoUiConfig::default(), selection);
+        let world = match self.world {
+            Some(model) => model,
+            None => {
+                let model = app.models_mut().insert(DemoWorld::default());
+                self.world = Some(model);
+                model
+            }
+        };
+        let inspector_edit_buffer = app.models_mut().insert(String::new());
+        let (ui, layers) = build_demo_ui(
+            window,
+            DemoUiConfig::default(),
+            selection,
+            world,
+            inspector_edit_buffer,
+        );
         Self::WindowState {
             ui,
             layers,
             palette_previous_focus: None,
             context_menu_previous_focus: None,
+            inspector_edit_previous_focus: None,
+            inspector_edit_buffer,
         }
     }
 
@@ -1249,6 +1301,78 @@ impl WinitDriver for DemoDriver {
                         .ui
                         .set_layer_visible(state.layers.command_palette, true);
                     state.ui.set_focus(Some(state.layers.command_palette_node));
+                }
+                app.request_redraw(window);
+            }
+            "inspector_edit.open" => {
+                let Some(request) = app
+                    .global::<InspectorEditService>()
+                    .and_then(|s| s.get(window))
+                    .cloned()
+                else {
+                    return;
+                };
+
+                let _ = state.inspector_edit_buffer.update(app, |buf, _cx| {
+                    *buf = request.initial_text;
+                });
+
+                state.inspector_edit_previous_focus = state.ui.focus();
+                state
+                    .ui
+                    .set_layer_visible(state.layers.inspector_edit, true);
+                state
+                    .ui
+                    .set_focus(Some(state.layers.inspector_edit_input_node));
+                app.request_redraw(window);
+            }
+            "inspector_edit.close" => {
+                if state.ui.is_layer_visible(state.layers.inspector_edit) {
+                    state
+                        .ui
+                        .set_layer_visible(state.layers.inspector_edit, false);
+                }
+
+                app.global_mut::<InspectorEditService>()
+                    .map(|s| s.clear(window));
+
+                if let Some(prev) = state.inspector_edit_previous_focus.take() {
+                    state.ui.set_focus(Some(prev));
+                }
+                app.request_redraw(window);
+            }
+            "inspector_edit.commit" => {
+                let Some(request) = app
+                    .global::<InspectorEditService>()
+                    .and_then(|s| s.get(window))
+                    .cloned()
+                else {
+                    return;
+                };
+
+                let input = state
+                    .inspector_edit_buffer
+                    .get(app)
+                    .cloned()
+                    .unwrap_or_default();
+
+                if let Some(world) = self.world {
+                    let _ = world.update(app, |w, _cx| {
+                        w.apply_edit(&request, input.as_str());
+                    });
+                }
+
+                for &w in self.logical_windows.keys() {
+                    app.request_redraw(w);
+                }
+
+                state
+                    .ui
+                    .set_layer_visible(state.layers.inspector_edit, false);
+                app.global_mut::<InspectorEditService>()
+                    .map(|s| s.clear(window));
+                if let Some(prev) = state.inspector_edit_previous_focus.take() {
+                    state.ui.set_focus(Some(prev));
                 }
                 app.request_redraw(window);
             }

@@ -4,6 +4,8 @@ use fret_core::{
 };
 
 use crate::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use fret_app::{App, CommandId, Model};
+use fret_core::KeyCode;
 
 #[derive(Debug, Clone)]
 pub struct Text {
@@ -138,6 +140,140 @@ impl TextInput {
         self.caret = self.text.len();
         self.selection_anchor = self.caret;
         self
+    }
+
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    pub fn set_text(&mut self, text: impl Into<String>) {
+        self.text = text.into();
+        self.caret = self.text.len();
+        self.selection_anchor = self.caret;
+        self.preedit.clear();
+        self.preedit_cursor = None;
+        self.text_blob = None;
+        self.text_metrics = None;
+        self.prefix_blob = None;
+        self.prefix_metrics = None;
+        self.suffix_blob = None;
+        self.suffix_metrics = None;
+        self.preedit_blob = None;
+        self.preedit_metrics = None;
+        self.caret_stops.clear();
+        self.last_sent_cursor = None;
+    }
+}
+
+pub struct BoundTextInput {
+    model: Model<String>,
+    last_revision: Option<u64>,
+    dirty_since_sync: bool,
+    submit_command: Option<CommandId>,
+    cancel_command: Option<CommandId>,
+    input: TextInput,
+}
+
+impl BoundTextInput {
+    pub fn new(model: Model<String>) -> Self {
+        Self {
+            model,
+            last_revision: None,
+            dirty_since_sync: false,
+            submit_command: None,
+            cancel_command: None,
+            input: TextInput::new(),
+        }
+    }
+
+    pub fn with_submit_command(mut self, command: CommandId) -> Self {
+        self.submit_command = Some(command);
+        self
+    }
+
+    pub fn with_cancel_command(mut self, command: CommandId) -> Self {
+        self.cancel_command = Some(command);
+        self
+    }
+
+    fn sync_from_model(&mut self, app: &App, force: bool) {
+        let revision = self.model.revision(app);
+        if revision == self.last_revision {
+            return;
+        }
+        self.last_revision = revision;
+
+        let Some(text) = self.model.get(app) else {
+            return;
+        };
+
+        if force || !self.dirty_since_sync {
+            self.input.set_text(text.clone());
+            self.dirty_since_sync = false;
+        }
+    }
+
+    fn maybe_update_model(&mut self, app: &mut App) {
+        let text = self.input.text().to_string();
+        let _ = self.model.update(app, |v, _cx| {
+            *v = text;
+        });
+    }
+}
+
+impl Widget for BoundTextInput {
+    fn is_focusable(&self) -> bool {
+        true
+    }
+
+    fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+        if cx.focus != Some(cx.node) {
+            self.sync_from_model(cx.app, false);
+        }
+
+        if cx.focus == Some(cx.node) {
+            if let Event::KeyDown { key, modifiers, .. } = event {
+                if !modifiers.shift && !modifiers.ctrl && !modifiers.alt && !modifiers.meta {
+                    match key {
+                        KeyCode::Enter => {
+                            if let Some(cmd) = self.submit_command.clone() {
+                                cx.dispatch_command(cmd);
+                                cx.stop_propagation();
+                                return;
+                            }
+                        }
+                        KeyCode::Escape => {
+                            if let Some(cmd) = self.cancel_command.clone() {
+                                cx.dispatch_command(cmd);
+                                cx.stop_propagation();
+                                return;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        let before = self.input.text().to_string();
+        self.input.event(cx, event);
+        if self.input.text() != before {
+            self.dirty_since_sync = true;
+            self.maybe_update_model(cx.app);
+            cx.invalidate_self(Invalidation::Layout);
+            cx.invalidate_self(Invalidation::Paint);
+            cx.request_redraw();
+        }
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+        let force = !self.dirty_since_sync;
+        self.sync_from_model(cx.app, force);
+        self.input.layout(cx)
+    }
+
+    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+        self.input.paint(cx);
     }
 }
 
