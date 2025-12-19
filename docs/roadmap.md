@@ -117,6 +117,7 @@ should not be treated as Fret framework deliverables (see ADR 0027):
 - P0: Semantics tree output (UI-only; platform bridge deferred) (ADR 0033).
 - P1: Base widgets: `Root`, `Stack`, `Split`, `Clip`, `Scroll`, `Column` (non-taffy). (prototype implemented)
 - P1: Scrollbar UX: draggable thumb + track clicking. (prototype implemented)
+- P1: Editor-scale list widgets: `VirtualList`, `TreeView` (prototype implemented)
 - P1: Layout contract: `layout_in(child, rect)` stores child bounds for hit-test/paint. (prototype implemented)
 - P1: Optional `Flex`/`Grid` widget backed by `taffy` (defer until needed; no `UiTree` refactor).
 - P0: Virtualization contract for editor-scale lists/tables/editors (no unbounded children in layout engines). (ADR 0042) (prototype implemented: `fret-ui` `VirtualList`)

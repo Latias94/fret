@@ -6,7 +6,7 @@ use crate::property_row::PropertyRow;
 use fret_core::{AppWindowId, Axis, Color, Px};
 use fret_ui::{
     ColoredPanel, Column, DockSpace, FixedPanel, Scroll, Split, Text, TextArea, TextInput,
-    UiLayerId, UiTree, VirtualList,
+    TreeNode, TreeView, UiLayerId, UiTree, VirtualList,
 };
 
 pub struct DemoUiConfig {
@@ -104,6 +104,60 @@ Goal: foundation for Console/Inspector/code editor.",
     }
     let list = ui.create_node(VirtualList::new(items));
     ui.add_child(list_panel, list);
+
+    let tree_header = ui.create_node(Text::new(
+        "TreeView MVP (Hierarchy-style tree: expand/collapse + selection + virtualization)",
+    ));
+    ui.add_child(column, tree_header);
+
+    let tree_panel = ui.create_node(FixedPanel::new(
+        Px(260.0),
+        Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.0,
+        },
+    ));
+    ui.add_child(column, tree_panel);
+
+    let mut next_id: u64 = 1;
+    let mut expand: Vec<u64> = Vec::new();
+    let mut roots: Vec<TreeNode> = Vec::new();
+    for r in 0..200u64 {
+        let root_id = next_id;
+        next_id += 1;
+        if r < 3 {
+            expand.push(root_id);
+        }
+
+        let mut children: Vec<TreeNode> = Vec::new();
+        for c in 0..20u64 {
+            let child_id = next_id;
+            next_id += 1;
+
+            let mut grandchildren: Vec<TreeNode> = Vec::new();
+            if c < 3 {
+                for g in 0..5u64 {
+                    let grand_id = next_id;
+                    next_id += 1;
+                    grandchildren.push(TreeNode::new(
+                        grand_id,
+                        format!("Grandchild {r:03}-{c:02}-{g:02}"),
+                    ));
+                }
+            }
+
+            children.push(
+                TreeNode::new(child_id, format!("Child {r:03}-{c:02}"))
+                    .with_children(grandchildren),
+            );
+        }
+        roots.push(TreeNode::new(root_id, format!("Root {r:03}")).with_children(children));
+    }
+
+    let tree = ui.create_node(TreeView::new(roots).with_expanded(expand));
+    ui.add_child(tree_panel, tree);
 
     let elements_demo = ui.create_node(ElementsMvp2Demo::new());
     ui.add_child(column, elements_demo);

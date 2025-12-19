@@ -7,6 +7,7 @@ mod split;
 mod stack;
 mod text;
 mod text_area;
+mod tree_view;
 mod virtual_list;
 
 pub use clip::Clip;
@@ -18,4 +19,5 @@ pub use split::Split;
 pub use stack::Stack;
 pub use text::{Text, TextInput};
 pub use text_area::{TextArea, TextAreaStyle};
-pub use virtual_list::{VirtualList, VirtualListStyle};
+pub use tree_view::{TreeNode, TreeView, TreeViewStyle};
+pub use virtual_list::{VirtualList, VirtualListRow, VirtualListStyle};
