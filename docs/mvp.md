@@ -164,6 +164,7 @@ This MVP is primarily a **contract / API boundary** milestone; performance work 
 - A minimal validation plan exists:
   - wrapped/multiline widget demo (not a code editor yet),
   - y-aware hit testing + caret rect behavior at line breaks,
+  - keyboard vertical caret movement (`text.move_up/down`, `text.select_up/down`) validated via the geometry queries,
   - IME cursor-area follows caret rect (window coordinates).
 
 References:
