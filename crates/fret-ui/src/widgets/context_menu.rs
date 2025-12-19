@@ -755,15 +755,16 @@ impl Widget for ContextMenu {
                     });
                 }
 
-                if let Some(label) = row.label {
+                if let (Some(label), Some(metrics)) = (row.label, row.label_metrics) {
                     let color = if row.enabled {
                         self.style.text_color
                     } else {
                         self.style.disabled_text_color
                     };
+                    let inner_y = y + (row.height.0 - metrics.size.height.0) * 0.5;
                     let origin = Point::new(
                         Px(panel.bounds.origin.x.0 + self.style.padding_x.0),
-                        Px(y + (row.height.0 - row.label_metrics.unwrap().size.height.0) * 0.5),
+                        Px(inner_y + metrics.baseline.0),
                     );
                     cx.scene.push(SceneOp::Text {
                         order: DrawOrder(2),
@@ -777,8 +778,8 @@ impl Widget for ContextMenu {
                     let x = panel.bounds.origin.x.0 + panel.bounds.size.width.0
                         - self.style.padding_x.0
                         - metrics.size.width.0;
-                    let origin =
-                        Point::new(Px(x), Px(y + (row.height.0 - metrics.size.height.0) * 0.5));
+                    let inner_y = y + (row.height.0 - metrics.size.height.0) * 0.5;
+                    let origin = Point::new(Px(x), Px(inner_y + metrics.baseline.0));
                     cx.scene.push(SceneOp::Text {
                         order: DrawOrder(2),
                         origin,
@@ -829,11 +830,8 @@ fn visible_menu_indices(
     for (i, item) in items.iter().enumerate() {
         match item {
             MenuItem::Separator => out.push(i),
-            MenuItem::Command { command, when } => {
+            MenuItem::Command { when, .. } => {
                 if when.as_ref().is_some_and(|w| !w.eval(ctx)) {
-                    continue;
-                }
-                if commands.get(command.clone()).is_some_and(|m| m.hidden) {
                     continue;
                 }
                 out.push(i);

@@ -1,12 +1,15 @@
-use fret_app::Effect;
+use fret_app::{CommandId, Effect, InputContext, Menu, MenuItem};
 use fret_core::{
     Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, Edges, PanelKey, RenderTargetId,
     Scene, SceneOp, ViewportFit, ViewportInputEvent, ViewportInputKind, ViewportMapping,
     geometry::{Point, Px, Rect, Size},
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
-use crate::widget::{EventCx, LayoutCx, PaintCx, Widget};
+use crate::{
+    widget::{EventCx, LayoutCx, PaintCx, Widget},
+    widgets::{ContextMenuRequest, ContextMenuService},
+};
 
 pub struct DockPanel {
     pub title: String,
@@ -44,6 +47,7 @@ pub struct DockManager {
     pub panels: HashMap<PanelKey, DockPanel>,
     hover: Option<DockDropTarget>,
     viewport_hover: Option<ViewportHover>,
+    viewport_context_menu: Option<ViewportInputEvent>,
 }
 
 impl Default for DockManager {
@@ -53,6 +57,7 @@ impl Default for DockManager {
             panels: HashMap::new(),
             hover: None,
             viewport_hover: None,
+            viewport_context_menu: None,
         }
     }
 }
@@ -107,6 +112,7 @@ impl Widget for DockSpace {
         let mut pending_effects: Vec<Effect> = Vec::new();
         let mut pending_redraws: Vec<fret_core::AppWindowId> = Vec::new();
         let mut invalidate_paint = false;
+        let mut open_viewport_menu: Option<(Point, ViewportInputEvent)> = None;
 
         #[derive(Clone)]
         struct DockDragSnapshot {
@@ -178,7 +184,21 @@ impl Widget for DockSpace {
                                 &layout,
                                 *position,
                             ) {
-                                if let Some(e) = viewport_input_from_hit(
+                                if *button == fret_core::MouseButton::Right {
+                                    if let Some(e) = viewport_input_from_hit(
+                                        self.window,
+                                        hit,
+                                        *position,
+                                        ViewportInputKind::PointerDown {
+                                            button: *button,
+                                            modifiers: *modifiers,
+                                        },
+                                    ) {
+                                        dock.viewport_context_menu = Some(e);
+                                        open_viewport_menu = Some((*position, e));
+                                        invalidate_paint = true;
+                                    }
+                                } else if let Some(e) = viewport_input_from_hit(
                                     self.window,
                                     hit,
                                     *position,
@@ -456,6 +476,50 @@ impl Widget for DockSpace {
             }
         }
 
+        if let Some((position, _viewport_event)) = open_viewport_menu {
+            let Some(window) = cx.window else {
+                return;
+            };
+
+            cx.request_focus(cx.node);
+
+            let inv_ctx = InputContext {
+                platform: cx.input_ctx.platform,
+                ui_has_modal: cx.input_ctx.ui_has_modal,
+                focus_is_text_input: false,
+            };
+
+            let menu = Menu {
+                title: Arc::from("Viewport"),
+                items: vec![
+                    MenuItem::Command {
+                        command: CommandId::from("viewport.copy_uv"),
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: CommandId::from("viewport.copy_target_px"),
+                        when: None,
+                    },
+                ],
+            };
+
+            cx.app
+                .with_global_mut(ContextMenuService::default, |service, _app| {
+                    service.set_request(
+                        window,
+                        ContextMenuRequest {
+                            position,
+                            menu,
+                            input_ctx: inv_ctx,
+                        },
+                    );
+                });
+            cx.dispatch_command(CommandId::from("context_menu.open"));
+            cx.request_redraw();
+            cx.stop_propagation();
+            return;
+        }
+
         if invalidate_paint {
             cx.invalidate(cx.node, crate::widget::Invalidation::Paint);
         }
@@ -465,6 +529,38 @@ impl Widget for DockSpace {
         }
         for effect in pending_effects {
             cx.app.push_effect(effect);
+        }
+    }
+
+    fn command(&mut self, cx: &mut crate::widget::CommandCx<'_>, command: &CommandId) -> bool {
+        match command.as_str() {
+            "viewport.copy_uv" => {
+                let Some(dock) = cx.app.global::<DockManager>() else {
+                    return false;
+                };
+                let Some(e) = dock.viewport_context_menu else {
+                    return false;
+                };
+                cx.app.push_effect(Effect::ClipboardSetText {
+                    text: format!("{:.6}, {:.6}", e.uv.0, e.uv.1),
+                });
+                cx.stop_propagation();
+                true
+            }
+            "viewport.copy_target_px" => {
+                let Some(dock) = cx.app.global::<DockManager>() else {
+                    return false;
+                };
+                let Some(e) = dock.viewport_context_menu else {
+                    return false;
+                };
+                cx.app.push_effect(Effect::ClipboardSetText {
+                    text: format!("{}, {}", e.target_px.0, e.target_px.1),
+                });
+                cx.stop_propagation();
+                true
+            }
+            _ => false,
         }
     }
 

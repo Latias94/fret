@@ -340,6 +340,23 @@ impl WinitDriver for DemoDriver {
         );
 
         app.commands_mut().register(
+            CommandId::from("viewport.copy_uv"),
+            CommandMeta::new("Copy Viewport UV")
+                .with_description("Copies the last viewport cursor UV to clipboard")
+                .with_category("Viewport")
+                .with_scope(CommandScope::Widget)
+                .hidden(),
+        );
+        app.commands_mut().register(
+            CommandId::from("viewport.copy_target_px"),
+            CommandMeta::new("Copy Viewport Target Px")
+                .with_description("Copies the last viewport cursor target pixel coordinates")
+                .with_category("Viewport")
+                .with_scope(CommandScope::Widget)
+                .hidden(),
+        );
+
+        app.commands_mut().register(
             CommandId::from("demo.toggle_modal"),
             CommandMeta::new("Toggle Modal Overlay")
                 .with_description("Demo-only: toggles the modal overlay layer")
