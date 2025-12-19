@@ -17,6 +17,9 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 12: MVP done in demo (context menu overlay + submenu + keyboard nav + focus restore)
 - MVP 13: MVP done in demo (Hierarchy selection model → Inspector panel)
 - MVP 16: MVP done in demo (DockSpace hosts Hierarchy + Inspector content)
+- Inspector + viewport tooling boundaries: drafted as Proposed ADRs
+  - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
+  - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
 
 ## MVP 7 — Command UI Surfaces (Palette + Menu Skeleton)
 
@@ -354,6 +357,74 @@ References:
 - `docs/adr/0016-plugin-and-panel-boundaries.md`
 - `docs/adr/0013-docking-ops-and-persistence.md`
 - `docs/adr/0020-focus-and-command-routing.md`
+
+## MVP 17 — Inspector P0 (Property Protocol + Minimal Editors)
+
+Goal: define the “productivity core” workflow for a Unity/Godot-like inspector, without binding the framework to any
+particular reflection/ECS implementation.
+
+**Scope**
+
+- Implement the editor-layer contract from ADR 0048 in `fret-demo`:
+  - stable `PropertyPath` + `PropertyValue` types (data-only),
+  - a `PropertyTree` builder for the demo selection model,
+  - a `PropertyEdit` event emitted by inspector UI (no direct model mutation).
+- Minimal built-in editors sufficient for real workflows:
+  - bool, int/float, string,
+  - enum (choices in metadata),
+  - vec2/vec3 (as grouped leafs).
+- “Mixed value” UX for multi-selection (display `Mixed`, apply edit to all selected compatible targets).
+- Ensure edits follow the “command/transaction then sync-to-model” discipline (ADR 0024 / Fyrox-style).
+
+**Non-goals**
+
+- Full engine reflection integration (this MVP uses a demo adapter).
+- Full undo/redo history UI (only the operational boundary is validated).
+
+**Definition of Done**
+
+- Editing a property in Inspector updates the selected entities in the demo model deterministically.
+- Drag-like controls emit `Begin/Update/Commit/Cancel` so future undo coalescing is straightforward.
+- Custom editor registration is demonstrated via at least one overridden editor.
+
+References:
+
+- `docs/adr/0048-inspector-property-protocol-and-editor-registry.md`
+- `docs/adr/0027-framework-scope-and-responsibilities.md`
+- `docs/adr/0024-undo-redo-and-edit-transactions.md`
+
+## MVP 18 — Viewport Tools P0 (Input Capture + Overlay Rendering)
+
+Goal: establish the editor-layer pattern for viewport tools so later gizmos/selection/camera controls don’t become bespoke
+glue.
+
+**Scope**
+
+- Implement the editor-layer contract from ADR 0049 in `fret-demo`:
+  - a `ToolManager` model (active tool mode + per-viewport tool state),
+  - tool routing from `Effect::ViewportInput` based on focus/modal gating,
+  - explicit capture during drags (consistent move/up delivery).
+- Provide at least one concrete tool with overlays:
+  - selection marquee OR translate gizmo stub (overlay-only is fine),
+  - overlay rendered above the viewport surface.
+- Scheduling rules:
+  - request animation frames only while tool is active (ADR 0034).
+
+**Non-goals**
+
+- Engine picking/gizmo math correctness (can be stubbed).
+- Advanced snapping and multi-history undo policies.
+
+**Definition of Done**
+
+- A focused viewport reliably receives tool input and shows interactive overlay feedback while hovering/dragging.
+- Tool drags remain smooth and consistent across docking and multi-window tear-off.
+
+References:
+
+- `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
+- `docs/adr/0025-viewport-input-forwarding.md`
+- `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
 
 ## Parking Lot (Explicitly Deferred)
 

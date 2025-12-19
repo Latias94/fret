@@ -86,6 +86,16 @@ should not be treated as Fret framework deliverables (see ADR 0027):
 
 - `docs/adr/0024-undo-redo-and-edit-transactions.md`
 - `docs/adr/0026-asset-database-and-import-pipeline.md`
+- `docs/adr/0048-inspector-property-protocol-and-editor-registry.md`
+- `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
+
+## Example Editor Workflows (Demo-Driven, P1)
+
+These are not framework commitments (ADR 0027), but they are essential to reaching Unity/Godot-like “feel” early and to
+validate that the framework contracts are sufficient.
+
+- Inspector P0: engine-agnostic property protocol + custom editor registry + minimal built-in editors (ADR 0048).
+- Viewport tools P0: input capture + tool routing + overlay rendering over viewport surfaces (ADR 0049, built on ADR 0025).
 
 ## Milestones
 
@@ -151,6 +161,10 @@ Remaining work (still P0, but can iterate after MVP2):
 
 - Persist/restore window placement (monitor + DPI-aware geometry) separate from the logical dock layout. (prototype implemented; stored as `DockLayoutWindowV1.placement`)
 - Improve hit-testing + drop-zone heuristics and polish the UX (snap thresholds, preview animations).
+- “Product UI” affordances to match Unity/Godot:
+  - dock drag hint overlay and tab drop indicators (Godot-style),
+  - dock context menu actions (float, close, move left/right, etc.),
+  - debounced layout persistence (delay disk writes during interactive drags).
 
 ### M5 — Engine Viewports
 
