@@ -44,7 +44,7 @@ pub struct ProjectTreeSnapshot {
 
 #[derive(Debug, Default)]
 pub struct ProjectSelectionService {
-    selected: Option<u64>,
+    selected_guid: Option<AssetGuid>,
     revision: u64,
 }
 
@@ -53,15 +53,15 @@ impl ProjectSelectionService {
         self.revision
     }
 
-    pub fn selected(&self) -> Option<u64> {
-        self.selected
+    pub fn selected_guid(&self) -> Option<AssetGuid> {
+        self.selected_guid
     }
 
-    pub fn set_selected(&mut self, selected: Option<u64>) {
-        if self.selected == selected {
+    pub fn set_selected_guid(&mut self, selected: Option<AssetGuid>) {
+        if self.selected_guid == selected {
             return;
         }
-        self.selected = selected;
+        self.selected_guid = selected;
         self.revision = self.revision.saturating_add(1);
     }
 }
@@ -77,6 +77,7 @@ pub struct ProjectService {
     path_by_id: HashMap<u64, PathBuf>,
     kind_by_id: HashMap<u64, ProjectEntryKind>,
     guid_by_id: HashMap<u64, AssetGuid>,
+    id_by_guid: HashMap<AssetGuid, u64>,
 }
 
 impl Default for ProjectService {
@@ -96,6 +97,7 @@ impl ProjectService {
             path_by_id: HashMap::new(),
             kind_by_id: HashMap::new(),
             guid_by_id: HashMap::new(),
+            id_by_guid: HashMap::new(),
         }
     }
 
@@ -124,6 +126,47 @@ impl ProjectService {
 
     pub fn guid_for_id(&self, id: u64) -> Option<AssetGuid> {
         self.guid_by_id.get(&id).copied()
+    }
+
+    pub fn id_for_guid(&self, guid: AssetGuid) -> Option<u64> {
+        self.id_by_guid.get(&guid).copied()
+    }
+
+    pub fn rename_entry(&mut self, id: u64, new_file_name: &str) -> io::Result<()> {
+        if new_file_name.contains(std::path::MAIN_SEPARATOR) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "new_file_name must be a single path segment",
+            ));
+        }
+
+        let from = self
+            .path_by_id
+            .get(&id)
+            .cloned()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "unknown entry id"))?;
+        let parent = from
+            .parent()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "entry has no parent"))?;
+        let to = parent.join(new_file_name);
+        move_path_and_meta(&from, &to)
+    }
+
+    pub fn move_entry_to_folder(&mut self, id: u64, folder: &str) -> io::Result<()> {
+        let from = self
+            .path_by_id
+            .get(&id)
+            .cloned()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "unknown entry id"))?;
+        let file_name = from
+            .file_name()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "entry has no file name"))?;
+
+        let dest_dir = self.assets_root.join(folder);
+        std::fs::create_dir_all(&dest_dir)?;
+
+        let to = dest_dir.join(file_name);
+        move_path_and_meta(&from, &to)
     }
 
     pub fn ensure_demo_assets_exist(&self) -> io::Result<()> {
@@ -167,6 +210,14 @@ impl ProjectService {
         if !assets_root.exists() {
             std::fs::create_dir_all(&assets_root)?;
         }
+
+        self.roots.clear();
+        self.next_id = 1;
+        self.id_by_path.clear();
+        self.path_by_id.clear();
+        self.kind_by_id.clear();
+        self.guid_by_id.clear();
+        self.id_by_guid.clear();
 
         let assets_id = self.id_for_path(&assets_root);
         self.kind_by_id
@@ -241,7 +292,9 @@ impl ProjectService {
     fn ensure_meta_for_path(&mut self, id: u64, path: &Path) -> io::Result<()> {
         let meta_path = meta_path_for(path);
         let meta = read_or_create_meta(&meta_path)?;
-        self.guid_by_id.insert(id, AssetGuid(meta.guid));
+        let guid = AssetGuid(meta.guid);
+        self.guid_by_id.insert(id, guid);
+        self.id_by_guid.insert(guid, id);
         Ok(())
     }
 }
@@ -261,6 +314,39 @@ fn meta_path_for(path: &Path) -> PathBuf {
     let mut os: OsString = path.as_os_str().to_os_string();
     os.push(".meta");
     PathBuf::from(os)
+}
+
+fn move_path_and_meta(from: &Path, to: &Path) -> io::Result<()> {
+    if to.exists() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "destination already exists",
+        ));
+    }
+
+    let meta_from = meta_path_for(from);
+    let meta_to = meta_path_for(to);
+
+    let meta_exists = meta_from.exists();
+    if meta_exists && meta_to.exists() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "destination meta already exists",
+        ));
+    }
+
+    std::fs::rename(from, to)?;
+
+    if meta_exists {
+        if let Err(err) = std::fs::rename(&meta_from, &meta_to) {
+            let _ = std::fs::rename(to, from);
+            return Err(err);
+        }
+    } else {
+        let _ = read_or_create_meta(&meta_to)?;
+    }
+
+    Ok(())
 }
 
 fn read_or_create_meta(path: &Path) -> io::Result<AssetMetaV1> {
@@ -292,4 +378,125 @@ fn read_or_create_meta(path: &Path) -> io::Result<AssetMetaV1> {
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
     std::fs::write(path, json)?;
     Ok(meta)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct TempDir {
+        path: PathBuf,
+    }
+
+    impl TempDir {
+        fn new(prefix: &str) -> io::Result<Self> {
+            let path = std::env::temp_dir().join(format!("{prefix}-{}", Uuid::new_v4()));
+            std::fs::create_dir_all(&path)?;
+            Ok(Self { path })
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.path);
+        }
+    }
+
+    fn collect_ids(node: &TreeNode, out: &mut Vec<u64>) {
+        out.push(node.id);
+        for child in &node.children {
+            collect_ids(child, out);
+        }
+    }
+
+    fn find_id_by_path_ends_with(service: &ProjectService, suffix: &str) -> Option<u64> {
+        let snapshot = service.snapshot();
+        let mut ids: Vec<u64> = Vec::new();
+        for root in &snapshot.roots {
+            collect_ids(root, &mut ids);
+        }
+        for id in ids {
+            let path = service.path_for_id(id)?;
+            if path.to_string_lossy().ends_with(suffix) {
+                return Some(id);
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn guid_preserved_on_rename() -> io::Result<()> {
+        let temp = TempDir::new("fret-project-rename")?;
+        let assets_root = temp.path().join("Assets");
+        std::fs::create_dir_all(&assets_root)?;
+
+        let file = assets_root.join("A.txt");
+        std::fs::write(&file, "hello")?;
+
+        let mut service = ProjectService::new(assets_root.clone());
+        service.rescan()?;
+
+        let id = find_id_by_path_ends_with(&service, "A.txt").expect("A.txt exists");
+        let guid = service.guid_for_id(id).expect("guid exists");
+
+        let meta_path_before = meta_path_for(&file);
+        let meta_before: AssetMetaV1 = serde_json::from_slice(&std::fs::read(&meta_path_before)?)?;
+        assert_eq!(meta_before.guid, guid.0);
+
+        service.rename_entry(id, "A_renamed.txt")?;
+        service.rescan()?;
+
+        let new_id = service
+            .id_for_guid(guid)
+            .expect("entry still present after rename");
+        let new_path = service
+            .path_for_id(new_id)
+            .expect("path for renamed entry exists");
+        assert!(new_path.to_string_lossy().ends_with("A_renamed.txt"));
+
+        let meta_path_after = meta_path_for(new_path);
+        let meta_after: AssetMetaV1 = serde_json::from_slice(&std::fs::read(&meta_path_after)?)?;
+        assert_eq!(meta_after.guid, guid.0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn guid_preserved_on_move() -> io::Result<()> {
+        let temp = TempDir::new("fret-project-move")?;
+        let assets_root = temp.path().join("Assets");
+        std::fs::create_dir_all(&assets_root)?;
+
+        let file = assets_root.join("B.txt");
+        std::fs::write(&file, "hello")?;
+
+        let mut service = ProjectService::new(assets_root.clone());
+        service.rescan()?;
+
+        let id = find_id_by_path_ends_with(&service, "B.txt").expect("B.txt exists");
+        let guid = service.guid_for_id(id).expect("guid exists");
+
+        service.move_entry_to_folder(id, "Moved")?;
+        service.rescan()?;
+
+        let new_id = service
+            .id_for_guid(guid)
+            .expect("entry still present after move");
+        let new_path = service
+            .path_for_id(new_id)
+            .expect("path for moved entry exists");
+        let new_path_str = new_path.to_string_lossy();
+        assert!(new_path_str.contains("Moved"));
+        assert!(new_path_str.ends_with("B.txt"));
+
+        let meta_path_after = meta_path_for(new_path);
+        let meta_after: AssetMetaV1 = serde_json::from_slice(&std::fs::read(&meta_path_after)?)?;
+        assert_eq!(meta_after.guid, guid.0);
+
+        Ok(())
+    }
 }

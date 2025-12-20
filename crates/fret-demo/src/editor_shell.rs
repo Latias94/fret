@@ -55,10 +55,10 @@ impl InspectorDataSource {
     fn new(app: &App, world: Model<DemoWorld>, targets: Vec<u64>) -> Self {
         let mut rows: Vec<InspectorRow> = Vec::new();
 
-        let project_selected = app
+        let project_selected_guid = app
             .global::<ProjectSelectionService>()
-            .and_then(|s| s.selected());
-        if let Some(id) = project_selected {
+            .and_then(|s| s.selected_guid());
+        if let Some(guid) = project_selected_guid {
             let Some(project) = app.global::<ProjectService>() else {
                 rows.push(InspectorRow::Header {
                     label: "Project model missing".to_string(),
@@ -66,12 +66,17 @@ impl InspectorDataSource {
                 return Self { rows };
             };
 
-            let kind = project.kind_for_id(id);
-            let guid = project.guid_for_id(id);
-            let path = project
-                .path_for_id(id)
-                .map(|p| p.to_string_lossy().to_string())
-                .unwrap_or_else(|| "<missing path>".to_string());
+            let (path, kind) = match project.id_for_guid(guid) {
+                Some(id) => {
+                    let kind = project.kind_for_id(id);
+                    let path = project
+                        .path_for_id(id)
+                        .map(|p| p.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "<missing path>".to_string());
+                    (path, kind)
+                }
+                None => ("<missing entry for GUID>".to_string(), None),
+            };
 
             rows.push(InspectorRow::Header {
                 label: "Asset".to_string(),
@@ -92,9 +97,7 @@ impl InspectorDataSource {
             });
             rows.push(InspectorRow::Property {
                 label: "GUID".to_string(),
-                value: guid
-                    .map(|g| g.0.to_string())
-                    .unwrap_or_else(|| "—".to_string()),
+                value: guid.0.to_string(),
                 action: None,
             });
             return Self { rows };
@@ -454,7 +457,7 @@ impl HierarchyPanel {
 
         cx.app
             .with_global_mut(ProjectSelectionService::default, |s, _app| {
-                s.set_selected(None);
+                s.set_selected_guid(None);
             });
 
         cx.request_redraw();

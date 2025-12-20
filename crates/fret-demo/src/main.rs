@@ -70,6 +70,38 @@ Symbols: []{}() <> /\\ | _-+=* &%$#@! ?
 Unicode: 你好，世界。日本語。한글. 😀✨
 "#;
 
+fn project_renamed_candidate(file_name: &str, attempt: u32) -> String {
+    if attempt == 0 {
+        format!("{file_name}_renamed")
+    } else {
+        format!("{file_name}_renamed_{attempt}")
+    }
+}
+
+fn next_project_rename_name(path: &Path) -> Option<String> {
+    let file_name = path.file_name()?.to_string_lossy();
+    let stem = path.file_stem()?.to_string_lossy();
+    let ext = path.extension().map(|e| e.to_string_lossy());
+
+    let mut attempt: u32 = 0;
+    loop {
+        let candidate = if ext.is_some() {
+            let base = project_renamed_candidate(stem.as_ref(), attempt);
+            format!("{base}.{}", ext.as_ref().unwrap().as_ref())
+        } else {
+            project_renamed_candidate(file_name.as_ref(), attempt)
+        };
+        let parent = path.parent()?;
+        if !parent.join(&candidate).exists() {
+            return Some(candidate);
+        }
+        attempt = attempt.saturating_add(1);
+        if attempt > 1000 {
+            return None;
+        }
+    }
+}
+
 struct DemoWindowState {
     ui: UiTree,
     layers: DemoLayers,
@@ -400,7 +432,7 @@ impl DemoDriver {
         selected.dedup();
 
         app.with_global_mut(ProjectSelectionService::default, |s, _app| {
-            s.set_selected(None);
+            s.set_selected_guid(None);
         });
 
         let Some(model) = self.selection_model() else {
@@ -957,6 +989,24 @@ impl WinitDriver for DemoDriver {
                 )
                 .with_category("Project")
                 .with_keywords(["project", "assets", "refresh", "scan"]),
+        );
+        app.commands_mut().register(
+            CommandId::from("project.rename_selected"),
+            CommandMeta::new("Rename Selected Asset")
+                .with_description(
+                    "Renames the selected asset/folder and moves its .meta to preserve GUID",
+                )
+                .with_category("Project")
+                .with_keywords(["project", "assets", "rename", "meta", "guid"]),
+        );
+        app.commands_mut().register(
+            CommandId::from("project.move_selected_to_moved"),
+            CommandMeta::new("Move Selected To Moved/")
+                .with_description(
+                    "Moves the selected asset/folder to Assets/Moved and moves its .meta to preserve GUID",
+                )
+                .with_category("Project")
+                .with_keywords(["project", "assets", "move", "meta", "guid"]),
         );
 
         app.commands_mut().register(
@@ -2405,6 +2455,86 @@ impl WinitDriver for DemoDriver {
                         tracing::error!(error = %err, "failed to scan demo project assets");
                     }
                 }
+                for &w in self.logical_windows.keys() {
+                    app.request_redraw(w);
+                }
+            }
+            "project.rename_selected" => {
+                let guid = app
+                    .global::<ProjectSelectionService>()
+                    .and_then(|s| s.selected_guid());
+                let Some(guid) = guid else {
+                    return;
+                };
+
+                if let Some(project) = app.global_mut::<ProjectService>() {
+                    let Some(id) = project.id_for_guid(guid) else {
+                        return;
+                    };
+                    let Some(path) = project.path_for_id(id).map(|p| p.to_path_buf()) else {
+                        return;
+                    };
+                    if path == project.assets_root() {
+                        return;
+                    }
+
+                    let Some(new_name) = next_project_rename_name(&path) else {
+                        tracing::error!(path = %path.to_string_lossy(), "failed to pick rename candidate");
+                        return;
+                    };
+
+                    if let Err(err) = project.rename_entry(id, &new_name) {
+                        tracing::error!(
+                            error = %err,
+                            from = %path.to_string_lossy(),
+                            to = %new_name,
+                            "project rename failed"
+                        );
+                        return;
+                    }
+                    if let Err(err) = project.rescan() {
+                        tracing::error!(error = %err, "failed to rescan project after rename");
+                        return;
+                    }
+                }
+
+                for &w in self.logical_windows.keys() {
+                    app.request_redraw(w);
+                }
+            }
+            "project.move_selected_to_moved" => {
+                let guid = app
+                    .global::<ProjectSelectionService>()
+                    .and_then(|s| s.selected_guid());
+                let Some(guid) = guid else {
+                    return;
+                };
+
+                if let Some(project) = app.global_mut::<ProjectService>() {
+                    let Some(id) = project.id_for_guid(guid) else {
+                        return;
+                    };
+                    let Some(path) = project.path_for_id(id).map(|p| p.to_path_buf()) else {
+                        return;
+                    };
+                    if path == project.assets_root() {
+                        return;
+                    }
+
+                    if let Err(err) = project.move_entry_to_folder(id, "Moved") {
+                        tracing::error!(
+                            error = %err,
+                            from = %path.to_string_lossy(),
+                            "project move failed"
+                        );
+                        return;
+                    }
+                    if let Err(err) = project.rescan() {
+                        tracing::error!(error = %err, "failed to rescan project after move");
+                        return;
+                    }
+                }
+
                 for &w in self.logical_windows.keys() {
                     app.request_redraw(w);
                 }
