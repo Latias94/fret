@@ -661,6 +661,7 @@ dependencies = [
  "fret-render",
  "fret-runner-winit-wgpu",
  "fret-ui",
+ "serde",
  "serde_json",
  "tracing",
  "tracing-subscriber",

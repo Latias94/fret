@@ -45,6 +45,8 @@ use fret_ui::{
 use std::{collections::HashMap, fs::File, path::Path, time::Duration};
 use winit::event_loop::EventLoop;
 
+use serde::{Deserialize, Serialize};
+
 struct DemoWindowState {
     ui: UiTree,
     layers: DemoLayers,
@@ -73,14 +75,28 @@ struct DemoDriver {
     world: Option<Model<DemoWorld>>,
     undo: Option<Model<UndoStack>>,
     viewport_tools: Option<Model<ViewportToolManager>>,
-    viewport_cameras: HashMap<(fret_core::AppWindowId, RenderTargetId), DemoViewportCamera>,
+    viewport_cameras: HashMap<PanelKey, DemoViewportCamera>,
+    camera_persist_timer: Option<fret_core::TimerToken>,
+    camera_persist_pending: bool,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 struct DemoViewportCamera {
     center: [f32; 2],
     zoom: f32,
     rotation: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ViewportCamerasFileV1 {
+    version: u32,
+    cameras: Vec<ViewportCameraEntryV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ViewportCameraEntryV1 {
+    panel: PanelKey,
+    camera: DemoViewportCamera,
 }
 
 impl Default for DemoViewportCamera {
@@ -153,24 +169,20 @@ impl DemoDriver {
         Path::new("./.fret/keymap.json")
     }
 
-    fn viewport_camera(
-        &self,
-        window: fret_core::AppWindowId,
-        target: RenderTargetId,
-    ) -> DemoViewportCamera {
+    fn viewport_cameras_path() -> &'static Path {
+        Path::new("./.fret/viewport_cameras.json")
+    }
+
+    fn viewport_camera(&self, panel: &PanelKey) -> DemoViewportCamera {
         self.viewport_cameras
-            .get(&(window, target))
+            .get(panel)
             .copied()
             .unwrap_or_default()
     }
 
-    fn viewport_camera_mut(
-        &mut self,
-        window: fret_core::AppWindowId,
-        target: RenderTargetId,
-    ) -> &mut DemoViewportCamera {
+    fn viewport_camera_mut(&mut self, panel: PanelKey) -> &mut DemoViewportCamera {
         self.viewport_cameras
-            .entry((window, target))
+            .entry(panel)
             .or_insert_with(DemoViewportCamera::default)
     }
 
@@ -184,12 +196,27 @@ impl DemoDriver {
         Keymap::from_file(Self::keymap_path())
     }
 
+    fn load_viewport_cameras_file() -> Option<ViewportCamerasFileV1> {
+        let file = File::open(Self::viewport_cameras_path()).ok()?;
+        serde_json::from_reader(file).ok()
+    }
+
     fn save_layout_file(layout: &DockLayoutV1) -> std::io::Result<()> {
         if let Some(parent) = Self::layout_path().parent() {
             std::fs::create_dir_all(parent)?;
         }
         let file = File::create(Self::layout_path())?;
         serde_json::to_writer_pretty(file, layout)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        Ok(())
+    }
+
+    fn save_viewport_cameras_file(file_v1: &ViewportCamerasFileV1) -> std::io::Result<()> {
+        if let Some(parent) = Self::viewport_cameras_path().parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let file = File::create(Self::viewport_cameras_path())?;
+        serde_json::to_writer_pretty(file, file_v1)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
         Ok(())
     }
@@ -204,6 +231,26 @@ impl DemoDriver {
             .export_layout_v1_with_placement(&windows, |w| self.window_placements.get(&w).cloned());
         if let Err(e) = Self::save_layout_file(&layout) {
             tracing::error!(error = ?e, "failed to save layout.json");
+        }
+    }
+
+    fn persist_viewport_cameras_now(&mut self) {
+        let mut cameras: Vec<ViewportCameraEntryV1> = self
+            .viewport_cameras
+            .iter()
+            .map(|(panel, camera)| ViewportCameraEntryV1 {
+                panel: panel.clone(),
+                camera: *camera,
+            })
+            .collect();
+        cameras.sort_by(|a, b| a.panel.kind.0.cmp(&b.panel.kind.0));
+
+        let file_v1 = ViewportCamerasFileV1 {
+            version: 1,
+            cameras,
+        };
+        if let Err(e) = Self::save_viewport_cameras_file(&file_v1) {
+            tracing::error!(error = ?e, "failed to save viewport_cameras.json");
         }
     }
 
@@ -223,6 +270,25 @@ impl DemoDriver {
         app.push_effect(Effect::CancelTimer { token });
         app.push_effect(Effect::SetTimer {
             window: Some(main),
+            token,
+            after: Duration::from_millis(500),
+            repeat: None,
+        });
+    }
+
+    fn schedule_camera_persist(&mut self, app: &mut App) {
+        let token = match self.camera_persist_timer {
+            Some(t) => t,
+            None => {
+                let t = app.next_timer_token();
+                self.camera_persist_timer = Some(t);
+                t
+            }
+        };
+        self.camera_persist_pending = true;
+        app.push_effect(Effect::CancelTimer { token });
+        app.push_effect(Effect::SetTimer {
+            window: self.main_window,
             token,
             after: Duration::from_millis(500),
             repeat: None,
@@ -467,7 +533,7 @@ impl DemoDriver {
                 continue;
             };
 
-            let camera = self.viewport_camera(window, vp.target);
+            let camera = self.viewport_camera(&panel_key);
             let marker_uv_from_world = lead_pos.map(|pos| camera.world_to_uv(pos));
             let marker_uv = marker_uv_from_world.or_else(|| lead.and_then(viewport_grid_marker_uv));
 
@@ -747,6 +813,18 @@ impl WinitDriver for DemoDriver {
     fn init(&mut self, app: &mut App, main_window: fret_core::AppWindowId) {
         self.main_window = Some(main_window);
         self.logical_windows.insert(main_window, "main".to_string());
+
+        if self.viewport_cameras.is_empty() {
+            if let Some(file) = Self::load_viewport_cameras_file() {
+                if file.version == 1 {
+                    self.viewport_cameras = file
+                        .cameras
+                        .into_iter()
+                        .map(|e| (e.panel, e.camera))
+                        .collect();
+                }
+            }
+        }
 
         app.set_global(InspectorEditService::default());
         app.set_global(PropertyEditService::default());
@@ -1878,6 +1956,10 @@ impl WinitDriver for DemoDriver {
                     self.dock_persist_pending = false;
                     self.persist_layout_now(app);
                 }
+                if Some(*token) == self.camera_persist_timer && self.camera_persist_pending {
+                    self.camera_persist_pending = false;
+                    self.persist_viewport_cameras_now();
+                }
             }
             fret_core::Event::WindowResized { width, height } => {
                 let entry = self.window_placements.entry(window).or_insert(
@@ -2386,16 +2468,23 @@ impl WinitDriver for DemoDriver {
 
             let mut pending_selection: Option<(Option<u64>, Vec<u64>, fret_core::Modifiers)> = None;
 
-            let target_px_size = app.global::<DockManager>().and_then(|dock| {
-                dock.graph
-                    .collect_panels_in_window(window)
-                    .into_iter()
-                    .find_map(|panel_key| {
-                        let panel = dock.panels.get(&panel_key)?;
-                        let vp = panel.viewport?;
-                        (vp.target == target).then_some(vp.target_px_size)
-                    })
-            });
+            let mut panel_key: Option<PanelKey> = None;
+            let mut target_px_size: Option<(u32, u32)> = None;
+            if let Some(dock) = app.global::<DockManager>() {
+                for pk in dock.graph.collect_panels_in_window(window) {
+                    let Some(panel) = dock.panels.get(&pk) else {
+                        continue;
+                    };
+                    let Some(vp) = panel.viewport else {
+                        continue;
+                    };
+                    if vp.target == target {
+                        panel_key = Some(pk);
+                        target_px_size = Some(vp.target_px_size);
+                        break;
+                    }
+                }
+            }
 
             let mut marquee_update: Option<Option<ViewportMarquee>> = None;
             let mut drag_line_update: Option<Option<fret_ui::dock::ViewportDragLine>> = None;
@@ -2405,6 +2494,33 @@ impl WinitDriver for DemoDriver {
             let handled = match event.kind {
                 fret_core::ViewportInputKind::PointerDown { button, modifiers } => match button {
                     fret_core::MouseButton::Left => 'handled: {
+                        if modifiers.alt {
+                            let start_uv = event.uv;
+                            let mut started = false;
+                            let _ = tool.update(app, |t, _cx| {
+                                if t.interaction.is_some() {
+                                    return;
+                                }
+                                t.interaction =
+                                    Some(ViewportInteraction::PanOrbit(PanOrbitInteraction {
+                                        window,
+                                        target,
+                                        kind: PanOrbitKind::Orbit,
+                                        button: fret_core::MouseButton::Left,
+                                        start_modifiers: modifiers,
+                                        start_uv,
+                                        last_uv: start_uv,
+                                        current_uv: start_uv,
+                                        start_target_px: event.target_px,
+                                        last_target_px: event.target_px,
+                                        current_target_px: event.target_px,
+                                        dragging: false,
+                                    }));
+                                started = true;
+                            });
+                            break 'handled started;
+                        }
+
                         let start_uv = event.uv;
 
                         let selection = selection_model
@@ -2414,7 +2530,10 @@ impl WinitDriver for DemoDriver {
                         let lead = selection.lead_entity;
                         let selected = selection.selected_entities;
 
-                        let camera = self.viewport_camera(window, target);
+                        let camera = panel_key
+                            .as_ref()
+                            .map(|p| self.viewport_camera(p))
+                            .unwrap_or_default();
                         let center_uv = lead
                             .and_then(|id| {
                                 let world = world_model.and_then(|m| m.get(app))?;
@@ -2535,6 +2654,7 @@ impl WinitDriver for DemoDriver {
                                     window,
                                     target,
                                     kind,
+                                    button,
                                     start_modifiers: modifiers,
                                     start_uv,
                                     last_uv: start_uv,
@@ -2619,7 +2739,10 @@ impl WinitDriver for DemoDriver {
                                 break 'mv true;
                             }
 
-                            let camera = self.viewport_camera(window, target);
+                            let camera = panel_key
+                                .as_ref()
+                                .map(|p| self.viewport_camera(p))
+                                .unwrap_or_default();
                             let mut view_dx = du_uv * DemoViewportCamera::WORLD_SPAN;
                             let mut view_dy = -dv_uv * DemoViewportCamera::WORLD_SPAN;
                             match constraint {
@@ -2679,7 +2802,7 @@ impl WinitDriver for DemoDriver {
                         }
                     }
 
-                    if buttons.right || buttons.middle {
+                    if buttons.right || buttons.middle || buttons.left {
                         let current_uv = event.uv;
                         let mut next: Option<PanOrbitInteraction> = None;
                         let mut camera_step: Option<(PanOrbitKind, f32, f32)> = None;
@@ -2689,15 +2812,24 @@ impl WinitDriver for DemoDriver {
                                 return;
                             };
 
-                            let want_right =
-                                m.kind == PanOrbitKind::Orbit && buttons.right && !buttons.middle;
-                            let want_middle =
-                                m.kind == PanOrbitKind::Pan && buttons.middle && !buttons.right;
+                            if m.window == window && m.target == target {
+                                let want = match m.button {
+                                    fret_core::MouseButton::Left => {
+                                        buttons.left && !buttons.right && !buttons.middle
+                                    }
+                                    fret_core::MouseButton::Right => {
+                                        buttons.right && !buttons.middle
+                                    }
+                                    fret_core::MouseButton::Middle => {
+                                        buttons.middle && !buttons.right
+                                    }
+                                    _ => false,
+                                };
 
-                            if m.window == window
-                                && m.target == target
-                                && (want_right || want_middle)
-                            {
+                                if !want {
+                                    return;
+                                }
+
                                 m.current_uv = current_uv;
                                 m.current_target_px = event.target_px;
 
@@ -2727,10 +2859,13 @@ impl WinitDriver for DemoDriver {
                         }
 
                         if let Some((kind, du, dv)) = camera_step {
-                            let cam = self.viewport_camera_mut(window, target);
-                            match kind {
-                                PanOrbitKind::Pan => cam.pan_by_uv_delta(du, dv),
-                                PanOrbitKind::Orbit => cam.orbit_by_uv_delta(du),
+                            if let Some(panel) = panel_key.clone() {
+                                let cam = self.viewport_camera_mut(panel);
+                                match kind {
+                                    PanOrbitKind::Pan => cam.pan_by_uv_delta(du, dv),
+                                    PanOrbitKind::Orbit => cam.orbit_by_uv_delta(du),
+                                }
+                                self.schedule_camera_persist(app);
                             }
                         }
 
@@ -2765,20 +2900,29 @@ impl WinitDriver for DemoDriver {
                     if modifiers.shift {
                         wheel_y *= 4.0;
                     }
-                    self.viewport_camera_mut(window, target)
-                        .zoom_at_uv(event.uv, wheel_y);
+                    if let Some(panel) = panel_key.clone() {
+                        self.viewport_camera_mut(panel)
+                            .zoom_at_uv(event.uv, wheel_y);
+                        self.schedule_camera_persist(app);
+                    }
                     request_redraw = true;
                     true
                 }
                 fret_core::ViewportInputKind::PointerUp { button, .. } => match button {
                     fret_core::MouseButton::Left => 'up_left: {
                         let mut commit: Option<MarqueeSelectInteraction> = None;
+                        let mut ended_pan_orbit: Option<PanOrbitInteraction> = None;
                         let mut ended_translate_dragging: Option<bool> = None;
                         let _ = tool.update(app, |t, _cx| match t.interaction.take() {
                             Some(ViewportInteraction::MarqueeSelect(m))
                                 if m.window == window && m.target == target =>
                             {
                                 commit = Some(m);
+                            }
+                            Some(ViewportInteraction::PanOrbit(m))
+                                if m.window == window && m.target == target =>
+                            {
+                                ended_pan_orbit = Some(m);
                             }
                             Some(ViewportInteraction::TranslateGizmo(m))
                                 if m.window == window && m.target == target =>
@@ -2805,11 +2949,20 @@ impl WinitDriver for DemoDriver {
                             break 'up_left true;
                         }
 
+                        if let Some(m) = ended_pan_orbit {
+                            if button == m.button {
+                                break 'up_left true;
+                            }
+                        }
+
                         let Some(m) = commit else {
                             break 'up_left true;
                         };
 
-                        let camera = self.viewport_camera(window, target);
+                        let camera = panel_key
+                            .as_ref()
+                            .map(|p| self.viewport_camera(p))
+                            .unwrap_or_default();
 
                         let dx = m.start_target_px.0.abs_diff(m.current_target_px.0);
                         let dy = m.start_target_px.1.abs_diff(m.current_target_px.1);
@@ -2903,11 +3056,7 @@ impl WinitDriver for DemoDriver {
                         let Some(m) = end else {
                             break 'up_other false;
                         };
-                        let want_right = m.kind == PanOrbitKind::Orbit
-                            && button == fret_core::MouseButton::Right;
-                        let want_middle =
-                            m.kind == PanOrbitKind::Pan && button == fret_core::MouseButton::Middle;
-                        if !want_right && !want_middle {
+                        if button != m.button {
                             break 'up_other false;
                         }
 

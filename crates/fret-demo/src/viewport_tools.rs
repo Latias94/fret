@@ -1,4 +1,4 @@
-use fret_core::{AppWindowId, Modifiers, RenderTargetId};
+use fret_core::{AppWindowId, Modifiers, MouseButton, RenderTargetId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ViewportToolMode {
@@ -84,6 +84,7 @@ pub struct PanOrbitInteraction {
     pub window: AppWindowId,
     pub target: RenderTargetId,
     pub kind: PanOrbitKind,
+    pub button: MouseButton,
     pub start_modifiers: Modifiers,
     pub start_uv: (f32, f32),
     pub last_uv: (f32, f32),

@@ -667,7 +667,9 @@ Goal: make viewport navigation feel editor-grade so selection and gizmos can be 
 
 - Middle-drag pan (2D camera translation).
 - Right-drag orbit stub (2D rotation).
+- Alt+left-drag orbit (Unity-style navigation shortcut).
 - Mouse wheel zoom around cursor.
+- Persist camera state per viewport panel.
 
 **Non-goals**
 
@@ -677,6 +679,7 @@ Goal: make viewport navigation feel editor-grade so selection and gizmos can be 
 
 - Pan/orbit/zoom updates viewport overlays and picking consistently.
 - Zoom uses “zoom around cursor” so the hovered point stays stable.
+- Camera state survives app restart (file persistence).
 
 Status:
 
