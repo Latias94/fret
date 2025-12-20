@@ -108,6 +108,19 @@ struct DemoViewportCamera {
     rotation: f32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DemoViewportRole {
+    Scene,
+    Game,
+}
+
+fn demo_viewport_role(panel: &PanelKey) -> DemoViewportRole {
+    match panel.kind.0.as_str() {
+        "core.game" => DemoViewportRole::Game,
+        _ => DemoViewportRole::Scene,
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct ViewportCamerasFileV1 {
     version: u32,
@@ -495,6 +508,16 @@ impl DemoDriver {
             let Some(vp) = panel.viewport else {
                 continue;
             };
+
+            if demo_viewport_role(&panel_key) == DemoViewportRole::Game {
+                dock.set_viewport_marquee(window, vp.target, None);
+                dock.set_viewport_drag_line(window, vp.target, None);
+                dock.set_viewport_selection_rect(window, vp.target, None);
+                dock.set_viewport_marker(window, vp.target, None);
+                dock.set_viewport_gizmo(window, vp.target, None);
+                dock.set_viewport_rotate_gizmo(window, vp.target, None);
+                continue;
+            }
 
             let camera = self.viewport_camera(&panel_key);
             let marker_uv_from_world = lead_pos.map(|pos| camera.world_to_uv(pos));
@@ -1794,6 +1817,7 @@ impl WinitDriver for DemoDriver {
                         target: t.target,
                         target_px_size: t.target_px_size,
                         fit: fret_core::ViewportFit::Contain,
+                        context_menu_enabled: true,
                     }),
             },
         );
@@ -1816,6 +1840,7 @@ impl WinitDriver for DemoDriver {
                         target: t.target,
                         target_px_size: t.target_px_size,
                         fit: fret_core::ViewportFit::Contain,
+                        context_menu_enabled: false,
                     }),
             },
         );
@@ -2645,6 +2670,11 @@ impl WinitDriver for DemoDriver {
                 }
             }
 
+            let allow_edit = panel_key
+                .as_ref()
+                .map(|p| demo_viewport_role(p) == DemoViewportRole::Scene)
+                .unwrap_or(true);
+
             let mut marquee_update: Option<Option<ViewportMarquee>> = None;
             let mut drag_line_update: Option<Option<fret_ui::dock::ViewportDragLine>> = None;
             let mut request_redraw = false;
@@ -2678,6 +2708,10 @@ impl WinitDriver for DemoDriver {
                                 started = true;
                             });
                             break 'handled started;
+                        }
+
+                        if !allow_edit {
+                            break 'handled false;
                         }
 
                         let start_uv = event.uv;
@@ -2914,6 +2948,20 @@ impl WinitDriver for DemoDriver {
                 },
                 fret_core::ViewportInputKind::PointerMove { buttons, modifiers } => 'mv: {
                     if !buttons.left && !buttons.right && !buttons.middle {
+                        if !allow_edit {
+                            let mut changed = false;
+                            let _ = tool.update(app, |t, _cx| {
+                                if t.hover_rotate.is_some() {
+                                    t.hover_rotate = None;
+                                    changed = true;
+                                }
+                            });
+                            if changed {
+                                request_redraw = true;
+                            }
+                            break 'mv false;
+                        }
+
                         let selection = selection_model
                             .and_then(|m| m.get(app))
                             .cloned()

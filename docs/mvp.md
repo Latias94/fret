@@ -33,6 +33,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 27: prototype implemented in demo (rotate gizmo stub + undo/redo)
 - MVP 28: prototype implemented in demo (engine render hook + camera-driven viewport background)
 - MVP 29: prototype implemented in demo (viewport render target auto-resize + registry update)
+- MVP 30: prototype implemented in demo (Scene/Game viewport roles: tool gating + context menu control)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -795,6 +796,35 @@ References:
 
 - `docs/adr/0007-viewport-surfaces.md`
 - `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
+
+## MVP 30 — Scene/Game Viewport Roles P0 (Editor Tool Gating)
+
+Goal: make multi-viewport editors feel Unity-like by establishing “roles” for viewports:
+
+- Scene view is an editor viewport (selection/gizmos/overlays).
+- Game view is a preview viewport (no editor gizmos/selection overlays by default).
+
+**Scope**
+
+- Demo defines a simple role policy keyed by `PanelKey` (`core.scene` vs `core.game`).
+- Game view default policy:
+  - editor overlays are suppressed,
+  - editor selection/gizmo interactions are not started from viewport input,
+  - viewport context menu is disabled so right-click can be reserved for navigation.
+
+**Non-goals**
+
+- Full play mode/runtime input integration (engine-level).
+- Per-plugin viewport role registration.
+
+**Definition of Done**
+
+- Switching between Scene/Game tabs preserves independent cameras and render targets.
+- Game view does not show editor selection/gizmos and does not change selection on click.
+
+Status:
+
+- Prototype implemented in `fret-demo` + `fret-ui` (`ViewportPanel.context_menu_enabled`).
 
 ## Parking Lot (Explicitly Deferred)
 

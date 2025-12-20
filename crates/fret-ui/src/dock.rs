@@ -26,6 +26,7 @@ pub struct ViewportPanel {
     pub target: RenderTargetId,
     pub target_px_size: (u32, u32),
     pub fit: ViewportFit,
+    pub context_menu_enabled: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -492,7 +493,9 @@ impl Widget for DockSpace {
                                             modifiers: *modifiers,
                                         },
                                     ) {
-                                        if *button == fret_core::MouseButton::Right {
+                                        if *button == fret_core::MouseButton::Right
+                                            && hit.viewport.context_menu_enabled
+                                        {
                                             dock.viewport_context_menu = Some(e);
                                         }
                                         pending_effects.push(Effect::ViewportInput(e));
@@ -708,7 +711,9 @@ impl Widget for DockSpace {
                                 },
                             );
                             if *button == fret_core::MouseButton::Right {
-                                dock.viewport_context_menu = Some(e);
+                                if capture.hit.viewport.context_menu_enabled {
+                                    dock.viewport_context_menu = Some(e);
+                                }
                             }
                             pending_effects.push(Effect::ViewportInput(e));
                             pending_redraws.push(self.window);
@@ -716,6 +721,7 @@ impl Widget for DockSpace {
                             if capture.open_context_menu_on_up
                                 && !capture.moved
                                 && *button == fret_core::MouseButton::Right
+                                && capture.hit.viewport.context_menu_enabled
                             {
                                 open_viewport_menu = Some((*position, e));
                             }
