@@ -2241,7 +2241,36 @@ impl WinitDriver for DemoDriver {
                         app.request_redraw(window);
                     }
                 }
-                fret_core::ExternalDragKind::DropFiles(_) | fret_core::ExternalDragKind::Leave => {
+                fret_core::ExternalDragKind::DropFiles(paths) => {
+                    if state.ui.is_layer_visible(state.layers.external_dnd) {
+                        state.ui.set_layer_visible(state.layers.external_dnd, false);
+                        app.request_redraw(window);
+                    }
+
+                    let mut imported: Vec<fret_editor::AssetGuid> = Vec::new();
+                    if let Some(project) = app.global_mut::<ProjectService>() {
+                        match project.import_files(paths.clone()) {
+                            Ok(guids) => imported = guids,
+                            Err(err) => {
+                                tracing::error!(error = %err, "project import failed");
+                            }
+                        }
+                        if let Err(err) = project.rescan() {
+                            tracing::error!(error = %err, "failed to rescan project after import");
+                        }
+                    }
+
+                    if let Some(last) = imported.last().copied() {
+                        app.with_global_mut(ProjectSelectionService::default, |s, _app| {
+                            s.set_selected_guid(Some(last));
+                        });
+                    }
+
+                    for &w in self.logical_windows.keys() {
+                        app.request_redraw(w);
+                    }
+                }
+                fret_core::ExternalDragKind::Leave => {
                     if state.ui.is_layer_visible(state.layers.external_dnd) {
                         state.ui.set_layer_visible(state.layers.external_dnd, false);
                         app.request_redraw(window);

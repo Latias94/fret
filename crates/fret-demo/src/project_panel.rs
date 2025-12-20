@@ -38,6 +38,7 @@ impl ProjectPanel {
         let snapshot = service.snapshot();
         self.tree.set_roots(snapshot.roots);
         self.last_revision = Some(revision);
+        self.last_selection_revision = None;
         self.sync_selection_from_service(app);
         true
     }

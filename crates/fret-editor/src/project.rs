@@ -128,8 +128,48 @@ impl ProjectService {
         self.guid_by_id.get(&id).copied()
     }
 
+    pub fn guid_for_path(&self, path: &Path) -> Option<AssetGuid> {
+        let id = self.id_by_path.get(path).copied()?;
+        self.guid_for_id(id)
+    }
+
     pub fn id_for_guid(&self, guid: AssetGuid) -> Option<u64> {
         self.id_by_guid.get(&guid).copied()
+    }
+
+    pub fn import_files(
+        &mut self,
+        sources: impl IntoIterator<Item = PathBuf>,
+    ) -> io::Result<Vec<AssetGuid>> {
+        let dest_dir = self.assets_root.join("Imports");
+        std::fs::create_dir_all(&dest_dir)?;
+
+        let mut imported: Vec<AssetGuid> = Vec::new();
+
+        for src in sources {
+            if src.is_dir() {
+                warn!(path = %src.to_string_lossy(), "skipping directory import (not supported yet)");
+                continue;
+            }
+            if !src.is_file() {
+                warn!(path = %src.to_string_lossy(), "skipping non-file import");
+                continue;
+            }
+
+            let Some(file_name) = src.file_name() else {
+                warn!(path = %src.to_string_lossy(), "skipping import without file name");
+                continue;
+            };
+
+            let dest_path = unique_dest_path(&dest_dir, file_name);
+            std::fs::copy(&src, &dest_path)?;
+
+            let meta_path = meta_path_for(&dest_path);
+            let meta = read_or_create_meta(&meta_path)?;
+            imported.push(AssetGuid(meta.guid));
+        }
+
+        Ok(imported)
     }
 
     pub fn rename_entry(&mut self, id: u64, new_file_name: &str) -> io::Result<()> {
@@ -316,6 +356,34 @@ fn meta_path_for(path: &Path) -> PathBuf {
     PathBuf::from(os)
 }
 
+fn unique_dest_path(dest_dir: &Path, file_name: &std::ffi::OsStr) -> PathBuf {
+    let candidate = dest_dir.join(file_name);
+    if !candidate.exists() {
+        return candidate;
+    }
+
+    let stem = Path::new(file_name)
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_else(|| "file".to_string());
+    let ext = Path::new(file_name)
+        .extension()
+        .map(|e| e.to_string_lossy().to_string());
+
+    for i in 1..=1000u32 {
+        let name = match &ext {
+            Some(ext) => format!("{stem}_{i}.{ext}"),
+            None => format!("{stem}_{i}"),
+        };
+        let p = dest_dir.join(name);
+        if !p.exists() {
+            return p;
+        }
+    }
+
+    dest_dir.join(format!("file-{}", Uuid::new_v4()))
+}
+
 fn move_path_and_meta(from: &Path, to: &Path) -> io::Result<()> {
     if to.exists() {
         return Err(io::Error::new(
@@ -496,6 +564,32 @@ mod tests {
         let meta_path_after = meta_path_for(new_path);
         let meta_after: AssetMetaV1 = serde_json::from_slice(&std::fs::read(&meta_path_after)?)?;
         assert_eq!(meta_after.guid, guid.0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn import_creates_meta_and_returns_guid() -> io::Result<()> {
+        let temp = TempDir::new("fret-project-import")?;
+        let assets_root = temp.path().join("Assets");
+        std::fs::create_dir_all(&assets_root)?;
+
+        let source_dir = temp.path().join("Source");
+        std::fs::create_dir_all(&source_dir)?;
+        let src = source_dir.join("Imported.txt");
+        std::fs::write(&src, "hello")?;
+
+        let mut service = ProjectService::new(assets_root.clone());
+        let imported = service.import_files([src.clone()])?;
+        assert_eq!(imported.len(), 1);
+
+        let dest = assets_root.join("Imports").join("Imported.txt");
+        assert!(dest.exists());
+        let meta = meta_path_for(&dest);
+        assert!(meta.exists());
+
+        let meta_value: AssetMetaV1 = serde_json::from_slice(&std::fs::read(&meta)?)?;
+        assert_eq!(meta_value.guid, imported[0].0);
 
         Ok(())
     }
