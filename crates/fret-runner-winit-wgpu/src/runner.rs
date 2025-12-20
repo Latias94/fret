@@ -135,6 +135,7 @@ pub trait WinitDriver {
         _state: &mut Self::WindowState,
         _context: &WgpuContext,
         _renderer: &mut Renderer,
+        _scale_factor: f32,
         _tick_id: fret_core::TickId,
         _frame_id: fret_core::FrameId,
     ) -> Vec<wgpu::CommandBuffer> {
@@ -1103,6 +1104,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     &mut state.user,
                     context,
                     renderer,
+                    scale_factor,
                     self.tick_id,
                     self.frame_id,
                 );

@@ -263,6 +263,7 @@ all later UI work inherits the same command/focus/clipboard semantics instead of
 - wgpu device/surface setup.
 - Resource registries for atlas/textures/render targets.
 - Pipelines for quads/SDF/text/images.
+- Supports updating registered viewport targets (resize/view updates) to keep embedded viewports crisp.
 
 ## Definition of Done (per milestone)
 

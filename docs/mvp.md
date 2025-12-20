@@ -32,6 +32,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 11 validation: prototype implemented in demo (multiline TextArea probe panel)
 - MVP 27: prototype implemented in demo (rotate gizmo stub + undo/redo)
 - MVP 28: prototype implemented in demo (engine render hook + camera-driven viewport background)
+- MVP 29: prototype implemented in demo (viewport render target auto-resize + registry update)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -760,6 +761,39 @@ References:
 
 - `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
 - `docs/adr/0015-render-ordering-and-z-layers.md`
+
+## MVP 29 — Viewport Target Lifecycle P0 (Auto-Resize + Registry Updates)
+
+Goal: make embedded viewports “editor-grade” by ensuring render target sizes match the on-screen viewport content size
+(no stretching blur) while keeping input mapping (uv/target_px) consistent.
+
+**Scope**
+
+- Track the on-screen viewport content rect for each active viewport target in `DockManager`.
+- Engine hook uses the content rect + `scale_factor` to derive the desired physical pixel size.
+- Demo resizes the scene render target when the panel size changes:
+  - recreate the texture,
+  - `renderer.update_render_target(...)` updates the registry view + size,
+  - dock panels update `ViewportPanel.target_px_size` for consistent mapping.
+
+**Non-goals**
+
+- Debounced resize policies (can land later; correctness first).
+- Multi-sampled resolve targets.
+
+**Definition of Done**
+
+- Resizing the Scene dock panel keeps the viewport crisp (target matches panel pixel size).
+- Viewport input mapping stays stable (picking/overlays do not drift after resize).
+
+Status:
+
+- Prototype implemented in `fret-demo` + `fret-ui`.
+
+References:
+
+- `docs/adr/0007-viewport-surfaces.md`
+- `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
 
 ## Parking Lot (Explicitly Deferred)
 

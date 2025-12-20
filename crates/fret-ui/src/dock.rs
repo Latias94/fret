@@ -62,6 +62,7 @@ pub struct DockManager {
     viewport_hover: Option<ViewportHover>,
     viewport_context_menu: Option<ViewportInputEvent>,
     viewport_overlays: HashMap<(fret_core::AppWindowId, RenderTargetId), ViewportOverlay>,
+    viewport_content_rects: HashMap<(fret_core::AppWindowId, RenderTargetId), Rect>,
 }
 
 #[derive(Default)]
@@ -160,6 +161,7 @@ impl Default for DockManager {
             viewport_hover: None,
             viewport_context_menu: None,
             viewport_overlays: HashMap::new(),
+            viewport_content_rects: HashMap::new(),
         }
     }
 }
@@ -175,6 +177,44 @@ impl DockManager {
 
     pub fn panel(&self, key: &PanelKey) -> Option<&DockPanel> {
         self.panels.get(key)
+    }
+
+    pub fn viewport_content_rect(
+        &self,
+        window: fret_core::AppWindowId,
+        target: RenderTargetId,
+    ) -> Option<Rect> {
+        self.viewport_content_rects.get(&(window, target)).copied()
+    }
+
+    pub fn clear_viewport_layout_for_window(&mut self, window: fret_core::AppWindowId) {
+        self.viewport_content_rects.retain(|(w, _), _| *w != window);
+    }
+
+    pub fn set_viewport_content_rect(
+        &mut self,
+        window: fret_core::AppWindowId,
+        target: RenderTargetId,
+        rect: Rect,
+    ) {
+        self.viewport_content_rects.insert((window, target), rect);
+    }
+
+    pub fn update_viewport_target_px_size(
+        &mut self,
+        target: RenderTargetId,
+        target_px_size: (u32, u32),
+    ) {
+        for panel in self.panels.values_mut() {
+            let Some(mut vp) = panel.viewport else {
+                continue;
+            };
+            if vp.target != target {
+                continue;
+            }
+            vp.target_px_size = target_px_size;
+            panel.viewport = Some(vp);
+        }
     }
 
     fn upsert_viewport_overlay(
@@ -1103,6 +1143,28 @@ impl Widget for DockSpace {
         };
 
         paint_chrome(chrome, cx.scene);
+        if let Some(dock) = cx.app.global_mut::<DockManager>() {
+            dock.clear_viewport_layout_for_window(self.window);
+            for (&node_id, &rect) in layout.iter() {
+                let (_tab_bar, content) = split_tab_bar(rect);
+                let target = {
+                    let mut out: Option<RenderTargetId> = None;
+                    if let Some(DockNode::Tabs { tabs, active }) = dock.graph.node(node_id) {
+                        if let Some(panel_key) = tabs.get(*active) {
+                            if let Some(panel) = dock.panel(panel_key) {
+                                if let Some(vp) = panel.viewport {
+                                    out = Some(vp.target);
+                                }
+                            }
+                        }
+                    }
+                    out
+                };
+                if let Some(target) = target {
+                    dock.set_viewport_content_rect(self.window, target, content);
+                }
+            }
+        }
         if let Some(dock) = cx.app.global::<DockManager>() {
             paint_dock(dock, self.window, &layout, cx.scene);
         }

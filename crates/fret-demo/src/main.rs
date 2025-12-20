@@ -83,6 +83,7 @@ struct DemoDriver {
     main_window: Option<fret_core::AppWindowId>,
     scene_target: Option<RenderTargetId>,
     scene_target_size: Option<(u32, u32)>,
+    scene_texture: Option<wgpu::Texture>,
     scene_view: Option<wgpu::TextureView>,
     scene_background: Option<SceneBackgroundRenderer>,
     logical_windows: HashMap<fret_core::AppWindowId, String>,
@@ -783,27 +784,81 @@ impl WinitDriver for DemoDriver {
 
         self.scene_target = Some(target);
         self.scene_target_size = Some((size, size));
+        self.scene_texture = Some(texture);
         self.scene_view = Some(view);
     }
 
     fn record_engine_commands(
         &mut self,
-        _app: &mut App,
-        _window: fret_core::AppWindowId,
+        app: &mut App,
+        window: fret_core::AppWindowId,
         _state: &mut Self::WindowState,
         context: &WgpuContext,
-        _renderer: &mut Renderer,
+        renderer: &mut Renderer,
+        scale_factor: f32,
         _tick_id: fret_core::TickId,
         _frame_id: fret_core::FrameId,
     ) -> Vec<wgpu::CommandBuffer> {
-        let (Some(view), Some(bg), Some(target_px_size)) = (
-            self.scene_view.as_ref(),
-            self.scene_background.as_ref(),
-            self.scene_target_size,
-        ) else {
+        let (Some(target), Some(bg)) = (self.scene_target, self.scene_background.as_ref()) else {
             return Vec::new();
         };
 
+        let desired_target_px_size = app
+            .global::<DockManager>()
+            .and_then(|dock| dock.viewport_content_rect(window, target))
+            .map(|content| {
+                const MAX_TARGET_PX: u32 = 8192;
+                let w = (content.size.width.0 * scale_factor).round().max(1.0) as u32;
+                let h = (content.size.height.0 * scale_factor).round().max(1.0) as u32;
+                (w.min(MAX_TARGET_PX), h.min(MAX_TARGET_PX))
+            });
+
+        if let Some(desired) = desired_target_px_size {
+            if self.scene_target_size != Some(desired) {
+                let format = wgpu::TextureFormat::Rgba8UnormSrgb;
+                let texture = context.device.create_texture(&wgpu::TextureDescriptor {
+                    label: Some("fret-demo scene render target"),
+                    size: wgpu::Extent3d {
+                        width: desired.0,
+                        height: desired.1,
+                        depth_or_array_layers: 1,
+                    },
+                    mip_level_count: 1,
+                    sample_count: 1,
+                    dimension: wgpu::TextureDimension::D2,
+                    format,
+                    usage: wgpu::TextureUsages::TEXTURE_BINDING
+                        | wgpu::TextureUsages::RENDER_ATTACHMENT,
+                    view_formats: &[],
+                });
+
+                let engine_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+                let ui_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+                let updated = renderer.update_render_target(
+                    target,
+                    RenderTargetDescriptor {
+                        view: ui_view,
+                        size: desired,
+                        format,
+                        color_space: RenderTargetColorSpace::Srgb,
+                    },
+                );
+                if updated {
+                    self.scene_texture = Some(texture);
+                    self.scene_view = Some(engine_view);
+                    self.scene_target_size = Some(desired);
+                    if let Some(dock) = app.global_mut::<DockManager>() {
+                        dock.update_viewport_target_px_size(target, desired);
+                    }
+                    app.request_redraw(window);
+                }
+            }
+        }
+
+        let target_px_size = self.scene_target_size.unwrap_or((512, 512));
+        let Some(view) = self.scene_view.as_ref() else {
+            return Vec::new();
+        };
         let panel = PanelKey::new("core.scene");
         let camera = self.viewport_camera(&panel);
         let cmd = bg.record_commands(
