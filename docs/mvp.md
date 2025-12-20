@@ -25,6 +25,10 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 20: prototype implemented in demo (translate gizmo stub: overlay + explicit drag phases; Q/W tool switching; Esc cancel rollback)
 - MVP 21: prototype implemented in demo (dock drag hints + dock tab context menu; debounced layout persistence)
 - MVP 22: prototype implemented in demo (undo/redo command stack; inspector edits + translate gizmo integrate)
+- Next (recommended, Unity-like feel):
+  - MVP 23: undo/redo integration expansion (Hierarchy drag & drop)
+  - MVP 24: edit transactions + coalescing policy (continuous edits)
+  - MVP 25: viewport tool polish (axis constraints + snapping stub)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -549,7 +553,7 @@ Goal: establish the editor-app boundary for undo/redo early so all subsequent to
 
 - A command stack that supports:
   - undo/redo,
-  - a coalescing boundary for “drag-like continuous edits”.
+  - a clear transaction boundary for “drag-like continuous edits”.
 - Integrate at least two edit sources:
   - inspector property edits,
   - viewport translate gizmo drags.
@@ -561,7 +565,7 @@ Goal: establish the editor-app boundary for undo/redo early so all subsequent to
 **Definition of Done**
 
 - Undo/redo works for at least one inspector edit and one viewport tool commit.
-- Continuous edits (e.g. gizmo drag) can be coalesced into a single history entry.
+- Continuous edits (e.g. gizmo drag) can be represented as a single history entry.
 
 Status:
 
@@ -572,6 +576,79 @@ Status:
 
 References:
 
+- `docs/adr/0024-undo-redo-and-edit-transactions.md`
+
+## MVP 23 — Undo/Redo Integration Expansion (Hierarchy DnD)
+
+Goal: extend the undo/redo boundary to a second “editor workflow” domain that users rely on constantly.
+
+**Scope**
+
+- Make Hierarchy drag & drop (reorder + reparent) undoable.
+- Preserve selection and UI state deterministically across undo/redo.
+
+**Non-goals**
+
+- Multi-document histories (per-scene stacks) and advanced merge policies.
+
+**Definition of Done**
+
+- Reorder and reparent operations in the Hierarchy produce undoable commands.
+- Undo/redo restores both the hierarchy structure and the selection.
+
+References:
+
+- `docs/adr/0024-undo-redo-and-edit-transactions.md`
+- `docs/adr/0016-plugin-boundaries-and-panel-ownership.md`
+
+## MVP 24 — Edit Transactions + Coalescing Policy (Continuous Edits)
+
+Goal: formalize transaction boundaries and coalescing rules so continuous edits (dragging, scrubbing) do not spam
+history and can be cancelled deterministically.
+
+**Scope**
+
+- Introduce a minimal “transaction” concept in the demo editor layer:
+  - begin/update/commit/cancel,
+  - coalesce strategy keyed by (tool + targets + property path).
+- Apply it to at least one continuous edit:
+  - viewport translate drag (coalesce intermediate updates).
+
+**Non-goals**
+
+- Persisting history to disk.
+
+**Definition of Done**
+
+- A long gizmo drag produces exactly one undo history entry.
+- Cancel reliably restores the pre-drag state without creating history entries.
+
+References:
+
+- `docs/adr/0024-undo-redo-and-edit-transactions.md`
+- `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
+
+## MVP 25 — Viewport Tool Polish (Axis Constraints + Snapping Stub)
+
+Goal: improve the “Unity-like” feel of viewport manipulation without committing to final 3D math contracts yet.
+
+**Scope**
+
+- Axis constraint selection (X/Y) for translate gizmo.
+- Optional snapping stub (grid step) controlled by a modifier key.
+
+**Non-goals**
+
+- Full camera-space 3D manipulation math and advanced snapping rules.
+
+**Definition of Done**
+
+- Users can drag along one axis deterministically.
+- Snapping is predictable and does not break undo/redo semantics.
+
+References:
+
+- `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
 - `docs/adr/0024-undo-redo-and-edit-transactions.md`
 
 ## Parking Lot (Explicitly Deferred)

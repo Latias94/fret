@@ -6,6 +6,7 @@ use crate::inspector_protocol::{
 };
 use crate::property::PropertyPath;
 use crate::property_edit::{PropertyEditKind, PropertyEditRequest, PropertyEditService};
+use crate::undo::{EditCommand, SelectionSnapshot, UndoStack};
 use crate::world::DemoWorld;
 use fret_app::{App, Model};
 use fret_core::{Color, Corners, Edges, Event, Px, Size, TextStyle};
@@ -287,6 +288,7 @@ pub struct HierarchyPanel {
     tree: TreeView,
     selection: Model<DemoSelection>,
     hierarchy: Model<DemoHierarchy>,
+    undo: Model<UndoStack>,
     drag: Option<HierarchyDragState>,
     last_selected: Option<u64>,
     last_selected_keys: Vec<u64>,
@@ -317,11 +319,16 @@ struct HierarchyDragState {
 }
 
 impl HierarchyPanel {
-    pub fn new(selection: Model<DemoSelection>, hierarchy: Model<DemoHierarchy>) -> Self {
+    pub fn new(
+        selection: Model<DemoSelection>,
+        hierarchy: Model<DemoHierarchy>,
+        undo: Model<UndoStack>,
+    ) -> Self {
         Self {
             tree: TreeView::new(Vec::new()),
             selection,
             hierarchy,
+            undo,
             drag: None,
             last_selected: None,
             last_selected_keys: Vec::new(),
@@ -511,9 +518,36 @@ impl HierarchyPanel {
             return true;
         };
 
-        let _ = self.hierarchy.update(cx.app, |h, _cx| {
-            let _ = h.apply_move(op);
+        let Some((from_parent, from_index)) =
+            self.hierarchy.get(cx.app).and_then(|h| h.locate(drag.id))
+        else {
+            return true;
+        };
+
+        let moved = self.hierarchy.update(cx.app, |h, _cx| h.apply_move(op));
+        let moved = moved.unwrap_or(false);
+        if !moved {
+            return true;
+        }
+
+        let selection_snapshot = self
+            .selection
+            .get(cx.app)
+            .map(SelectionSnapshot::from_selection)
+            .unwrap_or(SelectionSnapshot {
+                lead_entity: None,
+                selected_entities: Vec::new(),
+            });
+
+        let _ = self.undo.update(cx.app, |stack, _cx| {
+            stack.push(EditCommand::HierarchyMove {
+                op,
+                from_parent,
+                from_index,
+                selection: selection_snapshot,
+            });
         });
+
         self.last_hierarchy_revision = self.hierarchy.revision(cx.app);
 
         cx.invalidate_self(Invalidation::Layout);

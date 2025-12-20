@@ -1539,6 +1539,14 @@ impl WinitDriver for DemoDriver {
                 model
             }
         };
+        let undo = match self.undo {
+            Some(model) => model,
+            None => {
+                let model = app.models_mut().insert(UndoStack::default());
+                self.undo = Some(model);
+                model
+            }
+        };
         let world = match self.world {
             Some(model) => model,
             None => {
@@ -1560,7 +1568,7 @@ impl WinitDriver for DemoDriver {
         let key_hierarchy = PanelKey::new("core.hierarchy");
         let key_inspector = PanelKey::new("core.inspector");
 
-        let hierarchy_node = ui.create_node(HierarchyPanel::new(selection, hierarchy));
+        let hierarchy_node = ui.create_node(HierarchyPanel::new(selection, hierarchy, undo));
         let inspector_node = ui.create_node(InspectorPanel::new(selection, world));
         ui.add_child(layers.dockspace_node, hierarchy_node);
         ui.add_child(layers.dockspace_node, inspector_node);
@@ -1920,10 +1928,21 @@ impl WinitDriver for DemoDriver {
                     });
                 }
                 if let Some(cmd) = cmd {
-                    if let Some(world) = self.world {
-                        let _ = world.update(app, |w, _cx| {
-                            cmd.undo(w);
-                        });
+                    match &cmd {
+                        EditCommand::HierarchyMove { .. } => {
+                            if let (Some(hierarchy), Some(selection)) =
+                                (self.hierarchy, self.selection)
+                            {
+                                cmd.undo_in_app(app, hierarchy, selection);
+                            }
+                        }
+                        _ => {
+                            if let Some(world) = self.world {
+                                let _ = world.update(app, |w, _cx| {
+                                    cmd.undo(w);
+                                });
+                            }
+                        }
                     }
                     for &w in self.logical_windows.keys() {
                         app.request_redraw(w);
@@ -1938,10 +1957,21 @@ impl WinitDriver for DemoDriver {
                     });
                 }
                 if let Some(cmd) = cmd {
-                    if let Some(world) = self.world {
-                        let _ = world.update(app, |w, _cx| {
-                            cmd.apply(w);
-                        });
+                    match &cmd {
+                        EditCommand::HierarchyMove { .. } => {
+                            if let (Some(hierarchy), Some(selection)) =
+                                (self.hierarchy, self.selection)
+                            {
+                                cmd.apply_in_app(app, hierarchy, selection);
+                            }
+                        }
+                        _ => {
+                            if let Some(world) = self.world {
+                                let _ = world.update(app, |w, _cx| {
+                                    cmd.apply(w);
+                                });
+                            }
+                        }
                     }
                     for &w in self.logical_windows.keys() {
                         app.request_redraw(w);
