@@ -73,6 +73,75 @@ struct DemoDriver {
     world: Option<Model<DemoWorld>>,
     undo: Option<Model<UndoStack>>,
     viewport_tools: Option<Model<ViewportToolManager>>,
+    viewport_cameras: HashMap<(fret_core::AppWindowId, RenderTargetId), DemoViewportCamera>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DemoViewportCamera {
+    center: [f32; 2],
+    zoom: f32,
+    rotation: f32,
+}
+
+impl Default for DemoViewportCamera {
+    fn default() -> Self {
+        Self {
+            center: [5.0, 5.0],
+            zoom: 1.0,
+            rotation: 0.0,
+        }
+    }
+}
+
+impl DemoViewportCamera {
+    const WORLD_SPAN: f32 = 10.0;
+    const MIN_ZOOM: f32 = 0.1;
+    const MAX_ZOOM: f32 = 32.0;
+
+    fn rotate(v: [f32; 2], angle: f32) -> [f32; 2] {
+        let (s, c) = angle.sin_cos();
+        [v[0] * c - v[1] * s, v[0] * s + v[1] * c]
+    }
+
+    fn world_to_uv(&self, pos: [f32; 3]) -> (f32, f32) {
+        let dx = pos[0] - self.center[0];
+        let dy = pos[1] - self.center[1];
+        let r = Self::rotate([dx, dy], -self.rotation);
+        let view = [r[0] * self.zoom, r[1] * self.zoom];
+        let u = 0.5 + view[0] / Self::WORLD_SPAN;
+        let v = 0.5 - view[1] / Self::WORLD_SPAN;
+        (u, v)
+    }
+
+    fn uv_to_world_xy(&self, uv: (f32, f32)) -> [f32; 2] {
+        let view_x = (uv.0 - 0.5) * Self::WORLD_SPAN;
+        let view_y = (0.5 - uv.1) * Self::WORLD_SPAN;
+        let r = [view_x / self.zoom, view_y / self.zoom];
+        let d = Self::rotate(r, self.rotation);
+        [self.center[0] + d[0], self.center[1] + d[1]]
+    }
+
+    fn pan_by_uv_delta(&mut self, du: f32, dv: f32) {
+        let view = [du * Self::WORLD_SPAN, -dv * Self::WORLD_SPAN];
+        let r = [view[0] / self.zoom, view[1] / self.zoom];
+        let d = Self::rotate(r, self.rotation);
+        self.center[0] -= d[0];
+        self.center[1] -= d[1];
+    }
+
+    fn orbit_by_uv_delta(&mut self, du: f32) {
+        let radians_per_u = std::f32::consts::PI * 1.25;
+        self.rotation = (self.rotation + du * radians_per_u) % (std::f32::consts::TAU);
+    }
+
+    fn zoom_at_uv(&mut self, uv: (f32, f32), wheel_y: f32) {
+        let before = self.uv_to_world_xy(uv);
+        let zoom_mul = (wheel_y * 0.002).exp();
+        self.zoom = (self.zoom * zoom_mul).clamp(Self::MIN_ZOOM, Self::MAX_ZOOM);
+        let after = self.uv_to_world_xy(uv);
+        self.center[0] += before[0] - after[0];
+        self.center[1] += before[1] - after[1];
+    }
 }
 
 impl DemoDriver {
@@ -82,6 +151,27 @@ impl DemoDriver {
 
     fn keymap_path() -> &'static Path {
         Path::new("./.fret/keymap.json")
+    }
+
+    fn viewport_camera(
+        &self,
+        window: fret_core::AppWindowId,
+        target: RenderTargetId,
+    ) -> DemoViewportCamera {
+        self.viewport_cameras
+            .get(&(window, target))
+            .copied()
+            .unwrap_or_default()
+    }
+
+    fn viewport_camera_mut(
+        &mut self,
+        window: fret_core::AppWindowId,
+        target: RenderTargetId,
+    ) -> &mut DemoViewportCamera {
+        self.viewport_cameras
+            .entry((window, target))
+            .or_insert_with(DemoViewportCamera::default)
     }
 
     fn load_layout_file() -> Option<DockLayoutV1> {
@@ -325,12 +415,10 @@ impl DemoDriver {
             .and_then(|m| m.get(app))
             .and_then(|s| s.lead_entity);
 
-        let rect_uv = lead.and_then(viewport_grid_cell_uv_rect);
-        let marker_uv_from_world = lead.and_then(|id| {
+        let lead_pos = lead.and_then(|id| {
             let world = self.world.and_then(|m| m.get(app))?;
-            Some(demo_world_pos_to_viewport_uv(world.position(id)))
+            Some(world.position(id))
         });
-        let marker_uv = marker_uv_from_world.or_else(|| lead.and_then(viewport_grid_marker_uv));
 
         let tool_mode = self
             .viewport_tools
@@ -352,15 +440,6 @@ impl DemoDriver {
                     _ => None,
                 });
 
-        let marker = marker_uv.map(|uv| fret_ui::dock::ViewportMarker {
-            uv,
-            color: Color {
-                r: 0.20,
-                g: 0.45,
-                b: 0.95,
-                a: 0.95,
-            },
-        });
         let selection_fill = Color {
             r: 0.20,
             g: 0.45,
@@ -372,15 +451,6 @@ impl DemoDriver {
             g: 0.45,
             b: 0.95,
             a: 0.85,
-        };
-
-        let gizmo = match tool_mode {
-            ViewportToolMode::Move => marker_uv.map(|center_uv| fret_ui::dock::ViewportGizmo {
-                center_uv,
-                axis_len_px: fret_core::geometry::Px(80.0),
-                highlight: gizmo_highlight,
-            }),
-            ViewportToolMode::Select => None,
         };
 
         let Some(dock) = app.global_mut::<DockManager>() else {
@@ -396,6 +466,21 @@ impl DemoDriver {
             let Some(vp) = panel.viewport else {
                 continue;
             };
+
+            let camera = self.viewport_camera(window, vp.target);
+            let marker_uv_from_world = lead_pos.map(|pos| camera.world_to_uv(pos));
+            let marker_uv = marker_uv_from_world.or_else(|| lead.and_then(viewport_grid_marker_uv));
+
+            let marker = marker_uv.map(|uv| fret_ui::dock::ViewportMarker {
+                uv,
+                color: Color {
+                    r: 0.20,
+                    g: 0.45,
+                    b: 0.95,
+                    a: 0.95,
+                },
+            });
+
             let selection_rect = if let Some(center_uv) = marker_uv_from_world {
                 Some(viewport_selection_rect_around_uv(
                     center_uv,
@@ -405,13 +490,24 @@ impl DemoDriver {
                     selection_stroke,
                 ))
             } else {
-                rect_uv.map(|(min_uv, max_uv)| fret_ui::dock::ViewportSelectionRect {
-                    min_uv,
-                    max_uv,
-                    fill: selection_fill,
-                    stroke: selection_stroke,
-                })
+                lead.and_then(viewport_grid_cell_uv_rect)
+                    .map(|(min_uv, max_uv)| fret_ui::dock::ViewportSelectionRect {
+                        min_uv,
+                        max_uv,
+                        fill: selection_fill,
+                        stroke: selection_stroke,
+                    })
             };
+
+            let gizmo = match tool_mode {
+                ViewportToolMode::Move => marker_uv.map(|center_uv| fret_ui::dock::ViewportGizmo {
+                    center_uv,
+                    axis_len_px: fret_core::geometry::Px(80.0),
+                    highlight: gizmo_highlight,
+                }),
+                ViewportToolMode::Select => None,
+            };
+
             dock.set_viewport_selection_rect(window, vp.target, selection_rect);
             dock.set_viewport_marker(window, vp.target, marker);
             dock.set_viewport_gizmo(window, vp.target, gizmo);
@@ -419,15 +515,9 @@ impl DemoDriver {
     }
 }
 
-fn demo_world_pos_to_viewport_uv(pos: [f32; 3]) -> (f32, f32) {
-    let scale = 10.0;
-    let u = (pos[0] / scale).clamp(0.0, 1.0);
-    let v = (1.0 - pos[1] / scale).clamp(0.0, 1.0);
-    (u, v)
-}
-
 fn demo_pick_entity_by_uv(
     world: &DemoWorld,
+    camera: DemoViewportCamera,
     uv: (f32, f32),
     target_px_size: Option<(u32, u32)>,
 ) -> Option<u64> {
@@ -442,7 +532,7 @@ fn demo_pick_entity_by_uv(
 
     let mut best: Option<(u64, f32)> = None;
     for id in 1..=(GRID_W * GRID_H) {
-        let (eu, ev) = demo_world_pos_to_viewport_uv(world.position(id));
+        let (eu, ev) = camera.world_to_uv(world.position(id));
         let dx = (eu - u) * tw;
         let dy = (ev - v) * th;
         let d2 = dx * dx + dy * dy;
@@ -463,6 +553,7 @@ fn demo_pick_entity_by_uv(
 
 fn demo_pick_entities_in_uv_rect(
     world: &DemoWorld,
+    camera: DemoViewportCamera,
     a_uv: (f32, f32),
     b_uv: (f32, f32),
 ) -> Vec<u64> {
@@ -474,7 +565,7 @@ fn demo_pick_entities_in_uv_rect(
 
     let mut out: Vec<u64> = Vec::new();
     for id in 1..=(GRID_W * GRID_H) {
-        let (eu, ev) = demo_world_pos_to_viewport_uv(world.position(id));
+        let (eu, ev) = camera.world_to_uv(world.position(id));
         if eu >= u0 && eu <= u1 && ev >= v0 && ev <= v1 {
             out.push(id);
             if out.len() >= 2048 {
@@ -2323,10 +2414,11 @@ impl WinitDriver for DemoDriver {
                         let lead = selection.lead_entity;
                         let selected = selection.selected_entities;
 
+                        let camera = self.viewport_camera(window, target);
                         let center_uv = lead
                             .and_then(|id| {
                                 let world = world_model.and_then(|m| m.get(app))?;
-                                Some(demo_world_pos_to_viewport_uv(world.position(id)))
+                                Some(camera.world_to_uv(world.position(id)))
                             })
                             .or_else(|| lead.and_then(viewport_grid_marker_uv));
 
@@ -2445,8 +2537,10 @@ impl WinitDriver for DemoDriver {
                                     kind,
                                     start_modifiers: modifiers,
                                     start_uv,
+                                    last_uv: start_uv,
                                     current_uv: start_uv,
                                     start_target_px: event.target_px,
+                                    last_target_px: event.target_px,
                                     current_target_px: event.target_px,
                                     dragging: false,
                                 }));
@@ -2489,8 +2583,8 @@ impl WinitDriver for DemoDriver {
                                     m.dragging = true;
                                 }
 
-                                let du = (m.current_uv.0 - m.start_uv.0) * 10.0;
-                                let dv = (m.start_uv.1 - m.current_uv.1) * 10.0;
+                                let du = m.current_uv.0 - m.start_uv.0;
+                                let dv = m.current_uv.1 - m.start_uv.1;
                                 next_gizmo = Some((
                                     m.dragging,
                                     m.constraint,
@@ -2512,18 +2606,31 @@ impl WinitDriver for DemoDriver {
                             break 'mv true;
                         }
 
-                        if let Some((dragging, constraint, targets, start_positions, du, dv)) =
-                            next_gizmo
+                        if let Some((
+                            dragging,
+                            constraint,
+                            targets,
+                            start_positions,
+                            du_uv,
+                            dv_uv,
+                        )) = next_gizmo
                         {
                             if !dragging {
                                 break 'mv true;
                             }
 
-                            let (du, dv) = match constraint {
-                                TranslateAxisConstraint::Free => (du, dv),
-                                TranslateAxisConstraint::X => (du, 0.0),
-                                TranslateAxisConstraint::Y => (0.0, dv),
-                            };
+                            let camera = self.viewport_camera(window, target);
+                            let mut view_dx = du_uv * DemoViewportCamera::WORLD_SPAN;
+                            let mut view_dy = -dv_uv * DemoViewportCamera::WORLD_SPAN;
+                            match constraint {
+                                TranslateAxisConstraint::Free => {}
+                                TranslateAxisConstraint::X => view_dy = 0.0,
+                                TranslateAxisConstraint::Y => view_dx = 0.0,
+                            }
+
+                            let r = [view_dx / camera.zoom, view_dy / camera.zoom];
+                            let d = DemoViewportCamera::rotate(r, camera.rotation);
+                            let (du, dv) = (d[0], d[1]);
 
                             let snap_step = if modifiers.shift { Some(0.25) } else { None };
 
@@ -2575,6 +2682,7 @@ impl WinitDriver for DemoDriver {
                     if buttons.right || buttons.middle {
                         let current_uv = event.uv;
                         let mut next: Option<PanOrbitInteraction> = None;
+                        let mut camera_step: Option<(PanOrbitKind, f32, f32)> = None;
                         let _ = tool.update(app, |t, _cx| {
                             let Some(ViewportInteraction::PanOrbit(m)) = t.interaction.as_mut()
                             else {
@@ -2599,6 +2707,14 @@ impl WinitDriver for DemoDriver {
                                     m.dragging = true;
                                 }
 
+                                if m.dragging {
+                                    let du = m.current_uv.0 - m.last_uv.0;
+                                    let dv = m.current_uv.1 - m.last_uv.1;
+                                    m.last_uv = m.current_uv;
+                                    m.last_target_px = m.current_target_px;
+                                    camera_step = Some((m.kind, du, dv));
+                                }
+
                                 next = Some(*m);
                             }
                         });
@@ -2608,6 +2724,14 @@ impl WinitDriver for DemoDriver {
                         };
                         if !m.dragging {
                             break 'mv true;
+                        }
+
+                        if let Some((kind, du, dv)) = camera_step {
+                            let cam = self.viewport_camera_mut(window, target);
+                            match kind {
+                                PanOrbitKind::Pan => cam.pan_by_uv_delta(du, dv),
+                                PanOrbitKind::Orbit => cam.orbit_by_uv_delta(du),
+                            }
                         }
 
                         let color = match m.kind {
@@ -2635,6 +2759,16 @@ impl WinitDriver for DemoDriver {
                     }
 
                     false
+                }
+                fret_core::ViewportInputKind::Wheel { delta, modifiers } => {
+                    let mut wheel_y = delta.y.0;
+                    if modifiers.shift {
+                        wheel_y *= 4.0;
+                    }
+                    self.viewport_camera_mut(window, target)
+                        .zoom_at_uv(event.uv, wheel_y);
+                    request_redraw = true;
+                    true
                 }
                 fret_core::ViewportInputKind::PointerUp { button, .. } => match button {
                     fret_core::MouseButton::Left => 'up_left: {
@@ -2675,19 +2809,30 @@ impl WinitDriver for DemoDriver {
                             break 'up_left true;
                         };
 
+                        let camera = self.viewport_camera(window, target);
+
                         let dx = m.start_target_px.0.abs_diff(m.current_target_px.0);
                         let dy = m.start_target_px.1.abs_diff(m.current_target_px.1);
 
                         let (lead, ids) = if let Some(world) = world_model.and_then(|m| m.get(app))
                         {
                             if dx <= 3 && dy <= 3 {
-                                match demo_pick_entity_by_uv(world, m.current_uv, target_px_size) {
+                                match demo_pick_entity_by_uv(
+                                    world,
+                                    camera,
+                                    m.current_uv,
+                                    target_px_size,
+                                ) {
                                     Some(id) => (Some(id), vec![id]),
                                     None => (None, Vec::new()),
                                 }
                             } else {
-                                let ids =
-                                    demo_pick_entities_in_uv_rect(world, m.start_uv, m.current_uv);
+                                let ids = demo_pick_entities_in_uv_rect(
+                                    world,
+                                    camera,
+                                    m.start_uv,
+                                    m.current_uv,
+                                );
                                 let lead = ids.last().copied();
                                 (lead, ids)
                             }
@@ -2772,7 +2917,6 @@ impl WinitDriver for DemoDriver {
                     }
                     _ => false,
                 },
-                _ => false,
             };
 
             if let Some(dock) = app.global_mut::<DockManager>() {

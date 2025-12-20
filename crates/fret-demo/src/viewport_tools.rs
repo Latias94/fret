@@ -86,8 +86,10 @@ pub struct PanOrbitInteraction {
     pub kind: PanOrbitKind,
     pub start_modifiers: Modifiers,
     pub start_uv: (f32, f32),
+    pub last_uv: (f32, f32),
     pub current_uv: (f32, f32),
     pub start_target_px: (u32, u32),
+    pub last_target_px: (u32, u32),
     pub current_target_px: (u32, u32),
     pub dragging: bool,
 }

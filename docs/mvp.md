@@ -28,6 +28,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 23: prototype implemented in demo (Hierarchy drag & drop emits undoable commands; undo/redo restores hierarchy + selection)
 - MVP 24: prototype implemented in demo (edit transactions + coalescing; viewport translate drag produces a single undo entry)
 - MVP 25: prototype implemented in demo (translate axis constraints + Shift snapping stub)
+- MVP 26: prototype implemented in demo (viewport navigation: pan/orbit stub + wheel zoom)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -657,6 +658,33 @@ References:
 
 - `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
 - `docs/adr/0024-undo-redo-and-edit-transactions.md`
+
+## MVP 26 — Viewport Camera Navigation (Pan/Orbit + Wheel Zoom)
+
+Goal: make viewport navigation feel editor-grade so selection and gizmos can be exercised without fighting the view.
+
+**Scope**
+
+- Middle-drag pan (2D camera translation).
+- Right-drag orbit stub (2D rotation).
+- Mouse wheel zoom around cursor.
+
+**Non-goals**
+
+- Full 3D camera math and projection contracts.
+
+**Definition of Done**
+
+- Pan/orbit/zoom updates viewport overlays and picking consistently.
+- Zoom uses “zoom around cursor” so the hovered point stays stable.
+
+Status:
+
+- Prototype implemented in `fret-demo`.
+
+References:
+
+- `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
 
 ## Parking Lot (Explicitly Deferred)
 
