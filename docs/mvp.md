@@ -29,6 +29,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 24: prototype implemented in demo (edit transactions + coalescing; viewport translate drag produces a single undo entry)
 - MVP 25: prototype implemented in demo (translate axis constraints + Shift snapping stub)
 - MVP 26: prototype implemented in demo (viewport navigation: pan/orbit stub + wheel zoom)
+- MVP 11 validation: prototype implemented in demo (multiline TextArea probe panel)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -187,6 +188,10 @@ This MVP is primarily a **contract / API boundary** milestone; performance work 
   - y-aware hit testing + caret rect behavior at line breaks,
   - keyboard vertical caret movement (`text.move_up/down`, `text.select_up/down`) validated via the geometry queries,
   - IME cursor-area follows caret rect (window coordinates).
+
+Status:
+
+- Contract is locked (ADRs 0045/0046) and a validation probe is prototype implemented in `fret-demo` via `TextArea` (see `PanelKey` `core.text_probe`).
 
 References:
 

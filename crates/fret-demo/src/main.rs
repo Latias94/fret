@@ -47,6 +47,25 @@ use winit::event_loop::EventLoop;
 
 use serde::{Deserialize, Serialize};
 
+const TEXT_PROBE_DEFAULT: &str = r#"Multiline text probe (MVP11 validation)
+
+Try:
+- Click to place the caret (including near line ends).
+- Drag to select across wrapped lines.
+- Arrow Up/Down should preserve x as much as possible.
+- Scroll while typing; IME candidate window should follow the caret.
+
+Hard line breaks:
+line 1
+line 2
+line 3
+
+Long paragraph to test wrapping and hit testing:
+The quick brown fox jumps over the lazy dog. 1234567890.
+Symbols: []{}() <> /\\ | _-+=* &%$#@! ?
+Unicode: 你好，世界。日本語。한글. 😀✨
+"#;
+
 struct DemoWindowState {
     ui: UiTree,
     layers: DemoLayers,
@@ -1741,6 +1760,20 @@ impl WinitDriver for DemoDriver {
                 ),
             },
         );
+        let key_text_probe = PanelKey::new("core.text_probe");
+        dock.insert_panel(
+            key_text_probe.clone(),
+            DockPanel {
+                title: "Text Probe".to_string(),
+                color: Color {
+                    r: 0.16,
+                    g: 0.14,
+                    b: 0.20,
+                    a: 1.0,
+                },
+                viewport: None,
+            },
+        );
         let key_inspector = PanelKey::new("core.inspector");
         dock.insert_panel(
             key_inspector.clone(),
@@ -1787,6 +1820,21 @@ impl WinitDriver for DemoDriver {
                 }
             }
 
+            let probe_present = dock
+                .graph
+                .collect_panels_in_window(main_window)
+                .iter()
+                .any(|p| p == &key_text_probe);
+            if !probe_present {
+                if let Some(tabs) = dock.graph.first_tabs_in_window(main_window) {
+                    if let Some(DockNode::Tabs { tabs: list, .. }) = dock.graph.node_mut(tabs) {
+                        if !list.contains(&key_text_probe) {
+                            list.push(key_text_probe.clone());
+                        }
+                    }
+                }
+            }
+
             for w in &layout.windows {
                 if w.logical_window_id == "main" {
                     continue;
@@ -1808,7 +1856,7 @@ impl WinitDriver for DemoDriver {
                 active: 0,
             });
             let tabs_inspector = dock.graph.insert_node(DockNode::Tabs {
-                tabs: vec![key_inspector],
+                tabs: vec![key_inspector, key_text_probe],
                 active: 0,
             });
             let right = dock.graph.insert_node(DockNode::Split {
@@ -1892,15 +1940,21 @@ impl WinitDriver for DemoDriver {
 
         let key_hierarchy = PanelKey::new("core.hierarchy");
         let key_inspector = PanelKey::new("core.inspector");
+        let key_text_probe = PanelKey::new("core.text_probe");
 
         let hierarchy_node = ui.create_node(HierarchyPanel::new(selection, hierarchy, undo));
         let inspector_node = ui.create_node(InspectorPanel::new(selection, world));
+        let text_probe_node = ui.create_node(
+            fret_ui::TextArea::new(TEXT_PROBE_DEFAULT).with_min_height(fret_core::Px(240.0)),
+        );
         ui.add_child(layers.dockspace_node, hierarchy_node);
         ui.add_child(layers.dockspace_node, inspector_node);
+        ui.add_child(layers.dockspace_node, text_probe_node);
 
         app.with_global_mut(DockPanelContentService::default, |s, _app| {
             s.set(window, key_hierarchy, hierarchy_node);
             s.set(window, key_inspector, inspector_node);
+            s.set(window, key_text_probe, text_probe_node);
         });
         Self::WindowState {
             ui,

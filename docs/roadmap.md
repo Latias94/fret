@@ -196,7 +196,7 @@ Notes:
 Immediate next step:
 
 - MVP10 is prototype implemented (text editing baseline).
-- MVP11 contract is locked (ADRs 0045/0046). Next work is implementing multiline geometry in the text system and validating it in a small demo widget (see `docs/mvp.md`).
+- MVP11 contract is locked (ADRs 0045/0046) and a multiline validation probe is prototype implemented in `fret-demo` (see `docs/mvp.md`).
 
 ### M7 — Portability (wasm/WebGPU)
 
