@@ -5,9 +5,9 @@ use fret_app::{App, Model};
 use fret_core::{Color, Corners, Edges, Event, Px, Size, TextStyle};
 use fret_editor::{
     InspectorEditKind, InspectorEditRequest, InspectorEditService, InspectorEditorKind,
-    InspectorEditorRegistry, PropertyEditKind, PropertyEditRequest, PropertyEditService,
-    PropertyLeaf, PropertyMeta, PropertyNode, PropertyPath, PropertyTree, PropertyTypeTag,
-    PropertyValue,
+    InspectorEditorRegistry, ProjectEntryKind, ProjectSelectionService, ProjectService,
+    PropertyEditKind, PropertyEditRequest, PropertyEditService, PropertyLeaf, PropertyMeta,
+    PropertyNode, PropertyPath, PropertyTree, PropertyTypeTag, PropertyValue,
 };
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, TreeView, VirtualList, Widget};
 use std::borrow::Cow;
@@ -54,6 +54,51 @@ impl InspectorDataSource {
 
     fn new(app: &App, world: Model<DemoWorld>, targets: Vec<u64>) -> Self {
         let mut rows: Vec<InspectorRow> = Vec::new();
+
+        let project_selected = app
+            .global::<ProjectSelectionService>()
+            .and_then(|s| s.selected());
+        if let Some(id) = project_selected {
+            let Some(project) = app.global::<ProjectService>() else {
+                rows.push(InspectorRow::Header {
+                    label: "Project model missing".to_string(),
+                });
+                return Self { rows };
+            };
+
+            let kind = project.kind_for_id(id);
+            let guid = project.guid_for_id(id);
+            let path = project
+                .path_for_id(id)
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_else(|| "<missing path>".to_string());
+
+            rows.push(InspectorRow::Header {
+                label: "Asset".to_string(),
+            });
+            rows.push(InspectorRow::Property {
+                label: "Path".to_string(),
+                value: path,
+                action: None,
+            });
+            rows.push(InspectorRow::Property {
+                label: "Kind".to_string(),
+                value: match kind {
+                    Some(ProjectEntryKind::Directory) => "Folder".to_string(),
+                    Some(ProjectEntryKind::File) => "File".to_string(),
+                    None => "Unknown".to_string(),
+                },
+                action: None,
+            });
+            rows.push(InspectorRow::Property {
+                label: "GUID".to_string(),
+                value: guid
+                    .map(|g| g.0.to_string())
+                    .unwrap_or_else(|| "—".to_string()),
+                action: None,
+            });
+            return Self { rows };
+        }
 
         if targets.is_empty() {
             rows.push(InspectorRow::Header {
@@ -407,6 +452,11 @@ impl HierarchyPanel {
         });
         self.last_revision = self.selection.revision(cx.app);
 
+        cx.app
+            .with_global_mut(ProjectSelectionService::default, |s, _app| {
+                s.set_selected(None);
+            });
+
         cx.request_redraw();
     }
 
@@ -703,6 +753,7 @@ pub struct InspectorPanel {
     world: Model<DemoWorld>,
     last_revision: Option<u64>,
     last_world_revision: Option<u64>,
+    last_project_revision: Option<u64>,
     last_selected: Option<u64>,
     list: VirtualList<InspectorDataSource>,
 }
@@ -757,6 +808,7 @@ impl InspectorPanel {
             world,
             last_revision: None,
             last_world_revision: None,
+            last_project_revision: None,
             last_selected: None,
             list,
         }
@@ -765,8 +817,15 @@ impl InspectorPanel {
     fn maybe_refresh(&mut self, app: &App) -> bool {
         let revision = self.selection.revision(app);
         let world_revision = self.world.revision(app);
+        let project_revision = app
+            .global::<ProjectSelectionService>()
+            .map(|s| s.revision())
+            .unwrap_or(0);
 
-        if revision == self.last_revision && world_revision == self.last_world_revision {
+        if revision == self.last_revision
+            && world_revision == self.last_world_revision
+            && self.last_project_revision == Some(project_revision)
+        {
             return false;
         }
 
@@ -780,6 +839,7 @@ impl InspectorPanel {
         self.last_selected = lead;
         self.last_revision = revision;
         self.last_world_revision = world_revision;
+        self.last_project_revision = Some(project_revision);
 
         self.list
             .set_data(InspectorDataSource::new(app, self.world, selected));

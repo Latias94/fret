@@ -5,6 +5,7 @@ mod editor_shell;
 mod elements_mvp2;
 mod hierarchy;
 mod ime_probe;
+mod project_panel;
 mod scene_background;
 mod undo;
 mod viewport_targets;
@@ -13,6 +14,7 @@ mod world;
 use demo_ui::{DemoLayers, DemoUiConfig, build_demo_ui};
 use editor_shell::{DemoSelection, HierarchyPanel, InspectorPanel};
 use hierarchy::DemoHierarchy;
+use project_panel::ProjectPanel;
 use scene_background::{SceneBackgroundRenderer, SceneCameraParams};
 use undo::{EditCommand, UndoStack};
 use viewport_targets::{ViewportTarget, ViewportTargets};
@@ -29,9 +31,10 @@ use fret_core::{
 };
 use fret_editor::{
     InspectorEditKind, InspectorEditService, MarqueeSelectInteraction, PanOrbitInteraction,
-    PanOrbitKind, PropertyEditKind, PropertyEditRequest, PropertyEditService, PropertyValue,
-    RotateGizmoInteraction, TranslateAxisConstraint, TranslateGizmoInteraction,
-    ViewportInteraction, ViewportToolManager, ViewportToolMode, parse_value,
+    PanOrbitKind, ProjectSelectionService, ProjectService, PropertyEditKind, PropertyEditRequest,
+    PropertyEditService, PropertyValue, RotateGizmoInteraction, TranslateAxisConstraint,
+    TranslateGizmoInteraction, ViewportInteraction, ViewportToolManager, ViewportToolMode,
+    parse_value,
 };
 use fret_render::{Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{
@@ -395,6 +398,10 @@ impl DemoDriver {
     fn set_selection(&mut self, app: &mut App, lead: Option<u64>, mut selected: Vec<u64>) {
         selected.sort_unstable();
         selected.dedup();
+
+        app.with_global_mut(ProjectSelectionService::default, |s, _app| {
+            s.set_selected(None);
+        });
 
         let Some(model) = self.selection_model() else {
             return;
@@ -940,6 +947,16 @@ impl WinitDriver for DemoDriver {
                 .with_description("Toggles play mode for the Game viewport (animation preview)")
                 .with_category("Game")
                 .with_keywords(["play", "run", "game"]),
+        );
+
+        app.commands_mut().register(
+            CommandId::from("project.refresh"),
+            CommandMeta::new("Refresh Project")
+                .with_description(
+                    "Rescans the demo project Assets folder and regenerates missing .meta files",
+                )
+                .with_category("Project")
+                .with_keywords(["project", "assets", "refresh", "scan"]),
         );
 
         app.commands_mut().register(
@@ -1894,6 +1911,20 @@ impl WinitDriver for DemoDriver {
                 viewport: None,
             },
         );
+        let key_project = PanelKey::new("core.project");
+        dock.insert_panel(
+            key_project.clone(),
+            DockPanel {
+                title: "Project".to_string(),
+                color: Color {
+                    r: 0.14,
+                    g: 0.16,
+                    b: 0.20,
+                    a: 1.0,
+                },
+                viewport: None,
+            },
+        );
         let key_inspector = PanelKey::new("core.inspector");
         dock.insert_panel(
             key_inspector.clone(),
@@ -1970,6 +2001,21 @@ impl WinitDriver for DemoDriver {
                 }
             }
 
+            let project_present = dock
+                .graph
+                .collect_panels_in_window(main_window)
+                .iter()
+                .any(|p| p == &key_project);
+            if !project_present {
+                if let Some(tabs) = dock.graph.first_tabs_in_window(main_window) {
+                    if let Some(DockNode::Tabs { tabs: list, .. }) = dock.graph.node_mut(tabs) {
+                        if !list.contains(&key_project) {
+                            list.push(key_project.clone());
+                        }
+                    }
+                }
+            }
+
             for w in &layout.windows {
                 if w.logical_window_id == "main" {
                     continue;
@@ -1983,7 +2029,7 @@ impl WinitDriver for DemoDriver {
             }
         } else {
             let tabs_left = dock.graph.insert_node(DockNode::Tabs {
-                tabs: vec![key_hierarchy],
+                tabs: vec![key_hierarchy, key_project],
                 active: 0,
             });
             let tabs_scene = dock.graph.insert_node(DockNode::Tabs {
@@ -2008,6 +2054,17 @@ impl WinitDriver for DemoDriver {
         }
 
         app.set_global(dock);
+
+        if app.global::<ProjectService>().is_none() {
+            let mut project = ProjectService::default();
+            if let Err(err) = project.ensure_demo_assets_exist() {
+                tracing::error!(error = %err, "failed to create demo project assets");
+            }
+            if let Err(err) = project.rescan() {
+                tracing::error!(error = %err, "failed to scan demo project assets");
+            }
+            app.set_global(project);
+        }
 
         if self.selection.is_none() {
             self.selection = Some(app.models_mut().insert(DemoSelection::default()));
@@ -2074,20 +2131,24 @@ impl WinitDriver for DemoDriver {
             build_demo_ui(window, DemoUiConfig::default(), inspector_edit_buffer);
 
         let key_hierarchy = PanelKey::new("core.hierarchy");
+        let key_project = PanelKey::new("core.project");
         let key_inspector = PanelKey::new("core.inspector");
         let key_text_probe = PanelKey::new("core.text_probe");
 
         let hierarchy_node = ui.create_node(HierarchyPanel::new(selection, hierarchy, undo));
+        let project_node = ui.create_node(ProjectPanel::new());
         let inspector_node = ui.create_node(InspectorPanel::new(selection, world));
         let text_probe_node = ui.create_node(
             fret_ui::TextArea::new(TEXT_PROBE_DEFAULT).with_min_height(fret_core::Px(240.0)),
         );
         ui.add_child(layers.dockspace_node, hierarchy_node);
+        ui.add_child(layers.dockspace_node, project_node);
         ui.add_child(layers.dockspace_node, inspector_node);
         ui.add_child(layers.dockspace_node, text_probe_node);
 
         app.with_global_mut(DockPanelContentService::default, |s, _app| {
             s.set(window, key_hierarchy, hierarchy_node);
+            s.set(window, key_project, project_node);
             s.set(window, key_inspector, inspector_node);
             s.set(window, key_text_probe, text_probe_node);
         });
@@ -2331,6 +2392,19 @@ impl WinitDriver for DemoDriver {
             "demo.play.toggle" => {
                 self.play_mode = !self.play_mode;
                 self.play_started_at = self.play_mode.then(Instant::now);
+                for &w in self.logical_windows.keys() {
+                    app.request_redraw(w);
+                }
+            }
+            "project.refresh" => {
+                if let Some(project) = app.global_mut::<ProjectService>() {
+                    if let Err(err) = project.ensure_demo_assets_exist() {
+                        tracing::error!(error = %err, "failed to create demo project assets");
+                    }
+                    if let Err(err) = project.rescan() {
+                        tracing::error!(error = %err, "failed to scan demo project assets");
+                    }
+                }
                 for &w in self.logical_windows.keys() {
                     app.request_redraw(w);
                 }
