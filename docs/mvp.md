@@ -24,8 +24,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 19: prototype implemented in demo (viewport click-to-select + selection highlight overlay)
 - MVP 20: prototype implemented in demo (translate gizmo stub: overlay + explicit drag phases; Q/W tool switching; Esc cancel rollback)
 - MVP 21: prototype implemented in demo (dock drag hints + dock tab context menu; debounced layout persistence)
-- Next (recommended, Unity-like feel):
-  - MVP 22: undo/redo P0 (command stack + coalescing boundary)
+- MVP 22: prototype implemented in demo (undo/redo command stack; inspector edits + translate gizmo integrate)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -553,7 +552,7 @@ Goal: establish the editor-app boundary for undo/redo early so all subsequent to
   - a coalescing boundary for “drag-like continuous edits”.
 - Integrate at least two edit sources:
   - inspector property edits,
-  - hierarchy drag & drop ops.
+  - viewport translate gizmo drags.
 
 **Non-goals**
 
@@ -561,8 +560,15 @@ Goal: establish the editor-app boundary for undo/redo early so all subsequent to
 
 **Definition of Done**
 
-- Undo/redo works for at least one inspector edit and one hierarchy docking/tree op.
+- Undo/redo works for at least one inspector edit and one viewport tool commit.
 - Continuous edits (e.g. gizmo drag) can be coalesced into a single history entry.
+
+Status:
+
+- Prototype implemented in `fret-demo`:
+  - `edit.undo` / `edit.redo` commands with default bindings,
+  - inspector `property_edit.commit` pushes undoable edit commands,
+  - translate gizmo drags push a single undoable command on commit.
 
 References:
 

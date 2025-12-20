@@ -10,6 +10,7 @@ mod inspector_edit_layout;
 mod inspector_protocol;
 mod property;
 mod property_edit;
+mod undo;
 mod viewport_tools;
 mod world;
 
@@ -18,6 +19,7 @@ use editor_shell::{DemoSelection, HierarchyPanel, InspectorPanel};
 use hierarchy::DemoHierarchy;
 use inspector_edit::{InspectorEditKind, InspectorEditService, parse_value};
 use property_edit::PropertyEditService;
+use undo::{EditCommand, UndoStack};
 use viewport_tools::{
     MarqueeSelectInteraction, PanOrbitInteraction, PanOrbitKind, TranslateGizmoInteraction,
     ViewportInteraction, ViewportToolManager, ViewportToolMode,
@@ -69,6 +71,7 @@ struct DemoDriver {
     selection: Option<Model<DemoSelection>>,
     hierarchy: Option<Model<DemoHierarchy>>,
     world: Option<Model<DemoWorld>>,
+    undo: Option<Model<UndoStack>>,
     viewport_tools: Option<Model<ViewportToolManager>>,
 }
 
@@ -710,6 +713,21 @@ impl WinitDriver for DemoDriver {
                 .with_scope(CommandScope::Widget),
         );
 
+        app.commands_mut().register(
+            CommandId::from("edit.undo"),
+            CommandMeta::new("Undo")
+                .with_description("Undo the last editor action")
+                .with_category("Edit")
+                .with_scope(CommandScope::App),
+        );
+        app.commands_mut().register(
+            CommandId::from("edit.redo"),
+            CommandMeta::new("Redo")
+                .with_description("Redo the last undone editor action")
+                .with_category("Edit")
+                .with_scope(CommandScope::App),
+        );
+
         for (id, title, desc) in [
             (
                 "text.move_left",
@@ -903,6 +921,60 @@ impl WinitDriver for DemoDriver {
                     keys: KeySpecV1 {
                         mods: vec![],
                         key: "KeyW".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("edit.undo".into()),
+                    platform: Some("macos".into()),
+                    when: Some("!focus.is_text_input && !ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["meta".into()],
+                        key: "KeyZ".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("edit.redo".into()),
+                    platform: Some("macos".into()),
+                    when: Some("!focus.is_text_input && !ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["meta".into(), "shift".into()],
+                        key: "KeyZ".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("edit.undo".into()),
+                    platform: Some("windows".into()),
+                    when: Some("!focus.is_text_input && !ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyZ".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("edit.redo".into()),
+                    platform: Some("windows".into()),
+                    when: Some("!focus.is_text_input && !ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into(), "shift".into()],
+                        key: "KeyZ".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("edit.undo".into()),
+                    platform: Some("linux".into()),
+                    when: Some("!focus.is_text_input && !ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyZ".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("edit.redo".into()),
+                    platform: Some("linux".into()),
+                    when: Some("!focus.is_text_input && !ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into(), "shift".into()],
+                        key: "KeyZ".into(),
                     },
                 },
                 BindingV1 {
@@ -1438,6 +1510,9 @@ impl WinitDriver for DemoDriver {
         if self.world.is_none() {
             self.world = Some(app.models_mut().insert(DemoWorld::default()));
         }
+        if self.undo.is_none() {
+            self.undo = Some(app.models_mut().insert(UndoStack::default()));
+        }
         if self.viewport_tools.is_none() {
             self.viewport_tools = Some(app.models_mut().insert(ViewportToolManager::default()));
         }
@@ -1472,6 +1547,9 @@ impl WinitDriver for DemoDriver {
                 model
             }
         };
+        if self.undo.is_none() {
+            self.undo = Some(app.models_mut().insert(UndoStack::default()));
+        }
         if self.viewport_tools.is_none() {
             self.viewport_tools = Some(app.models_mut().insert(ViewportToolManager::default()));
         }
@@ -1800,14 +1878,74 @@ impl WinitDriver for DemoDriver {
                     return;
                 };
 
+                let before: Vec<Option<crate::property::PropertyValue>> = self
+                    .world
+                    .and_then(|world| world.get(app))
+                    .map(|w| {
+                        request
+                            .targets
+                            .iter()
+                            .map(|&id| w.get_property(id, &request.path))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+
+                let after = request.value.clone();
+
                 if let Some(world) = self.world {
                     let _ = world.update(app, |w, _cx| {
-                        w.apply_property_value(&request.targets, &request.path, request.value);
+                        w.apply_property_value(&request.targets, &request.path, after.clone());
                     });
+                }
+
+                if let Some(stack) = self.undo {
+                    let cmd = EditCommand::SetProperties {
+                        targets: request.targets,
+                        path: request.path,
+                        before,
+                        after,
+                    };
+                    let _ = stack.update(app, |s, _cx| s.push(cmd));
                 }
 
                 for &w in self.logical_windows.keys() {
                     app.request_redraw(w);
+                }
+            }
+            "edit.undo" => {
+                let mut cmd: Option<EditCommand> = None;
+                if let Some(stack) = self.undo {
+                    let _ = stack.update(app, |s, _cx| {
+                        cmd = s.pop_undo();
+                    });
+                }
+                if let Some(cmd) = cmd {
+                    if let Some(world) = self.world {
+                        let _ = world.update(app, |w, _cx| {
+                            cmd.undo(w);
+                        });
+                    }
+                    for &w in self.logical_windows.keys() {
+                        app.request_redraw(w);
+                    }
+                }
+            }
+            "edit.redo" => {
+                let mut cmd: Option<EditCommand> = None;
+                if let Some(stack) = self.undo {
+                    let _ = stack.update(app, |s, _cx| {
+                        cmd = s.pop_redo();
+                    });
+                }
+                if let Some(cmd) = cmd {
+                    if let Some(world) = self.world {
+                        let _ = world.update(app, |w, _cx| {
+                            cmd.apply(w);
+                        });
+                    }
+                    for &w in self.logical_windows.keys() {
+                        app.request_redraw(w);
+                    }
                 }
             }
             "viewport.tool.select" => {
@@ -1963,8 +2101,10 @@ impl WinitDriver for DemoDriver {
             let target = event.target;
             let selection_model = self.selection;
             let world_model = self.world;
+            let undo_model = self.undo;
 
             let mut pending_selection: Option<(Option<u64>, Vec<u64>, fret_core::Modifiers)> = None;
+            let mut pending_undo: Option<EditCommand> = None;
 
             let handled = app.with_global_mut(DockManager::default, |dock, app| match event.kind {
                 fret_core::ViewportInputKind::PointerDown { button, modifiers } => match button {
@@ -2231,7 +2371,7 @@ impl WinitDriver for DemoDriver {
                 } => match button {
                     fret_core::MouseButton::Left => {
                         let mut commit: Option<MarqueeSelectInteraction> = None;
-                        let mut commit_gizmo = false;
+                        let mut commit_gizmo: Option<TranslateGizmoInteraction> = None;
                         let _ = tool.update(app, |t, _cx| match t.interaction.take() {
                             Some(ViewportInteraction::MarqueeSelect(m))
                                 if m.window == window && m.target == target =>
@@ -2241,9 +2381,8 @@ impl WinitDriver for DemoDriver {
                             Some(ViewportInteraction::TranslateGizmo(m))
                                 if m.window == window && m.target == target =>
                             {
-                                commit_gizmo = true;
-                                if !m.dragging {
-                                    t.interaction = None;
+                                if m.dragging {
+                                    commit_gizmo = Some(m);
                                 }
                             }
                             other => t.interaction = other,
@@ -2252,7 +2391,47 @@ impl WinitDriver for DemoDriver {
                         dock.set_viewport_drag_line(window, target, None);
                         app.request_redraw(window);
 
-                        if commit_gizmo {
+                        if let Some(m) = commit_gizmo {
+                            let targets: Vec<u64> =
+                                m.start_positions.iter().map(|(id, _)| *id).collect();
+                            let before: Vec<[f32; 3]> =
+                                m.start_positions.iter().map(|(_, pos)| *pos).collect();
+
+                            let mut after: Vec<[f32; 3]> = Vec::new();
+                            if let Some(world) = world_model.and_then(|w| w.get(app)) {
+                                let position_path = crate::property::PropertyPath::new()
+                                    .field("transform")
+                                    .field("position");
+                                for &id in &targets {
+                                    if let Some(crate::property::PropertyValue::Vec3(pos)) =
+                                        world.get_property(id, &position_path)
+                                    {
+                                        after.push(pos);
+                                    }
+                                }
+                            }
+
+                            if after.len() != before.len() {
+                                after.clear();
+                                let du = (m.current_uv.0 - m.start_uv.0) * 10.0;
+                                let dv = (m.start_uv.1 - m.current_uv.1) * 10.0;
+                                after.extend(
+                                    before
+                                        .iter()
+                                        .map(|start| [start[0] + du, start[1] + dv, start[2]]),
+                                );
+                            }
+
+                            if before.len() == targets.len()
+                                && after.len() == targets.len()
+                                && before != after
+                            {
+                                pending_undo = Some(EditCommand::SetPositions {
+                                    targets,
+                                    before,
+                                    after,
+                                });
+                            }
                             return true;
                         }
 
@@ -2350,6 +2529,11 @@ impl WinitDriver for DemoDriver {
             });
 
             if handled {
+                if let Some(cmd) = pending_undo.take() {
+                    if let Some(stack) = undo_model {
+                        let _ = stack.update(app, |s, _cx| s.push(cmd));
+                    }
+                }
                 if let Some((lead, ids, modifiers)) = pending_selection.take() {
                     self.apply_selection_delta(app, lead, ids, modifiers);
                 }
