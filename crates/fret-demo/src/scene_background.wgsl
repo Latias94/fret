@@ -35,6 +35,7 @@ fn line_aa(dist: f32, thickness: f32, aa: f32) -> f32 {
 fn fs_main(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
   let target_px = u.v0.xy;
   let world_span = u.v0.z;
+  let time = u.v0.w;
   let center = u.v1.xy;
   let zoom = max(u.v1.z, 0.0001);
   let rotation = u.v1.w;
@@ -43,7 +44,9 @@ fn fs_main(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
   var ndc = (p.xy / target_px) * 2.0 - vec2<f32>(1.0, 1.0);
   ndc.y = -ndc.y;
 
-  let world = center + rotate(ndc * (world_span * 0.5) / zoom, rotation);
+  // Time is used to animate preview viewports (e.g. Game view) without affecting editor viewports.
+  let time_offset = vec2<f32>(time * 0.35, time * 0.15);
+  let world = center + rotate(ndc * (world_span * 0.5) / zoom, rotation) + time_offset;
 
   // Checker cell color from world-space integer grid.
   let cell = floor(world);
@@ -66,4 +69,3 @@ fn fs_main(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
 
   return vec4<f32>(col, 1.0);
 }
-

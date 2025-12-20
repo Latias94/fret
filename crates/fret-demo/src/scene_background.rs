@@ -8,6 +8,7 @@ pub struct SceneCameraParams {
     pub zoom: f32,
     pub rotation: f32,
     pub world_span: f32,
+    pub time: f32,
 }
 
 #[repr(C)]
@@ -117,7 +118,12 @@ impl SceneBackgroundRenderer {
     ) -> wgpu::CommandBuffer {
         let (w, h) = target_px_size;
         let uniform = SceneBackgroundUniform {
-            v0: [w.max(1) as f32, h.max(1) as f32, camera.world_span, 0.0],
+            v0: [
+                w.max(1) as f32,
+                h.max(1) as f32,
+                camera.world_span,
+                camera.time,
+            ],
             v1: [
                 camera.center[0],
                 camera.center[1],

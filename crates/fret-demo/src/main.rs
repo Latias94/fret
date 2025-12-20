@@ -47,7 +47,7 @@ use fret_ui::dock::ViewportMarquee;
 use fret_ui::{
     ContextMenuService, DockManager, DockPanel, DockPanelContentService, UiTree, ViewportPanel,
 };
-use std::{collections::HashMap, fs::File, path::Path, time::Duration};
+use std::{collections::HashMap, fs::File, path::Path, time::Duration, time::Instant};
 use winit::event_loop::EventLoop;
 
 use serde::{Deserialize, Serialize};
@@ -99,6 +99,8 @@ struct DemoDriver {
     viewport_cameras: HashMap<PanelKey, DemoViewportCamera>,
     camera_persist_timer: Option<fret_core::TimerToken>,
     camera_persist_pending: bool,
+    play_mode: bool,
+    play_started_at: Option<Instant>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -218,6 +220,15 @@ impl DemoDriver {
         self.viewport_cameras
             .entry(panel)
             .or_insert_with(DemoViewportCamera::default)
+    }
+
+    fn play_time_seconds(&self) -> f32 {
+        if !self.play_mode {
+            return 0.0;
+        }
+        self.play_started_at
+            .map(|t| t.elapsed().as_secs_f32())
+            .unwrap_or(0.0)
     }
 
     fn load_layout_file() -> Option<DockLayoutV1> {
@@ -821,6 +832,9 @@ impl WinitDriver for DemoDriver {
         };
         let panels: Vec<PanelKey> = targets.panel_keys().cloned().collect();
 
+        let play_time = self.play_time_seconds();
+        let mut wants_raf = false;
+
         let mut cmds: Vec<wgpu::CommandBuffer> = Vec::new();
 
         for panel in panels {
@@ -855,6 +869,14 @@ impl WinitDriver for DemoDriver {
                 app.request_redraw(window);
             }
 
+            let role = demo_viewport_role(&panel);
+            let time = if role == DemoViewportRole::Game && self.play_mode {
+                wants_raf = true;
+                play_time
+            } else {
+                0.0
+            };
+
             cmds.push(bg.record_commands(
                 &context.device,
                 &context.queue,
@@ -865,8 +887,13 @@ impl WinitDriver for DemoDriver {
                     zoom: camera.zoom,
                     rotation: camera.rotation,
                     world_span: DemoViewportCamera::WORLD_SPAN,
+                    time,
                 },
             ));
+        }
+
+        if wants_raf {
+            app.push_effect(Effect::RequestAnimationFrame(window));
         }
 
         cmds
@@ -904,6 +931,14 @@ impl WinitDriver for DemoDriver {
                 .with_description("Closes the command palette overlay")
                 .with_category("View")
                 .with_keywords(["palette", "command"]),
+        );
+
+        app.commands_mut().register(
+            CommandId::from("demo.play.toggle"),
+            CommandMeta::new("Toggle Play Mode")
+                .with_description("Toggles play mode for the Game viewport (animation preview)")
+                .with_category("Game")
+                .with_keywords(["play", "run", "game"]),
         );
 
         app.commands_mut().register(
@@ -2291,6 +2326,13 @@ impl WinitDriver for DemoDriver {
                     state.ui.set_focus(Some(state.layers.command_palette_node));
                 }
                 app.request_redraw(window);
+            }
+            "demo.play.toggle" => {
+                self.play_mode = !self.play_mode;
+                self.play_started_at = self.play_mode.then(Instant::now);
+                for &w in self.logical_windows.keys() {
+                    app.request_redraw(w);
+                }
             }
             "inspector_edit.open" => {
                 let Some(request) = app

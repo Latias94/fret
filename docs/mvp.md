@@ -34,6 +34,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 28: prototype implemented in demo (engine render hook + camera-driven viewport background)
 - MVP 29: prototype implemented in demo (viewport render target auto-resize + registry update)
 - MVP 30: prototype implemented in demo (Scene/Game viewport roles: tool gating + context menu control)
+- MVP 31: prototype implemented in demo (play mode stub: RAF scheduling + animated Game viewport)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -825,6 +826,31 @@ Goal: make multi-viewport editors feel Unity-like by establishing “roles” fo
 Status:
 
 - Prototype implemented in `fret-demo` + `fret-ui` (`ViewportPanel.context_menu_enabled`).
+
+## MVP 31 — Play Mode Stub P0 (Preview Loop + RAF Scheduling)
+
+Goal: validate an editor-grade “preview loop” without committing the framework to continuous rendering by default.
+
+**Scope**
+
+- Add a demo command to toggle play mode.
+- When play mode is enabled and the Game viewport is visible:
+  - request animation frames (ADR 0034) to keep the preview updating,
+  - render a simple time-based animation in the Game viewport background (no engine simulation yet).
+
+**Non-goals**
+
+- Full runtime input mapping and simulation stepping.
+- Editor/engine state synchronization (app-specific).
+
+**Definition of Done**
+
+- Toggling play mode makes the Game viewport visibly animate while Scene remains static.
+- Disabling play mode stops continuous redraw.
+
+Status:
+
+- Prototype implemented in `fret-demo` (`demo.play.toggle`).
 
 ## Parking Lot (Explicitly Deferred)
 

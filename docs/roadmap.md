@@ -101,6 +101,7 @@ validate that the framework contracts are sufficient.
 - Viewport navigation P0: pan/orbit stub + wheel zoom (prototype implemented in demo; see `docs/mvp.md` MVP 26).
 - Gizmo P0: rotate tool stub (prototype implemented in demo; see `docs/mvp.md` MVP 27).
 - Multi-viewport roles P0: Scene (editor) vs Game (preview) gating patterns (prototype implemented in demo; see `docs/mvp.md` MVP 30).
+- Play mode stub P0: preview loop with RAF scheduling while a Game viewport is visible (prototype implemented in demo; see `docs/mvp.md` MVP 31).
 - Undo/redo P0: command stack + transaction coalescing boundary (ADR 0024). (prototype implemented in demo; see `docs/mvp.md` MVP 22 + MVP 24).
 
 ## Milestones
