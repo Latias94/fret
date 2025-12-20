@@ -179,6 +179,7 @@ Remaining work (still P0, but can iterate after MVP2):
 - P0: Host-provided `WgpuContext` to support both editor-hosted and engine-hosted integration. (see ADR 0010)
 - P0: Viewport widget that displays an engine texture/render target.
 - P0: Viewport mapping + input event contract (window -> uv/px). (prototype implemented)
+- P0: Engine frame hook returns command buffers + explicit render target deltas; runner applies deltas before UI render. (prototype implemented; ADR 0038)
 - P1: Overlay composition primitives: UI can render overlays over the viewport; editor apps can build gizmos/selection on top.
 - P1: Input forwarding and capture rules (mouse/keyboard routed to viewport when focused).
 

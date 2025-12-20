@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
+    fmt,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -24,6 +25,38 @@ use winit::{
 use crate::error::RunnerError;
 
 type WindowAnchor = fret_core::WindowAnchor;
+
+pub enum RenderTargetUpdate {
+    Update {
+        id: fret_core::RenderTargetId,
+        desc: fret_render::RenderTargetDescriptor,
+    },
+    Unregister {
+        id: fret_core::RenderTargetId,
+    },
+}
+
+impl fmt::Debug for RenderTargetUpdate {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Update { id, desc } => f
+                .debug_struct("Update")
+                .field("id", id)
+                .field("size", &desc.size)
+                .field("format", &desc.format)
+                .field("color_space", &desc.color_space)
+                .field("view", &"<wgpu::TextureView>")
+                .finish(),
+            Self::Unregister { id } => f.debug_struct("Unregister").field("id", id).finish(),
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct EngineFrameUpdate {
+    pub target_updates: Vec<RenderTargetUpdate>,
+    pub command_buffers: Vec<wgpu::CommandBuffer>,
+}
 
 pub struct WinitRunnerConfig {
     pub main_window_title: String,
@@ -127,6 +160,32 @@ pub trait WinitDriver {
     fn init(&mut self, _app: &mut App, _main_window: fret_core::AppWindowId) {}
 
     fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, _renderer: &mut Renderer) {}
+
+    fn record_engine_frame(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        context: &WgpuContext,
+        renderer: &mut Renderer,
+        scale_factor: f32,
+        tick_id: fret_core::TickId,
+        frame_id: fret_core::FrameId,
+    ) -> EngineFrameUpdate {
+        EngineFrameUpdate {
+            target_updates: Vec::new(),
+            command_buffers: self.record_engine_commands(
+                app,
+                window,
+                state,
+                context,
+                renderer,
+                scale_factor,
+                tick_id,
+                frame_id,
+            ),
+        }
+    }
 
     fn record_engine_commands(
         &mut self,
@@ -1098,7 +1157,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     &mut state.scene,
                 );
 
-                let mut cmd_buffers = self.driver.record_engine_commands(
+                let engine_frame = self.driver.record_engine_frame(
                     &mut self.app,
                     app_window,
                     &mut state.user,
@@ -1108,6 +1167,27 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     self.tick_id,
                     self.frame_id,
                 );
+
+                for update in engine_frame.target_updates {
+                    match update {
+                        RenderTargetUpdate::Update { id, desc } => {
+                            if !renderer.update_render_target(id, desc) {
+                                error!(
+                                    ?id,
+                                    "engine frame update tried to update unknown render target"
+                                );
+                            }
+                        }
+                        RenderTargetUpdate::Unregister { id } => {
+                            if !renderer.unregister_render_target(id) {
+                                error!(
+                                    ?id,
+                                    "engine frame update tried to unregister unknown render target"
+                                );
+                            }
+                        }
+                    }
+                }
 
                 let ui_cmd = renderer.render_scene(
                     &context.device,
@@ -1120,6 +1200,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     state.surface.size(),
                 );
 
+                let mut cmd_buffers = engine_frame.command_buffers;
                 cmd_buffers.push(ui_cmd);
                 context.queue.submit(cmd_buffers);
                 frame.present();

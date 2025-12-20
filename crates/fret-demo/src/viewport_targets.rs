@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use fret_core::{PanelKey, RenderTargetId, geometry::Rect};
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer};
+use fret_runner_winit_wgpu::RenderTargetUpdate;
 
 pub struct ViewportTarget {
     pub target: RenderTargetId,
@@ -74,11 +75,10 @@ impl ViewportTarget {
     pub fn resize(
         &mut self,
         device: &wgpu::Device,
-        renderer: &mut Renderer,
         desired_px: (u32, u32),
-    ) -> bool {
+    ) -> Option<RenderTargetUpdate> {
         if self.target_px_size == desired_px {
-            return false;
+            return None;
         }
 
         let texture = device.create_texture(&wgpu::TextureDescriptor {
@@ -98,23 +98,20 @@ impl ViewportTarget {
 
         let engine_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         let ui_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let updated = renderer.update_render_target(
-            self.target,
-            RenderTargetDescriptor {
-                view: ui_view,
-                size: desired_px,
-                format: Self::FORMAT,
-                color_space: RenderTargetColorSpace::Srgb,
-            },
-        );
-        if !updated {
-            return false;
-        }
+        let desc = RenderTargetDescriptor {
+            view: ui_view,
+            size: desired_px,
+            format: Self::FORMAT,
+            color_space: RenderTargetColorSpace::Srgb,
+        };
 
         self.texture = texture;
         self.view = engine_view;
         self.target_px_size = desired_px;
-        true
+        Some(RenderTargetUpdate::Update {
+            id: self.target,
+            desc,
+        })
     }
 }
 

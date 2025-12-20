@@ -98,6 +98,21 @@ The engine render hook API must receive:
 - window/viewport identity and sizes (logical + physical) (ADR 0017 / ADR 0025),
 - access to diagnostics hooks for tracing/metrics (ADR 0036).
 
+## Implementation Notes
+
+The current desktop runner (`crates/fret-runner-winit-wgpu`) implements the “record commands + update targets”
+shape by extending the `WinitDriver` hook:
+
+- The driver may implement `record_engine_frame(...) -> EngineFrameUpdate`.
+- `EngineFrameUpdate` contains:
+  - `target_updates: Vec<RenderTargetUpdate>` (explicit render target deltas),
+  - `command_buffers: Vec<wgpu::CommandBuffer>` (engine work for this frame).
+- The runner applies `target_updates` to the renderer’s render target registry **before** recording and submitting
+  the UI command buffer, so UI sampling is correct in the same frame (ADR 0015).
+
+This keeps the queue ownership rule intact while avoiding demo-only glue code that directly mutates the renderer
+registry during interaction.
+
 ## Consequences
 
 - Correct-by-construction ordering: engine viewport writes happen before UI samples them (ADR 0015).

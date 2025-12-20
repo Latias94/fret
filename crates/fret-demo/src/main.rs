@@ -41,7 +41,10 @@ use fret_core::{
     Scene,
 };
 use fret_render::{Renderer, WgpuContext};
-use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
+use fret_runner_winit_wgpu::{
+    EngineFrameUpdate, RenderTargetUpdate, WindowCreateSpec, WinitDriver, WinitRunner,
+    WinitRunnerConfig,
+};
 use fret_ui::Invalidation;
 use fret_ui::dock::ViewportMarquee;
 use fret_ui::{
@@ -813,28 +816,29 @@ impl WinitDriver for DemoDriver {
         self.viewport_targets = Some(targets);
     }
 
-    fn record_engine_commands(
+    fn record_engine_frame(
         &mut self,
         app: &mut App,
         window: fret_core::AppWindowId,
         _state: &mut Self::WindowState,
         context: &WgpuContext,
-        renderer: &mut Renderer,
+        _renderer: &mut Renderer,
         scale_factor: f32,
         _tick_id: fret_core::TickId,
         _frame_id: fret_core::FrameId,
-    ) -> Vec<wgpu::CommandBuffer> {
+    ) -> EngineFrameUpdate {
         let Some(bg) = self.background.as_ref() else {
-            return Vec::new();
+            return EngineFrameUpdate::default();
         };
         let Some(targets) = self.viewport_targets.as_ref() else {
-            return Vec::new();
+            return EngineFrameUpdate::default();
         };
         let panels: Vec<PanelKey> = targets.panel_keys().cloned().collect();
 
         let play_time = self.play_time_seconds();
         let mut wants_raf = false;
 
+        let mut target_updates: Vec<RenderTargetUpdate> = Vec::new();
         let mut cmds: Vec<wgpu::CommandBuffer> = Vec::new();
 
         for panel in panels {
@@ -862,7 +866,8 @@ impl WinitDriver for DemoDriver {
                 continue;
             };
 
-            if target.resize(&context.device, renderer, desired_px) {
+            if let Some(update) = target.resize(&context.device, desired_px) {
+                target_updates.push(update);
                 if let Some(dock) = app.global_mut::<DockManager>() {
                     dock.update_viewport_target_px_size(target.target, desired_px);
                 }
@@ -896,7 +901,10 @@ impl WinitDriver for DemoDriver {
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
 
-        cmds
+        EngineFrameUpdate {
+            target_updates,
+            command_buffers: cmds,
+        }
     }
 
     fn init(&mut self, app: &mut App, main_window: fret_core::AppWindowId) {
