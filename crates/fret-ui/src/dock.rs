@@ -88,6 +88,7 @@ pub struct ViewportOverlay {
     pub marquee: Option<ViewportMarquee>,
     pub drag_line: Option<ViewportDragLine>,
     pub selection_rect: Option<ViewportSelectionRect>,
+    pub gizmo: Option<ViewportGizmo>,
     pub marker: Option<ViewportMarker>,
 }
 
@@ -103,6 +104,12 @@ pub struct ViewportSelectionRect {
     pub max_uv: (f32, f32),
     pub fill: Color,
     pub stroke: Color,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViewportGizmo {
+    pub center_uv: (f32, f32),
+    pub axis_len_px: Px,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -159,12 +166,14 @@ impl DockManager {
                 marquee: None,
                 drag_line: None,
                 selection_rect: None,
+                gizmo: None,
                 marker: None,
             });
         update(&mut overlay);
         if overlay.marquee.is_none()
             && overlay.drag_line.is_none()
             && overlay.selection_rect.is_none()
+            && overlay.gizmo.is_none()
             && overlay.marker.is_none()
         {
             self.viewport_overlays.remove(&key);
@@ -212,6 +221,15 @@ impl DockManager {
         rect: Option<ViewportSelectionRect>,
     ) {
         self.upsert_viewport_overlay(window, target, |o| o.selection_rect = rect);
+    }
+
+    pub fn set_viewport_gizmo(
+        &mut self,
+        window: fret_core::AppWindowId,
+        target: RenderTargetId,
+        gizmo: Option<ViewportGizmo>,
+    ) {
+        self.upsert_viewport_overlay(window, target, |o| o.gizmo = gizmo);
     }
 
     pub fn set_viewport_marker(
@@ -1128,6 +1146,9 @@ fn paint_viewport_overlay(content: Rect, overlay: ViewportOverlay, scene: &mut S
     if let Some(sel) = overlay.selection_rect {
         paint_viewport_selection_rect(content, sel, scene);
     }
+    if let Some(gizmo) = overlay.gizmo {
+        paint_viewport_gizmo(content, gizmo, scene);
+    }
     if let Some(m) = overlay.marquee {
         paint_viewport_marquee(content, m, scene);
     }
@@ -1137,6 +1158,74 @@ fn paint_viewport_overlay(content: Rect, overlay: ViewportOverlay, scene: &mut S
     if let Some(marker) = overlay.marker {
         paint_viewport_marker(content, marker, scene);
     }
+}
+
+fn paint_viewport_gizmo(content: Rect, gizmo: ViewportGizmo, scene: &mut Scene) {
+    let (u, v) = gizmo.center_uv;
+    let x = content.origin.x.0 + content.size.width.0 * u;
+    let y = content.origin.y.0 + content.size.height.0 * v;
+
+    let len = gizmo.axis_len_px;
+    let t = Px(2.5);
+
+    let x_axis = Rect::new(Point::new(Px(x), Px(y - t.0 * 0.5)), Size::new(len, t));
+    let y_axis = Rect::new(
+        Point::new(Px(x - t.0 * 0.5), Px(y - len.0)),
+        Size::new(t, len),
+    );
+
+    let x_color = Color {
+        r: 0.92,
+        g: 0.28,
+        b: 0.30,
+        a: 0.95,
+    };
+    let y_color = Color {
+        r: 0.25,
+        g: 0.88,
+        b: 0.40,
+        a: 0.95,
+    };
+
+    scene.push(SceneOp::Quad {
+        order: fret_core::DrawOrder(6),
+        rect: x_axis,
+        background: x_color,
+        border: Edges::all(Px(0.0)),
+        border_color: Color::TRANSPARENT,
+        corner_radii: fret_core::Corners::all(Px(0.0)),
+    });
+    scene.push(SceneOp::Quad {
+        order: fret_core::DrawOrder(6),
+        rect: y_axis,
+        background: y_color,
+        border: Edges::all(Px(0.0)),
+        border_color: Color::TRANSPARENT,
+        corner_radii: fret_core::Corners::all(Px(0.0)),
+    });
+
+    let handle = Px(10.0);
+    scene.push(SceneOp::Quad {
+        order: fret_core::DrawOrder(7),
+        rect: Rect::new(
+            Point::new(Px(x - handle.0 * 0.5), Px(y - handle.0 * 0.5)),
+            Size::new(handle, handle),
+        ),
+        background: Color {
+            r: 0.08,
+            g: 0.08,
+            b: 0.10,
+            a: 0.85,
+        },
+        border: Edges::all(Px(1.5)),
+        border_color: Color {
+            r: 0.92,
+            g: 0.92,
+            b: 0.95,
+            a: 0.9,
+        },
+        corner_radii: fret_core::Corners::all(Px(2.0)),
+    });
 }
 
 fn paint_viewport_selection_rect(content: Rect, rect: ViewportSelectionRect, scene: &mut Scene) {

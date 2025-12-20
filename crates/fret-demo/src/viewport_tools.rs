@@ -3,6 +3,7 @@ use fret_core::{AppWindowId, Modifiers, RenderTargetId};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ViewportToolMode {
     Select,
+    Move,
 }
 
 impl Default for ViewportToolMode {
@@ -31,12 +32,14 @@ impl Default for ViewportToolManager {
 pub enum ViewportInteractionKind {
     MarqueeSelect,
     PanOrbit,
+    TranslateGizmo,
 }
 
 #[derive(Debug, Clone)]
 pub enum ViewportInteraction {
     MarqueeSelect(MarqueeSelectInteraction),
     PanOrbit(PanOrbitInteraction),
+    TranslateGizmo(TranslateGizmoInteraction),
 }
 
 impl ViewportInteraction {
@@ -45,6 +48,7 @@ impl ViewportInteraction {
         match self {
             ViewportInteraction::MarqueeSelect(_) => ViewportInteractionKind::MarqueeSelect,
             ViewportInteraction::PanOrbit(_) => ViewportInteractionKind::PanOrbit,
+            ViewportInteraction::TranslateGizmo(_) => ViewportInteractionKind::TranslateGizmo,
         }
     }
 
@@ -53,6 +57,7 @@ impl ViewportInteraction {
         match self {
             ViewportInteraction::MarqueeSelect(m) => (m.window, m.target),
             ViewportInteraction::PanOrbit(m) => (m.window, m.target),
+            ViewportInteraction::TranslateGizmo(m) => (m.window, m.target),
         }
     }
 }
@@ -85,4 +90,18 @@ pub struct PanOrbitInteraction {
     pub start_target_px: (u32, u32),
     pub current_target_px: (u32, u32),
     pub dragging: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TranslateGizmoInteraction {
+    pub window: AppWindowId,
+    pub target: RenderTargetId,
+    pub start_modifiers: Modifiers,
+    pub start_uv: (f32, f32),
+    pub current_uv: (f32, f32),
+    pub start_target_px: (u32, u32),
+    pub current_target_px: (u32, u32),
+    pub dragging: bool,
+    pub targets: Vec<u64>,
+    pub start_positions: Vec<(u64, [f32; 3])>,
 }

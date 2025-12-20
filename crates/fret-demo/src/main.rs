@@ -19,8 +19,8 @@ use hierarchy::DemoHierarchy;
 use inspector_edit::{InspectorEditKind, InspectorEditService, parse_value};
 use property_edit::PropertyEditService;
 use viewport_tools::{
-    MarqueeSelectInteraction, PanOrbitInteraction, PanOrbitKind, ViewportInteraction,
-    ViewportToolManager, ViewportToolMode,
+    MarqueeSelectInteraction, PanOrbitInteraction, PanOrbitKind, TranslateGizmoInteraction,
+    ViewportInteraction, ViewportToolManager, ViewportToolMode,
 };
 use world::DemoWorld;
 
@@ -288,6 +288,12 @@ impl DemoDriver {
         let marker_uv = lead.and_then(viewport_grid_marker_uv);
         let rect_uv = lead.and_then(viewport_grid_cell_uv_rect);
 
+        let tool_mode = self
+            .viewport_tools
+            .and_then(|m| m.get(app))
+            .map(|t| t.active)
+            .unwrap_or_default();
+
         let marker = marker_uv.map(|uv| fret_ui::dock::ViewportMarker {
             uv,
             color: Color {
@@ -314,6 +320,14 @@ impl DemoDriver {
             },
         });
 
+        let gizmo = match tool_mode {
+            ViewportToolMode::Move => marker_uv.map(|center_uv| fret_ui::dock::ViewportGizmo {
+                center_uv,
+                axis_len_px: fret_core::geometry::Px(80.0),
+            }),
+            ViewportToolMode::Select => None,
+        };
+
         app.with_global_mut(DockManager::default, |dock, _app| {
             if dock.graph.window_root(window).is_none() {
                 return;
@@ -327,6 +341,7 @@ impl DemoDriver {
                 };
                 dock.set_viewport_selection_rect(window, vp.target, selection_rect);
                 dock.set_viewport_marker(window, vp.target, marker);
+                dock.set_viewport_gizmo(window, vp.target, gizmo);
             }
         });
     }
@@ -572,6 +587,19 @@ impl WinitDriver for DemoDriver {
         );
 
         app.commands_mut().register(
+            CommandId::from("viewport.tool.select"),
+            CommandMeta::new("Viewport Tool: Select")
+                .with_description("Switches the active viewport tool to Select")
+                .with_category("Viewport"),
+        );
+        app.commands_mut().register(
+            CommandId::from("viewport.tool.move"),
+            CommandMeta::new("Viewport Tool: Move")
+                .with_description("Switches the active viewport tool to Move/Translate")
+                .with_category("Viewport"),
+        );
+
+        app.commands_mut().register(
             CommandId::from("demo.toggle_modal"),
             CommandMeta::new("Toggle Modal Overlay")
                 .with_description("Demo-only: toggles the modal overlay layer")
@@ -795,6 +823,24 @@ impl WinitDriver for DemoDriver {
                     keys: KeySpecV1 {
                         mods: vec![],
                         key: "F2".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("viewport.tool.select".into()),
+                    platform: Some("all".into()),
+                    when: Some("!focus.is_text_input && !ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "KeyQ".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("viewport.tool.move".into()),
+                    platform: Some("all".into()),
+                    when: Some("!focus.is_text_input && !ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "KeyW".into(),
                     },
                 },
                 BindingV1 {
@@ -1483,29 +1529,68 @@ impl WinitDriver for DemoDriver {
                 && !modifiers.meta
             {
                 if let Some(tool) = self.viewport_tools {
-                    let mut cancel: Option<(fret_core::AppWindowId, RenderTargetId)> = None;
+                    enum CancelViewportInteraction {
+                        OverlayOnly(fret_core::AppWindowId, RenderTargetId),
+                        TranslateGizmo(
+                            fret_core::AppWindowId,
+                            RenderTargetId,
+                            Vec<(u64, [f32; 3])>,
+                        ),
+                    }
+
+                    let mut cancel: Option<CancelViewportInteraction> = None;
                     let _ = tool.update(app, |t, _cx| {
                         cancel = match t.interaction.take() {
                             Some(ViewportInteraction::MarqueeSelect(m)) => {
-                                Some((m.window, m.target))
+                                Some(CancelViewportInteraction::OverlayOnly(m.window, m.target))
                             }
-                            Some(ViewportInteraction::PanOrbit(m)) => Some((m.window, m.target)),
+                            Some(ViewportInteraction::PanOrbit(m)) => {
+                                Some(CancelViewportInteraction::OverlayOnly(m.window, m.target))
+                            }
+                            Some(ViewportInteraction::TranslateGizmo(m)) => {
+                                Some(CancelViewportInteraction::TranslateGizmo(
+                                    m.window,
+                                    m.target,
+                                    m.start_positions,
+                                ))
+                            }
                             other => {
                                 t.interaction = other;
                                 None
                             }
                         };
                     });
-                    if let Some((w, target)) = cancel {
-                        app.with_global_mut(DockManager::default, |dock, _app| {
-                            dock.set_viewport_marquee(w, target, None);
-                            dock.set_viewport_drag_line(w, target, None);
-                        });
-                        for &w in self.logical_windows.keys() {
-                            app.request_redraw(w);
-                        }
+
+                    let Some(cancel) = cancel else {
                         return;
+                    };
+
+                    let (w, target, rollback_positions) = match cancel {
+                        CancelViewportInteraction::OverlayOnly(w, target) => (w, target, None),
+                        CancelViewportInteraction::TranslateGizmo(w, target, start_positions) => {
+                            (w, target, Some(start_positions))
+                        }
+                    };
+
+                    if let Some(start_positions) = rollback_positions {
+                        if let Some(world) = self.world {
+                            let _ = world.update(app, |w, _cx| {
+                                for (id, start) in &start_positions {
+                                    let e = w.entity_mut(*id);
+                                    e.transform.position = *start;
+                                }
+                            });
+                        }
                     }
+
+                    app.with_global_mut(DockManager::default, |dock, _app| {
+                        dock.set_viewport_marquee(w, target, None);
+                        dock.set_viewport_drag_line(w, target, None);
+                    });
+                    for &w in self.logical_windows.keys() {
+                        app.request_redraw(w);
+                    }
+                    return;
                 }
             }
         }
@@ -1655,6 +1740,24 @@ impl WinitDriver for DemoDriver {
                     app.request_redraw(w);
                 }
             }
+            "viewport.tool.select" => {
+                if let Some(tool) = self.viewport_tools {
+                    let _ = tool.update(app, |t, _cx| {
+                        t.active = ViewportToolMode::Select;
+                        t.interaction = None;
+                    });
+                }
+                app.request_redraw(window);
+            }
+            "viewport.tool.move" => {
+                if let Some(tool) = self.viewport_tools {
+                    let _ = tool.update(app, |t, _cx| {
+                        t.active = ViewportToolMode::Move;
+                        t.interaction = None;
+                    });
+                }
+                app.request_redraw(window);
+            }
             "command_palette.close" => {
                 if state.ui.is_layer_visible(state.layers.command_palette) {
                     state
@@ -1787,39 +1890,94 @@ impl WinitDriver for DemoDriver {
         if let Some(tool) = self.viewport_tools {
             let window = event.window;
             let target = event.target;
+            let selection_model = self.selection;
+            let world_model = self.world;
 
             let mut pending_selection: Option<(Option<u64>, Vec<u64>, fret_core::Modifiers)> = None;
 
             let handled = app.with_global_mut(DockManager::default, |dock, app| match event.kind {
                 fret_core::ViewportInputKind::PointerDown { button, modifiers } => match button {
                     fret_core::MouseButton::Left => {
-                        let mut active = ViewportToolMode::Select;
-                        let mut has_interaction = false;
                         let start_uv = event.uv;
-                        let _ = tool.update(app, |t, _cx| {
-                            active = t.active;
-                            has_interaction = t.interaction.is_some();
-                            if has_interaction {
-                                return;
-                            }
 
-                            if active == ViewportToolMode::Select {
-                                t.interaction = Some(ViewportInteraction::MarqueeSelect(
-                                    MarqueeSelectInteraction {
-                                        window,
-                                        target,
-                                        start_modifiers: modifiers,
-                                        start_uv,
-                                        current_uv: start_uv,
-                                        start_target_px: event.target_px,
-                                        current_target_px: event.target_px,
-                                    },
-                                ));
-                            }
-                        });
-                        if has_interaction || active != ViewportToolMode::Select {
+                        let selection = selection_model
+                            .and_then(|m| m.get(app))
+                            .cloned()
+                            .unwrap_or_default();
+                        let lead = selection.lead_entity;
+                        let selected = selection.selected_entities;
+
+                        let on_gizmo =
+                            lead.and_then(viewport_grid_marker_uv)
+                                .is_some_and(|(u, v)| {
+                                    let du = (start_uv.0 - u).abs();
+                                    let dv = (start_uv.1 - v).abs();
+                                    du <= 0.02 && dv <= 0.02
+                                });
+
+                        let Some(cur_tool) = tool.get(app) else {
+                            return false;
+                        };
+                        let active = cur_tool.active;
+                        if cur_tool.interaction.is_some() {
                             return false;
                         }
+
+                        if active == ViewportToolMode::Move && on_gizmo && !selected.is_empty() {
+                            let mut start_positions: Vec<(u64, [f32; 3])> = Vec::new();
+                            if let Some(world) = world_model {
+                                if let Some(w) = world.get(app) {
+                                    let position_path = crate::property::PropertyPath::new()
+                                        .field("transform")
+                                        .field("position");
+                                    for &id in &selected {
+                                        if let Some(crate::property::PropertyValue::Vec3(pos)) =
+                                            w.get_property(id, &position_path)
+                                        {
+                                            start_positions.push((id, pos));
+                                        }
+                                    }
+                                }
+                            }
+
+                            if !start_positions.is_empty() {
+                                let targets: Vec<u64> =
+                                    start_positions.iter().map(|(id, _)| *id).collect();
+                                let _ = tool.update(app, |t, _cx| {
+                                    t.interaction = Some(ViewportInteraction::TranslateGizmo(
+                                        TranslateGizmoInteraction {
+                                            window,
+                                            target,
+                                            start_modifiers: modifiers,
+                                            start_uv,
+                                            current_uv: start_uv,
+                                            start_target_px: event.target_px,
+                                            current_target_px: event.target_px,
+                                            dragging: false,
+                                            targets,
+                                            start_positions,
+                                        },
+                                    ));
+                                });
+                                app.push_effect(Effect::RequestAnimationFrame(window));
+                                return true;
+                            }
+                        }
+
+                        let _ = tool.update(app, |t, _cx| {
+                            t.interaction = Some(ViewportInteraction::MarqueeSelect(
+                                MarqueeSelectInteraction {
+                                    window,
+                                    target,
+                                    start_modifiers: modifiers,
+                                    start_uv,
+                                    current_uv: start_uv,
+                                    start_target_px: event.target_px,
+                                    current_target_px: event.target_px,
+                                },
+                            ));
+                        });
+
                         dock.set_viewport_marquee(
                             window,
                             target,
@@ -1865,32 +2023,67 @@ impl WinitDriver for DemoDriver {
                 fret_core::ViewportInputKind::PointerMove { buttons, .. } => {
                     if buttons.left {
                         let current_uv = event.uv;
-                        let mut next: Option<MarqueeSelectInteraction> = None;
-                        let _ = tool.update(app, |t, _cx| {
-                            let Some(ViewportInteraction::MarqueeSelect(m)) =
-                                t.interaction.as_mut()
-                            else {
-                                return;
-                            };
-                            if m.window == window && m.target == target {
+                        let mut next_marquee: Option<MarqueeSelectInteraction> = None;
+                        let mut next_gizmo: Option<(bool, Vec<(u64, [f32; 3])>, f32, f32)> = None;
+                        let _ = tool.update(app, |t, _cx| match t.interaction.as_mut() {
+                            Some(ViewportInteraction::MarqueeSelect(m))
+                                if m.window == window && m.target == target =>
+                            {
                                 m.current_uv = current_uv;
                                 m.current_target_px = event.target_px;
-                                next = Some(*m);
+                                next_marquee = Some(*m);
                             }
+                            Some(ViewportInteraction::TranslateGizmo(m))
+                                if m.window == window && m.target == target =>
+                            {
+                                m.current_uv = current_uv;
+                                m.current_target_px = event.target_px;
+
+                                let dx = m.start_target_px.0.abs_diff(m.current_target_px.0);
+                                let dy = m.start_target_px.1.abs_diff(m.current_target_px.1);
+                                if !m.dragging && (dx > 3 || dy > 3) {
+                                    m.dragging = true;
+                                }
+
+                                let du = (m.current_uv.0 - m.start_uv.0) * 10.0;
+                                let dv = (m.start_uv.1 - m.current_uv.1) * 10.0;
+                                next_gizmo = Some((m.dragging, m.start_positions.clone(), du, dv));
+                            }
+                            _ => {}
                         });
-                        let Some(m) = next else {
-                            return false;
-                        };
-                        dock.set_viewport_marquee(
-                            window,
-                            target,
-                            Some(ViewportMarquee {
-                                a_uv: m.start_uv,
-                                b_uv: m.current_uv,
-                            }),
-                        );
-                        app.push_effect(Effect::RequestAnimationFrame(window));
-                        return true;
+
+                        if let Some(m) = next_marquee {
+                            dock.set_viewport_marquee(
+                                window,
+                                target,
+                                Some(ViewportMarquee {
+                                    a_uv: m.start_uv,
+                                    b_uv: m.current_uv,
+                                }),
+                            );
+                            app.push_effect(Effect::RequestAnimationFrame(window));
+                            return true;
+                        }
+
+                        if let Some((dragging, start_positions, du, dv)) = next_gizmo {
+                            if !dragging {
+                                return true;
+                            }
+                            if let Some(world) = world_model {
+                                let _ = world.update(app, |w, _cx| {
+                                    for (id, start) in &start_positions {
+                                        let e = w.entity_mut(*id);
+                                        e.transform.position =
+                                            [start[0] + du, start[1] + dv, start[2]];
+                                    }
+                                });
+                            }
+                            app.push_effect(Effect::RequestAnimationFrame(window));
+                            pending_selection = None;
+                            return true;
+                        }
+
+                        return false;
                     }
 
                     if buttons.right || buttons.middle {
@@ -1967,21 +2160,30 @@ impl WinitDriver for DemoDriver {
                 } => match button {
                     fret_core::MouseButton::Left => {
                         let mut commit: Option<MarqueeSelectInteraction> = None;
-                        let _ = tool.update(app, |t, _cx| {
-                            commit = match t.interaction.take() {
-                                Some(ViewportInteraction::MarqueeSelect(m))
-                                    if m.window == window && m.target == target =>
-                                {
-                                    Some(m)
+                        let mut commit_gizmo = false;
+                        let _ = tool.update(app, |t, _cx| match t.interaction.take() {
+                            Some(ViewportInteraction::MarqueeSelect(m))
+                                if m.window == window && m.target == target =>
+                            {
+                                commit = Some(m);
+                            }
+                            Some(ViewportInteraction::TranslateGizmo(m))
+                                if m.window == window && m.target == target =>
+                            {
+                                commit_gizmo = true;
+                                if !m.dragging {
+                                    t.interaction = None;
                                 }
-                                other => {
-                                    t.interaction = other;
-                                    None
-                                }
-                            };
+                            }
+                            other => t.interaction = other,
                         });
                         dock.set_viewport_marquee(window, target, None);
+                        dock.set_viewport_drag_line(window, target, None);
                         app.request_redraw(window);
+
+                        if commit_gizmo {
+                            return true;
+                        }
 
                         let Some(m) = commit else {
                             return true;

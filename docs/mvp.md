@@ -22,8 +22,8 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 17: prototype implemented in demo (property tree + editor registry + mixed values; bool/string/f32/vec3 editors)
 - MVP 18: prototype implemented in demo (ToolManager with capture + marquee select + pan/orbit drag interactions)
 - MVP 19: prototype implemented in demo (viewport click-to-select + selection highlight overlay)
+- MVP 20: prototype implemented in demo (translate gizmo stub: overlay + explicit drag phases; Q/W tool switching; Esc cancel rollback)
 - Next (recommended, Unity-like feel):
-  - MVP 20: translate gizmo stub (overlay + drag phases)
   - MVP 21: dock UX polish (drag hints + dock context menu + debounced persistence)
   - MVP 22: undo/redo P0 (command stack + coalescing boundary)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
@@ -497,6 +497,13 @@ math and snapping rules.
 
 - Dragging the gizmo updates the selected entity transform smoothly and deterministically.
 - Cancel returns the entity to the previous transform without leaving UI/tool state inconsistent.
+
+Status:
+
+- Prototype implemented in `fret-demo`:
+  - `Q` / `W` tool switching (Select / Move),
+  - overlay-only gizmo rendering over viewports,
+  - explicit `Begin`/`Update`/`Commit`/`Cancel` phases (Esc cancels and rolls back).
 
 References:
 

@@ -97,7 +97,7 @@ validate that the framework contracts are sufficient.
 - Inspector P0: engine-agnostic property protocol + custom editor registry + minimal built-in editors (ADR 0048). (prototype implemented in demo; see `docs/mvp.md` MVP 17)
 - Viewport tools P0: input capture + tool routing + overlay rendering over viewport surfaces (ADR 0049, built on ADR 0025). (prototype implemented in demo; see `docs/mvp.md` MVP 18)
 - Viewport picking P0: click-to-select + selection highlight overlays (demo-driven; see `docs/mvp.md` MVP 19).
-- Gizmo P0: translate tool with explicit drag phases and capture rules (demo-driven; see `docs/mvp.md` MVP 20).
+- Gizmo P0: translate tool with explicit drag phases and capture rules (prototype implemented in demo; see `docs/mvp.md` MVP 20).
 
 ## Milestones
 
