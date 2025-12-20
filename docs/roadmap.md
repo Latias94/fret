@@ -256,6 +256,7 @@ all later UI work inherits the same command/focus/clipboard semantics instead of
 - Owns the winit event loop and window lifecycle.
 - Drains `App::flush_effects()` and drives redraw/raf/timers deterministically across windows.
 - Owns surfaces + presentation and coordinates submission order (see ADR 0015 / ADR 0038).
+- Provides an engine render hook for recording command buffers, submitted by the runner before UI sampling (ADR 0038).
 
 ### `fret-render` (P0)
 

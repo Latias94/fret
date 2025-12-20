@@ -128,6 +128,19 @@ pub trait WinitDriver {
 
     fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, _renderer: &mut Renderer) {}
 
+    fn record_engine_commands(
+        &mut self,
+        _app: &mut App,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _context: &WgpuContext,
+        _renderer: &mut Renderer,
+        _tick_id: fret_core::TickId,
+        _frame_id: fret_core::FrameId,
+    ) -> Vec<wgpu::CommandBuffer> {
+        Vec::new()
+    }
+
     fn viewport_input(&mut self, _app: &mut App, _event: ViewportInputEvent) {}
 
     fn dock_op(&mut self, _app: &mut App, _op: fret_core::DockOp) {}
@@ -1084,7 +1097,17 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     &mut state.scene,
                 );
 
-                let cmd = renderer.render_scene(
+                let mut cmd_buffers = self.driver.record_engine_commands(
+                    &mut self.app,
+                    app_window,
+                    &mut state.user,
+                    context,
+                    renderer,
+                    self.tick_id,
+                    self.frame_id,
+                );
+
+                let ui_cmd = renderer.render_scene(
                     &context.device,
                     &context.queue,
                     state.surface.format(),
@@ -1095,7 +1118,8 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     state.surface.size(),
                 );
 
-                context.queue.submit([cmd]);
+                cmd_buffers.push(ui_cmd);
+                context.queue.submit(cmd_buffers);
                 frame.present();
 
                 self.frame_id.0 = self.frame_id.0.saturating_add(1);

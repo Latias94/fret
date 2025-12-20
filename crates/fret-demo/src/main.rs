@@ -10,6 +10,7 @@ mod inspector_edit_layout;
 mod inspector_protocol;
 mod property;
 mod property_edit;
+mod scene_background;
 mod undo;
 mod viewport_tools;
 mod world;
@@ -19,6 +20,7 @@ use editor_shell::{DemoSelection, HierarchyPanel, InspectorPanel};
 use hierarchy::DemoHierarchy;
 use inspector_edit::{InspectorEditKind, InspectorEditService, parse_value};
 use property_edit::PropertyEditService;
+use scene_background::{SceneBackgroundRenderer, SceneCameraParams};
 use undo::{EditCommand, UndoStack};
 use viewport_tools::{
     MarqueeSelectInteraction, PanOrbitInteraction, PanOrbitKind, RotateGizmoInteraction,
@@ -81,9 +83,8 @@ struct DemoDriver {
     main_window: Option<fret_core::AppWindowId>,
     scene_target: Option<RenderTargetId>,
     scene_target_size: Option<(u32, u32)>,
-    scene_texture: Option<wgpu::Texture>,
-    scene_pixels: Option<Vec<u8>>,
-    queue: Option<wgpu::Queue>,
+    scene_view: Option<wgpu::TextureView>,
+    scene_background: Option<SceneBackgroundRenderer>,
     logical_windows: HashMap<fret_core::AppWindowId, String>,
     window_placements: HashMap<fret_core::AppWindowId, fret_core::DockWindowPlacementV1>,
     next_floating_index: u32,
@@ -327,70 +328,6 @@ impl DemoDriver {
             dock.graph.set_window_root(main, tabs);
             tabs
         })
-    }
-
-    fn stamp_scene(&mut self, target: RenderTargetId, target_px: (u32, u32)) {
-        let (Some(scene_target), Some((w, h)), Some(texture), Some(queue), Some(pixels)) = (
-            self.scene_target,
-            self.scene_target_size,
-            self.scene_texture.as_ref(),
-            self.queue.as_ref(),
-            self.scene_pixels.as_mut(),
-        ) else {
-            return;
-        };
-        if target != scene_target {
-            return;
-        }
-
-        let (x, y) = target_px;
-        let cx = x.min(w.saturating_sub(1));
-        let cy = y.min(h.saturating_sub(1));
-
-        let mark = [240u8, 240u8, 245u8, 255u8];
-        let ring = [255u8, 90u8, 70u8, 255u8];
-        let r: i32 = 7;
-        let r2 = r * r;
-        let r_inner = (r - 1).max(0);
-        let r_inner2 = r_inner * r_inner;
-
-        for dy in -r..=r {
-            for dx in -r..=r {
-                let d2 = dx * dx + dy * dy;
-                if d2 > r2 {
-                    continue;
-                }
-
-                let px = cx as i32 + dx;
-                let py = cy as i32 + dy;
-                if px < 0 || py < 0 || px >= w as i32 || py >= h as i32 {
-                    continue;
-                }
-
-                let is_cross = dx == 0 || dy == 0;
-                let is_ring = d2 >= r_inner2;
-                if is_cross || is_ring {
-                    let rgba = if is_ring { ring } else { mark };
-                    let idx = ((py as u32 * w + px as u32) * 4) as usize;
-                    pixels[idx..idx + 4].copy_from_slice(&rgba);
-                }
-            }
-        }
-
-        queue.write_texture(
-            texture.as_image_copy(),
-            pixels,
-            wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(4 * w),
-                rows_per_image: Some(h),
-            },
-            wgpu::Extent3d {
-                width: w,
-                height: h,
-                depth_or_array_layers: 1,
-            },
-        );
     }
 
     fn next_floating_logical_id(&mut self) -> String {
@@ -817,7 +754,7 @@ impl WinitDriver for DemoDriver {
     fn gpu_ready(&mut self, _app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
         let size = 512u32;
         let format = wgpu::TextureFormat::Rgba8UnormSrgb;
-        self.queue = Some(context.queue.clone());
+        self.scene_background = Some(SceneBackgroundRenderer::new(&context.device, format));
         let texture = context.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("fret-demo scene render target"),
             size: wgpu::Extent3d {
@@ -835,41 +772,10 @@ impl WinitDriver for DemoDriver {
             view_formats: &[],
         });
 
-        let mut pixels: Vec<u8> = vec![0; (size * size * 4) as usize];
-        for y in 0..size {
-            for x in 0..size {
-                let idx = ((y * size + x) * 4) as usize;
-                let check = ((x / 32) ^ (y / 32)) & 1;
-                let (r, g, b) = if check == 0 {
-                    (24u8, 28u8, 40u8)
-                } else {
-                    (42u8, 55u8, 90u8)
-                };
-                pixels[idx] = r;
-                pixels[idx + 1] = g;
-                pixels[idx + 2] = b;
-                pixels[idx + 3] = 255u8;
-            }
-        }
-
-        context.queue.write_texture(
-            texture.as_image_copy(),
-            &pixels,
-            wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(4 * size),
-                rows_per_image: Some(size),
-            },
-            wgpu::Extent3d {
-                width: size,
-                height: size,
-                depth_or_array_layers: 1,
-            },
-        );
-
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let ui_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         let target = renderer.register_render_target(RenderTargetDescriptor {
-            view,
+            view: ui_view,
             size: (size, size),
             format,
             color_space: RenderTargetColorSpace::Srgb,
@@ -877,8 +783,42 @@ impl WinitDriver for DemoDriver {
 
         self.scene_target = Some(target);
         self.scene_target_size = Some((size, size));
-        self.scene_texture = Some(texture);
-        self.scene_pixels = Some(pixels);
+        self.scene_view = Some(view);
+    }
+
+    fn record_engine_commands(
+        &mut self,
+        _app: &mut App,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        context: &WgpuContext,
+        _renderer: &mut Renderer,
+        _tick_id: fret_core::TickId,
+        _frame_id: fret_core::FrameId,
+    ) -> Vec<wgpu::CommandBuffer> {
+        let (Some(view), Some(bg), Some(target_px_size)) = (
+            self.scene_view.as_ref(),
+            self.scene_background.as_ref(),
+            self.scene_target_size,
+        ) else {
+            return Vec::new();
+        };
+
+        let panel = PanelKey::new("core.scene");
+        let camera = self.viewport_camera(&panel);
+        let cmd = bg.record_commands(
+            &context.device,
+            &context.queue,
+            view,
+            target_px_size,
+            SceneCameraParams {
+                center: camera.center,
+                zoom: camera.zoom,
+                rotation: camera.rotation,
+                world_span: DemoViewportCamera::WORLD_SPAN,
+            },
+        );
+        vec![cmd]
     }
 
     fn init(&mut self, app: &mut App, main_window: fret_core::AppWindowId) {
@@ -3493,12 +3433,8 @@ impl WinitDriver for DemoDriver {
         }
 
         match event.kind {
-            fret_core::ViewportInputKind::PointerDown { button, .. } => {
+            fret_core::ViewportInputKind::PointerDown { .. } => {
                 println!("viewport_input: {event:?}");
-                if button == fret_core::MouseButton::Left {
-                    self.stamp_scene(event.target, event.target_px);
-                    app.request_redraw(event.window);
-                }
             }
             fret_core::ViewportInputKind::PointerUp { .. }
             | fret_core::ViewportInputKind::Wheel { .. } => {

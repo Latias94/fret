@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+bytemuck.workspace = true
 fret-app = { path = "../fret-app" }
 fret-core = { path = "../fret-core" }
 fret-render = { path = "../fret-render" }

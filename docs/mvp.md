@@ -31,6 +31,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 26: prototype implemented in demo (viewport navigation: pan/orbit stub + wheel zoom)
 - MVP 11 validation: prototype implemented in demo (multiline TextArea probe panel)
 - MVP 27: prototype implemented in demo (rotate gizmo stub + undo/redo)
+- MVP 28: prototype implemented in demo (engine render hook + camera-driven viewport background)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -725,6 +726,40 @@ References:
 
 - `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
 - `docs/adr/0024-undo-redo-and-edit-transactions.md`
+
+## MVP 28 — Engine Render Hook P0 (Recorded Commands + Central Submit)
+
+Goal: validate the mainline engine integration contract (ADR 0038) by rendering viewport targets via recorded command
+buffers that are submitted by the runner *before* UI sampling/presentation (ADR 0015).
+
+**Scope**
+
+- Add a wgpu-facing engine render hook in the desktop runner:
+  - driver records `wgpu::CommandBuffer`s for a frame,
+  - runner submits engine command buffers first, then the UI command buffer.
+- Demo exercises the contract end-to-end:
+  - a small “engine pass” renders a grid background into the Scene render target,
+  - the grid is driven by the per-panel viewport camera (pan/orbit/zoom),
+  - UI samples it via `ViewportSurface` in the same frame.
+
+**Non-goals**
+
+- Full engine render graph integration (multi-encoder graphs are supported, but the demo keeps a single pass).
+- Render target resize/update deltas (tracked in ADR 0038 but can land later).
+
+**Definition of Done**
+
+- Moving the viewport camera updates the sampled viewport background (not only overlays/picking).
+- No code outside the runner submits work directly to `wgpu::Queue` for frame-participating rendering.
+
+Status:
+
+- Prototype implemented in `fret-demo` + `fret-runner-winit-wgpu`.
+
+References:
+
+- `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
+- `docs/adr/0015-render-ordering-and-z-layers.md`
 
 ## Parking Lot (Explicitly Deferred)
 
