@@ -23,8 +23,8 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 18: prototype implemented in demo (ToolManager with capture + marquee select + pan/orbit drag interactions)
 - MVP 19: prototype implemented in demo (viewport click-to-select + selection highlight overlay)
 - MVP 20: prototype implemented in demo (translate gizmo stub: overlay + explicit drag phases; Q/W tool switching; Esc cancel rollback)
+- MVP 21: prototype implemented in demo (dock drag hints + dock tab context menu; debounced layout persistence)
 - Next (recommended, Unity-like feel):
-  - MVP 21: dock UX polish (drag hints + dock context menu + debounced persistence)
   - MVP 22: undo/redo P0 (command stack + coalescing boundary)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
@@ -529,6 +529,13 @@ Goal: upgrade docking UX toward Unity/Godot expectations without changing core d
 
 - Docking actions are visually guided and feel “product-like” (no invisible drop zones).
 - Layout save is delayed during drags and still persists correctly at the end.
+
+Status:
+
+- Prototype implemented in `fret-demo`:
+  - drop target hints shown while dragging dock tabs,
+  - dock tab context menu actions (float + move left/right),
+  - debounced `layout.json` persistence after dock ops and window placement changes.
 
 References:
 

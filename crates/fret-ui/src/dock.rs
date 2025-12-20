@@ -2,7 +2,7 @@ use fret_app::{CommandId, Effect, InputContext, Menu, MenuItem};
 use fret_core::{
     Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, Edges, NodeId, PanelKey,
     RenderTargetId, Scene, SceneOp, ViewportFit, ViewportInputEvent, ViewportInputKind,
-    ViewportMapping,
+    ViewportMapping, WindowAnchor,
     geometry::{Point, Px, Rect, Size},
 };
 use std::{
@@ -39,6 +39,14 @@ enum DockDropTarget {
     Float { window: fret_core::AppWindowId },
 }
 
+#[derive(Debug, Clone)]
+struct DockTabContextMenu {
+    window: fret_core::AppWindowId,
+    tabs: DockNodeId,
+    panel: PanelKey,
+    position: Point,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct ViewportHover {
     window: fret_core::AppWindowId,
@@ -50,6 +58,7 @@ pub struct DockManager {
     pub graph: DockGraph,
     pub panels: HashMap<PanelKey, DockPanel>,
     hover: Option<DockDropTarget>,
+    dock_tab_context_menu: Option<DockTabContextMenu>,
     viewport_hover: Option<ViewportHover>,
     viewport_context_menu: Option<ViewportInputEvent>,
     viewport_overlays: HashMap<(fret_core::AppWindowId, RenderTargetId), ViewportOverlay>,
@@ -131,6 +140,7 @@ impl Default for DockManager {
             graph: DockGraph::new(),
             panels: HashMap::new(),
             hover: None,
+            dock_tab_context_menu: None,
             viewport_hover: None,
             viewport_context_menu: None,
             viewport_overlays: HashMap::new(),
@@ -301,6 +311,7 @@ impl Widget for DockSpace {
         let mut pending_redraws: Vec<fret_core::AppWindowId> = Vec::new();
         let mut invalidate_paint = false;
         let mut invalidate_layout = false;
+        let mut open_dock_tab_menu: Option<Point> = None;
         let mut open_viewport_menu: Option<(Point, ViewportInputEvent)> = None;
         let mut request_focus: Option<NodeId> = None;
         let mut request_focus_panel: Option<PanelKey> = None;
@@ -367,6 +378,29 @@ impl Widget for DockSpace {
                                 begin_drag = Some((*position, panel_key));
                                 dock.hover = None;
                                 invalidate_paint = true;
+                                handled = true;
+                            }
+                        }
+
+                        if !handled && *button == fret_core::MouseButton::Right {
+                            if let Some((tabs_node, tab_index, panel_key)) =
+                                hit_test_tab(&dock.graph, &layout, *position)
+                            {
+                                pending_effects.push(Effect::Dock(DockOp::SetActiveTab {
+                                    tabs: tabs_node,
+                                    active: tab_index,
+                                }));
+                                request_focus_panel = Some(panel_key.clone());
+                                invalidate_layout = true;
+                                dock.dock_tab_context_menu = Some(DockTabContextMenu {
+                                    window: self.window,
+                                    tabs: tabs_node,
+                                    panel: panel_key,
+                                    position: *position,
+                                });
+                                dock.hover = None;
+                                invalidate_paint = true;
+                                open_dock_tab_menu = Some(*position);
                                 handled = true;
                             }
                         }
@@ -762,6 +796,55 @@ impl Widget for DockSpace {
             }
         }
 
+        if let Some(position) = open_dock_tab_menu {
+            let Some(window) = cx.window else {
+                return;
+            };
+
+            cx.request_focus(cx.node);
+
+            let inv_ctx = InputContext {
+                platform: cx.input_ctx.platform,
+                ui_has_modal: cx.input_ctx.ui_has_modal,
+                focus_is_text_input: false,
+            };
+
+            let menu = Menu {
+                title: Arc::from("Dock"),
+                items: vec![
+                    MenuItem::Command {
+                        command: CommandId::from("dock.tab.float"),
+                        when: None,
+                    },
+                    MenuItem::Separator,
+                    MenuItem::Command {
+                        command: CommandId::from("dock.tab.move_left"),
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: CommandId::from("dock.tab.move_right"),
+                        when: None,
+                    },
+                ],
+            };
+
+            cx.app
+                .with_global_mut(ContextMenuService::default, |service, _app| {
+                    service.set_request(
+                        window,
+                        ContextMenuRequest {
+                            position,
+                            menu,
+                            input_ctx: inv_ctx,
+                        },
+                    );
+                });
+            cx.dispatch_command(CommandId::from("context_menu.open"));
+            cx.request_redraw();
+            cx.stop_propagation();
+            return;
+        }
+
         if let Some((position, _viewport_event)) = open_viewport_menu {
             let Some(window) = cx.window else {
                 return;
@@ -826,6 +909,83 @@ impl Widget for DockSpace {
 
     fn command(&mut self, cx: &mut crate::widget::CommandCx<'_>, command: &CommandId) -> bool {
         match command.as_str() {
+            "dock.tab.float" => {
+                let Some(dock) = cx.app.global_mut::<DockManager>() else {
+                    return false;
+                };
+                let Some(ctx) = dock.dock_tab_context_menu.take() else {
+                    return false;
+                };
+                cx.app
+                    .push_effect(Effect::Dock(DockOp::RequestFloatPanelToNewWindow {
+                        source_window: ctx.window,
+                        panel: ctx.panel,
+                        anchor: Some(WindowAnchor {
+                            window: ctx.window,
+                            position: ctx.position,
+                        }),
+                    }));
+                cx.stop_propagation();
+                true
+            }
+            "dock.tab.move_left" => {
+                let Some(dock) = cx.app.global_mut::<DockManager>() else {
+                    return false;
+                };
+                let Some(ctx) = dock.dock_tab_context_menu.take() else {
+                    return false;
+                };
+                let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(ctx.tabs) else {
+                    return false;
+                };
+                let source_index = tabs.iter().position(|p| *p == ctx.panel);
+                let Some(source_index) = source_index else {
+                    return false;
+                };
+                if source_index == 0 {
+                    cx.stop_propagation();
+                    return true;
+                }
+                cx.app.push_effect(Effect::Dock(DockOp::MovePanel {
+                    source_window: ctx.window,
+                    panel: ctx.panel,
+                    target_window: ctx.window,
+                    target_tabs: ctx.tabs,
+                    zone: DropZone::Center,
+                    insert_index: Some(source_index.saturating_sub(1)),
+                }));
+                cx.stop_propagation();
+                true
+            }
+            "dock.tab.move_right" => {
+                let Some(dock) = cx.app.global_mut::<DockManager>() else {
+                    return false;
+                };
+                let Some(ctx) = dock.dock_tab_context_menu.take() else {
+                    return false;
+                };
+                let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(ctx.tabs) else {
+                    return false;
+                };
+                let source_index = tabs.iter().position(|p| *p == ctx.panel);
+                let Some(source_index) = source_index else {
+                    return false;
+                };
+                if source_index + 1 >= tabs.len() {
+                    cx.stop_propagation();
+                    return true;
+                }
+                cx.app.push_effect(Effect::Dock(DockOp::MovePanel {
+                    source_window: ctx.window,
+                    panel: ctx.panel,
+                    target_window: ctx.window,
+                    target_tabs: ctx.tabs,
+                    zone: DropZone::Center,
+                    insert_index: Some(source_index + 2),
+                }));
+                cx.stop_propagation();
+                true
+            }
             "viewport.copy_uv" => {
                 let Some(dock) = cx.app.global::<DockManager>() else {
                     return false;
@@ -934,6 +1094,13 @@ impl Widget for DockSpace {
 
         if let Some(dock) = cx.app.global::<DockManager>() {
             paint_split_handles(&dock.graph, &layout, cx.scene);
+        }
+        let is_dock_dragging = cx
+            .app
+            .drag()
+            .is_some_and(|d| d.dragging && d.payload::<DockPanelDragPayload>().is_some());
+        if is_dock_dragging {
+            paint_drop_hints(hover.clone(), self.window, chrome, &layout, cx.scene);
         }
         paint_drop_overlay(hover, self.window, chrome, &layout, cx.scene);
     }
@@ -1906,6 +2073,19 @@ fn paint_drop_overlay(
 
             if target.zone == DropZone::Center {
                 let (tab_bar, _content) = split_tab_bar(rect);
+                scene.push(SceneOp::Quad {
+                    order: fret_core::DrawOrder(9_990),
+                    rect: tab_bar,
+                    background: Color {
+                        r: 0.20,
+                        g: 0.55,
+                        b: 1.00,
+                        a: 0.10,
+                    },
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: fret_core::Corners::all(Px(6.0)),
+                });
                 if let Some(i) = target.insert_index {
                     let x = tab_bar.origin.x.0 + Px(120.0).0 * i as f32;
                     let marker = Rect {
@@ -1944,6 +2124,90 @@ fn paint_drop_overlay(
                 corner_radii: fret_core::Corners::all(Px(6.0)),
             });
         }
+    }
+}
+
+fn paint_drop_hints(
+    target: Option<DockDropTarget>,
+    _window: fret_core::AppWindowId,
+    _bounds: Rect,
+    layout: &std::collections::HashMap<DockNodeId, Rect>,
+    scene: &mut Scene,
+) {
+    let Some(target) = target else {
+        return;
+    };
+
+    let DockDropTarget::Dock(target) = target else {
+        return;
+    };
+
+    let Some(rect) = layout.get(&target.tabs).copied() else {
+        return;
+    };
+
+    let cx = rect.origin.x.0 + rect.size.width.0 * 0.5;
+    let cy = rect.origin.y.0 + rect.size.height.0 * 0.5;
+
+    let size = Px(22.0);
+    let gap = Px(6.0);
+    let step = Px(size.0 + gap.0);
+
+    let inactive_bg = Color {
+        r: 0.10,
+        g: 0.10,
+        b: 0.11,
+        a: 0.72,
+    };
+    let inactive_border = Color {
+        r: 0.18,
+        g: 0.18,
+        b: 0.20,
+        a: 0.95,
+    };
+    let active_bg = Color {
+        r: 0.20,
+        g: 0.55,
+        b: 1.00,
+        a: 0.85,
+    };
+    let active_border = Color {
+        r: 0.20,
+        g: 0.55,
+        b: 1.00,
+        a: 1.0,
+    };
+
+    let order = fret_core::DrawOrder(9_500);
+    let border = Edges::all(Px(1.5));
+    let corner_radii = fret_core::Corners::all(Px(6.0));
+
+    for (zone, dx, dy) in [
+        (DropZone::Center, 0.0, 0.0),
+        (DropZone::Left, -(step.0), 0.0),
+        (DropZone::Right, step.0, 0.0),
+        (DropZone::Top, 0.0, -(step.0)),
+        (DropZone::Bottom, 0.0, step.0),
+    ] {
+        let is_active = zone == target.zone;
+        let bg = if is_active { active_bg } else { inactive_bg };
+        let stroke = if is_active {
+            active_border
+        } else {
+            inactive_border
+        };
+
+        scene.push(SceneOp::Quad {
+            order,
+            rect: Rect::new(
+                Point::new(Px(cx + dx - size.0 * 0.5), Px(cy + dy - size.0 * 0.5)),
+                Size::new(size, size),
+            ),
+            background: bg,
+            border,
+            border_color: stroke,
+            corner_radii,
+        });
     }
 }
 

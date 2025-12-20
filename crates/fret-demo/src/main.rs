@@ -40,7 +40,7 @@ use fret_ui::dock::ViewportMarquee;
 use fret_ui::{
     ContextMenuService, DockManager, DockPanel, DockPanelContentService, UiTree, ViewportPanel,
 };
-use std::{collections::HashMap, fs::File, path::Path};
+use std::{collections::HashMap, fs::File, path::Path, time::Duration};
 use winit::event_loop::EventLoop;
 
 struct DemoWindowState {
@@ -64,6 +64,8 @@ struct DemoDriver {
     window_placements: HashMap<fret_core::AppWindowId, fret_core::DockWindowPlacementV1>,
     next_floating_index: u32,
     loaded_layout: Option<DockLayoutV1>,
+    dock_persist_timer: Option<fret_core::TimerToken>,
+    dock_persist_pending: bool,
     selection: Option<Model<DemoSelection>>,
     hierarchy: Option<Model<DemoHierarchy>>,
     world: Option<Model<DemoWorld>>,
@@ -97,6 +99,41 @@ impl DemoDriver {
         serde_json::to_writer_pretty(file, layout)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
         Ok(())
+    }
+
+    fn persist_layout_now(&mut self, app: &mut App) {
+        let Some(dock) = app.global::<DockManager>() else {
+            return;
+        };
+        let windows = self.window_list_for_export(dock);
+        let layout = dock
+            .graph
+            .export_layout_v1_with_placement(&windows, |w| self.window_placements.get(&w).cloned());
+        if let Err(e) = Self::save_layout_file(&layout) {
+            tracing::error!(error = ?e, "failed to save layout.json");
+        }
+    }
+
+    fn schedule_layout_persist(&mut self, app: &mut App) {
+        let Some(main) = self.main_window else {
+            return;
+        };
+        let token = match self.dock_persist_timer {
+            Some(t) => t,
+            None => {
+                let t = app.next_timer_token();
+                self.dock_persist_timer = Some(t);
+                t
+            }
+        };
+        self.dock_persist_pending = true;
+        app.push_effect(Effect::CancelTimer { token });
+        app.push_effect(Effect::SetTimer {
+            window: Some(main),
+            token,
+            after: Duration::from_millis(500),
+            repeat: None,
+        });
     }
 
     fn ensure_main_tabs(
@@ -597,6 +634,31 @@ impl WinitDriver for DemoDriver {
             CommandMeta::new("Viewport Tool: Move")
                 .with_description("Switches the active viewport tool to Move/Translate")
                 .with_category("Viewport"),
+        );
+
+        app.commands_mut().register(
+            CommandId::from("dock.tab.float"),
+            CommandMeta::new("Float Tab")
+                .with_description("Floats the current dock tab into a new window")
+                .with_category("Dock")
+                .with_scope(CommandScope::Widget)
+                .hidden(),
+        );
+        app.commands_mut().register(
+            CommandId::from("dock.tab.move_left"),
+            CommandMeta::new("Move Tab Left")
+                .with_description("Moves the current dock tab left")
+                .with_category("Dock")
+                .with_scope(CommandScope::Widget)
+                .hidden(),
+        );
+        app.commands_mut().register(
+            CommandId::from("dock.tab.move_right"),
+            CommandMeta::new("Move Tab Right")
+                .with_description("Moves the current dock tab right")
+                .with_category("Dock")
+                .with_scope(CommandScope::Widget)
+                .hidden(),
         );
 
         app.commands_mut().register(
@@ -1478,6 +1540,12 @@ impl WinitDriver for DemoDriver {
         }
 
         match event {
+            fret_core::Event::Timer { token } => {
+                if Some(*token) == self.dock_persist_timer && self.dock_persist_pending {
+                    self.dock_persist_pending = false;
+                    self.persist_layout_now(app);
+                }
+            }
             fret_core::Event::WindowResized { width, height } => {
                 let entry = self.window_placements.entry(window).or_insert(
                     fret_core::DockWindowPlacementV1 {
@@ -1490,6 +1558,7 @@ impl WinitDriver for DemoDriver {
                 );
                 entry.width = width.0.max(1.0).round() as u32;
                 entry.height = height.0.max(1.0).round() as u32;
+                self.schedule_layout_persist(app);
             }
             fret_core::Event::WindowMoved { x, y } => {
                 let entry = self.window_placements.entry(window).or_insert(
@@ -1503,6 +1572,7 @@ impl WinitDriver for DemoDriver {
                 );
                 entry.x = Some(*x);
                 entry.y = Some(*y);
+                self.schedule_layout_persist(app);
             }
             _ => {}
         }
@@ -1884,6 +1954,7 @@ impl WinitDriver for DemoDriver {
         for w in redraw {
             app.push_effect(Effect::UiInvalidateLayout { window: w });
         }
+        self.schedule_layout_persist(app);
     }
 
     fn viewport_input(&mut self, app: &mut App, event: fret_core::ViewportInputEvent) {
@@ -2423,15 +2494,7 @@ impl WinitDriver for DemoDriver {
             return true;
         };
         if window == main {
-            if let Some(dock) = app.global::<DockManager>() {
-                let windows = self.window_list_for_export(dock);
-                let layout = dock.graph.export_layout_v1_with_placement(&windows, |w| {
-                    self.window_placements.get(&w).cloned()
-                });
-                if let Err(e) = Self::save_layout_file(&layout) {
-                    tracing::error!(error = ?e, "failed to save layout.json");
-                }
-            }
+            self.persist_layout_now(app);
             return true;
         }
 
@@ -2448,6 +2511,7 @@ impl WinitDriver for DemoDriver {
         self.logical_windows.remove(&window);
 
         app.push_effect(Effect::UiInvalidateLayout { window: main });
+        self.schedule_layout_persist(app);
         true
     }
 }
