@@ -92,6 +92,13 @@ pub struct PanOrbitInteraction {
     pub dragging: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TranslateAxisConstraint {
+    Free,
+    X,
+    Y,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct TranslateGizmoInteraction {
     pub window: AppWindowId,
@@ -102,6 +109,7 @@ pub struct TranslateGizmoInteraction {
     pub start_target_px: (u32, u32),
     pub current_target_px: (u32, u32),
     pub dragging: bool,
+    pub constraint: TranslateAxisConstraint,
     pub targets: Vec<u64>,
     pub start_positions: Vec<(u64, [f32; 3])>,
 }

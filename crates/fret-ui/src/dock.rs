@@ -115,10 +115,18 @@ pub struct ViewportSelectionRect {
     pub stroke: Color,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ViewportGizmoPart {
+    X,
+    Y,
+    Handle,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ViewportGizmo {
     pub center_uv: (f32, f32),
     pub axis_len_px: Px,
+    pub highlight: Option<ViewportGizmoPart>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -1333,25 +1341,46 @@ fn paint_viewport_gizmo(content: Rect, gizmo: ViewportGizmo, scene: &mut Scene) 
     let y = content.origin.y.0 + content.size.height.0 * v;
 
     let len = gizmo.axis_len_px;
+    let highlight = gizmo.highlight;
     let t = Px(2.5);
+    let x_t = if highlight == Some(ViewportGizmoPart::X) {
+        Px(4.0)
+    } else {
+        t
+    };
+    let y_t = if highlight == Some(ViewportGizmoPart::Y) {
+        Px(4.0)
+    } else {
+        t
+    };
 
-    let x_axis = Rect::new(Point::new(Px(x), Px(y - t.0 * 0.5)), Size::new(len, t));
+    let x_axis = Rect::new(Point::new(Px(x), Px(y - x_t.0 * 0.5)), Size::new(len, x_t));
     let y_axis = Rect::new(
-        Point::new(Px(x - t.0 * 0.5), Px(y - len.0)),
-        Size::new(t, len),
+        Point::new(Px(x - y_t.0 * 0.5), Px(y - len.0)),
+        Size::new(y_t, len),
     );
 
+    let x_axis_alpha = if highlight == Some(ViewportGizmoPart::X) {
+        1.0
+    } else {
+        0.85
+    };
+    let y_axis_alpha = if highlight == Some(ViewportGizmoPart::Y) {
+        1.0
+    } else {
+        0.85
+    };
     let x_color = Color {
         r: 0.92,
         g: 0.28,
         b: 0.30,
-        a: 0.95,
+        a: x_axis_alpha,
     };
     let y_color = Color {
         r: 0.25,
         g: 0.88,
         b: 0.40,
-        a: 0.95,
+        a: y_axis_alpha,
     };
 
     scene.push(SceneOp::Quad {
@@ -1372,6 +1401,8 @@ fn paint_viewport_gizmo(content: Rect, gizmo: ViewportGizmo, scene: &mut Scene) 
     });
 
     let handle = Px(10.0);
+    let handle_highlight = highlight == Some(ViewportGizmoPart::Handle);
+    let handle_border = if handle_highlight { Px(2.5) } else { Px(1.5) };
     scene.push(SceneOp::Quad {
         order: fret_core::DrawOrder(7),
         rect: Rect::new(
@@ -1384,7 +1415,7 @@ fn paint_viewport_gizmo(content: Rect, gizmo: ViewportGizmo, scene: &mut Scene) 
             b: 0.10,
             a: 0.85,
         },
-        border: Edges::all(Px(1.5)),
+        border: Edges::all(handle_border),
         border_color: Color {
             r: 0.92,
             g: 0.92,

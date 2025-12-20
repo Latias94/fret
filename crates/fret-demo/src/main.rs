@@ -21,8 +21,8 @@ use inspector_edit::{InspectorEditKind, InspectorEditService, parse_value};
 use property_edit::PropertyEditService;
 use undo::{EditCommand, UndoStack};
 use viewport_tools::{
-    MarqueeSelectInteraction, PanOrbitInteraction, PanOrbitKind, TranslateGizmoInteraction,
-    ViewportInteraction, ViewportToolManager, ViewportToolMode,
+    MarqueeSelectInteraction, PanOrbitInteraction, PanOrbitKind, TranslateAxisConstraint,
+    TranslateGizmoInteraction, ViewportInteraction, ViewportToolManager, ViewportToolMode,
 };
 use world::DemoWorld;
 
@@ -338,6 +338,20 @@ impl DemoDriver {
             .map(|t| t.active)
             .unwrap_or_default();
 
+        let gizmo_highlight =
+            self.viewport_tools
+                .and_then(|m| m.get(app))
+                .and_then(|t| match &t.interaction {
+                    Some(ViewportInteraction::TranslateGizmo(g)) => match g.constraint {
+                        TranslateAxisConstraint::Free => {
+                            Some(fret_ui::dock::ViewportGizmoPart::Handle)
+                        }
+                        TranslateAxisConstraint::X => Some(fret_ui::dock::ViewportGizmoPart::X),
+                        TranslateAxisConstraint::Y => Some(fret_ui::dock::ViewportGizmoPart::Y),
+                    },
+                    _ => None,
+                });
+
         let marker = marker_uv.map(|uv| fret_ui::dock::ViewportMarker {
             uv,
             color: Color {
@@ -364,6 +378,7 @@ impl DemoDriver {
             ViewportToolMode::Move => marker_uv.map(|center_uv| fret_ui::dock::ViewportGizmo {
                 center_uv,
                 axis_len_px: fret_core::geometry::Px(80.0),
+                highlight: gizmo_highlight,
             }),
             ViewportToolMode::Select => None,
         };
@@ -517,7 +532,7 @@ fn viewport_gizmo_hit_test_px(
     axis_len_px: f32,
     thickness_px: f32,
     handle_px: f32,
-) -> bool {
+) -> Option<TranslateAxisConstraint> {
     let (tw, th) = target_px_size;
     let tw = tw.max(1) as f32;
     let th = th.max(1) as f32;
@@ -535,7 +550,16 @@ fn viewport_gizmo_hit_test_px(
     let on_x_axis = dx >= 0.0 && dx <= axis_len_px && dy.abs() <= thickness_px;
     let on_y_axis = dy <= 0.0 && dy >= -axis_len_px && dx.abs() <= thickness_px;
 
-    on_handle || on_x_axis || on_y_axis
+    if on_handle {
+        return Some(TranslateAxisConstraint::Free);
+    }
+    if on_x_axis {
+        return Some(TranslateAxisConstraint::X);
+    }
+    if on_y_axis {
+        return Some(TranslateAxisConstraint::Y);
+    }
+    None
 }
 
 fn viewport_grid_cell_uv_rect(id: u64) -> Option<((f32, f32), (f32, f32))> {
@@ -2306,7 +2330,7 @@ impl WinitDriver for DemoDriver {
                             })
                             .or_else(|| lead.and_then(viewport_grid_marker_uv));
 
-                        let on_gizmo = center_uv.is_some_and(|center_uv| {
+                        let gizmo_hit = center_uv.and_then(|center_uv| {
                             if let Some(size) = target_px_size {
                                 viewport_gizmo_hit_test_px(
                                     center_uv,
@@ -2320,7 +2344,7 @@ impl WinitDriver for DemoDriver {
                                 let (u, v) = center_uv;
                                 let du = (start_uv.0 - u).abs();
                                 let dv = (start_uv.1 - v).abs();
-                                du <= 0.02 && dv <= 0.02
+                                (du <= 0.02 && dv <= 0.02).then_some(TranslateAxisConstraint::Free)
                             }
                         });
 
@@ -2332,7 +2356,10 @@ impl WinitDriver for DemoDriver {
                             break 'handled false;
                         }
 
-                        if active == ViewportToolMode::Move && on_gizmo && !selected.is_empty() {
+                        if active == ViewportToolMode::Move
+                            && gizmo_hit.is_some()
+                            && !selected.is_empty()
+                        {
                             let mut start_positions: Vec<(u64, [f32; 3])> = Vec::new();
                             if let Some(world) = world_model {
                                 if let Some(w) = world.get(app) {
@@ -2365,6 +2392,8 @@ impl WinitDriver for DemoDriver {
                                             start_target_px: event.target_px,
                                             current_target_px: event.target_px,
                                             dragging: false,
+                                            constraint: gizmo_hit
+                                                .unwrap_or(TranslateAxisConstraint::Free),
                                             targets,
                                             start_positions,
                                         },
@@ -2427,12 +2456,13 @@ impl WinitDriver for DemoDriver {
                     }
                     _ => false,
                 },
-                fret_core::ViewportInputKind::PointerMove { buttons, .. } => 'mv: {
+                fret_core::ViewportInputKind::PointerMove { buttons, modifiers } => 'mv: {
                     if buttons.left {
                         let current_uv = event.uv;
                         let mut next_marquee: Option<MarqueeSelectInteraction> = None;
                         let mut next_gizmo: Option<(
                             bool,
+                            TranslateAxisConstraint,
                             Vec<u64>,
                             Vec<(u64, [f32; 3])>,
                             f32,
@@ -2463,6 +2493,7 @@ impl WinitDriver for DemoDriver {
                                 let dv = (m.start_uv.1 - m.current_uv.1) * 10.0;
                                 next_gizmo = Some((
                                     m.dragging,
+                                    m.constraint,
                                     m.targets.clone(),
                                     m.start_positions.clone(),
                                     du,
@@ -2481,14 +2512,42 @@ impl WinitDriver for DemoDriver {
                             break 'mv true;
                         }
 
-                        if let Some((dragging, targets, start_positions, du, dv)) = next_gizmo {
+                        if let Some((dragging, constraint, targets, start_positions, du, dv)) =
+                            next_gizmo
+                        {
                             if !dragging {
                                 break 'mv true;
                             }
 
+                            let (du, dv) = match constraint {
+                                TranslateAxisConstraint::Free => (du, dv),
+                                TranslateAxisConstraint::X => (du, 0.0),
+                                TranslateAxisConstraint::Y => (0.0, dv),
+                            };
+
+                            let snap_step = if modifiers.shift { Some(0.25) } else { None };
+
                             let mut after: Vec<[f32; 3]> = Vec::with_capacity(targets.len());
                             for (_id, start) in &start_positions {
-                                after.push([start[0] + du, start[1] + dv, start[2]]);
+                                let mut x = start[0] + du;
+                                let mut y = start[1] + dv;
+
+                                if let Some(step) = snap_step {
+                                    if step > 0.0 {
+                                        if constraint == TranslateAxisConstraint::Free
+                                            || constraint == TranslateAxisConstraint::X
+                                        {
+                                            x = (x / step).round() * step;
+                                        }
+                                        if constraint == TranslateAxisConstraint::Free
+                                            || constraint == TranslateAxisConstraint::Y
+                                        {
+                                            y = (y / step).round() * step;
+                                        }
+                                    }
+                                }
+
+                                after.push([x, y, start[2]]);
                             }
 
                             if let Some(world) = world_model {

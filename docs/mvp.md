@@ -27,8 +27,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 22: prototype implemented in demo (undo/redo command stack; inspector edits + translate gizmo integrate)
 - MVP 23: prototype implemented in demo (Hierarchy drag & drop emits undoable commands; undo/redo restores hierarchy + selection)
 - MVP 24: prototype implemented in demo (edit transactions + coalescing; viewport translate drag produces a single undo entry)
-- Next (recommended, Unity-like feel):
-  - MVP 25: viewport tool polish (axis constraints + snapping stub)
+- MVP 25: prototype implemented in demo (translate axis constraints + Shift snapping stub)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -649,6 +648,10 @@ Goal: improve the “Unity-like” feel of viewport manipulation without committ
 
 - Users can drag along one axis deterministically.
 - Snapping is predictable and does not break undo/redo semantics.
+
+Status:
+
+- Prototype implemented in `fret-demo` (axis constraints + Shift snapping; active-axis highlight while interacting).
 
 References:
 
