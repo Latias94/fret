@@ -21,8 +21,9 @@ use inspector_edit::{InspectorEditKind, InspectorEditService, parse_value};
 use property_edit::PropertyEditService;
 use undo::{EditCommand, UndoStack};
 use viewport_tools::{
-    MarqueeSelectInteraction, PanOrbitInteraction, PanOrbitKind, TranslateAxisConstraint,
-    TranslateGizmoInteraction, ViewportInteraction, ViewportToolManager, ViewportToolMode,
+    MarqueeSelectInteraction, PanOrbitInteraction, PanOrbitKind, RotateGizmoInteraction,
+    TranslateAxisConstraint, TranslateGizmoInteraction, ViewportInteraction, ViewportToolManager,
+    ViewportToolMode,
 };
 use world::DemoWorld;
 
@@ -524,6 +525,10 @@ impl DemoDriver {
                     },
                     _ => None,
                 });
+        let rotate_gizmo_highlight = self
+            .viewport_tools
+            .and_then(|m| m.get(app))
+            .is_some_and(|t| matches!(t.interaction, Some(ViewportInteraction::RotateGizmo(_))));
 
         let selection_fill = Color {
             r: 0.20,
@@ -590,12 +595,23 @@ impl DemoDriver {
                     axis_len_px: fret_core::geometry::Px(80.0),
                     highlight: gizmo_highlight,
                 }),
-                ViewportToolMode::Select => None,
+                _ => None,
+            };
+            let rotate_gizmo = match tool_mode {
+                ViewportToolMode::Rotate => {
+                    marker_uv.map(|center_uv| fret_ui::dock::ViewportRotateGizmo {
+                        center_uv,
+                        radius_px: fret_core::geometry::Px(56.0),
+                        highlight: rotate_gizmo_highlight,
+                    })
+                }
+                _ => None,
             };
 
             dock.set_viewport_selection_rect(window, vp.target, selection_rect);
             dock.set_viewport_marker(window, vp.target, marker);
             dock.set_viewport_gizmo(window, vp.target, gizmo);
+            dock.set_viewport_rotate_gizmo(window, vp.target, rotate_gizmo);
         }
     }
 }
@@ -736,6 +752,27 @@ fn viewport_gizmo_hit_test_px(
         return Some(TranslateAxisConstraint::Y);
     }
     None
+}
+
+fn viewport_rotate_gizmo_hit_test_px(
+    center_uv: (f32, f32),
+    target_px_size: (u32, u32),
+    cursor_target_px: (u32, u32),
+    radius_px: f32,
+    thickness_px: f32,
+) -> bool {
+    let (tw, th) = target_px_size;
+    let tw = tw.max(1) as f32;
+    let th = th.max(1) as f32;
+    let (u, v) = center_uv;
+    let cx = u * tw;
+    let cy = v * th;
+
+    let (x, y) = (cursor_target_px.0 as f32, cursor_target_px.1 as f32);
+    let dx = x - cx;
+    let dy = y - cy;
+    let d = (dx * dx + dy * dy).sqrt();
+    (d - radius_px).abs() <= thickness_px.max(1.0)
 }
 
 fn viewport_grid_cell_uv_rect(id: u64) -> Option<((f32, f32), (f32, f32))> {
@@ -980,6 +1017,12 @@ impl WinitDriver for DemoDriver {
             CommandId::from("viewport.tool.move"),
             CommandMeta::new("Viewport Tool: Move")
                 .with_description("Switches the active viewport tool to Move/Translate")
+                .with_category("Viewport"),
+        );
+        app.commands_mut().register(
+            CommandId::from("viewport.tool.rotate"),
+            CommandMeta::new("Viewport Tool: Rotate")
+                .with_description("Switches the active viewport tool to Rotate")
                 .with_category("Viewport"),
         );
 
@@ -1265,6 +1308,15 @@ impl WinitDriver for DemoDriver {
                     keys: KeySpecV1 {
                         mods: vec![],
                         key: "KeyW".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("viewport.tool.rotate".into()),
+                    platform: Some("all".into()),
+                    when: Some("!focus.is_text_input && !ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "KeyE".into(),
                     },
                 },
                 BindingV1 {
@@ -2075,6 +2127,7 @@ impl WinitDriver for DemoDriver {
                             RenderTargetId,
                             Vec<(u64, [f32; 3])>,
                         ),
+                        RotateGizmo(fret_core::AppWindowId, RenderTargetId, Vec<(u64, f32)>),
                     }
 
                     let mut cancel: Option<CancelViewportInteraction> = None;
@@ -2093,6 +2146,13 @@ impl WinitDriver for DemoDriver {
                                     m.start_positions,
                                 ))
                             }
+                            Some(ViewportInteraction::RotateGizmo(m)) => {
+                                Some(CancelViewportInteraction::RotateGizmo(
+                                    m.window,
+                                    m.target,
+                                    m.start_rotations,
+                                ))
+                            }
                             other => {
                                 t.interaction = other;
                                 None
@@ -2108,10 +2168,15 @@ impl WinitDriver for DemoDriver {
                         let _ = undo.update(app, |s, _cx| s.cancel_active());
                     }
 
-                    let (w, target, rollback_positions) = match cancel {
-                        CancelViewportInteraction::OverlayOnly(w, target) => (w, target, None),
+                    let (w, target, rollback_positions, rollback_rotations) = match cancel {
+                        CancelViewportInteraction::OverlayOnly(w, target) => {
+                            (w, target, None, None)
+                        }
                         CancelViewportInteraction::TranslateGizmo(w, target, start_positions) => {
-                            (w, target, Some(start_positions))
+                            (w, target, Some(start_positions), None)
+                        }
+                        CancelViewportInteraction::RotateGizmo(w, target, start_rotations) => {
+                            (w, target, None, Some(start_rotations))
                         }
                     };
 
@@ -2121,6 +2186,15 @@ impl WinitDriver for DemoDriver {
                                 for (id, start) in &start_positions {
                                     let e = w.entity_mut(*id);
                                     e.transform.position = *start;
+                                }
+                            });
+                        }
+                    }
+                    if let Some(start_rotations) = rollback_rotations {
+                        if let Some(world) = self.world {
+                            let _ = world.update(app, |w, _cx| {
+                                for (id, start) in &start_rotations {
+                                    w.entity_mut(*id).transform.rotation_y = *start;
                                 }
                             });
                         }
@@ -2383,6 +2457,15 @@ impl WinitDriver for DemoDriver {
                 }
                 app.request_redraw(window);
             }
+            "viewport.tool.rotate" => {
+                if let Some(tool) = self.viewport_tools {
+                    let _ = tool.update(app, |t, _cx| {
+                        t.active = ViewportToolMode::Rotate;
+                        t.interaction = None;
+                    });
+                }
+                app.request_redraw(window);
+            }
             "command_palette.close" => {
                 if state.ui.is_layer_visible(state.layers.command_palette) {
                     state
@@ -2595,7 +2678,7 @@ impl WinitDriver for DemoDriver {
                             })
                             .or_else(|| lead.and_then(viewport_grid_marker_uv));
 
-                        let gizmo_hit = center_uv.and_then(|center_uv| {
+                        let translate_hit = center_uv.and_then(|center_uv| {
                             if let Some(size) = target_px_size {
                                 viewport_gizmo_hit_test_px(
                                     center_uv,
@@ -2612,6 +2695,22 @@ impl WinitDriver for DemoDriver {
                                 (du <= 0.02 && dv <= 0.02).then_some(TranslateAxisConstraint::Free)
                             }
                         });
+                        let rotate_hit = center_uv.is_some_and(|center_uv| {
+                            if let Some(size) = target_px_size {
+                                viewport_rotate_gizmo_hit_test_px(
+                                    center_uv,
+                                    size,
+                                    event.target_px,
+                                    56.0,
+                                    8.0,
+                                )
+                            } else {
+                                let (u, v) = center_uv;
+                                let du = (start_uv.0 - u).abs();
+                                let dv = (start_uv.1 - v).abs();
+                                du <= 0.06 && dv <= 0.06
+                            }
+                        });
 
                         let Some(cur_tool) = tool.get(app) else {
                             break 'handled false;
@@ -2622,7 +2721,7 @@ impl WinitDriver for DemoDriver {
                         }
 
                         if active == ViewportToolMode::Move
-                            && gizmo_hit.is_some()
+                            && translate_hit.is_some()
                             && !selected.is_empty()
                         {
                             let mut start_positions: Vec<(u64, [f32; 3])> = Vec::new();
@@ -2657,10 +2756,54 @@ impl WinitDriver for DemoDriver {
                                             start_target_px: event.target_px,
                                             current_target_px: event.target_px,
                                             dragging: false,
-                                            constraint: gizmo_hit
+                                            constraint: translate_hit
                                                 .unwrap_or(TranslateAxisConstraint::Free),
                                             targets,
                                             start_positions,
+                                        },
+                                    ));
+                                });
+                                request_animation_frame = true;
+                                break 'handled true;
+                            }
+                        }
+
+                        if active == ViewportToolMode::Rotate && rotate_hit && !selected.is_empty()
+                        {
+                            let mut start_rotations: Vec<(u64, f32)> = Vec::new();
+                            if let Some(world) = world_model {
+                                if let Some(w) = world.get(app) {
+                                    for &id in &selected {
+                                        start_rotations.push((id, w.rotation_y(id)));
+                                    }
+                                }
+                            }
+
+                            if !start_rotations.is_empty() {
+                                let targets: Vec<u64> =
+                                    start_rotations.iter().map(|(id, _)| *id).collect();
+                                let before: Vec<f32> =
+                                    start_rotations.iter().map(|(_, rot)| *rot).collect();
+
+                                if let Some(stack) = undo_model {
+                                    let _ = stack.update(app, |s, _cx| {
+                                        s.begin_viewport_rotate(targets.clone(), before)
+                                    });
+                                }
+
+                                let _ = tool.update(app, |t, _cx| {
+                                    t.interaction = Some(ViewportInteraction::RotateGizmo(
+                                        RotateGizmoInteraction {
+                                            window,
+                                            target,
+                                            start_modifiers: modifiers,
+                                            start_uv,
+                                            current_uv: start_uv,
+                                            start_target_px: event.target_px,
+                                            current_target_px: event.target_px,
+                                            dragging: false,
+                                            targets,
+                                            start_rotations,
                                         },
                                     ));
                                 });
@@ -2736,6 +2879,7 @@ impl WinitDriver for DemoDriver {
                             f32,
                             f32,
                         )> = None;
+                        let mut next_rotate: Option<(bool, Vec<u64>, Vec<(u64, f32)>, f32)> = None;
 
                         let _ = tool.update(app, |t, _cx| match t.interaction.as_mut() {
                             Some(ViewportInteraction::MarqueeSelect(m))
@@ -2766,6 +2910,26 @@ impl WinitDriver for DemoDriver {
                                     m.start_positions.clone(),
                                     du,
                                     dv,
+                                ));
+                            }
+                            Some(ViewportInteraction::RotateGizmo(m))
+                                if m.window == window && m.target == target =>
+                            {
+                                m.current_uv = current_uv;
+                                m.current_target_px = event.target_px;
+
+                                let dx = m.start_target_px.0.abs_diff(m.current_target_px.0);
+                                let dy = m.start_target_px.1.abs_diff(m.current_target_px.1);
+                                if !m.dragging && (dx > 3 || dy > 3) {
+                                    m.dragging = true;
+                                }
+
+                                let du = m.current_uv.0 - m.start_uv.0;
+                                next_rotate = Some((
+                                    m.dragging,
+                                    m.targets.clone(),
+                                    m.start_rotations.clone(),
+                                    du,
                                 ));
                             }
                             _ => {}
@@ -2848,6 +3012,44 @@ impl WinitDriver for DemoDriver {
                                 let _ = stack.update(app, |s, _cx| {
                                     s.update_viewport_translate(targets, after)
                                 });
+                            }
+
+                            request_animation_frame = true;
+                            pending_selection = None;
+                            break 'mv true;
+                        }
+
+                        if let Some((dragging, targets, start_rotations, du_uv)) = next_rotate {
+                            if !dragging {
+                                break 'mv true;
+                            }
+
+                            let mut delta_deg = du_uv * 360.0;
+                            if modifiers.shift {
+                                let step = 15.0_f32;
+                                if step > 0.0 {
+                                    delta_deg = (delta_deg / step).round() * step;
+                                }
+                            }
+
+                            let mut after: Vec<f32> = Vec::with_capacity(targets.len());
+                            for (_id, start) in &start_rotations {
+                                after.push(*start + delta_deg);
+                            }
+
+                            if let Some(world) = world_model {
+                                let _ = world.update(app, |w, _cx| {
+                                    for ((id, _start), rot) in
+                                        start_rotations.iter().zip(after.iter().copied())
+                                    {
+                                        w.entity_mut(*id).transform.rotation_y = rot;
+                                    }
+                                });
+                            }
+
+                            if let Some(stack) = undo_model {
+                                let _ = stack
+                                    .update(app, |s, _cx| s.update_viewport_rotate(targets, after));
                             }
 
                             request_animation_frame = true;
@@ -2967,6 +3169,7 @@ impl WinitDriver for DemoDriver {
                         let mut commit: Option<MarqueeSelectInteraction> = None;
                         let mut ended_pan_orbit: Option<PanOrbitInteraction> = None;
                         let mut ended_translate_dragging: Option<bool> = None;
+                        let mut ended_rotate_dragging: Option<bool> = None;
                         let _ = tool.update(app, |t, _cx| match t.interaction.take() {
                             Some(ViewportInteraction::MarqueeSelect(m))
                                 if m.window == window && m.target == target =>
@@ -2983,6 +3186,11 @@ impl WinitDriver for DemoDriver {
                             {
                                 ended_translate_dragging = Some(m.dragging);
                             }
+                            Some(ViewportInteraction::RotateGizmo(m))
+                                if m.window == window && m.target == target =>
+                            {
+                                ended_rotate_dragging = Some(m.dragging);
+                            }
                             other => t.interaction = other,
                         });
 
@@ -2991,6 +3199,19 @@ impl WinitDriver for DemoDriver {
                         request_redraw = true;
 
                         if let Some(dragging) = ended_translate_dragging {
+                            if let Some(stack) = undo_model {
+                                let _ = stack.update(app, |s, _cx| {
+                                    if dragging {
+                                        s.commit_active();
+                                    } else {
+                                        s.cancel_active();
+                                    }
+                                });
+                            }
+                            break 'up_left true;
+                        }
+
+                        if let Some(dragging) = ended_rotate_dragging {
                             if let Some(stack) = undo_model {
                                 let _ = stack.update(app, |s, _cx| {
                                     if dragging {

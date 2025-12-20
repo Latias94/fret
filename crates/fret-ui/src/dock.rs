@@ -98,6 +98,7 @@ pub struct ViewportOverlay {
     pub drag_line: Option<ViewportDragLine>,
     pub selection_rect: Option<ViewportSelectionRect>,
     pub gizmo: Option<ViewportGizmo>,
+    pub rotate_gizmo: Option<ViewportRotateGizmo>,
     pub marker: Option<ViewportMarker>,
 }
 
@@ -127,6 +128,13 @@ pub struct ViewportGizmo {
     pub center_uv: (f32, f32),
     pub axis_len_px: Px,
     pub highlight: Option<ViewportGizmoPart>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViewportRotateGizmo {
+    pub center_uv: (f32, f32),
+    pub radius_px: Px,
+    pub highlight: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -185,6 +193,7 @@ impl DockManager {
                 drag_line: None,
                 selection_rect: None,
                 gizmo: None,
+                rotate_gizmo: None,
                 marker: None,
             });
         update(&mut overlay);
@@ -192,6 +201,7 @@ impl DockManager {
             && overlay.drag_line.is_none()
             && overlay.selection_rect.is_none()
             && overlay.gizmo.is_none()
+            && overlay.rotate_gizmo.is_none()
             && overlay.marker.is_none()
         {
             self.viewport_overlays.remove(&key);
@@ -248,6 +258,15 @@ impl DockManager {
         gizmo: Option<ViewportGizmo>,
     ) {
         self.upsert_viewport_overlay(window, target, |o| o.gizmo = gizmo);
+    }
+
+    pub fn set_viewport_rotate_gizmo(
+        &mut self,
+        window: fret_core::AppWindowId,
+        target: RenderTargetId,
+        gizmo: Option<ViewportRotateGizmo>,
+    ) {
+        self.upsert_viewport_overlay(window, target, |o| o.rotate_gizmo = gizmo);
     }
 
     pub fn set_viewport_marker(
@@ -1324,6 +1343,9 @@ fn paint_viewport_overlay(content: Rect, overlay: ViewportOverlay, scene: &mut S
     if let Some(gizmo) = overlay.gizmo {
         paint_viewport_gizmo(content, gizmo, scene);
     }
+    if let Some(gizmo) = overlay.rotate_gizmo {
+        paint_viewport_rotate_gizmo(content, gizmo, scene);
+    }
     if let Some(m) = overlay.marquee {
         paint_viewport_marquee(content, m, scene);
     }
@@ -1423,6 +1445,34 @@ fn paint_viewport_gizmo(content: Rect, gizmo: ViewportGizmo, scene: &mut Scene) 
             a: 0.9,
         },
         corner_radii: fret_core::Corners::all(Px(2.0)),
+    });
+}
+
+fn paint_viewport_rotate_gizmo(content: Rect, gizmo: ViewportRotateGizmo, scene: &mut Scene) {
+    let (u, v) = gizmo.center_uv;
+    let x = content.origin.x.0 + content.size.width.0 * u;
+    let y = content.origin.y.0 + content.size.height.0 * v;
+
+    let r = gizmo.radius_px;
+    let t = if gizmo.highlight { Px(3.0) } else { Px(2.0) };
+    let a = if gizmo.highlight { 0.95 } else { 0.75 };
+    let color = Color {
+        r: 0.98,
+        g: 0.82,
+        b: 0.28,
+        a,
+    };
+
+    scene.push(SceneOp::Quad {
+        order: fret_core::DrawOrder(6),
+        rect: Rect::new(
+            Point::new(Px(x - r.0), Px(y - r.0)),
+            Size::new(Px(r.0 * 2.0), Px(r.0 * 2.0)),
+        ),
+        background: Color::TRANSPARENT,
+        border: Edges::all(t),
+        border_color: color,
+        corner_radii: fret_core::Corners::all(r),
     });
 }
 

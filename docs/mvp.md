@@ -30,6 +30,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 25: prototype implemented in demo (translate axis constraints + Shift snapping stub)
 - MVP 26: prototype implemented in demo (viewport navigation: pan/orbit stub + wheel zoom)
 - MVP 11 validation: prototype implemented in demo (multiline TextArea probe panel)
+- MVP 27: prototype implemented in demo (rotate gizmo stub + undo/redo)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -693,6 +694,36 @@ Status:
 References:
 
 - `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
+
+## MVP 27 — Rotate Gizmo Stub (Overlay + Drag Phases)
+
+Goal: extend viewport tooling with a rotation interaction so the basic Unity Q/W/E workflow is validated.
+
+**Scope**
+
+- Add a Rotate tool mode and a rotate gizmo overlay around the selected entity.
+- Drag-to-rotate updates `transform.rotation_y` and participates in undo/redo coalescing.
+- Optional modifier snapping (Shift) for predictable steps.
+
+**Non-goals**
+
+- Full 3D camera-space rotation math.
+- Axis/plane constraints beyond a single stub axis.
+
+**Definition of Done**
+
+- `E` switches to Rotate mode.
+- Dragging the rotate gizmo updates the selected entity rotation and produces one undo entry.
+- Cancel is deterministic (`Esc` rolls back without history).
+
+Status:
+
+- Prototype implemented in `fret-demo`.
+
+References:
+
+- `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
+- `docs/adr/0024-undo-redo-and-edit-transactions.md`
 
 ## Parking Lot (Explicitly Deferred)
 

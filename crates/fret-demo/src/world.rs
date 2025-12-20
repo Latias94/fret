@@ -63,6 +63,13 @@ impl DemoWorld {
             .unwrap_or_else(|| Self::default_position(id))
     }
 
+    pub fn rotation_y(&self, id: u64) -> f32 {
+        self.entities
+            .get(&id)
+            .map(|e| e.transform.rotation_y)
+            .unwrap_or_else(|| Self::default_entity(id).transform.rotation_y)
+    }
+
     pub fn entity_mut(&mut self, id: u64) -> &mut DemoEntity {
         self.entities
             .entry(id)

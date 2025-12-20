@@ -99,6 +99,7 @@ validate that the framework contracts are sufficient.
 - Viewport picking P0: click-to-select + selection highlight overlays (demo-driven; see `docs/mvp.md` MVP 19).
 - Gizmo P0: translate tool with explicit drag phases, capture rules, and basic polish (axis constraints + snapping stub) (prototype implemented in demo; see `docs/mvp.md` MVP 20 + MVP 25).
 - Viewport navigation P0: pan/orbit stub + wheel zoom (prototype implemented in demo; see `docs/mvp.md` MVP 26).
+- Gizmo P0: rotate tool stub (prototype implemented in demo; see `docs/mvp.md` MVP 27).
 - Undo/redo P0: command stack + transaction coalescing boundary (ADR 0024). (prototype implemented in demo; see `docs/mvp.md` MVP 22 + MVP 24).
 
 ## Milestones

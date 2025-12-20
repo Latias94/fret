@@ -68,6 +68,38 @@ impl UndoStack {
         *cmd_after = after;
     }
 
+    pub fn begin_viewport_rotate(&mut self, targets: Vec<u64>, before: Vec<f32>) {
+        self.active = Some(EditTransaction {
+            key: TransactionKey::ViewportRotate {
+                targets: targets.clone(),
+            },
+            command: EditCommand::SetRotations {
+                targets,
+                before: before.clone(),
+                after: before,
+            },
+        });
+    }
+
+    pub fn update_viewport_rotate(&mut self, targets: Vec<u64>, after: Vec<f32>) {
+        let Some(tx) = self.active.as_mut() else {
+            return;
+        };
+        if tx.key != (TransactionKey::ViewportRotate { targets }) {
+            return;
+        }
+        let EditCommand::SetRotations {
+            after: cmd_after, ..
+        } = &mut tx.command
+        else {
+            return;
+        };
+        if cmd_after.len() != after.len() {
+            return;
+        }
+        *cmd_after = after;
+    }
+
     pub fn commit_active(&mut self) {
         let Some(tx) = self.active.take() else {
             return;
@@ -83,6 +115,7 @@ impl UndoStack {
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum TransactionKey {
     ViewportTranslate { targets: Vec<u64> },
+    ViewportRotate { targets: Vec<u64> },
 }
 
 #[derive(Debug, Clone)]
@@ -104,6 +137,11 @@ pub enum EditCommand {
         before: Vec<[f32; 3]>,
         after: Vec<[f32; 3]>,
     },
+    SetRotations {
+        targets: Vec<u64>,
+        before: Vec<f32>,
+        after: Vec<f32>,
+    },
     HierarchyMove {
         op: HierarchyMoveOp,
         from_parent: Option<u64>,
@@ -119,6 +157,7 @@ impl EditCommand {
                 before.iter().all(|b| b.as_ref() == Some(after))
             }
             EditCommand::SetPositions { before, after, .. } => before == after,
+            EditCommand::SetRotations { before, after, .. } => before == after,
             EditCommand::HierarchyMove { .. } => false,
         }
     }
@@ -136,6 +175,11 @@ impl EditCommand {
             EditCommand::SetPositions { targets, after, .. } => {
                 for (id, pos) in targets.iter().copied().zip(after.iter().copied()) {
                     world.entity_mut(id).transform.position = pos;
+                }
+            }
+            EditCommand::SetRotations { targets, after, .. } => {
+                for (id, rot) in targets.iter().copied().zip(after.iter().copied()) {
+                    world.entity_mut(id).transform.rotation_y = rot;
                 }
             }
             EditCommand::HierarchyMove { .. } => {}
@@ -162,6 +206,13 @@ impl EditCommand {
             } => {
                 for (id, pos) in targets.iter().copied().zip(before.iter().copied()) {
                     world.entity_mut(id).transform.position = pos;
+                }
+            }
+            EditCommand::SetRotations {
+                targets, before, ..
+            } => {
+                for (id, rot) in targets.iter().copied().zip(before.iter().copied()) {
+                    world.entity_mut(id).transform.rotation_y = rot;
                 }
             }
             EditCommand::HierarchyMove { .. } => {}
