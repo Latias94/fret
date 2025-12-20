@@ -525,10 +525,12 @@ impl DemoDriver {
                     },
                     _ => None,
                 });
-        let rotate_gizmo_highlight = self
-            .viewport_tools
-            .and_then(|m| m.get(app))
-            .is_some_and(|t| matches!(t.interaction, Some(ViewportInteraction::RotateGizmo(_))));
+        let rotate_gizmo_state = self.viewport_tools.and_then(|m| m.get(app)).map(|t| {
+            (
+                matches!(t.interaction, Some(ViewportInteraction::RotateGizmo(_))),
+                t.hover_rotate,
+            )
+        });
 
         let selection_fill = Color {
             r: 0.20,
@@ -598,13 +600,16 @@ impl DemoDriver {
                 _ => None,
             };
             let rotate_gizmo = match tool_mode {
-                ViewportToolMode::Rotate => {
-                    marker_uv.map(|center_uv| fret_ui::dock::ViewportRotateGizmo {
+                ViewportToolMode::Rotate => marker_uv.map(|center_uv| {
+                    let highlight = rotate_gizmo_state.is_some_and(|(active, hover)| {
+                        active || hover == Some((window, vp.target))
+                    });
+                    fret_ui::dock::ViewportRotateGizmo {
                         center_uv,
                         radius_px: fret_core::geometry::Px(56.0),
-                        highlight: rotate_gizmo_highlight,
-                    })
-                }
+                        highlight,
+                    }
+                }),
                 _ => None,
             };
 
@@ -773,6 +778,16 @@ fn viewport_rotate_gizmo_hit_test_px(
     let dy = y - cy;
     let d = (dx * dx + dy * dy).sqrt();
     (d - radius_px).abs() <= thickness_px.max(1.0)
+}
+
+fn normalize_angle_rad(mut a: f32) -> f32 {
+    while a > std::f32::consts::PI {
+        a -= std::f32::consts::TAU;
+    }
+    while a < -std::f32::consts::PI {
+        a += std::f32::consts::TAU;
+    }
+    a
 }
 
 fn viewport_grid_cell_uv_rect(id: u64) -> Option<((f32, f32), (f32, f32))> {
@@ -2780,6 +2795,25 @@ impl WinitDriver for DemoDriver {
                             }
 
                             if !start_rotations.is_empty() {
+                                let (center_target_px, start_angle_rad, use_target_px) =
+                                    if let (Some(size), Some(center_uv)) =
+                                        (target_px_size, center_uv)
+                                    {
+                                        let (tw, th) = size;
+                                        let center_target_px = (
+                                            center_uv.0 * tw.max(1) as f32,
+                                            center_uv.1 * th.max(1) as f32,
+                                        );
+                                        let dx = event.target_px.0 as f32 - center_target_px.0;
+                                        let dy = event.target_px.1 as f32 - center_target_px.1;
+                                        (center_target_px, dy.atan2(dx), true)
+                                    } else {
+                                        let center_uv = center_uv.unwrap_or((0.5, 0.5));
+                                        let dx = start_uv.0 - center_uv.0;
+                                        let dy = start_uv.1 - center_uv.1;
+                                        ((0.0, 0.0), dy.atan2(dx), false)
+                                    };
+
                                 let targets: Vec<u64> =
                                     start_rotations.iter().map(|(id, _)| *id).collect();
                                 let before: Vec<f32> =
@@ -2797,10 +2831,14 @@ impl WinitDriver for DemoDriver {
                                             window,
                                             target,
                                             start_modifiers: modifiers,
+                                            center_uv: center_uv.unwrap_or((0.5, 0.5)),
                                             start_uv,
                                             current_uv: start_uv,
                                             start_target_px: event.target_px,
                                             current_target_px: event.target_px,
+                                            center_target_px,
+                                            start_angle_rad,
+                                            use_target_px,
                                             dragging: false,
                                             targets,
                                             start_rotations,
@@ -2868,6 +2906,58 @@ impl WinitDriver for DemoDriver {
                     _ => false,
                 },
                 fret_core::ViewportInputKind::PointerMove { buttons, modifiers } => 'mv: {
+                    if !buttons.left && !buttons.right && !buttons.middle {
+                        let selection = selection_model
+                            .and_then(|m| m.get(app))
+                            .cloned()
+                            .unwrap_or_default();
+                        let lead = selection.lead_entity;
+                        let selected = selection.selected_entities;
+
+                        let active = tool.get(app).map(|t| t.active).unwrap_or_default();
+                        let can_hover = active == ViewportToolMode::Rotate
+                            && !selected.is_empty()
+                            && tool.get(app).is_some_and(|t| t.interaction.is_none());
+
+                        let mut hover: Option<(fret_core::AppWindowId, RenderTargetId)> = None;
+                        if can_hover {
+                            let camera = panel_key
+                                .as_ref()
+                                .map(|p| self.viewport_camera(p))
+                                .unwrap_or_default();
+                            let center_uv = lead
+                                .and_then(|id| {
+                                    let world = world_model.and_then(|m| m.get(app))?;
+                                    Some(camera.world_to_uv(world.position(id)))
+                                })
+                                .or_else(|| lead.and_then(viewport_grid_marker_uv));
+
+                            if let (Some(center_uv), Some(size)) = (center_uv, target_px_size) {
+                                if viewport_rotate_gizmo_hit_test_px(
+                                    center_uv,
+                                    size,
+                                    event.target_px,
+                                    56.0,
+                                    8.0,
+                                ) {
+                                    hover = Some((window, target));
+                                }
+                            }
+                        }
+
+                        let mut changed = false;
+                        let _ = tool.update(app, |t, _cx| {
+                            let next = if can_hover { hover } else { None };
+                            if t.hover_rotate != next {
+                                t.hover_rotate = next;
+                                changed = true;
+                            }
+                        });
+                        if changed {
+                            request_redraw = true;
+                        }
+                    }
+
                     if buttons.left {
                         let current_uv = event.uv;
                         let mut next_marquee: Option<MarqueeSelectInteraction> = None;
@@ -2879,7 +2969,17 @@ impl WinitDriver for DemoDriver {
                             f32,
                             f32,
                         )> = None;
-                        let mut next_rotate: Option<(bool, Vec<u64>, Vec<(u64, f32)>, f32)> = None;
+                        let mut next_rotate: Option<(
+                            bool,
+                            Vec<u64>,
+                            Vec<(u64, f32)>,
+                            (f32, f32),
+                            f32,
+                            bool,
+                            (u32, u32),
+                            (f32, f32),
+                            (f32, f32),
+                        )> = None;
 
                         let _ = tool.update(app, |t, _cx| match t.interaction.as_mut() {
                             Some(ViewportInteraction::MarqueeSelect(m))
@@ -2924,12 +3024,16 @@ impl WinitDriver for DemoDriver {
                                     m.dragging = true;
                                 }
 
-                                let du = m.current_uv.0 - m.start_uv.0;
                                 next_rotate = Some((
                                     m.dragging,
                                     m.targets.clone(),
                                     m.start_rotations.clone(),
-                                    du,
+                                    m.center_target_px,
+                                    m.start_angle_rad,
+                                    m.use_target_px,
+                                    m.current_target_px,
+                                    m.center_uv,
+                                    m.current_uv,
                                 ));
                             }
                             _ => {}
@@ -3019,12 +3123,33 @@ impl WinitDriver for DemoDriver {
                             break 'mv true;
                         }
 
-                        if let Some((dragging, targets, start_rotations, du_uv)) = next_rotate {
+                        if let Some((
+                            dragging,
+                            targets,
+                            start_rotations,
+                            center_target_px,
+                            start_angle_rad,
+                            use_target_px,
+                            current_target_px,
+                            center_uv,
+                            current_uv,
+                        )) = next_rotate
+                        {
                             if !dragging {
                                 break 'mv true;
                             }
 
-                            let mut delta_deg = du_uv * 360.0;
+                            let current_angle = if use_target_px {
+                                let dx = current_target_px.0 as f32 - center_target_px.0;
+                                let dy = current_target_px.1 as f32 - center_target_px.1;
+                                dy.atan2(dx)
+                            } else {
+                                let dx = current_uv.0 - center_uv.0;
+                                let dy = current_uv.1 - center_uv.1;
+                                dy.atan2(dx)
+                            };
+                            let mut delta_deg =
+                                normalize_angle_rad(current_angle - start_angle_rad).to_degrees();
                             if modifiers.shift {
                                 let step = 15.0_f32;
                                 if step > 0.0 {

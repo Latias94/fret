@@ -17,6 +17,7 @@ impl Default for ViewportToolMode {
 pub struct ViewportToolManager {
     pub active: ViewportToolMode,
     pub interaction: Option<ViewportInteraction>,
+    pub hover_rotate: Option<(AppWindowId, RenderTargetId)>,
 }
 
 impl Default for ViewportToolManager {
@@ -24,6 +25,7 @@ impl Default for ViewportToolManager {
         Self {
             active: ViewportToolMode::default(),
             interaction: None,
+            hover_rotate: None,
         }
     }
 }
@@ -127,10 +129,14 @@ pub struct RotateGizmoInteraction {
     pub window: AppWindowId,
     pub target: RenderTargetId,
     pub start_modifiers: Modifiers,
+    pub center_uv: (f32, f32),
     pub start_uv: (f32, f32),
     pub current_uv: (f32, f32),
     pub start_target_px: (u32, u32),
     pub current_target_px: (u32, u32),
+    pub center_target_px: (f32, f32),
+    pub start_angle_rad: f32,
+    pub use_target_px: bool,
     pub dragging: bool,
     pub targets: Vec<u64>,
     pub start_rotations: Vec<(u64, f32)>,

@@ -715,6 +715,7 @@ Goal: extend viewport tooling with a rotation interaction so the basic Unity Q/W
 - `E` switches to Rotate mode.
 - Dragging the rotate gizmo updates the selected entity rotation and produces one undo entry.
 - Cancel is deterministic (`Esc` rolls back without history).
+- Rotation is computed from the cursor angle around the gizmo center (atan2) and supports hover highlight.
 
 Status:
 
