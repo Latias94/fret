@@ -384,6 +384,9 @@ impl HierarchyPanel {
             return;
         }
 
+        if let Some(lead) = lead {
+            self.tree.reveal(lead);
+        }
         self.tree.set_selected_keys(selected.clone(), lead);
         self.last_selected = self.tree.selected();
         self.last_selected_keys = self.tree.selected_keys().iter().copied().collect();

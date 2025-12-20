@@ -220,6 +220,30 @@ impl TreeView {
         }
     }
 
+    pub fn reveal(&mut self, id: u64) {
+        if self.dirty {
+            self.rebuild();
+        }
+
+        let mut changed = false;
+        let mut cur = Some(id);
+        while let Some(node) = cur {
+            let parent = self.parent_by_id.get(&node).copied().flatten();
+            let Some(parent) = parent else {
+                break;
+            };
+            if self.expanded.insert(parent) {
+                changed = true;
+            }
+            cur = Some(parent);
+        }
+
+        if changed {
+            self.dirty = true;
+            self.rebuild();
+        }
+    }
+
     fn rebuild(&mut self) {
         self.parent_by_id.clear();
         self.first_child_by_id.clear();

@@ -21,8 +21,8 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 16: MVP done in demo (DockSpace hosts app-owned panel content via `DockPanelContentService`)
 - MVP 17: prototype implemented in demo (property tree + editor registry + mixed values; bool/string/f32/vec3 editors)
 - MVP 18: prototype implemented in demo (ToolManager with capture + marquee select + pan/orbit drag interactions)
+- MVP 19: prototype implemented in demo (viewport click-to-select + selection highlight overlay)
 - Next (recommended, Unity-like feel):
-  - MVP 19: viewport click-to-select + selection highlight overlay
   - MVP 20: translate gizmo stub (overlay + drag phases)
   - MVP 21: dock UX polish (drag hints + dock context menu + debounced persistence)
   - MVP 22: undo/redo P0 (command stack + coalescing boundary)
@@ -463,6 +463,10 @@ Goal: make the “click in viewport → selection updates everywhere” loop fee
 
 - Clicking in a focused viewport updates the app-owned selection model (and thus Hierarchy + Inspector) in the same frame.
 - The viewport shows an unambiguous highlight for the selected entity/entities.
+
+Status:
+
+- MVP done in `fret-demo` (grid-stub picking and a persistent selection highlight overlay).
 
 References:
 

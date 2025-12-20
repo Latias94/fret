@@ -36,7 +36,7 @@ use fret_core::{
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui::Invalidation;
-use fret_ui::dock::{ViewportMarquee, ViewportOverlay};
+use fret_ui::dock::ViewportMarquee;
 use fret_ui::{
     ContextMenuService, DockManager, DockPanel, DockPanelContentService, UiTree, ViewportPanel,
 };
@@ -274,6 +274,102 @@ impl DemoDriver {
 
         self.set_selection(app, lead, selected);
     }
+
+    fn sync_viewport_selection_overlay_for_window(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+    ) {
+        let lead = self
+            .selection_model()
+            .and_then(|m| m.get(app))
+            .and_then(|s| s.lead_entity);
+
+        let marker_uv = lead.and_then(viewport_grid_marker_uv);
+        let rect_uv = lead.and_then(viewport_grid_cell_uv_rect);
+
+        let marker = marker_uv.map(|uv| fret_ui::dock::ViewportMarker {
+            uv,
+            color: Color {
+                r: 0.20,
+                g: 0.45,
+                b: 0.95,
+                a: 0.95,
+            },
+        });
+        let selection_rect = rect_uv.map(|(min_uv, max_uv)| fret_ui::dock::ViewportSelectionRect {
+            min_uv,
+            max_uv,
+            fill: Color {
+                r: 0.20,
+                g: 0.45,
+                b: 0.95,
+                a: 0.16,
+            },
+            stroke: Color {
+                r: 0.20,
+                g: 0.45,
+                b: 0.95,
+                a: 0.85,
+            },
+        });
+
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            if dock.graph.window_root(window).is_none() {
+                return;
+            }
+            for panel_key in dock.graph.collect_panels_in_window(window) {
+                let Some(panel) = dock.panels.get(&panel_key) else {
+                    continue;
+                };
+                let Some(vp) = panel.viewport else {
+                    continue;
+                };
+                dock.set_viewport_selection_rect(window, vp.target, selection_rect);
+                dock.set_viewport_marker(window, vp.target, marker);
+            }
+        });
+    }
+}
+
+fn viewport_grid_marker_uv(id: u64) -> Option<(f32, f32)> {
+    if id == 0 {
+        return None;
+    }
+    let grid_w: u64 = 64;
+    let grid_h: u64 = 36;
+
+    let idx = id.saturating_sub(1);
+    let x = idx % grid_w;
+    let y = idx / grid_w;
+    if y >= grid_h {
+        return None;
+    }
+
+    let u = (x as f32 + 0.5) / grid_w as f32;
+    let v = (y as f32 + 0.5) / grid_h as f32;
+    Some((u, v))
+}
+
+fn viewport_grid_cell_uv_rect(id: u64) -> Option<((f32, f32), (f32, f32))> {
+    if id == 0 {
+        return None;
+    }
+    let grid_w: u64 = 64;
+    let grid_h: u64 = 36;
+
+    let idx = id.saturating_sub(1);
+    let x = idx % grid_w;
+    let y = idx / grid_w;
+    if y >= grid_h {
+        return None;
+    }
+
+    let u0 = x as f32 / grid_w as f32;
+    let v0 = y as f32 / grid_h as f32;
+    let u1 = (x as f32 + 1.0) / grid_w as f32;
+    let v1 = (y as f32 + 1.0) / grid_h as f32;
+    Some(((u0, v0), (u1, v1)))
 }
 
 impl WinitDriver for DemoDriver {
@@ -1402,7 +1498,8 @@ impl WinitDriver for DemoDriver {
                     });
                     if let Some((w, target)) = cancel {
                         app.with_global_mut(DockManager::default, |dock, _app| {
-                            dock.set_viewport_overlay(w, target, None);
+                            dock.set_viewport_marquee(w, target, None);
+                            dock.set_viewport_drag_line(w, target, None);
                         });
                         for &w in self.logical_windows.keys() {
                             app.request_redraw(w);
@@ -1691,6 +1788,8 @@ impl WinitDriver for DemoDriver {
             let window = event.window;
             let target = event.target;
 
+            let mut pending_selection: Option<(Option<u64>, Vec<u64>, fret_core::Modifiers)> = None;
+
             let handled = app.with_global_mut(DockManager::default, |dock, app| match event.kind {
                 fret_core::ViewportInputKind::PointerDown { button, modifiers } => match button {
                     fret_core::MouseButton::Left => {
@@ -1721,15 +1820,12 @@ impl WinitDriver for DemoDriver {
                         if has_interaction || active != ViewportToolMode::Select {
                             return false;
                         }
-                        dock.set_viewport_overlay(
+                        dock.set_viewport_marquee(
                             window,
                             target,
-                            Some(ViewportOverlay {
-                                marquee: Some(ViewportMarquee {
-                                    a_uv: start_uv,
-                                    b_uv: start_uv,
-                                }),
-                                drag_line: None,
+                            Some(ViewportMarquee {
+                                a_uv: start_uv,
+                                b_uv: start_uv,
                             }),
                         );
                         app.push_effect(Effect::RequestAnimationFrame(window));
@@ -1785,15 +1881,12 @@ impl WinitDriver for DemoDriver {
                         let Some(m) = next else {
                             return false;
                         };
-                        dock.set_viewport_overlay(
+                        dock.set_viewport_marquee(
                             window,
                             target,
-                            Some(ViewportOverlay {
-                                marquee: Some(ViewportMarquee {
-                                    a_uv: m.start_uv,
-                                    b_uv: m.current_uv,
-                                }),
-                                drag_line: None,
+                            Some(ViewportMarquee {
+                                a_uv: m.start_uv,
+                                b_uv: m.current_uv,
                             }),
                         );
                         app.push_effect(Effect::RequestAnimationFrame(window));
@@ -1853,16 +1946,13 @@ impl WinitDriver for DemoDriver {
                             },
                         };
 
-                        dock.set_viewport_overlay(
+                        dock.set_viewport_drag_line(
                             window,
                             target,
-                            Some(ViewportOverlay {
-                                marquee: None,
-                                drag_line: Some(fret_ui::dock::ViewportDragLine {
-                                    a_uv: m.start_uv,
-                                    b_uv: m.current_uv,
-                                    color,
-                                }),
+                            Some(fret_ui::dock::ViewportDragLine {
+                                a_uv: m.start_uv,
+                                b_uv: m.current_uv,
+                                color,
                             }),
                         );
                         app.push_effect(Effect::RequestAnimationFrame(window));
@@ -1890,7 +1980,7 @@ impl WinitDriver for DemoDriver {
                                 }
                             };
                         });
-                        dock.set_viewport_overlay(window, target, None);
+                        dock.set_viewport_marquee(window, target, None);
                         app.request_redraw(window);
 
                         let Some(m) = commit else {
@@ -1947,7 +2037,7 @@ impl WinitDriver for DemoDriver {
                             out
                         };
 
-                        self.apply_selection_delta(app, lead, ids, m.start_modifiers);
+                        pending_selection = Some((lead, ids, m.start_modifiers));
                         true
                     }
                     fret_core::MouseButton::Right | fret_core::MouseButton::Middle => {
@@ -1977,7 +2067,7 @@ impl WinitDriver for DemoDriver {
                             return false;
                         }
 
-                        dock.set_viewport_overlay(window, target, None);
+                        dock.set_viewport_drag_line(window, target, None);
                         app.request_redraw(window);
                         true
                     }
@@ -1987,6 +2077,9 @@ impl WinitDriver for DemoDriver {
             });
 
             if handled {
+                if let Some((lead, ids, modifiers)) = pending_selection.take() {
+                    self.apply_selection_delta(app, lead, ids, modifiers);
+                }
                 return;
             }
         }
@@ -2010,7 +2103,7 @@ impl WinitDriver for DemoDriver {
     fn render(
         &mut self,
         app: &mut App,
-        _window: fret_core::AppWindowId,
+        window: fret_core::AppWindowId,
         state: &mut Self::WindowState,
         bounds: Rect,
         scale_factor: f32,
@@ -2018,6 +2111,7 @@ impl WinitDriver for DemoDriver {
         scene: &mut Scene,
     ) {
         scene.clear();
+        self.sync_viewport_selection_overlay_for_window(app, window);
         state.ui.layout_all(app, text, bounds, scale_factor);
         state.ui.paint_all(app, text, bounds, scene, scale_factor);
     }

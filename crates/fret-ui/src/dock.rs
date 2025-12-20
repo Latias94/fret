@@ -87,12 +87,28 @@ impl DockPanelContentService {
 pub struct ViewportOverlay {
     pub marquee: Option<ViewportMarquee>,
     pub drag_line: Option<ViewportDragLine>,
+    pub selection_rect: Option<ViewportSelectionRect>,
+    pub marker: Option<ViewportMarker>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ViewportMarquee {
     pub a_uv: (f32, f32),
     pub b_uv: (f32, f32),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViewportSelectionRect {
+    pub min_uv: (f32, f32),
+    pub max_uv: (f32, f32),
+    pub fill: Color,
+    pub stroke: Color,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViewportMarker {
+    pub uv: (f32, f32),
+    pub color: Color,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -128,6 +144,35 @@ impl DockManager {
         self.panels.get(key)
     }
 
+    fn upsert_viewport_overlay(
+        &mut self,
+        window: fret_core::AppWindowId,
+        target: RenderTargetId,
+        update: impl FnOnce(&mut ViewportOverlay),
+    ) {
+        let key = (window, target);
+        let mut overlay = self
+            .viewport_overlays
+            .get(&key)
+            .copied()
+            .unwrap_or(ViewportOverlay {
+                marquee: None,
+                drag_line: None,
+                selection_rect: None,
+                marker: None,
+            });
+        update(&mut overlay);
+        if overlay.marquee.is_none()
+            && overlay.drag_line.is_none()
+            && overlay.selection_rect.is_none()
+            && overlay.marker.is_none()
+        {
+            self.viewport_overlays.remove(&key);
+        } else {
+            self.viewport_overlays.insert(key, overlay);
+        }
+    }
+
     pub fn set_viewport_overlay(
         &mut self,
         window: fret_core::AppWindowId,
@@ -140,6 +185,42 @@ impl DockManager {
         } else {
             self.viewport_overlays.remove(&key);
         }
+    }
+
+    pub fn set_viewport_marquee(
+        &mut self,
+        window: fret_core::AppWindowId,
+        target: RenderTargetId,
+        marquee: Option<ViewportMarquee>,
+    ) {
+        self.upsert_viewport_overlay(window, target, |o| o.marquee = marquee);
+    }
+
+    pub fn set_viewport_drag_line(
+        &mut self,
+        window: fret_core::AppWindowId,
+        target: RenderTargetId,
+        line: Option<ViewportDragLine>,
+    ) {
+        self.upsert_viewport_overlay(window, target, |o| o.drag_line = line);
+    }
+
+    pub fn set_viewport_selection_rect(
+        &mut self,
+        window: fret_core::AppWindowId,
+        target: RenderTargetId,
+        rect: Option<ViewportSelectionRect>,
+    ) {
+        self.upsert_viewport_overlay(window, target, |o| o.selection_rect = rect);
+    }
+
+    pub fn set_viewport_marker(
+        &mut self,
+        window: fret_core::AppWindowId,
+        target: RenderTargetId,
+        marker: Option<ViewportMarker>,
+    ) {
+        self.upsert_viewport_overlay(window, target, |o| o.marker = marker);
     }
 }
 
@@ -1044,12 +1125,144 @@ fn paint_viewport_crosshair(content: Rect, position: Point, scene: &mut Scene) {
 }
 
 fn paint_viewport_overlay(content: Rect, overlay: ViewportOverlay, scene: &mut Scene) {
+    if let Some(sel) = overlay.selection_rect {
+        paint_viewport_selection_rect(content, sel, scene);
+    }
     if let Some(m) = overlay.marquee {
         paint_viewport_marquee(content, m, scene);
     }
     if let Some(line) = overlay.drag_line {
         paint_viewport_drag_line(content, line, scene);
     }
+    if let Some(marker) = overlay.marker {
+        paint_viewport_marker(content, marker, scene);
+    }
+}
+
+fn paint_viewport_selection_rect(content: Rect, rect: ViewportSelectionRect, scene: &mut Scene) {
+    let (u0, v0) = rect.min_uv;
+    let (u1, v1) = rect.max_uv;
+    let left = content.origin.x.0 + content.size.width.0 * u0.min(u1);
+    let right = content.origin.x.0 + content.size.width.0 * u0.max(u1);
+    let top = content.origin.y.0 + content.size.height.0 * v0.min(v1);
+    let bottom = content.origin.y.0 + content.size.height.0 * v0.max(v1);
+
+    let inner = Rect::new(
+        Point::new(Px(left), Px(top)),
+        Size::new(Px((right - left).max(0.0)), Px((bottom - top).max(0.0))),
+    );
+    if inner.size.width.0 <= 0.0 || inner.size.height.0 <= 0.0 {
+        return;
+    }
+
+    let t = Px(2.0);
+    scene.push(SceneOp::Quad {
+        order: fret_core::DrawOrder(4),
+        rect: inner,
+        background: rect.fill,
+        border: Edges::all(Px(0.0)),
+        border_color: Color::TRANSPARENT,
+        corner_radii: fret_core::Corners::all(Px(0.0)),
+    });
+
+    let top_rect = Rect::new(inner.origin, Size::new(inner.size.width, t));
+    let bottom_rect = Rect::new(
+        Point::new(
+            inner.origin.x,
+            Px(inner.origin.y.0 + inner.size.height.0 - t.0),
+        ),
+        Size::new(inner.size.width, t),
+    );
+    let left_rect = Rect::new(inner.origin, Size::new(t, inner.size.height));
+    let right_rect = Rect::new(
+        Point::new(
+            Px(inner.origin.x.0 + inner.size.width.0 - t.0),
+            inner.origin.y,
+        ),
+        Size::new(t, inner.size.height),
+    );
+    for r in [top_rect, bottom_rect, left_rect, right_rect] {
+        scene.push(SceneOp::Quad {
+            order: fret_core::DrawOrder(5),
+            rect: r,
+            background: rect.stroke,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: fret_core::Corners::all(Px(0.0)),
+        });
+    }
+}
+
+fn paint_viewport_marker(content: Rect, marker: ViewportMarker, scene: &mut Scene) {
+    let (u, v) = marker.uv;
+    let x = content.origin.x.0 + content.size.width.0 * u;
+    let y = content.origin.y.0 + content.size.height.0 * v;
+
+    let t = Px(2.0);
+    let len = Px(10.0);
+    let color = marker.color;
+    let shadow = Color {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+        a: 0.35,
+    };
+
+    let h_shadow = Rect::new(
+        Point::new(Px(x - len.0), Px(y - t.0 * 0.5 + 1.0)),
+        Size::new(Px(len.0 * 2.0), t),
+    );
+    let v_shadow = Rect::new(
+        Point::new(Px(x - t.0 * 0.5 + 1.0), Px(y - len.0)),
+        Size::new(t, Px(len.0 * 2.0)),
+    );
+    for rect in [h_shadow, v_shadow] {
+        scene.push(SceneOp::Quad {
+            order: fret_core::DrawOrder(10),
+            rect,
+            background: shadow,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: fret_core::Corners::all(Px(0.0)),
+        });
+    }
+
+    let h = Rect::new(
+        Point::new(Px(x - len.0), Px(y - t.0 * 0.5)),
+        Size::new(Px(len.0 * 2.0), t),
+    );
+    let v = Rect::new(
+        Point::new(Px(x - t.0 * 0.5), Px(y - len.0)),
+        Size::new(t, Px(len.0 * 2.0)),
+    );
+    for rect in [h, v] {
+        scene.push(SceneOp::Quad {
+            order: fret_core::DrawOrder(11),
+            rect,
+            background: color,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: fret_core::Corners::all(Px(0.0)),
+        });
+    }
+
+    let p = Px(7.0);
+    scene.push(SceneOp::Quad {
+        order: fret_core::DrawOrder(12),
+        rect: Rect::new(
+            Point::new(Px(x - p.0 * 0.5), Px(y - p.0 * 0.5)),
+            Size::new(p, p),
+        ),
+        background: Color {
+            r: color.r,
+            g: color.g,
+            b: color.b,
+            a: (color.a * 0.25).min(1.0),
+        },
+        border: Edges::all(Px(1.5)),
+        border_color: color,
+        corner_radii: fret_core::Corners::all(Px(2.0)),
+    });
 }
 
 fn paint_viewport_marquee(content: Rect, marquee: ViewportMarquee, scene: &mut Scene) {
