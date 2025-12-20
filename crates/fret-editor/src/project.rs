@@ -172,6 +172,72 @@ impl ProjectService {
         Ok(imported)
     }
 
+    pub fn move_guid_into_folder(
+        &mut self,
+        dragged: AssetGuid,
+        dest_folder: AssetGuid,
+    ) -> io::Result<()> {
+        let Some(src_id) = self.id_for_guid(dragged) else {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                "unknown dragged guid",
+            ));
+        };
+        let Some(dest_id) = self.id_for_guid(dest_folder) else {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                "unknown destination folder guid",
+            ));
+        };
+
+        let Some(src_path) = self.path_for_id(src_id).map(|p| p.to_path_buf()) else {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                "missing source path",
+            ));
+        };
+        let Some(dest_path) = self.path_for_id(dest_id).map(|p| p.to_path_buf()) else {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                "missing destination path",
+            ));
+        };
+
+        if src_path == self.assets_root {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "cannot move Assets root",
+            ));
+        }
+
+        if self.kind_for_id(dest_id) != Some(ProjectEntryKind::Directory) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "destination is not a folder",
+            ));
+        }
+
+        if src_path.is_dir() && (dest_path == src_path || dest_path.starts_with(&src_path)) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "cannot move a folder into itself",
+            ));
+        }
+
+        let Some(file_name) = src_path.file_name() else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "source has no file name",
+            ));
+        };
+        let to = unique_dest_path(&dest_path, file_name);
+        if to == src_path {
+            return Ok(());
+        }
+
+        move_path_and_meta(&src_path, &to)
+    }
+
     pub fn rename_entry(&mut self, id: u64, new_file_name: &str) -> io::Result<()> {
         if new_file_name.contains(std::path::MAIN_SEPARATOR) {
             return Err(io::Error::new(
@@ -590,6 +656,41 @@ mod tests {
 
         let meta_value: AssetMetaV1 = serde_json::from_slice(&std::fs::read(&meta)?)?;
         assert_eq!(meta_value.guid, imported[0].0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn move_by_guid_preserves_guid() -> io::Result<()> {
+        let temp = TempDir::new("fret-project-move-guid")?;
+        let assets_root = temp.path().join("Assets");
+        std::fs::create_dir_all(&assets_root)?;
+        std::fs::create_dir_all(assets_root.join("Dest"))?;
+
+        let file = assets_root.join("C.txt");
+        std::fs::write(&file, "hello")?;
+
+        let mut service = ProjectService::new(assets_root.clone());
+        service.rescan()?;
+
+        let src_id = find_id_by_path_ends_with(&service, "C.txt").expect("C.txt exists");
+        let src_guid = service.guid_for_id(src_id).expect("guid exists");
+
+        let dest_id = find_id_by_path_ends_with(&service, "Dest").expect("Dest exists");
+        let dest_guid = service.guid_for_id(dest_id).expect("dest guid exists");
+
+        service.move_guid_into_folder(src_guid, dest_guid)?;
+        service.rescan()?;
+
+        let new_id = service.id_for_guid(src_guid).expect("still present");
+        let new_path = service.path_for_id(new_id).expect("path exists");
+        let new_path_str = new_path.to_string_lossy();
+        assert!(new_path_str.contains("Dest"));
+        assert!(new_path_str.ends_with("C.txt"));
+
+        let meta_path_after = meta_path_for(new_path);
+        let meta_after: AssetMetaV1 = serde_json::from_slice(&std::fs::read(&meta_path_after)?)?;
+        assert_eq!(meta_after.guid, src_guid.0);
 
         Ok(())
     }

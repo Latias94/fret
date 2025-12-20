@@ -98,6 +98,7 @@ pub struct TextArea {
     selection_anchor: usize,
     affinity: CaretAffinity,
     preferred_x: Option<Px>,
+    ensure_caret_visible: bool,
     selection_rects: Vec<Rect>,
     last_bounds: Rect,
     last_sent_cursor: Option<Rect>,
@@ -133,6 +134,7 @@ impl Default for TextArea {
             selection_anchor: 0,
             affinity: CaretAffinity::Downstream,
             preferred_x: None,
+            ensure_caret_visible: true,
             selection_rects: Vec::new(),
             last_bounds: Rect::default(),
             last_sent_cursor: None,
@@ -153,6 +155,7 @@ impl TextArea {
         self.text = text.into();
         self.caret = self.text.len();
         self.selection_anchor = self.caret;
+        self.ensure_caret_visible = true;
         self.preedit.clear();
         self.preedit_cursor = None;
         self
@@ -474,6 +477,7 @@ impl Widget for TextArea {
             Event::Pointer(fret_core::PointerEvent::Wheel { delta, .. }) => {
                 self.offset_y = Px((self.offset_y.0 - delta.y.0).max(0.0));
                 self.clamp_offset(self.last_content_height, self.last_viewport_height);
+                self.ensure_caret_visible = false;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 cx.stop_propagation();
@@ -498,6 +502,7 @@ impl Widget for TextArea {
                             self.clamp_offset(self.last_content_height, self.last_viewport_height);
                         }
 
+                        self.ensure_caret_visible = false;
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();
@@ -516,6 +521,7 @@ impl Widget for TextArea {
                 let local = fret_core::Point::new(local.x, Px(local.y.0 + self.offset_y.0));
                 self.set_caret_from_point(cx, local);
                 self.selection_anchor = self.caret;
+                self.ensure_caret_visible = true;
 
                 if had_preedit {
                     cx.invalidate_self(Invalidation::Layout);
@@ -548,6 +554,7 @@ impl Widget for TextArea {
                     let offset_delta = dy / travel * max_offset;
                     self.offset_y = Px(self.drag_offset_start_y.0 + offset_delta);
                     self.clamp_offset(self.last_content_height, self.last_viewport_height);
+                    self.ensure_caret_visible = false;
 
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
@@ -561,6 +568,7 @@ impl Widget for TextArea {
                     fret_core::Point::new(position.x - inner.origin.x, position.y - inner.origin.y);
                 let local = fret_core::Point::new(local.x, Px(local.y.0 + self.offset_y.0));
                 self.set_caret_from_point(cx, local);
+                self.ensure_caret_visible = true;
 
                 if had_preedit {
                     cx.invalidate_self(Invalidation::Layout);
@@ -591,6 +599,7 @@ impl Widget for TextArea {
                 self.last_text_input_text = Some(text.clone());
 
                 self.replace_selection(text);
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Layout);
                 cx.request_redraw();
             }
@@ -602,6 +611,7 @@ impl Widget for TextArea {
                 let normalized = text.replace("\r\n", "\n").replace('\r', "\n");
                 if !normalized.is_empty() {
                     self.replace_selection(&normalized);
+                    self.ensure_caret_visible = true;
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
@@ -628,6 +638,7 @@ impl Widget for TextArea {
                         self.last_ime_commit_text = Some(text.clone());
 
                         self.replace_selection(text);
+                        self.ensure_caret_visible = true;
                         cx.invalidate_self(Invalidation::Layout);
                         cx.request_redraw();
                     }
@@ -640,6 +651,7 @@ impl Widget for TextArea {
                             self.selection_anchor = self.caret;
                             self.affinity = CaretAffinity::Downstream;
                         }
+                        self.ensure_caret_visible = true;
                         cx.invalidate_self(Invalidation::Layout);
                         cx.request_redraw();
                     }
@@ -697,6 +709,7 @@ impl Widget for TextArea {
                 self.caret = 0;
                 self.selection_anchor = 0;
                 self.affinity = CaretAffinity::Downstream;
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Layout);
                 cx.request_redraw();
                 true
@@ -705,6 +718,7 @@ impl Widget for TextArea {
                 self.selection_anchor = 0;
                 self.caret = self.text.len();
                 self.affinity = CaretAffinity::Downstream;
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -725,6 +739,7 @@ impl Widget for TextArea {
                         text: self.text[a..b].to_string(),
                     });
                     self.delete_selection_if_any();
+                    self.ensure_caret_visible = true;
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
@@ -735,6 +750,7 @@ impl Widget for TextArea {
                 self.caret = Self::prev_boundary(&self.text, self.caret);
                 self.selection_anchor = self.caret;
                 self.affinity = CaretAffinity::Downstream;
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -743,6 +759,7 @@ impl Widget for TextArea {
                 self.caret = Self::next_boundary(&self.text, self.caret);
                 self.selection_anchor = self.caret;
                 self.affinity = CaretAffinity::Downstream;
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -751,6 +768,7 @@ impl Widget for TextArea {
                 self.caret = Self::move_word_left(&self.text, self.caret);
                 self.selection_anchor = self.caret;
                 self.affinity = CaretAffinity::Downstream;
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -759,6 +777,7 @@ impl Widget for TextArea {
                 self.caret = Self::move_word_right(&self.text, self.caret);
                 self.selection_anchor = self.caret;
                 self.affinity = CaretAffinity::Downstream;
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -766,6 +785,7 @@ impl Widget for TextArea {
             "text.move_home" => {
                 hit_test_line(self, cx, false);
                 self.selection_anchor = self.caret;
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -773,6 +793,7 @@ impl Widget for TextArea {
             "text.move_end" => {
                 hit_test_line(self, cx, true);
                 self.selection_anchor = self.caret;
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -790,6 +811,7 @@ impl Widget for TextArea {
                 self.selection_anchor = self.caret;
                 self.affinity = hit.affinity;
                 self.preferred_x = Some(x);
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -807,6 +829,7 @@ impl Widget for TextArea {
                 self.selection_anchor = self.caret;
                 self.affinity = hit.affinity;
                 self.preferred_x = Some(x);
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -814,6 +837,7 @@ impl Widget for TextArea {
             "text.select_left" => {
                 self.caret = Self::prev_boundary(&self.text, self.caret);
                 self.affinity = CaretAffinity::Downstream;
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -821,6 +845,7 @@ impl Widget for TextArea {
             "text.select_right" => {
                 self.caret = Self::next_boundary(&self.text, self.caret);
                 self.affinity = CaretAffinity::Downstream;
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -828,6 +853,7 @@ impl Widget for TextArea {
             "text.select_word_left" => {
                 self.caret = Self::move_word_left(&self.text, self.caret);
                 self.affinity = CaretAffinity::Downstream;
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -835,18 +861,21 @@ impl Widget for TextArea {
             "text.select_word_right" => {
                 self.caret = Self::move_word_right(&self.text, self.caret);
                 self.affinity = CaretAffinity::Downstream;
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.select_home" => {
                 hit_test_line(self, cx, false);
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.select_end" => {
                 hit_test_line(self, cx, true);
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -863,6 +892,7 @@ impl Widget for TextArea {
                 self.caret = hit.index;
                 self.affinity = hit.affinity;
                 self.preferred_x = Some(x);
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -879,12 +909,14 @@ impl Widget for TextArea {
                 self.caret = hit.index;
                 self.affinity = hit.affinity;
                 self.preferred_x = Some(x);
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.delete_backward" => {
                 if self.delete_selection_if_any() {
+                    self.ensure_caret_visible = true;
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                     return true;
@@ -897,12 +929,14 @@ impl Widget for TextArea {
                 self.caret = prev;
                 self.selection_anchor = self.caret;
                 self.affinity = CaretAffinity::Downstream;
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Layout);
                 cx.request_redraw();
                 true
             }
             "text.delete_forward" => {
                 if self.delete_selection_if_any() {
+                    self.ensure_caret_visible = true;
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                     return true;
@@ -914,12 +948,14 @@ impl Widget for TextArea {
                 self.text.replace_range(self.caret..next, "");
                 self.selection_anchor = self.caret;
                 self.affinity = CaretAffinity::Downstream;
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Layout);
                 cx.request_redraw();
                 true
             }
             "text.delete_word_backward" => {
                 if self.delete_selection_if_any() {
+                    self.ensure_caret_visible = true;
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                     return true;
@@ -932,12 +968,14 @@ impl Widget for TextArea {
                 self.caret = prev;
                 self.selection_anchor = self.caret;
                 self.affinity = CaretAffinity::Downstream;
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Layout);
                 cx.request_redraw();
                 true
             }
             "text.delete_word_forward" => {
                 if self.delete_selection_if_any() {
+                    self.ensure_caret_visible = true;
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                     return true;
@@ -949,6 +987,7 @@ impl Widget for TextArea {
                 self.text.replace_range(self.caret..next, "");
                 self.selection_anchor = self.caret;
                 self.affinity = CaretAffinity::Downstream;
+                self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Layout);
                 cx.request_redraw();
                 true
@@ -1106,6 +1145,10 @@ impl Widget for TextArea {
             color: self.style.text_color,
         });
 
+        if cx.focus != Some(cx.node) {
+            self.ensure_caret_visible = true;
+        }
+
         if cx.focus == Some(cx.node) {
             let caret_index = self.caret_display_index();
             let affinity = if self.preedit.is_empty() {
@@ -1115,22 +1158,25 @@ impl Widget for TextArea {
             };
             let caret = cx.text.caret_rect(blob, caret_index, affinity);
             let hairline = Px((1.0 / cx.scale_factor.max(1.0)).max(1.0 / 8.0));
-            let caret_top = caret.origin.y.0;
-            let caret_bottom = caret.origin.y.0 + caret.size.height.0;
-            let viewport_top = self.offset_y.0;
-            let viewport_bottom = self.offset_y.0 + inner.size.height.0;
-            let mut desired_offset = self.offset_y.0;
-            if caret_top < viewport_top {
-                desired_offset = caret_top;
-            } else if caret_bottom > viewport_bottom {
-                desired_offset = caret_bottom - inner.size.height.0;
-            }
-            if (desired_offset - self.offset_y.0).abs() > 0.01 {
-                self.offset_y = Px(desired_offset);
-                self.clamp_offset(self.last_content_height, self.last_viewport_height);
-                if let Some(window) = cx.window {
-                    cx.app.request_redraw(window);
+            if self.ensure_caret_visible {
+                let caret_top = caret.origin.y.0;
+                let caret_bottom = caret.origin.y.0 + caret.size.height.0;
+                let viewport_top = self.offset_y.0;
+                let viewport_bottom = self.offset_y.0 + inner.size.height.0;
+                let mut desired_offset = self.offset_y.0;
+                if caret_top < viewport_top {
+                    desired_offset = caret_top;
+                } else if caret_bottom > viewport_bottom {
+                    desired_offset = caret_bottom - inner.size.height.0;
                 }
+                if (desired_offset - self.offset_y.0).abs() > 0.01 {
+                    self.offset_y = Px(desired_offset);
+                    self.clamp_offset(self.last_content_height, self.last_viewport_height);
+                    if let Some(window) = cx.window {
+                        cx.app.request_redraw(window);
+                    }
+                }
+                self.ensure_caret_visible = false;
             }
 
             let caret_rect = Rect::new(

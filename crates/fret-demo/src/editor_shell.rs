@@ -757,6 +757,7 @@ pub struct InspectorPanel {
     last_revision: Option<u64>,
     last_world_revision: Option<u64>,
     last_project_revision: Option<u64>,
+    last_project_tree_revision: Option<u64>,
     last_selected: Option<u64>,
     list: VirtualList<InspectorDataSource>,
 }
@@ -812,6 +813,7 @@ impl InspectorPanel {
             last_revision: None,
             last_world_revision: None,
             last_project_revision: None,
+            last_project_tree_revision: None,
             last_selected: None,
             list,
         }
@@ -824,10 +826,12 @@ impl InspectorPanel {
             .global::<ProjectSelectionService>()
             .map(|s| s.revision())
             .unwrap_or(0);
+        let project_tree_revision = app.global::<ProjectService>().map(|p| p.revision());
 
         if revision == self.last_revision
             && world_revision == self.last_world_revision
             && self.last_project_revision == Some(project_revision)
+            && self.last_project_tree_revision == project_tree_revision
         {
             return false;
         }
@@ -843,6 +847,7 @@ impl InspectorPanel {
         self.last_revision = revision;
         self.last_world_revision = world_revision;
         self.last_project_revision = Some(project_revision);
+        self.last_project_tree_revision = project_tree_revision;
 
         self.list
             .set_data(InspectorDataSource::new(app, self.world, selected));

@@ -43,6 +43,8 @@ fn fs_main(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
   // Convert fragment pixel coords to NDC [-1, 1] with Y up.
   var ndc = (p.xy / target_px) * 2.0 - vec2<f32>(1.0, 1.0);
   ndc.y = -ndc.y;
+  // Preserve square world cells across viewport aspect ratios by scaling X.
+  ndc.x *= target_px.x / max(target_px.y, 1.0);
 
   // Time is used to animate preview viewports (e.g. Game view) without affecting editor viewports.
   let time_offset = vec2<f32>(time * 0.35, time * 0.15);
