@@ -8,25 +8,87 @@ use fret_app::{App, Model};
 pub struct UndoStack {
     undo: Vec<EditCommand>,
     redo: Vec<EditCommand>,
+    active: Option<EditTransaction>,
 }
 
 impl UndoStack {
     pub fn push(&mut self, command: EditCommand) {
+        self.active = None;
         self.redo.clear();
         self.undo.push(command);
     }
 
     pub fn pop_undo(&mut self) -> Option<EditCommand> {
+        self.active = None;
         let cmd = self.undo.pop()?;
         self.redo.push(cmd.clone());
         Some(cmd)
     }
 
     pub fn pop_redo(&mut self) -> Option<EditCommand> {
+        self.active = None;
         let cmd = self.redo.pop()?;
         self.undo.push(cmd.clone());
         Some(cmd)
     }
+
+    pub fn cancel_active(&mut self) {
+        self.active = None;
+    }
+
+    pub fn begin_viewport_translate(&mut self, targets: Vec<u64>, before: Vec<[f32; 3]>) {
+        self.active = Some(EditTransaction {
+            key: TransactionKey::ViewportTranslate {
+                targets: targets.clone(),
+            },
+            command: EditCommand::SetPositions {
+                targets,
+                before: before.clone(),
+                after: before,
+            },
+        });
+    }
+
+    pub fn update_viewport_translate(&mut self, targets: Vec<u64>, after: Vec<[f32; 3]>) {
+        let Some(tx) = self.active.as_mut() else {
+            return;
+        };
+        if tx.key != (TransactionKey::ViewportTranslate { targets }) {
+            return;
+        }
+        let EditCommand::SetPositions {
+            after: cmd_after, ..
+        } = &mut tx.command
+        else {
+            return;
+        };
+        if cmd_after.len() != after.len() {
+            return;
+        }
+        *cmd_after = after;
+    }
+
+    pub fn commit_active(&mut self) {
+        let Some(tx) = self.active.take() else {
+            return;
+        };
+        if tx.command.is_noop() {
+            return;
+        }
+        self.redo.clear();
+        self.undo.push(tx.command);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum TransactionKey {
+    ViewportTranslate { targets: Vec<u64> },
+}
+
+#[derive(Debug, Clone)]
+struct EditTransaction {
+    key: TransactionKey,
+    command: EditCommand,
 }
 
 #[derive(Debug, Clone)]
@@ -51,6 +113,16 @@ pub enum EditCommand {
 }
 
 impl EditCommand {
+    pub fn is_noop(&self) -> bool {
+        match self {
+            EditCommand::SetProperties { before, after, .. } => {
+                before.iter().all(|b| b.as_ref() == Some(after))
+            }
+            EditCommand::SetPositions { before, after, .. } => before == after,
+            EditCommand::HierarchyMove { .. } => false,
+        }
+    }
+
     pub fn apply(&self, world: &mut DemoWorld) {
         match self {
             EditCommand::SetProperties {

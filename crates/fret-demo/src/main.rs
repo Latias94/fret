@@ -325,8 +325,12 @@ impl DemoDriver {
             .and_then(|m| m.get(app))
             .and_then(|s| s.lead_entity);
 
-        let marker_uv = lead.and_then(viewport_grid_marker_uv);
         let rect_uv = lead.and_then(viewport_grid_cell_uv_rect);
+        let marker_uv_from_world = lead.and_then(|id| {
+            let world = self.world.and_then(|m| m.get(app))?;
+            Some(demo_world_pos_to_viewport_uv(world.position(id)))
+        });
+        let marker_uv = marker_uv_from_world.or_else(|| lead.and_then(viewport_grid_marker_uv));
 
         let tool_mode = self
             .viewport_tools
@@ -343,22 +347,18 @@ impl DemoDriver {
                 a: 0.95,
             },
         });
-        let selection_rect = rect_uv.map(|(min_uv, max_uv)| fret_ui::dock::ViewportSelectionRect {
-            min_uv,
-            max_uv,
-            fill: Color {
-                r: 0.20,
-                g: 0.45,
-                b: 0.95,
-                a: 0.16,
-            },
-            stroke: Color {
-                r: 0.20,
-                g: 0.45,
-                b: 0.95,
-                a: 0.85,
-            },
-        });
+        let selection_fill = Color {
+            r: 0.20,
+            g: 0.45,
+            b: 0.95,
+            a: 0.16,
+        };
+        let selection_stroke = Color {
+            r: 0.20,
+            g: 0.45,
+            b: 0.95,
+            a: 0.85,
+        };
 
         let gizmo = match tool_mode {
             ViewportToolMode::Move => marker_uv.map(|center_uv| fret_ui::dock::ViewportGizmo {
@@ -368,22 +368,126 @@ impl DemoDriver {
             ViewportToolMode::Select => None,
         };
 
-        app.with_global_mut(DockManager::default, |dock, _app| {
-            if dock.graph.window_root(window).is_none() {
-                return;
+        let Some(dock) = app.global_mut::<DockManager>() else {
+            return;
+        };
+        if dock.graph.window_root(window).is_none() {
+            return;
+        }
+        for panel_key in dock.graph.collect_panels_in_window(window) {
+            let Some(panel) = dock.panels.get(&panel_key) else {
+                continue;
+            };
+            let Some(vp) = panel.viewport else {
+                continue;
+            };
+            let selection_rect = if let Some(center_uv) = marker_uv_from_world {
+                Some(viewport_selection_rect_around_uv(
+                    center_uv,
+                    vp.target_px_size,
+                    8.0,
+                    selection_fill,
+                    selection_stroke,
+                ))
+            } else {
+                rect_uv.map(|(min_uv, max_uv)| fret_ui::dock::ViewportSelectionRect {
+                    min_uv,
+                    max_uv,
+                    fill: selection_fill,
+                    stroke: selection_stroke,
+                })
+            };
+            dock.set_viewport_selection_rect(window, vp.target, selection_rect);
+            dock.set_viewport_marker(window, vp.target, marker);
+            dock.set_viewport_gizmo(window, vp.target, gizmo);
+        }
+    }
+}
+
+fn demo_world_pos_to_viewport_uv(pos: [f32; 3]) -> (f32, f32) {
+    let scale = 10.0;
+    let u = (pos[0] / scale).clamp(0.0, 1.0);
+    let v = (1.0 - pos[1] / scale).clamp(0.0, 1.0);
+    (u, v)
+}
+
+fn demo_pick_entity_by_uv(
+    world: &DemoWorld,
+    uv: (f32, f32),
+    target_px_size: Option<(u32, u32)>,
+) -> Option<u64> {
+    const GRID_W: u64 = 64;
+    const GRID_H: u64 = 36;
+    const PICK_RADIUS_PX: f32 = 24.0;
+
+    let (u, v) = uv;
+    let (tw, th) = target_px_size.unwrap_or((1024, 768));
+    let tw = tw.max(1) as f32;
+    let th = th.max(1) as f32;
+
+    let mut best: Option<(u64, f32)> = None;
+    for id in 1..=(GRID_W * GRID_H) {
+        let (eu, ev) = demo_world_pos_to_viewport_uv(world.position(id));
+        let dx = (eu - u) * tw;
+        let dy = (ev - v) * th;
+        let d2 = dx * dx + dy * dy;
+        match best {
+            None => best = Some((id, d2)),
+            Some((_, best_d2)) if d2 < best_d2 => best = Some((id, d2)),
+            _ => {}
+        }
+    }
+
+    let (id, d2) = best?;
+    if d2 <= PICK_RADIUS_PX * PICK_RADIUS_PX {
+        Some(id)
+    } else {
+        None
+    }
+}
+
+fn demo_pick_entities_in_uv_rect(
+    world: &DemoWorld,
+    a_uv: (f32, f32),
+    b_uv: (f32, f32),
+) -> Vec<u64> {
+    const GRID_W: u64 = 64;
+    const GRID_H: u64 = 36;
+
+    let (u0, v0) = (a_uv.0.min(b_uv.0), a_uv.1.min(b_uv.1));
+    let (u1, v1) = (a_uv.0.max(b_uv.0), a_uv.1.max(b_uv.1));
+
+    let mut out: Vec<u64> = Vec::new();
+    for id in 1..=(GRID_W * GRID_H) {
+        let (eu, ev) = demo_world_pos_to_viewport_uv(world.position(id));
+        if eu >= u0 && eu <= u1 && ev >= v0 && ev <= v1 {
+            out.push(id);
+            if out.len() >= 2048 {
+                break;
             }
-            for panel_key in dock.graph.collect_panels_in_window(window) {
-                let Some(panel) = dock.panels.get(&panel_key) else {
-                    continue;
-                };
-                let Some(vp) = panel.viewport else {
-                    continue;
-                };
-                dock.set_viewport_selection_rect(window, vp.target, selection_rect);
-                dock.set_viewport_marker(window, vp.target, marker);
-                dock.set_viewport_gizmo(window, vp.target, gizmo);
-            }
-        });
+        }
+    }
+    out
+}
+
+fn viewport_selection_rect_around_uv(
+    center_uv: (f32, f32),
+    target_px_size: (u32, u32),
+    half_size_px: f32,
+    fill: Color,
+    stroke: Color,
+) -> fret_ui::dock::ViewportSelectionRect {
+    let (tw, th) = target_px_size;
+    let tw = (tw.max(1) as f32).max(1.0);
+    let th = (th.max(1) as f32).max(1.0);
+    let (u, v) = center_uv;
+    let du = half_size_px / tw;
+    let dv = half_size_px / th;
+    fret_ui::dock::ViewportSelectionRect {
+        min_uv: ((u - du).clamp(0.0, 1.0), (v - dv).clamp(0.0, 1.0)),
+        max_uv: ((u + du).clamp(0.0, 1.0), (v + dv).clamp(0.0, 1.0)),
+        fill,
+        stroke,
     }
 }
 
@@ -404,6 +508,34 @@ fn viewport_grid_marker_uv(id: u64) -> Option<(f32, f32)> {
     let u = (x as f32 + 0.5) / grid_w as f32;
     let v = (y as f32 + 0.5) / grid_h as f32;
     Some((u, v))
+}
+
+fn viewport_gizmo_hit_test_px(
+    center_uv: (f32, f32),
+    target_px_size: (u32, u32),
+    cursor_target_px: (u32, u32),
+    axis_len_px: f32,
+    thickness_px: f32,
+    handle_px: f32,
+) -> bool {
+    let (tw, th) = target_px_size;
+    let tw = tw.max(1) as f32;
+    let th = th.max(1) as f32;
+    let (u, v) = center_uv;
+    let cx = u * tw;
+    let cy = v * th;
+
+    let (x, y) = (cursor_target_px.0 as f32, cursor_target_px.1 as f32);
+    let dx = x - cx;
+    let dy = y - cy;
+
+    let half_handle = handle_px * 0.5;
+    let on_handle = dx.abs() <= half_handle && dy.abs() <= half_handle;
+
+    let on_x_axis = dx >= 0.0 && dx <= axis_len_px && dy.abs() <= thickness_px;
+    let on_y_axis = dy <= 0.0 && dy >= -axis_len_px && dx.abs() <= thickness_px;
+
+    on_handle || on_x_axis || on_y_axis
 }
 
 fn viewport_grid_cell_uv_rect(id: u64) -> Option<((f32, f32), (f32, f32))> {
@@ -1721,6 +1853,10 @@ impl WinitDriver for DemoDriver {
                         return;
                     };
 
+                    if let Some(undo) = self.undo {
+                        let _ = undo.update(app, |s, _cx| s.cancel_active());
+                    }
+
                     let (w, target, rollback_positions) = match cancel {
                         CancelViewportInteraction::OverlayOnly(w, target) => (w, target, None),
                         CancelViewportInteraction::TranslateGizmo(w, target, start_positions) => {
@@ -1739,10 +1875,10 @@ impl WinitDriver for DemoDriver {
                         }
                     }
 
-                    app.with_global_mut(DockManager::default, |dock, _app| {
+                    if let Some(dock) = app.global_mut::<DockManager>() {
                         dock.set_viewport_marquee(w, target, None);
                         dock.set_viewport_drag_line(w, target, None);
-                    });
+                    }
                     for &w in self.logical_windows.keys() {
                         app.request_redraw(w);
                     }
@@ -2134,11 +2270,26 @@ impl WinitDriver for DemoDriver {
             let undo_model = self.undo;
 
             let mut pending_selection: Option<(Option<u64>, Vec<u64>, fret_core::Modifiers)> = None;
-            let mut pending_undo: Option<EditCommand> = None;
 
-            let handled = app.with_global_mut(DockManager::default, |dock, app| match event.kind {
+            let target_px_size = app.global::<DockManager>().and_then(|dock| {
+                dock.graph
+                    .collect_panels_in_window(window)
+                    .into_iter()
+                    .find_map(|panel_key| {
+                        let panel = dock.panels.get(&panel_key)?;
+                        let vp = panel.viewport?;
+                        (vp.target == target).then_some(vp.target_px_size)
+                    })
+            });
+
+            let mut marquee_update: Option<Option<ViewportMarquee>> = None;
+            let mut drag_line_update: Option<Option<fret_ui::dock::ViewportDragLine>> = None;
+            let mut request_redraw = false;
+            let mut request_animation_frame = false;
+
+            let handled = match event.kind {
                 fret_core::ViewportInputKind::PointerDown { button, modifiers } => match button {
-                    fret_core::MouseButton::Left => {
+                    fret_core::MouseButton::Left => 'handled: {
                         let start_uv = event.uv;
 
                         let selection = selection_model
@@ -2148,35 +2299,45 @@ impl WinitDriver for DemoDriver {
                         let lead = selection.lead_entity;
                         let selected = selection.selected_entities;
 
-                        let on_gizmo =
-                            lead.and_then(viewport_grid_marker_uv)
-                                .is_some_and(|(u, v)| {
-                                    let du = (start_uv.0 - u).abs();
-                                    let dv = (start_uv.1 - v).abs();
-                                    du <= 0.02 && dv <= 0.02
-                                });
+                        let center_uv = lead
+                            .and_then(|id| {
+                                let world = world_model.and_then(|m| m.get(app))?;
+                                Some(demo_world_pos_to_viewport_uv(world.position(id)))
+                            })
+                            .or_else(|| lead.and_then(viewport_grid_marker_uv));
+
+                        let on_gizmo = center_uv.is_some_and(|center_uv| {
+                            if let Some(size) = target_px_size {
+                                viewport_gizmo_hit_test_px(
+                                    center_uv,
+                                    size,
+                                    event.target_px,
+                                    80.0,
+                                    6.0,
+                                    14.0,
+                                )
+                            } else {
+                                let (u, v) = center_uv;
+                                let du = (start_uv.0 - u).abs();
+                                let dv = (start_uv.1 - v).abs();
+                                du <= 0.02 && dv <= 0.02
+                            }
+                        });
 
                         let Some(cur_tool) = tool.get(app) else {
-                            return false;
+                            break 'handled false;
                         };
                         let active = cur_tool.active;
                         if cur_tool.interaction.is_some() {
-                            return false;
+                            break 'handled false;
                         }
 
                         if active == ViewportToolMode::Move && on_gizmo && !selected.is_empty() {
                             let mut start_positions: Vec<(u64, [f32; 3])> = Vec::new();
                             if let Some(world) = world_model {
                                 if let Some(w) = world.get(app) {
-                                    let position_path = crate::property::PropertyPath::new()
-                                        .field("transform")
-                                        .field("position");
                                     for &id in &selected {
-                                        if let Some(crate::property::PropertyValue::Vec3(pos)) =
-                                            w.get_property(id, &position_path)
-                                        {
-                                            start_positions.push((id, pos));
-                                        }
+                                        start_positions.push((id, w.position(id)));
                                     }
                                 }
                             }
@@ -2184,6 +2345,15 @@ impl WinitDriver for DemoDriver {
                             if !start_positions.is_empty() {
                                 let targets: Vec<u64> =
                                     start_positions.iter().map(|(id, _)| *id).collect();
+                                let before: Vec<[f32; 3]> =
+                                    start_positions.iter().map(|(_, pos)| *pos).collect();
+
+                                if let Some(stack) = undo_model {
+                                    let _ = stack.update(app, |s, _cx| {
+                                        s.begin_viewport_translate(targets.clone(), before)
+                                    });
+                                }
+
                                 let _ = tool.update(app, |t, _cx| {
                                     t.interaction = Some(ViewportInteraction::TranslateGizmo(
                                         TranslateGizmoInteraction {
@@ -2200,8 +2370,8 @@ impl WinitDriver for DemoDriver {
                                         },
                                     ));
                                 });
-                                app.push_effect(Effect::RequestAnimationFrame(window));
-                                return true;
+                                request_animation_frame = true;
+                                break 'handled true;
                             }
                         }
 
@@ -2219,16 +2389,12 @@ impl WinitDriver for DemoDriver {
                             ));
                         });
 
-                        dock.set_viewport_marquee(
-                            window,
-                            target,
-                            Some(ViewportMarquee {
-                                a_uv: start_uv,
-                                b_uv: start_uv,
-                            }),
-                        );
-                        app.push_effect(Effect::RequestAnimationFrame(window));
-                        true
+                        marquee_update = Some(Some(ViewportMarquee {
+                            a_uv: start_uv,
+                            b_uv: start_uv,
+                        }));
+                        request_animation_frame = true;
+                        break 'handled true;
                     }
                     fret_core::MouseButton::Right | fret_core::MouseButton::Middle => {
                         let kind = if button == fret_core::MouseButton::Right {
@@ -2261,11 +2427,18 @@ impl WinitDriver for DemoDriver {
                     }
                     _ => false,
                 },
-                fret_core::ViewportInputKind::PointerMove { buttons, .. } => {
+                fret_core::ViewportInputKind::PointerMove { buttons, .. } => 'mv: {
                     if buttons.left {
                         let current_uv = event.uv;
                         let mut next_marquee: Option<MarqueeSelectInteraction> = None;
-                        let mut next_gizmo: Option<(bool, Vec<(u64, [f32; 3])>, f32, f32)> = None;
+                        let mut next_gizmo: Option<(
+                            bool,
+                            Vec<u64>,
+                            Vec<(u64, [f32; 3])>,
+                            f32,
+                            f32,
+                        )> = None;
+
                         let _ = tool.update(app, |t, _cx| match t.interaction.as_mut() {
                             Some(ViewportInteraction::MarqueeSelect(m))
                                 if m.window == window && m.target == target =>
@@ -2288,43 +2461,56 @@ impl WinitDriver for DemoDriver {
 
                                 let du = (m.current_uv.0 - m.start_uv.0) * 10.0;
                                 let dv = (m.start_uv.1 - m.current_uv.1) * 10.0;
-                                next_gizmo = Some((m.dragging, m.start_positions.clone(), du, dv));
+                                next_gizmo = Some((
+                                    m.dragging,
+                                    m.targets.clone(),
+                                    m.start_positions.clone(),
+                                    du,
+                                    dv,
+                                ));
                             }
                             _ => {}
                         });
 
                         if let Some(m) = next_marquee {
-                            dock.set_viewport_marquee(
-                                window,
-                                target,
-                                Some(ViewportMarquee {
-                                    a_uv: m.start_uv,
-                                    b_uv: m.current_uv,
-                                }),
-                            );
-                            app.push_effect(Effect::RequestAnimationFrame(window));
-                            return true;
+                            marquee_update = Some(Some(ViewportMarquee {
+                                a_uv: m.start_uv,
+                                b_uv: m.current_uv,
+                            }));
+                            request_animation_frame = true;
+                            break 'mv true;
                         }
 
-                        if let Some((dragging, start_positions, du, dv)) = next_gizmo {
+                        if let Some((dragging, targets, start_positions, du, dv)) = next_gizmo {
                             if !dragging {
-                                return true;
+                                break 'mv true;
                             }
+
+                            let mut after: Vec<[f32; 3]> = Vec::with_capacity(targets.len());
+                            for (_id, start) in &start_positions {
+                                after.push([start[0] + du, start[1] + dv, start[2]]);
+                            }
+
                             if let Some(world) = world_model {
                                 let _ = world.update(app, |w, _cx| {
-                                    for (id, start) in &start_positions {
-                                        let e = w.entity_mut(*id);
-                                        e.transform.position =
-                                            [start[0] + du, start[1] + dv, start[2]];
+                                    for ((id, _start), pos) in
+                                        start_positions.iter().zip(after.iter().copied())
+                                    {
+                                        w.entity_mut(*id).transform.position = pos;
                                     }
                                 });
                             }
-                            app.push_effect(Effect::RequestAnimationFrame(window));
-                            pending_selection = None;
-                            return true;
-                        }
 
-                        return false;
+                            if let Some(stack) = undo_model {
+                                let _ = stack.update(app, |s, _cx| {
+                                    s.update_viewport_translate(targets, after)
+                                });
+                            }
+
+                            request_animation_frame = true;
+                            pending_selection = None;
+                            break 'mv true;
+                        }
                     }
 
                     if buttons.right || buttons.middle {
@@ -2359,10 +2545,10 @@ impl WinitDriver for DemoDriver {
                         });
 
                         let Some(m) = next else {
-                            return false;
+                            break 'mv false;
                         };
                         if !m.dragging {
-                            return true;
+                            break 'mv true;
                         }
 
                         let color = match m.kind {
@@ -2380,28 +2566,21 @@ impl WinitDriver for DemoDriver {
                             },
                         };
 
-                        dock.set_viewport_drag_line(
-                            window,
-                            target,
-                            Some(fret_ui::dock::ViewportDragLine {
-                                a_uv: m.start_uv,
-                                b_uv: m.current_uv,
-                                color,
-                            }),
-                        );
-                        app.push_effect(Effect::RequestAnimationFrame(window));
-                        return true;
+                        drag_line_update = Some(Some(fret_ui::dock::ViewportDragLine {
+                            a_uv: m.start_uv,
+                            b_uv: m.current_uv,
+                            color,
+                        }));
+                        request_animation_frame = true;
+                        break 'mv true;
                     }
 
                     false
                 }
-                fret_core::ViewportInputKind::PointerUp {
-                    button,
-                    modifiers: _,
-                } => match button {
-                    fret_core::MouseButton::Left => {
+                fret_core::ViewportInputKind::PointerUp { button, .. } => match button {
+                    fret_core::MouseButton::Left => 'up_left: {
                         let mut commit: Option<MarqueeSelectInteraction> = None;
-                        let mut commit_gizmo: Option<TranslateGizmoInteraction> = None;
+                        let mut ended_translate_dragging: Option<bool> = None;
                         let _ = tool.update(app, |t, _cx| match t.interaction.take() {
                             Some(ViewportInteraction::MarqueeSelect(m))
                                 if m.window == window && m.target == target =>
@@ -2411,69 +2590,49 @@ impl WinitDriver for DemoDriver {
                             Some(ViewportInteraction::TranslateGizmo(m))
                                 if m.window == window && m.target == target =>
                             {
-                                if m.dragging {
-                                    commit_gizmo = Some(m);
-                                }
+                                ended_translate_dragging = Some(m.dragging);
                             }
                             other => t.interaction = other,
                         });
-                        dock.set_viewport_marquee(window, target, None);
-                        dock.set_viewport_drag_line(window, target, None);
-                        app.request_redraw(window);
 
-                        if let Some(m) = commit_gizmo {
-                            let targets: Vec<u64> =
-                                m.start_positions.iter().map(|(id, _)| *id).collect();
-                            let before: Vec<[f32; 3]> =
-                                m.start_positions.iter().map(|(_, pos)| *pos).collect();
+                        marquee_update = Some(None);
+                        drag_line_update = Some(None);
+                        request_redraw = true;
 
-                            let mut after: Vec<[f32; 3]> = Vec::new();
-                            if let Some(world) = world_model.and_then(|w| w.get(app)) {
-                                let position_path = crate::property::PropertyPath::new()
-                                    .field("transform")
-                                    .field("position");
-                                for &id in &targets {
-                                    if let Some(crate::property::PropertyValue::Vec3(pos)) =
-                                        world.get_property(id, &position_path)
-                                    {
-                                        after.push(pos);
+                        if let Some(dragging) = ended_translate_dragging {
+                            if let Some(stack) = undo_model {
+                                let _ = stack.update(app, |s, _cx| {
+                                    if dragging {
+                                        s.commit_active();
+                                    } else {
+                                        s.cancel_active();
                                     }
-                                }
-                            }
-
-                            if after.len() != before.len() {
-                                after.clear();
-                                let du = (m.current_uv.0 - m.start_uv.0) * 10.0;
-                                let dv = (m.start_uv.1 - m.current_uv.1) * 10.0;
-                                after.extend(
-                                    before
-                                        .iter()
-                                        .map(|start| [start[0] + du, start[1] + dv, start[2]]),
-                                );
-                            }
-
-                            if before.len() == targets.len()
-                                && after.len() == targets.len()
-                                && before != after
-                            {
-                                pending_undo = Some(EditCommand::SetPositions {
-                                    targets,
-                                    before,
-                                    after,
                                 });
                             }
-                            return true;
+                            break 'up_left true;
                         }
 
                         let Some(m) = commit else {
-                            return true;
+                            break 'up_left true;
                         };
 
                         let dx = m.start_target_px.0.abs_diff(m.current_target_px.0);
                         let dy = m.start_target_px.1.abs_diff(m.current_target_px.1);
 
-                        let lead: Option<u64>;
-                        let ids: Vec<u64> = if dx <= 3 && dy <= 3 {
+                        let (lead, ids) = if let Some(world) = world_model.and_then(|m| m.get(app))
+                        {
+                            if dx <= 3 && dy <= 3 {
+                                match demo_pick_entity_by_uv(world, m.current_uv, target_px_size) {
+                                    Some(id) => (Some(id), vec![id]),
+                                    None => (None, Vec::new()),
+                                }
+                            } else {
+                                let ids =
+                                    demo_pick_entities_in_uv_rect(world, m.start_uv, m.current_uv);
+                                let lead = ids.last().copied();
+                                (lead, ids)
+                            }
+                        } else if dx <= 3 && dy <= 3 {
                             let grid_w: u64 = 64;
                             let grid_h: u64 = 36;
                             let x = ((m.current_uv.0 * grid_w as f32).floor() as u64)
@@ -2481,8 +2640,7 @@ impl WinitDriver for DemoDriver {
                             let y = ((m.current_uv.1 * grid_h as f32).floor() as u64)
                                 .min(grid_h.saturating_sub(1));
                             let id = 1 + y * grid_w + x;
-                            lead = Some(id);
-                            vec![id]
+                            (Some(id), vec![id])
                         } else {
                             let (u0, v0) = (
                                 m.start_uv.0.min(m.current_uv.0),
@@ -2515,14 +2673,14 @@ impl WinitDriver for DemoDriver {
                                     break;
                                 }
                             }
-                            lead = out.last().copied();
-                            out
+                            let lead = out.last().copied();
+                            (lead, out)
                         };
 
                         pending_selection = Some((lead, ids, m.start_modifiers));
                         true
                     }
-                    fret_core::MouseButton::Right | fret_core::MouseButton::Middle => {
+                    fret_core::MouseButton::Right | fret_core::MouseButton::Middle => 'up_other: {
                         let mut end: Option<PanOrbitInteraction> = None;
                         let _ = tool.update(app, |t, _cx| {
                             end = match t.interaction.take() {
@@ -2539,31 +2697,42 @@ impl WinitDriver for DemoDriver {
                         });
 
                         let Some(m) = end else {
-                            return false;
+                            break 'up_other false;
                         };
                         let want_right = m.kind == PanOrbitKind::Orbit
                             && button == fret_core::MouseButton::Right;
                         let want_middle =
                             m.kind == PanOrbitKind::Pan && button == fret_core::MouseButton::Middle;
                         if !want_right && !want_middle {
-                            return false;
+                            break 'up_other false;
                         }
 
-                        dock.set_viewport_drag_line(window, target, None);
-                        app.request_redraw(window);
+                        drag_line_update = Some(None);
+                        request_redraw = true;
                         true
                     }
                     _ => false,
                 },
                 _ => false,
-            });
+            };
+
+            if let Some(dock) = app.global_mut::<DockManager>() {
+                if let Some(update) = marquee_update {
+                    dock.set_viewport_marquee(window, target, update);
+                }
+                if let Some(update) = drag_line_update {
+                    dock.set_viewport_drag_line(window, target, update);
+                }
+            }
+
+            if request_redraw {
+                app.request_redraw(window);
+            }
+            if request_animation_frame {
+                app.push_effect(Effect::RequestAnimationFrame(window));
+            }
 
             if handled {
-                if let Some(cmd) = pending_undo.take() {
-                    if let Some(stack) = undo_model {
-                        let _ = stack.update(app, |s, _cx| s.push(cmd));
-                    }
-                }
                 if let Some((lead, ids, modifiers)) = pending_selection.take() {
                     self.apply_selection_delta(app, lead, ids, modifiers);
                 }

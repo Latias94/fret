@@ -146,6 +146,7 @@ impl App {
             .and_then(|value| value.downcast_mut::<T>())
     }
 
+    #[track_caller]
     pub fn with_global_mut<T: Any, R>(
         &mut self,
         init: impl FnOnce() -> T,
@@ -182,7 +183,11 @@ impl App {
             None => None,
             Some(v) => {
                 if v.is::<GlobalLeaseMarker>() {
-                    panic!("global already leased: {type_id:?}");
+                    panic!(
+                        "global already leased: {} ({type_id:?}) at {}",
+                        std::any::type_name::<T>(),
+                        std::panic::Location::caller()
+                    );
                 }
                 Some(*v.downcast::<T>().expect("global type id must match"))
             }

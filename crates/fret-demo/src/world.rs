@@ -21,20 +21,46 @@ pub struct DemoWorld {
 }
 
 impl DemoWorld {
+    const GRID_W: u64 = 64;
+    const GRID_H: u64 = 36;
+    const VIEWPORT_SCALE: f32 = 10.0;
+
+    fn default_position(id: u64) -> [f32; 3] {
+        if id == 0 {
+            return [0.0, 0.0, 0.0];
+        }
+
+        let idx = id.saturating_sub(1);
+        let x = idx % Self::GRID_W;
+        let y = (idx / Self::GRID_W).min(Self::GRID_H.saturating_sub(1));
+
+        let u = (x as f32 + 0.5) / Self::GRID_W as f32;
+        let v = (y as f32 + 0.5) / Self::GRID_H as f32;
+
+        [
+            u * Self::VIEWPORT_SCALE,
+            (1.0 - v) * Self::VIEWPORT_SCALE,
+            0.0,
+        ]
+    }
+
     fn default_entity(id: u64) -> DemoEntity {
         DemoEntity {
             name: format!("Entity {id:06}"),
             active: id % 3 != 0,
             transform: DemoTransform {
-                position: [
-                    (id % 97) as f32 * 0.1,
-                    (id % 53) as f32 * 0.1,
-                    (id % 31) as f32 * 0.1,
-                ],
+                position: Self::default_position(id),
                 rotation_y: (id % 360) as f32,
                 scale: 0.5 + (id % 100) as f32 * 0.01,
             },
         }
+    }
+
+    pub fn position(&self, id: u64) -> [f32; 3] {
+        self.entities
+            .get(&id)
+            .map(|e| e.transform.position)
+            .unwrap_or_else(|| Self::default_position(id))
     }
 
     pub fn entity_mut(&mut self, id: u64) -> &mut DemoEntity {
@@ -51,15 +77,16 @@ impl DemoWorld {
     }
 
     pub fn get_property(&self, id: u64, path: &PropertyPath) -> Option<PropertyValue> {
+        if path.matches_fields(&["transform", "position"]) {
+            return Some(PropertyValue::Vec3(self.position(id)));
+        }
+
         let e = self.entity_view(id);
         if path.matches_fields(&["name"]) {
             return Some(PropertyValue::String(e.name.clone()));
         }
         if path.matches_fields(&["active"]) {
             return Some(PropertyValue::Bool(e.active));
-        }
-        if path.matches_fields(&["transform", "position"]) {
-            return Some(PropertyValue::Vec3(e.transform.position));
         }
         if path.matches_fields(&["transform", "rotation_y"]) {
             return Some(PropertyValue::F32(e.transform.rotation_y));

@@ -25,9 +25,9 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 20: prototype implemented in demo (translate gizmo stub: overlay + explicit drag phases; Q/W tool switching; Esc cancel rollback)
 - MVP 21: prototype implemented in demo (dock drag hints + dock tab context menu; debounced layout persistence)
 - MVP 22: prototype implemented in demo (undo/redo command stack; inspector edits + translate gizmo integrate)
+- MVP 23: prototype implemented in demo (Hierarchy drag & drop emits undoable commands; undo/redo restores hierarchy + selection)
+- MVP 24: prototype implemented in demo (edit transactions + coalescing; viewport translate drag produces a single undo entry)
 - Next (recommended, Unity-like feel):
-  - MVP 23: undo/redo integration expansion (Hierarchy drag & drop)
-  - MVP 24: edit transactions + coalescing policy (continuous edits)
   - MVP 25: viewport tool polish (axis constraints + snapping stub)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
@@ -622,6 +622,10 @@ history and can be cancelled deterministically.
 
 - A long gizmo drag produces exactly one undo history entry.
 - Cancel reliably restores the pre-drag state without creating history entries.
+
+Status:
+
+- Prototype implemented in `fret-demo` for viewport translate drag.
 
 References:
 
