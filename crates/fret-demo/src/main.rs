@@ -12,6 +12,7 @@ mod property;
 mod property_edit;
 mod scene_background;
 mod undo;
+mod viewport_targets;
 mod viewport_tools;
 mod world;
 
@@ -22,6 +23,7 @@ use inspector_edit::{InspectorEditKind, InspectorEditService, parse_value};
 use property_edit::PropertyEditService;
 use scene_background::{SceneBackgroundRenderer, SceneCameraParams};
 use undo::{EditCommand, UndoStack};
+use viewport_targets::{ViewportTarget, ViewportTargets};
 use viewport_tools::{
     MarqueeSelectInteraction, PanOrbitInteraction, PanOrbitKind, RotateGizmoInteraction,
     TranslateAxisConstraint, TranslateGizmoInteraction, ViewportInteraction, ViewportToolManager,
@@ -38,7 +40,7 @@ use fret_core::{
     Axis, Color, DockLayoutNodeV1, DockLayoutV1, DockNode, DockOp, PanelKey, Rect, RenderTargetId,
     Scene,
 };
-use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
+use fret_render::{Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui::Invalidation;
 use fret_ui::dock::ViewportMarquee;
@@ -81,11 +83,8 @@ struct DemoWindowState {
 #[derive(Default)]
 struct DemoDriver {
     main_window: Option<fret_core::AppWindowId>,
-    scene_target: Option<RenderTargetId>,
-    scene_target_size: Option<(u32, u32)>,
-    scene_texture: Option<wgpu::Texture>,
-    scene_view: Option<wgpu::TextureView>,
-    scene_background: Option<SceneBackgroundRenderer>,
+    viewport_targets: Option<ViewportTargets>,
+    background: Option<SceneBackgroundRenderer>,
     logical_windows: HashMap<fret_core::AppWindowId, String>,
     window_placements: HashMap<fret_core::AppWindowId, fret_core::DockWindowPlacementV1>,
     next_floating_index: u32,
@@ -753,39 +752,31 @@ impl WinitDriver for DemoDriver {
     type WindowState = DemoWindowState;
 
     fn gpu_ready(&mut self, _app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
-        let size = 512u32;
-        let format = wgpu::TextureFormat::Rgba8UnormSrgb;
-        self.scene_background = Some(SceneBackgroundRenderer::new(&context.device, format));
-        let texture = context.device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("fret-demo scene render target"),
-            size: wgpu::Extent3d {
-                width: size,
-                height: size,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING
-                | wgpu::TextureUsages::COPY_DST
-                | wgpu::TextureUsages::RENDER_ATTACHMENT,
-            view_formats: &[],
-        });
-
-        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let ui_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let target = renderer.register_render_target(RenderTargetDescriptor {
-            view: ui_view,
-            size: (size, size),
-            format,
-            color_space: RenderTargetColorSpace::Srgb,
-        });
-
-        self.scene_target = Some(target);
-        self.scene_target_size = Some((size, size));
-        self.scene_texture = Some(texture);
-        self.scene_view = Some(view);
+        let size = (512u32, 512u32);
+        self.background = Some(SceneBackgroundRenderer::new(
+            &context.device,
+            ViewportTarget::FORMAT,
+        ));
+        let mut targets = ViewportTargets::default();
+        targets.insert(
+            PanelKey::new("core.scene"),
+            ViewportTarget::new(
+                &context.device,
+                renderer,
+                "fret-demo scene render target",
+                size,
+            ),
+        );
+        targets.insert(
+            PanelKey::new("core.game"),
+            ViewportTarget::new(
+                &context.device,
+                renderer,
+                "fret-demo game render target",
+                size,
+            ),
+        );
+        self.viewport_targets = Some(targets);
     }
 
     fn record_engine_commands(
@@ -799,81 +790,63 @@ impl WinitDriver for DemoDriver {
         _tick_id: fret_core::TickId,
         _frame_id: fret_core::FrameId,
     ) -> Vec<wgpu::CommandBuffer> {
-        let (Some(target), Some(bg)) = (self.scene_target, self.scene_background.as_ref()) else {
+        let Some(bg) = self.background.as_ref() else {
             return Vec::new();
         };
+        let Some(targets) = self.viewport_targets.as_ref() else {
+            return Vec::new();
+        };
+        let panels: Vec<PanelKey> = targets.panel_keys().cloned().collect();
 
-        let desired_target_px_size = app
-            .global::<DockManager>()
-            .and_then(|dock| dock.viewport_content_rect(window, target))
-            .map(|content| {
-                const MAX_TARGET_PX: u32 = 8192;
-                let w = (content.size.width.0 * scale_factor).round().max(1.0) as u32;
-                let h = (content.size.height.0 * scale_factor).round().max(1.0) as u32;
-                (w.min(MAX_TARGET_PX), h.min(MAX_TARGET_PX))
-            });
+        let mut cmds: Vec<wgpu::CommandBuffer> = Vec::new();
 
-        if let Some(desired) = desired_target_px_size {
-            if self.scene_target_size != Some(desired) {
-                let format = wgpu::TextureFormat::Rgba8UnormSrgb;
-                let texture = context.device.create_texture(&wgpu::TextureDescriptor {
-                    label: Some("fret-demo scene render target"),
-                    size: wgpu::Extent3d {
-                        width: desired.0,
-                        height: desired.1,
-                        depth_or_array_layers: 1,
-                    },
-                    mip_level_count: 1,
-                    sample_count: 1,
-                    dimension: wgpu::TextureDimension::D2,
-                    format,
-                    usage: wgpu::TextureUsages::TEXTURE_BINDING
-                        | wgpu::TextureUsages::RENDER_ATTACHMENT,
-                    view_formats: &[],
-                });
+        for panel in panels {
+            let camera = self.viewport_camera(&panel);
+            let Some(target_id) = self
+                .viewport_targets
+                .as_ref()
+                .and_then(|t| t.get(&panel).map(|t| t.target))
+            else {
+                continue;
+            };
+            let content = app
+                .global::<DockManager>()
+                .and_then(|dock| dock.viewport_content_rect(window, target_id));
+            let Some(content) = content else {
+                continue;
+            };
 
-                let engine_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-                let ui_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-                let updated = renderer.update_render_target(
-                    target,
-                    RenderTargetDescriptor {
-                        view: ui_view,
-                        size: desired,
-                        format,
-                        color_space: RenderTargetColorSpace::Srgb,
-                    },
-                );
-                if updated {
-                    self.scene_texture = Some(texture);
-                    self.scene_view = Some(engine_view);
-                    self.scene_target_size = Some(desired);
-                    if let Some(dock) = app.global_mut::<DockManager>() {
-                        dock.update_viewport_target_px_size(target, desired);
-                    }
-                    app.request_redraw(window);
+            let desired_px = ViewportTarget::desired_px_from_content(content, scale_factor);
+            let Some(target) = self
+                .viewport_targets
+                .as_mut()
+                .and_then(|t| t.get_mut(&panel))
+            else {
+                continue;
+            };
+
+            if target.resize(&context.device, renderer, desired_px) {
+                if let Some(dock) = app.global_mut::<DockManager>() {
+                    dock.update_viewport_target_px_size(target.target, desired_px);
                 }
+                app.request_redraw(window);
             }
+
+            cmds.push(bg.record_commands(
+                &context.device,
+                &context.queue,
+                &target.view,
+                target.target_px_size,
+                SceneCameraParams {
+                    center: camera.center,
+                    zoom: camera.zoom,
+                    rotation: camera.rotation,
+                    world_span: DemoViewportCamera::WORLD_SPAN,
+                },
+            ));
         }
 
-        let target_px_size = self.scene_target_size.unwrap_or((512, 512));
-        let Some(view) = self.scene_view.as_ref() else {
-            return Vec::new();
-        };
-        let panel = PanelKey::new("core.scene");
-        let camera = self.viewport_camera(&panel);
-        let cmd = bg.record_commands(
-            &context.device,
-            &context.queue,
-            view,
-            target_px_size,
-            SceneCameraParams {
-                center: camera.center,
-                zoom: camera.zoom,
-                rotation: camera.rotation,
-                world_span: DemoViewportCamera::WORLD_SPAN,
-            },
-        );
-        vec![cmd]
+        cmds
     }
 
     fn init(&mut self, app: &mut App, main_window: fret_core::AppWindowId) {
@@ -1813,13 +1786,37 @@ impl WinitDriver for DemoDriver {
                     b: 0.22,
                     a: 1.0,
                 },
-                viewport: self.scene_target.zip(self.scene_target_size).map(
-                    |(target, target_px_size)| ViewportPanel {
-                        target,
-                        target_px_size,
+                viewport: self
+                    .viewport_targets
+                    .as_ref()
+                    .and_then(|t| t.get(&key_scene))
+                    .map(|t| ViewportPanel {
+                        target: t.target,
+                        target_px_size: t.target_px_size,
                         fit: fret_core::ViewportFit::Contain,
-                    },
-                ),
+                    }),
+            },
+        );
+        let key_game = PanelKey::new("core.game");
+        dock.insert_panel(
+            key_game.clone(),
+            DockPanel {
+                title: "Game".to_string(),
+                color: Color {
+                    r: 0.11,
+                    g: 0.14,
+                    b: 0.18,
+                    a: 1.0,
+                },
+                viewport: self
+                    .viewport_targets
+                    .as_ref()
+                    .and_then(|t| t.get(&key_game))
+                    .map(|t| ViewportPanel {
+                        target: t.target,
+                        target_px_size: t.target_px_size,
+                        fit: fret_core::ViewportFit::Contain,
+                    }),
             },
         );
         let key_text_probe = PanelKey::new("core.text_probe");
@@ -1897,6 +1894,21 @@ impl WinitDriver for DemoDriver {
                 }
             }
 
+            let game_present = dock
+                .graph
+                .collect_panels_in_window(main_window)
+                .iter()
+                .any(|p| p == &key_game);
+            if !game_present {
+                if let Some(tabs) = dock.graph.first_tabs_in_window(main_window) {
+                    if let Some(DockNode::Tabs { tabs: list, .. }) = dock.graph.node_mut(tabs) {
+                        if !list.contains(&key_game) {
+                            list.push(key_game.clone());
+                        }
+                    }
+                }
+            }
+
             for w in &layout.windows {
                 if w.logical_window_id == "main" {
                     continue;
@@ -1914,7 +1926,7 @@ impl WinitDriver for DemoDriver {
                 active: 0,
             });
             let tabs_scene = dock.graph.insert_node(DockNode::Tabs {
-                tabs: vec![key_scene],
+                tabs: vec![key_scene, key_game],
                 active: 0,
             });
             let tabs_inspector = dock.graph.insert_node(DockNode::Tabs {

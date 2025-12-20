@@ -775,6 +775,7 @@ Goal: make embedded viewports “editor-grade” by ensuring render target sizes
   - recreate the texture,
   - `renderer.update_render_target(...)` updates the registry view + size,
   - dock panels update `ViewportPanel.target_px_size` for consistent mapping.
+- Resize policy uses a small “bucket” (e.g. 64px) to reduce reallocation churn during interactive dock resizing.
 
 **Non-goals**
 
