@@ -2,9 +2,9 @@ use crate::command_palette::{CommandPalette, OverlayBackdrop, OverlayPanelLayout
 use crate::dnd_probe::DndProbe;
 use crate::elements_mvp2::ElementsMvp2Demo;
 use crate::ime_probe::ImeProbe;
-use crate::inspector_edit_layout::{InspectorEditHint, InspectorEditLayout};
 use fret_app::Model;
 use fret_core::{AppWindowId, Axis, Color, Px};
+use fret_editor::{InspectorEditHint, InspectorEditLayout};
 use fret_ui::{
     BoundTextInput, ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel, Scroll, Split, Stack,
     Text, TextArea, TextInput, UiLayerId, UiTree, VirtualList, VirtualListDataSource,

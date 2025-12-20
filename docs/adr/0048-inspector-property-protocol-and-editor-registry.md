@@ -132,8 +132,8 @@ Notes:
 
 ## Implementation Notes (Current Prototype)
 
-- Demo protocol types + editor registry: `crates/fret-demo/src/inspector_protocol.rs`
-- Demo property edit request plumbing (commit-only for now): `crates/fret-demo/src/property_edit.rs`
+- Protocol types + editor registry (example editor layer): `crates/fret-editor/src/inspector_protocol.rs`
+- Property edit request plumbing (commit-only for now): `crates/fret-editor/src/property_edit.rs`
 - Demo inspector uses property tree + registry to build rows and routes edits through commands/services:
   - Inspector panel: `crates/fret-demo/src/editor_shell.rs`
   - Commit handler: `crates/fret-demo/src/main.rs` (`property_edit.commit`, `inspector_edit.commit`)

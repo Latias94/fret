@@ -1,15 +1,14 @@
 use crate::hierarchy::{DemoHierarchy, HierarchyDropKind, HierarchyDropTarget};
-use crate::inspector_edit::{InspectorEditKind, InspectorEditRequest, InspectorEditService};
-use crate::inspector_protocol::{
-    InspectorEditorKind, InspectorEditorRegistry, PropertyLeaf, PropertyMeta, PropertyNode,
-    PropertyTree, PropertyTypeTag,
-};
-use crate::property::PropertyPath;
-use crate::property_edit::{PropertyEditKind, PropertyEditRequest, PropertyEditService};
 use crate::undo::{EditCommand, SelectionSnapshot, UndoStack};
 use crate::world::DemoWorld;
 use fret_app::{App, Model};
 use fret_core::{Color, Corners, Edges, Event, Px, Size, TextStyle};
+use fret_editor::{
+    InspectorEditKind, InspectorEditRequest, InspectorEditService, InspectorEditorKind,
+    InspectorEditorRegistry, PropertyEditKind, PropertyEditRequest, PropertyEditService,
+    PropertyLeaf, PropertyMeta, PropertyNode, PropertyPath, PropertyTree, PropertyTypeTag,
+    PropertyValue,
+};
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, TreeView, VirtualList, Widget};
 use std::borrow::Cow;
 
@@ -70,17 +69,13 @@ impl InspectorDataSource {
             return Self { rows };
         };
 
-        fn mixed_value(
-            world: &DemoWorld,
-            targets: &[u64],
-            path: &PropertyPath,
-        ) -> crate::property::PropertyValue {
+        fn mixed_value(world: &DemoWorld, targets: &[u64], path: &PropertyPath) -> PropertyValue {
             let Some(first) = targets.first().and_then(|id| world.get_property(*id, path)) else {
-                return crate::property::PropertyValue::Mixed;
+                return PropertyValue::Mixed;
             };
             for &id in targets.iter().skip(1) {
                 if world.get_property(id, path) != Some(first.clone()) {
-                    return crate::property::PropertyValue::Mixed;
+                    return PropertyValue::Mixed;
                 }
             }
             first
@@ -169,20 +164,16 @@ impl InspectorDataSource {
                     let kind = registry.resolve_kind(leaf);
                     let action = match kind {
                         InspectorEditorKind::BoolToggle => match &leaf.value {
-                            crate::property::PropertyValue::Bool(v) => {
-                                Some(InspectorRowAction::ToggleBool {
-                                    targets: targets.to_vec(),
-                                    path: leaf.path.clone(),
-                                    current: Some(*v),
-                                })
-                            }
-                            crate::property::PropertyValue::Mixed => {
-                                Some(InspectorRowAction::ToggleBool {
-                                    targets: targets.to_vec(),
-                                    path: leaf.path.clone(),
-                                    current: None,
-                                })
-                            }
+                            PropertyValue::Bool(v) => Some(InspectorRowAction::ToggleBool {
+                                targets: targets.to_vec(),
+                                path: leaf.path.clone(),
+                                current: Some(*v),
+                            }),
+                            PropertyValue::Mixed => Some(InspectorRowAction::ToggleBool {
+                                targets: targets.to_vec(),
+                                path: leaf.path.clone(),
+                                current: None,
+                            }),
                             _ => None,
                         },
                         InspectorEditorKind::TextPopup => Some(InspectorRowAction::EditValue {
@@ -191,7 +182,7 @@ impl InspectorDataSource {
                                 path: leaf.path.clone(),
                                 kind: InspectorEditKind::String,
                                 initial_text: match &leaf.value {
-                                    crate::property::PropertyValue::String(v) => v.clone(),
+                                    PropertyValue::String(v) => v.clone(),
                                     _ => String::new(),
                                 },
                                 anchor: None,
@@ -206,7 +197,7 @@ impl InspectorDataSource {
                                     path: leaf.path.clone(),
                                     kind: InspectorEditKind::F32,
                                     initial_text: match &leaf.value {
-                                        crate::property::PropertyValue::F32(v) => match kind {
+                                        PropertyValue::F32(v) => match kind {
                                             InspectorEditorKind::AngleDegreesPopup => {
                                                 format!("{v:.1}")
                                             }
@@ -225,7 +216,7 @@ impl InspectorDataSource {
                                 path: leaf.path.clone(),
                                 kind: InspectorEditKind::Vec3,
                                 initial_text: match &leaf.value {
-                                    crate::property::PropertyValue::Vec3([x, y, z]) => {
+                                    PropertyValue::Vec3([x, y, z]) => {
                                         format!("{x:.3}, {y:.3}, {z:.3}")
                                     }
                                     _ => String::new(),
@@ -837,7 +828,7 @@ impl Widget for InspectorPanel {
                                     PropertyEditRequest {
                                         targets,
                                         path,
-                                        value: crate::property::PropertyValue::Bool(next),
+                                        value: PropertyValue::Bool(next),
                                         kind: PropertyEditKind::Commit,
                                     },
                                 );

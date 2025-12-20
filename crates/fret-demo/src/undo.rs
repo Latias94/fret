@@ -1,8 +1,8 @@
 use crate::editor_shell::DemoSelection;
 use crate::hierarchy::{DemoHierarchy, HierarchyMoveOp};
-use crate::property::{PropertyPath, PropertyValue};
 use crate::world::DemoWorld;
 use fret_app::{App, Model};
+use fret_editor::{PropertyPath, PropertyValue};
 
 #[derive(Debug, Default, Clone)]
 pub struct UndoStack {

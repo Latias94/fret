@@ -1,4 +1,4 @@
-use crate::property::{PropertyPath, PropertyValue};
+use fret_editor::{PropertyPath, PropertyValue};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]

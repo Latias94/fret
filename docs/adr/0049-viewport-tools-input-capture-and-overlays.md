@@ -114,7 +114,7 @@ Use:
 
 ## Implementation Notes (Current Prototype)
 
-- Demo tool manager + interaction state: `crates/fret-demo/src/viewport_tools.rs`
+- Tool manager + interaction state (example editor layer): `crates/fret-editor/src/viewport_tools.rs`
 - Demo tool routing from `Effect::ViewportInput`:
   - driver handler: `crates/fret-demo/src/main.rs` (`viewport_input`)
   - cancel path: `crates/fret-demo/src/main.rs` (Escape clears interaction + overlay)

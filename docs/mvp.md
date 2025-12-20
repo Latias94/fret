@@ -36,6 +36,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 30: prototype implemented in demo (Scene/Game viewport roles: tool gating + context menu control)
 - MVP 31: prototype implemented in demo (play mode stub: RAF scheduling + animated Game viewport)
 - MVP 32: prototype implemented in runner (engine frame update: render target deltas + command buffers, applied before UI render)
+- Example editor layer crate: `crates/fret-editor` extracted (inspector protocol + edit services + viewport tool state)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)

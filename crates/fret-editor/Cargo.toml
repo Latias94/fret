@@ -1,0 +1,8 @@
+[package]
+name = "fret-editor"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fret-core = { path = "../fret-core" }
+fret-ui = { path = "../fret-ui" }

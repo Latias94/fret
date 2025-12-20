@@ -659,6 +659,7 @@ dependencies = [
  "bytemuck",
  "fret-app",
  "fret-core",
+ "fret-editor",
  "fret-render",
  "fret-runner-winit-wgpu",
  "fret-ui",
@@ -668,6 +669,14 @@ dependencies = [
  "tracing-subscriber",
  "wgpu",
  "winit",
+]
+
+[[package]]
+name = "fret-editor"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-ui",
 ]
 
 [[package]]

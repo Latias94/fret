@@ -5,30 +5,17 @@ mod editor_shell;
 mod elements_mvp2;
 mod hierarchy;
 mod ime_probe;
-mod inspector_edit;
-mod inspector_edit_layout;
-mod inspector_protocol;
-mod property;
-mod property_edit;
 mod scene_background;
 mod undo;
 mod viewport_targets;
-mod viewport_tools;
 mod world;
 
 use demo_ui::{DemoLayers, DemoUiConfig, build_demo_ui};
 use editor_shell::{DemoSelection, HierarchyPanel, InspectorPanel};
 use hierarchy::DemoHierarchy;
-use inspector_edit::{InspectorEditKind, InspectorEditService, parse_value};
-use property_edit::PropertyEditService;
 use scene_background::{SceneBackgroundRenderer, SceneCameraParams};
 use undo::{EditCommand, UndoStack};
 use viewport_targets::{ViewportTarget, ViewportTargets};
-use viewport_tools::{
-    MarqueeSelectInteraction, PanOrbitInteraction, PanOrbitKind, RotateGizmoInteraction,
-    TranslateAxisConstraint, TranslateGizmoInteraction, ViewportInteraction, ViewportToolManager,
-    ViewportToolMode,
-};
 use world::DemoWorld;
 
 use fret_app::{
@@ -39,6 +26,12 @@ use fret_app::{
 use fret_core::{
     Axis, Color, DockLayoutNodeV1, DockLayoutV1, DockNode, DockOp, PanelKey, Rect, RenderTargetId,
     Scene,
+};
+use fret_editor::{
+    InspectorEditKind, InspectorEditService, MarqueeSelectInteraction, PanOrbitInteraction,
+    PanOrbitKind, PropertyEditKind, PropertyEditRequest, PropertyEditService, PropertyValue,
+    RotateGizmoInteraction, TranslateAxisConstraint, TranslateGizmoInteraction,
+    ViewportInteraction, ViewportToolManager, ViewportToolMode, parse_value,
 };
 use fret_render::{Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{
@@ -2409,11 +2402,11 @@ impl WinitDriver for DemoDriver {
                 app.with_global_mut(PropertyEditService::default, |s, _app| {
                     s.set(
                         window,
-                        crate::property_edit::PropertyEditRequest {
+                        PropertyEditRequest {
                             targets: request.targets,
                             path: request.path,
                             value,
-                            kind: crate::property_edit::PropertyEditKind::Commit,
+                            kind: PropertyEditKind::Commit,
                         },
                     );
                 });
@@ -2444,7 +2437,7 @@ impl WinitDriver for DemoDriver {
                     return;
                 };
 
-                let before: Vec<Option<crate::property::PropertyValue>> = self
+                let before: Vec<Option<PropertyValue>> = self
                     .world
                     .and_then(|world| world.get(app))
                     .map(|w| {

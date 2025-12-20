@@ -8,6 +8,7 @@ anyhow.workspace = true
 bytemuck.workspace = true
 fret-app = { path = "../fret-app" }
 fret-core = { path = "../fret-core" }
+fret-editor = { path = "../fret-editor" }
 fret-render = { path = "../fret-render" }
 fret-runner-winit-wgpu = { path = "../fret-runner-winit-wgpu" }
 fret-ui = { path = "../fret-ui" }
