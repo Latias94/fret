@@ -371,6 +371,40 @@ pub fn build_demo_ui(
                                 command: fret_app::CommandId::from("viewport.tool.rotate"),
                                 when: None,
                             },
+                            fret_app::MenuItem::Separator,
+                            fret_app::MenuItem::Submenu {
+                                title: Arc::<str>::from("Theme"),
+                                when: None,
+                                items: vec![
+                                    fret_app::MenuItem::Command {
+                                        command: fret_app::CommandId::from(
+                                            "theme.set.fret_default_dark",
+                                        ),
+                                        when: None,
+                                    },
+                                    fret_app::MenuItem::Command {
+                                        command: fret_app::CommandId::from(
+                                            "theme.set.hardhacker_dark",
+                                        ),
+                                        when: None,
+                                    },
+                                    fret_app::MenuItem::Command {
+                                        command: fret_app::CommandId::from(
+                                            "theme.set.godot_default_dark",
+                                        ),
+                                        when: None,
+                                    },
+                                    fret_app::MenuItem::Separator,
+                                    fret_app::MenuItem::Command {
+                                        command: fret_app::CommandId::from("theme.reload"),
+                                        when: None,
+                                    },
+                                    fret_app::MenuItem::Command {
+                                        command: fret_app::CommandId::from("theme.reset_override"),
+                                        when: None,
+                                    },
+                                ],
+                            },
                         ],
                     },
                 ],

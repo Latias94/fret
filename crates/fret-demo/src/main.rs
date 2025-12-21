@@ -209,6 +209,7 @@ fn load_theme(app: &mut App) {
     let candidates = [
         "./.fret/theme.json",
         "./themes/fret-default-dark.json",
+        "./themes/godot-default-dark.json",
         "./themes/hardhacker-dark.json",
     ];
     for path in candidates {
@@ -230,6 +231,22 @@ fn load_theme(app: &mut App) {
 
 fn theme_override_path() -> &'static str {
     "./.fret/theme.json"
+}
+
+fn theme_builtin_path(id: &str) -> Option<&'static str> {
+    match id {
+        "fret_default_dark" => Some("./themes/fret-default-dark.json"),
+        "hardhacker_dark" => Some("./themes/hardhacker-dark.json"),
+        "godot_default_dark" => Some("./themes/godot-default-dark.json"),
+        _ => None,
+    }
+}
+
+#[derive(Debug)]
+enum ThemeApplyOutcome {
+    Applied,
+    NoChange,
+    Failed,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -1302,6 +1319,52 @@ impl DemoDriver {
         });
     }
 
+    fn apply_theme_bytes(&mut self, app: &mut App, path: &str, bytes: &[u8]) -> ThemeApplyOutcome {
+        let cfg = match ThemeConfig::from_slice(bytes) {
+            Ok(cfg) => cfg,
+            Err(err) => {
+                tracing::error!(error = %err, path = %path, "failed to parse theme file");
+                return ThemeApplyOutcome::Failed;
+            }
+        };
+
+        let before = Theme::global(app).revision();
+        Theme::global_mut(app).apply_config(&cfg);
+        let after = Theme::global(app).revision();
+        if after == before {
+            return ThemeApplyOutcome::NoChange;
+        }
+
+        tracing::info!(theme = %cfg.name, path = %path, "applied theme");
+        for &w in self.logical_windows.keys() {
+            app.push_effect(Effect::UiInvalidateLayout { window: w });
+            app.request_redraw(w);
+        }
+        ThemeApplyOutcome::Applied
+    }
+
+    fn write_theme_override(&self, bytes: &[u8]) -> bool {
+        let path = theme_override_path();
+        if let Some(parent) = std::path::Path::new(path).parent() {
+            if let Err(err) = std::fs::create_dir_all(parent) {
+                tracing::error!(error = %err, path = %path, "failed to create theme override dir");
+                return false;
+            }
+        }
+        if let Err(err) = std::fs::write(path, bytes) {
+            tracing::error!(error = %err, path = %path, "failed to write theme override file");
+            return false;
+        }
+        true
+    }
+
+    fn reset_theme_override(&mut self) {
+        self.theme_file_modified = None;
+        self.theme_file_size = None;
+        self.theme_file_hash = None;
+        let _ = std::fs::remove_file(theme_override_path());
+    }
+
     fn reload_theme_if_changed(&mut self, app: &mut App) {
         let path = theme_override_path();
         let Ok(meta) = std::fs::metadata(path) else {
@@ -1971,6 +2034,42 @@ impl WinitDriver for DemoDriver {
                 .with_description("Toggles play mode for the Game viewport (animation preview)")
                 .with_category("Game")
                 .with_keywords(["play", "run", "game"]),
+        );
+
+        app.commands_mut().register(
+            CommandId::from("theme.reload"),
+            CommandMeta::new("Reload Theme")
+                .with_description("Reloads theme from .fret/theme.json or built-in fallbacks")
+                .with_category("View")
+                .with_keywords(["theme", "style", "reload"]),
+        );
+        app.commands_mut().register(
+            CommandId::from("theme.reset_override"),
+            CommandMeta::new("Reset Theme Override")
+                .with_description("Deletes .fret/theme.json and reloads the default theme")
+                .with_category("View")
+                .with_keywords(["theme", "style", "reset"]),
+        );
+        app.commands_mut().register(
+            CommandId::from("theme.set.fret_default_dark"),
+            CommandMeta::new("Theme: Fret Default (Dark)")
+                .with_description("Applies the built-in Fret default dark theme")
+                .with_category("View")
+                .with_keywords(["theme", "style", "fret"]),
+        );
+        app.commands_mut().register(
+            CommandId::from("theme.set.hardhacker_dark"),
+            CommandMeta::new("Theme: HardHacker-inspired Dark")
+                .with_description("Applies the built-in HardHacker-inspired dark theme")
+                .with_category("View")
+                .with_keywords(["theme", "style", "hardhacker"]),
+        );
+        app.commands_mut().register(
+            CommandId::from("theme.set.godot_default_dark"),
+            CommandMeta::new("Theme: Godot Default (Dark)")
+                .with_description("Applies the built-in Godot default dark theme mapping")
+                .with_category("View")
+                .with_keywords(["theme", "style", "godot"]),
         );
 
         app.commands_mut().register(
@@ -3711,6 +3810,42 @@ impl WinitDriver for DemoDriver {
                 for &w in self.logical_windows.keys() {
                     app.request_redraw(w);
                 }
+            }
+            "theme.reload" => {
+                load_theme(app);
+                for &w in self.logical_windows.keys() {
+                    app.push_effect(Effect::UiInvalidateLayout { window: w });
+                    app.request_redraw(w);
+                }
+            }
+            "theme.reset_override" => {
+                self.reset_theme_override();
+                load_theme(app);
+                for &w in self.logical_windows.keys() {
+                    app.push_effect(Effect::UiInvalidateLayout { window: w });
+                    app.request_redraw(w);
+                }
+            }
+            "theme.set.fret_default_dark"
+            | "theme.set.hardhacker_dark"
+            | "theme.set.godot_default_dark" => {
+                let id = command
+                    .as_str()
+                    .strip_prefix("theme.set.")
+                    .unwrap_or_default();
+                let Some(src_path) = theme_builtin_path(id) else {
+                    return;
+                };
+
+                let Ok(bytes) = std::fs::read(src_path) else {
+                    tracing::error!(path = %src_path, "failed to read built-in theme file");
+                    return;
+                };
+
+                // Persist as the active theme override so future launches keep the selection.
+                let _ = self.write_theme_override(&bytes);
+
+                let _ = self.apply_theme_bytes(app, src_path, &bytes);
             }
             "dock.tab.close" | "dock.tab.float" | "dock.tab.move_left" | "dock.tab.move_right" => {
                 let Some(dock) = app.global_mut::<DockManager>() else {
