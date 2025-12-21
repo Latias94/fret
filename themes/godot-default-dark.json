@@ -28,7 +28,18 @@
 
     "color.scrollbar.track": "#121212B3",
     "color.scrollbar.thumb": "#272727CC",
-    "color.scrollbar.thumb.hover": "#3A3A3ACC"
+    "color.scrollbar.thumb.hover": "#3A3A3ACC",
+
+    "color.viewport.selection.fill": "#569EFF29",
+    "color.viewport.selection.stroke": "#569EFFD9",
+    "color.viewport.marker": "#569EFFF2",
+    "color.viewport.drag_line.pan": "#569EFFD9",
+    "color.viewport.drag_line.orbit": "#FFD24AD9",
+    "color.viewport.gizmo.x": "#FF4D4D",
+    "color.viewport.gizmo.y": "#4DFF88",
+    "color.viewport.gizmo.handle.background": "#141414",
+    "color.viewport.gizmo.handle.border": "#C9C9C9",
+    "color.viewport.rotate_gizmo": "#FFD24A"
   },
   "metrics": {
     "metric.radius.sm": 6,

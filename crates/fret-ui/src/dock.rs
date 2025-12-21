@@ -1415,10 +1415,10 @@ fn paint_viewport_overlay(
         paint_viewport_selection_rect(content, sel, scene);
     }
     if let Some(gizmo) = overlay.gizmo {
-        paint_viewport_gizmo(content, gizmo, scene);
+        paint_viewport_gizmo(theme, content, gizmo, scene);
     }
     if let Some(gizmo) = overlay.rotate_gizmo {
-        paint_viewport_rotate_gizmo(content, gizmo, scene);
+        paint_viewport_rotate_gizmo(theme, content, gizmo, scene);
     }
     if let Some(m) = overlay.marquee {
         paint_viewport_marquee(theme, content, m, scene);
@@ -1431,7 +1431,12 @@ fn paint_viewport_overlay(
     }
 }
 
-fn paint_viewport_gizmo(content: Rect, gizmo: ViewportGizmo, scene: &mut Scene) {
+fn paint_viewport_gizmo(
+    theme: crate::ThemeSnapshot,
+    content: Rect,
+    gizmo: ViewportGizmo,
+    scene: &mut Scene,
+) {
     let (u, v) = gizmo.center_uv;
     let x = content.origin.x.0 + content.size.width.0 * u;
     let y = content.origin.y.0 + content.size.height.0 * v;
@@ -1467,16 +1472,12 @@ fn paint_viewport_gizmo(content: Rect, gizmo: ViewportGizmo, scene: &mut Scene) 
         0.85
     };
     let x_color = Color {
-        r: 0.92,
-        g: 0.28,
-        b: 0.30,
         a: x_axis_alpha,
+        ..theme.colors.viewport_gizmo_x
     };
     let y_color = Color {
-        r: 0.25,
-        g: 0.88,
-        b: 0.40,
         a: y_axis_alpha,
+        ..theme.colors.viewport_gizmo_y
     };
 
     scene.push(SceneOp::Quad {
@@ -1506,23 +1507,24 @@ fn paint_viewport_gizmo(content: Rect, gizmo: ViewportGizmo, scene: &mut Scene) 
             Size::new(handle, handle),
         ),
         background: Color {
-            r: 0.08,
-            g: 0.08,
-            b: 0.10,
             a: 0.85,
+            ..theme.colors.viewport_gizmo_handle_background
         },
         border: Edges::all(handle_border),
         border_color: Color {
-            r: 0.92,
-            g: 0.92,
-            b: 0.95,
-            a: 0.9,
+            a: 0.90,
+            ..theme.colors.viewport_gizmo_handle_border
         },
         corner_radii: fret_core::Corners::all(Px(2.0)),
     });
 }
 
-fn paint_viewport_rotate_gizmo(content: Rect, gizmo: ViewportRotateGizmo, scene: &mut Scene) {
+fn paint_viewport_rotate_gizmo(
+    theme: crate::ThemeSnapshot,
+    content: Rect,
+    gizmo: ViewportRotateGizmo,
+    scene: &mut Scene,
+) {
     let (u, v) = gizmo.center_uv;
     let x = content.origin.x.0 + content.size.width.0 * u;
     let y = content.origin.y.0 + content.size.height.0 * v;
@@ -1531,10 +1533,8 @@ fn paint_viewport_rotate_gizmo(content: Rect, gizmo: ViewportRotateGizmo, scene:
     let t = if gizmo.highlight { Px(3.0) } else { Px(2.0) };
     let a = if gizmo.highlight { 0.95 } else { 0.75 };
     let color = Color {
-        r: 0.98,
-        g: 0.82,
-        b: 0.28,
         a,
+        ..theme.colors.viewport_rotate_gizmo
     };
 
     scene.push(SceneOp::Quad {

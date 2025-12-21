@@ -68,6 +68,17 @@ pub struct ThemeColors {
     pub scrollbar_track: Color,
     pub scrollbar_thumb: Color,
     pub scrollbar_thumb_hover: Color,
+
+    pub viewport_selection_fill: Color,
+    pub viewport_selection_stroke: Color,
+    pub viewport_marker: Color,
+    pub viewport_drag_line_pan: Color,
+    pub viewport_drag_line_orbit: Color,
+    pub viewport_gizmo_x: Color,
+    pub viewport_gizmo_y: Color,
+    pub viewport_gizmo_handle_background: Color,
+    pub viewport_gizmo_handle_border: Color,
+    pub viewport_rotate_gizmo: Color,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -178,6 +189,38 @@ impl Theme {
         apply_color!(
             "color.scrollbar.thumb.hover",
             self.colors.scrollbar_thumb_hover
+        );
+
+        apply_color!(
+            "color.viewport.selection.fill",
+            self.colors.viewport_selection_fill
+        );
+        apply_color!(
+            "color.viewport.selection.stroke",
+            self.colors.viewport_selection_stroke
+        );
+        apply_color!("color.viewport.marker", self.colors.viewport_marker);
+        apply_color!(
+            "color.viewport.drag_line.pan",
+            self.colors.viewport_drag_line_pan
+        );
+        apply_color!(
+            "color.viewport.drag_line.orbit",
+            self.colors.viewport_drag_line_orbit
+        );
+        apply_color!("color.viewport.gizmo.x", self.colors.viewport_gizmo_x);
+        apply_color!("color.viewport.gizmo.y", self.colors.viewport_gizmo_y);
+        apply_color!(
+            "color.viewport.gizmo.handle.background",
+            self.colors.viewport_gizmo_handle_background
+        );
+        apply_color!(
+            "color.viewport.gizmo.handle.border",
+            self.colors.viewport_gizmo_handle_border
+        );
+        apply_color!(
+            "color.viewport.rotate_gizmo",
+            self.colors.viewport_rotate_gizmo
         );
 
         apply_metric!("metric.radius.sm", self.metrics.radius_sm);
@@ -334,6 +377,67 @@ fn default_theme() -> &'static Theme {
                 g: 0.55,
                 b: 0.58,
                 a: 0.90,
+            },
+
+            viewport_selection_fill: Color {
+                r: 0.20,
+                g: 0.45,
+                b: 0.95,
+                a: 0.16,
+            },
+            viewport_selection_stroke: Color {
+                r: 0.20,
+                g: 0.45,
+                b: 0.95,
+                a: 0.85,
+            },
+            viewport_marker: Color {
+                r: 0.20,
+                g: 0.45,
+                b: 0.95,
+                a: 0.95,
+            },
+            viewport_drag_line_pan: Color {
+                r: 0.25,
+                g: 0.92,
+                b: 0.55,
+                a: 0.85,
+            },
+            viewport_drag_line_orbit: Color {
+                r: 1.0,
+                g: 0.82,
+                b: 0.28,
+                a: 0.85,
+            },
+            viewport_gizmo_x: Color {
+                r: 0.92,
+                g: 0.28,
+                b: 0.30,
+                a: 1.0,
+            },
+            viewport_gizmo_y: Color {
+                r: 0.25,
+                g: 0.88,
+                b: 0.40,
+                a: 1.0,
+            },
+            viewport_gizmo_handle_background: Color {
+                r: 0.08,
+                g: 0.08,
+                b: 0.10,
+                a: 1.0,
+            },
+            viewport_gizmo_handle_border: Color {
+                r: 0.92,
+                g: 0.92,
+                b: 0.95,
+                a: 1.0,
+            },
+            viewport_rotate_gizmo: Color {
+                r: 0.98,
+                g: 0.82,
+                b: 0.28,
+                a: 1.0,
             },
         },
     })

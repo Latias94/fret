@@ -64,6 +64,19 @@ Fret defines a small set of typed tokens, grouped by function:
 - `color.scrollbar.thumb`
 - `color.scrollbar.thumb.hover`
 
+**Viewport overlays (editor)**
+
+- `color.viewport.selection.fill`
+- `color.viewport.selection.stroke`
+- `color.viewport.marker`
+- `color.viewport.drag_line.pan`
+- `color.viewport.drag_line.orbit`
+- `color.viewport.gizmo.x`
+- `color.viewport.gizmo.y`
+- `color.viewport.gizmo.handle.background`
+- `color.viewport.gizmo.handle.border`
+- `color.viewport.rotate_gizmo`
+
 **Metrics**
 
 - `metric.radius.sm`, `metric.radius.md`, `metric.radius.lg`

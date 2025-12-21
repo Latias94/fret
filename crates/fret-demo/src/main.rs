@@ -543,18 +543,9 @@ impl DemoDriver {
             )
         });
 
-        let selection_fill = Color {
-            r: 0.20,
-            g: 0.45,
-            b: 0.95,
-            a: 0.16,
-        };
-        let selection_stroke = Color {
-            r: 0.20,
-            g: 0.45,
-            b: 0.95,
-            a: 0.85,
-        };
+        let theme = Theme::global(app).snapshot();
+        let selection_fill = theme.colors.viewport_selection_fill;
+        let selection_stroke = theme.colors.viewport_selection_stroke;
 
         let Some(dock) = app.global_mut::<DockManager>() else {
             return;
@@ -586,12 +577,7 @@ impl DemoDriver {
 
             let marker = marker_uv.map(|uv| fret_ui::dock::ViewportMarker {
                 uv,
-                color: Color {
-                    r: 0.20,
-                    g: 0.45,
-                    b: 0.95,
-                    a: 0.95,
-                },
+                color: theme.colors.viewport_marker,
             });
 
             let selection_rect = if let Some(center_uv) = marker_uv_from_world {
@@ -3573,19 +3559,10 @@ impl WinitDriver for DemoDriver {
                             }
                         }
 
+                        let theme = Theme::global(app).snapshot();
                         let color = match m.kind {
-                            PanOrbitKind::Orbit => Color {
-                                r: 1.0,
-                                g: 0.82,
-                                b: 0.28,
-                                a: 0.85,
-                            },
-                            PanOrbitKind::Pan => Color {
-                                r: 0.25,
-                                g: 0.92,
-                                b: 0.55,
-                                a: 0.85,
-                            },
+                            PanOrbitKind::Orbit => theme.colors.viewport_drag_line_orbit,
+                            PanOrbitKind::Pan => theme.colors.viewport_drag_line_pan,
                         };
 
                         drag_line_update = Some(Some(fret_ui::dock::ViewportDragLine {
