@@ -175,7 +175,6 @@ This rule is required for predictable editor UX.
 - External drag initiation support for file exports and asset drags.
 - Rich clipboard formats (images, MIME bytes) and per-platform nuances.
 - Touch/pen drag policy and gesture integration.
-- Replace pointer-event broadcasting hacks with an explicit internal-drag routing channel (see “ImGui-style multi-viewport routing” below).
 
 ## Implementation Notes (Current Prototype)
 
@@ -223,6 +222,11 @@ Benefits:
 - Removes runner-level “DockPanel” special-cases and reduces accidental side-effects on unrelated widgets.
 - Matches editor-grade docking behavior patterns used by Dear ImGui (hovered viewport semantics).
 - Makes it easier to support future backends (wasm single-canvas can still compute hovered logical windows).
+
+Implementation status:
+
+- Prototype implemented: dock drag uses `Event::InternalDrag` for cross-window hover/drop, and the runner no longer
+  broadcasts `PointerEvent::Move` across windows.
 
 External OS file DnD prototype:
 

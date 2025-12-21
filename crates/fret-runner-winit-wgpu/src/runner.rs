@@ -792,10 +792,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         true
     }
 
-    fn route_internal_drag_hover_from_cursor(
-        &mut self,
-        source_window: fret_core::AppWindowId,
-    ) -> bool {
+    fn route_internal_drag_hover_from_cursor(&mut self) -> bool {
         let Some(drag) = self.app.drag() else {
             return self.clear_internal_drag_hover_if_needed();
         };
@@ -808,7 +805,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         };
 
         let mut hovered = self.window_under_cursor(screen_pos, None);
-        if hovered == Some(source_window) {
+        if hovered == Some(drag.source_window) {
             hovered = None;
         }
         if hovered != self.internal_drag_hover_window {
@@ -842,10 +839,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         true
     }
 
-    fn route_internal_drag_drop_from_cursor(
-        &mut self,
-        source_window: fret_core::AppWindowId,
-    ) -> bool {
+    fn route_internal_drag_drop_from_cursor(&mut self) -> bool {
         let Some(drag) = self.app.drag() else {
             return false;
         };
@@ -863,7 +857,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         let Some(target) = self.window_under_cursor(screen_pos, None) else {
             return false;
         };
-        if target == source_window {
+        if target == drag.source_window {
             return false;
         }
         let Some(pos) = self.local_pos_for_window(target, screen_pos) else {
@@ -1308,7 +1302,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                         modifiers: self.modifiers,
                     },
                 );
-                self.route_internal_drag_hover_from_cursor(app_window);
+                self.route_internal_drag_hover_from_cursor();
                 self.drain_effects(event_loop);
             }
             WindowEvent::MouseInput { state, button, .. } => {
@@ -1345,7 +1339,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     }
                     ElementState::Released => {
                         if button == fret_core::MouseButton::Left {
-                            self.route_internal_drag_drop_from_cursor(app_window);
+                            self.route_internal_drag_drop_from_cursor();
                         }
                         self.dispatch_pointer_event(
                             app_window,

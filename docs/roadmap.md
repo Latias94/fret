@@ -168,10 +168,6 @@ validate that the framework contracts are sufficient.
 Remaining work (still P0, but can iterate after MVP2):
 
 - Persist/restore window placement (monitor + DPI-aware geometry) separate from the logical dock layout. (prototype implemented; stored as `DockLayoutWindowV1.placement`)
-- Replace the current “broadcast `PointerEvent::Move` during dock drags” stopgap with an explicit internal-drag routing channel:
-  - track pointer in screen-space logical pixels,
-  - compute hovered window-under-cursor,
-  - emit `InternalDragEnter/Over/Leave/Drop` events per-window for editor-grade cross-window docking UX (ImGui multi-viewport mental model; see ADR 0041).
 - Improve hit-testing + drop-zone heuristics and polish the UX (snap thresholds, preview animations).
   - “Product UI” affordances to match Unity/Godot:
     - dock drag hint overlay and tab drop indicators (Godot-style),
