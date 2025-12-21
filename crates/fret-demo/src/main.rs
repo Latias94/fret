@@ -2235,8 +2235,16 @@ impl WinitDriver for DemoDriver {
             self.viewport_tools = Some(app.models_mut().insert(ViewportToolManager::default()));
         }
         let inspector_edit_buffer = app.models_mut().insert(String::new());
-        let (mut ui, layers) =
-            build_demo_ui(window, DemoUiConfig::default(), inspector_edit_buffer);
+        let viewport_tools = self
+            .viewport_tools
+            .unwrap_or_else(|| app.models_mut().insert(ViewportToolManager::default()));
+        self.viewport_tools = Some(viewport_tools);
+        let (mut ui, layers) = build_demo_ui(
+            window,
+            DemoUiConfig::default(),
+            inspector_edit_buffer,
+            viewport_tools,
+        );
 
         let key_hierarchy = PanelKey::new("core.hierarchy");
         let key_project = PanelKey::new("core.project");

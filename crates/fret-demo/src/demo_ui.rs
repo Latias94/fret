@@ -5,12 +5,14 @@ use crate::ime_probe::ImeProbe;
 use fret_app::Model;
 use fret_core::{AppWindowId, Axis, Color, Px};
 use fret_editor::{InspectorEditHint, InspectorEditLayout};
+use fret_editor::{ViewportToolManager, ViewportToolMode};
 use fret_ui::{
-    BoundTextInput, ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel, PanelThemeBackground,
-    Scroll, Split, Stack, Text, TextArea, TextInput, UiLayerId, UiTree, VirtualList,
-    VirtualListDataSource, VirtualListRow,
+    BoundTextInput, ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel, HeaderBody,
+    PanelThemeBackground, Scroll, Split, Stack, Text, TextArea, TextInput, Toolbar, ToolbarItem,
+    UiLayerId, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
 };
 use std::borrow::Cow;
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 struct LazyEntityList {
@@ -66,10 +68,57 @@ pub struct DemoLayers {
     pub dockspace_node: fret_core::NodeId,
 }
 
+struct DemoToolbar {
+    tools: Model<ViewportToolManager>,
+    toolbar: Toolbar,
+}
+
+impl DemoToolbar {
+    pub fn new(tools: Model<ViewportToolManager>) -> Self {
+        Self {
+            tools,
+            toolbar: Toolbar::new(Vec::new()),
+        }
+    }
+
+    fn rebuild_items(&mut self, app: &mut fret_app::App) {
+        let mode = self.tools.get(app).map(|t| t.active).unwrap_or_default();
+
+        let items = vec![
+            ToolbarItem::new("Select", "viewport.tool.select")
+                .with_selected(mode == ViewportToolMode::Select),
+            ToolbarItem::new("Move", "viewport.tool.move")
+                .with_selected(mode == ViewportToolMode::Move),
+            ToolbarItem::new("Rotate", "viewport.tool.rotate")
+                .with_selected(mode == ViewportToolMode::Rotate),
+            ToolbarItem::new(Arc::<str>::from("Play"), "demo.play.toggle"),
+        ];
+        self.toolbar.set_items(items);
+    }
+}
+
+impl fret_ui::Widget for DemoToolbar {
+    fn event(&mut self, cx: &mut fret_ui::EventCx<'_>, event: &fret_core::Event) {
+        self.rebuild_items(cx.app);
+        self.toolbar.event(cx, event);
+    }
+
+    fn layout(&mut self, cx: &mut fret_ui::LayoutCx<'_>) -> fret_core::Size {
+        self.rebuild_items(cx.app);
+        self.toolbar.layout(cx)
+    }
+
+    fn paint(&mut self, cx: &mut fret_ui::PaintCx<'_>) {
+        self.rebuild_items(cx.app);
+        self.toolbar.paint(cx);
+    }
+}
+
 pub fn build_demo_ui(
     window: AppWindowId,
     config: DemoUiConfig,
     inspector_edit_buffer: Model<String>,
+    viewport_tools: Model<ViewportToolManager>,
 ) -> (UiTree, DemoLayers) {
     let mut ui = UiTree::new();
     ui.set_window(window);
@@ -80,8 +129,14 @@ pub fn build_demo_ui(
     let bg = ui.create_node(ColoredPanel::themed(PanelThemeBackground::Surface, 1.0));
     ui.add_child(root, bg);
 
+    let frame = ui.create_node(HeaderBody::new(Px(44.0)));
+    ui.add_child(root, frame);
+
+    let toolbar = ui.create_node(DemoToolbar::new(viewport_tools));
+    ui.add_child(frame, toolbar);
+
     let split = ui.create_node(Split::new(Axis::Horizontal, config.split_fraction));
-    ui.add_child(root, split);
+    ui.add_child(frame, split);
 
     let dock = ui.create_node(DockSpace::new(window));
     ui.add_child(split, dock);
