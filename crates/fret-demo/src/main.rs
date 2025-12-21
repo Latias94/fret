@@ -146,7 +146,11 @@ struct DemoDriver {
 }
 
 fn load_theme(app: &mut App) {
-    let candidates = ["./.fret/theme.json", "./themes/hardhacker-dark.json"];
+    let candidates = [
+        "./.fret/theme.json",
+        "./themes/fret-default-dark.json",
+        "./themes/hardhacker-dark.json",
+    ];
     for path in candidates {
         let Ok(bytes) = std::fs::read(path) else {
             continue;
