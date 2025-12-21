@@ -1055,15 +1055,16 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
 
         match event {
             WindowEvent::CloseRequested => {
-                let is_main = Some(app_window) == self.main_window;
-                if is_main && self.config.exit_on_main_window_close {
-                    event_loop.exit();
-                    return;
+                if let Some(state) = self.windows.get_mut(app_window) {
+                    self.driver.handle_event(
+                        &mut self.app,
+                        unsafe { &mut *text_ptr },
+                        app_window,
+                        &mut state.user,
+                        &Event::WindowCloseRequested,
+                    );
                 }
-                self.close_window(app_window);
-                if is_main && self.windows.is_empty() {
-                    event_loop.exit();
-                }
+                self.drain_effects(event_loop);
             }
             WindowEvent::ModifiersChanged(mods) => {
                 self.raw_modifiers = mods.state();

@@ -2,6 +2,7 @@ use crate::command_palette::{CommandPalette, OverlayBackdrop, OverlayPanelLayout
 use crate::dnd_probe::DndProbe;
 use crate::elements_mvp2::ElementsMvp2Demo;
 use crate::ime_probe::ImeProbe;
+use crate::overlay_layouts::CenteredOverlayLayout;
 use fret_app::Model;
 use fret_core::{AppWindowId, Axis, Color, Px};
 use fret_editor::{InspectorEditHint, InspectorEditLayout};
@@ -294,9 +295,40 @@ Goal: foundation for Console/Inspector/code editor.",
         }
     };
 
-    let modal_root = ui.create_node(ColoredPanel::themed(PanelThemeBackground::Surface, 0.45));
+    let modal_root = ui.create_node(CenteredOverlayLayout::new(Px(520.0), Px(170.0)));
     let modal = ui.push_overlay_root(modal_root, true);
     ui.set_layer_visible(modal, false);
+
+    let modal_backdrop = ui.create_node(OverlayBackdrop::new(
+        PanelThemeBackground::Surface,
+        0.55,
+        fret_app::CommandId::from("unsaved_dialog.cancel"),
+    ));
+    ui.add_child(modal_root, modal_backdrop);
+
+    let modal_panel = ui.create_node(Stack::new());
+    ui.add_child(modal_root, modal_panel);
+
+    let modal_bg = ui.create_node(ColoredPanel::themed(PanelThemeBackground::Panel, 1.0));
+    ui.add_child(modal_panel, modal_bg);
+
+    let modal_col = ui.create_node(Column::new().with_padding(Px(14.0)).with_spacing(Px(10.0)));
+    ui.add_child(modal_panel, modal_col);
+
+    let modal_title = ui.create_node(Text::new("Unsaved changes"));
+    ui.add_child(modal_col, modal_title);
+
+    let modal_msg = ui.create_node(Text::new(
+        "The current scene has unsaved changes.\nDo you want to save before continuing?",
+    ));
+    ui.add_child(modal_col, modal_msg);
+
+    let modal_actions = ui.create_node(Toolbar::new(vec![
+        ToolbarItem::new("Save", "unsaved_dialog.save"),
+        ToolbarItem::new("Don't Save", "unsaved_dialog.discard"),
+        ToolbarItem::new("Cancel", "unsaved_dialog.cancel"),
+    ]));
+    ui.add_child(modal_col, modal_actions);
 
     let dnd_root = ui.create_node(ColoredPanel::themed(PanelThemeBackground::Panel, 0.22));
     let external_dnd = ui.push_overlay_root_ex(dnd_root, false, false);

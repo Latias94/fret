@@ -7,11 +7,13 @@ mod editor_shell;
 mod elements_mvp2;
 mod hierarchy;
 mod ime_probe;
+mod overlay_layouts;
 mod project_panel;
 mod scene_background;
 mod scene_document;
 mod text_probe_panel;
 mod undo;
+mod unsaved_changes;
 mod viewport_asset_drop;
 mod viewport_targets;
 mod world;
@@ -67,6 +69,7 @@ use std::{
     time::{Duration, Instant, SystemTime},
 };
 use text_probe_panel::{TextProbePanel, TextProbeService};
+use unsaved_changes::{UnsavedChangesService, UnsavedContinuation};
 use winit::event_loop::EventLoop;
 
 use serde::{Deserialize, Serialize};
@@ -128,6 +131,7 @@ struct DemoWindowState {
     palette_previous_focus: Option<fret_core::NodeId>,
     context_menu_previous_focus: Option<fret_core::NodeId>,
     inspector_edit_previous_focus: Option<fret_core::NodeId>,
+    unsaved_dialog_previous_focus: Option<fret_core::NodeId>,
     inspector_edit_buffer: Model<String>,
 }
 
@@ -382,7 +386,10 @@ impl DemoDriver {
                     return AssetDropDecision::Ignored;
                 }
 
-                if cx.driver.open_scene_by_guid(cx.app, cx.guid) {
+                if cx
+                    .driver
+                    .open_scene_by_guid_or_prompt(cx.app, cx.window, cx.guid)
+                {
                     AssetDropDecision::Handled
                 } else {
                     AssetDropDecision::Ignored
@@ -444,7 +451,9 @@ impl DemoDriver {
                     && cx.extension == Some("scene")
             }),
             apply: Box::new(|cx| {
-                let ok = cx.driver.open_scene_by_guid(cx.app, cx.guid);
+                let ok = cx
+                    .driver
+                    .open_scene_by_guid_or_prompt(cx.app, cx.window, cx.guid);
                 if !ok {
                     return AssetOpenDecision::Ignored;
                 }
@@ -488,6 +497,75 @@ impl DemoDriver {
         app.with_global_mut(SceneDocumentService::default, |s, _app| {
             s.set_dirty(true);
         });
+    }
+
+    fn is_scene_dirty(app: &App) -> bool {
+        app.global::<SceneDocumentService>()
+            .is_some_and(|s| s.dirty())
+    }
+
+    fn has_current_scene(app: &App) -> bool {
+        app.global::<CurrentSceneService>()
+            .and_then(|s| s.guid())
+            .is_some()
+    }
+
+    fn prompt_unsaved(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        action: UnsavedContinuation,
+    ) {
+        app.with_global_mut(UnsavedChangesService::default, |s, _app| {
+            s.set_pending(window, action);
+        });
+        app.push_effect(Effect::Command {
+            window: Some(window),
+            command: CommandId::from("unsaved_dialog.open"),
+        });
+    }
+
+    fn open_scene_by_guid_or_prompt(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        guid: fret_editor::AssetGuid,
+    ) -> bool {
+        if Self::is_scene_dirty(app) && Self::has_current_scene(app) {
+            self.prompt_unsaved(app, window, UnsavedContinuation::OpenScene { guid });
+            return true;
+        }
+        self.open_scene_by_guid(app, guid)
+    }
+
+    fn handle_window_close_requested(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut DemoWindowState,
+    ) {
+        let dirty = Self::is_scene_dirty(app) && Self::has_current_scene(app);
+        let key_scene = PanelKey::new("core.scene");
+        let contains_scene_panel = app.global::<DockManager>().is_some_and(|dock| {
+            dock.graph
+                .collect_panels_in_window(window)
+                .iter()
+                .any(|p| p == &key_scene)
+        });
+        let is_main = Some(window) == self.main_window;
+
+        if dirty && (is_main || contains_scene_panel) {
+            self.prompt_unsaved(app, window, UnsavedContinuation::CloseWindow { window });
+            if !state.ui.is_layer_visible(state.layers.modal) {
+                state.unsaved_dialog_previous_focus = state.ui.focus();
+                state.ui.set_layer_visible(state.layers.modal, true);
+                state.ui.set_focus(None);
+            }
+            app.request_redraw(window);
+            return;
+        }
+
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
     }
 
     fn sync_scene_chrome(&mut self, app: &mut App) {
@@ -1472,6 +1550,7 @@ impl WinitDriver for DemoDriver {
         app.with_global_mut(TextProbeService::default, |s, _app| {
             s.set(None, TEXT_PROBE_DEFAULT.to_string());
         });
+        app.set_global(UnsavedChangesService::default());
         app.set_global(InspectorEditService::default());
         app.set_global(PropertyEditService::default());
         load_theme(app);
@@ -1538,6 +1617,37 @@ impl WinitDriver for DemoDriver {
                 .with_description("Opens the selected asset using the editor action registry")
                 .with_category("Project")
                 .with_keywords(["asset", "open"]),
+        );
+
+        app.commands_mut().register(
+            CommandId::from("unsaved_dialog.open"),
+            CommandMeta::new("Internal: Open Unsaved Changes Dialog")
+                .with_description("Internal: opens the unsaved changes confirmation dialog")
+                .with_category("Internal")
+                .hidden(),
+        );
+        app.commands_mut().register(
+            CommandId::from("unsaved_dialog.save"),
+            CommandMeta::new("Internal: Save (Unsaved Dialog)")
+                .with_description("Internal: saves and continues the pending unsaved action")
+                .with_category("Internal")
+                .hidden(),
+        );
+        app.commands_mut().register(
+            CommandId::from("unsaved_dialog.discard"),
+            CommandMeta::new("Internal: Discard (Unsaved Dialog)")
+                .with_description(
+                    "Internal: discards changes and continues the pending unsaved action",
+                )
+                .with_category("Internal")
+                .hidden(),
+        );
+        app.commands_mut().register(
+            CommandId::from("unsaved_dialog.cancel"),
+            CommandMeta::new("Internal: Cancel (Unsaved Dialog)")
+                .with_description("Internal: cancels the pending unsaved action")
+                .with_category("Internal")
+                .hidden(),
         );
 
         app.commands_mut().register(
@@ -2767,6 +2877,7 @@ impl WinitDriver for DemoDriver {
             palette_previous_focus: None,
             context_menu_previous_focus: None,
             inspector_edit_previous_focus: None,
+            unsaved_dialog_previous_focus: None,
             inspector_edit_buffer,
         }
     }
@@ -2790,6 +2901,11 @@ impl WinitDriver for DemoDriver {
         state: &mut Self::WindowState,
         event: &fret_core::Event,
     ) {
+        if matches!(event, fret_core::Event::WindowCloseRequested) {
+            self.handle_window_close_requested(app, window, state);
+            return;
+        }
+
         if let fret_core::Event::ExternalDrag(drag) = event {
             tracing::info!(window = ?window, ?drag, "external drag event received");
             match &drag.kind {
@@ -3480,6 +3596,89 @@ impl WinitDriver for DemoDriver {
                 let vis = state.ui.is_layer_visible(state.layers.external_dnd);
                 state.ui.set_layer_visible(state.layers.external_dnd, !vis);
                 app.request_redraw(window);
+            }
+            "unsaved_dialog.open" => {
+                let pending_for_window = app
+                    .global::<UnsavedChangesService>()
+                    .and_then(|s| s.pending())
+                    .is_some_and(|(w, _)| w == window);
+                if !pending_for_window {
+                    return;
+                }
+                if !state.ui.is_layer_visible(state.layers.modal) {
+                    state.unsaved_dialog_previous_focus = state.ui.focus();
+                    state.ui.set_layer_visible(state.layers.modal, true);
+                    state.ui.set_focus(None);
+                    app.request_redraw(window);
+                }
+            }
+            "unsaved_dialog.cancel" => {
+                if state.ui.is_layer_visible(state.layers.modal) {
+                    state.ui.set_layer_visible(state.layers.modal, false);
+                }
+                app.with_global_mut(UnsavedChangesService::default, |s, _app| {
+                    s.clear();
+                });
+                if let Some(prev) = state.unsaved_dialog_previous_focus.take() {
+                    state.ui.set_focus(Some(prev));
+                }
+                app.request_redraw(window);
+            }
+            "unsaved_dialog.save" | "unsaved_dialog.discard" => {
+                let pending = app
+                    .global::<UnsavedChangesService>()
+                    .and_then(|s| s.pending());
+                let Some((pending_window, action)) = pending else {
+                    return;
+                };
+                if pending_window != window {
+                    return;
+                }
+
+                let continue_after = if command.as_str() == "unsaved_dialog.save" {
+                    self.save_current_scene(app)
+                } else {
+                    app.with_global_mut(SceneDocumentService::default, |s, _app| {
+                        s.set_dirty(false);
+                    });
+                    true
+                };
+                if !continue_after {
+                    return;
+                }
+
+                if state.ui.is_layer_visible(state.layers.modal) {
+                    state.ui.set_layer_visible(state.layers.modal, false);
+                }
+                app.with_global_mut(UnsavedChangesService::default, |s, _app| {
+                    s.clear();
+                });
+                if let Some(prev) = state.unsaved_dialog_previous_focus.take() {
+                    state.ui.set_focus(Some(prev));
+                }
+
+                match action {
+                    UnsavedContinuation::OpenScene { guid } => {
+                        let _ = self.open_scene_by_guid(app, guid);
+                        let key = PanelKey::new("core.scene");
+                        let op = asset_open::activate_panel_tab(app, window, key.clone()).or_else(
+                            || {
+                                self.main_window
+                                    .and_then(|w| asset_open::activate_panel_tab(app, w, key))
+                            },
+                        );
+                        if let Some(op) = op {
+                            app.push_effect(Effect::Dock(op));
+                        }
+                    }
+                    UnsavedContinuation::CloseWindow { window: w } => {
+                        app.push_effect(Effect::Window(WindowRequest::Close(w)));
+                    }
+                }
+
+                for &w in self.logical_windows.keys() {
+                    app.request_redraw(w);
+                }
             }
             "asset.open_selected" => {
                 let guid = app

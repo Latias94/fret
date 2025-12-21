@@ -344,6 +344,11 @@ pub enum Event {
     TextInput(String),
     /// Clipboard text payload delivered to the focused widget (typically as the result of a paste request).
     ClipboardText(String),
+    /// Window close button / OS close request was triggered.
+    ///
+    /// The runner must not close the window immediately; the app/driver may intercept the request
+    /// (e.g. unsaved-changes confirmation) and decide whether to emit `WindowRequest::Close`.
+    WindowCloseRequested,
     WindowScaleFactorChanged(f32),
     WindowMoved {
         x: i32,

@@ -88,6 +88,7 @@ pub struct AssetDropMatchCx<'a> {
 pub struct AssetDropApplyCx<'a> {
     pub app: &'a mut App,
     pub driver: &'a mut DemoDriver,
+    pub window: AppWindowId,
     pub guid: AssetGuid,
     pub path: Option<PathBuf>,
     pub target: AssetDropTarget,
@@ -150,6 +151,7 @@ impl AssetDropRegistry {
             let mut apply_cx = AssetDropApplyCx {
                 app,
                 driver,
+                window: req.window,
                 guid: req.guid,
                 path,
                 target: req.target,
