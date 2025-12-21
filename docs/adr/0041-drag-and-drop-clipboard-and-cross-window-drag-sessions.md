@@ -229,6 +229,9 @@ Implementation status:
   broadcasts `PointerEvent::Move` across windows.
 - Runner invariant: on mouse button release, the runner ends any active **cross-window** internal drag session to
   prevent "stuck" drags if no widget consumes the `InternalDrag::Drop` (or if the drop target is missing).
+- Runner tracking note: while a cross-window drag is active, the runner may update screen-space cursor position using
+  `DeviceEvent::MouseMotion` deltas to avoid platform behaviors where `WindowEvent::CursorMoved` is clamped during
+  OS-level mouse capture.
 
 External OS file DnD prototype:
 

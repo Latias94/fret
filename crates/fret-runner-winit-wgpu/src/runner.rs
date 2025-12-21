@@ -16,7 +16,9 @@ use tracing::error;
 use winit::{
     application::ApplicationHandler,
     dpi::{LogicalSize, PhysicalPosition, Position},
-    event::{ElementState, MouseButton as WinitMouseButton, MouseScrollDelta, WindowEvent},
+    event::{
+        DeviceEvent, ElementState, MouseButton as WinitMouseButton, MouseScrollDelta, WindowEvent,
+    },
     event_loop::{ActiveEventLoop, ControlFlow},
     keyboard::{Key, ModifiersState, NamedKey},
     window::{Window, WindowId},
@@ -868,6 +870,12 @@ impl<D: WinitDriver> WinitRunner<D> {
             return false;
         };
 
+        if drag.kind == fret_app::DragKind::DockPanel && target != drag.source_window {
+            if let Some(runtime) = self.windows.get(target) {
+                bring_window_to_front(&runtime.window);
+            }
+        }
+
         if let Some(prev) = self.internal_drag_hover_window.take() {
             if prev != target {
                 let prev_pos = self.internal_drag_hover_pos.take().unwrap_or_default();
@@ -988,6 +996,31 @@ impl TextService for NoTextService {
 }
 
 impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
+    fn device_event(
+        &mut self,
+        event_loop: &ActiveEventLoop,
+        _device_id: winit::event::DeviceId,
+        event: DeviceEvent,
+    ) {
+        let Some(drag) = self.app.drag() else {
+            return;
+        };
+        if !drag.cross_window_hover {
+            return;
+        }
+
+        let DeviceEvent::MouseMotion { delta } = event else {
+            return;
+        };
+        let Some(pos) = self.cursor_screen_pos else {
+            return;
+        };
+
+        self.cursor_screen_pos = Some(PhysicalPosition::new(pos.x + delta.0, pos.y + delta.1));
+        self.route_internal_drag_hover_from_cursor();
+        self.drain_effects(event_loop);
+    }
+
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.context.is_some() {
             return;
