@@ -7,9 +7,9 @@ use fret_core::{AppWindowId, Axis, Color, Px};
 use fret_editor::{InspectorEditHint, InspectorEditLayout};
 use fret_editor::{ViewportToolManager, ViewportToolMode};
 use fret_ui::{
-    BoundTextInput, ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel, HeaderBody,
-    PanelThemeBackground, Scroll, Split, Stack, Text, TextArea, TextInput, Toolbar, ToolbarItem,
-    UiLayerId, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
+    AppMenuBar, BoundTextInput, ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel,
+    HeaderBody, PanelThemeBackground, Scroll, Split, Stack, Text, TextArea, TextInput, Toolbar,
+    ToolbarItem, UiLayerId, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
 };
 use std::borrow::Cow;
 use std::sync::Arc;
@@ -129,11 +129,66 @@ pub fn build_demo_ui(
     let bg = ui.create_node(ColoredPanel::themed(PanelThemeBackground::Surface, 1.0));
     ui.add_child(root, bg);
 
-    let frame = ui.create_node(HeaderBody::new(Px(44.0)));
+    let frame = ui.create_node(HeaderBody::new(Px(76.0)));
     ui.add_child(root, frame);
 
+    let header = ui.create_node(Column::new());
+    ui.add_child(frame, header);
+
+    let menu_bar = fret_app::MenuBar {
+        menus: vec![
+            fret_app::Menu {
+                title: Arc::<str>::from("File"),
+                items: vec![
+                    fret_app::MenuItem::Command {
+                        command: fret_app::CommandId::from("command_palette.toggle"),
+                        when: None,
+                    },
+                    fret_app::MenuItem::Separator,
+                    fret_app::MenuItem::Command {
+                        command: fret_app::CommandId::from("project.refresh"),
+                        when: None,
+                    },
+                ],
+            },
+            fret_app::Menu {
+                title: Arc::<str>::from("Edit"),
+                items: vec![
+                    fret_app::MenuItem::Command {
+                        command: fret_app::CommandId::from("edit.undo"),
+                        when: None,
+                    },
+                    fret_app::MenuItem::Command {
+                        command: fret_app::CommandId::from("edit.redo"),
+                        when: None,
+                    },
+                ],
+            },
+            fret_app::Menu {
+                title: Arc::<str>::from("View"),
+                items: vec![
+                    fret_app::MenuItem::Command {
+                        command: fret_app::CommandId::from("viewport.tool.select"),
+                        when: None,
+                    },
+                    fret_app::MenuItem::Command {
+                        command: fret_app::CommandId::from("viewport.tool.move"),
+                        when: None,
+                    },
+                    fret_app::MenuItem::Command {
+                        command: fret_app::CommandId::from("viewport.tool.rotate"),
+                        when: None,
+                    },
+                ],
+            },
+        ],
+    };
+
+    let menu_bar_node = ui.create_node(AppMenuBar::new(menu_bar));
+    ui.add_child(header, menu_bar_node);
+
     let toolbar = ui.create_node(DemoToolbar::new(viewport_tools));
-    ui.add_child(frame, toolbar);
+    ui.add_child(header, toolbar);
 
     let split = ui.create_node(Split::new(Axis::Horizontal, config.split_fraction));
     ui.add_child(frame, split);

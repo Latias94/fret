@@ -1,3 +1,4 @@
+mod app_menu_bar;
 mod clip;
 mod column;
 mod context_menu;
@@ -13,6 +14,7 @@ mod toolbar;
 mod tree_view;
 mod virtual_list;
 
+pub use app_menu_bar::AppMenuBar;
 pub use clip::Clip;
 pub use column::Column;
 pub use context_menu::{ContextMenu, ContextMenuRequest, ContextMenuService, ContextMenuStyle};

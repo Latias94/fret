@@ -1,79 +1,63 @@
 use crate::ThemeSnapshot;
 use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
-use fret_app::CommandId;
+use fret_app::{InputContext, Menu, MenuBar};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp, Size,
     TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
-use std::sync::Arc;
 
-#[derive(Debug, Clone)]
-pub struct ToolbarItem {
-    pub label: Arc<str>,
-    pub command: CommandId,
-    pub selected: bool,
-}
-
-impl ToolbarItem {
-    pub fn new(label: impl Into<Arc<str>>, command: impl Into<CommandId>) -> Self {
-        Self {
-            label: label.into(),
-            command: command.into(),
-            selected: false,
-        }
-    }
-
-    pub fn with_selected(mut self, selected: bool) -> Self {
-        self.selected = selected;
-        self
-    }
-}
+use super::context_menu::{ContextMenuRequest, ContextMenuService};
 
 #[derive(Debug)]
-struct PreparedItem {
-    selected: bool,
+struct PreparedMenu {
+    index: usize,
     blob: fret_core::TextBlobId,
     metrics: TextMetrics,
     bounds: Rect,
 }
 
-pub struct Toolbar {
-    items: Vec<ToolbarItem>,
-    prepared: Vec<PreparedItem>,
+pub struct AppMenuBar {
+    menu_bar: MenuBar,
+    prepared: Vec<PreparedMenu>,
     hovered: Option<usize>,
-    pressed: Option<usize>,
+    open_index: Option<usize>,
+    open_serial: Option<u64>,
     style: TextStyle,
     padding_x: Px,
     padding_y: Px,
     gap: Px,
     corner_radius: Px,
+    height: Px,
     last_theme_revision: Option<u64>,
 }
 
-impl Toolbar {
-    pub fn new(items: Vec<ToolbarItem>) -> Self {
+impl AppMenuBar {
+    pub fn new(menu_bar: MenuBar) -> Self {
         Self {
-            items,
+            menu_bar,
             prepared: Vec::new(),
             hovered: None,
-            pressed: None,
+            open_index: None,
+            open_serial: None,
             style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
             },
             padding_x: Px(10.0),
             padding_y: Px(6.0),
-            gap: Px(8.0),
+            gap: Px(6.0),
             corner_radius: Px(8.0),
+            height: Px(30.0),
             last_theme_revision: None,
         }
     }
 
-    pub fn set_items(&mut self, items: Vec<ToolbarItem>) {
-        self.items = items;
+    pub fn set_menu_bar(&mut self, menu_bar: MenuBar) {
+        self.menu_bar = menu_bar;
         self.prepared.clear();
         self.hovered = None;
-        self.pressed = None;
+        self.open_index = None;
+        self.open_serial = None;
     }
 
     fn sync_style_from_theme(&mut self, theme: ThemeSnapshot) {
@@ -87,28 +71,104 @@ impl Toolbar {
         self.corner_radius = theme.metrics.radius_md;
     }
 
-    fn item_index_at(&self, pos: Point) -> Option<usize> {
-        for (i, item) in self.prepared.iter().enumerate() {
-            if item.bounds.contains(pos) {
-                return Some(i);
+    fn current_menu_serial(app: &fret_app::App, window: fret_core::AppWindowId) -> Option<u64> {
+        app.global::<ContextMenuService>()
+            .and_then(|s| s.request(window))
+            .map(|(serial, _)| serial)
+    }
+
+    fn sync_open_state(&mut self, app: &fret_app::App, window: fret_core::AppWindowId) {
+        if self.open_serial.is_none() {
+            return;
+        }
+        let current = Self::current_menu_serial(app, window);
+        if current != self.open_serial {
+            self.open_serial = None;
+            self.open_index = None;
+        }
+    }
+
+    fn menu_index_at(&self, pos: Point) -> Option<usize> {
+        for m in &self.prepared {
+            if m.bounds.contains(pos) {
+                return Some(m.index);
             }
         }
         None
     }
+
+    fn open_menu(&mut self, cx: &mut EventCx<'_>, window: fret_core::AppWindowId, index: usize) {
+        let Some(prepared) = self.prepared.iter().find(|m| m.index == index) else {
+            return;
+        };
+        let Some(menu) = self.menu_bar.menus.get(index) else {
+            return;
+        };
+
+        let position = Point::new(
+            prepared.bounds.origin.x,
+            Px(prepared.bounds.origin.y.0 + prepared.bounds.size.height.0 + 2.0),
+        );
+
+        let inv_ctx = InputContext {
+            platform: cx.input_ctx.platform,
+            ui_has_modal: cx.input_ctx.ui_has_modal,
+            focus_is_text_input: cx.input_ctx.focus_is_text_input,
+        };
+
+        cx.app
+            .with_global_mut(ContextMenuService::default, |service, _app| {
+                service.set_request(
+                    window,
+                    ContextMenuRequest {
+                        position,
+                        menu: Menu {
+                            title: menu.title.clone(),
+                            items: menu.items.clone(),
+                        },
+                        input_ctx: inv_ctx,
+                    },
+                );
+            });
+
+        self.open_index = Some(index);
+        self.open_serial = Self::current_menu_serial(cx.app, window);
+
+        cx.dispatch_command(fret_app::CommandId::from("context_menu.open"));
+        cx.stop_propagation();
+    }
+
+    fn close_menu(&mut self, cx: &mut EventCx<'_>) {
+        self.open_index = None;
+        self.open_serial = None;
+        cx.dispatch_command(fret_app::CommandId::from("context_menu.close"));
+        cx.stop_propagation();
+    }
 }
 
-impl Widget for Toolbar {
+impl Widget for AppMenuBar {
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
         self.sync_style_from_theme(cx.theme().snapshot());
+        let Some(window) = cx.window else {
+            return;
+        };
+
+        self.sync_open_state(cx.app, window);
 
         match event {
             Event::Pointer(pe) => match pe {
                 fret_core::PointerEvent::Move { position, .. } => {
-                    let hovered = self.item_index_at(*position);
+                    let hovered = self.menu_index_at(*position);
                     if hovered != self.hovered {
                         self.hovered = hovered;
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
+                    }
+
+                    if let (Some(open), Some(h)) = (self.open_index, hovered) {
+                        if open != h {
+                            self.open_menu(cx, window, h);
+                        }
                     }
                 }
                 fret_core::PointerEvent::Down {
@@ -117,36 +177,16 @@ impl Widget for Toolbar {
                     if *button != MouseButton::Left {
                         return;
                     }
-                    let Some(i) = self.item_index_at(*position) else {
+                    let Some(i) = self.menu_index_at(*position) else {
                         return;
                     };
-                    self.pressed = Some(i);
-                    cx.capture_pointer(cx.node);
-                    cx.invalidate_self(Invalidation::Paint);
-                    cx.request_redraw();
-                    cx.stop_propagation();
-                }
-                fret_core::PointerEvent::Up {
-                    position, button, ..
-                } => {
-                    if *button != MouseButton::Left {
+
+                    if self.open_index == Some(i) {
+                        self.close_menu(cx);
                         return;
                     }
-                    let pressed = self.pressed.take();
-                    cx.release_pointer_capture();
 
-                    let hovered = self.item_index_at(*position);
-                    if pressed.is_some() && pressed == hovered {
-                        if let Some(i) = pressed {
-                            if let Some(item) = self.items.get(i) {
-                                cx.dispatch_command(item.command.clone());
-                            }
-                        }
-                    }
-
-                    cx.invalidate_self(Invalidation::Paint);
-                    cx.request_redraw();
-                    cx.stop_propagation();
+                    self.open_menu(cx, window, i);
                 }
                 _ => {}
             },
@@ -161,50 +201,55 @@ impl Widget for Toolbar {
             cx.text.release(item.blob);
         }
 
-        let text_constraints = TextConstraints {
+        let constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
             scale_factor: cx.scale_factor,
         };
 
         let mut max_metrics_h = Px(0.0);
-        for item in &self.items {
+        for menu in &self.menu_bar.menus {
             let (_, metrics) = cx
                 .text
-                .prepare(item.label.as_ref(), self.style, text_constraints);
+                .prepare(menu.title.as_ref(), self.style, constraints);
             max_metrics_h = Px(max_metrics_h.0.max(metrics.size.height.0));
         }
 
         let row_h = Px(max_metrics_h.0 + self.padding_y.0 * 2.0);
-        let height = Px((row_h.0 + self.gap.0 * 2.0)
+        self.height = Px((row_h.0 + self.gap.0 * 2.0)
             .max(24.0)
             .min(cx.available.height.0));
 
-        let mut x = cx.bounds.origin.x.0 + self.gap.0.max(0.0);
         let y = cx.bounds.origin.y.0 + self.gap.0.max(0.0);
+        let mut x = cx.bounds.origin.x.0 + self.gap.0.max(0.0);
 
-        for item in &self.items {
-            let (blob, metrics) =
-                cx.text
-                    .prepare(item.label.as_ref(), self.style, text_constraints);
+        for (index, menu) in self.menu_bar.menus.iter().enumerate() {
+            let (blob, metrics) = cx
+                .text
+                .prepare(menu.title.as_ref(), self.style, constraints);
             let w = Px(metrics.size.width.0 + self.padding_x.0 * 2.0);
             let bounds = Rect::new(Point::new(Px(x), Px(y)), Size::new(w, row_h));
             x += w.0 + self.gap.0.max(0.0);
 
-            self.prepared.push(PreparedItem {
-                selected: item.selected,
+            self.prepared.push(PreparedMenu {
+                index,
                 blob,
                 metrics,
                 bounds,
             });
         }
 
-        Size::new(cx.available.width, height)
+        Size::new(cx.available.width, self.height)
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
         let theme = cx.theme().snapshot();
         self.sync_style_from_theme(theme);
+        let Some(window) = cx.window else {
+            return;
+        };
+
+        self.sync_open_state(cx.app, window);
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
@@ -215,13 +260,13 @@ impl Widget for Toolbar {
             corner_radii: Corners::all(Px(0.0)),
         });
 
-        for (i, item) in self.prepared.iter().enumerate() {
-            let hovered = self.hovered == Some(i);
-            let pressed = self.pressed == Some(i);
+        for item in &self.prepared {
+            let hovered = self.hovered == Some(item.index);
+            let active = self.open_index == Some(item.index);
 
-            let bg = if item.selected {
+            let bg = if active {
                 theme.colors.selection_background
-            } else if pressed || hovered {
+            } else if hovered {
                 theme.colors.hover_background
             } else {
                 Color {
