@@ -64,6 +64,41 @@ pub struct HierarchyMoveOp {
 }
 
 impl DemoHierarchy {
+    pub fn next_available_id(&self) -> u64 {
+        fn visit(nodes: &[TreeNode], max_id: &mut u64) {
+            for n in nodes {
+                *max_id = (*max_id).max(n.id);
+                if !n.children.is_empty() {
+                    visit(&n.children, max_id);
+                }
+            }
+        }
+
+        let mut max_id = 0u64;
+        visit(&self.roots, &mut max_id);
+        max_id.saturating_add(1)
+    }
+
+    pub fn create_entity(&mut self, parent: Option<u64>, label: String) -> u64 {
+        let id = self.next_available_id();
+        let node = TreeNode::new(id, label);
+
+        match parent {
+            None => {
+                self.roots.push(node);
+            }
+            Some(parent) => {
+                if let Some(p) = self.find_node_mut(parent) {
+                    p.children.push(node);
+                } else {
+                    self.roots.push(node);
+                }
+            }
+        }
+
+        id
+    }
+
     pub fn child_count(&self, parent: Option<u64>) -> usize {
         match parent {
             None => self.roots.len(),
@@ -240,5 +275,28 @@ impl DemoHierarchy {
         }
 
         remove_from(&mut self.roots, id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_entity_allocates_unique_id() {
+        let mut h = DemoHierarchy::default();
+        let id1 = h.create_entity(None, "A".to_string());
+        let id2 = h.create_entity(None, "B".to_string());
+        assert_ne!(id1, id2);
+        assert!(id2 > id1);
+    }
+
+    #[test]
+    fn create_entity_inserts_under_parent() {
+        let mut h = DemoHierarchy::default();
+        let parent = h.roots[0].id;
+        let child = h.create_entity(Some(parent), "Child".to_string());
+        let p = h.find_node(parent).expect("parent exists");
+        assert!(p.children.iter().any(|c| c.id == child));
     }
 }

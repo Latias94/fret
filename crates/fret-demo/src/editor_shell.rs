@@ -1,4 +1,5 @@
 use crate::hierarchy::{DemoHierarchy, HierarchyDropKind, HierarchyDropTarget};
+use crate::project_panel::ProjectDragPayload;
 use crate::undo::{EditCommand, SelectionSnapshot, UndoStack};
 use crate::world::DemoWorld;
 use fret_app::{App, Model};
@@ -328,12 +329,26 @@ pub struct HierarchyPanel {
     selection: Model<DemoSelection>,
     hierarchy: Model<DemoHierarchy>,
     undo: Model<UndoStack>,
+    world: Model<DemoWorld>,
     drag: Option<HierarchyDragState>,
+    asset_drop: Option<AssetDropPreview>,
     last_selected: Option<u64>,
     last_selected_keys: Vec<u64>,
     last_revision: Option<u64>,
     last_hierarchy_revision: Option<u64>,
     did_init_expanded: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AssetDropPreviewKind {
+    HighlightRow,
+    AppendRoot,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct AssetDropPreview {
+    kind: AssetDropPreviewKind,
+    parent: Option<u64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -362,19 +377,104 @@ impl HierarchyPanel {
         selection: Model<DemoSelection>,
         hierarchy: Model<DemoHierarchy>,
         undo: Model<UndoStack>,
+        world: Model<DemoWorld>,
     ) -> Self {
         Self {
             tree: TreeView::new(Vec::new()),
             selection,
             hierarchy,
             undo,
+            world,
             drag: None,
+            asset_drop: None,
             last_selected: None,
             last_selected_keys: Vec::new(),
             last_revision: None,
             last_hierarchy_revision: None,
             did_init_expanded: false,
         }
+    }
+
+    fn asset_drop_preview_at(
+        &mut self,
+        app: &App,
+        position: fret_core::Point,
+    ) -> Option<AssetDropPreview> {
+        let Some(session) = app.drag() else {
+            return None;
+        };
+        if !session.dragging {
+            return None;
+        }
+        let payload = session.payload::<ProjectDragPayload>()?;
+        let Some(project) = app.global::<ProjectService>() else {
+            return None;
+        };
+        let Some(id) = project.id_for_guid(payload.guid) else {
+            return None;
+        };
+        if project.kind_for_id(id) != Some(ProjectEntryKind::File) {
+            return None;
+        }
+
+        let content = self.tree.content_bounds();
+        if !content.contains(position) {
+            return None;
+        }
+
+        if let Some(target) = self.tree.row_id_at(position) {
+            Some(AssetDropPreview {
+                kind: AssetDropPreviewKind::HighlightRow,
+                parent: Some(target),
+            })
+        } else {
+            Some(AssetDropPreview {
+                kind: AssetDropPreviewKind::AppendRoot,
+                parent: None,
+            })
+        }
+    }
+
+    fn commit_asset_drop(&mut self, cx: &mut EventCx<'_>, preview: AssetDropPreview) {
+        let Some(session) = cx.app.drag() else {
+            return;
+        };
+        if !session.dragging {
+            return;
+        }
+        let Some(payload) = session.payload::<ProjectDragPayload>() else {
+            return;
+        };
+        let Some(project) = cx.app.global::<ProjectService>() else {
+            return;
+        };
+
+        let name = project
+            .id_for_guid(payload.guid)
+            .and_then(|id| project.path_for_id(id))
+            .and_then(|p| p.file_stem().map(|s| s.to_string_lossy().to_string()))
+            .unwrap_or_else(|| format!("Asset {}", payload.guid.0));
+
+        let new_id = self
+            .hierarchy
+            .update(cx.app, |h, _cx| {
+                h.create_entity(preview.parent, name.clone())
+            })
+            .ok();
+        let Some(new_id) = new_id else {
+            return;
+        };
+
+        let _ = self.world.update(cx.app, |w, _cx| {
+            w.entity_mut(new_id).name = name;
+        });
+
+        let _ = self.selection.update(cx.app, |s, _cx| {
+            s.lead_entity = Some(new_id);
+            s.selected_entities = vec![new_id];
+        });
+
+        cx.request_redraw();
     }
 
     fn maybe_sync_hierarchy(&mut self, app: &App) {
@@ -607,6 +707,35 @@ impl Widget for HierarchyPanel {
     }
 
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+        if let Event::InternalDrag(drag) = event {
+            match drag.kind {
+                fret_core::InternalDragKind::Enter | fret_core::InternalDragKind::Over => {
+                    let next = self.asset_drop_preview_at(cx.app, drag.position);
+                    if self.asset_drop != next {
+                        self.asset_drop = next;
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                    }
+                }
+                fret_core::InternalDragKind::Leave | fret_core::InternalDragKind::Cancel => {
+                    if self.asset_drop.take().is_some() {
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                    }
+                }
+                fret_core::InternalDragKind::Drop => {
+                    if let Some(preview) = self.asset_drop_preview_at(cx.app, drag.position) {
+                        self.commit_asset_drop(cx, preview);
+                    }
+                    self.asset_drop = None;
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                }
+            }
+            cx.stop_propagation();
+            return;
+        }
+
         match event {
             Event::Pointer(fret_core::PointerEvent::Down {
                 position,
@@ -679,6 +808,53 @@ impl Widget for HierarchyPanel {
         // Selection changes may request only a redraw (paint), so sync here as well.
         self.maybe_sync_from_model(cx.app);
         self.tree.paint(cx);
+
+        if let Some(preview) = self.asset_drop {
+            let theme = cx.theme().snapshot();
+            let stroke = Color {
+                a: 0.9,
+                ..theme.colors.accent
+            };
+            let t = Px(2.0);
+
+            match preview.kind {
+                AssetDropPreviewKind::HighlightRow => {
+                    if let Some(parent) = preview.parent {
+                        if let Some(rect) = self.tree.row_rect(parent) {
+                            cx.scene.push(fret_core::SceneOp::Quad {
+                                order: fret_core::DrawOrder(49),
+                                rect,
+                                background: Color::TRANSPARENT,
+                                border: Edges::all(t),
+                                border_color: stroke,
+                                corner_radii: Corners::all(Px(0.0)),
+                            });
+                        }
+                    }
+                }
+                AssetDropPreviewKind::AppendRoot => {
+                    let y = if let Some(last) = self.tree.last_row_rect() {
+                        Px(last.origin.y.0 + last.size.height.0 - t.0)
+                    } else {
+                        let content = self.tree.content_bounds();
+                        Px(content.origin.y.0 + content.size.height.0 - t.0)
+                    };
+                    let content = self.tree.content_bounds();
+                    let line = fret_core::Rect::new(
+                        fret_core::Point::new(content.origin.x, y),
+                        fret_core::Size::new(content.size.width, t),
+                    );
+                    cx.scene.push(fret_core::SceneOp::Quad {
+                        order: fret_core::DrawOrder(49),
+                        rect: line,
+                        background: stroke,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                }
+            }
+        }
 
         let Some(drag) = self.drag.as_ref() else {
             return;

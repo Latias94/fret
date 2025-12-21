@@ -10,7 +10,9 @@ use fret_ui::{
 };
 
 #[derive(Debug, Clone, Copy)]
-struct ProjectDragPayload;
+pub(crate) struct ProjectDragPayload {
+    pub(crate) guid: AssetGuid,
+}
 
 #[derive(Debug)]
 pub struct ProjectPanel {
@@ -269,7 +271,12 @@ impl Widget for ProjectPanel {
                             if dist2 > 16.0 {
                                 drag.dragging = true;
                                 if let Some(window) = cx.window {
-                                    cx.app.begin_drag(window, drag.start, ProjectDragPayload);
+                                    cx.app.begin_cross_window_drag_with_kind(
+                                        fret_app::DragKind::Custom,
+                                        window,
+                                        drag.start,
+                                        ProjectDragPayload { guid: drag.guid },
+                                    );
                                 }
                                 cx.capture_pointer(cx.node);
                             }
@@ -301,6 +308,30 @@ impl Widget for ProjectPanel {
             }) => {
                 if let Some(drag) = self.drag.take() {
                     if drag.dragging {
+                        let dropped_outside_source_window = cx.window.is_some_and(|window| {
+                            cx.app.drag().is_some_and(|session| {
+                                session.payload::<ProjectDragPayload>().is_some()
+                                    && session.current_window != window
+                            })
+                        });
+
+                        if dropped_outside_source_window {
+                            cx.release_pointer_capture();
+                            if cx
+                                .app
+                                .drag()
+                                .and_then(|d| d.payload::<ProjectDragPayload>())
+                                .is_some()
+                            {
+                                cx.app.cancel_drag();
+                            }
+                            self.drag = None;
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                            cx.stop_propagation();
+                            return;
+                        }
+
                         let target = drag
                             .hover_folder
                             .or_else(|| self.folder_guid_at(cx.app, *position));

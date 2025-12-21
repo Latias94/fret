@@ -40,6 +40,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 33: prototype implemented in demo (Project panel + `.meta` GUIDs; rename/move keep GUID stable; OS file drop imports into `Assets/Imports`; internal drag move to folders)
 - MVP 34: prototype implemented in demo (dock tab bar titles + hover/active chrome baseline; overflow scroll + close tab)
 - MVP 35: prototype implemented (ImGui-style multi-window internal drag routing: screen-space pointer + hovered window; dock drag now uses `Event::InternalDrag` instead of cross-window `PointerEvent` broadcasting)
+- MVP 36: prototype implemented in demo (internal drag of Project asset into Hierarchy creates a new entity and selects it; cross-window supported via `Event::InternalDrag`)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)

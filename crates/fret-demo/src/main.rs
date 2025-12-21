@@ -2276,7 +2276,7 @@ impl WinitDriver for DemoDriver {
         let key_inspector = PanelKey::new("core.inspector");
         let key_text_probe = PanelKey::new("core.text_probe");
 
-        let hierarchy_node = ui.create_node(HierarchyPanel::new(selection, hierarchy, undo));
+        let hierarchy_node = ui.create_node(HierarchyPanel::new(selection, hierarchy, undo, world));
         let project_node = ui.create_node(ProjectPanel::new());
         let inspector_node = ui.create_node(InspectorPanel::new(selection, world));
         let text_probe_node = ui.create_node(
