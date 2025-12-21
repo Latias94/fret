@@ -1043,6 +1043,83 @@ impl DemoDriver {
         });
     }
 
+    fn reset_layout_to_default(&mut self, app: &mut App) -> bool {
+        let Some(main_window) = self.main_window else {
+            return false;
+        };
+
+        // Close all non-main dock windows.
+        let windows_to_close: Vec<fret_core::AppWindowId> = self
+            .logical_windows
+            .keys()
+            .copied()
+            .filter(|w| *w != main_window)
+            .collect();
+
+        {
+            let Some(dock) = app.global_mut::<DockManager>() else {
+                return false;
+            };
+
+            let key_scene = PanelKey::new("core.scene");
+            let key_game = PanelKey::new("core.game");
+            let key_text_probe = PanelKey::new("core.text_probe");
+            let key_project = PanelKey::new("core.project");
+            let key_inspector = PanelKey::new("core.inspector");
+            let key_hierarchy = PanelKey::new("core.hierarchy");
+
+            // Rebuild a clean dock graph (panels remain registered).
+            dock.graph = fret_core::DockGraph::new();
+
+            let tabs_left = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![key_hierarchy, key_project],
+                active: 0,
+            });
+            let tabs_scene = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![key_scene, key_game],
+                active: 0,
+            });
+            let tabs_inspector = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![key_inspector, key_text_probe],
+                active: 0,
+            });
+            let right = dock.graph.insert_node(DockNode::Split {
+                axis: Axis::Vertical,
+                children: vec![tabs_scene, tabs_inspector],
+                fractions: vec![0.72, 0.28],
+            });
+            let root_dock = dock.graph.insert_node(DockNode::Split {
+                axis: Axis::Horizontal,
+                children: vec![tabs_left, right],
+                fractions: vec![0.26, 0.74],
+            });
+            dock.graph.set_window_root(main_window, root_dock);
+
+            for w in &windows_to_close {
+                dock.graph.remove_window_root(*w);
+                dock.clear_viewport_layout_for_window(*w);
+            }
+        }
+
+        for w in windows_to_close {
+            self.logical_windows.remove(&w);
+            self.window_placements.remove(&w);
+            app.push_effect(Effect::Window(WindowRequest::Close(w)));
+        }
+
+        self.loaded_layout = None;
+
+        app.push_effect(Effect::UiInvalidateLayout {
+            window: main_window,
+        });
+        app.request_redraw(main_window);
+
+        self.persist_layout_now(app);
+        self.loaded_layout = Self::load_layout_file();
+
+        true
+    }
+
     fn schedule_camera_persist(&mut self, app: &mut App) {
         let token = match self.camera_persist_timer {
             Some(t) => t,
@@ -2001,6 +2078,14 @@ impl WinitDriver for DemoDriver {
                 .with_category("Dock")
                 .with_scope(CommandScope::Widget)
                 .hidden(),
+        );
+        app.commands_mut().register(
+            CommandId::from("dock.layout.reset_default"),
+            CommandMeta::new("Reset Layout")
+                .with_description("Resets the dock layout back to the default layout")
+                .with_category("Dock")
+                .with_scope(CommandScope::App)
+                .with_keywords(["dock", "layout", "reset", "default"]),
         );
 
         app.commands_mut().register(
@@ -3480,6 +3565,13 @@ impl WinitDriver for DemoDriver {
                 };
 
                 self.dock_op(app, op);
+            }
+            "dock.layout.reset_default" => {
+                if self.reset_layout_to_default(app) {
+                    for &w in self.logical_windows.keys() {
+                        app.request_redraw(w);
+                    }
+                }
             }
             "project.refresh" => {
                 if let Some(project) = app.global_mut::<ProjectService>() {

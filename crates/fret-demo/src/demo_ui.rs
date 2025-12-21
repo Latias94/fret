@@ -173,6 +173,15 @@ pub fn build_demo_ui(
                                 when: None,
                             },
                             fret_app::MenuItem::Separator,
+                            fret_app::MenuItem::Submenu {
+                                title: Arc::<str>::from("Layout"),
+                                when: None,
+                                items: vec![fret_app::MenuItem::Command {
+                                    command: fret_app::CommandId::from("dock.layout.reset_default"),
+                                    when: None,
+                                }],
+                            },
+                            fret_app::MenuItem::Separator,
                             fret_app::MenuItem::Command {
                                 command: fret_app::CommandId::from("command_palette.toggle"),
                                 when: None,
