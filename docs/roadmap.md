@@ -165,6 +165,7 @@ validate that the framework contracts are sufficient.
 - P0: Floating windows are first-class: tear-off and merge back. (MVP done in demo via `DockOp` + `WindowRequest`)
 - P0: Cross-window drag state and drop target rendering. (done; app-scoped internal `DragSession` + drop overlay)
 - P0: Dock persistence (layout.json v1) + stable panel identity. (MVP done in demo; persists/restores)
+- P0: Layout reset + minimal layout preset save/load (“last”). (done in demo; menu-backed actions)
 
 Remaining work (still P0, but can iterate after MVP2):
 

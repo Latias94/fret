@@ -548,7 +548,7 @@ Goal: upgrade docking UX toward Unity/Godot expectations without changing core d
 
 **Non-goals**
 
-- Full workspace management UI (layouts list, reset-to-default presets).
+- Full workspace management UI (named layouts list, per-project presets, rename/delete, etc.).
 
 **Definition of Done**
 
@@ -560,6 +560,9 @@ Status:
 - Prototype implemented in `fret-demo`:
   - drop target hints shown while dragging dock tabs,
   - dock tab context menu actions (float + move left/right),
+  - `File -> Layout` actions:
+    - reset-to-default layout,
+    - save/load a minimal “last” layout preset (`./.fret/layout-presets/last.json`),
   - debounced `layout.json` persistence after dock ops and window placement changes.
 
 References:

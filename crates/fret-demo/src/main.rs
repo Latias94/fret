@@ -325,6 +325,14 @@ impl DemoDriver {
         Path::new("./.fret/layout.json")
     }
 
+    fn layout_presets_dir() -> &'static Path {
+        Path::new("./.fret/layout-presets")
+    }
+
+    fn last_layout_preset_path() -> PathBuf {
+        Self::layout_presets_dir().join("last.json")
+    }
+
     fn keymap_path() -> &'static Path {
         Path::new("./.fret/keymap.json")
     }
@@ -978,6 +986,35 @@ impl DemoDriver {
         Ok(())
     }
 
+    fn save_layout_to_path(path: &Path, layout: &DockLayoutV1) -> std::io::Result<()> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let file = File::create(path)?;
+        serde_json::to_writer_pretty(file, layout)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        Ok(())
+    }
+
+    fn load_layout_from_path(path: &Path) -> Option<DockLayoutV1> {
+        let file = File::open(path).ok()?;
+        serde_json::from_reader(file).ok()
+    }
+
+    fn bump_next_floating_index_from_layout(&mut self, layout: &DockLayoutV1) {
+        let mut max_seen: u32 = 0;
+        for w in &layout.windows {
+            let Some(suffix) = w.logical_window_id.strip_prefix("floating-") else {
+                continue;
+            };
+            let Ok(n) = suffix.parse::<u32>() else {
+                continue;
+            };
+            max_seen = max_seen.max(n);
+        }
+        self.next_floating_index = self.next_floating_index.max(max_seen.saturating_add(1));
+    }
+
     fn save_viewport_cameras_file(file_v1: &ViewportCamerasFileV1) -> std::io::Result<()> {
         if let Some(parent) = Self::viewport_cameras_path().parent() {
             std::fs::create_dir_all(parent)?;
@@ -999,6 +1036,112 @@ impl DemoDriver {
         if let Err(e) = Self::save_layout_file(&layout) {
             tracing::error!(error = ?e, "failed to save layout.json");
         }
+    }
+
+    fn save_last_layout_preset(&mut self, app: &mut App) -> bool {
+        let Some(dock) = app.global::<DockManager>() else {
+            return false;
+        };
+        let windows = self.window_list_for_export(dock);
+        let layout = dock
+            .graph
+            .export_layout_v1_with_placement(&windows, |w| self.window_placements.get(&w).cloned());
+
+        let path = Self::last_layout_preset_path();
+        if let Err(err) = Self::save_layout_to_path(&path, &layout) {
+            tracing::error!(error = %err, path = %path.to_string_lossy(), "failed to save layout preset");
+            return false;
+        }
+        true
+    }
+
+    fn apply_layout_v1(&mut self, app: &mut App, layout: DockLayoutV1) -> bool {
+        let Some(main_window) = self.main_window else {
+            return false;
+        };
+
+        let theme = Theme::global(app).snapshot();
+        let missing_color = Color {
+            a: 1.0,
+            ..theme.colors.hover_background
+        };
+
+        let windows_to_close: Vec<fret_core::AppWindowId> = self
+            .logical_windows
+            .keys()
+            .copied()
+            .filter(|w| *w != main_window)
+            .collect();
+
+        {
+            let Some(dock) = app.global_mut::<DockManager>() else {
+                return false;
+            };
+
+            dock.graph = fret_core::DockGraph::new();
+
+            Self::ensure_layout_panels(dock, &layout, missing_color);
+
+            let Some(main_entry) = layout
+                .windows
+                .iter()
+                .find(|w| w.logical_window_id == "main")
+            else {
+                return false;
+            };
+
+            let Some(root) = dock
+                .graph
+                .import_subtree_from_layout_v1(&layout, main_entry.root)
+            else {
+                return false;
+            };
+            dock.graph.set_window_root(main_window, root);
+
+            for w in &windows_to_close {
+                dock.graph.remove_window_root(*w);
+                dock.clear_viewport_layout_for_window(*w);
+            }
+        }
+
+        for w in windows_to_close {
+            self.logical_windows.remove(&w);
+            self.window_placements.remove(&w);
+            app.push_effect(Effect::Window(WindowRequest::Close(w)));
+        }
+
+        self.loaded_layout = Some(layout.clone());
+        self.bump_next_floating_index_from_layout(&layout);
+
+        if let Err(err) = Self::save_layout_file(&layout) {
+            tracing::error!(error = %err, "failed to save active layout.json");
+        }
+
+        for entry in &layout.windows {
+            if entry.logical_window_id == "main" {
+                continue;
+            }
+            app.push_effect(Effect::Window(WindowRequest::Create(CreateWindowRequest {
+                kind: CreateWindowKind::DockRestore {
+                    logical_window_id: entry.logical_window_id.clone(),
+                },
+                anchor: None,
+            })));
+        }
+
+        app.push_effect(Effect::UiInvalidateLayout {
+            window: main_window,
+        });
+        app.request_redraw(main_window);
+        true
+    }
+
+    fn load_last_layout_preset(&mut self, app: &mut App) -> bool {
+        let path = Self::last_layout_preset_path();
+        let Some(layout) = Self::load_layout_from_path(&path) else {
+            return false;
+        };
+        self.apply_layout_v1(app, layout)
     }
 
     fn persist_viewport_cameras_now(&mut self) {
@@ -2087,6 +2230,22 @@ impl WinitDriver for DemoDriver {
                 .with_scope(CommandScope::App)
                 .with_keywords(["dock", "layout", "reset", "default"]),
         );
+        app.commands_mut().register(
+            CommandId::from("dock.layout.preset.save_last"),
+            CommandMeta::new("Save Layout Preset (Last)")
+                .with_description("Saves the current dock layout as the 'last' preset")
+                .with_category("Dock")
+                .with_scope(CommandScope::App)
+                .with_keywords(["dock", "layout", "preset", "save"]),
+        );
+        app.commands_mut().register(
+            CommandId::from("dock.layout.preset.load_last"),
+            CommandMeta::new("Load Layout Preset (Last)")
+                .with_description("Loads the 'last' layout preset")
+                .with_category("Dock")
+                .with_scope(CommandScope::App)
+                .with_keywords(["dock", "layout", "preset", "load"]),
+        );
 
         app.commands_mut().register(
             CommandId::from("demo.toggle_modal"),
@@ -2992,6 +3151,7 @@ impl WinitDriver for DemoDriver {
             };
             Self::ensure_layout_panels(&mut dock, &layout, missing_color);
             self.loaded_layout = Some(layout.clone());
+            self.bump_next_floating_index_from_layout(&layout);
 
             if let Some(main_entry) = layout
                 .windows
@@ -3568,6 +3728,20 @@ impl WinitDriver for DemoDriver {
             }
             "dock.layout.reset_default" => {
                 if self.reset_layout_to_default(app) {
+                    for &w in self.logical_windows.keys() {
+                        app.request_redraw(w);
+                    }
+                }
+            }
+            "dock.layout.preset.save_last" => {
+                if self.save_last_layout_preset(app) {
+                    for &w in self.logical_windows.keys() {
+                        app.request_redraw(w);
+                    }
+                }
+            }
+            "dock.layout.preset.load_last" => {
+                if self.load_last_layout_preset(app) {
                     for &w in self.logical_windows.keys() {
                         app.request_redraw(w);
                     }
@@ -5207,6 +5381,7 @@ impl WinitDriver for DemoDriver {
                 };
                 if let Some(root) = dock.graph.import_subtree_from_layout_v1(layout, entry.root) {
                     dock.graph.set_window_root(new_window, root);
+                    app.push_effect(Effect::UiInvalidateLayout { window: new_window });
                     app.request_redraw(new_window);
                 }
             }
@@ -5237,6 +5412,82 @@ impl WinitDriver for DemoDriver {
         app.push_effect(Effect::UiInvalidateLayout { window: main });
         self.schedule_layout_persist(app);
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_core::{DockLayoutNodeV1, DockLayoutWindowV1};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    static TEMP_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    fn unique_temp_path(stem: &str) -> PathBuf {
+        let mut dir = std::env::temp_dir();
+        dir.push(format!("fret-demo-tests-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&dir);
+
+        let n = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+        dir.push(format!("{stem}-{n}.json"));
+        dir
+    }
+
+    #[test]
+    fn bump_next_floating_index_from_layout_tracks_max() {
+        let mut driver = DemoDriver::default();
+        driver.next_floating_index = 1;
+
+        let layout = DockLayoutV1::new_v1(
+            vec![DockLayoutWindowV1 {
+                logical_window_id: "floating-3".to_string(),
+                root: 0,
+                placement: None,
+            }],
+            Vec::new(),
+        );
+
+        driver.bump_next_floating_index_from_layout(&layout);
+        assert_eq!(driver.next_floating_index, 4);
+
+        let layout = DockLayoutV1::new_v1(
+            vec![DockLayoutWindowV1 {
+                logical_window_id: "floating-abc".to_string(),
+                root: 0,
+                placement: None,
+            }],
+            Vec::new(),
+        );
+
+        driver.bump_next_floating_index_from_layout(&layout);
+        assert_eq!(driver.next_floating_index, 4);
+    }
+
+    #[test]
+    fn save_and_load_layout_roundtrips() {
+        let path = unique_temp_path("layout");
+
+        let layout = DockLayoutV1::new_v1(
+            vec![DockLayoutWindowV1 {
+                logical_window_id: "main".to_string(),
+                root: 1,
+                placement: None,
+            }],
+            vec![DockLayoutNodeV1::Tabs {
+                id: 1,
+                tabs: vec![PanelKey::new("core.hierarchy")],
+                active: 0,
+            }],
+        );
+
+        DemoDriver::save_layout_to_path(&path, &layout).unwrap();
+        let loaded = DemoDriver::load_layout_from_path(&path).unwrap();
+
+        let orig = serde_json::to_value(&layout).unwrap();
+        let got = serde_json::to_value(&loaded).unwrap();
+        assert_eq!(orig, got);
+
+        let _ = std::fs::remove_file(&path);
     }
 }
 
