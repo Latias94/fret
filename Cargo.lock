@@ -727,6 +727,8 @@ version = "0.1.0"
 dependencies = [
  "fret-app",
  "fret-core",
+ "serde",
+ "serde_json",
  "slotmap",
  "taffy",
  "tracing",

@@ -54,20 +54,20 @@ impl Widget for DndProbe {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
-        let bg = if self.hovering {
-            Color {
-                r: 0.10,
-                g: 0.16,
-                b: 0.10,
-                a: 1.0,
-            }
+        let theme = cx.theme().snapshot();
+        let (bg, border_color) = if self.hovering {
+            (
+                Color {
+                    a: 0.22,
+                    ..theme.colors.accent
+                },
+                Color {
+                    a: 0.85,
+                    ..theme.colors.accent
+                },
+            )
         } else {
-            Color {
-                r: 0.12,
-                g: 0.12,
-                b: 0.16,
-                a: 1.0,
-            }
+            (theme.colors.panel_background, theme.colors.panel_border)
         };
 
         cx.scene.push(SceneOp::Quad {
@@ -75,13 +75,8 @@ impl Widget for DndProbe {
             rect: cx.bounds,
             background: bg,
             border: Edges::all(Px(1.0)),
-            border_color: Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 0.35,
-            },
-            corner_radii: Corners::all(Px(8.0)),
+            border_color,
+            corner_radii: Corners::all(theme.metrics.radius_md),
         });
 
         // Note: no text rendering yet; rely on logs for path details.

@@ -369,6 +369,7 @@ impl Widget for ProjectPanel {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
+        let theme = cx.theme().snapshot();
         let _ = self.maybe_refresh(cx.app);
         self.sync_selection_from_service(cx.app);
         self.tree.paint(cx);
@@ -380,10 +381,8 @@ impl Widget for ProjectPanel {
                         if let Some(target_id) = project.id_for_guid(target_guid) {
                             if let Some(rect) = self.tree.row_rect(target_id) {
                                 let stroke = Color {
-                                    r: 0.20,
-                                    g: 0.75,
-                                    b: 1.0,
                                     a: 0.9,
+                                    ..theme.colors.accent
                                 };
                                 cx.scene.push(SceneOp::Quad {
                                     order: DrawOrder(190),
@@ -421,18 +420,11 @@ impl Widget for ProjectPanel {
             order: DrawOrder(200),
             rect,
             background: Color {
-                r: 0.08,
-                g: 0.09,
-                b: 0.11,
                 a: 0.92,
+                ..theme.colors.panel_background
             },
             border: Edges::all(Px(1.0)),
-            border_color: Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 0.40,
-            },
+            border_color: theme.colors.panel_border,
             corner_radii: Corners::all(Px(0.0)),
         });
 
@@ -458,12 +450,7 @@ impl Widget for ProjectPanel {
             order: DrawOrder(201),
             origin: fret_core::Point::new(Px(rect.origin.x.0 + 6.0), Px(baseline_y)),
             text: blob,
-            color: Color {
-                r: 0.90,
-                g: 0.90,
-                b: 0.92,
-                a: 1.0,
-            },
+            color: theme.colors.text_primary,
         });
         cx.text.release(blob);
     }

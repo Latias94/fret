@@ -4,7 +4,7 @@ use fret_core::{
     SceneOp, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 
-use crate::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use crate::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Theme, Widget};
 
 #[derive(Debug, Clone)]
 pub struct TextAreaStyle {
@@ -79,11 +79,14 @@ pub struct TextArea {
     wrap: TextWrap,
     min_height: Px,
     style: TextAreaStyle,
+    style_override: bool,
+    last_theme_revision: Option<u64>,
 
     blob: Option<fret_core::TextBlobId>,
     metrics: Option<TextMetrics>,
 
     offset_y: Px,
+    scrollbar_width: Px,
     dragging_thumb: bool,
     drag_pointer_start_y: Px,
     drag_offset_start_y: Px,
@@ -119,9 +122,12 @@ impl Default for TextArea {
             wrap: TextWrap::Word,
             min_height: Px(0.0),
             style: TextAreaStyle::default(),
+            style_override: false,
+            last_theme_revision: None,
             blob: None,
             metrics: None,
             offset_y: Px(0.0),
+            scrollbar_width: Px(10.0),
             dragging_thumb: false,
             drag_pointer_start_y: Px(0.0),
             drag_offset_start_y: Px(0.0),
@@ -178,7 +184,33 @@ impl TextArea {
 
     pub fn with_style(mut self, style: TextAreaStyle) -> Self {
         self.style = style;
+        self.style_override = true;
         self
+    }
+
+    fn sync_style_from_theme(&mut self, theme: &Theme) {
+        self.scrollbar_width = theme.metrics.scrollbar_width;
+
+        if self.style_override {
+            return;
+        }
+        if self.last_theme_revision == Some(theme.revision()) {
+            return;
+        }
+        self.last_theme_revision = Some(theme.revision());
+
+        self.style.padding = theme.metrics.padding_md;
+        self.style.background = theme.colors.panel_background;
+        self.style.border_color = theme.colors.panel_border;
+        self.style.corner_radii = Corners::all(theme.metrics.radius_md);
+        self.style.text_color = theme.colors.text_primary;
+        self.style.selection_color = theme.colors.selection_background;
+        self.style.caret_color = theme.colors.text_primary;
+        self.style.preedit_bg_color = Color {
+            a: 0.22,
+            ..theme.colors.selection_background
+        };
+        self.style.preedit_underline_color = theme.colors.accent;
     }
 
     pub fn offset_y(&self) -> Px {
@@ -234,13 +266,13 @@ impl TextArea {
     }
 
     fn content_bounds(&self) -> Rect {
-        const SCROLLBAR_W: Px = Px(10.0);
+        let scrollbar_w = self.scrollbar_width;
         let inner = self.inner_bounds();
         if self.last_content_height.0 > self.last_viewport_height.0 {
             Rect::new(
                 inner.origin,
                 Size::new(
-                    Px((inner.size.width.0 - SCROLLBAR_W.0).max(0.0)),
+                    Px((inner.size.width.0 - scrollbar_w.0).max(0.0)),
                     inner.size.height,
                 ),
             )
@@ -389,7 +421,7 @@ impl TextArea {
             return None;
         }
 
-        let w = Px(10.0);
+        let w = self.scrollbar_width;
         let track = Rect::new(
             fret_core::Point::new(
                 Px(bounds.origin.x.0 + bounds.size.width.0 - w.0),
@@ -473,6 +505,7 @@ impl Widget for TextArea {
     }
 
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+        self.sync_style_from_theme(cx.theme());
         match event {
             Event::Pointer(fret_core::PointerEvent::Wheel { delta, .. }) => {
                 self.offset_y = Px((self.offset_y.0 - delta.y.0).max(0.0));
@@ -997,12 +1030,13 @@ impl Widget for TextArea {
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+        self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
 
         self.caret = Self::clamp_to_boundary(&self.text, self.caret);
         self.selection_anchor = Self::clamp_to_boundary(&self.text, self.selection_anchor);
 
-        const SCROLLBAR_W: Px = Px(10.0);
+        let scrollbar_w = self.scrollbar_width;
 
         let inner = self.inner_bounds();
         let layout_text_owned = self.layout_text();
@@ -1020,7 +1054,7 @@ impl Widget for TextArea {
         let show_scrollbar = metrics.size.height.0 > inner.size.height.0;
         if show_scrollbar {
             cx.text.release(blob);
-            constraints.max_width = Some(Px((inner.size.width.0 - SCROLLBAR_W.0).max(0.0)));
+            constraints.max_width = Some(Px((inner.size.width.0 - scrollbar_w.0).max(0.0)));
             (blob, metrics) = cx.text.prepare(layout_text, self.text_style, constraints);
         }
 
@@ -1046,6 +1080,7 @@ impl Widget for TextArea {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
+        self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
 
         cx.scene.push(SceneOp::Quad {
@@ -1238,34 +1273,28 @@ impl Widget for TextArea {
         cx.scene.push(SceneOp::PopClip);
 
         if let Some((track, thumb)) = self.scrollbar_geometry(cx.bounds) {
+            let (track_bg, thumb_bg, thumb_hover_bg, radius) = {
+                let theme = cx.theme();
+                (
+                    theme.colors.scrollbar_track,
+                    theme.colors.scrollbar_thumb,
+                    theme.colors.scrollbar_thumb_hover,
+                    theme.metrics.radius_sm,
+                )
+            };
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(100),
                 rect: track,
-                background: Color {
-                    r: 0.10,
-                    g: 0.10,
-                    b: 0.11,
-                    a: 0.9,
-                },
+                background: track_bg,
                 border: Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(Px(6.0)),
+                corner_radii: Corners::all(radius),
             });
 
             let thumb_bg = if self.dragging_thumb {
-                Color {
-                    r: 0.55,
-                    g: 0.55,
-                    b: 0.58,
-                    a: 0.9,
-                }
+                thumb_hover_bg
             } else {
-                Color {
-                    r: 0.42,
-                    g: 0.42,
-                    b: 0.45,
-                    a: 0.9,
-                }
+                thumb_bg
             };
 
             cx.scene.push(SceneOp::Quad {
@@ -1274,7 +1303,7 @@ impl Widget for TextArea {
                 background: thumb_bg,
                 border: Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(Px(6.0)),
+                corner_radii: Corners::all(radius),
             });
         }
     }

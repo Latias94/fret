@@ -3,18 +3,28 @@ use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp, Size,
     TextConstraints, TextMetrics, TextStyle, TextWrap, ids::FontId,
 };
-use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, PanelThemeBackground, Widget};
 
 #[derive(Debug)]
 pub struct OverlayBackdrop {
+    theme_background: PanelThemeBackground,
+    alpha: f32,
     color: Color,
+    last_theme_revision: Option<u64>,
     close_command: CommandId,
 }
 
 impl OverlayBackdrop {
-    pub fn new(color: Color, close_command: CommandId) -> Self {
+    pub fn new(
+        theme_background: PanelThemeBackground,
+        alpha: f32,
+        close_command: CommandId,
+    ) -> Self {
         Self {
-            color,
+            theme_background,
+            alpha: alpha.clamp(0.0, 1.0),
+            color: Color::TRANSPARENT,
+            last_theme_revision: None,
             close_command,
         }
     }
@@ -37,6 +47,19 @@ impl Widget for OverlayBackdrop {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
+        let theme = cx.theme();
+        if self.last_theme_revision != Some(theme.revision()) {
+            self.last_theme_revision = Some(theme.revision());
+            let base = match self.theme_background {
+                PanelThemeBackground::Surface => theme.colors.surface_background,
+                PanelThemeBackground::Panel => theme.colors.panel_background,
+            };
+            self.color = Color {
+                a: self.alpha,
+                ..base
+            };
+        }
+
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: cx.bounds,
@@ -420,18 +443,14 @@ impl Widget for CommandPalette {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
+        let theme = cx.theme().snapshot();
         let panel_bg = Color {
-            r: 0.10,
-            g: 0.10,
-            b: 0.12,
             a: 0.98,
+            ..theme.colors.panel_background
         };
-        let border = Color {
-            r: 0.22,
-            g: 0.22,
-            b: 0.25,
-            a: 1.0,
-        };
+        let border = theme.colors.panel_border;
+        let radius = theme.metrics.radius_lg;
+        let pad_x = theme.metrics.padding_md.0.max(0.0);
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
@@ -439,10 +458,9 @@ impl Widget for CommandPalette {
             background: panel_bg,
             border: Edges::all(Px(1.0)),
             border_color: border,
-            corner_radii: Corners::all(Px(10.0)),
+            corner_radii: Corners::all(radius),
         });
 
-        let pad_x = 12.0;
         let header_y = cx.bounds.origin.y.0 + 10.0;
 
         if let (Some(prompt), Some(prompt_metrics)) = (self.prompt_blob, self.prompt_metrics) {
@@ -454,12 +472,7 @@ impl Widget for CommandPalette {
                 order: DrawOrder(1),
                 origin,
                 text: prompt,
-                color: Color {
-                    r: 0.78,
-                    g: 0.78,
-                    b: 0.82,
-                    a: 1.0,
-                },
+                color: theme.colors.text_muted,
             });
         }
 
@@ -472,12 +485,7 @@ impl Widget for CommandPalette {
                 order: DrawOrder(1),
                 origin,
                 text: blob,
-                color: Color {
-                    r: 0.90,
-                    g: 0.90,
-                    b: 0.92,
-                    a: 1.0,
-                },
+                color: theme.colors.text_primary,
             });
         }
 
@@ -495,12 +503,7 @@ impl Widget for CommandPalette {
                         Point::new(Px(cx.bounds.origin.x.0 + 6.0), Px(y + 2.0)),
                         Size::new(Px(cx.bounds.size.width.0 - 12.0), Px(row_h - 4.0)),
                     ),
-                    background: Color {
-                        r: 0.18,
-                        g: 0.20,
-                        b: 0.26,
-                        a: 1.0,
-                    },
+                    background: theme.colors.menu_item_selected,
                     border: Edges::all(Px(0.0)),
                     border_color: Color::TRANSPARENT,
                     corner_radii: Corners::all(Px(6.0)),
@@ -515,12 +518,7 @@ impl Widget for CommandPalette {
                     Px(y + 2.0 + item.title_metrics.baseline.0),
                 ),
                 text: item.title_blob,
-                color: Color {
-                    r: 0.92,
-                    g: 0.92,
-                    b: 0.94,
-                    a: 1.0,
-                },
+                color: theme.colors.text_primary,
             });
 
             if let (Some(blob), Some(metrics)) = (item.shortcut_blob, item.shortcut_metrics) {
@@ -531,12 +529,7 @@ impl Widget for CommandPalette {
                     order: DrawOrder(2),
                     origin,
                     text: blob,
-                    color: Color {
-                        r: 0.70,
-                        g: 0.70,
-                        b: 0.74,
-                        a: 1.0,
-                    },
+                    color: theme.colors.text_muted,
                 });
             }
         }

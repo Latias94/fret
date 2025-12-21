@@ -1,0 +1,41 @@
+{
+  "name": "Godot Default (Dark) - Fret mapping",
+  "author": "Derived from Godot editor preset colors (approx.)",
+  "url": "https://github.com/godotengine/godot",
+  "colors": {
+    "color.surface.background": "#141414",
+    "color.panel.background": "#191919",
+    "color.panel.border": "#121212F2",
+
+    "color.text.primary": "#C9C9C9",
+    "color.text.muted": "#C9C9C9B3",
+    "color.text.disabled": "#C9C9C959",
+
+    "color.accent": "#569EFF",
+    "color.selection.background": "#569EFF66",
+    "color.hover.background": "#1F1F1F",
+    "color.focus.ring": "#569EFFCC",
+
+    "color.menu.background": "#191919",
+    "color.menu.border": "#121212F2",
+    "color.menu.item.hover": "#1F1F1F",
+    "color.menu.item.selected": "#569EFF40",
+
+    "color.list.background": "#191919",
+    "color.list.border": "#121212F2",
+    "color.list.row.hover": "#1F1F1F",
+    "color.list.row.selected": "#569EFF40",
+
+    "color.scrollbar.track": "#121212B3",
+    "color.scrollbar.thumb": "#272727CC",
+    "color.scrollbar.thumb.hover": "#3A3A3ACC"
+  },
+  "metrics": {
+    "metric.radius.sm": 6,
+    "metric.radius.md": 8,
+    "metric.radius.lg": 10,
+    "metric.padding.sm": 8,
+    "metric.padding.md": 10,
+    "metric.scrollbar.width": 10
+  }
+}

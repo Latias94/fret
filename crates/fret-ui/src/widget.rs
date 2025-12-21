@@ -1,3 +1,4 @@
+use crate::Theme;
 use fret_app::InputContext;
 use fret_app::{App, CommandId};
 use fret_core::{AppWindowId, Event, NodeId, Rect, Scene, Size, TextService};
@@ -25,6 +26,10 @@ pub struct EventCx<'a> {
 }
 
 impl<'a> EventCx<'a> {
+    pub fn theme(&self) -> &Theme {
+        Theme::global(&*self.app)
+    }
+
     pub fn invalidate(&mut self, node: NodeId, kind: Invalidation) {
         self.invalidations.push((node, kind));
     }
@@ -77,6 +82,10 @@ pub struct CommandCx<'a> {
 }
 
 impl<'a> CommandCx<'a> {
+    pub fn theme(&self) -> &Theme {
+        Theme::global(&*self.app)
+    }
+
     pub fn invalidate(&mut self, node: NodeId, kind: Invalidation) {
         self.invalidations.push((node, kind));
     }
@@ -115,6 +124,10 @@ pub struct LayoutCx<'a> {
 }
 
 impl<'a> LayoutCx<'a> {
+    pub fn theme(&self) -> &Theme {
+        Theme::global(&*self.app)
+    }
+
     pub fn layout(&mut self, child: NodeId, available: Size) -> Size {
         let rect = Rect::new(self.bounds.origin, available);
         (self.layout_child)(child, rect)
@@ -140,6 +153,10 @@ pub struct PaintCx<'a> {
 }
 
 impl<'a> PaintCx<'a> {
+    pub fn theme(&self) -> &Theme {
+        Theme::global(&*self.app)
+    }
+
     pub fn paint(&mut self, child: NodeId, bounds: Rect) {
         (self.paint_child)(child, bounds);
     }

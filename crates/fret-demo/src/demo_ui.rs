@@ -6,9 +6,9 @@ use fret_app::Model;
 use fret_core::{AppWindowId, Axis, Color, Px};
 use fret_editor::{InspectorEditHint, InspectorEditLayout};
 use fret_ui::{
-    BoundTextInput, ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel, Scroll, Split, Stack,
-    Text, TextArea, TextInput, UiLayerId, UiTree, VirtualList, VirtualListDataSource,
-    VirtualListRow,
+    BoundTextInput, ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel, PanelThemeBackground,
+    Scroll, Split, Stack, Text, TextArea, TextInput, UiLayerId, UiTree, VirtualList,
+    VirtualListDataSource, VirtualListRow,
 };
 use std::borrow::Cow;
 
@@ -74,14 +74,20 @@ pub fn build_demo_ui(
     let mut ui = UiTree::new();
     ui.set_window(window);
 
-    let root = ui.create_node(Split::new(Axis::Horizontal, config.split_fraction));
+    let root = ui.create_node(Stack::new());
     ui.set_root(root);
 
+    let bg = ui.create_node(ColoredPanel::themed(PanelThemeBackground::Surface, 1.0));
+    ui.add_child(root, bg);
+
+    let split = ui.create_node(Split::new(Axis::Horizontal, config.split_fraction));
+    ui.add_child(root, split);
+
     let dock = ui.create_node(DockSpace::new(window));
-    ui.add_child(root, dock);
+    ui.add_child(split, dock);
 
     let scroll = ui.create_node(Scroll::new());
-    ui.add_child(root, scroll);
+    ui.add_child(split, scroll);
 
     let column = ui.create_node(Column::new().with_padding(Px(10.0)).with_spacing(Px(8.0)));
     ui.add_child(scroll, column);
@@ -149,21 +155,11 @@ Goal: foundation for Console/Inspector/code editor.",
     let elements_demo = ui.create_node(ElementsMvp2Demo::new());
     ui.add_child(column, elements_demo);
 
-    let modal_root = ui.create_node(ColoredPanel::new(Color {
-        r: 0.02,
-        g: 0.02,
-        b: 0.02,
-        a: 0.45,
-    }));
+    let modal_root = ui.create_node(ColoredPanel::themed(PanelThemeBackground::Surface, 0.45));
     let modal = ui.push_overlay_root(modal_root, true);
     ui.set_layer_visible(modal, false);
 
-    let dnd_root = ui.create_node(ColoredPanel::new(Color {
-        r: 0.08,
-        g: 0.20,
-        b: 0.10,
-        a: 0.22,
-    }));
+    let dnd_root = ui.create_node(ColoredPanel::themed(PanelThemeBackground::Panel, 0.22));
     let external_dnd = ui.push_overlay_root_ex(dnd_root, false, false);
     ui.set_layer_visible(external_dnd, false);
 
@@ -173,12 +169,8 @@ Goal: foundation for Console/Inspector/code editor.",
     ui.set_layer_visible(command_palette, false);
 
     let backdrop = ui.create_node(OverlayBackdrop::new(
-        Color {
-            r: 0.02,
-            g: 0.02,
-            b: 0.02,
-            a: 0.55,
-        },
+        PanelThemeBackground::Surface,
+        0.55,
         fret_app::CommandId::from("command_palette.close"),
     ));
     ui.add_child(palette_root, backdrop);
@@ -195,12 +187,8 @@ Goal: foundation for Console/Inspector/code editor.",
     ui.set_layer_visible(inspector_edit, false);
 
     let inspector_backdrop = ui.create_node(OverlayBackdrop::new(
-        Color {
-            r: 0.02,
-            g: 0.02,
-            b: 0.02,
-            a: 0.55,
-        },
+        PanelThemeBackground::Surface,
+        0.55,
         fret_app::CommandId::from("inspector_edit.commit"),
     ));
     ui.add_child(inspector_root, inspector_backdrop);
@@ -208,12 +196,7 @@ Goal: foundation for Console/Inspector/code editor.",
     let inspector_panel = ui.create_node(Stack::new());
     ui.add_child(inspector_root, inspector_panel);
 
-    let inspector_panel_bg = ui.create_node(ColoredPanel::new(Color {
-        r: 0.10,
-        g: 0.10,
-        b: 0.12,
-        a: 1.0,
-    }));
+    let inspector_panel_bg = ui.create_node(ColoredPanel::themed(PanelThemeBackground::Panel, 1.0));
     ui.add_child(inspector_panel, inspector_panel_bg);
 
     let inspector_column =

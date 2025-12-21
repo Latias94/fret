@@ -12,6 +12,7 @@ pub struct Scroll {
     last_bounds: Rect,
     last_content_height: Px,
     last_viewport_height: Px,
+    scrollbar_width: Px,
 }
 
 impl Scroll {
@@ -24,6 +25,7 @@ impl Scroll {
             last_bounds: Rect::default(),
             last_content_height: Px(0.0),
             last_viewport_height: Px(0.0),
+            scrollbar_width: Px(10.0),
         }
     }
 
@@ -51,7 +53,7 @@ impl Scroll {
             return None;
         }
 
-        let w = Px(10.0);
+        let w = self.scrollbar_width;
         let track = Rect::new(
             Point::new(
                 Px(self.last_bounds.origin.x.0 + self.last_bounds.size.width.0 - w.0),
@@ -104,6 +106,7 @@ impl Default for Scroll {
 
 impl Widget for Scroll {
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+        self.scrollbar_width = cx.theme().metrics.scrollbar_width;
         let Event::Pointer(pe) = event else {
             return;
         };
@@ -186,12 +189,13 @@ impl Widget for Scroll {
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+        self.scrollbar_width = cx.theme().metrics.scrollbar_width;
         self.last_bounds = cx.bounds;
         let Some(&child) = cx.children.first() else {
             return cx.available;
         };
 
-        const SCROLLBAR_W: Px = Px(10.0);
+        let scrollbar_w = self.scrollbar_width;
 
         // Measure content with unconstrained height (very simple MVP).
         let mut content_width = cx.available.width;
@@ -205,7 +209,7 @@ impl Widget for Scroll {
 
         let show_scrollbar = content_size.height.0 > cx.available.height.0;
         if show_scrollbar {
-            content_width = Px((cx.available.width.0 - SCROLLBAR_W.0).max(0.0));
+            content_width = Px((cx.available.width.0 - scrollbar_w.0).max(0.0));
             content_size = cx.layout_in(
                 child,
                 Rect::new(cx.bounds.origin, Size::new(content_width, Px(1.0e9))),
@@ -227,6 +231,7 @@ impl Widget for Scroll {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
+        self.scrollbar_width = cx.theme().metrics.scrollbar_width;
         self.last_bounds = cx.bounds;
         let Some(&child) = cx.children.first() else {
             return;
@@ -243,34 +248,28 @@ impl Widget for Scroll {
         cx.scene.push(SceneOp::PopClip);
 
         if let Some((track, thumb)) = self.scrollbar_geometry() {
+            let (track_bg, thumb_bg, thumb_hover_bg, radius) = {
+                let theme = cx.theme();
+                (
+                    theme.colors.scrollbar_track,
+                    theme.colors.scrollbar_thumb,
+                    theme.colors.scrollbar_thumb_hover,
+                    theme.metrics.radius_sm,
+                )
+            };
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(100),
                 rect: track,
-                background: Color {
-                    r: 0.10,
-                    g: 0.10,
-                    b: 0.11,
-                    a: 0.9,
-                },
+                background: track_bg,
                 border: Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(Px(6.0)),
+                corner_radii: Corners::all(radius),
             });
 
             let thumb_bg = if self.dragging_thumb {
-                Color {
-                    r: 0.55,
-                    g: 0.55,
-                    b: 0.58,
-                    a: 0.9,
-                }
+                thumb_hover_bg
             } else {
-                Color {
-                    r: 0.42,
-                    g: 0.42,
-                    b: 0.45,
-                    a: 0.9,
-                }
+                thumb_bg
             };
 
             cx.scene.push(SceneOp::Quad {
@@ -279,7 +278,7 @@ impl Widget for Scroll {
                 background: thumb_bg,
                 border: Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(Px(6.0)),
+                corner_radii: Corners::all(radius),
             });
         }
     }

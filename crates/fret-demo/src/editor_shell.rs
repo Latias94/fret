@@ -2,7 +2,7 @@ use crate::hierarchy::{DemoHierarchy, HierarchyDropKind, HierarchyDropTarget};
 use crate::undo::{EditCommand, SelectionSnapshot, UndoStack};
 use crate::world::DemoWorld;
 use fret_app::{App, Model};
-use fret_core::{Color, Corners, Edges, Event, Px, Size, TextStyle};
+use fret_core::{Color, Corners, Edges, Event, Px, Size};
 use fret_editor::{
     InspectorEditKind, InspectorEditRequest, InspectorEditService, InspectorEditorKind,
     InspectorEditorRegistry, ProjectEntryKind, ProjectSelectionService, ProjectService,
@@ -764,47 +764,7 @@ pub struct InspectorPanel {
 
 impl InspectorPanel {
     pub fn new(selection: Model<DemoSelection>, world: Model<DemoWorld>) -> Self {
-        let mut list = VirtualList::new(InspectorDataSource::empty())
-            .with_row_height(Px(22.0))
-            .with_style(fret_ui::VirtualListStyle {
-                padding_x: Px(10.0),
-                background: Color {
-                    r: 0.10,
-                    g: 0.10,
-                    b: 0.12,
-                    a: 1.0,
-                },
-                border: Edges::all(Px(1.0)),
-                border_color: Color {
-                    r: 0.0,
-                    g: 0.0,
-                    b: 0.0,
-                    a: 0.35,
-                },
-                corner_radii: Corners::all(Px(8.0)),
-                row_hover: Color {
-                    r: 0.16,
-                    g: 0.17,
-                    b: 0.22,
-                    a: 0.95,
-                },
-                row_selected: Color {
-                    r: 0.24,
-                    g: 0.34,
-                    b: 0.52,
-                    a: 0.65,
-                },
-                text_color: Color {
-                    r: 0.92,
-                    g: 0.92,
-                    b: 0.92,
-                    a: 1.0,
-                },
-                text_style: TextStyle {
-                    font: fret_core::FontId::default(),
-                    size: Px(13.0),
-                },
-            });
+        let mut list = VirtualList::new(InspectorDataSource::empty()).with_row_height(Px(22.0));
         list.clear_selection();
 
         Self {

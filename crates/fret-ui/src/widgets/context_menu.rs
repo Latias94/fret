@@ -1,3 +1,4 @@
+use crate::Theme;
 use crate::widget::{EventCx, Invalidation, PaintCx, Widget};
 use fret_app::{CommandId, InputContext, KeymapService, Menu, MenuItem, format_sequence};
 use fret_core::{
@@ -142,6 +143,7 @@ pub struct ContextMenu {
     style: ContextMenuStyle,
     last_bounds: Rect,
     last_serial: Option<u64>,
+    last_theme_revision: Option<u64>,
     open_path: Vec<usize>,
     selection: Vec<Option<usize>>,
     hover_panel: Option<usize>,
@@ -180,6 +182,7 @@ impl ContextMenu {
             style: ContextMenuStyle::default(),
             last_bounds: Rect::default(),
             last_serial: None,
+            last_theme_revision: None,
             open_path: Vec::new(),
             selection: Vec::new(),
             hover_panel: None,
@@ -191,6 +194,22 @@ impl ContextMenu {
     pub fn with_style(mut self, style: ContextMenuStyle) -> Self {
         self.style = style;
         self
+    }
+
+    fn sync_style_from_theme(&mut self, theme: &Theme) {
+        if self.last_theme_revision == Some(theme.revision()) {
+            return;
+        }
+        self.last_theme_revision = Some(theme.revision());
+
+        let radius = theme.metrics.radius_md;
+        self.style.background = theme.colors.menu_background;
+        self.style.border_color = theme.colors.menu_border;
+        self.style.corner_radii = Corners::all(radius);
+        self.style.row_hover = theme.colors.menu_item_hover;
+        self.style.row_selected = theme.colors.menu_item_selected;
+        self.style.text_color = theme.colors.text_primary;
+        self.style.disabled_text_color = theme.colors.text_disabled;
     }
 
     fn cleanup(&mut self, text: &mut dyn fret_core::TextService) {
@@ -509,11 +528,13 @@ impl Widget for ContextMenu {
     }
 
     fn layout(&mut self, cx: &mut crate::widget::LayoutCx<'_>) -> Size {
+        self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
         cx.available
     }
 
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+        self.sync_style_from_theme(cx.theme());
         let Some(window) = cx.window else {
             return;
         };
@@ -690,6 +711,7 @@ impl Widget for ContextMenu {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
+        self.sync_style_from_theme(cx.theme());
         let Some(window) = self.ensure_prepared(cx) else {
             return;
         };

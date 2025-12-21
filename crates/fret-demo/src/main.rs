@@ -44,7 +44,8 @@ use fret_runner_winit_wgpu::{
 use fret_ui::Invalidation;
 use fret_ui::dock::ViewportMarquee;
 use fret_ui::{
-    ContextMenuService, DockManager, DockPanel, DockPanelContentService, UiTree, ViewportPanel,
+    ContextMenuService, DockManager, DockPanel, DockPanelContentService, Theme, ThemeConfig,
+    UiTree, ViewportPanel,
 };
 use std::{collections::HashMap, fs::File, path::Path, time::Duration, time::Instant};
 use winit::event_loop::EventLoop;
@@ -132,6 +133,25 @@ struct DemoDriver {
     camera_persist_pending: bool,
     play_mode: bool,
     play_started_at: Option<Instant>,
+}
+
+fn load_theme(app: &mut App) {
+    let candidates = ["./.fret/theme.json", "./themes/hardhacker-dark.json"];
+    for path in candidates {
+        let Ok(bytes) = std::fs::read(path) else {
+            continue;
+        };
+        match ThemeConfig::from_slice(&bytes) {
+            Ok(cfg) => {
+                Theme::global_mut(app).apply_config(&cfg);
+                tracing::info!(theme = %cfg.name, path = %path, "loaded theme");
+                return;
+            }
+            Err(err) => {
+                tracing::error!(error = %err, path = %path, "failed to parse theme file");
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -404,18 +424,13 @@ impl DemoDriver {
         out
     }
 
-    fn ensure_layout_panels(dock: &mut DockManager, layout: &DockLayoutV1) {
+    fn ensure_layout_panels(dock: &mut DockManager, layout: &DockLayoutV1, missing_color: Color) {
         for node in &layout.nodes {
             if let DockLayoutNodeV1::Tabs { tabs, .. } = node {
                 for key in tabs {
                     dock.ensure_panel(key, || DockPanel {
                         title: format!("Missing: {}", key.kind.0),
-                        color: Color {
-                            r: 0.18,
-                            g: 0.18,
-                            b: 0.20,
-                            a: 1.0,
-                        },
+                        color: missing_color,
                         viewport: None,
                     });
                 }
@@ -957,6 +972,7 @@ impl WinitDriver for DemoDriver {
 
         app.set_global(InspectorEditService::default());
         app.set_global(PropertyEditService::default());
+        load_theme(app);
 
         app.commands_mut().register(
             CommandId::from("command_palette.toggle"),
@@ -1900,18 +1916,15 @@ impl WinitDriver for DemoDriver {
         }
         app.set_global(KeymapService { keymap: merged });
 
+        let theme = Theme::global(app).snapshot();
+
         let mut dock = DockManager::default();
         let key_scene = PanelKey::new("core.scene");
         dock.insert_panel(
             key_scene.clone(),
             DockPanel {
                 title: "Scene".to_string(),
-                color: Color {
-                    r: 0.12,
-                    g: 0.16,
-                    b: 0.22,
-                    a: 1.0,
-                },
+                color: theme.colors.panel_background,
                 viewport: self
                     .viewport_targets
                     .as_ref()
@@ -1929,12 +1942,7 @@ impl WinitDriver for DemoDriver {
             key_game.clone(),
             DockPanel {
                 title: "Game".to_string(),
-                color: Color {
-                    r: 0.11,
-                    g: 0.14,
-                    b: 0.18,
-                    a: 1.0,
-                },
+                color: theme.colors.panel_background,
                 viewport: self
                     .viewport_targets
                     .as_ref()
@@ -1952,12 +1960,7 @@ impl WinitDriver for DemoDriver {
             key_text_probe.clone(),
             DockPanel {
                 title: "Text Probe".to_string(),
-                color: Color {
-                    r: 0.16,
-                    g: 0.14,
-                    b: 0.20,
-                    a: 1.0,
-                },
+                color: theme.colors.panel_background,
                 viewport: None,
             },
         );
@@ -1966,12 +1969,7 @@ impl WinitDriver for DemoDriver {
             key_project.clone(),
             DockPanel {
                 title: "Project".to_string(),
-                color: Color {
-                    r: 0.14,
-                    g: 0.16,
-                    b: 0.20,
-                    a: 1.0,
-                },
+                color: theme.colors.panel_background,
                 viewport: None,
             },
         );
@@ -1980,12 +1978,7 @@ impl WinitDriver for DemoDriver {
             key_inspector.clone(),
             DockPanel {
                 title: "Inspector".to_string(),
-                color: Color {
-                    r: 0.16,
-                    g: 0.14,
-                    b: 0.20,
-                    a: 1.0,
-                },
+                color: theme.colors.panel_background,
                 viewport: None,
             },
         );
@@ -1994,18 +1987,17 @@ impl WinitDriver for DemoDriver {
             key_hierarchy.clone(),
             DockPanel {
                 title: "Hierarchy".to_string(),
-                color: Color {
-                    r: 0.15,
-                    g: 0.18,
-                    b: 0.14,
-                    a: 1.0,
-                },
+                color: theme.colors.panel_background,
                 viewport: None,
             },
         );
 
         if let Some(layout) = Self::load_layout_file() {
-            Self::ensure_layout_panels(&mut dock, &layout);
+            let missing_color = Color {
+                a: 1.0,
+                ..theme.colors.hover_background
+            };
+            Self::ensure_layout_panels(&mut dock, &layout, missing_color);
             self.loaded_layout = Some(layout.clone());
 
             if let Some(main_entry) = layout

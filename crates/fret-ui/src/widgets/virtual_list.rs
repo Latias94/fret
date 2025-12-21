@@ -1,3 +1,4 @@
+use crate::Theme;
 use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 use fret_app::{CommandId, Effect, InputContext, Menu, MenuItem};
 use fret_core::{
@@ -150,6 +151,9 @@ pub struct VirtualList<D: VirtualListDataSource> {
     data: D,
     row_height: Px,
     style: VirtualListStyle,
+    style_override: bool,
+    last_theme_revision: Option<u64>,
+    scrollbar_width: Px,
 
     offset_y: Px,
     dragging_thumb: bool,
@@ -188,6 +192,9 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             data,
             row_height: Px(20.0),
             style: VirtualListStyle::default(),
+            style_override: false,
+            last_theme_revision: None,
+            scrollbar_width: Px(10.0),
             offset_y: Px(0.0),
             dragging_thumb: false,
             drag_pointer_start_y: Px(0.0),
@@ -215,11 +222,32 @@ impl<D: VirtualListDataSource> VirtualList<D> {
 
     pub fn with_style(mut self, style: VirtualListStyle) -> Self {
         self.style = style;
+        self.style_override = true;
         self
     }
 
     pub fn style(&self) -> &VirtualListStyle {
         &self.style
+    }
+
+    fn sync_style_from_theme(&mut self, theme: &Theme) {
+        self.scrollbar_width = theme.metrics.scrollbar_width;
+
+        if self.style_override {
+            return;
+        }
+        if self.last_theme_revision == Some(theme.revision()) {
+            return;
+        }
+        self.last_theme_revision = Some(theme.revision());
+
+        self.style.padding_x = theme.metrics.padding_md;
+        self.style.background = theme.colors.list_background;
+        self.style.border_color = theme.colors.list_border;
+        self.style.corner_radii = Corners::all(theme.metrics.radius_md);
+        self.style.row_hover = theme.colors.list_row_hover;
+        self.style.row_selected = theme.colors.list_row_selected;
+        self.style.text_color = theme.colors.text_primary;
     }
 
     pub fn row_height(&self) -> Px {
@@ -386,12 +414,12 @@ impl<D: VirtualListDataSource> VirtualList<D> {
     }
 
     pub fn content_bounds(&self) -> Rect {
-        const SCROLLBAR_W: Px = Px(10.0);
+        let scrollbar_w = self.scrollbar_width;
         if self.last_content_height.0 > self.last_viewport_height.0 {
             Rect::new(
                 self.last_bounds.origin,
                 Size::new(
-                    Px((self.last_bounds.size.width.0 - SCROLLBAR_W.0).max(0.0)),
+                    Px((self.last_bounds.size.width.0 - scrollbar_w.0).max(0.0)),
                     self.last_bounds.size.height,
                 ),
             )
@@ -465,7 +493,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             return None;
         }
 
-        let w = Px(10.0);
+        let w = self.scrollbar_width;
         let track = Rect::new(
             fret_core::Point::new(
                 Px(self.last_bounds.origin.x.0 + self.last_bounds.size.width.0 - w.0),
@@ -702,6 +730,7 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
     }
 
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+        self.sync_style_from_theme(cx.theme());
         match event {
             Event::Pointer(pe) => match pe {
                 fret_core::PointerEvent::Wheel { delta, .. } => {
@@ -889,6 +918,7 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+        self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
 
         let count = self.data.len();
@@ -900,6 +930,7 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
+        self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
         self.last_viewport_height = cx.bounds.size.height;
         self.last_content_height = Px(self.data.len() as f32 * self.row_height.0);
@@ -959,34 +990,28 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
         cx.scene.push(SceneOp::PopClip);
 
         if let Some((track, thumb)) = self.scrollbar_geometry() {
+            let (track_bg, thumb_bg, thumb_hover_bg, radius) = {
+                let theme = cx.theme();
+                (
+                    theme.colors.scrollbar_track,
+                    theme.colors.scrollbar_thumb,
+                    theme.colors.scrollbar_thumb_hover,
+                    theme.metrics.radius_sm,
+                )
+            };
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(100),
                 rect: track,
-                background: Color {
-                    r: 0.10,
-                    g: 0.10,
-                    b: 0.11,
-                    a: 0.9,
-                },
+                background: track_bg,
                 border: Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(Px(6.0)),
+                corner_radii: Corners::all(radius),
             });
 
             let thumb_bg = if self.dragging_thumb {
-                Color {
-                    r: 0.55,
-                    g: 0.55,
-                    b: 0.58,
-                    a: 0.9,
-                }
+                thumb_hover_bg
             } else {
-                Color {
-                    r: 0.42,
-                    g: 0.42,
-                    b: 0.45,
-                    a: 0.9,
-                }
+                thumb_bg
             };
 
             cx.scene.push(SceneOp::Quad {
@@ -995,7 +1020,7 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
                 background: thumb_bg,
                 border: Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(Px(6.0)),
+                corner_radii: Corners::all(radius),
             });
         }
     }

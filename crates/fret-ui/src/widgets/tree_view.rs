@@ -9,7 +9,7 @@ use std::{
 };
 
 use super::context_menu::{ContextMenuRequest, ContextMenuService};
-use super::virtual_list::{VirtualList, VirtualListDataSource, VirtualListRow, VirtualListStyle};
+use super::virtual_list::{VirtualList, VirtualListDataSource, VirtualListRow};
 
 #[derive(Debug, Clone)]
 pub struct TreeNode {
@@ -35,7 +35,6 @@ impl TreeNode {
 
 #[derive(Debug, Clone)]
 pub struct TreeViewStyle {
-    pub list: VirtualListStyle,
     pub indent_width: Px,
     pub disclosure_width: Px,
 }
@@ -43,7 +42,6 @@ pub struct TreeViewStyle {
 impl Default for TreeViewStyle {
     fn default() -> Self {
         Self {
-            list: VirtualListStyle::default(),
             indent_width: Px(16.0),
             disclosure_width: Px(14.0),
         }
@@ -116,8 +114,7 @@ impl TreeView {
             list: VirtualList::new(TreeViewDataSource {
                 rows: flat,
                 indent_width: style.indent_width,
-            })
-            .with_style(style.list.clone()),
+            }),
             style,
             dirty: true,
         };

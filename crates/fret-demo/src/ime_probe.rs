@@ -95,35 +95,22 @@ impl Widget for ImeProbe {
             return;
         };
 
+        let theme = cx.theme().snapshot();
+
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: cx.bounds,
-            background: Color {
-                r: 0.10,
-                g: 0.11,
-                b: 0.14,
-                a: 1.0,
-            },
+            background: theme.colors.panel_background,
             border: Edges::all(Px(1.0)),
-            border_color: Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 0.35,
-            },
-            corner_radii: Corners::all(Px(8.0)),
+            border_color: theme.colors.panel_border,
+            corner_radii: Corners::all(theme.metrics.radius_md),
         });
 
         let caret = self.caret_rect(cx.bounds);
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: caret,
-            background: Color {
-                r: 0.95,
-                g: 0.95,
-                b: 0.95,
-                a: 1.0,
-            },
+            background: theme.colors.text_primary,
             border: Edges::all(Px(0.0)),
             border_color: Color::TRANSPARENT,
             corner_radii: Corners::all(Px(1.0)),

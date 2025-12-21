@@ -1,0 +1,41 @@
+{
+  "name": "HardHacker-inspired Dark",
+  "author": "HardHackerLabs (palette reference)",
+  "url": "https://github.com/hardhackerlabs/themes",
+  "colors": {
+    "color.surface.background": "#201C2B",
+    "color.panel.background": "#282433",
+    "color.panel.border": "#171522CC",
+
+    "color.text.primary": "#EEE9FC",
+    "color.text.muted": "#938AAD",
+    "color.text.disabled": "#938AAD80",
+
+    "color.accent": "#E965A5",
+    "color.selection.background": "#3F3951CC",
+    "color.hover.background": "#3F395166",
+    "color.focus.ring": "#E965A5CC",
+
+    "color.menu.background": "#282433",
+    "color.menu.border": "#171522CC",
+    "color.menu.item.hover": "#3F395166",
+    "color.menu.item.selected": "#3F3951CC",
+
+    "color.list.background": "#282433",
+    "color.list.border": "#171522CC",
+    "color.list.row.hover": "#3F395166",
+    "color.list.row.selected": "#3F3951CC",
+
+    "color.scrollbar.track": "#1F1C2780",
+    "color.scrollbar.thumb": "#3F3951B3",
+    "color.scrollbar.thumb.hover": "#938AADB3"
+  },
+  "metrics": {
+    "metric.radius.sm": 6,
+    "metric.radius.md": 8,
+    "metric.radius.lg": 10,
+    "metric.padding.sm": 8,
+    "metric.padding.md": 10,
+    "metric.scrollbar.width": 10
+  }
+}

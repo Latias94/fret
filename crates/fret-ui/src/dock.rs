@@ -1172,7 +1172,7 @@ impl Widget for DockSpace {
             }
         }
         if let Some(dock) = cx.app.global::<DockManager>() {
-            paint_dock(dock, self.window, &layout, cx.scene);
+            paint_dock(cx.theme().snapshot(), dock, self.window, &layout, cx.scene);
         }
 
         let panel_nodes = self.panel_nodes(cx.app);
@@ -1195,9 +1195,23 @@ impl Widget for DockSpace {
             .drag()
             .is_some_and(|d| d.dragging && d.payload::<DockPanelDragPayload>().is_some());
         if is_dock_dragging {
-            paint_drop_hints(hover.clone(), self.window, chrome, &layout, cx.scene);
+            paint_drop_hints(
+                cx.theme().snapshot(),
+                hover.clone(),
+                self.window,
+                chrome,
+                &layout,
+                cx.scene,
+            );
         }
-        paint_drop_overlay(hover, self.window, chrome, &layout, cx.scene);
+        paint_drop_overlay(
+            cx.theme().snapshot(),
+            hover,
+            self.window,
+            chrome,
+            &layout,
+            cx.scene,
+        );
     }
 }
 
@@ -1238,6 +1252,7 @@ fn active_panel_content_bounds(
 }
 
 fn paint_dock(
+    theme: crate::ThemeSnapshot,
     dock: &DockManager,
     window: fret_core::AppWindowId,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
@@ -1253,12 +1268,7 @@ fn paint_dock(
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(0),
             rect,
-            background: Color {
-                r: 0.12,
-                g: 0.13,
-                b: 0.14,
-                a: 1.0,
-            },
+            background: theme.colors.panel_background,
             border: Edges::all(Px(0.0)),
             border_color: Color::TRANSPARENT,
             corner_radii: fret_core::Corners::all(Px(0.0)),
@@ -1267,12 +1277,7 @@ fn paint_dock(
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(1),
             rect: tab_bar,
-            background: Color {
-                r: 0.10,
-                g: 0.10,
-                b: 0.11,
-                a: 1.0,
-            },
+            background: theme.colors.surface_background,
             border: Edges::all(Px(0.0)),
             border_color: Color::TRANSPARENT,
             corner_radii: fret_core::Corners::all(Px(0.0)),
@@ -1291,18 +1296,11 @@ fn paint_dock(
             let is_active = i == *active;
             let bg = if is_active {
                 Color {
-                    r: 0.18,
-                    g: 0.18,
-                    b: 0.20,
                     a: 1.0,
+                    ..theme.colors.selection_background
                 }
             } else {
-                Color {
-                    r: 0.14,
-                    g: 0.14,
-                    b: 0.15,
-                    a: 1.0,
-                }
+                theme.colors.panel_background
             };
 
             scene.push(SceneOp::Quad {
@@ -1333,7 +1331,7 @@ fn paint_dock(
                     background: panel.color,
                     border: Edges::all(Px(0.0)),
                     border_color: Color::TRANSPARENT,
-                    corner_radii: fret_core::Corners::all(Px(6.0)),
+                    corner_radii: fret_core::Corners::all(theme.metrics.radius_sm),
                 });
 
                 scene.push(SceneOp::PushClipRect { rect: content });
@@ -1345,11 +1343,11 @@ fn paint_dock(
                 });
                 if let Some(h) = dock.viewport_hover.as_ref() {
                     if h.window == window && active_panel.is_some_and(|p| p == &h.panel) {
-                        paint_viewport_crosshair(draw_rect, h.position, scene);
+                        paint_viewport_crosshair(theme, draw_rect, h.position, scene);
                     }
                 }
                 if let Some(overlay) = dock.viewport_overlays.get(&(window, vp.target)) {
-                    paint_viewport_overlay(draw_rect, *overlay, scene);
+                    paint_viewport_overlay(theme, draw_rect, *overlay, scene);
                 }
                 scene.push(SceneOp::PopClip);
             } else {
@@ -1359,14 +1357,19 @@ fn paint_dock(
                     background: panel.color,
                     border: Edges::all(Px(0.0)),
                     border_color: Color::TRANSPARENT,
-                    corner_radii: fret_core::Corners::all(Px(6.0)),
+                    corner_radii: fret_core::Corners::all(theme.metrics.radius_sm),
                 });
             }
         }
     }
 }
 
-fn paint_viewport_crosshair(content: Rect, position: Point, scene: &mut Scene) {
+fn paint_viewport_crosshair(
+    theme: crate::ThemeSnapshot,
+    content: Rect,
+    position: Point,
+    scene: &mut Scene,
+) {
     if !content.contains(position) {
         return;
     }
@@ -1386,10 +1389,8 @@ fn paint_viewport_crosshair(content: Rect, position: Point, scene: &mut Scene) {
     };
 
     let color = Color {
-        r: 0.95,
-        g: 0.95,
-        b: 0.97,
         a: 0.65,
+        ..theme.colors.text_primary
     };
 
     for rect in [h, v] {
@@ -1404,7 +1405,12 @@ fn paint_viewport_crosshair(content: Rect, position: Point, scene: &mut Scene) {
     }
 }
 
-fn paint_viewport_overlay(content: Rect, overlay: ViewportOverlay, scene: &mut Scene) {
+fn paint_viewport_overlay(
+    theme: crate::ThemeSnapshot,
+    content: Rect,
+    overlay: ViewportOverlay,
+    scene: &mut Scene,
+) {
     if let Some(sel) = overlay.selection_rect {
         paint_viewport_selection_rect(content, sel, scene);
     }
@@ -1415,7 +1421,7 @@ fn paint_viewport_overlay(content: Rect, overlay: ViewportOverlay, scene: &mut S
         paint_viewport_rotate_gizmo(content, gizmo, scene);
     }
     if let Some(m) = overlay.marquee {
-        paint_viewport_marquee(content, m, scene);
+        paint_viewport_marquee(theme, content, m, scene);
     }
     if let Some(line) = overlay.drag_line {
         paint_viewport_drag_line(content, line, scene);
@@ -1670,7 +1676,12 @@ fn paint_viewport_marker(content: Rect, marker: ViewportMarker, scene: &mut Scen
     });
 }
 
-fn paint_viewport_marquee(content: Rect, marquee: ViewportMarquee, scene: &mut Scene) {
+fn paint_viewport_marquee(
+    theme: crate::ThemeSnapshot,
+    content: Rect,
+    marquee: ViewportMarquee,
+    scene: &mut Scene,
+) {
     let (au, av) = marquee.a_uv;
     let (bu, bv) = marquee.b_uv;
     let x0 = content.origin.x.0 + content.size.width.0 * au;
@@ -1693,16 +1704,12 @@ fn paint_viewport_marquee(content: Rect, marquee: ViewportMarquee, scene: &mut S
     }
 
     let fill = Color {
-        r: 0.20,
-        g: 0.45,
-        b: 0.95,
         a: 0.14,
+        ..theme.colors.accent
     };
     let stroke = Color {
-        r: 0.20,
-        g: 0.45,
-        b: 0.95,
         a: 0.85,
+        ..theme.colors.accent
     };
     let t = Px(1.5);
 
@@ -2186,6 +2193,7 @@ fn paint_split_handles(
 }
 
 fn paint_drop_overlay(
+    theme: crate::ThemeSnapshot,
     target: Option<DockDropTarget>,
     window: fret_core::AppWindowId,
     bounds: Rect,
@@ -2205,14 +2213,12 @@ fn paint_drop_overlay(
                 order: fret_core::DrawOrder(10_000),
                 rect: float_zone(bounds),
                 background: Color {
-                    r: 0.20,
-                    g: 0.55,
-                    b: 1.00,
                     a: 0.45,
+                    ..theme.colors.accent
                 },
                 border: Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
-                corner_radii: fret_core::Corners::all(Px(8.0)),
+                corner_radii: fret_core::Corners::all(theme.metrics.radius_md),
             });
         }
         DockDropTarget::Dock(target) => {
@@ -2226,14 +2232,12 @@ fn paint_drop_overlay(
                     order: fret_core::DrawOrder(9_990),
                     rect: tab_bar,
                     background: Color {
-                        r: 0.20,
-                        g: 0.55,
-                        b: 1.00,
                         a: 0.10,
+                        ..theme.colors.accent
                     },
                     border: Edges::all(Px(0.0)),
                     border_color: Color::TRANSPARENT,
-                    corner_radii: fret_core::Corners::all(Px(6.0)),
+                    corner_radii: fret_core::Corners::all(theme.metrics.radius_sm),
                 });
                 if let Some(i) = target.insert_index {
                     let x = tab_bar.origin.x.0 + Px(120.0).0 * i as f32;
@@ -2245,10 +2249,8 @@ fn paint_drop_overlay(
                         order: fret_core::DrawOrder(10_000),
                         rect: marker,
                         background: Color {
-                            r: 0.20,
-                            g: 0.55,
-                            b: 1.00,
                             a: 0.65,
+                            ..theme.colors.accent
                         },
                         border: Edges::all(Px(0.0)),
                         border_color: Color::TRANSPARENT,
@@ -2263,20 +2265,19 @@ fn paint_drop_overlay(
                 order: fret_core::DrawOrder(10_000),
                 rect: overlay,
                 background: Color {
-                    r: 0.20,
-                    g: 0.55,
-                    b: 1.00,
                     a: 0.22,
+                    ..theme.colors.accent
                 },
                 border: Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
-                corner_radii: fret_core::Corners::all(Px(6.0)),
+                corner_radii: fret_core::Corners::all(theme.metrics.radius_sm),
             });
         }
     }
 }
 
 fn paint_drop_hints(
+    theme: crate::ThemeSnapshot,
     target: Option<DockDropTarget>,
     _window: fret_core::AppWindowId,
     _bounds: Rect,
@@ -2303,33 +2304,25 @@ fn paint_drop_hints(
     let step = Px(size.0 + gap.0);
 
     let inactive_bg = Color {
-        r: 0.10,
-        g: 0.10,
-        b: 0.11,
         a: 0.72,
+        ..theme.colors.panel_background
     };
     let inactive_border = Color {
-        r: 0.18,
-        g: 0.18,
-        b: 0.20,
         a: 0.95,
+        ..theme.colors.panel_border
     };
     let active_bg = Color {
-        r: 0.20,
-        g: 0.55,
-        b: 1.00,
         a: 0.85,
+        ..theme.colors.accent
     };
     let active_border = Color {
-        r: 0.20,
-        g: 0.55,
-        b: 1.00,
         a: 1.0,
+        ..theme.colors.accent
     };
 
     let order = fret_core::DrawOrder(9_500);
     let border = Edges::all(Px(1.5));
-    let corner_radii = fret_core::Corners::all(Px(6.0));
+    let corner_radii = fret_core::Corners::all(theme.metrics.radius_sm);
 
     for (zone, dx, dy) in [
         (DropZone::Center, 0.0, 0.0),

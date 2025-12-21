@@ -80,6 +80,7 @@ impl Widget for ElementsMvp2Demo {
             return;
         };
 
+        let theme = cx.theme().snapshot();
         let bounds = cx.bounds;
         let app = &mut *cx.app;
         let scene = &mut *cx.scene;
@@ -91,12 +92,9 @@ impl Widget for ElementsMvp2Demo {
             });
 
             let header_h = Px(26.0);
-            let header_bg = Color {
-                r: 0.10,
-                g: 0.10,
-                b: 0.12,
-                a: 1.0,
-            };
+            let header_bg = theme.colors.panel_background;
+            let panel_border = theme.colors.panel_border;
+            let radius = theme.metrics.radius_md;
 
             scene.push(SceneOp::Quad {
                 order: DrawOrder(0),
@@ -104,15 +102,15 @@ impl Widget for ElementsMvp2Demo {
                 background: header_bg,
                 border: Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(Px(8.0)),
+                corner_radii: Corners::all(radius),
             });
 
             // Keyed row: item color is stored per item id (stable across reorder).
             let y0 = header_h + Px(12.0);
-            let pad = Px(10.0);
+            let pad = theme.metrics.padding_md;
             let item_w = Px(44.0);
             let item_h = Px(28.0);
-            let gap = Px(8.0);
+            let gap = theme.metrics.padding_sm;
 
             scene.push(SceneOp::Quad {
                 order: DrawOrder(0),
@@ -120,15 +118,10 @@ impl Widget for ElementsMvp2Demo {
                     fret_core::Point::new(bounds.origin.x, bounds.origin.y + y0),
                     Size::new(bounds.size.width, item_h + Px(18.0)),
                 ),
-                background: Color {
-                    r: 0.12,
-                    g: 0.14,
-                    b: 0.18,
-                    a: 1.0,
-                },
+                background: theme.colors.surface_background,
                 border: Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(Px(8.0)),
+                corner_radii: Corners::all(radius),
             });
 
             ecx.for_each_keyed(
@@ -152,13 +145,8 @@ impl Widget for ElementsMvp2Demo {
                         rect,
                         background: color,
                         border: Edges::all(Px(1.0)),
-                        border_color: Color {
-                            r: 0.0,
-                            g: 0.0,
-                            b: 0.0,
-                            a: 0.35,
-                        },
-                        corner_radii: Corners::all(Px(6.0)),
+                        border_color: panel_border,
+                        corner_radii: Corners::all(theme.metrics.radius_sm),
                     });
                 },
             );
@@ -172,15 +160,10 @@ impl Widget for ElementsMvp2Demo {
                     fret_core::Point::new(bounds.origin.x, bounds.origin.y + y1),
                     Size::new(bounds.size.width, item_h + Px(18.0)),
                 ),
-                background: Color {
-                    r: 0.14,
-                    g: 0.12,
-                    b: 0.16,
-                    a: 1.0,
-                },
+                background: theme.colors.surface_background,
                 border: Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(Px(8.0)),
+                corner_radii: Corners::all(radius),
             });
 
             ecx.for_each_unkeyed(&items, |ecx, index, key| {
@@ -200,13 +183,8 @@ impl Widget for ElementsMvp2Demo {
                     rect,
                     background: color,
                     border: Edges::all(Px(1.0)),
-                    border_color: Color {
-                        r: 0.0,
-                        g: 0.0,
-                        b: 0.0,
-                        a: 0.35,
-                    },
-                    corner_radii: Corners::all(Px(6.0)),
+                    border_color: panel_border,
+                    corner_radii: Corners::all(theme.metrics.radius_sm),
                 });
             });
         });

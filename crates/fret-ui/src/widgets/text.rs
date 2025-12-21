@@ -939,26 +939,24 @@ impl Widget for TextInput {
             return;
         };
 
+        let theme = cx.theme().snapshot();
+        let focused = cx.focus == Some(cx.node);
+        let border_color = if focused {
+            theme.colors.focus_ring
+        } else {
+            theme.colors.panel_border
+        };
+
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: cx.bounds,
-            background: Color {
-                r: 0.10,
-                g: 0.11,
-                b: 0.14,
-                a: 1.0,
-            },
+            background: theme.colors.panel_background,
             border: fret_core::geometry::Edges::all(Px(1.0)),
-            border_color: Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 0.35,
-            },
-            corner_radii: fret_core::geometry::Corners::all(Px(6.0)),
+            border_color,
+            corner_radii: fret_core::geometry::Corners::all(theme.metrics.radius_sm),
         });
 
-        let padding = Px(8.0);
+        let padding = theme.metrics.padding_sm;
         if self.has_selection() && self.preedit.is_empty() {
             let (a, b) = self.selection_range();
             let start_x = self
@@ -983,14 +981,12 @@ impl Widget for TextInput {
                     ),
                 ),
                 background: Color {
-                    r: 0.22,
-                    g: 0.24,
-                    b: 0.34,
                     a: 1.0,
+                    ..theme.colors.selection_background
                 },
                 border: fret_core::geometry::Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
-                corner_radii: fret_core::geometry::Corners::all(Px(4.0)),
+                corner_radii: fret_core::geometry::Corners::all(theme.metrics.radius_sm),
             });
         }
         let base_origin = if let Some(metrics) = self.text_metrics {
@@ -1011,12 +1007,7 @@ impl Widget for TextInput {
                     order: DrawOrder(0),
                     origin: base_origin,
                     text: blob,
-                    color: Color {
-                        r: 0.92,
-                        g: 0.92,
-                        b: 0.92,
-                        a: 1.0,
-                    },
+                    color: theme.colors.text_primary,
                 });
             }
         } else {
@@ -1034,12 +1025,7 @@ impl Widget for TextInput {
                     order: DrawOrder(0),
                     origin: base_origin,
                     text: blob,
-                    color: Color {
-                        r: 0.92,
-                        g: 0.92,
-                        b: 0.92,
-                        a: 1.0,
-                    },
+                    color: theme.colors.text_primary,
                 });
             }
             if let Some(pre_blob) = self.preedit_blob {
@@ -1049,12 +1035,7 @@ impl Widget for TextInput {
                     order: DrawOrder(0),
                     origin: pre_origin,
                     text: pre_blob,
-                    color: Color {
-                        r: 0.65,
-                        g: 0.82,
-                        b: 1.0,
-                        a: 1.0,
-                    },
+                    color: theme.colors.accent,
                 });
             }
             if let Some(suffix_blob) = self.suffix_blob {
@@ -1066,17 +1047,11 @@ impl Widget for TextInput {
                     order: DrawOrder(0),
                     origin: suffix_origin,
                     text: suffix_blob,
-                    color: Color {
-                        r: 0.92,
-                        g: 0.92,
-                        b: 0.92,
-                        a: 1.0,
-                    },
+                    color: theme.colors.text_primary,
                 });
             }
         }
 
-        let focused = cx.focus == Some(cx.node);
         if !focused {
             return;
         }
@@ -1112,12 +1087,7 @@ impl Widget for TextInput {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: caret,
-            background: Color {
-                r: 0.95,
-                g: 0.95,
-                b: 0.95,
-                a: 1.0,
-            },
+            background: theme.colors.text_primary,
             border: fret_core::geometry::Edges::all(Px(0.0)),
             border_color: Color::TRANSPARENT,
             corner_radii: fret_core::geometry::Corners::all(Px(1.0)),
