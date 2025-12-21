@@ -602,7 +602,10 @@ styling driven by theme tokens.
 
 Status:
 
-- In progress.
+- Prototype implemented in `fret-ui` + `fret-demo`:
+  - tab titles are rendered (with per-tab clipping),
+  - hover/active styling + close button,
+  - title text updates are re-prepared when `DockPanel.title` changes.
 
 References:
 

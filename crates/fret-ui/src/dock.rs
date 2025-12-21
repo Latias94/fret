@@ -8,6 +8,7 @@ use fret_core::{
 };
 use std::{
     collections::{HashMap, HashSet},
+    hash::{Hash, Hasher},
     sync::Arc,
 };
 
@@ -353,6 +354,7 @@ const DOCK_TAB_CLOSE_GAP: Px = Px(6.0);
 struct PreparedTabTitle {
     blob: TextBlobId,
     metrics: TextMetrics,
+    title_hash: u64,
 }
 
 pub struct DockSpace {
@@ -426,24 +428,42 @@ impl DockSpace {
         dock: &DockManager,
         layout: &std::collections::HashMap<DockNodeId, Rect>,
     ) {
-        let mut visible: HashSet<PanelKey> = HashSet::new();
+        let mut visible_set: HashSet<PanelKey> = HashSet::new();
         for (&node_id, _rect) in layout {
             let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id) else {
                 continue;
             };
             for panel in tabs {
-                visible.insert(panel.clone());
+                visible_set.insert(panel.clone());
             }
         }
 
-        let same_tabs = visible.len() == self.tab_titles.len()
-            && visible.iter().all(|p| self.tab_titles.contains_key(p));
+        let same_tabs = visible_set.len() == self.tab_titles.len()
+            && visible_set.iter().all(|p| self.tab_titles.contains_key(p));
+
+        let hash_title = |s: &str| -> u64 {
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            s.hash(&mut hasher);
+            hasher.finish()
+        };
 
         if same_tabs
             && self.last_theme_revision == Some(theme.revision)
             && self.last_tab_text_scale_factor == Some(scale_factor)
         {
-            return;
+            let titles_unchanged = visible_set.iter().all(|panel| {
+                let title = dock
+                    .panel(panel)
+                    .map(|p| p.title.as_str())
+                    .unwrap_or(panel.kind.0.as_str());
+                let hash = hash_title(title);
+                self.tab_titles
+                    .get(panel)
+                    .is_some_and(|t| t.title_hash == hash)
+            });
+            if titles_unchanged {
+                return;
+            }
         }
         self.last_theme_revision = Some(theme.revision);
         self.last_tab_text_scale_factor = Some(scale_factor);
@@ -476,16 +496,24 @@ impl DockSpace {
         self.tab_close_glyph = Some(PreparedTabTitle {
             blob: close_blob,
             metrics: close_metrics,
+            title_hash: 0,
         });
 
-        for panel in visible {
+        for panel in visible_set {
             let title = dock
                 .panel(&panel)
                 .map(|p| p.title.as_str())
                 .unwrap_or(panel.kind.0.as_str());
+            let title_hash = hash_title(title);
             let (blob, metrics) = text.prepare(title, self.tab_text_style, constraints);
-            self.tab_titles
-                .insert(panel, PreparedTabTitle { blob, metrics });
+            self.tab_titles.insert(
+                panel,
+                PreparedTabTitle {
+                    blob,
+                    metrics,
+                    title_hash,
+                },
+            );
         }
     }
 
