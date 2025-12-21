@@ -101,6 +101,10 @@ impl Widget for Toolbar {
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
         self.sync_style_from_theme(cx.theme().snapshot());
 
+        if self.items.is_empty() {
+            return;
+        }
+
         match event {
             Event::Pointer(pe) => match pe {
                 fret_core::PointerEvent::Move { position, .. } => {
@@ -161,6 +165,12 @@ impl Widget for Toolbar {
             cx.text.release(item.blob);
         }
 
+        if self.items.is_empty() {
+            self.hovered = None;
+            self.pressed = None;
+            return Size::new(cx.available.width, Px(0.0));
+        }
+
         let text_constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
@@ -186,7 +196,7 @@ impl Widget for Toolbar {
                 cx.text
                     .prepare(item.label.as_ref(), self.style, text_constraints);
             let w = Px(metrics.size.width.0 + self.padding_x.0 * 2.0);
-            let bounds = Rect::new(Point::new(Px(x), Px(y)), Size::new(w, row_h));
+            let bounds = Rect::new(Point::new(Px(x), Px(y)), Size::new(w, height));
             x += w.0 + self.gap.0.max(0.0);
 
             self.prepared.push(PreparedItem {
@@ -201,6 +211,10 @@ impl Widget for Toolbar {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
+        if self.items.is_empty() || cx.bounds.size.height.0 <= 0.0 {
+            return;
+        }
+
         let theme = cx.theme().snapshot();
         self.sync_style_from_theme(theme);
 

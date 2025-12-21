@@ -1,3 +1,4 @@
+use crate::DemoPlayState;
 use crate::command_palette::{CommandPalette, OverlayBackdrop, OverlayPanelLayout};
 use crate::dnd_probe::DndProbe;
 use crate::elements_mvp2::ElementsMvp2Demo;
@@ -79,6 +80,7 @@ struct DemoToolbar {
     tools: Model<ViewportToolManager>,
     toolbar: Toolbar,
     last_mode: Option<ViewportToolMode>,
+    last_playing: Option<bool>,
 }
 
 impl DemoToolbar {
@@ -87,24 +89,31 @@ impl DemoToolbar {
             tools,
             toolbar: Toolbar::new(Vec::new()),
             last_mode: None,
+            last_playing: None,
         }
     }
 
     fn rebuild_items(&mut self, app: &mut fret_app::App) -> bool {
         let mode = self.tools.get(app).map(|t| t.active).unwrap_or_default();
-        if self.last_mode == Some(mode) {
+        let playing = app.global::<DemoPlayState>().is_some_and(|s| s.playing);
+        if self.last_mode == Some(mode) && self.last_playing == Some(playing) {
             return false;
         }
         self.last_mode = Some(mode);
+        self.last_playing = Some(playing);
 
+        let play_label: Arc<str> = if playing { "Stop" } else { "Play" }.into();
         let items = vec![
-            ToolbarItem::new("Select", "viewport.tool.select")
+            ToolbarItem::new("Select (Q)", "viewport.tool.select")
                 .with_selected(mode == ViewportToolMode::Select),
-            ToolbarItem::new("Move", "viewport.tool.move")
+            ToolbarItem::new("Move (W)", "viewport.tool.move")
                 .with_selected(mode == ViewportToolMode::Move),
-            ToolbarItem::new("Rotate", "viewport.tool.rotate")
+            ToolbarItem::new("Rotate (E)", "viewport.tool.rotate")
                 .with_selected(mode == ViewportToolMode::Rotate),
-            ToolbarItem::new(Arc::<str>::from("Play"), "demo.play.toggle"),
+            ToolbarItem::new(play_label, "demo.play.toggle").with_selected(playing),
+            ToolbarItem::new("Save Layout", "dock.layout.preset.save_last"),
+            ToolbarItem::new("Load Layout", "dock.layout.preset.load_last"),
+            ToolbarItem::new("Reset Layout", "dock.layout.reset_default"),
         ];
         self.toolbar.set_items(items);
         true

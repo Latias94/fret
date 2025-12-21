@@ -75,6 +75,11 @@ use winit::event_loop::EventLoop;
 
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Default)]
+pub(crate) struct DemoPlayState {
+    pub playing: bool,
+}
+
 const TEXT_PROBE_DEFAULT: &str = r#"Multiline text probe (MVP11 validation)
 
 Try:
@@ -3261,6 +3266,10 @@ impl WinitDriver for DemoDriver {
             app.set_global(project);
         }
 
+        if app.global::<DemoPlayState>().is_none() {
+            app.set_global(DemoPlayState::default());
+        }
+
         if self.selection.is_none() {
             self.selection = Some(app.models_mut().insert(DemoSelection::default()));
         }
@@ -3660,6 +3669,9 @@ impl WinitDriver for DemoDriver {
             "demo.play.toggle" => {
                 self.play_mode = !self.play_mode;
                 self.play_started_at = self.play_mode.then(Instant::now);
+                app.with_global_mut(DemoPlayState::default, |s, _app| {
+                    s.playing = self.play_mode;
+                });
                 for &w in self.logical_windows.keys() {
                     app.request_redraw(w);
                 }
