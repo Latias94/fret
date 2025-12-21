@@ -1,3 +1,5 @@
+use crate::asset_drop::CurrentSceneService;
+use crate::asset_drop::{AssetDropRequest, AssetDropService, AssetDropTarget};
 use crate::hierarchy::{DemoHierarchy, HierarchyDropKind, HierarchyDropTarget};
 use crate::project_panel::ProjectDragPayload;
 use crate::undo::{EditCommand, SelectionSnapshot, UndoStack};
@@ -55,6 +57,19 @@ impl InspectorDataSource {
 
     fn new(app: &App, world: Model<DemoWorld>, targets: Vec<u64>) -> Self {
         let mut rows: Vec<InspectorRow> = Vec::new();
+
+        let current_scene_guid = app.global::<CurrentSceneService>().and_then(|s| s.guid());
+        if let Some(guid) = current_scene_guid {
+            let name = app
+                .global::<ProjectService>()
+                .and_then(|p| p.id_for_guid(guid).and_then(|id| p.path_for_id(id)))
+                .and_then(|p| p.file_name())
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| format!("Scene {}", guid.0));
+            rows.push(InspectorRow::Header {
+                label: format!("Scene: {name}"),
+            });
+        }
 
         let project_selected_guid = app
             .global::<ProjectSelectionService>()
@@ -329,7 +344,6 @@ pub struct HierarchyPanel {
     selection: Model<DemoSelection>,
     hierarchy: Model<DemoHierarchy>,
     undo: Model<UndoStack>,
-    world: Model<DemoWorld>,
     drag: Option<HierarchyDragState>,
     asset_drop: Option<AssetDropPreview>,
     last_selected: Option<u64>,
@@ -377,14 +391,12 @@ impl HierarchyPanel {
         selection: Model<DemoSelection>,
         hierarchy: Model<DemoHierarchy>,
         undo: Model<UndoStack>,
-        world: Model<DemoWorld>,
     ) -> Self {
         Self {
             tree: TreeView::new(Vec::new()),
             selection,
             hierarchy,
             undo,
-            world,
             drag: None,
             asset_drop: None,
             last_selected: None,
@@ -436,45 +448,29 @@ impl HierarchyPanel {
     }
 
     fn commit_asset_drop(&mut self, cx: &mut EventCx<'_>, preview: AssetDropPreview) {
-        let Some(session) = cx.app.drag() else {
+        let Some(window) = cx.window else {
             return;
         };
-        if !session.dragging {
-            return;
-        }
-        let Some(payload) = session.payload::<ProjectDragPayload>() else {
-            return;
-        };
-        let Some(project) = cx.app.global::<ProjectService>() else {
-            return;
-        };
-
-        let name = project
-            .id_for_guid(payload.guid)
-            .and_then(|id| project.path_for_id(id))
-            .and_then(|p| p.file_stem().map(|s| s.to_string_lossy().to_string()))
-            .unwrap_or_else(|| format!("Asset {}", payload.guid.0));
-
-        let new_id = self
-            .hierarchy
-            .update(cx.app, |h, _cx| {
-                h.create_entity(preview.parent, name.clone())
-            })
-            .ok();
-        let Some(new_id) = new_id else {
+        let guid = cx
+            .app
+            .drag()
+            .and_then(|session| session.dragging.then_some(session))
+            .and_then(|session| session.payload::<ProjectDragPayload>())
+            .map(|p| p.guid);
+        let Some(guid) = guid else {
             return;
         };
 
-        let _ = self.world.update(cx.app, |w, _cx| {
-            w.entity_mut(new_id).name = name;
-        });
-
-        let _ = self.selection.update(cx.app, |s, _cx| {
-            s.lead_entity = Some(new_id);
-            s.selected_entities = vec![new_id];
-        });
-
-        cx.request_redraw();
+        cx.app
+            .with_global_mut(AssetDropService::default, |s, _app| {
+                s.push(AssetDropRequest {
+                    window,
+                    guid,
+                    target: AssetDropTarget::Hierarchy {
+                        parent: preview.parent,
+                    },
+                });
+            });
     }
 
     fn maybe_sync_hierarchy(&mut self, app: &App) {
@@ -934,6 +930,7 @@ pub struct InspectorPanel {
     last_world_revision: Option<u64>,
     last_project_revision: Option<u64>,
     last_project_tree_revision: Option<u64>,
+    last_scene_revision: Option<u64>,
     last_selected: Option<u64>,
     list: VirtualList<InspectorDataSource>,
 }
@@ -950,6 +947,7 @@ impl InspectorPanel {
             last_world_revision: None,
             last_project_revision: None,
             last_project_tree_revision: None,
+            last_scene_revision: None,
             last_selected: None,
             list,
         }
@@ -963,11 +961,16 @@ impl InspectorPanel {
             .map(|s| s.revision())
             .unwrap_or(0);
         let project_tree_revision = app.global::<ProjectService>().map(|p| p.revision());
+        let scene_revision = app
+            .global::<CurrentSceneService>()
+            .map(|s| s.revision())
+            .unwrap_or(0);
 
         if revision == self.last_revision
             && world_revision == self.last_world_revision
             && self.last_project_revision == Some(project_revision)
             && self.last_project_tree_revision == project_tree_revision
+            && self.last_scene_revision == Some(scene_revision)
         {
             return false;
         }
@@ -984,6 +987,7 @@ impl InspectorPanel {
         self.last_world_revision = world_revision;
         self.last_project_revision = Some(project_revision);
         self.last_project_tree_revision = project_tree_revision;
+        self.last_scene_revision = Some(scene_revision);
 
         self.list
             .set_data(InspectorDataSource::new(app, self.world, selected));

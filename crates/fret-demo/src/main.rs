@@ -1,3 +1,4 @@
+mod asset_drop;
 mod command_palette;
 mod demo_ui;
 mod dnd_probe;
@@ -18,10 +19,13 @@ use hierarchy::DemoHierarchy;
 use project_panel::ProjectPanel;
 use scene_background::{SceneBackgroundRenderer, SceneCameraParams};
 use undo::{EditCommand, UndoStack};
-use viewport_asset_drop::ViewportAssetDropService;
 use viewport_targets::{ViewportTarget, ViewportTargets};
 use world::DemoWorld;
 
+use asset_drop::{
+    AssetDropDecision, AssetDropRegistry, AssetDropRule, AssetDropService, AssetDropTarget,
+    CurrentSceneService,
+};
 use fret_app::{
     App, CommandId, CommandMeta, CommandScope, CreateWindowKind, CreateWindowRequest, Effect,
     Keymap, KeymapFileV1, KeymapService, Model, WindowRequest,
@@ -147,6 +151,7 @@ struct DemoDriver {
     play_mode: bool,
     play_started_at: Option<Instant>,
     pending_window_ui_kinds: VecDeque<DemoUiKind>,
+    asset_drop_registry: AssetDropRegistry,
 }
 
 fn load_theme(app: &mut App) {
@@ -293,6 +298,153 @@ impl DemoDriver {
         self.viewport_cameras
             .entry(panel)
             .or_insert_with(DemoViewportCamera::default)
+    }
+
+    fn install_asset_drop_rules(&mut self) {
+        self.asset_drop_registry = AssetDropRegistry::default();
+
+        self.asset_drop_registry.add_rule(AssetDropRule {
+            matches: Box::new(|cx| {
+                cx.kind == Some(fret_editor::ProjectEntryKind::File)
+                    && matches!(cx.target, AssetDropTarget::Hierarchy { .. })
+            }),
+            apply: Box::new(|cx| {
+                let AssetDropTarget::Hierarchy { parent } = &cx.target else {
+                    return AssetDropDecision::Ignored;
+                };
+                let name = cx
+                    .path
+                    .as_deref()
+                    .and_then(|p| p.file_stem())
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_else(|| format!("Asset {}", cx.guid.0));
+
+                let Some(new_id) = cx.driver.spawn_asset_entity(cx.app, name, *parent, None) else {
+                    return AssetDropDecision::Ignored;
+                };
+                cx.driver.select_entity(cx.app, new_id);
+                AssetDropDecision::Handled
+            }),
+        });
+
+        self.asset_drop_registry.add_rule(AssetDropRule {
+            matches: Box::new(|cx| {
+                cx.kind == Some(fret_editor::ProjectEntryKind::File)
+                    && matches!(cx.target, AssetDropTarget::SceneViewport { .. })
+            }),
+            apply: Box::new(|cx| {
+                let AssetDropTarget::SceneViewport { panel, uv, .. } = &cx.target else {
+                    return AssetDropDecision::Ignored;
+                };
+                if demo_viewport_role(panel) != DemoViewportRole::Scene {
+                    return AssetDropDecision::Ignored;
+                }
+
+                let name = cx
+                    .path
+                    .as_deref()
+                    .and_then(|p| p.file_stem())
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_else(|| format!("Asset {}", cx.guid.0));
+
+                let cam = cx.driver.viewport_camera(panel);
+                let [x, y] = cam.uv_to_world_xy(*uv);
+                let Some(new_id) = cx
+                    .driver
+                    .spawn_asset_entity(cx.app, name, None, Some([x, y]))
+                else {
+                    return AssetDropDecision::Ignored;
+                };
+                cx.driver.select_entity(cx.app, new_id);
+                AssetDropDecision::Handled
+            }),
+        });
+
+        self.asset_drop_registry.add_rule(AssetDropRule {
+            matches: Box::new(|cx| {
+                cx.kind == Some(fret_editor::ProjectEntryKind::File)
+                    && cx.extension == Some("scene")
+                    && matches!(cx.target, AssetDropTarget::SceneViewport { .. })
+            }),
+            apply: Box::new(|cx| {
+                let AssetDropTarget::SceneViewport { panel, .. } = &cx.target else {
+                    return AssetDropDecision::Ignored;
+                };
+                if demo_viewport_role(panel) != DemoViewportRole::Scene {
+                    return AssetDropDecision::Ignored;
+                }
+
+                cx.app
+                    .with_global_mut(CurrentSceneService::default, |s, _app| {
+                        s.set_guid(Some(cx.guid));
+                    });
+
+                let title = cx
+                    .path
+                    .as_deref()
+                    .and_then(|p| p.file_stem())
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_else(|| format!("Scene {}", cx.guid.0));
+                if let Some(dock) = cx.app.global_mut::<DockManager>() {
+                    if let Some(p) = dock.panels.get_mut(panel) {
+                        p.title = format!("Scene — {title}");
+                    }
+                }
+
+                if let Some(selection) = cx.driver.selection {
+                    let _ = selection.update(cx.app, |s, _cx| {
+                        s.lead_entity = None;
+                        s.selected_entities.clear();
+                    });
+                }
+                cx.app
+                    .with_global_mut(ProjectSelectionService::default, |s, _app| {
+                        s.set_selected_guid(Some(cx.guid));
+                    });
+
+                AssetDropDecision::Handled
+            }),
+        });
+    }
+
+    fn spawn_asset_entity(
+        &mut self,
+        app: &mut App,
+        name: String,
+        parent: Option<u64>,
+        position_xy: Option<[f32; 2]>,
+    ) -> Option<u64> {
+        let hierarchy = self.hierarchy?;
+        let world = self.world?;
+
+        let new_id = hierarchy
+            .update(app, |h, _cx| h.create_entity(parent, name.clone()))
+            .ok()?;
+
+        let _ = world.update(app, |w, _cx| {
+            let e = w.entity_mut(new_id);
+            e.name = name;
+            if let Some([x, y]) = position_xy {
+                e.transform.position = [x, y, 0.0];
+            }
+        });
+
+        Some(new_id)
+    }
+
+    fn select_entity(&mut self, app: &mut App, id: u64) {
+        let Some(selection) = self.selection else {
+            return;
+        };
+
+        let _ = selection.update(app, |s, _cx| {
+            s.lead_entity = Some(id);
+            s.selected_entities = vec![id];
+        });
+
+        app.with_global_mut(ProjectSelectionService::default, |s, _app| {
+            s.set_selected_guid(None);
+        });
     }
 
     fn play_time_seconds(&self) -> f32 {
@@ -714,59 +866,20 @@ impl DemoDriver {
         }
     }
 
-    fn handle_viewport_asset_drop_requests(&mut self, app: &mut App) -> bool {
-        let Some(req) = app
-            .global_mut::<ViewportAssetDropService>()
-            .and_then(|s| s.take_request())
-        else {
-            return false;
-        };
-
-        if demo_viewport_role(&req.panel) != DemoViewportRole::Scene {
+    fn handle_asset_drop_requests(&mut self, app: &mut App) -> bool {
+        let requests = app.with_global_mut(AssetDropService::default, |s, _app| s.drain());
+        if requests.is_empty() {
             return false;
         }
 
-        let Some(hierarchy) = self.hierarchy else {
-            return false;
-        };
-        let Some(world) = self.world else {
-            return false;
-        };
-        let Some(selection) = self.selection else {
-            return false;
-        };
-
-        let name = app
-            .global::<ProjectService>()
-            .and_then(|p| p.id_for_guid(req.guid).and_then(|id| p.path_for_id(id)))
-            .and_then(|p| p.file_stem().map(|s| s.to_string_lossy().to_string()))
-            .unwrap_or_else(|| format!("Asset {}", req.guid.0));
-
-        let new_id = hierarchy
-            .update(app, |h, _cx| h.create_entity(None, name.clone()))
-            .ok();
-        let Some(new_id) = new_id else {
-            return false;
-        };
-
-        let cam = self.viewport_camera(&req.panel);
-        let [x, y] = cam.uv_to_world_xy(req.uv);
-        let _ = world.update(app, |w, _cx| {
-            let e = w.entity_mut(new_id);
-            e.name = name;
-            e.transform.position = [x, y, 0.0];
-        });
-
-        let _ = selection.update(app, |s, _cx| {
-            s.lead_entity = Some(new_id);
-            s.selected_entities = vec![new_id];
-        });
-
-        app.with_global_mut(ProjectSelectionService::default, |s, _app| {
-            s.set_selected_guid(None);
-        });
-
-        true
+        let mut registry = std::mem::take(&mut self.asset_drop_registry);
+        let mut handled_any = false;
+        for req in requests {
+            let decision = registry.handle(self, app, req);
+            handled_any |= decision == AssetDropDecision::Handled;
+        }
+        self.asset_drop_registry = registry;
+        handled_any
     }
 }
 
@@ -1098,10 +1211,13 @@ impl WinitDriver for DemoDriver {
             }
         }
 
+        app.set_global(AssetDropService::default());
+        app.set_global(CurrentSceneService::default());
         app.set_global(InspectorEditService::default());
         app.set_global(PropertyEditService::default());
         load_theme(app);
         self.ensure_theme_hot_reload(app, main_window);
+        self.install_asset_drop_rules();
 
         app.commands_mut().register(
             CommandId::from("command_palette.toggle"),
@@ -2335,7 +2451,7 @@ impl WinitDriver for DemoDriver {
         let key_game = PanelKey::new("core.game");
         let key_text_probe = PanelKey::new("core.text_probe");
 
-        let hierarchy_node = ui.create_node(HierarchyPanel::new(selection, hierarchy, undo, world));
+        let hierarchy_node = ui.create_node(HierarchyPanel::new(selection, hierarchy, undo));
         let project_node = ui.create_node(ProjectPanel::new());
         let inspector_node = ui.create_node(InspectorPanel::new(selection, world));
         let scene_drop_node = ui.create_node(viewport_asset_drop::ViewportAssetDropPanel::new(
@@ -2599,7 +2715,7 @@ impl WinitDriver for DemoDriver {
         }
         state.ui.dispatch_event(app, text, event);
 
-        if self.handle_viewport_asset_drop_requests(app) {
+        if self.handle_asset_drop_requests(app) {
             for &w in self.logical_windows.keys() {
                 app.request_redraw(w);
             }

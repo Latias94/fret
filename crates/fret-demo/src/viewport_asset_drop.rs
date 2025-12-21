@@ -1,38 +1,13 @@
 use fret_app::DragKind;
 use fret_core::{
-    AppWindowId, Color, Corners, DrawOrder, Edges, Event, PanelKey, Point, Px, Rect,
-    RenderTargetId, SceneOp, Size, ViewportMapping,
+    Color, Corners, DrawOrder, Edges, Event, PanelKey, Point, Px, Rect, SceneOp, Size,
+    ViewportMapping,
 };
-use fret_editor::{AssetGuid, ProjectEntryKind, ProjectService};
+use fret_editor::{ProjectEntryKind, ProjectService};
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 
+use crate::asset_drop::{AssetDropRequest, AssetDropService, AssetDropTarget};
 use crate::project_panel::ProjectDragPayload;
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ViewportAssetDropRequest {
-    pub window: AppWindowId,
-    pub panel: PanelKey,
-    pub target: RenderTargetId,
-    pub uv: (f32, f32),
-    pub guid: AssetGuid,
-}
-
-#[derive(Default)]
-pub struct ViewportAssetDropService {
-    request: Option<ViewportAssetDropRequest>,
-    revision: u64,
-}
-
-impl ViewportAssetDropService {
-    pub fn take_request(&mut self) -> Option<ViewportAssetDropRequest> {
-        self.request.take()
-    }
-
-    fn set_request(&mut self, req: ViewportAssetDropRequest) {
-        self.request = Some(req);
-        self.revision = self.revision.saturating_add(1);
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct ViewportAssetDropHover {
@@ -179,15 +154,17 @@ impl Widget for ViewportAssetDropPanel {
                 };
 
                 cx.app
-                    .with_global_mut(ViewportAssetDropService::default, |s, _app| {
-                        s.set_request(ViewportAssetDropRequest {
-                        window,
-                        panel: self.panel.clone(),
-                        target,
-                        uv: hover.uv,
-                        guid,
+                    .with_global_mut(AssetDropService::default, |s, _app| {
+                        s.push(AssetDropRequest {
+                            window,
+                            guid,
+                            target: AssetDropTarget::SceneViewport {
+                                panel: self.panel.clone(),
+                                target,
+                                uv: hover.uv,
+                            },
+                        });
                     });
-                });
 
                 self.hover = None;
                 cx.invalidate_self(Invalidation::Paint);
