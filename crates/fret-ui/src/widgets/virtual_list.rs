@@ -825,6 +825,7 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
                                                 position: *position,
                                                 menu,
                                                 input_ctx: inv_ctx,
+                                                menu_bar: None,
                                             },
                                         );
                                     },

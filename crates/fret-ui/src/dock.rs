@@ -1306,6 +1306,7 @@ impl Widget for DockSpace {
                             position,
                             menu,
                             input_ctx: inv_ctx,
+                            menu_bar: None,
                         },
                     );
                 });
@@ -1350,6 +1351,7 @@ impl Widget for DockSpace {
                             position,
                             menu,
                             input_ctx: inv_ctx,
+                            menu_bar: None,
                         },
                     );
                 });

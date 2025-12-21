@@ -6,7 +6,9 @@ use fret_core::{
     TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 
-use super::context_menu::{ContextMenuRequest, ContextMenuService};
+use super::context_menu::{
+    ContextMenuRequest, ContextMenuService, MenuBarContextMenu, MenuBarContextMenuEntry,
+};
 
 #[derive(Debug)]
 struct PreparedMenu {
@@ -78,14 +80,21 @@ impl AppMenuBar {
     }
 
     fn sync_open_state(&mut self, app: &fret_app::App, window: fret_core::AppWindowId) {
-        if self.open_serial.is_none() {
-            return;
-        }
-        let current = Self::current_menu_serial(app, window);
-        if current != self.open_serial {
+        let current = app
+            .global::<ContextMenuService>()
+            .and_then(|s| s.request(window));
+        let Some((serial, request)) = current else {
             self.open_serial = None;
             self.open_index = None;
-        }
+            return;
+        };
+        let Some(menu_bar) = request.menu_bar.as_ref() else {
+            self.open_serial = None;
+            self.open_index = None;
+            return;
+        };
+        self.open_serial = Some(serial);
+        self.open_index = Some(menu_bar.open_index);
     }
 
     fn menu_index_at(&self, pos: Point) -> Option<usize> {
@@ -118,6 +127,24 @@ impl AppMenuBar {
 
         cx.app
             .with_global_mut(ContextMenuService::default, |service, _app| {
+                let entries: Vec<MenuBarContextMenuEntry> = self
+                    .prepared
+                    .iter()
+                    .filter_map(|m| {
+                        self.menu_bar
+                            .menus
+                            .get(m.index)
+                            .map(|menu| MenuBarContextMenuEntry {
+                                index: m.index,
+                                bounds: m.bounds,
+                                menu: Menu {
+                                    title: menu.title.clone(),
+                                    items: menu.items.clone(),
+                                },
+                            })
+                    })
+                    .collect();
+
                 service.set_request(
                     window,
                     ContextMenuRequest {
@@ -127,6 +154,10 @@ impl AppMenuBar {
                             items: menu.items.clone(),
                         },
                         input_ctx: inv_ctx,
+                        menu_bar: Some(MenuBarContextMenu {
+                            open_index: index,
+                            entries,
+                        }),
                     },
                 );
             });
@@ -196,6 +227,9 @@ impl Widget for AppMenuBar {
 
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
         self.sync_style_from_theme(cx.theme().snapshot());
+        if let Some(window) = cx.window {
+            self.sync_open_state(cx.app, window);
+        }
 
         for item in self.prepared.drain(..) {
             cx.text.release(item.blob);

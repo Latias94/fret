@@ -163,6 +163,7 @@ impl ProjectPanel {
                         position,
                         menu,
                         input_ctx: inv_ctx,
+                        menu_bar: None,
                     },
                 );
             });

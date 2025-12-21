@@ -8,10 +8,24 @@ use fret_core::{
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Debug, Clone)]
+pub struct MenuBarContextMenuEntry {
+    pub index: usize,
+    pub bounds: Rect,
+    pub menu: Menu,
+}
+
+#[derive(Debug, Clone)]
+pub struct MenuBarContextMenu {
+    pub open_index: usize,
+    pub entries: Vec<MenuBarContextMenuEntry>,
+}
+
+#[derive(Debug, Clone)]
 pub struct ContextMenuRequest {
     pub position: Point,
     pub menu: Menu,
     pub input_ctx: InputContext,
+    pub menu_bar: Option<MenuBarContextMenu>,
 }
 
 #[derive(Debug, Default)]
@@ -514,6 +528,46 @@ impl ContextMenu {
         cx.dispatch_command(CommandId::from("context_menu.close"));
         cx.stop_propagation();
     }
+
+    fn switch_menu_bar_menu(
+        &mut self,
+        cx: &mut EventCx<'_>,
+        window: fret_core::AppWindowId,
+        request: &ContextMenuRequest,
+        target_index: usize,
+    ) -> bool {
+        let Some(menu_bar) = request.menu_bar.as_ref() else {
+            return false;
+        };
+        let Some(entry) = menu_bar.entries.iter().find(|e| e.index == target_index) else {
+            return false;
+        };
+
+        let position = Point::new(
+            entry.bounds.origin.x,
+            Px(entry.bounds.origin.y.0 + entry.bounds.size.height.0 + 2.0),
+        );
+
+        let next = ContextMenuRequest {
+            position,
+            menu: entry.menu.clone(),
+            input_ctx: request.input_ctx.clone(),
+            menu_bar: Some(MenuBarContextMenu {
+                open_index: target_index,
+                entries: menu_bar.entries.clone(),
+            }),
+        };
+
+        cx.app
+            .with_global_mut(ContextMenuService::default, |service, _app| {
+                service.set_request(window, next);
+                service.set_pending_action(window, None);
+            });
+
+        cx.invalidate_self(Invalidation::Paint);
+        cx.request_redraw();
+        true
+    }
 }
 
 impl Default for ContextMenu {
@@ -539,14 +593,14 @@ impl Widget for ContextMenu {
             return;
         };
 
-        let is_visible = cx
+        let Some((_, request)) = cx
             .app
             .global::<ContextMenuService>()
             .and_then(|s| s.request(window))
-            .is_some();
-        if !is_visible {
+            .map(|(serial, request)| (serial, request.clone()))
+        else {
             return;
-        }
+        };
 
         match event {
             Event::KeyDown { key, modifiers, .. } => {
@@ -668,6 +722,18 @@ impl Widget for ContextMenu {
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
                         }
+                    } else if let Some(menu_bar) = request.menu_bar.as_ref() {
+                        if let Some(entry) = menu_bar
+                            .entries
+                            .iter()
+                            .find(|e| e.bounds.contains(*position))
+                        {
+                            if entry.index != menu_bar.open_index {
+                                if self.switch_menu_bar_menu(cx, window, &request, entry.index) {
+                                    cx.stop_propagation();
+                                }
+                            }
+                        }
                     }
                 }
                 fret_core::PointerEvent::Down {
@@ -700,6 +766,21 @@ impl Widget for ContextMenu {
                             }
                         }
                         return;
+                    }
+
+                    if let Some(menu_bar) = request.menu_bar.as_ref() {
+                        if let Some(entry) = menu_bar
+                            .entries
+                            .iter()
+                            .find(|e| e.bounds.contains(*position))
+                        {
+                            if entry.index == menu_bar.open_index {
+                                self.close_menu(cx, window);
+                            } else if self.switch_menu_bar_menu(cx, window, &request, entry.index) {
+                                cx.stop_propagation();
+                            }
+                            return;
+                        }
                     }
 
                     self.close_menu(cx, window);
