@@ -47,7 +47,13 @@ use fret_ui::{
     ContextMenuService, DockManager, DockPanel, DockPanelContentService, Theme, ThemeConfig,
     UiTree, ViewportPanel,
 };
-use std::{collections::HashMap, fs::File, path::Path, time::Duration, time::Instant};
+use std::{
+    collections::HashMap,
+    fs::File,
+    hash::{Hash, Hasher},
+    path::Path,
+    time::{Duration, Instant, SystemTime},
+};
 use winit::event_loop::EventLoop;
 
 use serde::{Deserialize, Serialize};
@@ -131,6 +137,10 @@ struct DemoDriver {
     viewport_cameras: HashMap<PanelKey, DemoViewportCamera>,
     camera_persist_timer: Option<fret_core::TimerToken>,
     camera_persist_pending: bool,
+    theme_reload_timer: Option<fret_core::TimerToken>,
+    theme_file_modified: Option<SystemTime>,
+    theme_file_size: Option<u64>,
+    theme_file_hash: Option<u64>,
     play_mode: bool,
     play_started_at: Option<Instant>,
 }
@@ -152,6 +162,10 @@ fn load_theme(app: &mut App) {
             }
         }
     }
+}
+
+fn theme_override_path() -> &'static str {
+    "./.fret/theme.json"
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -389,6 +403,71 @@ impl DemoDriver {
             after: Duration::from_millis(500),
             repeat: None,
         });
+    }
+
+    fn ensure_theme_hot_reload(&mut self, app: &mut App, window: fret_core::AppWindowId) {
+        if self.theme_reload_timer.is_some() {
+            return;
+        }
+
+        let token = app.next_timer_token();
+        self.theme_reload_timer = Some(token);
+        app.push_effect(Effect::SetTimer {
+            window: Some(window),
+            token,
+            after: Duration::from_millis(250),
+            repeat: Some(Duration::from_millis(250)),
+        });
+    }
+
+    fn reload_theme_if_changed(&mut self, app: &mut App) {
+        let path = theme_override_path();
+        let Ok(meta) = std::fs::metadata(path) else {
+            return;
+        };
+
+        let modified = meta.modified().ok();
+        let size = meta.len();
+        if self.theme_file_modified == modified && self.theme_file_size == Some(size) {
+            return;
+        }
+
+        let Ok(bytes) = std::fs::read(path) else {
+            return;
+        };
+
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        bytes.hash(&mut hasher);
+        let hash = hasher.finish();
+
+        self.theme_file_modified = modified;
+        self.theme_file_size = Some(size);
+
+        if self.theme_file_hash == Some(hash) {
+            return;
+        }
+        self.theme_file_hash = Some(hash);
+
+        match ThemeConfig::from_slice(&bytes) {
+            Ok(cfg) => {
+                let before = Theme::global(app).revision();
+                {
+                    let theme = Theme::global_mut(app);
+                    theme.apply_config(&cfg);
+                }
+                let after = Theme::global(app).revision();
+                if after != before {
+                    tracing::info!(theme = %cfg.name, path = %path, "reloaded theme");
+                    for &w in self.logical_windows.keys() {
+                        app.push_effect(Effect::UiInvalidateLayout { window: w });
+                        app.request_redraw(w);
+                    }
+                }
+            }
+            Err(err) => {
+                tracing::error!(error = %err, path = %path, "failed to parse theme file");
+            }
+        }
     }
 
     fn ensure_main_tabs(
@@ -959,6 +1038,7 @@ impl WinitDriver for DemoDriver {
         app.set_global(InspectorEditService::default());
         app.set_global(PropertyEditService::default());
         load_theme(app);
+        self.ensure_theme_hot_reload(app, main_window);
 
         app.commands_mut().register(
             CommandId::from("command_palette.toggle"),
@@ -2266,6 +2346,9 @@ impl WinitDriver for DemoDriver {
                 if Some(*token) == self.camera_persist_timer && self.camera_persist_pending {
                     self.camera_persist_pending = false;
                     self.persist_viewport_cameras_now();
+                }
+                if Some(*token) == self.theme_reload_timer {
+                    self.reload_theme_if_changed(app);
                 }
             }
             fret_core::Event::WindowResized { width, height } => {
