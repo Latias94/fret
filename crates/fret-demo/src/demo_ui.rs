@@ -68,6 +68,12 @@ pub struct DemoLayers {
     pub dockspace_node: fret_core::NodeId,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DemoUiKind {
+    Main,
+    DockFloating,
+}
+
 struct DemoToolbar {
     tools: Model<ViewportToolManager>,
     toolbar: Toolbar,
@@ -126,6 +132,7 @@ impl fret_ui::Widget for DemoToolbar {
 
 pub fn build_demo_ui(
     window: AppWindowId,
+    kind: DemoUiKind,
     config: DemoUiConfig,
     inspector_edit_buffer: Model<String>,
     viewport_tools: Model<ViewportToolManager>,
@@ -139,141 +146,153 @@ pub fn build_demo_ui(
     let bg = ui.create_node(ColoredPanel::themed(PanelThemeBackground::Surface, 1.0));
     ui.add_child(root, bg);
 
-    let frame = ui.create_node(HeaderBody::auto());
-    ui.add_child(root, frame);
+    let dock = match kind {
+        DemoUiKind::Main => {
+            let frame = ui.create_node(HeaderBody::auto());
+            ui.add_child(root, frame);
 
-    let header = ui.create_node(Column::new());
-    ui.add_child(frame, header);
+            let header = ui.create_node(Column::new());
+            ui.add_child(frame, header);
 
-    let menu_bar = fret_app::MenuBar {
-        menus: vec![
-            fret_app::Menu {
-                title: Arc::<str>::from("File"),
-                items: vec![
-                    fret_app::MenuItem::Command {
-                        command: fret_app::CommandId::from("command_palette.toggle"),
-                        when: None,
+            let menu_bar = fret_app::MenuBar {
+                menus: vec![
+                    fret_app::Menu {
+                        title: Arc::<str>::from("File"),
+                        items: vec![
+                            fret_app::MenuItem::Command {
+                                command: fret_app::CommandId::from("command_palette.toggle"),
+                                when: None,
+                            },
+                            fret_app::MenuItem::Separator,
+                            fret_app::MenuItem::Command {
+                                command: fret_app::CommandId::from("project.refresh"),
+                                when: None,
+                            },
+                        ],
                     },
-                    fret_app::MenuItem::Separator,
-                    fret_app::MenuItem::Command {
-                        command: fret_app::CommandId::from("project.refresh"),
-                        when: None,
+                    fret_app::Menu {
+                        title: Arc::<str>::from("Edit"),
+                        items: vec![
+                            fret_app::MenuItem::Command {
+                                command: fret_app::CommandId::from("edit.undo"),
+                                when: None,
+                            },
+                            fret_app::MenuItem::Command {
+                                command: fret_app::CommandId::from("edit.redo"),
+                                when: None,
+                            },
+                        ],
+                    },
+                    fret_app::Menu {
+                        title: Arc::<str>::from("View"),
+                        items: vec![
+                            fret_app::MenuItem::Command {
+                                command: fret_app::CommandId::from("viewport.tool.select"),
+                                when: None,
+                            },
+                            fret_app::MenuItem::Command {
+                                command: fret_app::CommandId::from("viewport.tool.move"),
+                                when: None,
+                            },
+                            fret_app::MenuItem::Command {
+                                command: fret_app::CommandId::from("viewport.tool.rotate"),
+                                when: None,
+                            },
+                        ],
                     },
                 ],
-            },
-            fret_app::Menu {
-                title: Arc::<str>::from("Edit"),
-                items: vec![
-                    fret_app::MenuItem::Command {
-                        command: fret_app::CommandId::from("edit.undo"),
-                        when: None,
-                    },
-                    fret_app::MenuItem::Command {
-                        command: fret_app::CommandId::from("edit.redo"),
-                        when: None,
-                    },
-                ],
-            },
-            fret_app::Menu {
-                title: Arc::<str>::from("View"),
-                items: vec![
-                    fret_app::MenuItem::Command {
-                        command: fret_app::CommandId::from("viewport.tool.select"),
-                        when: None,
-                    },
-                    fret_app::MenuItem::Command {
-                        command: fret_app::CommandId::from("viewport.tool.move"),
-                        when: None,
-                    },
-                    fret_app::MenuItem::Command {
-                        command: fret_app::CommandId::from("viewport.tool.rotate"),
-                        when: None,
-                    },
-                ],
-            },
-        ],
-    };
+            };
 
-    let menu_bar_node = ui.create_node(AppMenuBar::new(menu_bar));
-    ui.add_child(header, menu_bar_node);
+            let menu_bar_node = ui.create_node(AppMenuBar::new(menu_bar));
+            ui.add_child(header, menu_bar_node);
 
-    let toolbar = ui.create_node(DemoToolbar::new(viewport_tools));
-    ui.add_child(header, toolbar);
+            let toolbar = ui.create_node(DemoToolbar::new(viewport_tools));
+            ui.add_child(header, toolbar);
 
-    let split = ui.create_node(Split::new(Axis::Horizontal, config.split_fraction));
-    ui.add_child(frame, split);
+            let split = ui.create_node(Split::new(Axis::Horizontal, config.split_fraction));
+            ui.add_child(frame, split);
 
-    let dock = ui.create_node(DockSpace::new(window));
-    ui.add_child(split, dock);
+            let dock = ui.create_node(DockSpace::new(window));
+            ui.add_child(split, dock);
 
-    let scroll = ui.create_node(Scroll::new());
-    ui.add_child(split, scroll);
+            let scroll = ui.create_node(Scroll::new());
+            ui.add_child(split, scroll);
 
-    let column = ui.create_node(Column::new().with_padding(Px(10.0)).with_spacing(Px(8.0)));
-    ui.add_child(scroll, column);
+            let column = ui.create_node(Column::new().with_padding(Px(10.0)).with_spacing(Px(8.0)));
+            ui.add_child(scroll, column);
 
-    let dnd_probe = ui.create_node(DndProbe::new());
-    ui.add_child(column, dnd_probe);
+            let dnd_probe = ui.create_node(DndProbe::new());
+            ui.add_child(column, dnd_probe);
 
-    let text_header = ui.create_node(Text::new("Text MVP (labels + single-line TextInput)"));
-    ui.add_child(column, text_header);
+            let text_header =
+                ui.create_node(Text::new("Text MVP (labels + single-line TextInput)"));
+            ui.add_child(column, text_header);
 
-    let text_input =
-        ui.create_node(TextInput::new().with_text("Click here, then type (IME supported)"));
-    ui.add_child(column, text_input);
+            let text_input =
+                ui.create_node(TextInput::new().with_text("Click here, then type (IME supported)"));
+            ui.add_child(column, text_input);
 
-    let text_input2 =
-        ui.create_node(TextInput::new().with_text("Another TextInput (Tab to switch focus)"));
-    ui.add_child(column, text_input2);
+            let text_input2 = ui
+                .create_node(TextInput::new().with_text("Another TextInput (Tab to switch focus)"));
+            ui.add_child(column, text_input2);
 
-    let ime_probe = ui.create_node(ImeProbe::new());
-    ui.add_child(column, ime_probe);
+            let ime_probe = ui.create_node(ImeProbe::new());
+            ui.add_child(column, ime_probe);
 
-    let multiline_header = ui.create_node(Text::new(
-        "Multiline MVP (wrap + hit test + caret rect + selection rects)",
-    ));
-    ui.add_child(column, multiline_header);
+            let multiline_header = ui.create_node(Text::new(
+                "Multiline MVP (wrap + hit test + caret rect + selection rects)",
+            ));
+            ui.add_child(column, multiline_header);
 
-    let multiline = ui.create_node(
-        TextArea::new(
-            "Multiline text: click/drag to place caret and select.\n\
+            let multiline = ui.create_node(
+                TextArea::new(
+                    "Multiline text: click/drag to place caret and select.\n\
 This is wrapped text (TextWrap::Word) and exercises:\n\
 - TextService::hit_test_point\n\
 - TextService::caret_rect\n\
 - TextService::selection_rects\n\
 \n\
 Goal: foundation for Console/Inspector/code editor.",
-        )
-        .with_min_height(Px(220.0)),
-    );
-    ui.add_child(column, multiline);
+                )
+                .with_min_height(Px(220.0)),
+            );
+            ui.add_child(column, multiline);
 
-    let editor_header = ui.create_node(Text::new(
-        "Editor Shell MVP (Hierarchy → Inspector) is mounted into DockSpace panels",
-    ));
-    ui.add_child(column, editor_header);
+            let editor_header = ui.create_node(Text::new(
+                "Editor Shell MVP (Hierarchy → Inspector) is mounted into DockSpace panels",
+            ));
+            ui.add_child(column, editor_header);
 
-    let list_header = ui.create_node(Text::new(
-        "VirtualList MVP (Hierarchy/Project-scale list: scroll + selection + virtualization)",
-    ));
-    ui.add_child(column, list_header);
+            let list_header = ui.create_node(Text::new(
+                "VirtualList MVP (Hierarchy/Project-scale list: scroll + selection + virtualization)",
+            ));
+            ui.add_child(column, list_header);
 
-    let list_panel = ui.create_node(FixedPanel::new(
-        Px(260.0),
-        Color {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.0,
-        },
-    ));
-    ui.add_child(column, list_panel);
+            let list_panel = ui.create_node(FixedPanel::new(
+                Px(260.0),
+                Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 0.0,
+                },
+            ));
+            ui.add_child(column, list_panel);
 
-    let list = ui.create_node(VirtualList::new(LazyEntityList { count: 100_000 }));
-    ui.add_child(list_panel, list);
+            let list = ui.create_node(VirtualList::new(LazyEntityList { count: 100_000 }));
+            ui.add_child(list_panel, list);
 
-    let elements_demo = ui.create_node(ElementsMvp2Demo::new());
-    ui.add_child(column, elements_demo);
+            let elements_demo = ui.create_node(ElementsMvp2Demo::new());
+            ui.add_child(column, elements_demo);
+
+            dock
+        }
+        DemoUiKind::DockFloating => {
+            let dock = ui.create_node(DockSpace::new(window));
+            ui.add_child(root, dock);
+            dock
+        }
+    };
 
     let modal_root = ui.create_node(ColoredPanel::themed(PanelThemeBackground::Surface, 0.45));
     let modal = ui.push_overlay_root(modal_root, true);

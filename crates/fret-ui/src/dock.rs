@@ -1,4 +1,4 @@
-use fret_app::{CommandId, Effect, InputContext, Menu, MenuItem};
+use fret_app::{CommandId, DragKind, Effect, InputContext, Menu, MenuItem};
 use fret_core::{
     Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, Edges, NodeId, PanelKey,
     RenderTargetId, Scene, SceneOp, TextBlobId, TextConstraints, TextMetrics, TextService,
@@ -169,6 +169,14 @@ impl Default for DockManager {
 }
 
 impl DockManager {
+    pub fn take_dock_tab_context_menu(
+        &mut self,
+    ) -> Option<(fret_core::AppWindowId, DockNodeId, PanelKey, Point)> {
+        self.dock_tab_context_menu
+            .take()
+            .map(|m| (m.window, m.tabs, m.panel, m.position))
+    }
+
     pub fn insert_panel(&mut self, key: PanelKey, panel: DockPanel) {
         self.panels.insert(key, panel);
     }
@@ -1121,8 +1129,12 @@ impl Widget for DockSpace {
         }
 
         if let Some((start, panel)) = begin_drag {
-            cx.app
-                .begin_drag(self.window, start, DockPanelDragPayload { panel });
+            cx.app.begin_drag_with_kind(
+                DragKind::DockPanel,
+                self.window,
+                start,
+                DockPanelDragPayload { panel },
+            );
         }
 
         if let Some(request) = request_pointer_capture {

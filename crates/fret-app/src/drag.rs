@@ -2,9 +2,16 @@ use std::any::Any;
 
 use fret_core::{AppWindowId, Point};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DragKind {
+    DockPanel,
+    Custom,
+}
+
 #[derive(Debug)]
 pub struct DragSession {
     pub source_window: AppWindowId,
+    pub kind: DragKind,
     pub start: Point,
     pub position: Point,
     pub dragging: bool,
@@ -12,9 +19,15 @@ pub struct DragSession {
 }
 
 impl DragSession {
-    pub fn new<T: Any>(source_window: AppWindowId, start: Point, payload: T) -> Self {
+    pub fn new<T: Any>(
+        source_window: AppWindowId,
+        kind: DragKind,
+        start: Point,
+        payload: T,
+    ) -> Self {
         Self {
             source_window,
+            kind,
             start,
             position: start,
             dragging: false,

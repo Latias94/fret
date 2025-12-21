@@ -23,7 +23,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 18: prototype implemented in demo (ToolManager with capture + marquee select + pan/orbit drag interactions)
 - MVP 19: prototype implemented in demo (viewport click-to-select + selection highlight overlay)
 - MVP 20: prototype implemented in demo (translate gizmo stub: overlay + explicit drag phases; Q/W tool switching; Esc cancel rollback)
-- MVP 21: prototype implemented in demo (dock drag hints + dock tab context menu; debounced layout persistence)
+- MVP 21: prototype implemented in demo (dock drag hints + dock tab context menu actions; debounced layout persistence)
 - MVP 22: prototype implemented in demo (undo/redo command stack; inspector edits + translate gizmo integrate)
 - MVP 23: prototype implemented in demo (Hierarchy drag & drop emits undoable commands; undo/redo restores hierarchy + selection)
 - MVP 24: prototype implemented in demo (edit transactions + coalescing; viewport translate drag produces a single undo entry)
@@ -38,7 +38,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 32: prototype implemented in runner (engine frame update: render target deltas + command buffers, applied before UI render)
 - Example editor layer crate: `crates/fret-editor` extracted (inspector protocol + edit services + viewport tool state)
 - MVP 33: prototype implemented in demo (Project panel + `.meta` GUIDs; rename/move keep GUID stable; OS file drop imports into `Assets/Imports`; internal drag move to folders)
-- MVP 34: in progress (dock tab bar titles + hover/active chrome baseline)
+- MVP 34: prototype implemented in demo (dock tab bar titles + hover/active chrome baseline; overflow scroll + close tab)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)

@@ -10,6 +10,7 @@ pub use app::{
     WindowRequest,
 };
 
+pub use drag::DragKind;
 pub use drag::DragSession;
 pub use keymap::{BindingV1, KeySpecV1, KeymapFileV1};
 pub use keymap::{

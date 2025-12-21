@@ -3,6 +3,11 @@ name = "fret-runner-winit-wgpu"
 version.workspace = true
 edition.workspace = true
 
+[features]
+# Some upstream macros (`objc`'s `msg_send!`) include `cfg(feature = "cargo-clippy")`.
+# Declaring it avoids `unexpected_cfgs` warnings under Rust's check-cfg.
+cargo-clippy = []
+
 [dependencies]
 arboard.workspace = true
 fret-app = { path = "../fret-app" }
@@ -14,3 +19,7 @@ thiserror.workspace = true
 tracing.workspace = true
 wgpu.workspace = true
 winit.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+cocoa.workspace = true
+objc.workspace = true

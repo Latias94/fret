@@ -5,7 +5,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-use fret_app::{App, CreateWindowRequest, Effect, WindowRequest};
+use fret_app::DragKind;
+use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{
     Event, ExternalDragEvent, ExternalDragKind, Modifiers, MouseButton, Point, Px, Rect, Scene,
     Size, TextService, ViewportInputEvent,
@@ -25,6 +26,41 @@ use winit::{
 use crate::error::RunnerError;
 
 type WindowAnchor = fret_core::WindowAnchor;
+
+#[cfg(target_os = "macos")]
+#[allow(deprecated)]
+fn bring_window_to_front(window: &Window) {
+    use cocoa::{
+        appkit::{NSApp, NSApplication, NSWindow},
+        base::{id, nil},
+    };
+    use objc::runtime::YES;
+    use objc::{msg_send, sel, sel_impl};
+    use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
+
+    unsafe {
+        // macOS often keeps newly created windows behind the current key window unless we
+        // explicitly activate the app and order the window front.
+        let app = NSApp();
+        app.activateIgnoringOtherApps_(YES);
+
+        // winit exposes an `NSView*` via raw-window-handle; resolve `NSWindow*` from it.
+        if let Ok(handle) = window.window_handle() {
+            if let RawWindowHandle::AppKit(h) = handle.as_raw() {
+                let ns_view: id = h.ns_view.as_ptr() as id;
+                let ns_window: id = msg_send![ns_view, window];
+                if ns_window != nil {
+                    ns_window.makeKeyAndOrderFront_(nil);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn bring_window_to_front(window: &Window) {
+    window.focus_window();
+}
 
 pub enum RenderTargetUpdate {
     Update {
@@ -309,6 +345,7 @@ pub struct WinitRunner<D: WinitDriver> {
     raf_windows: HashSet<fret_core::AppWindowId>,
     timers: HashMap<fret_core::TimerToken, TimerEntry>,
     clipboard: Option<arboard::Clipboard>,
+    cursor_screen_pos: Option<PhysicalPosition<f64>>,
 }
 
 #[derive(Debug, Clone)]
@@ -340,6 +377,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             raf_windows: HashSet::new(),
             timers: HashMap::new(),
             clipboard: arboard::Clipboard::new().ok(),
+            cursor_screen_pos: None,
         }
     }
 
@@ -433,8 +471,26 @@ impl<D: WinitDriver> WinitRunner<D> {
         let scale = anchor_state.window.scale_factor();
 
         let (ox, oy) = self.config.new_window_anchor_offset;
-        let x = outer.x as f64 + anchor.position.x.0 as f64 * scale + ox;
-        let y = outer.y as f64 + anchor.position.y.0 as f64 * scale + oy;
+        let mut x = outer.x as f64 + anchor.position.x.0 as f64 * scale + ox;
+        let mut y = outer.y as f64 + anchor.position.y.0 as f64 * scale + oy;
+
+        // Best-effort clamping: avoid creating "off-screen" floating windows due to
+        // platform-specific coordinate spaces and DPI conversions.
+        if let Some(monitor) = anchor_state.window.current_monitor() {
+            let pos = monitor.position();
+            let size = monitor.size();
+
+            let min_x = pos.x as f64;
+            let min_y = pos.y as f64;
+            // Leave a small margin so the window stays reachable even if its size is larger than
+            // the monitor work area.
+            let max_x = min_x + size.width as f64 - 40.0;
+            let max_y = min_y + size.height as f64 - 40.0;
+
+            x = x.clamp(min_x, max_x);
+            y = y.clamp(min_y, max_y);
+        }
+
         Some(PhysicalPosition::new(x as i32, y as i32).into())
     }
 
@@ -658,6 +714,13 @@ impl<D: WinitDriver> WinitRunner<D> {
                                         continue;
                                     }
                                 };
+
+                            if matches!(create.kind, CreateWindowKind::DockFloating { .. }) {
+                                if let Some(runtime) = self.windows.get(new_window) {
+                                    bring_window_to_front(&runtime.window);
+                                }
+                            }
+
                             self.driver
                                 .window_created(&mut self.app, &create, new_window);
                             self.app.request_redraw(new_window);
@@ -680,6 +743,55 @@ impl<D: WinitDriver> WinitRunner<D> {
         pe: fret_core::PointerEvent,
     ) {
         let text_ptr = self.text_service_mut_ptr();
+
+        let is_dock_drag = self
+            .app
+            .drag()
+            .is_some_and(|d| d.dragging && d.kind == DragKind::DockPanel);
+
+        if is_dock_drag {
+            if let fret_core::PointerEvent::Move {
+                buttons, modifiers, ..
+            } = pe
+            {
+                if let Some(screen_pos) = self.cursor_screen_pos {
+                    let windows: Vec<fret_core::AppWindowId> = self.windows.keys().collect();
+                    for w in windows {
+                        let Some(state) = self.windows.get_mut(w) else {
+                            continue;
+                        };
+
+                        let Ok(inner_pos) = state.window.inner_position() else {
+                            continue;
+                        };
+
+                        let local_physical = PhysicalPosition::new(
+                            screen_pos.x - inner_pos.x as f64,
+                            screen_pos.y - inner_pos.y as f64,
+                        );
+
+                        let local_logical: winit::dpi::LogicalPosition<f32> =
+                            local_physical.to_logical(state.window.scale_factor());
+
+                        let local = Point::new(Px(local_logical.x), Px(local_logical.y));
+
+                        self.driver.handle_event(
+                            &mut self.app,
+                            unsafe { &mut *text_ptr },
+                            w,
+                            &mut state.user,
+                            &Event::Pointer(fret_core::PointerEvent::Move {
+                                position: local,
+                                buttons,
+                                modifiers,
+                            }),
+                        );
+                    }
+                    return;
+                }
+            }
+        }
+
         let Some(state) = self.windows.get_mut(window) else {
             return;
         };
@@ -690,6 +802,65 @@ impl<D: WinitDriver> WinitRunner<D> {
             &mut state.user,
             &Event::Pointer(pe),
         );
+    }
+
+    fn cursor_screen_pos_fallback_for_window(
+        &self,
+        window: fret_core::AppWindowId,
+    ) -> Option<PhysicalPosition<f64>> {
+        let state = self.windows.get(window)?;
+        let inner = state.window.inner_position().ok()?;
+        let scale = state.window.scale_factor();
+        let x = inner.x as f64 + state.cursor_pos.x.0 as f64 * scale;
+        let y = inner.y as f64 + state.cursor_pos.y.0 as f64 * scale;
+        Some(PhysicalPosition::new(x, y))
+    }
+
+    fn local_pos_for_window(
+        &self,
+        window: fret_core::AppWindowId,
+        screen_pos: PhysicalPosition<f64>,
+    ) -> Option<Point> {
+        let state = self.windows.get(window)?;
+        let inner = state.window.inner_position().ok()?;
+        let local_physical =
+            PhysicalPosition::new(screen_pos.x - inner.x as f64, screen_pos.y - inner.y as f64);
+        let local_logical: winit::dpi::LogicalPosition<f32> =
+            local_physical.to_logical(state.window.scale_factor());
+        Some(Point::new(Px(local_logical.x), Px(local_logical.y)))
+    }
+
+    fn window_under_cursor(
+        &self,
+        screen_pos: PhysicalPosition<f64>,
+        prefer_not: Option<fret_core::AppWindowId>,
+    ) -> Option<fret_core::AppWindowId> {
+        let mut fallback: Option<fret_core::AppWindowId> = None;
+        for w in self.windows.keys() {
+            let Some(state) = self.windows.get(w) else {
+                continue;
+            };
+            let Ok(inner) = state.window.inner_position() else {
+                continue;
+            };
+            let size = state.window.inner_size();
+            let left = inner.x as f64;
+            let top = inner.y as f64;
+            let right = left + size.width as f64;
+            let bottom = top + size.height as f64;
+            if screen_pos.x >= left
+                && screen_pos.x < right
+                && screen_pos.y >= top
+                && screen_pos.y < bottom
+            {
+                if prefer_not.is_some_and(|p| p == w) {
+                    fallback = Some(w);
+                    continue;
+                }
+                return Some(w);
+            }
+        }
+        fallback
     }
 
     fn map_wheel_delta(
@@ -1005,18 +1176,31 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 self.app.request_redraw(app_window);
             }
             WindowEvent::CursorMoved { position, .. } => {
-                let (pos, buttons, external_drag_files) = {
+                let (pos, buttons, external_drag_files, screen_pos) = {
                     let Some(state) = self.windows.get_mut(app_window) else {
                         return;
                     };
                     let logical = position.to_logical::<f32>(state.window.scale_factor());
                     state.cursor_pos = Point::new(Px(logical.x), Px(logical.y));
+
+                    let screen_pos = state.window.inner_position().ok().map(|inner| {
+                        PhysicalPosition::new(
+                            inner.x as f64 + position.x,
+                            inner.y as f64 + position.y,
+                        )
+                    });
+
                     (
                         state.cursor_pos,
                         state.pressed_buttons,
                         state.external_drag_files.clone(),
+                        screen_pos,
                     )
                 };
+
+                if let Some(p) = screen_pos {
+                    self.cursor_screen_pos = Some(p);
+                }
 
                 if !external_drag_files.is_empty() {
                     if let Some(state) = self.windows.get_mut(app_window) {
@@ -1075,6 +1259,34 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                         );
                     }
                     ElementState::Released => {
+                        let is_dock_drag = self
+                            .app
+                            .drag()
+                            .is_some_and(|d| d.dragging && d.kind == DragKind::DockPanel);
+                        if is_dock_drag && button == fret_core::MouseButton::Left {
+                            let source = self.app.drag().map(|d| d.source_window);
+                            let screen_pos = self
+                                .cursor_screen_pos
+                                .or_else(|| self.cursor_screen_pos_fallback_for_window(app_window));
+                            if let Some(screen_pos) = screen_pos {
+                                if let Some(target) = self.window_under_cursor(screen_pos, source) {
+                                    if target != app_window {
+                                        if let Some(local) =
+                                            self.local_pos_for_window(target, screen_pos)
+                                        {
+                                            self.dispatch_pointer_event(
+                                                target,
+                                                fret_core::PointerEvent::Up {
+                                                    position: local,
+                                                    button,
+                                                    modifiers: self.modifiers,
+                                                },
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         self.dispatch_pointer_event(
                             app_window,
                             fret_core::PointerEvent::Up {

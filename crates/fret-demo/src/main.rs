@@ -11,7 +11,7 @@ mod undo;
 mod viewport_targets;
 mod world;
 
-use demo_ui::{DemoLayers, DemoUiConfig, build_demo_ui};
+use demo_ui::{DemoLayers, DemoUiConfig, DemoUiKind, build_demo_ui};
 use editor_shell::{DemoSelection, HierarchyPanel, InspectorPanel};
 use hierarchy::DemoHierarchy;
 use project_panel::ProjectPanel;
@@ -26,8 +26,8 @@ use fret_app::{
     keymap::{BindingV1, KeySpecV1},
 };
 use fret_core::{
-    Axis, Color, DockLayoutNodeV1, DockLayoutV1, DockNode, DockOp, PanelKey, Rect, RenderTargetId,
-    Scene,
+    Axis, Color, DockLayoutNodeV1, DockLayoutV1, DockNode, DockOp, DropZone, PanelKey, Rect,
+    RenderTargetId, Scene, WindowAnchor,
 };
 use fret_editor::{
     InspectorEditKind, InspectorEditService, MarqueeSelectInteraction, PanOrbitInteraction,
@@ -49,6 +49,7 @@ use fret_ui::{
 };
 use std::{
     collections::HashMap,
+    collections::VecDeque,
     fs::File,
     hash::{Hash, Hasher},
     path::Path,
@@ -143,6 +144,7 @@ struct DemoDriver {
     theme_file_hash: Option<u64>,
     play_mode: bool,
     play_started_at: Option<Instant>,
+    pending_window_ui_kinds: VecDeque<DemoUiKind>,
 }
 
 fn load_theme(app: &mut App) {
@@ -2208,6 +2210,16 @@ impl WinitDriver for DemoDriver {
         app: &mut App,
         window: fret_core::AppWindowId,
     ) -> Self::WindowState {
+        let fallback_kind = if self.main_window.is_some() && Some(window) != self.main_window {
+            DemoUiKind::DockFloating
+        } else {
+            DemoUiKind::Main
+        };
+        let ui_kind = self
+            .pending_window_ui_kinds
+            .pop_front()
+            .unwrap_or(fallback_kind);
+
         let selection = match self.selection {
             Some(model) => model,
             None => {
@@ -2253,6 +2265,7 @@ impl WinitDriver for DemoDriver {
         self.viewport_tools = Some(viewport_tools);
         let (mut ui, layers) = build_demo_ui(
             window,
+            ui_kind,
             DemoUiConfig::default(),
             inspector_edit_buffer,
             viewport_tools,
@@ -2555,6 +2568,68 @@ impl WinitDriver for DemoDriver {
                 for &w in self.logical_windows.keys() {
                     app.request_redraw(w);
                 }
+            }
+            "dock.tab.close" | "dock.tab.float" | "dock.tab.move_left" | "dock.tab.move_right" => {
+                let Some(dock) = app.global_mut::<DockManager>() else {
+                    return;
+                };
+                let Some((dock_window, tabs_node, panel, position)) =
+                    dock.take_dock_tab_context_menu()
+                else {
+                    return;
+                };
+
+                let op = match command.as_str() {
+                    "dock.tab.close" => DockOp::ClosePanel {
+                        window: dock_window,
+                        panel,
+                    },
+                    "dock.tab.float" => DockOp::RequestFloatPanelToNewWindow {
+                        source_window: dock_window,
+                        panel,
+                        anchor: Some(WindowAnchor {
+                            window: dock_window,
+                            position,
+                        }),
+                    },
+                    "dock.tab.move_left" | "dock.tab.move_right" => {
+                        let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(tabs_node) else {
+                            return;
+                        };
+                        let Some(index) = tabs.iter().position(|p| p == &panel) else {
+                            return;
+                        };
+
+                        if command.as_str() == "dock.tab.move_left" {
+                            if index == 0 {
+                                return;
+                            }
+                            DockOp::MovePanel {
+                                source_window: dock_window,
+                                panel,
+                                target_window: dock_window,
+                                target_tabs: tabs_node,
+                                zone: DropZone::Center,
+                                insert_index: Some(index - 1),
+                            }
+                        } else {
+                            if index + 1 >= tabs.len() {
+                                return;
+                            }
+                            DockOp::MovePanel {
+                                source_window: dock_window,
+                                panel,
+                                target_window: dock_window,
+                                target_tabs: tabs_node,
+                                zone: DropZone::Center,
+                                insert_index: Some(index + 2),
+                            }
+                        }
+                    }
+                    _ => return,
+                };
+
+                self.dock_op(app, op);
             }
             "project.refresh" => {
                 if let Some(project) = app.global_mut::<ProjectService>() {
@@ -3937,6 +4012,8 @@ impl WinitDriver for DemoDriver {
     ) -> Option<WindowCreateSpec> {
         match &request.kind {
             CreateWindowKind::DockFloating { panel, .. } => {
+                self.pending_window_ui_kinds
+                    .push_back(DemoUiKind::DockFloating);
                 let title = app
                     .global::<DockManager>()
                     .and_then(|dock| dock.panel(panel))
@@ -3948,6 +4025,8 @@ impl WinitDriver for DemoDriver {
                 ))
             }
             CreateWindowKind::DockRestore { logical_window_id } => {
+                self.pending_window_ui_kinds
+                    .push_back(DemoUiKind::DockFloating);
                 let mut spec = WindowCreateSpec::new(
                     format!("fret-demo - {logical_window_id}"),
                     winit::dpi::LogicalSize::new(640.0, 480.0),

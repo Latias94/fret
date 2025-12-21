@@ -23,6 +23,7 @@ pub struct TextBlob {
     pub metrics: TextMetrics,
     pub lines: Vec<TextLine>,
     pub caret_stops: Vec<(usize, Px)>,
+    ref_count: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -323,9 +324,13 @@ impl TextSystem {
     ) -> (TextBlobId, TextMetrics) {
         let key = TextBlobKey::new(text, style, constraints);
         if let Some(id) = self.blob_cache.get(&key).copied() {
-            if let Some(blob) = self.blobs.get(id) {
+            if let Some(blob) = self.blobs.get_mut(id) {
+                blob.ref_count = blob.ref_count.saturating_add(1);
                 return (id, blob.metrics);
             }
+            // Stale cache entry (shouldn't happen, but keep it robust).
+            self.blob_cache.remove(&key);
+            self.blob_key_by_id.remove(&id);
         }
 
         let scale = constraints.scale_factor.max(1.0);
@@ -455,6 +460,7 @@ impl TextSystem {
             metrics,
             lines,
             caret_stops,
+            ref_count: 1,
         });
         self.blob_cache.insert(key.clone(), id);
         self.blob_key_by_id.insert(id, key);
@@ -564,11 +570,26 @@ impl TextSystem {
     }
 
     pub fn release(&mut self, blob: TextBlobId) {
-        let Some(key) = self.blob_key_by_id.remove(&blob) else {
-            return;
+        let should_remove = match self.blobs.get_mut(blob) {
+            Some(b) => {
+                if b.ref_count > 1 {
+                    b.ref_count = b.ref_count.saturating_sub(1);
+                    false
+                } else {
+                    true
+                }
+            }
+            None => return,
         };
-        self.blob_cache.remove(&key);
-        self.blobs.remove(blob);
+
+        if !should_remove {
+            return;
+        }
+
+        if let Some(key) = self.blob_key_by_id.remove(&blob) {
+            self.blob_cache.remove(&key);
+        }
+        let _ = self.blobs.remove(blob);
     }
 }
 

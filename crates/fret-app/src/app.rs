@@ -9,6 +9,7 @@ use std::{
 use fret_core::{AppWindowId, FrameId, NodeId, Rect, TickId, TimerToken, WindowAnchor};
 use slotmap::SlotMap;
 
+use crate::drag::DragKind;
 use crate::drag::DragSession;
 use crate::{keymap::DefaultKeybinding, when_expr::WhenExpr};
 
@@ -232,7 +233,17 @@ impl App {
         start: fret_core::Point,
         payload: T,
     ) {
-        self.drag = Some(DragSession::new(source_window, start, payload));
+        self.begin_drag_with_kind(DragKind::Custom, source_window, start, payload);
+    }
+
+    pub fn begin_drag_with_kind<T: Any>(
+        &mut self,
+        kind: DragKind,
+        source_window: AppWindowId,
+        start: fret_core::Point,
+        payload: T,
+    ) {
+        self.drag = Some(DragSession::new(source_window, kind, start, payload));
     }
 
     pub fn drag(&self) -> Option<&DragSession> {
