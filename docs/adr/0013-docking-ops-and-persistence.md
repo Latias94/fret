@@ -175,6 +175,8 @@ Notes:
 - Docking can evolve without entangling UI widgets with persistence formats.
 - Undo/redo becomes feasible (operations are explicit).
 - Plugins can register panels without leaking runtime-only IDs into user config files.
+- UX note: drop-zone hit-testing and preview overlays should share the same threshold rules so “what you see”
+  matches “what you get” during docking drags.
 
 ## Future Work
 

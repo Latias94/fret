@@ -2439,11 +2439,20 @@ fn split_tab_bar(rect: Rect) -> (Rect, Rect) {
     (tab_bar, content)
 }
 
+fn dock_drop_edge_thickness(rect: Rect) -> Px {
+    let min_dim = rect.size.width.0.min(rect.size.height.0);
+    // Keep split zones usable on large panels, but avoid making "center tab" drops difficult.
+    // Also keep the thickness sane on small panels.
+    let base = (min_dim * 0.20).clamp(12.0, 64.0);
+    let cap = (min_dim * 0.33).clamp(8.0, 64.0);
+    Px(base.min(cap))
+}
+
 fn drop_zone_rect(rect: Rect, zone: DropZone) -> Rect {
     if zone == DropZone::Center {
         return rect;
     }
-    let thickness = 0.25 * rect.size.width.0.min(rect.size.height.0);
+    let thickness = dock_drop_edge_thickness(rect).0;
     match zone {
         DropZone::Left => Rect {
             origin: rect.origin,
@@ -2561,23 +2570,25 @@ fn hit_test_drop_target(
             });
         }
 
-        let thickness = 0.25 * rect.size.width.0.min(rect.size.height.0);
+        let thickness = dock_drop_edge_thickness(rect).0;
         let left = position.x.0 - rect.origin.x.0;
         let right = rect.origin.x.0 + rect.size.width.0 - position.x.0;
         let top = position.y.0 - rect.origin.y.0;
         let bottom = rect.origin.y.0 + rect.size.height.0 - position.y.0;
 
-        let zone = if left < thickness {
-            DropZone::Left
-        } else if right < thickness {
-            DropZone::Right
-        } else if top < thickness {
-            DropZone::Top
-        } else if bottom < thickness {
-            DropZone::Bottom
-        } else {
-            DropZone::Center
-        };
+        let mut zone = DropZone::Center;
+        let mut best = thickness;
+        for (candidate, dist) in [
+            (DropZone::Left, left),
+            (DropZone::Right, right),
+            (DropZone::Top, top),
+            (DropZone::Bottom, bottom),
+        ] {
+            if dist < best {
+                best = dist;
+                zone = candidate;
+            }
+        }
 
         return Some(HoverTarget {
             tabs: node,
