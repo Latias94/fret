@@ -227,6 +227,8 @@ Implementation status:
 
 - Prototype implemented: dock drag uses `Event::InternalDrag` for cross-window hover/drop, and the runner no longer
   broadcasts `PointerEvent::Move` across windows.
+- Runner invariant: on mouse button release, the runner ends any active **cross-window** internal drag session to
+  prevent "stuck" drags if no widget consumes the `InternalDrag::Drop` (or if the drop target is missing).
 
 External OS file DnD prototype:
 

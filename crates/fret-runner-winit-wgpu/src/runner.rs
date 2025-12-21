@@ -851,10 +851,20 @@ impl<D: WinitDriver> WinitRunner<D> {
             return false;
         };
 
-        let Some(target) = self.window_under_cursor(screen_pos, None) else {
+        let target = self
+            .window_under_cursor(screen_pos, None)
+            .or(self.internal_drag_hover_window);
+        let Some(target) = target else {
             return false;
         };
-        let Some(pos) = self.local_pos_for_window(target, screen_pos) else {
+        let pos = self.local_pos_for_window(target, screen_pos).or_else(|| {
+            if self.internal_drag_hover_window == Some(target) {
+                self.internal_drag_hover_pos
+            } else {
+                None
+            }
+        });
+        let Some(pos) = pos else {
             return false;
         };
 
@@ -1335,6 +1345,11 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     ElementState::Released => {
                         if button == fret_core::MouseButton::Left {
                             self.route_internal_drag_drop_from_cursor();
+                            // Cross-window drags are runner-routed (Enter/Over/Drop), so ensure the
+                            // drag session cannot get "stuck" if no widget ends it.
+                            if self.app.drag().is_some_and(|d| d.cross_window_hover) {
+                                self.app.cancel_drag();
+                            }
                         }
                         self.dispatch_pointer_event(
                             app_window,
