@@ -1,14 +1,15 @@
 use fret_editor::{PropertyPath, PropertyValue};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DemoTransform {
     pub position: [f32; 3],
     pub rotation_y: f32,
     pub scale: f32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DemoEntity {
     pub name: String,
     pub active: bool,
@@ -81,6 +82,14 @@ impl DemoWorld {
             .get(&id)
             .cloned()
             .unwrap_or_else(|| Self::default_entity(id))
+    }
+
+    pub fn entity_snapshot(&self, id: u64) -> DemoEntity {
+        self.entity_view(id)
+    }
+
+    pub fn clear(&mut self) {
+        self.entities.clear();
     }
 
     pub fn get_property(&self, id: u64, path: &PropertyPath) -> Option<PropertyValue> {

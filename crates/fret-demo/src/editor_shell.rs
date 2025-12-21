@@ -2,6 +2,7 @@ use crate::asset_drop::CurrentSceneService;
 use crate::asset_drop::{AssetDropRequest, AssetDropService, AssetDropTarget};
 use crate::hierarchy::{DemoHierarchy, HierarchyDropKind, HierarchyDropTarget};
 use crate::project_panel::ProjectDragPayload;
+use crate::scene_document::SceneDocumentService;
 use crate::undo::{EditCommand, SelectionSnapshot, UndoStack};
 use crate::world::DemoWorld;
 use fret_app::{App, Model};
@@ -687,6 +688,17 @@ impl HierarchyPanel {
                 selection: selection_snapshot,
             });
         });
+        let has_scene = cx
+            .app
+            .global::<CurrentSceneService>()
+            .and_then(|s| s.guid())
+            .is_some();
+        if has_scene {
+            cx.app
+                .with_global_mut(SceneDocumentService::default, |s, _app| {
+                    s.set_dirty(true);
+                });
+        }
 
         self.last_hierarchy_revision = self.hierarchy.revision(cx.app);
 

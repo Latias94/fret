@@ -8,6 +8,7 @@ mod hierarchy;
 mod ime_probe;
 mod project_panel;
 mod scene_background;
+mod scene_document;
 mod undo;
 mod viewport_asset_drop;
 mod viewport_targets;
@@ -53,6 +54,7 @@ use fret_ui::{
     ContextMenuService, DockManager, DockPanel, DockPanelContentService, Theme, ThemeConfig,
     UiTree, ViewportPanel,
 };
+use scene_document::{SceneDocumentService, SceneSnapshot};
 use std::{
     collections::HashMap,
     collections::VecDeque,
@@ -152,6 +154,7 @@ struct DemoDriver {
     play_started_at: Option<Instant>,
     pending_window_ui_kinds: VecDeque<DemoUiKind>,
     asset_drop_registry: AssetDropRegistry,
+    last_scene_chrome_rev: Option<(u64, u64)>,
 }
 
 fn load_theme(app: &mut App) {
@@ -374,37 +377,196 @@ impl DemoDriver {
                     return AssetDropDecision::Ignored;
                 }
 
-                cx.app
-                    .with_global_mut(CurrentSceneService::default, |s, _app| {
-                        s.set_guid(Some(cx.guid));
-                    });
-
-                let title = cx
-                    .path
-                    .as_deref()
-                    .and_then(|p| p.file_stem())
-                    .map(|s| s.to_string_lossy().to_string())
-                    .unwrap_or_else(|| format!("Scene {}", cx.guid.0));
-                if let Some(dock) = cx.app.global_mut::<DockManager>() {
-                    if let Some(p) = dock.panels.get_mut(panel) {
-                        p.title = format!("Scene — {title}");
-                    }
+                if cx.driver.open_scene_by_guid(cx.app, cx.guid) {
+                    AssetDropDecision::Handled
+                } else {
+                    AssetDropDecision::Ignored
                 }
-
-                if let Some(selection) = cx.driver.selection {
-                    let _ = selection.update(cx.app, |s, _cx| {
-                        s.lead_entity = None;
-                        s.selected_entities.clear();
-                    });
-                }
-                cx.app
-                    .with_global_mut(ProjectSelectionService::default, |s, _app| {
-                        s.set_selected_guid(Some(cx.guid));
-                    });
-
-                AssetDropDecision::Handled
             }),
         });
+    }
+
+    fn mark_scene_dirty(&mut self, app: &mut App) {
+        let has_scene = app
+            .global::<CurrentSceneService>()
+            .and_then(|s| s.guid())
+            .is_some();
+        if !has_scene {
+            return;
+        }
+        app.with_global_mut(SceneDocumentService::default, |s, _app| {
+            s.set_dirty(true);
+        });
+    }
+
+    fn sync_scene_chrome(&mut self, app: &mut App) {
+        let scene_rev = app
+            .global::<CurrentSceneService>()
+            .map(|s| s.revision())
+            .unwrap_or(0);
+        let doc_rev = app
+            .global::<SceneDocumentService>()
+            .map(|s| s.revision())
+            .unwrap_or(0);
+        let next = (scene_rev, doc_rev);
+        if self.last_scene_chrome_rev == Some(next) {
+            return;
+        }
+        self.last_scene_chrome_rev = Some(next);
+
+        let guid = app.global::<CurrentSceneService>().and_then(|s| s.guid());
+        let dirty = app
+            .global::<SceneDocumentService>()
+            .is_some_and(|s| s.dirty());
+
+        let title = guid
+            .and_then(|guid| {
+                let project = app.global::<ProjectService>()?;
+                let id = project.id_for_guid(guid)?;
+                let path = project.path_for_id(id)?;
+                let stem = path.file_stem()?.to_string_lossy().to_string();
+                Some(stem)
+            })
+            .unwrap_or_else(|| "Scene".to_string());
+        let suffix = if dirty { " *" } else { "" };
+
+        let key_scene = PanelKey::new("core.scene");
+        if let Some(dock) = app.global_mut::<DockManager>() {
+            if let Some(p) = dock.panels.get_mut(&key_scene) {
+                p.title = format!("Scene — {title}{suffix}");
+            }
+        }
+    }
+
+    fn open_scene_by_guid(&mut self, app: &mut App, guid: fret_editor::AssetGuid) -> bool {
+        let Some(project) = app.global::<ProjectService>() else {
+            return false;
+        };
+        let Some(id) = project.id_for_guid(guid) else {
+            return false;
+        };
+        if project.kind_for_id(id) != Some(fret_editor::ProjectEntryKind::File) {
+            return false;
+        }
+        let Some(path) = project.path_for_id(id).map(|p| p.to_path_buf()) else {
+            return false;
+        };
+        if path
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default()
+            != "scene"
+        {
+            return false;
+        }
+        let fallback_name = path
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| "Scene".to_string());
+
+        let bytes = std::fs::read(&path).unwrap_or_default();
+        let file = scene_document::parse_scene_bytes(&bytes).unwrap_or_else(|| {
+            let mut entity = DemoWorld::default().entity_snapshot(1);
+            entity.name = fallback_name;
+            scene_document::DemoSceneFileV1 {
+                version: 1,
+                roots: vec![scene_document::DemoSceneNodeV1 {
+                    id: 1,
+                    entity,
+                    children: Vec::new(),
+                }],
+            }
+        });
+        let snapshot = file.to_snapshot();
+        self.apply_scene_snapshot(app, guid, snapshot);
+        true
+    }
+
+    fn save_current_scene(&mut self, app: &mut App) -> bool {
+        let guid = app.global::<CurrentSceneService>().and_then(|s| s.guid());
+        let Some(guid) = guid else {
+            return false;
+        };
+        let Some(project) = app.global::<ProjectService>() else {
+            return false;
+        };
+        let Some(id) = project.id_for_guid(guid) else {
+            return false;
+        };
+        let Some(path) = project.path_for_id(id).map(|p| p.to_path_buf()) else {
+            return false;
+        };
+        if path
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default()
+            != "scene"
+        {
+            return false;
+        }
+
+        let hierarchy = self.hierarchy.and_then(|m| m.get(app)).cloned();
+        let world = self.world.and_then(|m| m.get(app)).cloned();
+        let (hierarchy, world) = match (hierarchy, world) {
+            (Some(h), Some(w)) => (h, w),
+            _ => return false,
+        };
+
+        let snapshot = SceneSnapshot { hierarchy, world };
+        let file = scene_document::DemoSceneFileV1::from_snapshot(&snapshot);
+        let bytes = scene_document::write_scene_pretty(&file);
+        if let Err(err) = std::fs::write(&path, bytes) {
+            tracing::error!(error = %err, path = %path.to_string_lossy(), "failed to save scene");
+            return false;
+        }
+
+        app.with_global_mut(SceneDocumentService::default, |s, _app| {
+            s.set_dirty(false);
+        });
+        true
+    }
+
+    fn apply_scene_snapshot(
+        &mut self,
+        app: &mut App,
+        guid: fret_editor::AssetGuid,
+        snapshot: SceneSnapshot,
+    ) {
+        if let Some(hierarchy) = self.hierarchy {
+            let _ = hierarchy.update(app, |h, _cx| {
+                h.roots = snapshot.hierarchy.roots;
+            });
+        }
+        if let Some(world) = self.world {
+            let _ = world.update(app, |w, _cx| {
+                *w = snapshot.world;
+            });
+        }
+        if let Some(selection) = self.selection {
+            let _ = selection.update(app, |s, _cx| {
+                s.lead_entity = None;
+                s.selected_entities.clear();
+            });
+        }
+        if let Some(undo) = self.undo {
+            let _ = undo.update(app, |u, _cx| {
+                *u = UndoStack::default();
+            });
+        }
+
+        app.with_global_mut(CurrentSceneService::default, |s, _app| {
+            s.set_guid(Some(guid));
+        });
+        app.with_global_mut(SceneDocumentService::default, |s, _app| {
+            s.set_dirty(false);
+        });
+        app.with_global_mut(ProjectSelectionService::default, |s, _app| {
+            s.set_selected_guid(Some(guid));
+        });
+
+        for &w in self.logical_windows.keys() {
+            app.request_redraw(w);
+        }
     }
 
     fn spawn_asset_entity(
@@ -429,6 +591,7 @@ impl DemoDriver {
             }
         });
 
+        self.mark_scene_dirty(app);
         Some(new_id)
     }
 
@@ -1213,11 +1376,14 @@ impl WinitDriver for DemoDriver {
 
         app.set_global(AssetDropService::default());
         app.set_global(CurrentSceneService::default());
+        app.set_global(SceneDocumentService::default());
         app.set_global(InspectorEditService::default());
         app.set_global(PropertyEditService::default());
         load_theme(app);
         self.ensure_theme_hot_reload(app, main_window);
         self.install_asset_drop_rules();
+
+        self.last_scene_chrome_rev = None;
 
         app.commands_mut().register(
             CommandId::from("command_palette.toggle"),
@@ -1268,6 +1434,21 @@ impl WinitDriver for DemoDriver {
                 )
                 .with_category("Project")
                 .with_keywords(["project", "assets", "move", "meta", "guid"]),
+        );
+
+        app.commands_mut().register(
+            CommandId::from("scene.open_selected"),
+            CommandMeta::new("Open Scene")
+                .with_description("Opens the selected .scene asset as the current scene document")
+                .with_category("Scene")
+                .with_keywords(["scene", "open", "load"]),
+        );
+        app.commands_mut().register(
+            CommandId::from("scene.save"),
+            CommandMeta::new("Save Scene")
+                .with_description("Saves the current scene document to disk")
+                .with_category("Scene")
+                .with_keywords(["scene", "save"]),
         );
 
         app.commands_mut().register(
@@ -3046,6 +3227,7 @@ impl WinitDriver for DemoDriver {
                     };
                     let _ = stack.update(app, |s, _cx| s.push(cmd));
                 }
+                self.mark_scene_dirty(app);
 
                 for &w in self.logical_windows.keys() {
                     app.request_redraw(w);
@@ -3196,6 +3378,26 @@ impl WinitDriver for DemoDriver {
                 let vis = state.ui.is_layer_visible(state.layers.external_dnd);
                 state.ui.set_layer_visible(state.layers.external_dnd, !vis);
                 app.request_redraw(window);
+            }
+            "scene.open_selected" => {
+                let guid = app
+                    .global::<ProjectSelectionService>()
+                    .and_then(|s| s.selected_guid());
+                let Some(guid) = guid else {
+                    return;
+                };
+                if self.open_scene_by_guid(app, guid) {
+                    for &w in self.logical_windows.keys() {
+                        app.request_redraw(w);
+                    }
+                }
+            }
+            "scene.save" => {
+                if self.save_current_scene(app) {
+                    for &w in self.logical_windows.keys() {
+                        app.request_redraw(w);
+                    }
+                }
             }
             _ => {}
         }
@@ -4009,6 +4211,9 @@ impl WinitDriver for DemoDriver {
                                     }
                                 });
                             }
+                            if dragging {
+                                self.mark_scene_dirty(app);
+                            }
                             break 'up_left true;
                         }
 
@@ -4021,6 +4226,9 @@ impl WinitDriver for DemoDriver {
                                         s.cancel_active();
                                     }
                                 });
+                            }
+                            if dragging {
+                                self.mark_scene_dirty(app);
                             }
                             break 'up_left true;
                         }
@@ -4191,6 +4399,7 @@ impl WinitDriver for DemoDriver {
         scene: &mut Scene,
     ) {
         scene.clear();
+        self.sync_scene_chrome(app);
         self.sync_viewport_selection_overlay_for_window(app, window);
         state.ui.layout_all(app, text, bounds, scale_factor);
         state.ui.paint_all(app, text, bounds, scene, scale_factor);

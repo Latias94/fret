@@ -8,6 +8,7 @@ use fret_ui::{
     ContextMenuRequest, ContextMenuService, EventCx, Invalidation, LayoutCx, PaintCx, TreeView,
     Widget,
 };
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ProjectDragPayload {
@@ -21,6 +22,7 @@ pub struct ProjectPanel {
     last_selected: Option<u64>,
     last_selection_revision: Option<u64>,
     drag: Option<ProjectDragState>,
+    last_click: Option<(u64, Instant)>,
 }
 
 #[derive(Debug, Clone)]
@@ -39,6 +41,7 @@ impl ProjectPanel {
             last_selected: None,
             last_selection_revision: None,
             drag: None,
+            last_click: None,
         }
     }
 
@@ -131,6 +134,11 @@ impl ProjectPanel {
         let menu = Menu {
             title: std::sync::Arc::from("Project"),
             items: vec![
+                MenuItem::Command {
+                    command: CommandId::from("scene.open_selected"),
+                    when: None,
+                },
+                MenuItem::Separator,
                 MenuItem::Command {
                     command: CommandId::from("project.rename_selected"),
                     when: None,
@@ -372,6 +380,38 @@ impl Widget for ProjectPanel {
                     }
                 }
                 self.tree.event(cx, event);
+
+                if let Some(row_id) = self.tree.row_id_at(*position) {
+                    let now = Instant::now();
+                    let is_double_click = self.last_click.is_some_and(|(prev, at)| {
+                        prev == row_id && now.duration_since(at) <= Duration::from_millis(400)
+                    });
+                    self.last_click = Some((row_id, now));
+
+                    if is_double_click {
+                        if let Some(project) = cx.app.global::<ProjectService>() {
+                            if project.kind_for_id(row_id) == Some(ProjectEntryKind::File) {
+                                let is_scene = project
+                                    .path_for_id(row_id)
+                                    .and_then(|p| p.extension().and_then(|s| s.to_str()))
+                                    .is_some_and(|e| e.eq_ignore_ascii_case("scene"));
+                                if is_scene {
+                                    let guid = project.guid_for_id(row_id);
+                                    cx.app.with_global_mut(
+                                        ProjectSelectionService::default,
+                                        |s, _app| {
+                                            s.set_selected_guid(guid);
+                                        },
+                                    );
+                                    cx.dispatch_command(CommandId::from("scene.open_selected"));
+                                    cx.request_redraw();
+                                    cx.stop_propagation();
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
             }
             _ => {
                 self.tree.event(cx, event);
