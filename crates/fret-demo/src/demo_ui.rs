@@ -129,7 +129,7 @@ pub fn build_demo_ui(
     let bg = ui.create_node(ColoredPanel::themed(PanelThemeBackground::Surface, 1.0));
     ui.add_child(root, bg);
 
-    let frame = ui.create_node(HeaderBody::new(Px(76.0)));
+    let frame = ui.create_node(HeaderBody::auto());
     ui.add_child(root, frame);
 
     let header = ui.create_node(Column::new());

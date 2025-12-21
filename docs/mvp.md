@@ -38,6 +38,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 32: prototype implemented in runner (engine frame update: render target deltas + command buffers, applied before UI render)
 - Example editor layer crate: `crates/fret-editor` extracted (inspector protocol + edit services + viewport tool state)
 - MVP 33: prototype implemented in demo (Project panel + `.meta` GUIDs; rename/move keep GUID stable; OS file drop imports into `Assets/Imports`; internal drag move to folders)
+- MVP 34: in progress (dock tab bar titles + hover/active chrome baseline)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -557,6 +558,40 @@ References:
 
 - `docs/adr/0013-docking-ops-and-persistence.md`
 - `docs/adr/0011-overlays-and-multi-root.md`
+
+## MVP 34 — Dock Tab Bar Readability (Titles + Hover)
+
+Goal: make docking feel less “prototype” by rendering panel titles in the dock chrome, with minimal hover/active
+styling driven by theme tokens.
+
+**Scope**
+
+- Render dock tab titles (panel `DockPanel.title`) in the tab bar.
+- Clip title drawing to tab bounds so long titles do not spill into adjacent tabs.
+- Apply minimal chrome styling:
+  - hover background,
+  - active underline (accent).
+
+**Non-goals**
+
+- Close buttons, overflow scrolling, and drag-reorder polish.
+- Ellipsis/truncation rules for long titles (clipping is enough for now).
+
+**Definition of Done**
+
+- Dock tabs display readable titles across the demo panels.
+- Hovering a tab provides visual feedback; active tab is clearly indicated.
+- Behavior is stable across theme reload and DPI/scale-factor changes.
+
+Status:
+
+- In progress.
+
+References:
+
+- `docs/adr/0013-docking-ops-and-persistence.md`
+- `docs/adr/0032-style-tokens-and-theme-resolution.md`
+- `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
 
 ## MVP 22 — Undo/Redo P0 (Command Stack + Coalescing Boundary)
 

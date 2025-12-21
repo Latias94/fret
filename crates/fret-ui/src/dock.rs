@@ -1,8 +1,9 @@
 use fret_app::{CommandId, Effect, InputContext, Menu, MenuItem};
 use fret_core::{
     Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, Edges, NodeId, PanelKey,
-    RenderTargetId, Scene, SceneOp, ViewportFit, ViewportInputEvent, ViewportInputKind,
-    ViewportMapping, WindowAnchor,
+    RenderTargetId, Scene, SceneOp, TextBlobId, TextConstraints, TextMetrics, TextService,
+    TextStyle, TextWrap, ViewportFit, ViewportInputEvent, ViewportInputKind, ViewportMapping,
+    WindowAnchor,
     geometry::{Point, Px, Rect, Size},
 };
 use std::{
@@ -335,6 +336,15 @@ struct HoverTarget {
     insert_index: Option<usize>,
 }
 
+const DOCK_TAB_H: Px = Px(28.0);
+const DOCK_TAB_W: Px = Px(120.0);
+
+#[derive(Debug, Clone, Copy)]
+struct PreparedTabTitle {
+    blob: TextBlobId,
+    metrics: TextMetrics,
+}
+
 pub struct DockSpace {
     pub window: fret_core::AppWindowId,
     last_bounds: Rect,
@@ -342,6 +352,11 @@ pub struct DockSpace {
     panel_content: HashMap<PanelKey, NodeId>,
     panel_last_sizes: HashMap<PanelKey, Size>,
     viewport_capture: Option<ViewportCaptureState>,
+    tab_titles: HashMap<PanelKey, PreparedTabTitle>,
+    hovered_tab: Option<(DockNodeId, usize)>,
+    tab_text_style: TextStyle,
+    last_tab_text_scale_factor: Option<f32>,
+    last_theme_revision: Option<u64>,
 }
 
 impl DockSpace {
@@ -353,6 +368,14 @@ impl DockSpace {
             panel_content: HashMap::new(),
             panel_last_sizes: HashMap::new(),
             viewport_capture: None,
+            tab_titles: HashMap::new(),
+            hovered_tab: None,
+            tab_text_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(13.0),
+            },
+            last_tab_text_scale_factor: None,
+            last_theme_revision: None,
         }
     }
 
@@ -370,6 +393,59 @@ impl DockSpace {
         }
         out.extend(self.panel_content.iter().map(|(k, v)| (k.clone(), *v)));
         out
+    }
+
+    fn rebuild_tab_titles(
+        &mut self,
+        text: &mut dyn TextService,
+        theme: crate::ThemeSnapshot,
+        scale_factor: f32,
+        dock: &DockManager,
+        layout: &std::collections::HashMap<DockNodeId, Rect>,
+    ) {
+        let mut visible: HashSet<PanelKey> = HashSet::new();
+        for (&node_id, _rect) in layout {
+            let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id) else {
+                continue;
+            };
+            for panel in tabs {
+                visible.insert(panel.clone());
+            }
+        }
+
+        let same_tabs = visible.len() == self.tab_titles.len()
+            && visible.iter().all(|p| self.tab_titles.contains_key(p));
+
+        if same_tabs
+            && self.last_theme_revision == Some(theme.revision)
+            && self.last_tab_text_scale_factor == Some(scale_factor)
+        {
+            return;
+        }
+        self.last_theme_revision = Some(theme.revision);
+        self.last_tab_text_scale_factor = Some(scale_factor);
+
+        for (_, title) in self.tab_titles.drain() {
+            text.release(title.blob);
+        }
+
+        let pad_x = theme.metrics.padding_md;
+        let inner_max_w = Px((DOCK_TAB_W.0 - pad_x.0 * 2.0).max(0.0));
+        let constraints = TextConstraints {
+            max_width: Some(inner_max_w),
+            wrap: TextWrap::None,
+            scale_factor,
+        };
+
+        for panel in visible {
+            let title = dock
+                .panel(&panel)
+                .map(|p| p.title.as_str())
+                .unwrap_or(panel.kind.0.as_str());
+            let (blob, metrics) = text.prepare(title, self.tab_text_style, constraints);
+            self.tab_titles
+                .insert(panel, PreparedTabTitle { blob, metrics });
+        }
     }
 }
 
@@ -520,6 +596,23 @@ impl Widget for DockSpace {
                         buttons,
                         modifiers,
                     } => {
+                        let hovered = if self.viewport_capture.is_none()
+                            && self.divider_drag.is_none()
+                            && dock_drag.is_none()
+                        {
+                            let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
+                            let layout = compute_layout_map(&dock.graph, root, dock_bounds);
+                            hit_test_tab(&dock.graph, &layout, *position)
+                                .map(|(node, idx, _)| (node, idx))
+                        } else {
+                            None
+                        };
+                        if hovered != self.hovered_tab {
+                            self.hovered_tab = hovered;
+                            invalidate_paint = true;
+                            pending_redraws.push(self.window);
+                        }
+
                         if let Some(mut divider) = self.divider_drag {
                             let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
                             let layout = compute_layout_map(&dock.graph, root, dock_bounds);
@@ -639,13 +732,13 @@ impl Widget for DockSpace {
                             update_drag = Some((*position, dragging));
 
                             if dragging {
-                                let (chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                                if chrome.contains(*position) {
+                                let bounds = self.last_bounds;
+                                if float_zone(bounds).contains(*position) {
                                     dock.hover = Some(DockDropTarget::Float {
                                         window: self.window,
                                     });
-                                } else if dock_bounds.contains(*position) {
-                                    let layout = compute_layout_map(&dock.graph, root, dock_bounds);
+                                } else if bounds.contains(*position) {
+                                    let layout = compute_layout_map(&dock.graph, root, bounds);
                                     dock.hover =
                                         hit_test_drop_target(&dock.graph, &layout, *position)
                                             .map(DockDropTarget::Dock);
@@ -665,11 +758,11 @@ impl Widget for DockSpace {
                         delta,
                         modifiers,
                     } => {
-                        let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                        if !dock_bounds.contains(*position) {
+                        let bounds = self.last_bounds;
+                        if !bounds.contains(*position) {
                             return;
                         }
-                        let layout = compute_layout_map(&dock.graph, root, dock_bounds);
+                        let layout = compute_layout_map(&dock.graph, root, bounds);
                         if let Some(hit) = hit_test_active_viewport_panel(
                             &dock.graph,
                             &dock.panels,
@@ -879,7 +972,7 @@ impl Widget for DockSpace {
             let inv_ctx = InputContext {
                 platform: cx.input_ctx.platform,
                 ui_has_modal: cx.input_ctx.ui_has_modal,
-                focus_is_text_input: false,
+                focus_is_text_input: cx.input_ctx.focus_is_text_input,
             };
 
             let menu = Menu {
@@ -928,7 +1021,7 @@ impl Widget for DockSpace {
             let inv_ctx = InputContext {
                 platform: cx.input_ctx.platform,
                 ui_has_modal: cx.input_ctx.ui_has_modal,
-                focus_is_text_input: false,
+                focus_is_text_input: cx.input_ctx.focus_is_text_input,
             };
 
             let menu = Menu {
@@ -1093,18 +1186,24 @@ impl Widget for DockSpace {
         self.last_bounds = cx.bounds;
         let hidden = hidden_bounds(Size::new(Px(0.0), Px(0.0)));
 
-        let Some(active_bounds) = (|| {
+        let Some((active_bounds, layout)) = (|| {
             let dock = cx.app.global::<DockManager>()?;
             let root = dock.graph.window_root(self.window)?;
             let (_chrome, dock_bounds) = dock_space_regions(cx.bounds);
             let layout = compute_layout_map(&dock.graph, root, dock_bounds);
-            Some(active_panel_content_bounds(&dock.graph, &layout))
+            Some((active_panel_content_bounds(&dock.graph, &layout), layout))
         })() else {
             for &child in cx.children {
                 let _ = cx.layout_in(child, hidden);
             }
             return cx.available;
         };
+
+        let theme = cx.theme().snapshot();
+        let scale_factor = cx.scale_factor;
+        if let Some(dock) = cx.app.global::<DockManager>() {
+            self.rebuild_tab_titles(cx.text, theme, scale_factor, dock, &layout);
+        }
 
         let panel_nodes = self.panel_nodes(cx.app);
         let mut laid_out: HashSet<NodeId> = HashSet::new();
@@ -1137,7 +1236,7 @@ impl Widget for DockSpace {
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
         self.last_bounds = cx.bounds;
-        let Some((chrome, layout, active_bounds, hover)) = (|| {
+        let Some((_chrome, layout, active_bounds, hover)) = (|| {
             let dock = cx.app.global::<DockManager>()?;
             let root = dock.graph.window_root(self.window)?;
             let (chrome, dock_bounds) = dock_space_regions(cx.bounds);
@@ -1148,7 +1247,6 @@ impl Widget for DockSpace {
             return;
         };
 
-        paint_chrome(chrome, cx.scene);
         if let Some(dock) = cx.app.global_mut::<DockManager>() {
             dock.clear_viewport_layout_for_window(self.window);
             for (&node_id, &rect) in layout.iter() {
@@ -1172,7 +1270,15 @@ impl Widget for DockSpace {
             }
         }
         if let Some(dock) = cx.app.global::<DockManager>() {
-            paint_dock(cx.theme().snapshot(), dock, self.window, &layout, cx.scene);
+            paint_dock(
+                cx.theme().snapshot(),
+                dock,
+                self.window,
+                &layout,
+                &self.tab_titles,
+                self.hovered_tab,
+                cx.scene,
+            );
         }
 
         let panel_nodes = self.panel_nodes(cx.app);
@@ -1199,7 +1305,7 @@ impl Widget for DockSpace {
                 cx.theme().snapshot(),
                 hover.clone(),
                 self.window,
-                chrome,
+                cx.bounds,
                 &layout,
                 cx.scene,
             );
@@ -1208,7 +1314,7 @@ impl Widget for DockSpace {
             cx.theme().snapshot(),
             hover,
             self.window,
-            chrome,
+            cx.bounds,
             &layout,
             cx.scene,
         );
@@ -1256,6 +1362,8 @@ fn paint_dock(
     dock: &DockManager,
     window: fret_core::AppWindowId,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
+    tab_titles: &HashMap<PanelKey, PreparedTabTitle>,
+    hovered_tab: Option<(DockNodeId, usize)>,
     scene: &mut Scene,
 ) {
     let graph = &dock.graph;
@@ -1283,24 +1391,26 @@ fn paint_dock(
             corner_radii: fret_core::Corners::all(Px(0.0)),
         });
 
-        let tab_w = Px(120.0);
         for (i, panel) in tabs.iter().enumerate() {
             let tab_rect = Rect {
                 origin: Point::new(
-                    Px(tab_bar.origin.x.0 + tab_w.0 * i as f32),
+                    Px(tab_bar.origin.x.0 + DOCK_TAB_W.0 * i as f32),
                     tab_bar.origin.y,
                 ),
-                size: Size::new(tab_w, tab_bar.size.height),
+                size: Size::new(DOCK_TAB_W, tab_bar.size.height),
             };
 
             let is_active = i == *active;
+            let is_hovered = hovered_tab == Some((node_id, i));
             let bg = if is_active {
-                Color {
-                    a: 1.0,
-                    ..theme.colors.selection_background
-                }
-            } else {
                 theme.colors.panel_background
+            } else if is_hovered {
+                theme.colors.hover_background
+            } else {
+                Color {
+                    a: 0.0,
+                    ..theme.colors.panel_background
+                }
             };
 
             scene.push(SceneOp::Quad {
@@ -1312,7 +1422,46 @@ fn paint_dock(
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             });
 
-            let _ = dock.panel(panel);
+            if is_active {
+                let underline_h = Px(2.0);
+                let underline = Rect {
+                    origin: Point::new(
+                        tab_rect.origin.x,
+                        Px(tab_rect.origin.y.0 + tab_rect.size.height.0 - underline_h.0),
+                    ),
+                    size: Size::new(tab_rect.size.width, underline_h),
+                };
+                scene.push(SceneOp::Quad {
+                    order: fret_core::DrawOrder(3),
+                    rect: underline,
+                    background: theme.colors.accent,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: fret_core::Corners::all(Px(0.0)),
+                });
+            }
+
+            if let Some(title) = tab_titles.get(panel) {
+                let pad_x = theme.metrics.padding_md;
+                let text_x = Px(tab_rect.origin.x.0 + pad_x.0);
+                let inner_y = tab_rect.origin.y.0
+                    + ((tab_rect.size.height.0 - title.metrics.size.height.0) * 0.5);
+                let text_y = Px(inner_y + title.metrics.baseline.0);
+                let text_color = if is_active || is_hovered {
+                    theme.colors.text_primary
+                } else {
+                    theme.colors.text_muted
+                };
+
+                scene.push(SceneOp::PushClipRect { rect: tab_rect });
+                scene.push(SceneOp::Text {
+                    order: fret_core::DrawOrder(4),
+                    origin: Point::new(text_x, text_y),
+                    text: title.blob,
+                    color: text_color,
+                });
+                scene.push(SceneOp::PopClip);
+            }
         }
 
         let active_panel = tabs.get(*active);
@@ -1899,10 +2048,9 @@ fn hit_test_active_viewport_panel(
 }
 
 fn split_tab_bar(rect: Rect) -> (Rect, Rect) {
-    let tab_h = Px(28.0);
     let tab_bar = Rect {
         origin: rect.origin,
-        size: Size::new(rect.size.width, Px(tab_h.0.min(rect.size.height.0))),
+        size: Size::new(rect.size.width, Px(DOCK_TAB_H.0.min(rect.size.height.0))),
     };
     let content = Rect {
         origin: Point::new(rect.origin.x, Px(rect.origin.y.0 + tab_bar.size.height.0)),
@@ -1959,7 +2107,6 @@ fn hit_test_tab(
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     position: Point,
 ) -> Option<(DockNodeId, usize, PanelKey)> {
-    let tab_w = Px(120.0);
     for (&node, &rect) in layout.iter() {
         let Some(DockNode::Tabs { tabs, .. }) = graph.node(node) else {
             continue;
@@ -1972,7 +2119,7 @@ fn hit_test_tab(
             continue;
         }
         let rel_x = position.x.0 - tab_bar.origin.x.0;
-        let idx = (rel_x / tab_w.0).floor() as isize;
+        let idx = (rel_x / DOCK_TAB_W.0).floor() as isize;
         if idx < 0 {
             continue;
         }
@@ -2034,9 +2181,8 @@ fn hit_test_drop_target(
 }
 
 fn compute_tab_insert_index(tab_bar: Rect, tab_count: usize, position: Point) -> usize {
-    let tab_w = Px(120.0).0;
     let rel_x = position.x.0 - tab_bar.origin.x.0;
-    let raw = (rel_x / tab_w) + 0.5;
+    let raw = (rel_x / DOCK_TAB_W.0) + 0.5;
     let idx = raw.floor() as isize;
     idx.clamp(0, tab_count as isize) as usize
 }
@@ -2240,7 +2386,7 @@ fn paint_drop_overlay(
                     corner_radii: fret_core::Corners::all(theme.metrics.radius_sm),
                 });
                 if let Some(i) = target.insert_index {
-                    let x = tab_bar.origin.x.0 + Px(120.0).0 * i as f32;
+                    let x = tab_bar.origin.x.0 + DOCK_TAB_W.0 * i as f32;
                     let marker = Rect {
                         origin: Point::new(Px(x - 2.0), tab_bar.origin.y),
                         size: Size::new(Px(4.0), tab_bar.size.height),
@@ -2353,39 +2499,8 @@ fn paint_drop_hints(
     }
 }
 
-fn paint_chrome(bounds: Rect, scene: &mut Scene) {
-    scene.push(SceneOp::Quad {
-        order: fret_core::DrawOrder(50),
-        rect: bounds,
-        background: Color {
-            r: 0.08,
-            g: 0.08,
-            b: 0.09,
-            a: 1.0,
-        },
-        border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
-        corner_radii: fret_core::Corners::all(Px(0.0)),
-    });
-
-    let rect = float_zone(bounds);
-    scene.push(SceneOp::Quad {
-        order: fret_core::DrawOrder(8_000),
-        rect,
-        background: Color {
-            r: 0.10,
-            g: 0.10,
-            b: 0.11,
-            a: 1.0,
-        },
-        border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
-        corner_radii: fret_core::Corners::all(Px(8.0)),
-    });
-}
-
 fn dock_space_regions(bounds: Rect) -> (Rect, Rect) {
-    let chrome_h = Px(44.0);
+    let chrome_h = Px(0.0);
     let chrome = Rect {
         origin: bounds.origin,
         size: Size::new(bounds.size.width, Px(chrome_h.0.min(bounds.size.height.0))),
