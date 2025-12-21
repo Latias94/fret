@@ -5,11 +5,10 @@ use std::{
     time::{Duration, Instant},
 };
 
-use fret_app::DragKind;
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{
-    Event, ExternalDragEvent, ExternalDragKind, Modifiers, MouseButton, Point, Px, Rect, Scene,
-    Size, TextService, ViewportInputEvent,
+    Event, ExternalDragEvent, ExternalDragKind, InternalDragEvent, InternalDragKind, Modifiers,
+    MouseButton, Point, Px, Rect, Scene, Size, TextService, ViewportInputEvent,
 };
 use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
 use slotmap::SlotMap;
@@ -346,6 +345,8 @@ pub struct WinitRunner<D: WinitDriver> {
     timers: HashMap<fret_core::TimerToken, TimerEntry>,
     clipboard: Option<arboard::Clipboard>,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
+    internal_drag_hover_window: Option<fret_core::AppWindowId>,
+    internal_drag_hover_pos: Option<Point>,
 }
 
 #[derive(Debug, Clone)]
@@ -378,6 +379,8 @@ impl<D: WinitDriver> WinitRunner<D> {
             timers: HashMap::new(),
             clipboard: arboard::Clipboard::new().ok(),
             cursor_screen_pos: None,
+            internal_drag_hover_window: None,
+            internal_drag_hover_pos: None,
         }
     }
 
@@ -730,6 +733,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             }
 
             did_work |= self.fire_due_timers(now);
+            did_work |= self.clear_internal_drag_hover_if_needed();
 
             if !did_work {
                 break;
@@ -744,54 +748,6 @@ impl<D: WinitDriver> WinitRunner<D> {
     ) {
         let text_ptr = self.text_service_mut_ptr();
 
-        let is_dock_drag = self
-            .app
-            .drag()
-            .is_some_and(|d| d.dragging && d.kind == DragKind::DockPanel);
-
-        if is_dock_drag {
-            if let fret_core::PointerEvent::Move {
-                buttons, modifiers, ..
-            } = pe
-            {
-                if let Some(screen_pos) = self.cursor_screen_pos {
-                    let windows: Vec<fret_core::AppWindowId> = self.windows.keys().collect();
-                    for w in windows {
-                        let Some(state) = self.windows.get_mut(w) else {
-                            continue;
-                        };
-
-                        let Ok(inner_pos) = state.window.inner_position() else {
-                            continue;
-                        };
-
-                        let local_physical = PhysicalPosition::new(
-                            screen_pos.x - inner_pos.x as f64,
-                            screen_pos.y - inner_pos.y as f64,
-                        );
-
-                        let local_logical: winit::dpi::LogicalPosition<f32> =
-                            local_physical.to_logical(state.window.scale_factor());
-
-                        let local = Point::new(Px(local_logical.x), Px(local_logical.y));
-
-                        self.driver.handle_event(
-                            &mut self.app,
-                            unsafe { &mut *text_ptr },
-                            w,
-                            &mut state.user,
-                            &Event::Pointer(fret_core::PointerEvent::Move {
-                                position: local,
-                                buttons,
-                                modifiers,
-                            }),
-                        );
-                    }
-                    return;
-                }
-            }
-        }
-
         let Some(state) = self.windows.get_mut(window) else {
             return;
         };
@@ -802,6 +758,134 @@ impl<D: WinitDriver> WinitRunner<D> {
             &mut state.user,
             &Event::Pointer(pe),
         );
+    }
+
+    fn dispatch_internal_drag_event(
+        &mut self,
+        window: fret_core::AppWindowId,
+        kind: InternalDragKind,
+        position: Point,
+    ) {
+        let text_ptr = self.text_service_mut_ptr();
+        let Some(state) = self.windows.get_mut(window) else {
+            return;
+        };
+        self.driver.handle_event(
+            &mut self.app,
+            unsafe { &mut *text_ptr },
+            window,
+            &mut state.user,
+            &Event::InternalDrag(InternalDragEvent { position, kind }),
+        );
+    }
+
+    fn clear_internal_drag_hover_if_needed(&mut self) -> bool {
+        let Some(window) = self.internal_drag_hover_window else {
+            return false;
+        };
+        if self.app.drag().is_some_and(|d| d.cross_window_hover) {
+            return false;
+        }
+        self.internal_drag_hover_window = None;
+        let pos = self.internal_drag_hover_pos.take().unwrap_or_default();
+        self.dispatch_internal_drag_event(window, InternalDragKind::Cancel, pos);
+        true
+    }
+
+    fn route_internal_drag_hover_from_cursor(
+        &mut self,
+        source_window: fret_core::AppWindowId,
+    ) -> bool {
+        let Some(drag) = self.app.drag() else {
+            return self.clear_internal_drag_hover_if_needed();
+        };
+        if !drag.cross_window_hover {
+            return self.clear_internal_drag_hover_if_needed();
+        }
+
+        let Some(screen_pos) = self.cursor_screen_pos else {
+            return false;
+        };
+
+        let mut hovered = self.window_under_cursor(screen_pos, None);
+        if hovered == Some(source_window) {
+            hovered = None;
+        }
+        if hovered != self.internal_drag_hover_window {
+            if let Some(prev) = self.internal_drag_hover_window.take() {
+                let prev_pos = self.internal_drag_hover_pos.take().unwrap_or_default();
+                self.dispatch_internal_drag_event(prev, InternalDragKind::Leave, prev_pos);
+            }
+            if let Some(next) = hovered {
+                if let Some(pos) = self.local_pos_for_window(next, screen_pos) {
+                    self.dispatch_internal_drag_event(next, InternalDragKind::Enter, pos);
+                    self.internal_drag_hover_window = Some(next);
+                    self.internal_drag_hover_pos = Some(pos);
+                }
+            }
+        }
+
+        let Some(current) = self.internal_drag_hover_window else {
+            return false;
+        };
+        let Some(pos) = self.local_pos_for_window(current, screen_pos) else {
+            return false;
+        };
+
+        if let Some(d) = self.app.drag_mut() {
+            d.current_window = current;
+            d.position = pos;
+        }
+
+        self.internal_drag_hover_pos = Some(pos);
+        self.dispatch_internal_drag_event(current, InternalDragKind::Over, pos);
+        true
+    }
+
+    fn route_internal_drag_drop_from_cursor(
+        &mut self,
+        source_window: fret_core::AppWindowId,
+    ) -> bool {
+        let Some(drag) = self.app.drag() else {
+            return false;
+        };
+        if !drag.cross_window_hover {
+            return false;
+        }
+
+        let screen_pos = self
+            .cursor_screen_pos
+            .or_else(|| self.cursor_screen_pos_fallback_for_window(drag.source_window));
+        let Some(screen_pos) = screen_pos else {
+            return false;
+        };
+
+        let Some(target) = self.window_under_cursor(screen_pos, None) else {
+            return false;
+        };
+        if target == source_window {
+            return false;
+        }
+        let Some(pos) = self.local_pos_for_window(target, screen_pos) else {
+            return false;
+        };
+
+        if let Some(prev) = self.internal_drag_hover_window.take() {
+            if prev != target {
+                let prev_pos = self.internal_drag_hover_pos.take().unwrap_or_default();
+                self.dispatch_internal_drag_event(prev, InternalDragKind::Leave, prev_pos);
+            }
+        }
+        self.internal_drag_hover_window = Some(target);
+        self.internal_drag_hover_pos = Some(pos);
+
+        if let Some(d) = self.app.drag_mut() {
+            d.current_window = target;
+            d.position = pos;
+        }
+
+        self.dispatch_internal_drag_event(target, InternalDragKind::Drop, pos);
+        true
     }
 
     fn cursor_screen_pos_fallback_for_window(
@@ -1224,6 +1308,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                         modifiers: self.modifiers,
                     },
                 );
+                self.route_internal_drag_hover_from_cursor(app_window);
                 self.drain_effects(event_loop);
             }
             WindowEvent::MouseInput { state, button, .. } => {
@@ -1259,33 +1344,8 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                         );
                     }
                     ElementState::Released => {
-                        let is_dock_drag = self
-                            .app
-                            .drag()
-                            .is_some_and(|d| d.dragging && d.kind == DragKind::DockPanel);
-                        if is_dock_drag && button == fret_core::MouseButton::Left {
-                            let source = self.app.drag().map(|d| d.source_window);
-                            let screen_pos = self
-                                .cursor_screen_pos
-                                .or_else(|| self.cursor_screen_pos_fallback_for_window(app_window));
-                            if let Some(screen_pos) = screen_pos {
-                                if let Some(target) = self.window_under_cursor(screen_pos, source) {
-                                    if target != app_window {
-                                        if let Some(local) =
-                                            self.local_pos_for_window(target, screen_pos)
-                                        {
-                                            self.dispatch_pointer_event(
-                                                target,
-                                                fret_core::PointerEvent::Up {
-                                                    position: local,
-                                                    button,
-                                                    modifiers: self.modifiers,
-                                                },
-                                            );
-                                        }
-                                    }
-                                }
-                            }
+                        if button == fret_core::MouseButton::Left {
+                            self.route_internal_drag_drop_from_cursor(app_window);
                         }
                         self.dispatch_pointer_event(
                             app_window,

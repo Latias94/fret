@@ -1117,6 +1117,138 @@ impl Widget for DockSpace {
                         }
                     }
                 },
+                fret_core::Event::InternalDrag(e) => {
+                    let position = e.position;
+                    match e.kind {
+                        fret_core::InternalDragKind::Enter | fret_core::InternalDragKind::Over => {
+                            if let Some(drag) = dock_drag.as_ref() {
+                                let mut dragging = drag.dragging;
+                                if drag.source_window == self.window {
+                                    let dx = position.x.0 - drag.start.x.0;
+                                    let dy = position.y.0 - drag.start.y.0;
+                                    let dist2 = dx * dx + dy * dy;
+                                    if !dragging && dist2 > 16.0 {
+                                        dragging = true;
+                                    }
+                                } else if !dragging {
+                                    dragging = true;
+                                }
+
+                                update_drag = Some((position, dragging));
+
+                                if dragging {
+                                    let bounds = self.last_bounds;
+                                    if float_zone(bounds).contains(position) {
+                                        dock.hover = Some(DockDropTarget::Float {
+                                            window: self.window,
+                                        });
+                                    } else if bounds.contains(position) {
+                                        let layout = compute_layout_map(&dock.graph, root, bounds);
+                                        dock.hover = hit_test_drop_target(
+                                            &dock.graph,
+                                            &layout,
+                                            &self.tab_scroll,
+                                            position,
+                                        )
+                                        .map(DockDropTarget::Dock);
+                                    } else {
+                                        dock.hover = None;
+                                    }
+                                } else {
+                                    dock.hover = None;
+                                }
+
+                                pending_redraws.push(self.window);
+                                invalidate_paint = true;
+                            } else {
+                                dock.hover = None;
+                            }
+                        }
+                        fret_core::InternalDragKind::Leave
+                        | fret_core::InternalDragKind::Cancel => {
+                            if dock.hover.take().is_some() {
+                                pending_redraws.push(self.window);
+                                invalidate_paint = true;
+                            }
+                            dock.hover = None;
+                        }
+                        fret_core::InternalDragKind::Drop => {
+                            if let Some(drag) = dock_drag.as_ref() {
+                                let mut dragging = drag.dragging;
+                                if drag.source_window != self.window && !dragging {
+                                    dragging = true;
+                                }
+
+                                if dragging {
+                                    let bounds = self.last_bounds;
+                                    if float_zone(bounds).contains(position) {
+                                        dock.hover = Some(DockDropTarget::Float {
+                                            window: self.window,
+                                        });
+                                    } else if bounds.contains(position) {
+                                        let layout = compute_layout_map(&dock.graph, root, bounds);
+                                        dock.hover = hit_test_drop_target(
+                                            &dock.graph,
+                                            &layout,
+                                            &self.tab_scroll,
+                                            position,
+                                        )
+                                        .map(DockDropTarget::Dock);
+                                    } else {
+                                        dock.hover = None;
+                                    }
+
+                                    match dock.hover.clone() {
+                                        Some(DockDropTarget::Dock(target)) => {
+                                            pending_effects.push(Effect::Dock(DockOp::MovePanel {
+                                                source_window: drag.source_window,
+                                                panel: drag.panel.clone(),
+                                                target_window: self.window,
+                                                target_tabs: target.tabs,
+                                                zone: target.zone,
+                                                insert_index: target.insert_index,
+                                            }));
+                                            invalidate_layout = true;
+                                        }
+                                        Some(DockDropTarget::Float { .. }) => {
+                                            pending_effects.push(Effect::Dock(
+                                                DockOp::RequestFloatPanelToNewWindow {
+                                                    source_window: drag.source_window,
+                                                    panel: drag.panel.clone(),
+                                                    anchor: Some(fret_core::WindowAnchor {
+                                                        window: self.window,
+                                                        position,
+                                                    }),
+                                                },
+                                            ));
+                                            invalidate_layout = true;
+                                        }
+                                        None => {
+                                            if float_zone(self.last_bounds).contains(position) {
+                                                pending_effects.push(Effect::Dock(
+                                                    DockOp::RequestFloatPanelToNewWindow {
+                                                        source_window: drag.source_window,
+                                                        panel: drag.panel.clone(),
+                                                        anchor: Some(fret_core::WindowAnchor {
+                                                            window: self.window,
+                                                            position,
+                                                        }),
+                                                    },
+                                                ));
+                                                invalidate_layout = true;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                dock.hover = None;
+                                end_dock_drag = true;
+                                invalidate_paint = true;
+                                pending_redraws.push(self.window);
+                            }
+                        }
+                    }
+                }
                 _ => {}
             }
         }
@@ -1129,7 +1261,7 @@ impl Widget for DockSpace {
         }
 
         if let Some((start, panel)) = begin_drag {
-            cx.app.begin_drag_with_kind(
+            cx.app.begin_cross_window_drag_with_kind(
                 DragKind::DockPanel,
                 self.window,
                 start,

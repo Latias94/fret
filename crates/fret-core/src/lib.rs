@@ -22,8 +22,8 @@ pub use ids::{
     TimerToken,
 };
 pub use input::{
-    Event, ExternalDragEvent, ExternalDragKind, ImeEvent, KeyCode, Modifiers, MouseButton,
-    PointerEvent,
+    Event, ExternalDragEvent, ExternalDragKind, ImeEvent, InternalDragEvent, InternalDragKind,
+    KeyCode, Modifiers, MouseButton, PointerEvent,
 };
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputKind};
 pub use panels::{PanelKey, PanelKind};

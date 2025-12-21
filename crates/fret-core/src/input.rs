@@ -309,6 +309,21 @@ pub struct ExternalDragEvent {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum InternalDragKind {
+    Enter,
+    Over,
+    Drop,
+    Leave,
+    Cancel,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct InternalDragEvent {
+    pub position: Point,
+    pub kind: InternalDragKind,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Event {
     Pointer(PointerEvent),
     Timer {
@@ -316,6 +331,7 @@ pub enum Event {
     },
     Ime(ImeEvent),
     ExternalDrag(ExternalDragEvent),
+    InternalDrag(InternalDragEvent),
     KeyDown {
         key: KeyCode,
         modifiers: Modifiers,

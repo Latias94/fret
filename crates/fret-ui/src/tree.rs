@@ -1088,6 +1088,7 @@ fn event_position(event: &Event) -> Option<Point> {
     match event {
         Event::Pointer(pe) => Some(pointer_position(pe)),
         Event::ExternalDrag(e) => Some(e.position),
+        Event::InternalDrag(e) => Some(e.position),
         _ => None,
     }
 }

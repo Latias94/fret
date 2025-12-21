@@ -175,12 +175,54 @@ This rule is required for predictable editor UX.
 - External drag initiation support for file exports and asset drags.
 - Rich clipboard formats (images, MIME bytes) and per-platform nuances.
 - Touch/pen drag policy and gesture integration.
+- Replace pointer-event broadcasting hacks with an explicit internal-drag routing channel (see “ImGui-style multi-viewport routing” below).
 
 ## Implementation Notes (Current Prototype)
 
 - `fret-app` provides an app-scoped internal drag state (`crates/fret-app/src/drag.rs`).
 - Docking uses the shared internal drag state (no per-dock bespoke drag session struct).
 - Docking drop commits (including float-to-new-window requests) are emitted as `DockOp` (via `Effect::Dock`) and applied by the app/driver during effect draining.
+
+### ImGui-style multi-viewport routing (screen-space pointer, hovered viewport)
+
+Dear ImGui’s docking + multi-viewport UX relies on two ideas that are worth copying:
+
+1. **Mouse position is tracked in an absolute/screen coordinate space** (still in logical pixels).
+2. **A hovered viewport/window id is reported every time the mouse moves**, so docking/drag logic can
+   reason about cross-window hover without requiring OS-level pointer capture handoff.
+
+In the pinned reference backend (`repo-ref/dear-imgui-rs` @ `a3261f5ed219`), the winit platform code:
+
+- computes screen-space logical mouse position by adding the per-window client position to the local
+  cursor coordinates (`backends/dear-imgui-winit/src/platform.rs`, `WindowEvent::CursorMoved`),
+- reports the hovered viewport id via `Io::add_mouse_viewport_event` and clears it on `CursorLeft`,
+- routes window-local events to the correct secondary viewport window by matching `WindowId`
+  (`backends/dear-imgui-winit/src/multi_viewport.rs`, `route_event_to_viewports`).
+
+This is a better long-term mental model than “special-case dock drags in the runner”.
+
+#### Recommended Fret direction (P0, replaces current stopgap)
+
+Today’s prototype includes a stopgap: while a dock-tab drag is active, the runner broadcasts synthetic
+`PointerEvent::Move` to all windows so that non-focused windows can render drop hints.
+
+The recommended direction is to replace this with an explicit internal-drag routing channel:
+
+- Runner tracks **global pointer state** in screen-space logical pixels (derived from winit window
+  position + cursor local position; ADR 0017 still owns the “logical pixels are canonical” rule).
+- Runner computes the **window-under-cursor** (hovered window) from window rectangles in screen space.
+- Runner emits **synthetic internal-drag hover events** to the UI runtime, per-window, even when the
+  OS-level pointer is effectively captured by another window.
+  - `InternalDragEnter/Over/Leave/Drop` should be routed via the same hit-test rules as `ExternalDrag`
+    (overlays first, then content).
+- Widgets that care about cross-window drags (DockSpace, Project panel drop targets) react to
+  internal-drag events instead of relying on cross-window pointer move broadcasting.
+
+Benefits:
+
+- Removes runner-level “DockPanel” special-cases and reduces accidental side-effects on unrelated widgets.
+- Matches editor-grade docking behavior patterns used by Dear ImGui (hovered viewport semantics).
+- Makes it easier to support future backends (wasm single-canvas can still compute hovered logical windows).
 
 External OS file DnD prototype:
 

@@ -246,6 +246,21 @@ impl App {
         self.drag = Some(DragSession::new(source_window, kind, start, payload));
     }
 
+    pub fn begin_cross_window_drag_with_kind<T: Any>(
+        &mut self,
+        kind: DragKind,
+        source_window: AppWindowId,
+        start: fret_core::Point,
+        payload: T,
+    ) {
+        self.drag = Some(DragSession::new_cross_window(
+            source_window,
+            kind,
+            start,
+            payload,
+        ));
+    }
+
     pub fn drag(&self) -> Option<&DragSession> {
         self.drag.as_ref()
     }

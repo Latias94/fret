@@ -11,6 +11,8 @@ pub enum DragKind {
 #[derive(Debug)]
 pub struct DragSession {
     pub source_window: AppWindowId,
+    pub current_window: AppWindowId,
+    pub cross_window_hover: bool,
     pub kind: DragKind,
     pub start: Point,
     pub position: Point,
@@ -27,6 +29,26 @@ impl DragSession {
     ) -> Self {
         Self {
             source_window,
+            current_window: source_window,
+            cross_window_hover: false,
+            kind,
+            start,
+            position: start,
+            dragging: false,
+            payload: Box::new(payload),
+        }
+    }
+
+    pub fn new_cross_window<T: Any>(
+        source_window: AppWindowId,
+        kind: DragKind,
+        start: Point,
+        payload: T,
+    ) -> Self {
+        Self {
+            source_window,
+            current_window: source_window,
+            cross_window_hover: true,
             kind,
             start,
             position: start,
