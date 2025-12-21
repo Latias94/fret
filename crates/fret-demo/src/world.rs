@@ -88,10 +88,6 @@ impl DemoWorld {
         self.entity_view(id)
     }
 
-    pub fn clear(&mut self) {
-        self.entities.clear();
-    }
-
     pub fn get_property(&self, id: u64, path: &PropertyPath) -> Option<PropertyValue> {
         if path.matches_fields(&["transform", "position"]) {
             return Some(PropertyValue::Vec3(self.position(id)));

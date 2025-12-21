@@ -1,7 +1,7 @@
 use fret_app::{CommandId, InputContext, Menu, MenuItem};
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, Modifiers, MouseButton, Px, Rect, SceneOp, Size,
-    TextStyle,
+    Color, Corners, DrawOrder, Edges, Event, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp,
+    Size, TextStyle,
 };
 use fret_editor::{AssetGuid, ProjectEntryKind, ProjectSelectionService, ProjectService};
 use fret_ui::{
@@ -135,7 +135,7 @@ impl ProjectPanel {
             title: std::sync::Arc::from("Project"),
             items: vec![
                 MenuItem::Command {
-                    command: CommandId::from("scene.open_selected"),
+                    command: CommandId::from("asset.open_selected"),
                     when: None,
                 },
                 MenuItem::Separator,
@@ -236,6 +236,21 @@ impl Widget for ProjectPanel {
     }
 
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+        if let Event::KeyDown {
+            key: KeyCode::Enter,
+            modifiers,
+            repeat: false,
+        } = event
+        {
+            if modifiers.ctrl || modifiers.meta || modifiers.shift || modifiers.alt {
+                self.tree.event(cx, event);
+                return;
+            }
+            cx.dispatch_command(CommandId::from("asset.open_selected"));
+            cx.stop_propagation();
+            return;
+        }
+
         if let Event::Pointer(fret_core::PointerEvent::Down {
             position,
             button: MouseButton::Right,
@@ -391,23 +406,17 @@ impl Widget for ProjectPanel {
                     if is_double_click {
                         if let Some(project) = cx.app.global::<ProjectService>() {
                             if project.kind_for_id(row_id) == Some(ProjectEntryKind::File) {
-                                let is_scene = project
-                                    .path_for_id(row_id)
-                                    .and_then(|p| p.extension().and_then(|s| s.to_str()))
-                                    .is_some_and(|e| e.eq_ignore_ascii_case("scene"));
-                                if is_scene {
-                                    let guid = project.guid_for_id(row_id);
-                                    cx.app.with_global_mut(
-                                        ProjectSelectionService::default,
-                                        |s, _app| {
-                                            s.set_selected_guid(guid);
-                                        },
-                                    );
-                                    cx.dispatch_command(CommandId::from("scene.open_selected"));
-                                    cx.request_redraw();
-                                    cx.stop_propagation();
-                                    return;
-                                }
+                                let guid = project.guid_for_id(row_id);
+                                cx.app.with_global_mut(
+                                    ProjectSelectionService::default,
+                                    |s, _app| {
+                                        s.set_selected_guid(guid);
+                                    },
+                                );
+                                cx.dispatch_command(CommandId::from("asset.open_selected"));
+                                cx.request_redraw();
+                                cx.stop_propagation();
+                                return;
                             }
                         }
                     }

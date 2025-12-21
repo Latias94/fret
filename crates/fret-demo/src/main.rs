@@ -1,4 +1,5 @@
 mod asset_drop;
+mod asset_open;
 mod command_palette;
 mod demo_ui;
 mod dnd_probe;
@@ -9,6 +10,7 @@ mod ime_probe;
 mod project_panel;
 mod scene_background;
 mod scene_document;
+mod text_probe_panel;
 mod undo;
 mod viewport_asset_drop;
 mod viewport_targets;
@@ -27,6 +29,7 @@ use asset_drop::{
     AssetDropDecision, AssetDropRegistry, AssetDropRule, AssetDropService, AssetDropTarget,
     CurrentSceneService,
 };
+use asset_open::{AssetOpenDecision, AssetOpenRegistry, AssetOpenRule};
 use fret_app::{
     App, CommandId, CommandMeta, CommandScope, CreateWindowKind, CreateWindowRequest, Effect,
     Keymap, KeymapFileV1, KeymapService, Model, WindowRequest,
@@ -63,6 +66,7 @@ use std::{
     path::Path,
     time::{Duration, Instant, SystemTime},
 };
+use text_probe_panel::{TextProbePanel, TextProbeService};
 use winit::event_loop::EventLoop;
 
 use serde::{Deserialize, Serialize};
@@ -155,6 +159,7 @@ struct DemoDriver {
     pending_window_ui_kinds: VecDeque<DemoUiKind>,
     asset_drop_registry: AssetDropRegistry,
     last_scene_chrome_rev: Option<(u64, u64)>,
+    asset_open_registry: AssetOpenRegistry,
 }
 
 fn load_theme(app: &mut App) {
@@ -384,6 +389,92 @@ impl DemoDriver {
                 }
             }),
         });
+    }
+
+    fn install_asset_open_rules(&mut self) {
+        self.asset_open_registry = AssetOpenRegistry::default();
+
+        self.asset_open_registry.add_rule(AssetOpenRule {
+            matches: Box::new(|cx| {
+                cx.kind == Some(fret_editor::ProjectEntryKind::File)
+                    && cx
+                        .extension
+                        .is_some_and(|e| matches!(e, "txt" | "md" | "json" | "wgsl"))
+            }),
+            apply: Box::new(|cx| {
+                let Some(path) = cx.path.as_deref() else {
+                    return AssetOpenDecision::Ignored;
+                };
+                let bytes = std::fs::read(path).unwrap_or_default();
+                let text = String::from_utf8_lossy(&bytes).to_string();
+                let title = path
+                    .file_name()
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "Text".to_string());
+
+                cx.app
+                    .with_global_mut(TextProbeService::default, |s, _app| {
+                        s.set(Some(title.clone()), text);
+                    });
+
+                let key = PanelKey::new("core.text_probe");
+                if let Some(dock) = cx.app.global_mut::<DockManager>() {
+                    if let Some(p) = dock.panels.get_mut(&key) {
+                        p.title = format!("Text Probe — {title}");
+                    }
+                }
+
+                let op =
+                    asset_open::activate_panel_tab(cx.app, cx.window, key.clone()).or_else(|| {
+                        cx.driver
+                            .main_window
+                            .and_then(|w| asset_open::activate_panel_tab(cx.app, w, key))
+                    });
+
+                if let Some(op) = op {
+                    cx.app.push_effect(Effect::Dock(op));
+                }
+                AssetOpenDecision::Handled
+            }),
+        });
+
+        self.asset_open_registry.add_rule(AssetOpenRule {
+            matches: Box::new(|cx| {
+                cx.kind == Some(fret_editor::ProjectEntryKind::File)
+                    && cx.extension == Some("scene")
+            }),
+            apply: Box::new(|cx| {
+                let ok = cx.driver.open_scene_by_guid(cx.app, cx.guid);
+                if !ok {
+                    return AssetOpenDecision::Ignored;
+                }
+
+                let key = PanelKey::new("core.scene");
+                let op =
+                    asset_open::activate_panel_tab(cx.app, cx.window, key.clone()).or_else(|| {
+                        cx.driver
+                            .main_window
+                            .and_then(|w| asset_open::activate_panel_tab(cx.app, w, key))
+                    });
+                if let Some(op) = op {
+                    cx.app.push_effect(Effect::Dock(op));
+                }
+
+                AssetOpenDecision::Handled
+            }),
+        });
+    }
+
+    fn open_asset_by_guid(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        guid: fret_editor::AssetGuid,
+    ) -> bool {
+        let mut reg = std::mem::take(&mut self.asset_open_registry);
+        let decision = reg.handle(self, app, window, guid);
+        self.asset_open_registry = reg;
+        decision == AssetOpenDecision::Handled
     }
 
     fn mark_scene_dirty(&mut self, app: &mut App) {
@@ -1377,11 +1468,16 @@ impl WinitDriver for DemoDriver {
         app.set_global(AssetDropService::default());
         app.set_global(CurrentSceneService::default());
         app.set_global(SceneDocumentService::default());
+        app.set_global(TextProbeService::default());
+        app.with_global_mut(TextProbeService::default, |s, _app| {
+            s.set(None, TEXT_PROBE_DEFAULT.to_string());
+        });
         app.set_global(InspectorEditService::default());
         app.set_global(PropertyEditService::default());
         load_theme(app);
         self.ensure_theme_hot_reload(app, main_window);
         self.install_asset_drop_rules();
+        self.install_asset_open_rules();
 
         self.last_scene_chrome_rev = None;
 
@@ -1434,6 +1530,14 @@ impl WinitDriver for DemoDriver {
                 )
                 .with_category("Project")
                 .with_keywords(["project", "assets", "move", "meta", "guid"]),
+        );
+
+        app.commands_mut().register(
+            CommandId::from("asset.open_selected"),
+            CommandMeta::new("Open Asset")
+                .with_description("Opens the selected asset using the editor action registry")
+                .with_category("Project")
+                .with_keywords(["asset", "open"]),
         );
 
         app.commands_mut().register(
@@ -2641,9 +2745,7 @@ impl WinitDriver for DemoDriver {
         let game_drop_node = ui.create_node(viewport_asset_drop::ViewportAssetDropPanel::new(
             key_game.clone(),
         ));
-        let text_probe_node = ui.create_node(
-            fret_ui::TextArea::new(TEXT_PROBE_DEFAULT).with_min_height(fret_core::Px(240.0)),
-        );
+        let text_probe_node = ui.create_node(TextProbePanel::new(TEXT_PROBE_DEFAULT));
         ui.add_child(layers.dockspace_node, hierarchy_node);
         ui.add_child(layers.dockspace_node, project_node);
         ui.add_child(layers.dockspace_node, inspector_node);
@@ -3379,6 +3481,19 @@ impl WinitDriver for DemoDriver {
                 state.ui.set_layer_visible(state.layers.external_dnd, !vis);
                 app.request_redraw(window);
             }
+            "asset.open_selected" => {
+                let guid = app
+                    .global::<ProjectSelectionService>()
+                    .and_then(|s| s.selected_guid());
+                let Some(guid) = guid else {
+                    return;
+                };
+                if self.open_asset_by_guid(app, window, guid) {
+                    for &w in self.logical_windows.keys() {
+                        app.request_redraw(w);
+                    }
+                }
+            }
             "scene.open_selected" => {
                 let guid = app
                     .global::<ProjectSelectionService>()
@@ -3386,7 +3501,7 @@ impl WinitDriver for DemoDriver {
                 let Some(guid) = guid else {
                     return;
                 };
-                if self.open_scene_by_guid(app, guid) {
+                if self.open_asset_by_guid(app, window, guid) {
                     for &w in self.logical_windows.keys() {
                         app.request_redraw(w);
                     }
