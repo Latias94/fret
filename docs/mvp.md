@@ -568,13 +568,19 @@ styling driven by theme tokens.
 
 - Render dock tab titles (panel `DockPanel.title`) in the tab bar.
 - Clip title drawing to tab bounds so long titles do not spill into adjacent tabs.
+- Add a close affordance:
+  - hover/active tab shows a close button,
+  - close emits a `DockOp` (no ad-hoc graph mutation).
+- Support overflow scrolling:
+  - mouse wheel over the tab bar scrolls tabs horizontally when overflowed.
 - Apply minimal chrome styling:
   - hover background,
   - active underline (accent).
 
 **Non-goals**
 
-- Close buttons, overflow scrolling, and drag-reorder polish.
+- Tab drag-reorder polish.
+- Advanced overflow UI (scroll buttons, pinned tabs, animations).
 - Ellipsis/truncation rules for long titles (clipping is enough for now).
 
 **Definition of Done**

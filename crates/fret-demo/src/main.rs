@@ -1245,6 +1245,14 @@ impl WinitDriver for DemoDriver {
                 .with_scope(CommandScope::Widget)
                 .hidden(),
         );
+        app.commands_mut().register(
+            CommandId::from("dock.tab.close"),
+            CommandMeta::new("Close Tab")
+                .with_description("Closes the current dock tab")
+                .with_category("Dock")
+                .with_scope(CommandScope::Widget)
+                .hidden(),
+        );
 
         app.commands_mut().register(
             CommandId::from("demo.toggle_modal"),
@@ -2972,6 +2980,13 @@ impl WinitDriver for DemoDriver {
                     && Some(*source_window) != self.main_window
                 {
                     close_if_empty = Some(*source_window);
+                }
+            }
+            if let DockOp::ClosePanel { window, .. } = &op {
+                if dock.graph.collect_panels_in_window(*window).is_empty()
+                    && Some(*window) != self.main_window
+                {
+                    close_if_empty = Some(*window);
                 }
             }
 

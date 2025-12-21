@@ -176,12 +176,10 @@ impl Widget for Toolbar {
         }
 
         let row_h = Px(max_metrics_h.0 + self.padding_y.0 * 2.0);
-        let height = Px((row_h.0 + self.gap.0 * 2.0)
-            .max(24.0)
-            .min(cx.available.height.0));
+        let height = Px(row_h.0.max(24.0).min(cx.available.height.0));
 
         let mut x = cx.bounds.origin.x.0 + self.gap.0.max(0.0);
-        let y = cx.bounds.origin.y.0 + self.gap.0.max(0.0);
+        let y = cx.bounds.origin.y.0;
 
         for item in &self.items {
             let (blob, metrics) =

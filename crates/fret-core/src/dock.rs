@@ -159,6 +159,17 @@ impl DockGraph {
         true
     }
 
+    pub fn close_panel(&mut self, window: AppWindowId, panel: PanelKey) -> bool {
+        let Some((tabs, index)) = self.find_panel_in_window(window, &panel) else {
+            return false;
+        };
+        if !self.remove_panel_from_tabs(tabs, index) {
+            return false;
+        }
+        self.collapse_empty_tabs_upwards(window, tabs);
+        true
+    }
+
     pub fn float_panel_to_window(
         &mut self,
         source_window: AppWindowId,
@@ -482,6 +493,7 @@ impl DockGraph {
     pub fn apply_op(&mut self, op: &DockOp) -> bool {
         match op {
             DockOp::SetActiveTab { tabs, active } => self.set_active_tab(*tabs, *active),
+            DockOp::ClosePanel { window, panel } => self.close_panel(*window, panel.clone()),
             DockOp::MovePanel {
                 source_window,
                 panel,

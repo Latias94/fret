@@ -71,6 +71,7 @@ pub struct DemoLayers {
 struct DemoToolbar {
     tools: Model<ViewportToolManager>,
     toolbar: Toolbar,
+    last_mode: Option<ViewportToolMode>,
 }
 
 impl DemoToolbar {
@@ -78,11 +79,16 @@ impl DemoToolbar {
         Self {
             tools,
             toolbar: Toolbar::new(Vec::new()),
+            last_mode: None,
         }
     }
 
-    fn rebuild_items(&mut self, app: &mut fret_app::App) {
+    fn rebuild_items(&mut self, app: &mut fret_app::App) -> bool {
         let mode = self.tools.get(app).map(|t| t.active).unwrap_or_default();
+        if self.last_mode == Some(mode) {
+            return false;
+        }
+        self.last_mode = Some(mode);
 
         let items = vec![
             ToolbarItem::new("Select", "viewport.tool.select")
@@ -94,22 +100,26 @@ impl DemoToolbar {
             ToolbarItem::new(Arc::<str>::from("Play"), "demo.play.toggle"),
         ];
         self.toolbar.set_items(items);
+        true
     }
 }
 
 impl fret_ui::Widget for DemoToolbar {
     fn event(&mut self, cx: &mut fret_ui::EventCx<'_>, event: &fret_core::Event) {
-        self.rebuild_items(cx.app);
+        if self.rebuild_items(cx.app) {
+            cx.invalidate_self(fret_ui::Invalidation::Layout);
+            cx.invalidate_self(fret_ui::Invalidation::Paint);
+            cx.request_redraw();
+        }
         self.toolbar.event(cx, event);
     }
 
     fn layout(&mut self, cx: &mut fret_ui::LayoutCx<'_>) -> fret_core::Size {
-        self.rebuild_items(cx.app);
+        let _ = self.rebuild_items(cx.app);
         self.toolbar.layout(cx)
     }
 
     fn paint(&mut self, cx: &mut fret_ui::PaintCx<'_>) {
-        self.rebuild_items(cx.app);
         self.toolbar.paint(cx);
     }
 }
