@@ -63,9 +63,10 @@ use scene_document::{SceneDocumentService, SceneSnapshot};
 use std::{
     collections::HashMap,
     collections::VecDeque,
+    ffi::OsString,
     fs::File,
     hash::{Hash, Hasher},
-    path::Path,
+    path::{Path, PathBuf},
     time::{Duration, Instant, SystemTime},
 };
 use text_probe_panel::{TextProbePanel, TextProbeService};
@@ -123,6 +124,39 @@ fn next_project_rename_name(path: &Path) -> Option<String> {
             return None;
         }
     }
+}
+
+fn meta_path_for_asset(path: &Path) -> PathBuf {
+    let mut os: OsString = path.as_os_str().to_os_string();
+    os.push(".meta");
+    PathBuf::from(os)
+}
+
+fn unique_scene_path(scenes_dir: &Path, base_stem: &str) -> PathBuf {
+    let base_stem = base_stem.trim();
+    let base_stem = if base_stem.is_empty() {
+        "Scene"
+    } else {
+        base_stem
+    };
+
+    for i in 0..=1000u32 {
+        let name = if i == 0 {
+            format!("{base_stem}.scene")
+        } else {
+            format!("{base_stem} {i}.scene")
+        };
+        let candidate = scenes_dir.join(name);
+        if !candidate.exists() && !meta_path_for_asset(&candidate).exists() {
+            return candidate;
+        }
+    }
+
+    let stamp = SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    scenes_dir.join(format!("Scene-{stamp}.scene"))
 }
 
 struct DemoWindowState {
@@ -538,6 +572,71 @@ impl DemoDriver {
         self.open_scene_by_guid(app, guid)
     }
 
+    fn new_scene_or_prompt(&mut self, app: &mut App, window: fret_core::AppWindowId) -> bool {
+        if Self::is_scene_dirty(app) && Self::has_current_scene(app) {
+            self.prompt_unsaved(app, window, UnsavedContinuation::NewScene);
+            return true;
+        }
+        self.create_and_open_new_scene(app)
+    }
+
+    fn create_and_open_new_scene(&mut self, app: &mut App) -> bool {
+        let Some(guid) = self.create_new_scene_asset(app) else {
+            return false;
+        };
+        self.open_scene_by_guid(app, guid)
+    }
+
+    fn create_new_scene_asset(&mut self, app: &mut App) -> Option<fret_editor::AssetGuid> {
+        let Some(project) = app.global_mut::<ProjectService>() else {
+            return None;
+        };
+
+        let scenes_dir = project.assets_root().join("Scenes");
+        if let Err(err) = std::fs::create_dir_all(&scenes_dir) {
+            tracing::error!(
+                error = %err,
+                path = %scenes_dir.to_string_lossy(),
+                "failed to create Scenes directory"
+            );
+            return None;
+        }
+
+        let path = unique_scene_path(&scenes_dir, "New Scene");
+        let scene_title = path
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| "Scene".to_string());
+
+        let mut entity = DemoWorld::default().entity_snapshot(1);
+        entity.name = scene_title;
+
+        let file = scene_document::DemoSceneFileV1 {
+            version: 1,
+            roots: vec![scene_document::DemoSceneNodeV1 {
+                id: 1,
+                entity,
+                children: Vec::new(),
+            }],
+        };
+        let bytes = scene_document::write_scene_pretty(&file);
+        if let Err(err) = std::fs::write(&path, bytes) {
+            tracing::error!(
+                error = %err,
+                path = %path.to_string_lossy(),
+                "failed to write new scene file"
+            );
+            return None;
+        }
+
+        if let Err(err) = project.rescan() {
+            tracing::error!(error = %err, "failed to rescan project after creating new scene");
+            return None;
+        }
+
+        project.guid_for_path(&path)
+    }
+
     fn handle_window_close_requested(
         &mut self,
         app: &mut App,
@@ -651,6 +750,12 @@ impl DemoDriver {
         true
     }
 
+    fn capture_scene_snapshot(&self, app: &App) -> Option<SceneSnapshot> {
+        let hierarchy = self.hierarchy.and_then(|m| m.get(app)).cloned()?;
+        let world = self.world.and_then(|m| m.get(app)).cloned()?;
+        Some(SceneSnapshot { hierarchy, world })
+    }
+
     fn save_current_scene(&mut self, app: &mut App) -> bool {
         let guid = app.global::<CurrentSceneService>().and_then(|s| s.guid());
         let Some(guid) = guid else {
@@ -674,14 +779,9 @@ impl DemoDriver {
             return false;
         }
 
-        let hierarchy = self.hierarchy.and_then(|m| m.get(app)).cloned();
-        let world = self.world.and_then(|m| m.get(app)).cloned();
-        let (hierarchy, world) = match (hierarchy, world) {
-            (Some(h), Some(w)) => (h, w),
-            _ => return false,
+        let Some(snapshot) = self.capture_scene_snapshot(app) else {
+            return false;
         };
-
-        let snapshot = SceneSnapshot { hierarchy, world };
         let file = scene_document::DemoSceneFileV1::from_snapshot(&snapshot);
         let bytes = scene_document::write_scene_pretty(&file);
         if let Err(err) = std::fs::write(&path, bytes) {
@@ -692,6 +792,71 @@ impl DemoDriver {
         app.with_global_mut(SceneDocumentService::default, |s, _app| {
             s.set_dirty(false);
         });
+        true
+    }
+
+    fn save_current_scene_as(&mut self, app: &mut App) -> bool {
+        let Some(snapshot) = self.capture_scene_snapshot(app) else {
+            return false;
+        };
+
+        let base_stem = app
+            .global::<CurrentSceneService>()
+            .and_then(|s| s.guid())
+            .and_then(|guid| {
+                let project = app.global::<ProjectService>()?;
+                let id = project.id_for_guid(guid)?;
+                let path = project.path_for_id(id)?;
+                path.file_stem().map(|s| s.to_string_lossy().to_string())
+            })
+            .unwrap_or_else(|| "Scene".to_string());
+        let base_stem = format!("{base_stem} Copy");
+
+        let Some(project) = app.global_mut::<ProjectService>() else {
+            return false;
+        };
+        let scenes_dir = project.assets_root().join("Scenes");
+        if let Err(err) = std::fs::create_dir_all(&scenes_dir) {
+            tracing::error!(
+                error = %err,
+                path = %scenes_dir.to_string_lossy(),
+                "failed to create Scenes directory"
+            );
+            return false;
+        }
+
+        let path = unique_scene_path(&scenes_dir, &base_stem);
+        let file = scene_document::DemoSceneFileV1::from_snapshot(&snapshot);
+        let bytes = scene_document::write_scene_pretty(&file);
+        if let Err(err) = std::fs::write(&path, bytes) {
+            tracing::error!(
+                error = %err,
+                path = %path.to_string_lossy(),
+                "failed to write scene file (save as)"
+            );
+            return false;
+        }
+
+        if let Err(err) = project.rescan() {
+            tracing::error!(error = %err, "failed to rescan project after save as");
+            return false;
+        }
+
+        let Some(guid) = project.guid_for_path(&path) else {
+            tracing::error!(path = %path.to_string_lossy(), "save as produced file without guid");
+            return false;
+        };
+
+        app.with_global_mut(CurrentSceneService::default, |s, _app| {
+            s.set_guid(Some(guid));
+        });
+        app.with_global_mut(SceneDocumentService::default, |s, _app| {
+            s.set_dirty(false);
+        });
+        app.with_global_mut(ProjectSelectionService::default, |s, _app| {
+            s.set_selected_guid(Some(guid));
+        });
+
         true
     }
 
@@ -1658,11 +1823,25 @@ impl WinitDriver for DemoDriver {
                 .with_keywords(["scene", "open", "load"]),
         );
         app.commands_mut().register(
+            CommandId::from("scene.new"),
+            CommandMeta::new("New Scene")
+                .with_description("Creates a new .scene asset and opens it as the current scene")
+                .with_category("Scene")
+                .with_keywords(["scene", "new", "create"]),
+        );
+        app.commands_mut().register(
             CommandId::from("scene.save"),
             CommandMeta::new("Save Scene")
                 .with_description("Saves the current scene document to disk")
                 .with_category("Scene")
                 .with_keywords(["scene", "save"]),
+        );
+        app.commands_mut().register(
+            CommandId::from("scene.save_as"),
+            CommandMeta::new("Save Scene As")
+                .with_description("Saves the current scene document as a new .scene asset")
+                .with_category("Scene")
+                .with_keywords(["scene", "save", "save as", "copy"]),
         );
 
         app.commands_mut().register(
@@ -2144,6 +2323,87 @@ impl WinitDriver for DemoDriver {
                     keys: KeySpecV1 {
                         mods: vec!["ctrl".into(), "shift".into()],
                         key: "KeyZ".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("scene.new".into()),
+                    platform: Some("macos".into()),
+                    when: Some("!ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["meta".into()],
+                        key: "KeyN".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("scene.save".into()),
+                    platform: Some("macos".into()),
+                    when: Some("!ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["meta".into()],
+                        key: "KeyS".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("scene.save_as".into()),
+                    platform: Some("macos".into()),
+                    when: Some("!ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["meta".into(), "shift".into()],
+                        key: "KeyS".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("scene.new".into()),
+                    platform: Some("windows".into()),
+                    when: Some("!ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyN".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("scene.save".into()),
+                    platform: Some("windows".into()),
+                    when: Some("!ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyS".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("scene.save_as".into()),
+                    platform: Some("windows".into()),
+                    when: Some("!ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into(), "shift".into()],
+                        key: "KeyS".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("scene.new".into()),
+                    platform: Some("linux".into()),
+                    when: Some("!ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyN".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("scene.save".into()),
+                    platform: Some("linux".into()),
+                    when: Some("!ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyS".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("scene.save_as".into()),
+                    platform: Some("linux".into()),
+                    when: Some("!ui.has_modal".into()),
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into(), "shift".into()],
+                        key: "KeyS".into(),
                     },
                 },
                 BindingV1 {
@@ -3658,6 +3918,20 @@ impl WinitDriver for DemoDriver {
                 }
 
                 match action {
+                    UnsavedContinuation::NewScene => {
+                        let ok = self.create_and_open_new_scene(app);
+                        if ok {
+                            let key = PanelKey::new("core.scene");
+                            let op = asset_open::activate_panel_tab(app, window, key.clone())
+                                .or_else(|| {
+                                    self.main_window
+                                        .and_then(|w| asset_open::activate_panel_tab(app, w, key))
+                                });
+                            if let Some(op) = op {
+                                app.push_effect(Effect::Dock(op));
+                            }
+                        }
+                    }
                     UnsavedContinuation::OpenScene { guid } => {
                         let _ = self.open_scene_by_guid(app, guid);
                         let key = PanelKey::new("core.scene");
@@ -3706,8 +3980,32 @@ impl WinitDriver for DemoDriver {
                     }
                 }
             }
+            "scene.new" => {
+                if self.new_scene_or_prompt(app, window) {
+                    let key = PanelKey::new("core.scene");
+                    let op =
+                        asset_open::activate_panel_tab(app, window, key.clone()).or_else(|| {
+                            self.main_window
+                                .and_then(|w| asset_open::activate_panel_tab(app, w, key))
+                        });
+                    if let Some(op) = op {
+                        app.push_effect(Effect::Dock(op));
+                    }
+
+                    for &w in self.logical_windows.keys() {
+                        app.request_redraw(w);
+                    }
+                }
+            }
             "scene.save" => {
                 if self.save_current_scene(app) {
+                    for &w in self.logical_windows.keys() {
+                        app.request_redraw(w);
+                    }
+                }
+            }
+            "scene.save_as" => {
+                if self.save_current_scene_as(app) {
                     for &w in self.logical_windows.keys() {
                         app.request_redraw(w);
                     }

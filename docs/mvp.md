@@ -46,6 +46,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 39: prototype implemented in demo (scene document P0: open selected `.scene` + load into world/hierarchy; dirty marker `*` + save writes JSON v1)
 - MVP 40: prototype implemented in demo (asset open registry: Project double-click/Enter routes through `asset.open_selected`; `.scene` opens Scene doc, text-like assets open Text Probe)
 - MVP 41: prototype implemented in demo (unsaved changes guard: opening a new scene or closing a window with the Scene panel prompts Save/Don't Save/Cancel; winit close requests are routed through `Event::WindowCloseRequested`)
+- MVP 42: prototype implemented in demo (scene workflow P0: New Scene + Save As; File menu and Cmd/Ctrl shortcuts)
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)

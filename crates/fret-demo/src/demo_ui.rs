@@ -161,6 +161,19 @@ pub fn build_demo_ui(
                         title: Arc::<str>::from("File"),
                         items: vec![
                             fret_app::MenuItem::Command {
+                                command: fret_app::CommandId::from("scene.new"),
+                                when: None,
+                            },
+                            fret_app::MenuItem::Command {
+                                command: fret_app::CommandId::from("scene.save"),
+                                when: None,
+                            },
+                            fret_app::MenuItem::Command {
+                                command: fret_app::CommandId::from("scene.save_as"),
+                                when: None,
+                            },
+                            fret_app::MenuItem::Separator,
+                            fret_app::MenuItem::Command {
                                 command: fret_app::CommandId::from("command_palette.toggle"),
                                 when: None,
                             },

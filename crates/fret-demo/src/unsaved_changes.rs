@@ -3,6 +3,7 @@ use fret_editor::AssetGuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnsavedContinuation {
+    NewScene,
     OpenScene { guid: AssetGuid },
     CloseWindow { window: AppWindowId },
 }

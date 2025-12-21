@@ -103,6 +103,7 @@ validate that the framework contracts are sufficient.
 - Multi-viewport roles P0: Scene (editor) vs Game (preview) gating patterns (prototype implemented in demo; see `docs/mvp.md` MVP 30).
 - Play mode stub P0: preview loop with RAF scheduling while a Game viewport is visible (prototype implemented in demo; see `docs/mvp.md` MVP 31).
 - Undo/redo P0: command stack + transaction coalescing boundary (ADR 0024). (prototype implemented in demo; see `docs/mvp.md` MVP 22 + MVP 24).
+- Scene documents P0: `.scene` open/new/save/save-as + unsaved changes guard (demo-driven; see `docs/mvp.md` MVP 39–42).
 
 ## Milestones
 
