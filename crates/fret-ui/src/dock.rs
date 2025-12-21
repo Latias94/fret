@@ -365,6 +365,7 @@ pub struct DockSpace {
     panel_last_sizes: HashMap<PanelKey, Size>,
     viewport_capture: Option<ViewportCaptureState>,
     tab_titles: HashMap<PanelKey, PreparedTabTitle>,
+    empty_state: Option<PreparedTabTitle>,
     hovered_tab: Option<(DockNodeId, usize)>,
     hovered_tab_close: bool,
     pressed_tab_close: Option<(DockNodeId, usize, PanelKey)>,
@@ -372,6 +373,9 @@ pub struct DockSpace {
     tab_close_glyph: Option<PreparedTabTitle>,
     tab_text_style: TextStyle,
     tab_close_style: TextStyle,
+    empty_state_style: TextStyle,
+    last_empty_state_scale_factor: Option<f32>,
+    last_empty_state_theme_revision: Option<u64>,
     last_tab_text_scale_factor: Option<f32>,
     last_theme_revision: Option<u64>,
 }
@@ -386,6 +390,7 @@ impl DockSpace {
             panel_last_sizes: HashMap::new(),
             viewport_capture: None,
             tab_titles: HashMap::new(),
+            empty_state: None,
             hovered_tab: None,
             hovered_tab_close: false,
             pressed_tab_close: None,
@@ -399,6 +404,12 @@ impl DockSpace {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
             },
+            empty_state_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(13.0),
+            },
+            last_empty_state_scale_factor: None,
+            last_empty_state_theme_revision: None,
             last_tab_text_scale_factor: None,
             last_theme_revision: None,
         }
@@ -566,6 +577,75 @@ impl DockSpace {
 
         scroll = Px(scroll.0.clamp(0.0, max_scroll.0));
         self.set_tab_scroll_for(tabs, scroll);
+    }
+
+    fn rebuild_empty_state(
+        &mut self,
+        text: &mut dyn TextService,
+        theme: crate::ThemeSnapshot,
+        scale_factor: f32,
+        max_width: Px,
+    ) {
+        if self.last_empty_state_theme_revision == Some(theme.revision)
+            && self.last_empty_state_scale_factor == Some(scale_factor)
+        {
+            return;
+        }
+        self.last_empty_state_theme_revision = Some(theme.revision);
+        self.last_empty_state_scale_factor = Some(scale_factor);
+
+        if let Some(prev) = self.empty_state.take() {
+            text.release(prev.blob);
+        }
+
+        let constraints = TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::Word,
+            scale_factor,
+        };
+        let (blob, metrics) = text.prepare(
+            "No panels in this window.\nUse File → Layout → Reset Layout.",
+            self.empty_state_style,
+            constraints,
+        );
+        self.empty_state = Some(PreparedTabTitle {
+            blob,
+            metrics,
+            title_hash: 0,
+        });
+    }
+
+    fn paint_empty_state(&mut self, cx: &mut PaintCx<'_>) {
+        let theme = cx.theme().snapshot();
+        cx.scene.push(SceneOp::Quad {
+            order: fret_core::DrawOrder(0),
+            rect: cx.bounds,
+            background: theme.colors.panel_background,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: fret_core::Corners::all(Px(0.0)),
+        });
+
+        let pad = theme.metrics.padding_md.0.max(0.0);
+        let max_w = Px((cx.bounds.size.width.0 - pad * 2.0).max(0.0));
+        self.rebuild_empty_state(cx.text, theme, cx.scale_factor, max_w);
+
+        let Some(text) = self.empty_state else {
+            return;
+        };
+
+        let x = (cx.bounds.origin.x.0 + (cx.bounds.size.width.0 - text.metrics.size.width.0) * 0.5)
+            .max(cx.bounds.origin.x.0 + pad);
+        let inner_y =
+            cx.bounds.origin.y.0 + (cx.bounds.size.height.0 - text.metrics.size.height.0) * 0.5;
+        let y = inner_y + text.metrics.baseline.0;
+
+        cx.scene.push(SceneOp::Text {
+            order: fret_core::DrawOrder(1),
+            origin: Point::new(Px(x), Px(y)),
+            text: text.blob,
+            color: theme.colors.text_muted,
+        });
     }
 }
 
@@ -1605,6 +1685,7 @@ impl Widget for DockSpace {
             let active_bounds = active_panel_content_bounds(&dock.graph, &layout);
             Some((chrome, layout, active_bounds, dock.hover.clone()))
         })() else {
+            self.paint_empty_state(cx);
             return;
         };
 
@@ -3009,4 +3090,57 @@ fn dock_space_regions(bounds: Rect) -> (Rect, Rect) {
         ),
     };
     (chrome, dock)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, Scene, SceneOp, TextConstraints, TextMetrics, TextService, TextStyle,
+    };
+
+    #[derive(Default)]
+    struct FakeTextService;
+
+    impl TextService for FakeTextService {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(240.0), Px(34.0)),
+                    baseline: Px(18.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    #[test]
+    fn dock_space_paints_empty_state_when_no_window_root() {
+        let mut ui = crate::UiTree::new();
+        ui.set_window(AppWindowId::default());
+
+        let root = ui.create_node(DockSpace::new(AppWindowId::default()));
+        ui.set_root(root);
+
+        let mut app = App::new();
+        let mut text = FakeTextService::default();
+
+        let size = Size::new(Px(800.0), Px(600.0));
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+
+        let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+        let mut scene = Scene::default();
+        ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+        assert!(scene.ops.iter().any(|op| matches!(op, SceneOp::Quad { .. })));
+        assert!(scene.ops.iter().any(|op| matches!(op, SceneOp::Text { .. })));
+    }
 }

@@ -3158,6 +3158,7 @@ impl WinitDriver for DemoDriver {
             self.loaded_layout = Some(layout.clone());
             self.bump_next_floating_index_from_layout(&layout);
 
+            let mut imported_main_root = false;
             if let Some(main_entry) = layout
                 .windows
                 .iter()
@@ -3168,7 +3169,40 @@ impl WinitDriver for DemoDriver {
                     .import_subtree_from_layout_v1(&layout, main_entry.root)
                 {
                     dock.graph.set_window_root(main_window, root);
+                    imported_main_root = true;
                 }
+            }
+
+            // If we have a layout file but fail to import a main root (e.g. version drift or
+            // corrupted file), fall back to the default layout instead of leaving the main window
+            // blank.
+            let mut allow_restore_windows = imported_main_root;
+            if !imported_main_root || dock.graph.window_root(main_window).is_none() {
+                tracing::warn!("layout.json present but main root could not be restored; falling back to default layout");
+                allow_restore_windows = false;
+                let tabs_left = dock.graph.insert_node(DockNode::Tabs {
+                    tabs: vec![key_hierarchy.clone(), key_project.clone()],
+                    active: 0,
+                });
+                let tabs_scene = dock.graph.insert_node(DockNode::Tabs {
+                    tabs: vec![key_scene.clone(), key_game.clone()],
+                    active: 0,
+                });
+                let tabs_inspector = dock.graph.insert_node(DockNode::Tabs {
+                    tabs: vec![key_inspector.clone(), key_text_probe.clone()],
+                    active: 0,
+                });
+                let right = dock.graph.insert_node(DockNode::Split {
+                    axis: Axis::Vertical,
+                    children: vec![tabs_scene, tabs_inspector],
+                    fractions: vec![0.72, 0.28],
+                });
+                let root_dock = dock.graph.insert_node(DockNode::Split {
+                    axis: Axis::Horizontal,
+                    children: vec![tabs_left, right],
+                    fractions: vec![0.26, 0.74],
+                });
+                dock.graph.set_window_root(main_window, root_dock);
             }
 
             let probe_present = dock
@@ -3216,16 +3250,18 @@ impl WinitDriver for DemoDriver {
                 }
             }
 
-            for w in &layout.windows {
-                if w.logical_window_id == "main" {
-                    continue;
+            if allow_restore_windows {
+                for w in &layout.windows {
+                    if w.logical_window_id == "main" {
+                        continue;
+                    }
+                    app.push_effect(Effect::Window(WindowRequest::Create(CreateWindowRequest {
+                        kind: CreateWindowKind::DockRestore {
+                            logical_window_id: w.logical_window_id.clone(),
+                        },
+                        anchor: None,
+                    })));
                 }
-                app.push_effect(Effect::Window(WindowRequest::Create(CreateWindowRequest {
-                    kind: CreateWindowKind::DockRestore {
-                        logical_window_id: w.logical_window_id.clone(),
-                    },
-                    anchor: None,
-                })));
             }
         } else {
             let tabs_left = dock.graph.insert_node(DockNode::Tabs {
