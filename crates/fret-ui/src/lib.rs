@@ -11,9 +11,9 @@ pub use theme::{Theme, ThemeConfig, ThemeSnapshot};
 pub use tree::{UiLayerId, UiTree};
 pub use widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 pub use widgets::{
-    AppMenuBar, BoundTextInput, Clip, ColoredPanel, Column, ContextMenu, ContextMenuRequest,
-    ContextMenuService, ContextMenuStyle, FixedPanel, HeaderBody, PanelThemeBackground, Scroll,
-    Split, Stack, Text, TextArea, TextAreaStyle, TextInput, Toolbar, ToolbarItem, TreeNode,
+    AppMenuBar, Bar, BoundTextInput, Clip, ColoredPanel, Column, ContextMenu, ContextMenuRequest,
+    ContextMenuService, ContextMenuStyle, FixedPanel, HeaderBody, PanelThemeBackground, Row,
+    Scroll, Split, Stack, Text, TextArea, TextAreaStyle, TextInput, Toolbar, ToolbarItem, TreeNode,
     TreeView, TreeViewStyle, VecStringDataSource, VirtualList, VirtualListDataSource,
     VirtualListRow, VirtualListStyle,
 };

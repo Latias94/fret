@@ -207,7 +207,11 @@ impl Widget for Toolbar {
             });
         }
 
-        Size::new(cx.available.width, height)
+        let end_x = (x - self.gap.0.max(0.0)).max(cx.bounds.origin.x.0);
+        let width = Px((end_x - cx.bounds.origin.x.0)
+            .min(cx.available.width.0)
+            .max(0.0));
+        Size::new(width, height)
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
