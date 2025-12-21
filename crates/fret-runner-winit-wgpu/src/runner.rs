@@ -804,10 +804,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             return false;
         };
 
-        let mut hovered = self.window_under_cursor(screen_pos, None);
-        if hovered == Some(drag.source_window) {
-            hovered = None;
-        }
+        let hovered = self.window_under_cursor(screen_pos, None);
         if hovered != self.internal_drag_hover_window {
             if let Some(prev) = self.internal_drag_hover_window.take() {
                 let prev_pos = self.internal_drag_hover_pos.take().unwrap_or_default();
@@ -857,9 +854,6 @@ impl<D: WinitDriver> WinitRunner<D> {
         let Some(target) = self.window_under_cursor(screen_pos, None) else {
             return false;
         };
-        if target == drag.source_window {
-            return false;
-        }
         let Some(pos) = self.local_pos_for_window(target, screen_pos) else {
             return false;
         };

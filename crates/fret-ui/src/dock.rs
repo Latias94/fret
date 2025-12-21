@@ -831,46 +831,8 @@ impl Widget for DockSpace {
                             }
                         }
 
-                        if let Some(drag) = dock_drag.as_ref() {
-                            let mut dragging = drag.dragging;
-                            if drag.source_window == self.window {
-                                let dx = position.x.0 - drag.start.x.0;
-                                let dy = position.y.0 - drag.start.y.0;
-                                let dist2 = dx * dx + dy * dy;
-                                if !dragging && dist2 > 16.0 {
-                                    dragging = true;
-                                }
-                            } else if !dragging {
-                                dragging = true;
-                            }
-
-                            update_drag = Some((*position, dragging));
-
-                            if dragging {
-                                let bounds = self.last_bounds;
-                                if float_zone(bounds).contains(*position) {
-                                    dock.hover = Some(DockDropTarget::Float {
-                                        window: self.window,
-                                    });
-                                } else if bounds.contains(*position) {
-                                    let layout = compute_layout_map(&dock.graph, root, bounds);
-                                    dock.hover = hit_test_drop_target(
-                                        &dock.graph,
-                                        &layout,
-                                        &self.tab_scroll,
-                                        *position,
-                                    )
-                                    .map(DockDropTarget::Dock);
-                                } else {
-                                    dock.hover = None;
-                                }
-                                pending_redraws.push(self.window);
-                            } else {
-                                dock.hover = None;
-                            }
-                        } else {
-                            dock.hover = None;
-                        }
+                        // Dock/tab dragging is handled via `Event::InternalDrag` so it can work
+                        // across windows without relying on pointer-event broadcasting.
                     }
                     fret_core::PointerEvent::Wheel {
                         position,

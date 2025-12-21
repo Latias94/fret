@@ -8,6 +8,7 @@ mod ime_probe;
 mod project_panel;
 mod scene_background;
 mod undo;
+mod viewport_asset_drop;
 mod viewport_targets;
 mod world;
 
@@ -17,6 +18,7 @@ use hierarchy::DemoHierarchy;
 use project_panel::ProjectPanel;
 use scene_background::{SceneBackgroundRenderer, SceneCameraParams};
 use undo::{EditCommand, UndoStack};
+use viewport_asset_drop::ViewportAssetDropService;
 use viewport_targets::{ViewportTarget, ViewportTargets};
 use world::DemoWorld;
 
@@ -710,6 +712,61 @@ impl DemoDriver {
             dock.set_viewport_gizmo(window, vp.target, gizmo);
             dock.set_viewport_rotate_gizmo(window, vp.target, rotate_gizmo);
         }
+    }
+
+    fn handle_viewport_asset_drop_requests(&mut self, app: &mut App) -> bool {
+        let Some(req) = app
+            .global_mut::<ViewportAssetDropService>()
+            .and_then(|s| s.take_request())
+        else {
+            return false;
+        };
+
+        if demo_viewport_role(&req.panel) != DemoViewportRole::Scene {
+            return false;
+        }
+
+        let Some(hierarchy) = self.hierarchy else {
+            return false;
+        };
+        let Some(world) = self.world else {
+            return false;
+        };
+        let Some(selection) = self.selection else {
+            return false;
+        };
+
+        let name = app
+            .global::<ProjectService>()
+            .and_then(|p| p.id_for_guid(req.guid).and_then(|id| p.path_for_id(id)))
+            .and_then(|p| p.file_stem().map(|s| s.to_string_lossy().to_string()))
+            .unwrap_or_else(|| format!("Asset {}", req.guid.0));
+
+        let new_id = hierarchy
+            .update(app, |h, _cx| h.create_entity(None, name.clone()))
+            .ok();
+        let Some(new_id) = new_id else {
+            return false;
+        };
+
+        let cam = self.viewport_camera(&req.panel);
+        let [x, y] = cam.uv_to_world_xy(req.uv);
+        let _ = world.update(app, |w, _cx| {
+            let e = w.entity_mut(new_id);
+            e.name = name;
+            e.transform.position = [x, y, 0.0];
+        });
+
+        let _ = selection.update(app, |s, _cx| {
+            s.lead_entity = Some(new_id);
+            s.selected_entities = vec![new_id];
+        });
+
+        app.with_global_mut(ProjectSelectionService::default, |s, _app| {
+            s.set_selected_guid(None);
+        });
+
+        true
     }
 }
 
@@ -2274,23 +2331,35 @@ impl WinitDriver for DemoDriver {
         let key_hierarchy = PanelKey::new("core.hierarchy");
         let key_project = PanelKey::new("core.project");
         let key_inspector = PanelKey::new("core.inspector");
+        let key_scene = PanelKey::new("core.scene");
+        let key_game = PanelKey::new("core.game");
         let key_text_probe = PanelKey::new("core.text_probe");
 
         let hierarchy_node = ui.create_node(HierarchyPanel::new(selection, hierarchy, undo, world));
         let project_node = ui.create_node(ProjectPanel::new());
         let inspector_node = ui.create_node(InspectorPanel::new(selection, world));
+        let scene_drop_node = ui.create_node(viewport_asset_drop::ViewportAssetDropPanel::new(
+            key_scene.clone(),
+        ));
+        let game_drop_node = ui.create_node(viewport_asset_drop::ViewportAssetDropPanel::new(
+            key_game.clone(),
+        ));
         let text_probe_node = ui.create_node(
             fret_ui::TextArea::new(TEXT_PROBE_DEFAULT).with_min_height(fret_core::Px(240.0)),
         );
         ui.add_child(layers.dockspace_node, hierarchy_node);
         ui.add_child(layers.dockspace_node, project_node);
         ui.add_child(layers.dockspace_node, inspector_node);
+        ui.add_child(layers.dockspace_node, scene_drop_node);
+        ui.add_child(layers.dockspace_node, game_drop_node);
         ui.add_child(layers.dockspace_node, text_probe_node);
 
         app.with_global_mut(DockPanelContentService::default, |s, _app| {
             s.set(window, key_hierarchy, hierarchy_node);
             s.set(window, key_project, project_node);
             s.set(window, key_inspector, inspector_node);
+            s.set(window, key_scene, scene_drop_node);
+            s.set(window, key_game, game_drop_node);
             s.set(window, key_text_probe, text_probe_node);
         });
         Self::WindowState {
@@ -2529,6 +2598,12 @@ impl WinitDriver for DemoDriver {
             }
         }
         state.ui.dispatch_event(app, text, event);
+
+        if self.handle_viewport_asset_drop_requests(app) {
+            for &w in self.logical_windows.keys() {
+                app.request_redraw(w);
+            }
+        }
     }
 
     fn handle_command(

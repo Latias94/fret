@@ -501,7 +501,14 @@ impl UiTree {
 
         let default_root = barrier_root.unwrap_or(base_root);
 
-        let target = if let Some(captured) = self.captured {
+        // Pointer capture only affects pointer events. Drag-and-drop style events
+        // (external/internal) must continue to follow the cursor for correct cross-window UX.
+        let captured = match event {
+            Event::Pointer(_) => self.captured,
+            _ => None,
+        };
+
+        let target = if let Some(captured) = captured {
             Some(captured)
         } else if let Some(pos) = event_position(event) {
             self.hit_test_layers(&active_layers, pos)
