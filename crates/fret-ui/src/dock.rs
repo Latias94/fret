@@ -35,7 +35,7 @@ struct DockPanelDragPayload {
     panel: PanelKey,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum DockDropTarget {
     Dock(HoverTarget),
     Float { window: fret_core::AppWindowId },
@@ -337,7 +337,7 @@ struct DividerDragState {
     fraction: f32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct HoverTarget {
     tabs: DockNodeId,
     zone: DropZone,
@@ -1084,6 +1084,7 @@ impl Widget for DockSpace {
                     match e.kind {
                         fret_core::InternalDragKind::Enter | fret_core::InternalDragKind::Over => {
                             if let Some(drag) = dock_drag.as_ref() {
+                                let prev_hover = dock.hover.clone();
                                 let mut dragging = drag.dragging;
                                 if drag.source_window == self.window {
                                     let dx = position.x.0 - drag.start.x.0;
@@ -1120,8 +1121,10 @@ impl Widget for DockSpace {
                                     dock.hover = None;
                                 }
 
-                                pending_redraws.push(self.window);
-                                invalidate_paint = true;
+                                if dock.hover != prev_hover {
+                                    pending_redraws.push(self.window);
+                                    invalidate_paint = true;
+                                }
                             } else {
                                 dock.hover = None;
                             }
@@ -2775,16 +2778,20 @@ fn paint_drop_overlay(
             if w != window {
                 return;
             }
+            let zone = float_zone(bounds);
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(10_000),
-                rect: float_zone(bounds),
+                rect: zone,
                 background: Color {
-                    a: 0.45,
+                    a: 0.35,
                     ..theme.colors.accent
                 },
-                border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
-                corner_radii: fret_core::Corners::all(theme.metrics.radius_md),
+                border: Edges::all(Px(2.0)),
+                border_color: Color {
+                    a: 0.85,
+                    ..theme.colors.accent
+                },
+                corner_radii: fret_core::Corners::all(Px(theme.metrics.radius_md.0.max(6.0))),
             });
         }
         DockDropTarget::Dock(target) => {
@@ -2798,33 +2805,65 @@ fn paint_drop_overlay(
                     order: fret_core::DrawOrder(9_990),
                     rect: tab_bar,
                     background: Color {
-                        a: 0.10,
+                        a: 0.14,
                         ..theme.colors.accent
                     },
-                    border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
-                    corner_radii: fret_core::Corners::all(theme.metrics.radius_sm),
+                    border: Edges::all(Px(1.0)),
+                    border_color: Color {
+                        a: 0.45,
+                        ..theme.colors.accent
+                    },
+                    corner_radii: fret_core::Corners::all(Px(theme.metrics.radius_sm.0.max(4.0))),
                 });
                 if let Some(i) = target.insert_index {
                     let scroll = tab_scroll_for_node(tab_scroll, target.tabs);
                     let x = tab_bar.origin.x.0 + DOCK_TAB_W.0 * i as f32 - scroll.0;
-                    let marker = Rect {
-                        origin: Point::new(Px(x - 2.0), tab_bar.origin.y),
-                        size: Size::new(Px(4.0), tab_bar.size.height),
-                    };
+                    let marker = Rect::new(
+                        Point::new(Px(x - 3.0), Px(tab_bar.origin.y.0 + 3.0)),
+                        Size::new(Px(6.0), Px((tab_bar.size.height.0 - 6.0).max(0.0))),
+                    );
                     scene.push(SceneOp::Quad {
                         order: fret_core::DrawOrder(10_000),
                         rect: marker,
                         background: Color {
-                            a: 0.65,
+                            a: 0.85,
                             ..theme.colors.accent
                         },
-                        border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
-                        corner_radii: fret_core::Corners::all(Px(2.0)),
+                        border: Edges::all(Px(1.0)),
+                        border_color: Color {
+                            a: 1.0,
+                            ..theme.colors.accent
+                        },
+                        corner_radii: fret_core::Corners::all(Px(3.0)),
                     });
-                    return;
+
+                    let cap_w = Px(14.0);
+                    let cap_h = Px(3.0);
+                    let cap_x = Px(x - cap_w.0 * 0.5);
+                    let cap_top =
+                        Rect::new(Point::new(cap_x, marker.origin.y), Size::new(cap_w, cap_h));
+                    let cap_bottom = Rect::new(
+                        Point::new(
+                            cap_x,
+                            Px(marker.origin.y.0 + marker.size.height.0 - cap_h.0),
+                        ),
+                        Size::new(cap_w, cap_h),
+                    );
+                    for cap in [cap_top, cap_bottom] {
+                        scene.push(SceneOp::Quad {
+                            order: fret_core::DrawOrder(10_001),
+                            rect: cap,
+                            background: Color {
+                                a: 0.92,
+                                ..theme.colors.accent
+                            },
+                            border: Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: fret_core::Corners::all(Px(2.0)),
+                        });
+                    }
                 }
+                return;
             }
 
             let overlay = drop_zone_rect(rect, target.zone);
@@ -2832,12 +2871,15 @@ fn paint_drop_overlay(
                 order: fret_core::DrawOrder(10_000),
                 rect: overlay,
                 background: Color {
-                    a: 0.22,
+                    a: 0.16,
                     ..theme.colors.accent
                 },
-                border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
-                corner_radii: fret_core::Corners::all(theme.metrics.radius_sm),
+                border: Edges::all(Px(2.0)),
+                border_color: Color {
+                    a: 0.85,
+                    ..theme.colors.accent
+                },
+                corner_radii: fret_core::Corners::all(Px(theme.metrics.radius_sm.0.max(4.0))),
             });
         }
     }
@@ -2866,12 +2908,12 @@ fn paint_drop_hints(
     let cx = rect.origin.x.0 + rect.size.width.0 * 0.5;
     let cy = rect.origin.y.0 + rect.size.height.0 * 0.5;
 
-    let size = Px(22.0);
-    let gap = Px(6.0);
+    let size = Px(26.0);
+    let gap = Px(8.0);
     let step = Px(size.0 + gap.0);
 
     let inactive_bg = Color {
-        a: 0.72,
+        a: 0.64,
         ..theme.colors.panel_background
     };
     let inactive_border = Color {
@@ -2879,7 +2921,7 @@ fn paint_drop_hints(
         ..theme.colors.panel_border
     };
     let active_bg = Color {
-        a: 0.85,
+        a: 0.92,
         ..theme.colors.accent
     };
     let active_border = Color {
@@ -2888,8 +2930,8 @@ fn paint_drop_hints(
     };
 
     let order = fret_core::DrawOrder(9_500);
-    let border = Edges::all(Px(1.5));
-    let corner_radii = fret_core::Corners::all(theme.metrics.radius_sm);
+    let border = Edges::all(Px(2.0));
+    let corner_radii = fret_core::Corners::all(Px(theme.metrics.radius_sm.0.max(4.0)));
 
     for (zone, dx, dy) in [
         (DropZone::Center, 0.0, 0.0),
