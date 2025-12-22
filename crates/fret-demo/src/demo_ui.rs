@@ -25,6 +25,47 @@ pub struct DebugHudService {
     per_window: HashMap<AppWindowId, fret_ui::UiDebugFrameStats>,
 }
 
+#[derive(Default)]
+pub struct DebugInspectorService {
+    enabled: bool,
+    per_window: HashMap<AppWindowId, DebugInspectorSnapshot>,
+}
+
+impl DebugInspectorService {
+    pub fn enabled(&self) -> bool {
+        self.enabled
+    }
+
+    pub fn toggle(&mut self) -> bool {
+        self.enabled = !self.enabled;
+        self.enabled
+    }
+
+    pub fn set_snapshot(&mut self, window: AppWindowId, snapshot: DebugInspectorSnapshot) {
+        self.per_window.insert(window, snapshot);
+    }
+
+    pub fn snapshot(&self, window: AppWindowId) -> Option<&DebugInspectorSnapshot> {
+        self.per_window.get(&window)
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct DebugInspectorSnapshot {
+    pub cursor: Option<fret_core::Point>,
+    pub hit: Option<fret_core::NodeId>,
+    pub focus: Option<fret_core::NodeId>,
+    pub captured: Option<fret_core::NodeId>,
+    pub barrier_root: Option<fret_core::NodeId>,
+    pub outlines: Vec<DebugInspectorOutline>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct DebugInspectorOutline {
+    pub rect: fret_core::Rect,
+    pub color: fret_core::Color,
+}
+
 impl DebugHudService {
     pub fn enabled(&self) -> bool {
         self.enabled
@@ -96,6 +137,7 @@ pub struct DemoLayers {
     pub inspector_edit: UiLayerId,
     pub inspector_edit_input_node: fret_core::NodeId,
     pub debug_hud: UiLayerId,
+    pub debug_inspector: UiLayerId,
     pub dockspace_node: fret_core::NodeId,
 }
 
@@ -414,6 +456,53 @@ impl fret_ui::Widget for DebugHudPanel {
     }
 }
 
+struct DebugInspectorOverlay;
+
+impl DebugInspectorOverlay {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl fret_ui::Widget for DebugInspectorOverlay {
+    fn event(&mut self, _cx: &mut fret_ui::EventCx<'_>, _event: &fret_core::Event) {}
+
+    fn layout(&mut self, cx: &mut fret_ui::LayoutCx<'_>) -> fret_core::Size {
+        cx.available
+    }
+
+    fn paint(&mut self, cx: &mut fret_ui::PaintCx<'_>) {
+        let Some(window) = cx.window else {
+            return;
+        };
+        let Some(svc) = cx.app.global::<DebugInspectorService>() else {
+            return;
+        };
+        if !svc.enabled() {
+            return;
+        }
+        let Some(snapshot) = svc.snapshot(window) else {
+            return;
+        };
+
+        for outline in &snapshot.outlines {
+            cx.scene.push(fret_core::SceneOp::Quad {
+                order: fret_core::DrawOrder(100),
+                rect: outline.rect,
+                background: fret_core::Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 0.0,
+                },
+                border: fret_core::Edges::all(Px(2.0)),
+                border_color: outline.color,
+                corner_radii: fret_core::Corners::all(Px(0.0)),
+            });
+        }
+    }
+}
+
 pub fn build_demo_ui(
     window: AppWindowId,
     kind: DemoUiKind,
@@ -524,6 +613,10 @@ pub fn build_demo_ui(
                             fret_app::MenuItem::Separator,
                             fret_app::MenuItem::Command {
                                 command: fret_app::CommandId::from("debug.hud.toggle"),
+                                when: None,
+                            },
+                            fret_app::MenuItem::Command {
+                                command: fret_app::CommandId::from("debug.inspector.toggle"),
                                 when: None,
                             },
                             fret_app::MenuItem::Separator,
@@ -762,6 +855,13 @@ Goal: foundation for Console/Inspector/code editor.",
     );
     ui.add_child(inspector_column, inspector_edit_input_node);
 
+    let inspector_overlay_root = ui.create_node(Stack::new());
+    let debug_inspector = ui.push_overlay_root_ex(inspector_overlay_root, false, false);
+    ui.set_layer_visible(debug_inspector, false);
+
+    let inspector_overlay = ui.create_node(DebugInspectorOverlay::new());
+    ui.add_child(inspector_overlay_root, inspector_overlay);
+
     (
         ui,
         DemoLayers {
@@ -774,6 +874,7 @@ Goal: foundation for Console/Inspector/code editor.",
             inspector_edit,
             inspector_edit_input_node,
             debug_hud,
+            debug_inspector,
             dockspace_node: dock,
         },
     )

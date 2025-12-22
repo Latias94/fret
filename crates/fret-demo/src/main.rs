@@ -18,7 +18,10 @@ mod viewport_asset_drop;
 mod viewport_targets;
 mod world;
 
-use demo_ui::{DebugHudService, DemoLayers, DemoUiConfig, DemoUiKind, build_demo_ui};
+use demo_ui::{
+    DebugHudService, DebugInspectorOutline, DebugInspectorService, DebugInspectorSnapshot,
+    DemoLayers, DemoUiConfig, DemoUiKind, build_demo_ui,
+};
 use editor_shell::{DemoSelection, HierarchyPanel, InspectorPanel};
 use hierarchy::DemoHierarchy;
 use project_panel::ProjectPanel;
@@ -172,6 +175,7 @@ struct DemoWindowState {
     inspector_edit_previous_focus: Option<fret_core::NodeId>,
     unsaved_dialog_previous_focus: Option<fret_core::NodeId>,
     inspector_edit_buffer: Model<String>,
+    last_cursor_pos: Option<fret_core::Point>,
 }
 
 #[derive(Default)]
@@ -2016,6 +2020,7 @@ impl WinitDriver for DemoDriver {
         app.set_global(InspectorEditService::default());
         app.set_global(PropertyEditService::default());
         app.set_global(DebugHudService::default());
+        app.set_global(DebugInspectorService::default());
         load_theme(app);
         self.ensure_theme_hot_reload(app, main_window);
         self.install_asset_drop_rules();
@@ -2052,6 +2057,13 @@ impl WinitDriver for DemoDriver {
                 .with_description("Toggles the UI debug HUD overlay (layout/paint timings)")
                 .with_category("View")
                 .with_keywords(["debug", "hud", "ui", "profiling"]),
+        );
+        app.commands_mut().register(
+            CommandId::from("debug.inspector.toggle"),
+            CommandMeta::new("Toggle UI Inspector Overlay")
+                .with_description("Toggles the UI inspector overlay (hit-test + bounds outlines)")
+                .with_category("View")
+                .with_keywords(["debug", "inspector", "ui", "hit-test"]),
         );
 
         app.commands_mut().register(
@@ -3548,6 +3560,7 @@ impl WinitDriver for DemoDriver {
             inspector_edit_previous_focus: None,
             unsaved_dialog_previous_focus: None,
             inspector_edit_buffer,
+            last_cursor_pos: None,
         }
     }
 
@@ -3580,6 +3593,15 @@ impl WinitDriver for DemoDriver {
         state: &mut Self::WindowState,
         event: &fret_core::Event,
     ) {
+        if let fret_core::Event::Pointer(pe) = event {
+            state.last_cursor_pos = Some(match pe {
+                fret_core::PointerEvent::Down { position, .. }
+                | fret_core::PointerEvent::Up { position, .. }
+                | fret_core::PointerEvent::Move { position, .. }
+                | fret_core::PointerEvent::Wheel { position, .. } => *position,
+            });
+        }
+
         if matches!(event, fret_core::Event::WindowCloseRequested) {
             self.handle_window_close_requested(app, window, state);
             return;
@@ -3820,6 +3842,14 @@ impl WinitDriver for DemoDriver {
                     app.request_redraw(w);
                 }
                 tracing::info!(enabled, "toggled ui debug hud");
+            }
+            "debug.inspector.toggle" => {
+                let enabled =
+                    app.with_global_mut(DebugInspectorService::default, |s, _app| s.toggle());
+                for &w in self.logical_windows.keys() {
+                    app.request_redraw(w);
+                }
+                tracing::info!(enabled, "toggled ui inspector");
             }
             "command_palette.toggle" => {
                 let vis = state.ui.is_layer_visible(state.layers.command_palette);
@@ -5602,7 +5632,85 @@ impl WinitDriver for DemoDriver {
                 .set_layer_visible(state.layers.debug_hud, hud_enabled);
         }
 
+        let inspector_enabled = app
+            .global::<DebugInspectorService>()
+            .is_some_and(|s| s.enabled());
+        if state.ui.is_layer_visible(state.layers.debug_inspector) != inspector_enabled {
+            state
+                .ui
+                .set_layer_visible(state.layers.debug_inspector, inspector_enabled);
+        }
+
         state.ui.layout_all(app, text, bounds, scale_factor);
+
+        if inspector_enabled {
+            let cursor = state.last_cursor_pos;
+            let mut snapshot = DebugInspectorSnapshot::default();
+            snapshot.cursor = cursor;
+            snapshot.focus = state.ui.focus();
+            snapshot.captured = state.ui.captured();
+
+            let hit_color = Color {
+                r: 0.1,
+                g: 0.8,
+                b: 1.0,
+                a: 0.95,
+            };
+            let focus_color = Color {
+                r: 0.2,
+                g: 0.95,
+                b: 0.2,
+                a: 0.95,
+            };
+            let capture_color = Color {
+                r: 1.0,
+                g: 0.6,
+                b: 0.15,
+                a: 0.95,
+            };
+            let barrier_color = Color {
+                r: 0.8,
+                g: 0.35,
+                b: 1.0,
+                a: 0.95,
+            };
+
+            let push_outline = |node: fret_core::NodeId, color: Color, out: &mut Vec<_>| {
+                if let Some(rect) = state.ui.debug_node_bounds(node) {
+                    out.push(DebugInspectorOutline { rect, color });
+                }
+            };
+
+            if let Some(pos) = cursor {
+                let hit = state.ui.debug_hit_test(pos);
+                snapshot.hit = hit.hit;
+                snapshot.barrier_root = hit.barrier_root;
+                if let Some(node) = hit.barrier_root {
+                    push_outline(node, barrier_color, &mut snapshot.outlines);
+                }
+
+                if let Some(node) = hit.hit {
+                    let path = state.ui.debug_node_path(node);
+                    let denom = (path.len().saturating_sub(1)).max(1) as f32;
+                    for (i, id) in path.into_iter().enumerate() {
+                        let t = i as f32 / denom;
+                        let a = 0.15 + t * 0.75;
+                        push_outline(id, Color { a, ..hit_color }, &mut snapshot.outlines);
+                    }
+                }
+            }
+
+            if let Some(node) = snapshot.focus {
+                push_outline(node, focus_color, &mut snapshot.outlines);
+            }
+            if let Some(node) = snapshot.captured {
+                push_outline(node, capture_color, &mut snapshot.outlines);
+            }
+
+            app.global_mut::<DebugInspectorService>()
+                .map(|s| s.set_snapshot(window, snapshot));
+        }
+
         state.ui.paint_all(app, text, bounds, scene, scale_factor);
 
         if hud_enabled {

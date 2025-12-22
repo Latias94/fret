@@ -99,6 +99,22 @@ pub struct UiDebugFrameStats {
     pub captured: Option<NodeId>,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugLayerInfo {
+    pub id: UiLayerId,
+    pub root: NodeId,
+    pub visible: bool,
+    pub blocks_underlay_input: bool,
+    pub hit_testable: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct UiDebugHitTest {
+    pub hit: Option<NodeId>,
+    pub active_layer_roots: Vec<NodeId>,
+    pub barrier_root: Option<NodeId>,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 struct ObservationMask {
     paint: bool,
@@ -201,6 +217,52 @@ impl UiTree {
 
     pub fn debug_stats(&self) -> UiDebugFrameStats {
         self.debug_stats
+    }
+
+    pub fn captured(&self) -> Option<NodeId> {
+        self.captured
+    }
+
+    pub fn debug_node_bounds(&self, node: NodeId) -> Option<Rect> {
+        self.nodes.get(node).map(|n| n.bounds)
+    }
+
+    pub fn debug_node_path(&self, node: NodeId) -> Vec<NodeId> {
+        let mut out: Vec<NodeId> = Vec::new();
+        let mut current = Some(node);
+        while let Some(id) = current {
+            out.push(id);
+            current = self.nodes.get(id).and_then(|n| n.parent);
+        }
+        out.reverse();
+        out
+    }
+
+    pub fn debug_layers_in_paint_order(&self) -> Vec<UiDebugLayerInfo> {
+        self.layer_order
+            .iter()
+            .copied()
+            .filter_map(|id| {
+                let layer = self.layers.get(id)?;
+                Some(UiDebugLayerInfo {
+                    id,
+                    root: layer.root,
+                    visible: layer.visible,
+                    blocks_underlay_input: layer.blocks_underlay_input,
+                    hit_testable: layer.hit_testable,
+                })
+            })
+            .collect()
+    }
+
+    pub fn debug_hit_test(&self, position: Point) -> UiDebugHitTest {
+        let (active_roots, barrier_root) = self.active_input_layers();
+        let hit = self.hit_test_layers(&active_roots, position);
+        UiDebugHitTest {
+            hit,
+            active_layer_roots: active_roots,
+            barrier_root,
+        }
     }
 
     fn clear_pending_shortcut(&mut self, app: &mut App) {
