@@ -1,5 +1,5 @@
 use fret_core::{Color, Corners, DrawOrder, Edges, Event, MouseButton, Px, Rect, SceneOp, Size};
-use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Widget, elements};
+use fret_ui_app::{App, EventCx, GenericWidget, Invalidation, LayoutCx, PaintCx, elements};
 
 #[derive(Default)]
 struct RootState {
@@ -42,7 +42,7 @@ impl Default for ElementsMvp2Demo {
     }
 }
 
-impl Widget for ElementsMvp2Demo {
+impl GenericWidget<App> for ElementsMvp2Demo {
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
         let Some(window) = cx.window else {
             return;

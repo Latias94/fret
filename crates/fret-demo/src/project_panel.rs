@@ -4,9 +4,9 @@ use fret_core::{
     Size, TextStyle,
 };
 use fret_editor::{AssetGuid, ProjectEntryKind, ProjectSelectionService, ProjectService};
-use fret_ui::{
-    ContextMenuRequest, ContextMenuService, EventCx, Invalidation, LayoutCx, PaintCx, TreeView,
-    Widget,
+use fret_ui_app::{
+    App, ContextMenuRequest, ContextMenuService, EventCx, GenericWidget, Invalidation, LayoutCx,
+    PaintCx, TreeView,
 };
 use std::time::{Duration, Instant};
 
@@ -232,7 +232,7 @@ impl ProjectPanel {
     }
 }
 
-impl Widget for ProjectPanel {
+impl GenericWidget<App> for ProjectPanel {
     fn is_focusable(&self) -> bool {
         true
     }

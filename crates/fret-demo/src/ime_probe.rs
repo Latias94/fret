@@ -2,7 +2,7 @@ use fret_app::Effect;
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, ImeEvent, MouseButton, Px, Rect, SceneOp, Size,
 };
-use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use fret_ui_app::{App, EventCx, GenericWidget, Invalidation, LayoutCx, PaintCx};
 
 #[derive(Debug, Default)]
 pub struct ImeProbe {
@@ -29,7 +29,7 @@ impl ImeProbe {
     }
 }
 
-impl Widget for ImeProbe {
+impl GenericWidget<App> for ImeProbe {
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
         let Some(window) = cx.window else {
             return;

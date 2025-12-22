@@ -1,6 +1,6 @@
 use crate::inspector_edit::InspectorEditService;
 use fret_core::{AppWindowId, Color, DrawOrder, Px, SceneOp, Size};
-use fret_ui::{LayoutCx, PaintCx, Widget};
+use fret_ui::{LayoutCx, PaintCx, UiHost, Widget};
 
 #[derive(Debug)]
 pub struct InspectorEditLayout {
@@ -21,8 +21,8 @@ impl InspectorEditLayout {
     }
 }
 
-impl Widget for InspectorEditLayout {
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+impl<H: UiHost> Widget<H> for InspectorEditLayout {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let Some((&backdrop, rest)) = cx.children.split_first() else {
             return cx.available;
         };
@@ -121,7 +121,7 @@ impl Widget for InspectorEditLayout {
         cx.available
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         for &child in cx.children {
             if let Some(bounds) = cx.child_bounds(child) {
                 cx.paint(child, bounds);
@@ -143,8 +143,8 @@ impl InspectorEditHint {
     }
 }
 
-impl Widget for InspectorEditHint {
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+impl<H: UiHost> Widget<H> for InspectorEditHint {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let Some(service) = cx.app.global::<InspectorEditService>() else {
             return Size::new(cx.available.width, Px(0.0));
         };
@@ -155,7 +155,7 @@ impl Widget for InspectorEditHint {
         }
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         let Some(service) = cx.app.global::<InspectorEditService>() else {
             return;
         };

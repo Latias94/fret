@@ -11,7 +11,7 @@ fret-core = { path = "../fret-core" }
 fret-editor = { path = "../fret-editor" }
 fret-render = { path = "../fret-render" }
 fret-runner-winit-wgpu = { path = "../fret-runner-winit-wgpu" }
-fret-ui = { path = "../fret-ui" }
+fret-ui-app = { path = "../fret-ui-app" }
 serde_json.workspace = true
 serde.workspace = true
 tracing.workspace = true

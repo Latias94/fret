@@ -6,6 +6,7 @@ pub mod input;
 pub mod keymap;
 pub mod menu;
 pub mod model;
+pub mod ui_host;
 pub mod when_expr;
 
 pub use command::CommandId;
@@ -17,4 +18,5 @@ pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};
 pub use keymap::{DefaultKeybinding, Keymap, KeymapService, PlatformFilter};
 pub use menu::{Menu, MenuBar, MenuItem};
 pub use model::{Model, ModelCx, ModelHost, ModelId, ModelStore, ModelUpdateError};
+pub use ui_host::UiHost;
 pub use when_expr::WhenExpr;

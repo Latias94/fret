@@ -1,4 +1,4 @@
-use fret_ui::TreeNode;
+use fret_ui_app::TreeNode;
 
 #[derive(Debug, Clone)]
 pub struct DemoHierarchy {

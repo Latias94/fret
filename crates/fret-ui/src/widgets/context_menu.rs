@@ -2,12 +2,13 @@ use crate::{
     Theme, UiHost,
     widget::{EventCx, Invalidation, PaintCx, Widget},
 };
-use fret_app::KeymapService;
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp, Size,
     TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
-use fret_runtime::{CommandId, InputContext, Menu, MenuItem, format_sequence};
+use fret_runtime::{
+    CommandId, CommandRegistry, InputContext, KeymapService, Menu, MenuItem, format_sequence,
+};
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Debug, Clone)]
@@ -986,7 +987,7 @@ impl<H: UiHost> Widget<H> for ContextMenu {
 fn visible_menu_indices(
     items: &[MenuItem],
     ctx: &InputContext,
-    commands: &fret_app::CommandRegistry,
+    commands: &CommandRegistry,
 ) -> Vec<usize> {
     let mut out: Vec<usize> = Vec::new();
 

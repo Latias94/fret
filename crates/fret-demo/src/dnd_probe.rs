@@ -1,7 +1,7 @@
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, ExternalDragKind, MouseButton, Px, SceneOp, Size,
 };
-use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use fret_ui_app::{App, EventCx, GenericWidget, Invalidation, LayoutCx, PaintCx};
 
 #[derive(Debug, Default)]
 pub struct DndProbe {
@@ -15,7 +15,7 @@ impl DndProbe {
     }
 }
 
-impl Widget for DndProbe {
+impl GenericWidget<App> for DndProbe {
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
         match event {
             Event::ExternalDrag(drag) => {

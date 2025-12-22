@@ -1,7 +1,6 @@
 use crate::{Theme, UiHost};
-use fret_app::{Model, ModelId};
 use fret_core::{AppWindowId, Event, NodeId, Rect, Scene, Size, TextService};
-use fret_runtime::{CommandId, Effect, InputContext};
+use fret_runtime::{CommandId, Effect, InputContext, Model, ModelId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Invalidation {
@@ -10,7 +9,7 @@ pub enum Invalidation {
     HitTest,
 }
 
-pub struct EventCx<'a, H: UiHost = fret_app::App> {
+pub struct EventCx<'a, H: UiHost> {
     pub app: &'a mut H,
     pub text: &'a mut dyn TextService,
     pub node: NodeId,
@@ -69,7 +68,7 @@ impl<'a, H: UiHost> EventCx<'a, H> {
     }
 }
 
-pub struct CommandCx<'a, H: UiHost = fret_app::App> {
+pub struct CommandCx<'a, H: UiHost> {
     pub app: &'a mut H,
     pub text: &'a mut dyn TextService,
     pub node: NodeId,
@@ -110,7 +109,7 @@ impl<'a, H: UiHost> CommandCx<'a, H> {
     }
 }
 
-pub struct LayoutCx<'a, H: UiHost = fret_app::App> {
+pub struct LayoutCx<'a, H: UiHost> {
     pub app: &'a mut H,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
@@ -143,7 +142,7 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
     }
 }
 
-pub struct PaintCx<'a, H: UiHost = fret_app::App> {
+pub struct PaintCx<'a, H: UiHost> {
     pub app: &'a mut H,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
@@ -176,7 +175,7 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
     }
 }
 
-pub trait Widget<H: UiHost = fret_app::App> {
+pub trait Widget<H: UiHost> {
     fn event(&mut self, _cx: &mut EventCx<'_, H>, _event: &Event) {}
     fn command(&mut self, _cx: &mut CommandCx<'_, H>, _command: &CommandId) -> bool {
         false

@@ -1,6 +1,8 @@
 pub mod dock;
 pub mod elements;
 pub mod host;
+#[cfg(test)]
+mod test_host;
 pub mod theme;
 pub mod tree;
 pub mod widget;

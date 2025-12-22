@@ -75,7 +75,7 @@ impl WindowElementState {
     }
 }
 
-pub struct ElementCx<'a, H: UiHost = fret_app::App> {
+pub struct ElementCx<'a, H: UiHost> {
     pub app: &'a mut H,
     pub window: AppWindowId,
     pub frame_id: FrameId,

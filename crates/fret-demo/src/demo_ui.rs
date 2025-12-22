@@ -10,10 +10,11 @@ use fret_app::Model;
 use fret_core::{AppWindowId, Axis, Color, ExternalDragPayloadKind, PlatformCapabilities, Px};
 use fret_editor::{InspectorEditHint, InspectorEditLayout};
 use fret_editor::{ViewportToolManager, ViewportToolMode};
-use fret_ui::{
-    AppMenuBar, Bar, BoundTextInput, ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel,
-    HeaderBody, PanelThemeBackground, Row, Scroll, Split, Stack, Text, TextArea, TextInput,
-    Toolbar, ToolbarItem, UiLayerId, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
+use fret_ui_app::{
+    App, AppMenuBar, Bar, BoundTextInput, ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel,
+    GenericWidget, HeaderBody, PanelThemeBackground, Row, Scroll, Split, Stack, Text, TextArea,
+    TextInput, Toolbar, ToolbarItem, UiLayerId, UiTree, VirtualList, VirtualListDataSource,
+    VirtualListRow,
 };
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -22,7 +23,7 @@ use std::sync::Arc;
 #[derive(Default)]
 pub struct DebugHudService {
     enabled: bool,
-    per_window: HashMap<AppWindowId, fret_ui::UiDebugFrameStats>,
+    per_window: HashMap<AppWindowId, fret_ui_app::UiDebugFrameStats>,
 }
 
 #[derive(Default)]
@@ -59,7 +60,7 @@ pub struct DebugInspectorSnapshot {
     pub captured: Option<fret_core::NodeId>,
     pub barrier_root: Option<fret_core::NodeId>,
     pub active_layer_roots: Vec<fret_core::NodeId>,
-    pub layers: Vec<fret_ui::UiDebugLayerInfo>,
+    pub layers: Vec<fret_ui_app::UiDebugLayerInfo>,
     pub outlines: Vec<DebugInspectorOutline>,
 }
 
@@ -79,11 +80,11 @@ impl DebugHudService {
         self.enabled
     }
 
-    pub fn set_stats(&mut self, window: AppWindowId, stats: fret_ui::UiDebugFrameStats) {
+    pub fn set_stats(&mut self, window: AppWindowId, stats: fret_ui_app::UiDebugFrameStats) {
         self.per_window.insert(window, stats);
     }
 
-    pub fn stats(&self, window: AppWindowId) -> Option<fret_ui::UiDebugFrameStats> {
+    pub fn stats(&self, window: AppWindowId) -> Option<fret_ui_app::UiDebugFrameStats> {
         self.per_window.get(&window).copied()
     }
 }
@@ -197,22 +198,22 @@ impl DemoToolbar {
     }
 }
 
-impl fret_ui::Widget for DemoToolbar {
-    fn event(&mut self, cx: &mut fret_ui::EventCx<'_>, event: &fret_core::Event) {
+impl GenericWidget<App> for DemoToolbar {
+    fn event(&mut self, cx: &mut fret_ui_app::EventCx<'_>, event: &fret_core::Event) {
         if self.rebuild_items(cx.app) {
-            cx.invalidate_self(fret_ui::Invalidation::Layout);
-            cx.invalidate_self(fret_ui::Invalidation::Paint);
+            cx.invalidate_self(fret_ui_app::Invalidation::Layout);
+            cx.invalidate_self(fret_ui_app::Invalidation::Paint);
             cx.request_redraw();
         }
         self.toolbar.event(cx, event);
     }
 
-    fn layout(&mut self, cx: &mut fret_ui::LayoutCx<'_>) -> fret_core::Size {
+    fn layout(&mut self, cx: &mut fret_ui_app::LayoutCx<'_>) -> fret_core::Size {
         let _ = self.rebuild_items(cx.app);
         self.toolbar.layout(cx)
     }
 
-    fn paint(&mut self, cx: &mut fret_ui::PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut fret_ui_app::PaintCx<'_>) {
         self.toolbar.paint(cx);
     }
 }
@@ -264,7 +265,7 @@ impl DemoTopBarStatus {
         format!("{play} | {title}{suffix}")
     }
 
-    fn sync_text(&mut self, cx: &mut fret_ui::LayoutCx<'_>) -> bool {
+    fn sync_text(&mut self, cx: &mut fret_ui_app::LayoutCx<'_>) -> bool {
         let playing = cx.app.global::<DemoPlayState>().is_some_and(|s| s.playing);
         let scene_rev = cx
             .app
@@ -301,15 +302,15 @@ impl DemoTopBarStatus {
     }
 }
 
-impl fret_ui::Widget for DemoTopBarStatus {
-    fn event(&mut self, _cx: &mut fret_ui::EventCx<'_>, _event: &fret_core::Event) {}
+impl GenericWidget<App> for DemoTopBarStatus {
+    fn event(&mut self, _cx: &mut fret_ui_app::EventCx<'_>, _event: &fret_core::Event) {}
 
-    fn layout(&mut self, cx: &mut fret_ui::LayoutCx<'_>) -> fret_core::Size {
+    fn layout(&mut self, cx: &mut fret_ui_app::LayoutCx<'_>) -> fret_core::Size {
         let _ = self.sync_text(cx);
         self.text_metrics.map(|m| m.size).unwrap_or_default()
     }
 
-    fn paint(&mut self, cx: &mut fret_ui::PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut fret_ui_app::PaintCx<'_>) {
         let theme = cx.theme().snapshot();
         let Some(blob) = self.text_blob else {
             return;
@@ -360,7 +361,7 @@ impl DebugHudPanel {
         }
     }
 
-    fn sync_text(&mut self, cx: &mut fret_ui::LayoutCx<'_>) -> bool {
+    fn sync_text(&mut self, cx: &mut fret_ui_app::LayoutCx<'_>) -> bool {
         let Some(window) = cx.window else {
             return false;
         };
@@ -432,17 +433,17 @@ impl DebugHudPanel {
     }
 }
 
-impl fret_ui::Widget for DebugHudPanel {
-    fn event(&mut self, _cx: &mut fret_ui::EventCx<'_>, _event: &fret_core::Event) {}
+impl GenericWidget<App> for DebugHudPanel {
+    fn event(&mut self, _cx: &mut fret_ui_app::EventCx<'_>, _event: &fret_core::Event) {}
 
-    fn layout(&mut self, cx: &mut fret_ui::LayoutCx<'_>) -> fret_core::Size {
+    fn layout(&mut self, cx: &mut fret_ui_app::LayoutCx<'_>) -> fret_core::Size {
         let _ = self.sync_text(cx);
         let size = self.text_metrics.map(|m| m.size).unwrap_or_default();
         let pad = cx.theme().snapshot().metrics.padding_md;
         fret_core::Size::new(size.width + pad + pad, size.height + pad + pad)
     }
 
-    fn paint(&mut self, cx: &mut fret_ui::PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut fret_ui_app::PaintCx<'_>) {
         let theme = cx.theme().snapshot();
         let Some(blob) = self.text_blob else {
             return;
@@ -509,7 +510,7 @@ impl DebugInspectorOverlay {
         }
     }
 
-    fn sync_text(&mut self, cx: &mut fret_ui::PaintCx<'_>, snapshot: &DebugInspectorSnapshot) {
+    fn sync_text(&mut self, cx: &mut fret_ui_app::PaintCx<'_>, snapshot: &DebugInspectorSnapshot) {
         let cursor = snapshot
             .cursor
             .map(|p| (p.x.0.round() as i32, p.y.0.round() as i32));
@@ -557,14 +558,14 @@ impl DebugInspectorOverlay {
     }
 }
 
-impl fret_ui::Widget for DebugInspectorOverlay {
-    fn event(&mut self, _cx: &mut fret_ui::EventCx<'_>, _event: &fret_core::Event) {}
+impl GenericWidget<App> for DebugInspectorOverlay {
+    fn event(&mut self, _cx: &mut fret_ui_app::EventCx<'_>, _event: &fret_core::Event) {}
 
-    fn layout(&mut self, cx: &mut fret_ui::LayoutCx<'_>) -> fret_core::Size {
+    fn layout(&mut self, cx: &mut fret_ui_app::LayoutCx<'_>) -> fret_core::Size {
         cx.available
     }
 
-    fn paint(&mut self, cx: &mut fret_ui::PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut fret_ui_app::PaintCx<'_>) {
         let Some(window) = cx.window else {
             return;
         };

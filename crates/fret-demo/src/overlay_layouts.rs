@@ -1,5 +1,5 @@
 use fret_core::Size;
-use fret_ui::{LayoutCx, PaintCx, Widget};
+use fret_ui_app::{App, GenericWidget, LayoutCx, PaintCx};
 
 #[derive(Debug, Clone, Copy)]
 pub struct CenteredOverlayLayout {
@@ -13,7 +13,7 @@ impl CenteredOverlayLayout {
     }
 }
 
-impl Widget for CenteredOverlayLayout {
+impl GenericWidget<App> for CenteredOverlayLayout {
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
         let Some((&backdrop, rest)) = cx.children.split_first() else {
             return cx.available;
@@ -69,7 +69,7 @@ impl CornerOverlayLayout {
     }
 }
 
-impl Widget for CornerOverlayLayout {
+impl GenericWidget<App> for CornerOverlayLayout {
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
         let Some(&child) = cx.children.first() else {
             return cx.available;

@@ -4,7 +4,7 @@ use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp, Size,
     TextConstraints, TextMetrics, TextStyle, TextWrap, ids::FontId,
 };
-use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, PanelThemeBackground, Widget};
+use fret_ui_app::{EventCx, GenericWidget, Invalidation, LayoutCx, PaintCx, PanelThemeBackground};
 
 #[derive(Debug)]
 pub struct OverlayBackdrop {
@@ -31,7 +31,7 @@ impl OverlayBackdrop {
     }
 }
 
-impl Widget for OverlayBackdrop {
+impl GenericWidget<App> for OverlayBackdrop {
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
         cx.available
     }
@@ -94,7 +94,7 @@ impl OverlayPanelLayout {
     }
 }
 
-impl Widget for OverlayPanelLayout {
+impl GenericWidget<App> for OverlayPanelLayout {
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
         let Some((&backdrop, rest)) = cx.children.split_first() else {
             return cx.available;
@@ -307,7 +307,7 @@ impl Default for CommandPalette {
     }
 }
 
-impl Widget for CommandPalette {
+impl GenericWidget<App> for CommandPalette {
     fn is_focusable(&self) -> bool {
         true
     }

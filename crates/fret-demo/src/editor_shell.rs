@@ -16,7 +16,9 @@ use fret_editor::{
     PropertyEditKind, PropertyEditRequest, PropertyEditService, PropertyLeaf, PropertyMeta,
     PropertyNode, PropertyPath, PropertyTree, PropertyTypeTag, PropertyValue,
 };
-use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, ThemeSnapshot, TreeView, Widget};
+use fret_ui_app::{
+    EventCx, GenericWidget, Invalidation, LayoutCx, PaintCx, ThemeSnapshot, TreeView,
+};
 
 #[derive(Debug, Default, Clone)]
 pub struct DemoSelection {
@@ -745,7 +747,7 @@ impl HierarchyPanel {
     }
 }
 
-impl Widget for HierarchyPanel {
+impl GenericWidget<App> for HierarchyPanel {
     fn is_focusable(&self) -> bool {
         true
     }
@@ -1314,7 +1316,7 @@ impl InspectorPanel {
     }
 }
 
-impl Widget for InspectorPanel {
+impl GenericWidget<App> for InspectorPanel {
     fn is_focusable(&self) -> bool {
         true
     }
@@ -1873,7 +1875,7 @@ mod inspector_tests {
         let selection = app.models_mut().insert(DemoSelection::default());
         let world = app.models_mut().insert(DemoWorld::default());
 
-        let mut ui = fret_ui::UiTree::new();
+        let mut ui = fret_ui_app::UiTree::new();
         ui.set_window(AppWindowId::default());
 
         let inspector = ui.create_node(InspectorPanel::new(selection, world));

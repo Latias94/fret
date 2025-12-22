@@ -56,9 +56,9 @@ use fret_runner_winit_wgpu::{
     EngineFrameUpdate, RenderTargetUpdate, WindowCreateSpec, WinitDriver, WinitRunner,
     WinitRunnerConfig,
 };
-use fret_ui::Invalidation;
-use fret_ui::dock::ViewportMarquee;
-use fret_ui::{
+use fret_ui_app::Invalidation;
+use fret_ui_app::dock::ViewportMarquee;
+use fret_ui_app::{
     ContextMenuService, DockManager, DockPanel, DockPanelContentService, Theme, ThemeConfig,
     UiTree, ViewportPanel,
 };
@@ -516,7 +516,7 @@ impl DemoDriver {
                     cx.window,
                     preferred,
                     key.clone(),
-                    fret_ui::dock::ActivatePanelOptions { focus: true },
+                    fret_ui_app::dock::ActivatePanelOptions { focus: true },
                 );
                 AssetOpenDecision::Handled
             }),
@@ -544,7 +544,7 @@ impl DemoDriver {
                     cx.window,
                     preferred,
                     key.clone(),
-                    fret_ui::dock::ActivatePanelOptions { focus: true },
+                    fret_ui_app::dock::ActivatePanelOptions { focus: true },
                 );
 
                 AssetOpenDecision::Handled
@@ -1567,10 +1567,10 @@ impl DemoDriver {
                 .and_then(|t| match &t.interaction {
                     Some(ViewportInteraction::TranslateGizmo(g)) => match g.constraint {
                         TranslateAxisConstraint::Free => {
-                            Some(fret_ui::dock::ViewportGizmoPart::Handle)
+                            Some(fret_ui_app::dock::ViewportGizmoPart::Handle)
                         }
-                        TranslateAxisConstraint::X => Some(fret_ui::dock::ViewportGizmoPart::X),
-                        TranslateAxisConstraint::Y => Some(fret_ui::dock::ViewportGizmoPart::Y),
+                        TranslateAxisConstraint::X => Some(fret_ui_app::dock::ViewportGizmoPart::X),
+                        TranslateAxisConstraint::Y => Some(fret_ui_app::dock::ViewportGizmoPart::Y),
                     },
                     _ => None,
                 });
@@ -1613,7 +1613,7 @@ impl DemoDriver {
             let marker_uv_from_world = lead_pos.map(|pos| camera.world_to_uv(pos));
             let marker_uv = marker_uv_from_world.or_else(|| lead.and_then(viewport_grid_marker_uv));
 
-            let marker = marker_uv.map(|uv| fret_ui::dock::ViewportMarker {
+            let marker = marker_uv.map(|uv| fret_ui_app::dock::ViewportMarker {
                 uv,
                 color: theme.colors.viewport_marker,
             });
@@ -1628,20 +1628,24 @@ impl DemoDriver {
                 ))
             } else {
                 lead.and_then(viewport_grid_cell_uv_rect)
-                    .map(|(min_uv, max_uv)| fret_ui::dock::ViewportSelectionRect {
-                        min_uv,
-                        max_uv,
-                        fill: selection_fill,
-                        stroke: selection_stroke,
-                    })
+                    .map(
+                        |(min_uv, max_uv)| fret_ui_app::dock::ViewportSelectionRect {
+                            min_uv,
+                            max_uv,
+                            fill: selection_fill,
+                            stroke: selection_stroke,
+                        },
+                    )
             };
 
             let gizmo = match tool_mode {
-                ViewportToolMode::Move => marker_uv.map(|center_uv| fret_ui::dock::ViewportGizmo {
-                    center_uv,
-                    axis_len_px: fret_core::geometry::Px(80.0),
-                    highlight: gizmo_highlight,
-                }),
+                ViewportToolMode::Move => {
+                    marker_uv.map(|center_uv| fret_ui_app::dock::ViewportGizmo {
+                        center_uv,
+                        axis_len_px: fret_core::geometry::Px(80.0),
+                        highlight: gizmo_highlight,
+                    })
+                }
                 _ => None,
             };
             let rotate_gizmo = match tool_mode {
@@ -1649,7 +1653,7 @@ impl DemoDriver {
                     let highlight = rotate_gizmo_state.is_some_and(|(active, hover)| {
                         active || hover == Some((window, vp.target))
                     });
-                    fret_ui::dock::ViewportRotateGizmo {
+                    fret_ui_app::dock::ViewportRotateGizmo {
                         center_uv,
                         radius_px: fret_core::geometry::Px(56.0),
                         highlight,
@@ -1749,14 +1753,14 @@ fn viewport_selection_rect_around_uv(
     half_size_px: f32,
     fill: Color,
     stroke: Color,
-) -> fret_ui::dock::ViewportSelectionRect {
+) -> fret_ui_app::dock::ViewportSelectionRect {
     let (tw, th) = target_px_size;
     let tw = (tw.max(1) as f32).max(1.0);
     let th = (th.max(1) as f32).max(1.0);
     let (u, v) = center_uv;
     let du = half_size_px / tw;
     let dv = half_size_px / th;
-    fret_ui::dock::ViewportSelectionRect {
+    fret_ui_app::dock::ViewportSelectionRect {
         min_uv: ((u - du).clamp(0.0, 1.0), (v - dv).clamp(0.0, 1.0)),
         max_uv: ((u + du).clamp(0.0, 1.0), (v + dv).clamp(0.0, 1.0)),
         fill,
@@ -4569,7 +4573,7 @@ impl WinitDriver for DemoDriver {
                                 window,
                                 preferred,
                                 key.clone(),
-                                fret_ui::dock::ActivatePanelOptions { focus: true },
+                                fret_ui_app::dock::ActivatePanelOptions { focus: true },
                             );
                         }
                     }
@@ -4582,7 +4586,7 @@ impl WinitDriver for DemoDriver {
                             window,
                             preferred,
                             key.clone(),
-                            fret_ui::dock::ActivatePanelOptions { focus: true },
+                            fret_ui_app::dock::ActivatePanelOptions { focus: true },
                         );
                     }
                     UnsavedContinuation::CloseWindow { window: w } => {
@@ -4629,7 +4633,7 @@ impl WinitDriver for DemoDriver {
                         window,
                         preferred,
                         key.clone(),
-                        fret_ui::dock::ActivatePanelOptions { focus: true },
+                        fret_ui_app::dock::ActivatePanelOptions { focus: true },
                     );
 
                     for &w in self.logical_windows.keys() {
@@ -4778,7 +4782,7 @@ impl WinitDriver for DemoDriver {
                 .unwrap_or(true);
 
             let mut marquee_update: Option<Option<ViewportMarquee>> = None;
-            let mut drag_line_update: Option<Option<fret_ui::dock::ViewportDragLine>> = None;
+            let mut drag_line_update: Option<Option<fret_ui_app::dock::ViewportDragLine>> = None;
             let mut request_redraw = false;
             let mut request_animation_frame = false;
 
@@ -5413,7 +5417,7 @@ impl WinitDriver for DemoDriver {
                             PanOrbitKind::Pan => theme.colors.viewport_drag_line_pan,
                         };
 
-                        drag_line_update = Some(Some(fret_ui::dock::ViewportDragLine {
+                        drag_line_update = Some(Some(fret_ui_app::dock::ViewportDragLine {
                             a_uv: m.start_uv,
                             b_uv: m.current_uv,
                             color,

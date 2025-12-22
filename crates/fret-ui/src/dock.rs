@@ -3238,7 +3238,7 @@ fn dock_space_regions(bounds: Rect) -> (Rect, Rect) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fret_app::App;
+    use crate::test_host::TestHost;
     use fret_core::{
         AppWindowId, Event, InternalDragEvent, InternalDragKind, Scene, SceneOp, TextConstraints,
         TextMetrics, TextService, TextStyle,
@@ -3300,7 +3300,7 @@ mod tests {
         let root = ui.create_node(DockSpace::new(AppWindowId::default()));
         ui.set_root(root);
 
-        let mut app = App::new();
+        let mut app = TestHost::new();
         let mut text = FakeTextService::default();
 
         let size = Size::new(Px(800.0), Px(600.0));
@@ -3334,7 +3334,7 @@ mod tests {
         let root = ui.create_node(DockSpace::new(window));
         ui.set_root(root);
 
-        let mut app = App::new();
+        let mut app = TestHost::new();
         app.with_global_mut(DockManager::default, |dock, _app| {
             let tabs = dock.graph.insert_node(DockNode::Tabs {
                 tabs: vec![PanelKey::new("core.hierarchy")],

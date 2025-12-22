@@ -4,9 +4,8 @@ use fret_core::{
 };
 
 use crate::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
-use fret_app::Model;
 use fret_core::KeyCode;
-use fret_runtime::{CommandId, Effect};
+use fret_runtime::{CommandId, Effect, Model};
 
 #[derive(Debug, Clone)]
 pub struct Text {

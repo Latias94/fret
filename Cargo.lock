@@ -705,7 +705,7 @@ dependencies = [
  "fret-editor",
  "fret-render",
  "fret-runner-winit-wgpu",
- "fret-ui",
+ "fret-ui-app",
  "serde",
  "serde_json",
  "tracing",
@@ -781,7 +781,6 @@ dependencies = [
 name = "fret-ui"
 version = "0.1.0"
 dependencies = [
- "fret-app",
  "fret-core",
  "fret-runtime",
  "serde",
@@ -789,6 +788,14 @@ dependencies = [
  "slotmap",
  "taffy",
  "tracing",
+]
+
+[[package]]
+name = "fret-ui-app"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-ui",
 ]
 
 [[package]]

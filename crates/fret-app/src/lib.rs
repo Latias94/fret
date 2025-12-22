@@ -2,6 +2,7 @@ pub mod app;
 pub mod drag;
 pub mod keymap;
 pub mod menu;
+pub mod ui_host;
 pub mod when_expr;
 
 pub use app::App;

@@ -4,7 +4,6 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-fret-app = { path = "../fret-app" }
 fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }
 slotmap.workspace = true

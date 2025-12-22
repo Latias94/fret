@@ -1,5 +1,5 @@
 use fret_core::{Event, Px, Size};
-use fret_ui::{EventCx, LayoutCx, PaintCx, TextArea, Widget};
+use fret_ui_app::{App, EventCx, GenericWidget, LayoutCx, PaintCx, TextArea};
 
 #[derive(Debug, Default)]
 pub struct TextProbeService {
@@ -55,7 +55,7 @@ impl TextProbePanel {
     }
 }
 
-impl Widget for TextProbePanel {
+impl GenericWidget<App> for TextProbePanel {
     fn is_focusable(&self) -> bool {
         true
     }

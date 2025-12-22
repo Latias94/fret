@@ -4,7 +4,7 @@ use fret_core::{
     ViewportMapping,
 };
 use fret_editor::{ProjectEntryKind, ProjectService};
-use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use fret_ui_app::{App, EventCx, GenericWidget, Invalidation, LayoutCx, PaintCx};
 
 use crate::asset_drop::{AssetDropRequest, AssetDropService, AssetDropTarget};
 use crate::project_panel::ProjectDragPayload;
@@ -48,7 +48,7 @@ impl ViewportAssetDropPanel {
             return None;
         }
 
-        let dock = app.global::<fret_ui::DockManager>()?;
+        let dock = app.global::<fret_ui_app::DockManager>()?;
         let panel = dock.panels.get(&self.panel)?;
         let vp = panel.viewport?;
 
@@ -102,7 +102,7 @@ impl ViewportAssetDropPanel {
     }
 }
 
-impl Widget for ViewportAssetDropPanel {
+impl GenericWidget<App> for ViewportAssetDropPanel {
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
         let Event::InternalDrag(drag) = event else {
             return;
@@ -143,7 +143,7 @@ impl Widget for ViewportAssetDropPanel {
                     return;
                 };
 
-                let dock = cx.app.global::<fret_ui::DockManager>();
+                let dock = cx.app.global::<fret_ui_app::DockManager>();
                 let target = dock
                     .and_then(|d| d.panels.get(&self.panel))
                     .and_then(|p| p.viewport)

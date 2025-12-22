@@ -48,7 +48,7 @@ pub struct DemoSceneNodeV1 {
 }
 
 impl DemoSceneNodeV1 {
-    fn from_tree_node(snapshot: &SceneSnapshot, node: &fret_ui::TreeNode) -> Self {
+    fn from_tree_node(snapshot: &SceneSnapshot, node: &fret_ui_app::TreeNode) -> Self {
         let mut entity = snapshot.world.entity_snapshot(node.id);
         entity.name = node.label.clone();
         let children = node
@@ -63,9 +63,9 @@ impl DemoSceneNodeV1 {
         }
     }
 
-    fn to_tree_and_entities(&self) -> (fret_ui::TreeNode, Vec<(u64, DemoEntity)>) {
+    fn to_tree_and_entities(&self) -> (fret_ui_app::TreeNode, Vec<(u64, DemoEntity)>) {
         let mut entities: Vec<(u64, DemoEntity)> = vec![(self.id, self.entity.clone())];
-        let children: Vec<fret_ui::TreeNode> = self
+        let children: Vec<fret_ui_app::TreeNode> = self
             .children
             .iter()
             .map(|c| {
@@ -75,7 +75,7 @@ impl DemoSceneNodeV1 {
             })
             .collect();
         (
-            fret_ui::TreeNode::new(self.id, self.entity.name.clone()).with_children(children),
+            fret_ui_app::TreeNode::new(self.id, self.entity.name.clone()).with_children(children),
             entities,
         )
     }

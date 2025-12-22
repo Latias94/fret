@@ -2,13 +2,12 @@ use crate::{
     UiHost,
     widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget},
 };
-use fret_app::{KeymapService, ModelId};
 use fret_core::PlatformCapabilities;
 use fret_core::{
     AppWindowId, Event, FrameId, KeyCode, NodeId, Point, PointerEvent, Rect, Scene, Size,
     TextService,
 };
-use fret_runtime::{CommandId, Effect, InputContext, KeyChord, Platform};
+use fret_runtime::{CommandId, Effect, InputContext, KeyChord, KeymapService, ModelId, Platform};
 use slotmap::SlotMap;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
@@ -66,7 +65,7 @@ struct UiLayer {
     hit_testable: bool,
 }
 
-pub struct Node<H: UiHost = fret_app::App> {
+pub struct Node<H: UiHost> {
     pub widget: Option<Box<dyn Widget<H>>>,
     pub parent: Option<NodeId>,
     pub children: Vec<NodeId>,
@@ -191,7 +190,7 @@ impl ObservationIndex {
     }
 }
 
-pub struct UiTree<H: UiHost = fret_app::App> {
+pub struct UiTree<H: UiHost> {
     nodes: SlotMap<NodeId, Node<H>>,
     layers: SlotMap<UiLayerId, UiLayer>,
     layer_order: Vec<UiLayerId>,
@@ -1383,8 +1382,8 @@ impl<H: UiHost> UiTree<H> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fret_app::App;
     use fret_core::{Scene, TextConstraints, TextMetrics, TextService, TextStyle, TextWrap};
+    use fret_runtime::Model;
 
     #[derive(Default)]
     struct FakeTextService;
@@ -1409,11 +1408,11 @@ mod tests {
     }
 
     struct ObservingWidget {
-        model: fret_app::Model<u32>,
+        model: Model<u32>,
     }
 
-    impl Widget for ObservingWidget {
-        fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+    impl<H: UiHost> Widget<H> for ObservingWidget {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
             cx.observe_model(self.model, Invalidation::Layout);
             let _ = cx.text.prepare(
                 "x",
@@ -1430,7 +1429,7 @@ mod tests {
             Size::new(fret_core::Px(10.0), fret_core::Px(10.0))
         }
 
-        fn paint(&mut self, cx: &mut PaintCx<'_>) {
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
             cx.observe_model(self.model, Invalidation::Paint);
             let _ = cx.scene;
         }
@@ -1438,7 +1437,7 @@ mod tests {
 
     #[test]
     fn model_change_invalidates_observers() {
-        let mut app = App::new();
+        let mut app = crate::test_host::TestHost::new();
         let model = app.models_mut().insert(0u32);
 
         let mut ui = UiTree::new();
