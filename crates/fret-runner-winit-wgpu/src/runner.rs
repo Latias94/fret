@@ -1434,6 +1434,11 @@ impl<D: WinitDriver> WinitRunner<D> {
         // If the mouse was released outside any window, winit may not deliver a `MouseInput`
         // event to the source window. Synthesize a Drop targeted at the source window using an
         // out-of-bounds local position so DockSpace treats it as a tear-off request.
+        if let Some(d) = self.app.drag_mut() {
+            if d.kind == fret_app::DragKind::DockPanel {
+                d.dragging = true;
+            }
+        }
         self.dispatch_internal_drag_event(source_window, InternalDragKind::Drop, {
             Point::new(Px(-32.0), Px(-32.0))
         });
@@ -1842,6 +1847,11 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 {
                     if self.saw_left_mouse_release_this_turn || macos_is_left_mouse_down() {
                         return;
+                    }
+                    if let Some(d) = self.app.drag_mut() {
+                        if d.kind == fret_app::DragKind::DockPanel {
+                            d.dragging = true;
+                        }
                     }
                     self.dispatch_internal_drag_event(source_window, InternalDragKind::Drop, {
                         Point::new(Px(-32.0), Px(-32.0))

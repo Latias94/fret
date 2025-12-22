@@ -780,6 +780,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
             panel: PanelKey,
         }
 
+        fn is_outside_bounds_with_margin(bounds: Rect, position: Point, margin: Px) -> bool {
+            position.x.0 < bounds.origin.x.0 - margin.0
+                || position.y.0 < bounds.origin.y.0 - margin.0
+                || position.x.0 > bounds.origin.x.0 + bounds.size.width.0 + margin.0
+                || position.y.0 > bounds.origin.y.0 + bounds.size.height.0 + margin.0
+        }
+
         let allow_viewport_hover = cx.app.drag().is_none_or(|d| !d.dragging);
         let dock_drag = cx.app.drag().and_then(|d| {
             d.payload::<DockPanelDragPayload>()
@@ -1317,7 +1324,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     let dx = position.x.0 - drag.start.x.0;
                                     let dy = position.y.0 - drag.start.y.0;
                                     let dist2 = dx * dx + dy * dy;
-                                    if !dragging && dist2 > 16.0 {
+                                    // Match ImGui's default drag threshold (~6px).
+                                    if !dragging && dist2 > 36.0 {
                                         dragging = true;
                                     }
                                 } else if !dragging {
@@ -1329,9 +1337,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 if dragging {
                                     let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off;
                                     let bounds = self.last_bounds;
+                                    let margin = Px(10.0);
                                     let requested_tear_off = allow_tear_off
                                         && drag.source_window == self.window
-                                        && !bounds.contains(position)
+                                        && is_outside_bounds_with_margin(bounds, position, margin)
                                         && self.tear_off_in_flight.is_none();
 
                                     if requested_tear_off {
@@ -1409,8 +1418,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 let bounds = self.last_bounds;
                                 if !dragging {
                                     if drag.source_window != self.window {
-                                        dragging = true;
-                                    } else if !bounds.contains(position) {
                                         dragging = true;
                                     }
                                 }
