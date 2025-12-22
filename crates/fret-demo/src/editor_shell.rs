@@ -1238,9 +1238,13 @@ impl InspectorPanel {
 
     fn layout_columns(&mut self, theme: ThemeSnapshot, bounds: Rect) {
         let (pad_x, _pad_y) = Self::padding(theme);
-        let width = bounds.size.width.0;
-        let min_w = 120.0f32;
-        let max_w = 260.0f32.min(width * 0.55);
+        let width = if bounds.size.width.0.is_finite() {
+            bounds.size.width.0.max(0.0)
+        } else {
+            0.0
+        };
+        let max_w = 260.0f32.min(width * 0.55).max(0.0);
+        let min_w = 120.0f32.min(max_w);
 
         let mut desired = 0.0f32;
         for row in &self.prepared {
@@ -1249,7 +1253,12 @@ impl InspectorPanel {
             };
             desired = desired.max(label.metrics.size.width.0);
         }
-        desired = (desired + pad_x.0 * 2.0).clamp(min_w, max_w);
+        if max_w <= 0.0 {
+            self.label_col_w = Px(0.0);
+            return;
+        }
+
+        let desired = (desired + pad_x.0 * 2.0).clamp(min_w, max_w);
         self.label_col_w = Px(desired);
     }
 
@@ -1817,5 +1826,56 @@ impl Widget for InspectorPanel {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod inspector_tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{TextBlobId, TextMetrics, TextService};
+
+    #[derive(Default)]
+    struct FakeTextService;
+
+    impl TextService for FakeTextService {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    #[test]
+    fn inspector_layout_does_not_panic_with_zero_width() {
+        let mut app = App::new();
+        let selection = app.models_mut().insert(DemoSelection::default());
+        let world = app.models_mut().insert(DemoWorld::default());
+
+        let mut ui = fret_ui::UiTree::new();
+        ui.set_window(AppWindowId::default());
+
+        let inspector = ui.create_node(InspectorPanel::new(selection, world));
+        ui.set_root(inspector);
+
+        let mut text = FakeTextService::default();
+        let _ = ui.layout(
+            &mut app,
+            &mut text,
+            inspector,
+            Size::new(Px(0.0), Px(100.0)),
+            1.0,
+        );
     }
 }
