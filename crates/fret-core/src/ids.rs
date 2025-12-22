@@ -18,3 +18,6 @@ pub struct FrameId(pub u64);
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TimerToken(pub u64);
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ExternalDropToken(pub u64);

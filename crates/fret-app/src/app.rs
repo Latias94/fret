@@ -53,6 +53,13 @@ pub enum Effect {
     ClipboardGetText {
         window: AppWindowId,
     },
+    ExternalDropReadAll {
+        window: AppWindowId,
+        token: fret_core::ExternalDropToken,
+    },
+    ExternalDropRelease {
+        token: fret_core::ExternalDropToken,
+    },
     ViewportInput(fret_core::ViewportInputEvent),
     Dock(fret_core::DockOp),
     ImeAllow {

@@ -172,6 +172,32 @@ impl ProjectService {
         Ok(imported)
     }
 
+    pub fn import_files_from_bytes(
+        &mut self,
+        sources: impl IntoIterator<Item = (String, Vec<u8>)>,
+    ) -> io::Result<Vec<AssetGuid>> {
+        let dest_dir = self.assets_root.join("Imports");
+        std::fs::create_dir_all(&dest_dir)?;
+
+        let mut imported: Vec<AssetGuid> = Vec::new();
+
+        for (name, bytes) in sources {
+            let Some(file_name) = sanitize_import_file_name(&name) else {
+                warn!(name = %name, "skipping import with invalid file name");
+                continue;
+            };
+
+            let dest_path = unique_dest_path(&dest_dir, &file_name);
+            std::fs::write(&dest_path, bytes)?;
+
+            let meta_path = meta_path_for(&dest_path);
+            let meta = read_or_create_meta(&meta_path)?;
+            imported.push(AssetGuid(meta.guid));
+        }
+
+        Ok(imported)
+    }
+
     pub fn move_guid_into_folder(
         &mut self,
         dragged: AssetGuid,
@@ -448,6 +474,25 @@ fn unique_dest_path(dest_dir: &Path, file_name: &std::ffi::OsStr) -> PathBuf {
     }
 
     dest_dir.join(format!("file-{}", Uuid::new_v4()))
+}
+
+fn sanitize_import_file_name(name: &str) -> Option<std::ffi::OsString> {
+    let name = name.trim();
+    if name.is_empty() {
+        return None;
+    }
+
+    let base = name
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(name)
+        .trim()
+        .trim_matches(['/', '\\']);
+    if base.is_empty() || base == "." || base == ".." {
+        return None;
+    }
+
+    Some(std::ffi::OsString::from(base))
 }
 
 fn move_path_and_meta(from: &Path, to: &Path) -> io::Result<()> {

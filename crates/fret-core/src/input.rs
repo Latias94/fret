@@ -1,8 +1,7 @@
 use crate::{
-    AppWindowId, RenderTargetId, TimerToken,
+    AppWindowId, ExternalDropToken, RenderTargetId, TimerToken,
     geometry::{Point, Px},
 };
-use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MouseButton {
@@ -296,16 +295,39 @@ pub enum PointerEvent {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExternalDragKind {
-    EnterFiles(Vec<PathBuf>),
-    OverFiles(Vec<PathBuf>),
-    DropFiles(Vec<PathBuf>),
+    EnterFiles(ExternalDragFiles),
+    OverFiles(ExternalDragFiles),
+    DropFiles(ExternalDragFiles),
     Leave,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExternalDragFiles {
+    pub token: ExternalDropToken,
+    pub files: Vec<ExternalDragFile>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExternalDragFile {
+    pub name: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExternalDragEvent {
     pub position: Point,
     pub kind: ExternalDragKind,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExternalDropDataEvent {
+    pub token: ExternalDropToken,
+    pub files: Vec<ExternalDropFileData>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExternalDropFileData {
+    pub name: String,
+    pub bytes: Vec<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -331,6 +353,7 @@ pub enum Event {
     },
     Ime(ImeEvent),
     ExternalDrag(ExternalDragEvent),
+    ExternalDropData(ExternalDropDataEvent),
     InternalDrag(InternalDragEvent),
     KeyDown {
         key: KeyCode,

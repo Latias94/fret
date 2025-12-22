@@ -3618,34 +3618,15 @@ impl WinitDriver for DemoDriver {
                         app.request_redraw(window);
                     }
                 }
-                fret_core::ExternalDragKind::DropFiles(paths) => {
+                fret_core::ExternalDragKind::DropFiles(files) => {
                     if state.ui.is_layer_visible(state.layers.external_dnd) {
                         state.ui.set_layer_visible(state.layers.external_dnd, false);
                         app.request_redraw(window);
                     }
-
-                    let mut imported: Vec<fret_editor::AssetGuid> = Vec::new();
-                    if let Some(project) = app.global_mut::<ProjectService>() {
-                        match project.import_files(paths.clone()) {
-                            Ok(guids) => imported = guids,
-                            Err(err) => {
-                                tracing::error!(error = %err, "project import failed");
-                            }
-                        }
-                        if let Err(err) = project.rescan() {
-                            tracing::error!(error = %err, "failed to rescan project after import");
-                        }
-                    }
-
-                    if let Some(last) = imported.last().copied() {
-                        app.with_global_mut(ProjectSelectionService::default, |s, _app| {
-                            s.set_selected_guid(Some(last));
-                        });
-                    }
-
-                    for &w in self.logical_windows.keys() {
-                        app.request_redraw(w);
-                    }
+                    app.push_effect(Effect::ExternalDropReadAll {
+                        window,
+                        token: files.token,
+                    });
                 }
                 fret_core::ExternalDragKind::Leave => {
                     if state.ui.is_layer_visible(state.layers.external_dnd) {
@@ -3653,6 +3634,40 @@ impl WinitDriver for DemoDriver {
                         app.request_redraw(window);
                     }
                 }
+            }
+        }
+
+        if let fret_core::Event::ExternalDropData(payload) = event {
+            let mut imported: Vec<fret_editor::AssetGuid> = Vec::new();
+            if let Some(project) = app.global_mut::<ProjectService>() {
+                let items: Vec<(String, Vec<u8>)> = payload
+                    .files
+                    .iter()
+                    .map(|f| (f.name.clone(), f.bytes.clone()))
+                    .collect();
+                match project.import_files_from_bytes(items) {
+                    Ok(guids) => imported = guids,
+                    Err(err) => {
+                        tracing::error!(error = %err, "project import failed");
+                    }
+                }
+                if let Err(err) = project.rescan() {
+                    tracing::error!(error = %err, "failed to rescan project after import");
+                }
+            }
+
+            app.push_effect(Effect::ExternalDropRelease {
+                token: payload.token,
+            });
+
+            if let Some(last) = imported.last().copied() {
+                app.with_global_mut(ProjectSelectionService::default, |s, _app| {
+                    s.set_selected_guid(Some(last));
+                });
+            }
+
+            for &w in self.logical_windows.keys() {
+                app.request_redraw(w);
             }
         }
 

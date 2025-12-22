@@ -7,9 +7,10 @@ use std::{
 
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{
-    Event, ExternalDragEvent, ExternalDragKind, InternalDragEvent, InternalDragKind, Modifiers,
-    MouseButton, PlatformCapabilities, Point, Px, Rect, Scene, Size, TextService,
-    ViewportInputEvent,
+    Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
+    ExternalDropDataEvent, ExternalDropFileData, ExternalDropToken, InternalDragEvent,
+    InternalDragKind, Modifiers, MouseButton, PlatformCapabilities, Point, Px, Rect, Scene, Size,
+    TextService, ViewportInputEvent,
 };
 use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
 use slotmap::SlotMap;
@@ -483,6 +484,7 @@ struct WindowRuntime<S> {
     is_focused: bool,
     ime_allowed: bool,
     external_drag_files: Vec<std::path::PathBuf>,
+    external_drag_token: Option<ExternalDropToken>,
     user: S,
 }
 
@@ -522,6 +524,9 @@ pub struct WinitRunner<D: WinitDriver> {
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
     internal_drag_hover_window: Option<fret_core::AppWindowId>,
     internal_drag_hover_pos: Option<Point>,
+
+    external_drop_next_token: u64,
+    external_drop_payloads: HashMap<ExternalDropToken, Vec<std::path::PathBuf>>,
 }
 
 #[derive(Debug, Clone)]
@@ -568,7 +573,31 @@ impl<D: WinitDriver> WinitRunner<D> {
             cursor_screen_pos: None,
             internal_drag_hover_window: None,
             internal_drag_hover_pos: None,
+            external_drop_next_token: 1,
+            external_drop_payloads: HashMap::new(),
         }
+    }
+
+    fn allocate_external_drop_token(&mut self) -> ExternalDropToken {
+        let token = ExternalDropToken(self.external_drop_next_token);
+        self.external_drop_next_token = self.external_drop_next_token.saturating_add(1);
+        token
+    }
+
+    fn external_drag_files(
+        token: ExternalDropToken,
+        paths: &[std::path::PathBuf],
+    ) -> ExternalDragFiles {
+        let files = paths
+            .iter()
+            .map(|p| ExternalDragFile {
+                name: p
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| p.to_string_lossy().to_string()),
+            })
+            .collect();
+        ExternalDragFiles { token, files }
     }
 
     fn text_service_mut_ptr(&mut self) -> *mut dyn TextService {
@@ -630,6 +659,7 @@ impl<D: WinitDriver> WinitRunner<D> {
                 is_focused: false,
                 ime_allowed: false,
                 external_drag_files: Vec::new(),
+                external_drag_token: None,
                 user,
             }
         });
@@ -892,6 +922,37 @@ impl<D: WinitDriver> WinitRunner<D> {
                                 &Event::ClipboardText(text),
                             );
                         }
+                    }
+                    Effect::ExternalDropReadAll { window, token } => {
+                        let Some(paths) = self.external_drop_payloads.get(&token).cloned() else {
+                            continue;
+                        };
+
+                        let mut files: Vec<ExternalDropFileData> = Vec::new();
+                        for path in paths {
+                            let Ok(bytes) = std::fs::read(&path) else {
+                                continue;
+                            };
+                            let name = path
+                                .file_name()
+                                .map(|n| n.to_string_lossy().to_string())
+                                .unwrap_or_else(|| path.to_string_lossy().to_string());
+                            files.push(ExternalDropFileData { name, bytes });
+                        }
+
+                        let text_ptr = self.text_service_mut_ptr();
+                        if let Some(state) = self.windows.get_mut(window) {
+                            self.driver.handle_event(
+                                &mut self.app,
+                                unsafe { &mut *text_ptr },
+                                window,
+                                &mut state.user,
+                                &Event::ExternalDropData(ExternalDropDataEvent { token, files }),
+                            );
+                        }
+                    }
+                    Effect::ExternalDropRelease { token } => {
+                        self.external_drop_payloads.remove(&token);
                     }
                     Effect::ViewportInput(event) => {
                         self.driver.viewport_input(&mut self.app, event);
@@ -1568,53 +1629,102 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
             }
             WindowEvent::HoveredFile(path) => {
                 tracing::debug!(path = %path.display(), "winit hovered file");
-                if let Some(state) = self.windows.get_mut(app_window) {
+                let existing = self
+                    .windows
+                    .get(app_window)
+                    .and_then(|s| s.external_drag_token);
+                let token = existing.unwrap_or_else(|| self.allocate_external_drop_token());
+
+                let (position, kind, files) = {
+                    let Some(state) = self.windows.get_mut(app_window) else {
+                        self.drain_effects(event_loop);
+                        return;
+                    };
+                    if state.external_drag_token.is_none() {
+                        state.external_drag_token = Some(token);
+                    }
                     let position = state.cursor_pos;
                     state.external_drag_files.push(path);
                     let files = state.external_drag_files.clone();
+                    let kind = if state.external_drag_files.len() == 1 {
+                        ExternalDragKind::EnterFiles(Self::external_drag_files(token, &files))
+                    } else {
+                        ExternalDragKind::OverFiles(Self::external_drag_files(token, &files))
+                    };
+                    (position, kind, files)
+                };
+
+                self.external_drop_payloads.insert(token, files);
+
+                if let Some(state) = self.windows.get_mut(app_window) {
                     self.driver.handle_event(
                         &mut self.app,
                         unsafe { &mut *text_ptr },
                         app_window,
                         &mut state.user,
-                        &Event::ExternalDrag(ExternalDragEvent {
-                            position,
-                            kind: if state.external_drag_files.len() == 1 {
-                                ExternalDragKind::EnterFiles(files)
-                            } else {
-                                ExternalDragKind::OverFiles(files)
-                            },
-                        }),
+                        &Event::ExternalDrag(ExternalDragEvent { position, kind }),
                     );
                 }
                 self.drain_effects(event_loop);
             }
             WindowEvent::DroppedFile(path) => {
                 tracing::debug!(path = %path.display(), "winit dropped file");
-                if let Some(state) = self.windows.get_mut(app_window) {
+                let existing = self
+                    .windows
+                    .get(app_window)
+                    .and_then(|s| s.external_drag_token);
+                let token = existing.unwrap_or_else(|| self.allocate_external_drop_token());
+
+                let (position, kind, files) = {
+                    let Some(state) = self.windows.get_mut(app_window) else {
+                        self.drain_effects(event_loop);
+                        return;
+                    };
+                    if state.external_drag_token.is_none() {
+                        state.external_drag_token = Some(token);
+                    }
                     let position = state.cursor_pos;
                     if state.external_drag_files.is_empty() {
                         state.external_drag_files.push(path);
                     }
                     let files = std::mem::take(&mut state.external_drag_files);
+                    state.external_drag_token = None;
+                    let kind =
+                        ExternalDragKind::DropFiles(Self::external_drag_files(token, &files));
+                    (position, kind, files)
+                };
+
+                self.external_drop_payloads.insert(token, files);
+
+                if let Some(state) = self.windows.get_mut(app_window) {
                     self.driver.handle_event(
                         &mut self.app,
                         unsafe { &mut *text_ptr },
                         app_window,
                         &mut state.user,
-                        &Event::ExternalDrag(ExternalDragEvent {
-                            position,
-                            kind: ExternalDragKind::DropFiles(files),
-                        }),
+                        &Event::ExternalDrag(ExternalDragEvent { position, kind }),
                     );
                 }
                 self.drain_effects(event_loop);
             }
             WindowEvent::HoveredFileCancelled => {
                 tracing::debug!("winit hovered file cancelled");
-                if let Some(state) = self.windows.get_mut(app_window) {
+                let (position, token) = {
+                    let Some(state) = self.windows.get_mut(app_window) else {
+                        self.drain_effects(event_loop);
+                        return;
+                    };
                     let position = state.cursor_pos;
                     state.external_drag_files.clear();
+                    let token = state.external_drag_token.take();
+                    (position, token)
+                };
+
+                if let Some(token) = token {
+                    self.external_drop_payloads.remove(&token);
+                }
+
+                if let Some(state) = self.windows.get_mut(app_window) {
                     self.driver.handle_event(
                         &mut self.app,
                         unsafe { &mut *text_ptr },
@@ -1654,7 +1764,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 self.app.request_redraw(app_window);
             }
             WindowEvent::CursorMoved { position, .. } => {
-                let (pos, buttons, external_drag_files, screen_pos) = {
+                let (pos, buttons, external_drag_token, screen_pos) = {
                     let Some(state) = self.windows.get_mut(app_window) else {
                         return;
                     };
@@ -1671,7 +1781,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     (
                         state.cursor_pos,
                         state.pressed_buttons,
-                        state.external_drag_files.clone(),
+                        state.external_drag_token,
                         screen_pos,
                     )
                 };
@@ -1680,7 +1790,14 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     self.cursor_screen_pos = Some(p);
                 }
 
-                if !external_drag_files.is_empty() {
+                if let Some(token) = external_drag_token {
+                    let paths = self
+                        .external_drop_payloads
+                        .get(&token)
+                        .cloned()
+                        .unwrap_or_default();
+                    let kind =
+                        ExternalDragKind::OverFiles(Self::external_drag_files(token, &paths));
                     if let Some(state) = self.windows.get_mut(app_window) {
                         self.driver.handle_event(
                             &mut self.app,
@@ -1689,7 +1806,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                             &mut state.user,
                             &Event::ExternalDrag(ExternalDragEvent {
                                 position: pos,
-                                kind: ExternalDragKind::OverFiles(external_drag_files),
+                                kind,
                             }),
                         );
                     }

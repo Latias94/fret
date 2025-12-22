@@ -20,11 +20,12 @@ pub use dock_layout::{
 pub use dock_op::DockOp;
 pub use geometry::{Corners, Edges, Point, Px, Rect, Size};
 pub use ids::{
-    AppWindowId, DockNodeId, FontId, FrameId, ImageId, NodeId, RenderTargetId, TextBlobId, TickId,
-    TimerToken,
+    AppWindowId, DockNodeId, ExternalDropToken, FontId, FrameId, ImageId, NodeId, RenderTargetId,
+    TextBlobId, TickId, TimerToken,
 };
 pub use input::{
-    Event, ExternalDragEvent, ExternalDragKind, ImeEvent, InternalDragEvent, InternalDragKind,
+    Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
+    ExternalDropDataEvent, ExternalDropFileData, ImeEvent, InternalDragEvent, InternalDragKind,
     KeyCode, Modifiers, MouseButton, PointerEvent,
 };
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputKind};

@@ -6,7 +6,7 @@ use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 #[derive(Debug, Default)]
 pub struct DndProbe {
     hovering: bool,
-    last_path: Option<String>,
+    last_name: Option<String>,
 }
 
 impl DndProbe {
@@ -22,13 +22,13 @@ impl Widget for DndProbe {
                 match &drag.kind {
                     ExternalDragKind::EnterFiles(files) | ExternalDragKind::OverFiles(files) => {
                         self.hovering = true;
-                        self.last_path = files.last().map(|p| p.display().to_string());
-                        tracing::info!(count = files.len(), "external drag hover");
+                        self.last_name = files.files.last().map(|f| f.name.clone());
+                        tracing::info!(count = files.files.len(), "external drag hover");
                     }
                     ExternalDragKind::DropFiles(files) => {
                         self.hovering = false;
-                        self.last_path = files.last().map(|p| p.display().to_string());
-                        tracing::info!(count = files.len(), "external drag drop");
+                        self.last_name = files.files.last().map(|f| f.name.clone());
+                        tracing::info!(count = files.files.len(), "external drag drop");
                     }
                     ExternalDragKind::Leave => {
                         self.hovering = false;
@@ -40,7 +40,7 @@ impl Widget for DndProbe {
             }
             Event::Pointer(fret_core::PointerEvent::Down { button, .. }) => {
                 if *button == MouseButton::Right {
-                    self.last_path = None;
+                    self.last_name = None;
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                 }
@@ -80,6 +80,6 @@ impl Widget for DndProbe {
         });
 
         // Note: no text rendering yet; rely on logs for path details.
-        let _ = &self.last_path;
+        let _ = &self.last_name;
     }
 }
