@@ -86,6 +86,10 @@ pub enum Effect {
 pub enum WindowRequest {
     Create(CreateWindowRequest),
     Close(AppWindowId),
+    Raise {
+        window: AppWindowId,
+        sender: Option<AppWindowId>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

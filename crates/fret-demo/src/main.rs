@@ -389,6 +389,33 @@ impl DemoDriver {
             .or_insert_with(DemoViewportCamera::default)
     }
 
+    fn activate_panel_tab_best_effort(
+        &self,
+        app: &mut App,
+        from_window: fret_core::AppWindowId,
+        panel: PanelKey,
+    ) -> Option<(fret_core::AppWindowId, fret_core::DockOp)> {
+        if let Some(op) = asset_open::activate_panel_tab(app, from_window, panel.clone()) {
+            return Some((from_window, op));
+        }
+        if let Some(main) = self.main_window {
+            if main != from_window {
+                if let Some(op) = asset_open::activate_panel_tab(app, main, panel.clone()) {
+                    return Some((main, op));
+                }
+            }
+        }
+        for (&w, _) in &self.logical_windows {
+            if w == from_window || Some(w) == self.main_window {
+                continue;
+            }
+            if let Some(op) = asset_open::activate_panel_tab(app, w, panel.clone()) {
+                return Some((w, op));
+            }
+        }
+        None
+    }
+
     fn install_asset_drop_rules(&mut self) {
         self.asset_drop_registry = AssetDropRegistry::default();
 
@@ -508,15 +535,17 @@ impl DemoDriver {
                     }
                 }
 
-                let op =
-                    asset_open::activate_panel_tab(cx.app, cx.window, key.clone()).or_else(|| {
-                        cx.driver
-                            .main_window
-                            .and_then(|w| asset_open::activate_panel_tab(cx.app, w, key))
-                    });
-
-                if let Some(op) = op {
+                if let Some((target_window, op)) =
+                    cx.driver
+                        .activate_panel_tab_best_effort(cx.app, cx.window, key.clone())
+                {
                     cx.app.push_effect(Effect::Dock(op));
+                    if target_window != cx.window {
+                        cx.app.push_effect(Effect::Window(WindowRequest::Raise {
+                            window: target_window,
+                            sender: Some(cx.window),
+                        }));
+                    }
                 }
                 AssetOpenDecision::Handled
             }),
@@ -536,14 +565,17 @@ impl DemoDriver {
                 }
 
                 let key = PanelKey::new("core.scene");
-                let op =
-                    asset_open::activate_panel_tab(cx.app, cx.window, key.clone()).or_else(|| {
-                        cx.driver
-                            .main_window
-                            .and_then(|w| asset_open::activate_panel_tab(cx.app, w, key))
-                    });
-                if let Some(op) = op {
+                if let Some((target_window, op)) =
+                    cx.driver
+                        .activate_panel_tab_best_effort(cx.app, cx.window, key.clone())
+                {
                     cx.app.push_effect(Effect::Dock(op));
+                    if target_window != cx.window {
+                        cx.app.push_effect(Effect::Window(WindowRequest::Raise {
+                            window: target_window,
+                            sender: Some(cx.window),
+                        }));
+                    }
                 }
 
                 AssetOpenDecision::Handled
@@ -4562,27 +4594,32 @@ impl WinitDriver for DemoDriver {
                         let ok = self.create_and_open_new_scene(app);
                         if ok {
                             let key = PanelKey::new("core.scene");
-                            let op = asset_open::activate_panel_tab(app, window, key.clone())
-                                .or_else(|| {
-                                    self.main_window
-                                        .and_then(|w| asset_open::activate_panel_tab(app, w, key))
-                                });
-                            if let Some(op) = op {
+                            if let Some((target_window, op)) =
+                                self.activate_panel_tab_best_effort(app, window, key.clone())
+                            {
                                 app.push_effect(Effect::Dock(op));
+                                if target_window != window {
+                                    app.push_effect(Effect::Window(WindowRequest::Raise {
+                                        window: target_window,
+                                        sender: Some(window),
+                                    }));
+                                }
                             }
                         }
                     }
                     UnsavedContinuation::OpenScene { guid } => {
                         let _ = self.open_scene_by_guid(app, guid);
                         let key = PanelKey::new("core.scene");
-                        let op = asset_open::activate_panel_tab(app, window, key.clone()).or_else(
-                            || {
-                                self.main_window
-                                    .and_then(|w| asset_open::activate_panel_tab(app, w, key))
-                            },
-                        );
-                        if let Some(op) = op {
+                        if let Some((target_window, op)) =
+                            self.activate_panel_tab_best_effort(app, window, key.clone())
+                        {
                             app.push_effect(Effect::Dock(op));
+                            if target_window != window {
+                                app.push_effect(Effect::Window(WindowRequest::Raise {
+                                    window: target_window,
+                                    sender: Some(window),
+                                }));
+                            }
                         }
                     }
                     UnsavedContinuation::CloseWindow { window: w } => {
@@ -4623,13 +4660,16 @@ impl WinitDriver for DemoDriver {
             "scene.new" => {
                 if self.new_scene_or_prompt(app, window) {
                     let key = PanelKey::new("core.scene");
-                    let op =
-                        asset_open::activate_panel_tab(app, window, key.clone()).or_else(|| {
-                            self.main_window
-                                .and_then(|w| asset_open::activate_panel_tab(app, w, key))
-                        });
-                    if let Some(op) = op {
+                    if let Some((target_window, op)) =
+                        self.activate_panel_tab_best_effort(app, window, key.clone())
+                    {
                         app.push_effect(Effect::Dock(op));
+                        if target_window != window {
+                            app.push_effect(Effect::Window(WindowRequest::Raise {
+                                window: target_window,
+                                sender: Some(window),
+                            }));
+                        }
                     }
 
                     for &w in self.logical_windows.keys() {

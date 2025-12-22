@@ -1073,6 +1073,24 @@ impl<D: WinitDriver> WinitRunner<D> {
                                 .window_created(&mut self.app, &create, new_window);
                             self.app.request_redraw(new_window);
                         }
+                        WindowRequest::Raise {
+                            window,
+                            sender: sender_id,
+                        } => {
+                            let sender_window = sender_id
+                                .and_then(|id| self.windows.get(id))
+                                .map(|w| w.window.as_ref());
+                            if let Some(state) = self.windows.get(window) {
+                                let _ = bring_window_to_front(&state.window, sender_window);
+                                state.window.request_redraw();
+                            }
+                            #[cfg(target_os = "macos")]
+                            {
+                                if self.windows.contains_key(window) {
+                                    self.enqueue_window_front(window, sender_id, None, now);
+                                }
+                            }
+                        }
                     },
                 }
             }

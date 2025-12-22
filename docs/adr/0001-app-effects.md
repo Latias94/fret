@@ -46,10 +46,11 @@ Examples of “non-minimal” effects already in use:
 ## Consequences
 
 - Multi-window features (docking tear-off) become predictable: dock emits a `WindowRequest::Create(...)`, runner creates the OS window, and then dock graph is updated.
+- Cross-window UX can be made deterministic without direct platform calls: UI can emit a best-effort `WindowRequest::Raise { .. }` when activating a panel in another window.
 - Borrow scopes stay small: widgets mutate models and enqueue effects without needing to hold platform objects.
 
 ## Future Work
 
 - Add additional effect types (clipboard, cursor, drag-and-drop, IME requests).
-- Add more window operations (set title, set cursor, clipboard, drag-and-drop).
+- Add more window operations (set title, set cursor, set window placement, native menu integration).
 - Add scheduling hooks (timers/animations) as effects or as a sibling subsystem.
