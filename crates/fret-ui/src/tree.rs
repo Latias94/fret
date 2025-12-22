@@ -7,7 +7,9 @@ use fret_core::{
     AppWindowId, Event, FrameId, KeyCode, NodeId, Point, PointerEvent, Rect, Scene, Size,
     TextService,
 };
-use fret_runtime::{CommandId, Effect, InputContext, KeyChord, KeymapService, ModelId, Platform};
+use fret_runtime::{
+    CommandId, DragKind, Effect, InputContext, KeyChord, KeymapService, ModelId, Platform,
+};
 use slotmap::SlotMap;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
@@ -198,6 +200,7 @@ pub struct UiTree<H: UiHost> {
     base_layer: Option<UiLayerId>,
     focus: Option<NodeId>,
     captured: Option<NodeId>,
+    last_internal_drag_target: Option<NodeId>,
     window: Option<AppWindowId>,
     suppress_text_input_until_key_up: Option<KeyCode>,
     pending_shortcut: PendingShortcut,
@@ -219,6 +222,7 @@ impl<H: UiHost> Default for UiTree<H> {
             base_layer: None,
             focus: None,
             captured: None,
+            last_internal_drag_target: None,
             window: None,
             suppress_text_input_until_key_up: None,
             pending_shortcut: PendingShortcut::default(),
@@ -721,12 +725,46 @@ impl<H: UiHost> UiTree<H> {
             _ => None,
         };
 
+        // Dock tab drags must be routed to the `DockSpace` root, even if the cursor is over
+        // another widget (e.g. menu bar) or outside all hit-testable widgets (tear-off).
+        let dock_drag_target = (|| {
+            if !matches!(event, Event::InternalDrag(_)) {
+                return None;
+            }
+            let window = self.window?;
+            let drag = app.drag()?;
+            if !drag.cross_window_hover || drag.kind != DragKind::DockPanel {
+                return None;
+            }
+            let dock = app.global::<crate::DockManager>()?;
+            let target = dock.dock_space_node(window)?;
+            self.node_in_any_layer(target, &active_layers)
+                .then_some(target)
+        })();
+
         let target = if let Some(captured) = captured {
             Some(captured)
+        } else if let Some(target) = dock_drag_target {
+            Some(target)
         } else if let Some(pos) = event_position(event) {
-            self.hit_test_layers(&active_layers, pos)
-                .or(barrier_root)
-                .or(Some(default_root))
+            let hit = self.hit_test_layers(&active_layers, pos);
+
+            if matches!(event, Event::InternalDrag(_)) {
+                if let Some(node) = hit {
+                    self.last_internal_drag_target = Some(node);
+                } else if self
+                    .last_internal_drag_target
+                    .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
+                {
+                    self.last_internal_drag_target = None;
+                }
+            }
+
+            hit.or_else(|| {
+                matches!(event, Event::InternalDrag(_)).then_some(self.last_internal_drag_target)?
+            })
+            .or(barrier_root)
+            .or(Some(default_root))
         } else {
             self.focus.or(Some(default_root))
         };

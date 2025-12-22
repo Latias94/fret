@@ -25,6 +25,10 @@ impl TestHost {
     pub(crate) fn new() -> Self {
         Self::default()
     }
+
+    pub(crate) fn take_effects(&mut self) -> Vec<Effect> {
+        std::mem::take(&mut self.effects)
+    }
 }
 
 impl UiHost for TestHost {

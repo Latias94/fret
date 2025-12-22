@@ -63,6 +63,7 @@ struct ViewportHover {
 pub struct DockManager {
     pub graph: DockGraph,
     pub panels: HashMap<PanelKey, DockPanel>,
+    dock_space_nodes: HashMap<fret_core::AppWindowId, NodeId>,
     hover: Option<DockDropTarget>,
     dock_tab_context_menu: Option<DockTabContextMenu>,
     viewport_hover: Option<ViewportHover>,
@@ -249,6 +250,7 @@ impl Default for DockManager {
         Self {
             graph: DockGraph::new(),
             panels: HashMap::new(),
+            dock_space_nodes: HashMap::new(),
             hover: None,
             dock_tab_context_menu: None,
             viewport_hover: None,
@@ -260,6 +262,14 @@ impl Default for DockManager {
 }
 
 impl DockManager {
+    pub fn dock_space_node(&self, window: fret_core::AppWindowId) -> Option<NodeId> {
+        self.dock_space_nodes.get(&window).copied()
+    }
+
+    pub fn register_dock_space_node(&mut self, window: fret_core::AppWindowId, node: NodeId) {
+        self.dock_space_nodes.insert(window, node);
+    }
+
     pub fn take_dock_tab_context_menu(
         &mut self,
     ) -> Option<(fret_core::AppWindowId, DockNodeId, PanelKey, Point)> {
@@ -780,6 +790,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             let Some(dock) = cx.app.global_mut::<DockManager>() else {
                 return;
             };
+            dock.register_dock_space_node(self.window, cx.node);
             let Some(root) = dock.graph.window_root(self.window) else {
                 return;
             };
@@ -1221,7 +1232,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         }
                                         None => {
                                             if allow_tear_off
-                                                && float_zone(self.last_bounds).contains(*position)
+                                                && (!self.last_bounds.contains(*position)
+                                                    || float_zone(self.last_bounds)
+                                                        .contains(*position))
                                             {
                                                 pending_effects.push(Effect::Dock(
                                                     DockOp::RequestFloatPanelToNewWindow {
@@ -1293,7 +1306,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 if dragging {
                                     let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off;
                                     let bounds = self.last_bounds;
-                                    if allow_tear_off && float_zone(bounds).contains(position) {
+                                    if allow_tear_off && !bounds.contains(position) {
+                                        dock.hover = Some(DockDropTarget::Float {
+                                            window: self.window,
+                                        });
+                                    } else if allow_tear_off
+                                        && float_zone(bounds).contains(position)
+                                    {
                                         dock.hover = Some(DockDropTarget::Float {
                                             window: self.window,
                                         });
@@ -1333,13 +1352,17 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             let prev_hover = dock.hover.clone();
                             if let Some(drag) = dock_drag.as_ref() {
                                 let mut dragging = drag.dragging;
-                                if drag.source_window != self.window && !dragging {
-                                    dragging = true;
+                                let bounds = self.last_bounds;
+                                if !dragging {
+                                    if drag.source_window != self.window {
+                                        dragging = true;
+                                    } else if !bounds.contains(position) {
+                                        dragging = true;
+                                    }
                                 }
 
                                 if dragging {
                                     let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off;
-                                    let bounds = self.last_bounds;
                                     if allow_tear_off && float_zone(bounds).contains(position) {
                                         dock.hover = Some(DockDropTarget::Float {
                                             window: self.window,
@@ -1386,7 +1409,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         }
                                         None => {
                                             if allow_tear_off
-                                                && float_zone(self.last_bounds).contains(position)
+                                                && (!self.last_bounds.contains(position)
+                                                    || float_zone(self.last_bounds)
+                                                        .contains(position))
                                             {
                                                 pending_effects.push(Effect::Dock(
                                                     DockOp::RequestFloatPanelToNewWindow {
@@ -1734,6 +1759,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.last_bounds = cx.bounds;
         let hidden = hidden_bounds(Size::new(Px(0.0), Px(0.0)));
+
+        if let Some(dock) = cx.app.global_mut::<DockManager>() {
+            dock.register_dock_space_node(self.window, cx.node);
+        }
 
         let Some((active_bounds, layout)) = (|| {
             let dock = cx.app.global::<DockManager>()?;
@@ -3024,15 +3053,15 @@ fn paint_drop_overlay(
             if w != window {
                 return;
             }
-            let zone = float_zone(bounds);
+            let zone = bounds;
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(10_000),
                 rect: zone,
                 background: Color {
-                    a: 0.35,
+                    a: 0.10,
                     ..theme.colors.accent
                 },
-                border: Edges::all(Px(2.0)),
+                border: Edges::all(Px(3.0)),
                 border_color: Color {
                     a: 0.85,
                     ..theme.colors.accent
@@ -3230,10 +3259,11 @@ fn dock_space_regions(bounds: Rect) -> (Rect, Rect) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Stack;
     use crate::test_host::TestHost;
     use fret_core::{
-        AppWindowId, Event, InternalDragEvent, InternalDragKind, Scene, SceneOp, TextConstraints,
-        TextMetrics, TextService, TextStyle,
+        AppWindowId, Event, InternalDragEvent, InternalDragKind, PlatformCapabilities, Point, Px,
+        Scene, SceneOp, Size, TextConstraints, TextMetrics, TextService, TextStyle,
     };
 
     #[derive(Default)]
@@ -3360,5 +3390,136 @@ mod tests {
 
         let hover = app.global::<DockManager>().and_then(|d| d.hover.clone());
         assert!(hover.is_none(), "dock hover should be cleared on drop");
+    }
+
+    #[test]
+    fn dock_tab_drop_outside_window_requests_float() {
+        let window = AppWindowId::default();
+
+        let mut ui = crate::UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(DockSpace::new(window));
+        ui.set_root(root);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![PanelKey::new("core.hierarchy")],
+                active: 0,
+            });
+            dock.graph.set_window_root(window, tabs);
+            dock.panels.insert(
+                PanelKey::new("core.hierarchy"),
+                DockPanel {
+                    title: "Hierarchy".to_string(),
+                    color: Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+        });
+
+        app.begin_cross_window_drag_with_kind(
+            DragKind::DockPanel,
+            window,
+            Point::new(Px(24.0), Px(12.0)),
+            DockPanelDragPayload {
+                panel: PanelKey::new("core.hierarchy"),
+            },
+        );
+        if let Some(drag) = app.drag_mut() {
+            drag.dragging = true;
+        }
+
+        let mut text = FakeTextService;
+        let size = Size::new(Px(800.0), Px(600.0));
+        let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::InternalDrag(InternalDragEvent {
+                position: Point::new(Px(-32.0), Px(12.0)),
+                kind: InternalDragKind::Drop,
+            }),
+        );
+
+        let effects = app.take_effects();
+        assert!(
+            effects.iter().any(|e| matches!(
+                e,
+                Effect::Dock(DockOp::RequestFloatPanelToNewWindow { panel, .. })
+                    if *panel == PanelKey::new("core.hierarchy")
+            )),
+            "expected a float request effect when dropping outside the window"
+        );
+    }
+
+    #[test]
+    fn dock_tab_drop_outside_routes_to_dock_space() {
+        let window = AppWindowId::default();
+
+        let mut ui = crate::UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(Stack::new());
+        let dock_space = ui.create_node(DockSpace::new(window));
+        ui.add_child(root, dock_space);
+        ui.set_root(root);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![PanelKey::new("core.hierarchy")],
+                active: 0,
+            });
+            dock.graph.set_window_root(window, tabs);
+            dock.panels.insert(
+                PanelKey::new("core.hierarchy"),
+                DockPanel {
+                    title: "Hierarchy".to_string(),
+                    color: Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+        });
+
+        let mut text = FakeTextService;
+        let size = Size::new(Px(800.0), Px(600.0));
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        app.begin_cross_window_drag_with_kind(
+            DragKind::DockPanel,
+            window,
+            Point::new(Px(24.0), Px(12.0)),
+            DockPanelDragPayload {
+                panel: PanelKey::new("core.hierarchy"),
+            },
+        );
+        if let Some(drag) = app.drag_mut() {
+            drag.dragging = true;
+        }
+
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::InternalDrag(InternalDragEvent {
+                position: Point::new(Px(-32.0), Px(12.0)),
+                kind: InternalDragKind::Drop,
+            }),
+        );
+
+        let effects = app.take_effects();
+        assert!(
+            effects.iter().any(|e| matches!(
+                e,
+                Effect::Dock(DockOp::RequestFloatPanelToNewWindow { panel, .. })
+                    if *panel == PanelKey::new("core.hierarchy")
+            )),
+            "expected DockSpace to receive the drop even when hit-testing fails"
+        );
     }
 }

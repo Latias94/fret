@@ -70,6 +70,60 @@ fn macos_window_log(args: fmt::Arguments<'_>) {
     }
 }
 
+fn dock_tearoff_log(args: fmt::Arguments<'_>) {
+    #[cfg(target_os = "macos")]
+    {
+        use std::{
+            io::Write,
+            sync::{Mutex, OnceLock},
+        };
+
+        if std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_none() {
+            return;
+        }
+
+        static LOG_FILE: OnceLock<Mutex<std::fs::File>> = OnceLock::new();
+
+        let file = LOG_FILE.get_or_init(|| {
+            let _ = std::fs::create_dir_all("target");
+            let path = std::path::Path::new("target").join("fret-dock-tearoff.log");
+            let mut file = std::fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(path)
+                .expect("open fret-dock-tearoff.log");
+            let _ = writeln!(
+                file,
+                "[session] pid={} time={:?}",
+                std::process::id(),
+                std::time::SystemTime::now()
+            );
+            Mutex::new(file)
+        });
+
+        let Ok(mut file) = file.lock() else {
+            return;
+        };
+
+        let _ = writeln!(file, "{}", args);
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[allow(deprecated)]
+fn macos_is_left_mouse_down() -> bool {
+    use objc::runtime::Class;
+    use objc::{msg_send, sel, sel_impl};
+    unsafe {
+        let Some(class) = Class::get("NSEvent") else {
+            return false;
+        };
+        let buttons: u64 = msg_send![class, pressedMouseButtons];
+        (buttons & 1) != 0
+    }
+}
+
 #[cfg(target_os = "macos")]
 #[allow(deprecated)]
 fn bring_window_to_front(window: &Window, sender: Option<&Window>) -> bool {
@@ -533,6 +587,9 @@ pub struct WinitRunner<D: WinitDriver> {
     modifiers: Modifiers,
     raw_modifiers: ModifiersState,
     alt_gr_down: bool,
+    /// True if this event-loop turn already observed a left mouse release via `WindowEvent`.
+    /// On macOS we may also see the same release as a `DeviceEvent`, so this prevents double-drop.
+    saw_left_mouse_release_this_turn: bool,
 
     tick_id: fret_core::TickId,
     frame_id: fret_core::FrameId,
@@ -584,6 +641,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             modifiers: map_modifiers(raw_modifiers, alt_gr_down),
             raw_modifiers,
             alt_gr_down,
+            saw_left_mouse_release_this_turn: false,
             tick_id: fret_core::TickId::default(),
             frame_id: fret_core::FrameId::default(),
             raf_windows: HashSet::new(),
@@ -1030,6 +1088,9 @@ impl<D: WinitDriver> WinitRunner<D> {
                         self.driver.viewport_input(&mut self.app, event);
                     }
                     Effect::Dock(op) => {
+                        if matches!(op, fret_core::DockOp::RequestFloatPanelToNewWindow { .. }) {
+                            dock_tearoff_log(format_args!("[effect-dock] {:?}", op));
+                        }
                         self.driver.dock_op(&mut self.app, op);
                     }
                     Effect::Window(req) => match req {
@@ -1046,6 +1107,12 @@ impl<D: WinitDriver> WinitRunner<D> {
                             }
                         }
                         WindowRequest::Create(create) => {
+                            if matches!(create.kind, CreateWindowKind::DockFloating { .. }) {
+                                dock_tearoff_log(format_args!(
+                                    "[effect-window-create] kind={:?} anchor={:?}",
+                                    create.kind, create.anchor
+                                ));
+                            }
                             let new_window =
                                 match self.create_window_from_request(event_loop, &create) {
                                     Ok(id) => id,
@@ -1218,6 +1285,46 @@ impl<D: WinitDriver> WinitRunner<D> {
             .min()
     }
 
+    #[cfg(target_os = "macos")]
+    fn maybe_finish_dock_drag_released_outside(&mut self) -> bool {
+        let (source_window, current_window, dragging) = {
+            let Some(drag) = self.app.drag() else {
+                return false;
+            };
+            if !drag.cross_window_hover
+                || drag.kind != fret_app::DragKind::DockPanel
+                || macos_is_left_mouse_down()
+                || self.saw_left_mouse_release_this_turn
+            {
+                return false;
+            }
+            (drag.source_window, drag.current_window, drag.dragging)
+        };
+
+        dock_tearoff_log(format_args!(
+            "[poll-up] source={:?} current={:?} screen_pos={:?} dragging={}",
+            source_window, current_window, self.cursor_screen_pos, dragging
+        ));
+
+        // If the mouse was released outside any window, winit may not deliver a `MouseInput`
+        // event to the source window. Synthesize a Drop targeted at the source window using an
+        // out-of-bounds local position so DockSpace treats it as a tear-off request.
+        self.dispatch_internal_drag_event(source_window, InternalDragKind::Drop, {
+            Point::new(Px(-32.0), Px(-32.0))
+        });
+        dock_tearoff_log(format_args!(
+            "[poll-drop] dispatched target={:?}",
+            source_window
+        ));
+
+        if self.app.drag().is_some_and(|d| d.cross_window_hover) {
+            self.app.cancel_drag();
+            let _ = self.clear_internal_drag_hover_if_needed();
+        }
+
+        true
+    }
+
     fn dispatch_pointer_event(
         &mut self,
         window: fret_core::AppWindowId,
@@ -1339,9 +1446,9 @@ impl<D: WinitDriver> WinitRunner<D> {
             .filter(|w| self.screen_pos_in_window(*w, screen_pos))
             .or_else(|| self.window_under_cursor(screen_pos, None))
             .or(self.internal_drag_hover_window);
-        let Some(target) = target else {
-            return false;
-        };
+        // If the cursor is outside all windows (Unity/ImGui-style tear-off), still deliver the
+        // drop to the source window using the last known screen cursor position.
+        let target = target.unwrap_or(drag.source_window);
         let pos = self.local_pos_for_window(target, screen_pos).or_else(|| {
             if self.internal_drag_hover_window == Some(target) {
                 self.internal_drag_hover_pos
@@ -1509,23 +1616,63 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
         _device_id: winit::event::DeviceId,
         event: DeviceEvent,
     ) {
-        let Some(drag) = self.app.drag() else {
-            return;
-        };
-        if !drag.cross_window_hover {
+        if !self.app.drag().is_some_and(|d| d.cross_window_hover) {
             return;
         }
 
-        let DeviceEvent::MouseMotion { delta } = event else {
-            return;
-        };
-        let Some(pos) = self.cursor_screen_pos else {
-            return;
-        };
+        match event {
+            DeviceEvent::MouseMotion { delta } => {
+                let Some(pos) = self.cursor_screen_pos else {
+                    return;
+                };
 
-        self.cursor_screen_pos = Some(PhysicalPosition::new(pos.x + delta.0, pos.y + delta.1));
-        self.route_internal_drag_hover_from_cursor();
-        self.drain_effects(event_loop);
+                self.cursor_screen_pos =
+                    Some(PhysicalPosition::new(pos.x + delta.0, pos.y + delta.1));
+                self.route_internal_drag_hover_from_cursor();
+                self.drain_effects(event_loop);
+            }
+            DeviceEvent::Button {
+                state: ElementState::Released,
+                ..
+            } => {
+                // On macOS, releasing the mouse button outside any window may not deliver a
+                // `WindowEvent::MouseInput` to the source window. Use device events to still
+                // terminate cross-window dock drags (Unity/ImGui-style tear-off).
+                let (source_window, current_window, dragging) = {
+                    let Some(drag) = self.app.drag() else {
+                        return;
+                    };
+                    if drag.kind != fret_app::DragKind::DockPanel {
+                        return;
+                    }
+                    (drag.source_window, drag.current_window, drag.dragging)
+                };
+                dock_tearoff_log(format_args!(
+                    "[device-up] source={:?} current={:?} screen_pos={:?} dragging={}",
+                    source_window, current_window, self.cursor_screen_pos, dragging
+                ));
+
+                #[cfg(target_os = "macos")]
+                {
+                    if self.saw_left_mouse_release_this_turn || macos_is_left_mouse_down() {
+                        return;
+                    }
+                    self.dispatch_internal_drag_event(source_window, InternalDragKind::Drop, {
+                        Point::new(Px(-32.0), Px(-32.0))
+                    });
+                    dock_tearoff_log(format_args!(
+                        "[device-drop] dispatched target={:?}",
+                        source_window
+                    ));
+                }
+                if self.app.drag().is_some_and(|d| d.cross_window_hover) {
+                    self.app.cancel_drag();
+                    let _ = self.clear_internal_drag_hover_if_needed();
+                }
+                self.drain_effects(event_loop);
+            }
+            _ => {}
+        }
     }
 
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
@@ -1947,6 +2094,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     }
                     ElementState::Released => {
                         if button == fret_core::MouseButton::Left {
+                            self.saw_left_mouse_release_this_turn = true;
                             self.route_internal_drag_drop_from_cursor();
                             // Cross-window drags are runner-routed (Enter/Over/Drop), so ensure the
                             // drag session cannot get "stuck" if no widget ends it.
@@ -2097,10 +2245,18 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         self.tick_id.0 = self.tick_id.0.saturating_add(1);
         self.app.set_tick_id(self.tick_id);
+        self.saw_left_mouse_release_this_turn = false;
 
         self.drain_effects(event_loop);
 
         let now = Instant::now();
+
+        #[cfg(target_os = "macos")]
+        {
+            if self.maybe_finish_dock_drag_released_outside() {
+                self.drain_effects(event_loop);
+            }
+        }
 
         let did_pending_front_work = self.process_pending_front_requests(now);
 
@@ -2119,7 +2275,8 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
             });
         }
 
-        let wants_raf = !self.raf_windows.is_empty();
+        let drag_poll = self.app.drag().is_some_and(|d| d.cross_window_hover);
+        let wants_raf = !self.raf_windows.is_empty() || drag_poll;
         self.raf_windows.clear();
 
         let next = match (next_deadline, wants_raf) {
@@ -2129,7 +2286,9 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
             (None, false) => None,
         };
 
-        if let Some(next) = next {
+        if drag_poll {
+            event_loop.set_control_flow(ControlFlow::Poll);
+        } else if let Some(next) = next {
             event_loop.set_control_flow(ControlFlow::WaitUntil(next));
         } else if did_pending_front_work {
             // Ensure we keep turning the event loop while we try to raise a window on macOS.
