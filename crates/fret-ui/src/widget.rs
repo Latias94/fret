@@ -1,6 +1,6 @@
 use crate::Theme;
 use fret_app::InputContext;
-use fret_app::{App, CommandId};
+use fret_app::{App, CommandId, Model, ModelId};
 use fret_core::{AppWindowId, Event, NodeId, Rect, Scene, Size, TextService};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -120,12 +120,17 @@ pub struct LayoutCx<'a> {
     pub available: Size,
     pub scale_factor: f32,
     pub text: &'a mut dyn TextService,
+    pub observe_model: &'a mut dyn FnMut(ModelId, Invalidation),
     pub layout_child: &'a mut dyn FnMut(NodeId, Rect) -> Size,
 }
 
 impl<'a> LayoutCx<'a> {
     pub fn theme(&self) -> &Theme {
         Theme::global(&*self.app)
+    }
+
+    pub fn observe_model<T>(&mut self, model: Model<T>, invalidation: Invalidation) {
+        (self.observe_model)(model.id(), invalidation);
     }
 
     pub fn layout(&mut self, child: NodeId, available: Size) -> Size {
@@ -147,6 +152,7 @@ pub struct PaintCx<'a> {
     pub bounds: Rect,
     pub scale_factor: f32,
     pub text: &'a mut dyn TextService,
+    pub observe_model: &'a mut dyn FnMut(ModelId, Invalidation),
     pub scene: &'a mut Scene,
     pub paint_child: &'a mut dyn FnMut(NodeId, Rect),
     pub child_bounds: &'a dyn Fn(NodeId) -> Option<Rect>,
@@ -155,6 +161,10 @@ pub struct PaintCx<'a> {
 impl<'a> PaintCx<'a> {
     pub fn theme(&self) -> &Theme {
         Theme::global(&*self.app)
+    }
+
+    pub fn observe_model<T>(&mut self, model: Model<T>, invalidation: Invalidation) {
+        (self.observe_model)(model.id(), invalidation);
     }
 
     pub fn paint(&mut self, child: NodeId, bounds: Rect) {

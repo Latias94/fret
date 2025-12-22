@@ -227,6 +227,10 @@ impl App {
         &mut self.commands
     }
 
+    pub fn take_changed_models(&mut self) -> Vec<ModelId> {
+        self.models.take_changed_models()
+    }
+
     pub fn begin_drag<T: Any>(
         &mut self,
         source_window: AppWindowId,
@@ -430,6 +434,8 @@ impl<'a> ModelCx<'a> {
 
 pub struct ModelStore {
     storage: SlotMap<ModelId, ModelEntry>,
+    changed: Vec<ModelId>,
+    changed_dedup: HashSet<ModelId>,
 }
 
 struct ModelEntry {
@@ -441,6 +447,8 @@ impl Default for ModelStore {
     fn default() -> Self {
         Self {
             storage: SlotMap::with_key(),
+            changed: Vec::new(),
+            changed_dedup: HashSet::new(),
         }
     }
 }
@@ -490,6 +498,7 @@ impl<T: Any> Drop for ModelLease<T> {
                     entry.value = Some(value);
                     if self.dirty {
                         entry.revision = entry.revision.saturating_add(1);
+                        store.mark_changed(self.id);
                     }
                 }
             }
@@ -498,6 +507,17 @@ impl<T: Any> Drop for ModelLease<T> {
 }
 
 impl ModelStore {
+    fn mark_changed(&mut self, id: ModelId) {
+        if self.changed_dedup.insert(id) {
+            self.changed.push(id);
+        }
+    }
+
+    pub fn take_changed_models(&mut self) -> Vec<ModelId> {
+        self.changed_dedup.clear();
+        std::mem::take(&mut self.changed)
+    }
+
     pub fn insert<T: Any>(&mut self, value: T) -> Model<T> {
         let id = self.storage.insert(ModelEntry {
             value: Some(Box::new(value)),

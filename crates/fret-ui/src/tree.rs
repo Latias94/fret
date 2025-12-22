@@ -1,5 +1,5 @@
 use crate::widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};
-use fret_app::{App, CommandId, Effect, InputContext, KeyChord, KeymapService, Platform};
+use fret_app::{App, CommandId, Effect, InputContext, KeyChord, KeymapService, ModelId, Platform};
 use fret_core::{
     AppWindowId, Event, KeyCode, NodeId, Point, PointerEvent, Rect, Scene, Size, TextService,
 };
@@ -86,6 +86,77 @@ impl Node {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct ObservationMask {
+    paint: bool,
+    layout: bool,
+    hit_test: bool,
+}
+
+impl ObservationMask {
+    fn add(&mut self, inv: Invalidation) {
+        match inv {
+            Invalidation::Paint => self.paint = true,
+            Invalidation::Layout => {
+                self.layout = true;
+                self.paint = true;
+            }
+            Invalidation::HitTest => {
+                self.hit_test = true;
+                self.layout = true;
+                self.paint = true;
+            }
+        }
+    }
+
+    fn union(self, other: Self) -> Self {
+        Self {
+            paint: self.paint || other.paint,
+            layout: self.layout || other.layout,
+            hit_test: self.hit_test || other.hit_test,
+        }
+    }
+
+    fn is_empty(self) -> bool {
+        !(self.paint || self.layout || self.hit_test)
+    }
+}
+
+#[derive(Default)]
+struct ObservationIndex {
+    by_node: HashMap<NodeId, HashMap<ModelId, ObservationMask>>,
+    by_model: HashMap<ModelId, HashMap<NodeId, ObservationMask>>,
+}
+
+impl ObservationIndex {
+    fn record(&mut self, node: NodeId, observations: Vec<(ModelId, Invalidation)>) {
+        let mut next: HashMap<ModelId, ObservationMask> = HashMap::new();
+        for (model, inv) in observations {
+            next.entry(model).or_default().add(inv);
+        }
+
+        let prev = self.by_node.insert(node, next);
+        let prev = prev.unwrap_or_default();
+        let next = self.by_node.get(&node).cloned().unwrap_or_default();
+
+        for (model, _) in &prev {
+            if next.contains_key(model) {
+                continue;
+            }
+            if let Some(nodes) = self.by_model.get_mut(model) {
+                nodes.remove(&node);
+                if nodes.is_empty() {
+                    self.by_model.remove(model);
+                }
+            }
+        }
+
+        for (model, mask) in next {
+            self.by_model.entry(model).or_default().insert(node, mask);
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct UiTree {
     nodes: SlotMap<NodeId, Node>,
@@ -99,6 +170,8 @@ pub struct UiTree {
     suppress_text_input_until_key_up: Option<KeyCode>,
     pending_shortcut: PendingShortcut,
     replaying_pending_shortcut: bool,
+    observed_in_layout: ObservationIndex,
+    observed_in_paint: ObservationIndex,
 }
 
 impl UiTree {
@@ -894,6 +967,11 @@ impl UiTree {
             }
         };
 
+        let mut observations: Vec<(ModelId, Invalidation)> = Vec::new();
+        let mut observe_model = |model: ModelId, inv: Invalidation| {
+            observations.push((model, inv));
+        };
+
         let size = self.with_widget_mut(node, |widget, tree| {
             let children: Vec<NodeId> = tree
                 .nodes
@@ -910,11 +988,13 @@ impl UiTree {
                 available: bounds.size,
                 scale_factor: sf,
                 text: unsafe { &mut *text_ptr },
+                observe_model: &mut observe_model,
                 layout_child: &mut layout_child,
             };
             widget.layout(&mut cx)
         });
 
+        self.observed_in_layout.record(node, observations);
         if let Some(n) = self.nodes.get_mut(node) {
             n.measured_size = size;
             n.invalidation.layout = false;
@@ -958,6 +1038,11 @@ impl UiTree {
             n.bounds = bounds;
         }
 
+        let mut observations: Vec<(ModelId, Invalidation)> = Vec::new();
+        let mut observe_model = |model: ModelId, inv: Invalidation| {
+            observations.push((model, inv));
+        };
+
         self.with_widget_mut(node, |widget, tree| {
             let children: Vec<NodeId> = tree
                 .nodes
@@ -973,6 +1058,7 @@ impl UiTree {
                 bounds,
                 scale_factor: sf,
                 text: unsafe { &mut *text_ptr },
+                observe_model: &mut observe_model,
                 scene,
                 paint_child: &mut paint_child,
                 child_bounds: &child_bounds,
@@ -980,6 +1066,7 @@ impl UiTree {
             widget.paint(&mut cx);
         });
 
+        self.observed_in_paint.record(node, observations);
         if let Some(n) = self.nodes.get_mut(node) {
             n.invalidation.paint = false;
         }
@@ -1027,6 +1114,57 @@ impl UiTree {
 
     pub fn invalidate(&mut self, node: NodeId, inv: Invalidation) {
         self.mark_invalidation(node, inv);
+    }
+
+    pub fn propagate_model_changes(&mut self, app: &mut App, changed: &[ModelId]) -> bool {
+        if changed.is_empty() {
+            return false;
+        }
+
+        let mut combined: HashMap<NodeId, ObservationMask> = HashMap::new();
+        for &model in changed {
+            if let Some(nodes) = self.observed_in_layout.by_model.get(&model) {
+                for (&node, &mask) in nodes {
+                    combined
+                        .entry(node)
+                        .and_modify(|m| *m = m.union(mask))
+                        .or_insert(mask);
+                }
+            }
+            if let Some(nodes) = self.observed_in_paint.by_model.get(&model) {
+                for (&node, &mask) in nodes {
+                    combined
+                        .entry(node)
+                        .and_modify(|m| *m = m.union(mask))
+                        .or_insert(mask);
+                }
+            }
+        }
+
+        let mut did_invalidate = false;
+        for (node, mask) in combined {
+            if mask.is_empty() || !self.nodes.contains_key(node) {
+                continue;
+            }
+            if mask.hit_test {
+                self.mark_invalidation(node, Invalidation::HitTest);
+            }
+            if mask.layout {
+                self.mark_invalidation(node, Invalidation::Layout);
+            }
+            if mask.paint {
+                self.mark_invalidation(node, Invalidation::Paint);
+            }
+            did_invalidate = true;
+        }
+
+        if did_invalidate {
+            if let Some(window) = self.window {
+                app.request_redraw(window);
+            }
+        }
+
+        did_invalidate
     }
 
     fn visible_layers_in_paint_order(&self) -> impl Iterator<Item = UiLayerId> + '_ {
@@ -1079,6 +1217,99 @@ impl UiTree {
             node = parent;
         }
         self.nodes.contains_key(node).then_some(node)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{Scene, TextConstraints, TextMetrics, TextService, TextStyle, TextWrap};
+
+    #[derive(Default)]
+    struct FakeTextService;
+
+    impl TextService for FakeTextService {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: TextStyle,
+            _constraints: TextConstraints,
+        ) -> (fret_core::TextBlobId, TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+                    baseline: fret_core::Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    struct ObservingWidget {
+        model: fret_app::Model<u32>,
+    }
+
+    impl Widget for ObservingWidget {
+        fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+            cx.observe_model(self.model, Invalidation::Layout);
+            let _ = cx.text.prepare(
+                "x",
+                TextStyle {
+                    font: fret_core::FontId::default(),
+                    size: fret_core::Px(12.0),
+                },
+                TextConstraints {
+                    max_width: None,
+                    wrap: TextWrap::None,
+                    scale_factor: cx.scale_factor,
+                },
+            );
+            Size::new(fret_core::Px(10.0), fret_core::Px(10.0))
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_>) {
+            cx.observe_model(self.model, Invalidation::Paint);
+            let _ = cx.scene;
+        }
+    }
+
+    #[test]
+    fn model_change_invalidates_observers() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(0u32);
+
+        let mut ui = UiTree::new();
+        ui.set_window(AppWindowId::default());
+
+        let node = ui.create_node(ObservingWidget { model });
+        ui.set_root(node);
+
+        let mut text = FakeTextService::default();
+        let bounds = Rect::new(
+            Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+        );
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+        if let Some(n) = ui.nodes.get_mut(node) {
+            n.invalidation.clear();
+        }
+
+        let _ = app.update(model, |_app, v| {
+            *v += 1;
+        });
+        let changed = app.take_changed_models();
+        assert!(changed.contains(&model.id()));
+
+        ui.propagate_model_changes(&mut app, &changed);
+        let n = ui.nodes.get(node).unwrap();
+        assert!(n.invalidation.layout);
+        assert!(n.invalidation.paint);
     }
 }
 

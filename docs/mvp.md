@@ -287,7 +287,7 @@ Notes:
 Status:
 
 - MVP done in `fret-demo` (see `crates/fret-demo/src/editor_shell.rs`).
-  - Note: selection changes currently invalidate the window’s dock panel content nodes to guarantee same-frame refresh; long-term this should be driven by model observation/dependency tracking (GPUI-style `notify`).
+  - Note: selection changes are now propagated via model observation + UI invalidation (ADR 0051, prototype implemented); global services are still manual until service revisions are standardized (P1).
 
 References:
 

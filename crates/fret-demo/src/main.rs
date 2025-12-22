@@ -3553,6 +3553,16 @@ impl WinitDriver for DemoDriver {
             .invalidate(state.layers.dockspace_node, Invalidation::Layout);
     }
 
+    fn handle_model_changes(
+        &mut self,
+        app: &mut App,
+        _window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        changed: &[fret_app::ModelId],
+    ) {
+        state.ui.propagate_model_changes(app, changed);
+    }
+
     fn handle_event(
         &mut self,
         app: &mut App,
