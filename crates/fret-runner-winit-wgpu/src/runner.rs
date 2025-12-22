@@ -806,7 +806,12 @@ impl<D: WinitDriver> WinitRunner<D> {
             return false;
         };
 
-        let hovered = self.window_under_cursor(screen_pos, None);
+        // Prefer the window we already hovered, if the cursor is still inside it. This makes
+        // cross-window drag hover stable even when OS windows overlap and we don't have z-order.
+        let hovered = self
+            .internal_drag_hover_window
+            .filter(|w| self.screen_pos_in_window(*w, screen_pos))
+            .or_else(|| self.window_under_cursor(screen_pos, None));
         if hovered != self.internal_drag_hover_window {
             if let Some(prev) = self.internal_drag_hover_window.take() {
                 let prev_pos = self.internal_drag_hover_pos.take().unwrap_or_default();
@@ -853,8 +858,11 @@ impl<D: WinitDriver> WinitRunner<D> {
             return false;
         };
 
+        // Prefer the last hovered window if possible; window overlap makes hit-testing ambiguous.
         let target = self
-            .window_under_cursor(screen_pos, None)
+            .internal_drag_hover_window
+            .filter(|w| self.screen_pos_in_window(*w, screen_pos))
+            .or_else(|| self.window_under_cursor(screen_pos, None))
             .or(self.internal_drag_hover_window);
         let Some(target) = target else {
             return false;
@@ -904,6 +912,25 @@ impl<D: WinitDriver> WinitRunner<D> {
         let x = inner.x as f64 + state.cursor_pos.x.0 as f64 * scale;
         let y = inner.y as f64 + state.cursor_pos.y.0 as f64 * scale;
         Some(PhysicalPosition::new(x, y))
+    }
+
+    fn screen_pos_in_window(
+        &self,
+        window: fret_core::AppWindowId,
+        screen_pos: PhysicalPosition<f64>,
+    ) -> bool {
+        let Some(state) = self.windows.get(window) else {
+            return false;
+        };
+        let Ok(inner) = state.window.inner_position() else {
+            return false;
+        };
+        let size = state.window.inner_size();
+        let left = inner.x as f64;
+        let top = inner.y as f64;
+        let right = left + size.width as f64;
+        let bottom = top + size.height as f64;
+        screen_pos.x >= left && screen_pos.x < right && screen_pos.y >= top && screen_pos.y < bottom
     }
 
     fn local_pos_for_window(
@@ -1382,6 +1409,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                             // drag session cannot get "stuck" if no widget ends it.
                             if self.app.drag().is_some_and(|d| d.cross_window_hover) {
                                 self.app.cancel_drag();
+                                let _ = self.clear_internal_drag_hover_if_needed();
                             }
                         }
                         self.dispatch_pointer_event(
