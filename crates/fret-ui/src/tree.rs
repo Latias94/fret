@@ -1,11 +1,12 @@
 use crate::widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 use fret_app::{App, CommandId, Effect, InputContext, KeyChord, KeymapService, ModelId, Platform};
 use fret_core::{
-    AppWindowId, Event, KeyCode, NodeId, Point, PointerEvent, Rect, Scene, Size, TextService,
+    AppWindowId, Event, FrameId, KeyCode, NodeId, Point, PointerEvent, Rect, Scene, Size,
+    TextService,
 };
 use slotmap::SlotMap;
 use std::collections::HashMap;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 const PENDING_SHORTCUT_TIMEOUT: Duration = Duration::from_millis(1000);
 
@@ -84,6 +85,18 @@ impl Node {
             },
         }
     }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct UiDebugFrameStats {
+    pub frame_id: FrameId,
+    pub layout_time: Duration,
+    pub paint_time: Duration,
+    pub layout_nodes_visited: u32,
+    pub layout_nodes_performed: u32,
+    pub paint_nodes: u32,
+    pub focus: Option<NodeId>,
+    pub captured: Option<NodeId>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -172,11 +185,22 @@ pub struct UiTree {
     replaying_pending_shortcut: bool,
     observed_in_layout: ObservationIndex,
     observed_in_paint: ObservationIndex,
+
+    debug_enabled: bool,
+    debug_stats: UiDebugFrameStats,
 }
 
 impl UiTree {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn set_debug_enabled(&mut self, enabled: bool) {
+        self.debug_enabled = enabled;
+    }
+
+    pub fn debug_stats(&self) -> UiDebugFrameStats {
+        self.debug_stats
     }
 
     fn clear_pending_shortcut(&mut self, app: &mut App) {
@@ -361,12 +385,25 @@ impl UiTree {
         bounds: Rect,
         scale_factor: f32,
     ) {
+        let started = self.debug_enabled.then_some(Instant::now());
+        if self.debug_enabled {
+            self.debug_stats.frame_id = app.frame_id();
+            self.debug_stats.layout_nodes_visited = 0;
+            self.debug_stats.layout_nodes_performed = 0;
+            self.debug_stats.focus = self.focus;
+            self.debug_stats.captured = self.captured;
+        }
+
         let roots: Vec<NodeId> = self
             .visible_layers_in_paint_order()
             .map(|layer| self.layers[layer].root)
             .collect();
         for root in roots {
             let _ = self.layout_in(app, text, root, bounds, scale_factor);
+        }
+
+        if let Some(started) = started {
+            self.debug_stats.layout_time = started.elapsed();
         }
     }
 
@@ -378,12 +415,24 @@ impl UiTree {
         scene: &mut Scene,
         scale_factor: f32,
     ) {
+        let started = self.debug_enabled.then_some(Instant::now());
+        if self.debug_enabled {
+            self.debug_stats.frame_id = app.frame_id();
+            self.debug_stats.paint_nodes = 0;
+            self.debug_stats.focus = self.focus;
+            self.debug_stats.captured = self.captured;
+        }
+
         let roots: Vec<NodeId> = self
             .visible_layers_in_paint_order()
             .map(|layer| self.layers[layer].root)
             .collect();
         for root in roots {
             self.paint(app, text, root, bounds, scene, scale_factor);
+        }
+
+        if let Some(started) = started {
+            self.debug_stats.paint_time = started.elapsed();
         }
     }
 
@@ -943,6 +992,11 @@ impl UiTree {
         bounds: Rect,
         scale_factor: f32,
     ) -> Size {
+        if self.debug_enabled {
+            self.debug_stats.layout_nodes_visited =
+                self.debug_stats.layout_nodes_visited.saturating_add(1);
+        }
+
         let (prev_bounds, measured, invalidated) = match self.nodes.get(node) {
             Some(n) => (n.bounds, n.measured_size, n.invalidation.layout),
             None => return Size::default(),
@@ -955,6 +1009,10 @@ impl UiTree {
         let needs_layout = invalidated || prev_bounds != bounds;
         if !needs_layout {
             return measured;
+        }
+        if self.debug_enabled {
+            self.debug_stats.layout_nodes_performed =
+                self.debug_stats.layout_nodes_performed.saturating_add(1);
         }
 
         let tree_ptr: *mut UiTree = self;
@@ -1012,6 +1070,10 @@ impl UiTree {
         scene: &mut Scene,
         scale_factor: f32,
     ) {
+        if self.debug_enabled {
+            self.debug_stats.paint_nodes = self.debug_stats.paint_nodes.saturating_add(1);
+        }
+
         let tree_ref: *const UiTree = self as *const UiTree;
         let tree_ptr: *mut UiTree = self;
         let app_ptr: *mut App = app;

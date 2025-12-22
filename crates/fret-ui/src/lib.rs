@@ -8,7 +8,7 @@ pub mod widgets;
 pub use dock::{DockManager, DockPanel, DockPanelContentService, DockSpace, ViewportPanel};
 pub use elements::{ElementCx, ElementRuntime, GlobalElementId};
 pub use theme::{Theme, ThemeConfig, ThemeSnapshot};
-pub use tree::{UiLayerId, UiTree};
+pub use tree::{UiDebugFrameStats, UiLayerId, UiTree};
 pub use widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 pub use widgets::{
     AppMenuBar, Bar, BoundTextInput, Clip, ColoredPanel, Column, ContextMenu, ContextMenuRequest,

@@ -4,7 +4,7 @@ use crate::command_palette::{CommandPalette, OverlayBackdrop, OverlayPanelLayout
 use crate::dnd_probe::DndProbe;
 use crate::elements_mvp2::ElementsMvp2Demo;
 use crate::ime_probe::ImeProbe;
-use crate::overlay_layouts::CenteredOverlayLayout;
+use crate::overlay_layouts::{CenteredOverlayLayout, CornerOverlayLayout};
 use crate::scene_document::SceneDocumentService;
 use fret_app::Model;
 use fret_core::{AppWindowId, Axis, Color, Px};
@@ -16,7 +16,33 @@ use fret_ui::{
     Toolbar, ToolbarItem, UiLayerId, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
 };
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::sync::Arc;
+
+#[derive(Default)]
+pub struct DebugHudService {
+    enabled: bool,
+    per_window: HashMap<AppWindowId, fret_ui::UiDebugFrameStats>,
+}
+
+impl DebugHudService {
+    pub fn enabled(&self) -> bool {
+        self.enabled
+    }
+
+    pub fn toggle(&mut self) -> bool {
+        self.enabled = !self.enabled;
+        self.enabled
+    }
+
+    pub fn set_stats(&mut self, window: AppWindowId, stats: fret_ui::UiDebugFrameStats) {
+        self.per_window.insert(window, stats);
+    }
+
+    pub fn stats(&self, window: AppWindowId) -> Option<fret_ui::UiDebugFrameStats> {
+        self.per_window.get(&window).copied()
+    }
+}
 
 #[derive(Debug, Clone)]
 struct LazyEntityList {
@@ -69,6 +95,7 @@ pub struct DemoLayers {
     pub context_menu_node: fret_core::NodeId,
     pub inspector_edit: UiLayerId,
     pub inspector_edit_input_node: fret_core::NodeId,
+    pub debug_hud: UiLayerId,
     pub dockspace_node: fret_core::NodeId,
 }
 
@@ -264,6 +291,129 @@ impl fret_ui::Widget for DemoTopBarStatus {
     }
 }
 
+struct DebugHudPanel {
+    text: String,
+    text_blob: Option<fret_core::TextBlobId>,
+    text_metrics: Option<fret_core::TextMetrics>,
+    last_key: Option<(u64, u32, u32, u32)>,
+    last_scale_factor: Option<f32>,
+    style: fret_core::TextStyle,
+}
+
+impl DebugHudPanel {
+    pub fn new() -> Self {
+        Self {
+            text: String::new(),
+            text_blob: None,
+            text_metrics: None,
+            last_key: None,
+            last_scale_factor: None,
+            style: fret_core::TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(12.0),
+            },
+        }
+    }
+
+    fn sync_text(&mut self, cx: &mut fret_ui::LayoutCx<'_>) -> bool {
+        let Some(window) = cx.window else {
+            return false;
+        };
+        let Some(hud) = cx.app.global::<DebugHudService>() else {
+            return false;
+        };
+        let Some(stats) = hud.stats(window) else {
+            return false;
+        };
+
+        let key = (
+            stats.frame_id.0,
+            stats.layout_nodes_visited,
+            stats.layout_nodes_performed,
+            stats.paint_nodes,
+        );
+        if self.last_key == Some(key) && self.last_scale_factor == Some(cx.scale_factor) {
+            return false;
+        }
+        self.last_key = Some(key);
+        self.last_scale_factor = Some(cx.scale_factor);
+
+        if let Some(blob) = self.text_blob.take() {
+            cx.text.release(blob);
+        }
+
+        let layout_ms = stats.layout_time.as_secs_f64() * 1000.0;
+        let paint_ms = stats.paint_time.as_secs_f64() * 1000.0;
+
+        self.text = format!(
+            "UI Debug\nframe: {}\nlayout: {:.2} ms ({} / {})\npaint: {:.2} ms ({} nodes)\nfocus: {:?}\ncapture: {:?}",
+            stats.frame_id.0,
+            layout_ms,
+            stats.layout_nodes_performed,
+            stats.layout_nodes_visited,
+            paint_ms,
+            stats.paint_nodes,
+            stats.focus,
+            stats.captured,
+        );
+
+        let constraints = fret_core::TextConstraints {
+            max_width: Some(cx.available.width),
+            wrap: fret_core::TextWrap::Word,
+            scale_factor: cx.scale_factor,
+        };
+        let (blob, metrics) = cx.text.prepare(&self.text, self.style, constraints);
+        self.text_blob = Some(blob);
+        self.text_metrics = Some(metrics);
+        true
+    }
+}
+
+impl fret_ui::Widget for DebugHudPanel {
+    fn event(&mut self, _cx: &mut fret_ui::EventCx<'_>, _event: &fret_core::Event) {}
+
+    fn layout(&mut self, cx: &mut fret_ui::LayoutCx<'_>) -> fret_core::Size {
+        let _ = self.sync_text(cx);
+        let size = self.text_metrics.map(|m| m.size).unwrap_or_default();
+        let pad = cx.theme().snapshot().metrics.padding_md;
+        fret_core::Size::new(size.width + pad + pad, size.height + pad + pad)
+    }
+
+    fn paint(&mut self, cx: &mut fret_ui::PaintCx<'_>) {
+        let theme = cx.theme().snapshot();
+        let Some(blob) = self.text_blob else {
+            return;
+        };
+        let Some(metrics) = self.text_metrics else {
+            return;
+        };
+
+        let pad = theme.metrics.padding_md;
+        let bg = theme.colors.panel_background;
+        let border = theme.colors.panel_border;
+
+        cx.scene.push(fret_core::SceneOp::Quad {
+            order: fret_core::DrawOrder(0),
+            rect: cx.bounds,
+            background: bg,
+            border: fret_core::Edges::all(Px(1.0)),
+            border_color: border,
+            corner_radii: fret_core::Corners::all(theme.metrics.radius_md),
+        });
+
+        let origin = fret_core::Point::new(
+            cx.bounds.origin.x + pad,
+            cx.bounds.origin.y + pad + metrics.baseline,
+        );
+        cx.scene.push(fret_core::SceneOp::Text {
+            order: fret_core::DrawOrder(1),
+            origin,
+            text: blob,
+            color: theme.colors.text_primary,
+        });
+    }
+}
+
 pub fn build_demo_ui(
     window: AppWindowId,
     kind: DemoUiKind,
@@ -369,6 +519,11 @@ pub fn build_demo_ui(
                             },
                             fret_app::MenuItem::Command {
                                 command: fret_app::CommandId::from("viewport.tool.rotate"),
+                                when: None,
+                            },
+                            fret_app::MenuItem::Separator,
+                            fret_app::MenuItem::Command {
+                                command: fret_app::CommandId::from("debug.hud.toggle"),
                                 when: None,
                             },
                             fret_app::MenuItem::Separator,
@@ -549,6 +704,14 @@ Goal: foundation for Console/Inspector/code editor.",
     let external_dnd = ui.push_overlay_root_ex(dnd_root, false, false);
     ui.set_layer_visible(external_dnd, false);
 
+    let debug_root =
+        ui.create_node(CornerOverlayLayout::top_left(Px(360.0), Px(140.0)).with_margin(Px(12.0)));
+    let debug_hud = ui.push_overlay_root_ex(debug_root, false, false);
+    ui.set_layer_visible(debug_hud, false);
+
+    let debug_panel = ui.create_node(DebugHudPanel::new());
+    ui.add_child(debug_root, debug_panel);
+
     let palette_root =
         ui.create_node(OverlayPanelLayout::new(Px(640.0), Px(360.0)).with_top(Px(64.0)));
     let command_palette = ui.push_overlay_root(palette_root, true);
@@ -610,6 +773,7 @@ Goal: foundation for Console/Inspector/code editor.",
             context_menu_node,
             inspector_edit,
             inspector_edit_input_node,
+            debug_hud,
             dockspace_node: dock,
         },
     )

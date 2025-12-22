@@ -18,7 +18,7 @@ mod viewport_asset_drop;
 mod viewport_targets;
 mod world;
 
-use demo_ui::{DemoLayers, DemoUiConfig, DemoUiKind, build_demo_ui};
+use demo_ui::{DebugHudService, DemoLayers, DemoUiConfig, DemoUiKind, build_demo_ui};
 use editor_shell::{DemoSelection, HierarchyPanel, InspectorPanel};
 use hierarchy::DemoHierarchy;
 use project_panel::ProjectPanel;
@@ -2015,6 +2015,7 @@ impl WinitDriver for DemoDriver {
         app.set_global(UnsavedChangesService::default());
         app.set_global(InspectorEditService::default());
         app.set_global(PropertyEditService::default());
+        app.set_global(DebugHudService::default());
         load_theme(app);
         self.ensure_theme_hot_reload(app, main_window);
         self.install_asset_drop_rules();
@@ -2043,6 +2044,14 @@ impl WinitDriver for DemoDriver {
                 .with_description("Toggles play mode for the Game viewport (animation preview)")
                 .with_category("Game")
                 .with_keywords(["play", "run", "game"]),
+        );
+
+        app.commands_mut().register(
+            CommandId::from("debug.hud.toggle"),
+            CommandMeta::new("Toggle UI Debug HUD")
+                .with_description("Toggles the UI debug HUD overlay (layout/paint timings)")
+                .with_category("View")
+                .with_keywords(["debug", "hud", "ui", "profiling"]),
         );
 
         app.commands_mut().register(
@@ -3804,6 +3813,14 @@ impl WinitDriver for DemoDriver {
         }
 
         match command.as_str() {
+            "debug.hud.toggle" => {
+                let enabled =
+                    app.with_global_mut(DebugHudService::default, |hud, _app| hud.toggle());
+                for &w in self.logical_windows.keys() {
+                    app.request_redraw(w);
+                }
+                tracing::info!(enabled, "toggled ui debug hud");
+            }
             "command_palette.toggle" => {
                 let vis = state.ui.is_layer_visible(state.layers.command_palette);
                 if vis {
@@ -5574,8 +5591,25 @@ impl WinitDriver for DemoDriver {
         scene.clear();
         self.sync_scene_chrome(app);
         self.sync_viewport_selection_overlay_for_window(app, window);
+
+        let hud_enabled = app
+            .global::<DebugHudService>()
+            .is_some_and(|hud| hud.enabled());
+        state.ui.set_debug_enabled(hud_enabled);
+        if state.ui.is_layer_visible(state.layers.debug_hud) != hud_enabled {
+            state
+                .ui
+                .set_layer_visible(state.layers.debug_hud, hud_enabled);
+        }
+
         state.ui.layout_all(app, text, bounds, scale_factor);
         state.ui.paint_all(app, text, bounds, scene, scale_factor);
+
+        if hud_enabled {
+            let stats = state.ui.debug_stats();
+            app.global_mut::<DebugHudService>()
+                .map(|hud| hud.set_stats(window, stats));
+        }
     }
 
     fn window_create_spec(
