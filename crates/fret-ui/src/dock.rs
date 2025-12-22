@@ -2814,18 +2814,20 @@ fn compute_split_fraction(
     match axis {
         fret_core::Axis::Horizontal => {
             let w = bounds.size.width.0;
-            if w <= min_px * 2.0 {
+            if !w.is_finite() || w <= min_px * 2.0 {
                 return None;
             }
-            let x = (position.x.0 - bounds.origin.x.0).clamp(min_px, w - min_px);
+            let max_x = (w - min_px).max(min_px);
+            let x = (position.x.0 - bounds.origin.x.0).clamp(min_px, max_x);
             Some(x / w)
         }
         fret_core::Axis::Vertical => {
             let h = bounds.size.height.0;
-            if h <= min_px * 2.0 {
+            if !h.is_finite() || h <= min_px * 2.0 {
                 return None;
             }
-            let y = (position.y.0 - bounds.origin.y.0).clamp(min_px, h - min_px);
+            let max_y = (h - min_px).max(min_px);
+            let y = (position.y.0 - bounds.origin.y.0).clamp(min_px, max_y);
             Some(y / h)
         }
     }
@@ -3131,6 +3133,29 @@ mod tests {
         }
 
         fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    #[test]
+    fn compute_split_fraction_handles_small_bounds() {
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(300.0)));
+        let pos = Point::new(Px(60.0), Px(10.0));
+        assert_eq!(
+            compute_split_fraction(fret_core::Axis::Horizontal, bounds, bounds, bounds, pos),
+            None
+        );
+    }
+
+    #[test]
+    fn compute_split_fraction_handles_nan_bounds() {
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(f32::NAN), Px(300.0)),
+        );
+        let pos = Point::new(Px(60.0), Px(10.0));
+        assert_eq!(
+            compute_split_fraction(fret_core::Axis::Horizontal, bounds, bounds, bounds, pos),
+            None
+        );
     }
 
     #[test]
