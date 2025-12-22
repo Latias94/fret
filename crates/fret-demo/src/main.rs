@@ -511,19 +511,7 @@ impl DemoDriver {
                 let preferred = [Some(cx.window), cx.driver.main_window]
                     .into_iter()
                     .flatten();
-                if let Some(dock) = cx.app.global::<DockManager>() {
-                    if let Some((target_window, op)) =
-                        dock.activate_panel_tab_best_effort(preferred, &key)
-                    {
-                        cx.app.push_effect(Effect::Dock(op));
-                        if target_window != cx.window {
-                            cx.app.push_effect(Effect::Window(WindowRequest::Raise {
-                                window: target_window,
-                                sender: Some(cx.window),
-                            }));
-                        }
-                    }
-                }
+                DockManager::request_activate_panel(cx.app, cx.window, preferred, key.clone());
                 AssetOpenDecision::Handled
             }),
         });
@@ -545,19 +533,7 @@ impl DemoDriver {
                 let preferred = [Some(cx.window), cx.driver.main_window]
                     .into_iter()
                     .flatten();
-                if let Some(dock) = cx.app.global::<DockManager>() {
-                    if let Some((target_window, op)) =
-                        dock.activate_panel_tab_best_effort(preferred, &key)
-                    {
-                        cx.app.push_effect(Effect::Dock(op));
-                        if target_window != cx.window {
-                            cx.app.push_effect(Effect::Window(WindowRequest::Raise {
-                                window: target_window,
-                                sender: Some(cx.window),
-                            }));
-                        }
-                    }
-                }
+                DockManager::request_activate_panel(cx.app, cx.window, preferred, key.clone());
 
                 AssetOpenDecision::Handled
             }),
@@ -4576,38 +4552,19 @@ impl WinitDriver for DemoDriver {
                         if ok {
                             let key = PanelKey::new("core.scene");
                             let preferred = [Some(window), self.main_window].into_iter().flatten();
-                            if let Some(dock) = app.global::<DockManager>() {
-                                if let Some((target_window, op)) =
-                                    dock.activate_panel_tab_best_effort(preferred, &key)
-                                {
-                                    app.push_effect(Effect::Dock(op));
-                                    if target_window != window {
-                                        app.push_effect(Effect::Window(WindowRequest::Raise {
-                                            window: target_window,
-                                            sender: Some(window),
-                                        }));
-                                    }
-                                }
-                            }
+                            DockManager::request_activate_panel(
+                                app,
+                                window,
+                                preferred,
+                                key.clone(),
+                            );
                         }
                     }
                     UnsavedContinuation::OpenScene { guid } => {
                         let _ = self.open_scene_by_guid(app, guid);
                         let key = PanelKey::new("core.scene");
                         let preferred = [Some(window), self.main_window].into_iter().flatten();
-                        if let Some(dock) = app.global::<DockManager>() {
-                            if let Some((target_window, op)) =
-                                dock.activate_panel_tab_best_effort(preferred, &key)
-                            {
-                                app.push_effect(Effect::Dock(op));
-                                if target_window != window {
-                                    app.push_effect(Effect::Window(WindowRequest::Raise {
-                                        window: target_window,
-                                        sender: Some(window),
-                                    }));
-                                }
-                            }
-                        }
+                        DockManager::request_activate_panel(app, window, preferred, key.clone());
                     }
                     UnsavedContinuation::CloseWindow { window: w } => {
                         app.push_effect(Effect::Window(WindowRequest::Close(w)));
@@ -4648,19 +4605,7 @@ impl WinitDriver for DemoDriver {
                 if self.new_scene_or_prompt(app, window) {
                     let key = PanelKey::new("core.scene");
                     let preferred = [Some(window), self.main_window].into_iter().flatten();
-                    if let Some(dock) = app.global::<DockManager>() {
-                        if let Some((target_window, op)) =
-                            dock.activate_panel_tab_best_effort(preferred, &key)
-                        {
-                            app.push_effect(Effect::Dock(op));
-                            if target_window != window {
-                                app.push_effect(Effect::Window(WindowRequest::Raise {
-                                    window: target_window,
-                                    sender: Some(window),
-                                }));
-                            }
-                        }
-                    }
+                    DockManager::request_activate_panel(app, window, preferred, key.clone());
 
                     for &w in self.logical_windows.keys() {
                         app.request_redraw(w);

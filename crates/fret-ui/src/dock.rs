@@ -1,4 +1,6 @@
-use fret_app::{CommandId, DragKind, Effect, InputContext, Menu, MenuItem, WhenExpr};
+use fret_app::{
+    CommandId, DragKind, Effect, InputContext, Menu, MenuItem, WhenExpr, WindowRequest,
+};
 use fret_core::{
     Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, Edges, NodeId, PanelKey,
     RenderTargetId, Scene, SceneOp, TextBlobId, TextConstraints, TextMetrics, TextService,
@@ -13,6 +15,7 @@ use std::{
 };
 
 use crate::{
+    UiHost,
     widget::{EventCx, LayoutCx, PaintCx, Widget},
     widgets::{ContextMenuRequest, ContextMenuService},
 };
@@ -98,6 +101,30 @@ impl DockManager {
             }
         }
         None
+    }
+
+    pub fn request_activate_panel<H: UiHost>(
+        host: &mut H,
+        sender: fret_core::AppWindowId,
+        preferred_windows: impl IntoIterator<Item = fret_core::AppWindowId>,
+        panel: PanelKey,
+    ) -> bool {
+        let preferred: Vec<fret_core::AppWindowId> = preferred_windows.into_iter().collect();
+        let Some((target_window, op)) = host
+            .global::<DockManager>()
+            .and_then(|dock| dock.activate_panel_tab_best_effort(preferred, &panel))
+        else {
+            return false;
+        };
+
+        host.push_effect(Effect::Dock(op));
+        if target_window != sender {
+            host.push_effect(Effect::Window(WindowRequest::Raise {
+                window: target_window,
+                sender: Some(sender),
+            }));
+        }
+        true
     }
 }
 
