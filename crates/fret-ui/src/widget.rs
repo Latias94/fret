@@ -1,7 +1,7 @@
 use crate::{Theme, UiHost};
-use fret_app::InputContext;
-use fret_app::{CommandId, Model, ModelId};
+use fret_app::{Model, ModelId};
 use fret_core::{AppWindowId, Event, NodeId, Rect, Scene, Size, TextService};
+use fret_runtime::{CommandId, Effect, InputContext};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Invalidation {
@@ -39,7 +39,7 @@ impl<'a, H: UiHost> EventCx<'a, H> {
     }
 
     pub fn dispatch_command(&mut self, command: CommandId) {
-        self.app.push_effect(fret_app::Effect::Command {
+        self.app.push_effect(Effect::Command {
             window: self.window,
             command,
         });

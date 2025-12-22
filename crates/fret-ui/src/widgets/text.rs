@@ -4,8 +4,9 @@ use fret_core::{
 };
 
 use crate::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
-use fret_app::{CommandId, Model};
+use fret_app::Model;
 use fret_core::KeyCode;
+use fret_runtime::{CommandId, Effect};
 
 #[derive(Debug, Clone)]
 pub struct Text {
@@ -478,7 +479,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 }
                 cx.request_focus(cx.node);
                 cx.capture_pointer(cx.node);
-                cx.app.push_effect(fret_app::Effect::ImeAllow {
+                cx.app.push_effect(Effect::ImeAllow {
                     window,
                     enabled: true,
                 });
@@ -659,7 +660,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         }
     }
 
-    fn command(&mut self, cx: &mut crate::CommandCx<'_, H>, command: &fret_app::CommandId) -> bool {
+    fn command(&mut self, cx: &mut crate::CommandCx<'_, H>, command: &CommandId) -> bool {
         if cx.focus != Some(cx.node) {
             return false;
         }
@@ -685,7 +686,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             "text.copy" => {
                 let (a, b) = self.selection_range();
                 if a != b {
-                    cx.app.push_effect(fret_app::Effect::ClipboardSetText {
+                    cx.app.push_effect(Effect::ClipboardSetText {
                         text: self.text[a..b].to_string(),
                     });
                 }
@@ -694,7 +695,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             "text.cut" => {
                 let (a, b) = self.selection_range();
                 if a != b {
-                    cx.app.push_effect(fret_app::Effect::ClipboardSetText {
+                    cx.app.push_effect(Effect::ClipboardSetText {
                         text: self.text[a..b].to_string(),
                     });
                     self.delete_selection_if_any();
@@ -709,8 +710,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 let Some(window) = cx.window else {
                     return true;
                 };
-                cx.app
-                    .push_effect(fret_app::Effect::ClipboardGetText { window });
+                cx.app.push_effect(Effect::ClipboardGetText { window });
                 true
             }
             "text.move_left" => {
@@ -1059,7 +1059,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             return;
         }
 
-        cx.app.push_effect(fret_app::Effect::ImeAllow {
+        cx.app.push_effect(Effect::ImeAllow {
             window,
             enabled: true,
         });
@@ -1080,7 +1080,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         );
         if self.last_sent_cursor.map_or(true, |r| r != caret) {
             self.last_sent_cursor = Some(caret);
-            cx.app.push_effect(fret_app::Effect::ImeSetCursorArea {
+            cx.app.push_effect(Effect::ImeSetCursorArea {
                 window,
                 rect: caret,
             });

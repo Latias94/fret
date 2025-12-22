@@ -3,11 +3,11 @@ use crate::{
     UiHost,
     widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget},
 };
-use fret_app::{InputContext, Menu, MenuBar};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp, Size,
     TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
+use fret_runtime::{CommandId, InputContext, Menu, MenuBar};
 
 use super::context_menu::{
     ContextMenuRequest, ContextMenuService, MenuBarContextMenu, MenuBarContextMenuEntry,
@@ -174,14 +174,14 @@ impl AppMenuBar {
         self.open_index = Some(index);
         self.open_serial = Self::current_menu_serial(&*cx.app, window);
 
-        cx.dispatch_command(fret_app::CommandId::from("context_menu.open"));
+        cx.dispatch_command(CommandId::from("context_menu.open"));
         cx.stop_propagation();
     }
 
     fn close_menu<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>) {
         self.open_index = None;
         self.open_serial = None;
-        cx.dispatch_command(fret_app::CommandId::from("context_menu.close"));
+        cx.dispatch_command(CommandId::from("context_menu.close"));
         cx.stop_propagation();
     }
 }

@@ -1,8 +1,8 @@
-use fret_app::Effect;
 use fret_core::{
     CaretAffinity, Color, Corners, DrawOrder, Edges, Event, ImeEvent, MouseButton, Px, Rect,
     SceneOp, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
+use fret_runtime::Effect;
 
 use crate::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
@@ -698,7 +698,7 @@ impl<H: UiHost> Widget<H> for TextArea {
         }
     }
 
-    fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &fret_app::CommandId) -> bool {
+    fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &fret_runtime::CommandId) -> bool {
         if cx.focus != Some(cx.node) {
             return false;
         }

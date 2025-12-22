@@ -1,12 +1,12 @@
-use fret_app::{
-    CommandId, DragKind, Effect, InputContext, Menu, MenuItem, WhenExpr, WindowRequest,
-};
 use fret_core::{
     Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, Edges, NodeId, PanelKey,
     RenderTargetId, Scene, SceneOp, TextBlobId, TextConstraints, TextMetrics, TextService,
     TextStyle, TextWrap, ViewportFit, ViewportInputEvent, ViewportInputKind, ViewportMapping,
     WindowAnchor,
     geometry::{Point, Px, Rect, Size},
+};
+use fret_runtime::{
+    CommandId, DragKind, Effect, InputContext, Menu, MenuItem, WhenExpr, WindowRequest,
 };
 use std::{
     collections::{HashMap, HashSet},

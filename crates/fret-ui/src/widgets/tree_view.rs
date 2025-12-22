@@ -2,8 +2,8 @@ use crate::{
     UiHost,
     widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget},
 };
-use fret_app::{CommandId, InputContext, Menu, MenuItem};
 use fret_core::{Event, KeyCode, Modifiers, MouseButton, Px};
+use fret_runtime::{CommandId, InputContext, Menu, MenuItem};
 use std::{
     borrow::Cow,
     collections::{HashMap, HashSet},

@@ -2,11 +2,12 @@ use crate::{
     Theme, UiHost,
     widget::{EventCx, Invalidation, PaintCx, Widget},
 };
-use fret_app::{CommandId, InputContext, KeymapService, Menu, MenuItem, format_sequence};
+use fret_app::KeymapService;
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp, Size,
     TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
+use fret_runtime::{CommandId, InputContext, Menu, MenuItem, format_sequence};
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Debug, Clone)]

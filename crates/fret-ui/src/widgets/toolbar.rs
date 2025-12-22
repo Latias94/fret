@@ -3,11 +3,11 @@ use crate::{
     UiHost,
     widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget},
 };
-use fret_app::CommandId;
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp, Size,
     TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
+use fret_runtime::CommandId;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]

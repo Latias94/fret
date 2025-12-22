@@ -1,7 +1,8 @@
 use std::any::Any;
 
-use fret_app::{CommandRegistry, DragKind, DragSession, Effect, ModelId, ModelStore};
+use fret_app::{CommandRegistry, ModelId, ModelStore};
 use fret_core::{AppWindowId, FrameId, Point, TickId, TimerToken};
+use fret_runtime::{DragKind, DragSession, Effect};
 
 pub trait UiHost {
     fn set_global<T: Any>(&mut self, value: T);

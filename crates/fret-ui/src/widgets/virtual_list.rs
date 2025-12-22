@@ -2,11 +2,11 @@ use crate::{
     Theme, UiHost,
     widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget},
 };
-use fret_app::{CommandId, Effect, InputContext, Menu, MenuItem};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp,
     Size, TextConstraints, TextStyle, TextWrap,
 };
+use fret_runtime::{CommandId, Effect, InputContext, Menu, MenuItem};
 use std::{borrow::Cow, collections::HashSet, hash::Hash, sync::Arc};
 
 use super::context_menu::{ContextMenuRequest, ContextMenuService};

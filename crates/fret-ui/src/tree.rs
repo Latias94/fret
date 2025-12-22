@@ -2,12 +2,13 @@ use crate::{
     UiHost,
     widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget},
 };
-use fret_app::{CommandId, Effect, InputContext, KeyChord, KeymapService, ModelId, Platform};
+use fret_app::{KeymapService, ModelId};
 use fret_core::PlatformCapabilities;
 use fret_core::{
     AppWindowId, Event, FrameId, KeyCode, NodeId, Point, PointerEvent, Rect, Scene, Size,
     TextService,
 };
+use fret_runtime::{CommandId, Effect, InputContext, KeyChord, Platform};
 use slotmap::SlotMap;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
@@ -807,7 +808,7 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         app: &mut H,
         text: &mut dyn TextService,
-        command: &fret_app::CommandId,
+        command: &CommandId,
     ) -> bool {
         let Some(base_root) = self
             .base_layer
@@ -913,7 +914,7 @@ impl<H: UiHost> UiTree<H> {
     fn dispatch_focus_traversal(
         &mut self,
         app: &mut H,
-        command: &fret_app::CommandId,
+        command: &CommandId,
         active_layers: &[NodeId],
         barrier_root: Option<NodeId>,
         base_root: NodeId,
