@@ -68,6 +68,39 @@ pub struct DockManager {
     viewport_content_rects: HashMap<(fret_core::AppWindowId, RenderTargetId), Rect>,
 }
 
+impl DockManager {
+    pub fn activate_panel_tab_best_effort(
+        &self,
+        preferred_windows: impl IntoIterator<Item = fret_core::AppWindowId>,
+        panel: &PanelKey,
+    ) -> Option<(fret_core::AppWindowId, fret_core::DockOp)> {
+        let mut preferred: Vec<fret_core::AppWindowId> = Vec::new();
+        let mut seen: std::collections::HashSet<fret_core::AppWindowId> =
+            std::collections::HashSet::new();
+        for w in preferred_windows {
+            if seen.insert(w) {
+                preferred.push(w);
+            }
+        }
+
+        for w in &preferred {
+            if let Some((tabs, active)) = self.graph.find_panel_in_window(*w, panel) {
+                return Some((*w, fret_core::DockOp::SetActiveTab { tabs, active }));
+            }
+        }
+
+        for w in self.graph.windows() {
+            if seen.contains(&w) {
+                continue;
+            }
+            if let Some((tabs, active)) = self.graph.find_panel_in_window(w, panel) {
+                return Some((w, fret_core::DockOp::SetActiveTab { tabs, active }));
+            }
+        }
+        None
+    }
+}
+
 #[derive(Default)]
 pub struct DockPanelContentService {
     per_window: HashMap<fret_core::AppWindowId, HashMap<PanelKey, NodeId>>,

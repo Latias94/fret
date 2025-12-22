@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use fret_app::App;
-use fret_core::{AppWindowId, PanelKey};
+use fret_core::AppWindowId;
 use fret_editor::{AssetGuid, ProjectEntryKind, ProjectService};
 
 use crate::DemoDriver;
@@ -90,32 +90,4 @@ impl AssetOpenRegistry {
 
         AssetOpenDecision::Ignored
     }
-}
-
-pub fn activate_panel_tab(
-    app: &mut App,
-    window: AppWindowId,
-    panel: PanelKey,
-) -> Option<fret_core::DockOp> {
-    let dock = app.global::<fret_ui::DockManager>()?;
-    let root = dock.graph.window_root(window)?;
-
-    fn find(
-        graph: &fret_core::DockGraph,
-        node: fret_core::DockNodeId,
-        panel: &PanelKey,
-    ) -> Option<(fret_core::DockNodeId, usize)> {
-        match graph.node(node)? {
-            fret_core::DockNode::Tabs { tabs, .. } => {
-                let i = tabs.iter().position(|p| p == panel)?;
-                Some((node, i))
-            }
-            fret_core::DockNode::Split { children, .. } => {
-                children.iter().copied().find_map(|c| find(graph, c, panel))
-            }
-        }
-    }
-
-    let (tabs, active) = find(&dock.graph, root, &panel)?;
-    Some(fret_core::DockOp::SetActiveTab { tabs, active })
 }

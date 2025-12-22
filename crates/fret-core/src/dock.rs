@@ -3,7 +3,7 @@ use crate::{
     geometry::{Point, Px, Rect, Size},
     ids::{AppWindowId, DockNodeId},
 };
-use slotmap::SlotMap;
+use slotmap::{Key, SlotMap};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -282,13 +282,19 @@ impl DockGraph {
         }
     }
 
-    fn find_panel_in_window(
+    pub fn find_panel_in_window(
         &self,
         window: AppWindowId,
         panel: &PanelKey,
     ) -> Option<(DockNodeId, usize)> {
         let root = self.window_root(window)?;
         self.find_panel_in_subtree(root, panel)
+    }
+
+    pub fn windows(&self) -> Vec<AppWindowId> {
+        let mut windows: Vec<AppWindowId> = self.window_roots.keys().copied().collect();
+        windows.sort_by_key(|w| w.data().as_ffi());
+        windows
     }
 
     pub fn collect_panels_in_window(&self, window: AppWindowId) -> Vec<PanelKey> {
