@@ -3638,6 +3638,10 @@ impl WinitDriver for DemoDriver {
         }
 
         if let fret_core::Event::ExternalDropData(payload) = event {
+            for err in &payload.errors {
+                tracing::warn!(name = %err.name, message = %err.message, "external drop read error");
+            }
+
             let mut imported: Vec<fret_editor::AssetGuid> = Vec::new();
             if let Some(project) = app.global_mut::<ProjectService>() {
                 let items: Vec<(String, Vec<u8>)> = payload

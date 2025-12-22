@@ -1,16 +1,12 @@
 # ADR 0053: External Drag-and-Drop Payload Portability (Desktop + wasm)
 
-Status: Proposed
+Status: Accepted
 Scope: `fret-core` input event contracts + platform boundary (`fret-platform-*`)
 
 ## Context
 
-Fret supports external OS drag-and-drop for “files dropped onto the editor” workflows (assets import, open scene,
-etc.). Today, `fret-core` represents external file drags as:
-
-- `ExternalDragKind::{EnterFiles, OverFiles, DropFiles}(Vec<PathBuf>)`
-
-This works on desktop, but it is not a stable cross-platform contract:
+Fret supports external OS drag-and-drop for “files dropped onto the editor” workflows (asset import, open scene,
+etc.). A desktop-only contract based on `PathBuf` is not portable:
 
 - **wasm/web** does not provide real filesystem paths for dropped items.
 - Sandboxed environments may provide only “file handles” or “blob tokens”.
@@ -29,20 +25,30 @@ If we keep `PathBuf` in `fret-core` events, we will face a breaking change when 
 
 Replace “external file drag payload = `PathBuf`” with a portable representation based on **opaque handles**.
 
-### 1) `fret-core` event payload becomes a handle type
+### 1) `fret-core` drag event payload becomes a token + metadata
 
-Introduce an `ExternalFileRef` (name TBD) that is:
+Represent external file drags as:
 
-- cloneable, comparable, and printable for diagnostics,
-- does **not** expose a concrete OS path in the core contract,
-- may carry safe metadata useful for UX (e.g. display name, MIME type hint, size hint).
+- a stable `ExternalDropToken` (opaque handle),
+- plus safe metadata for UI/UX (`name`, future MIME/size hints).
 
-Example sketch:
+Concretely:
 
 ```rust
-pub struct ExternalFileRef {
-    pub token: ExternalFileToken,
-    pub display_name: Arc<str>,
+pub enum ExternalDragKind {
+    EnterFiles(ExternalDragFiles),
+    OverFiles(ExternalDragFiles),
+    DropFiles(ExternalDragFiles),
+    Leave,
+}
+
+pub struct ExternalDragFiles {
+    pub token: ExternalDropToken,
+    pub files: Vec<ExternalDragFile>,
+}
+
+pub struct ExternalDragFile {
+    pub name: String,
 }
 ```
 
@@ -50,9 +56,8 @@ pub struct ExternalFileRef {
 
 To read data or resolve a concrete source, the app requests it via effects, e.g.:
 
-- `Effect::ExternalFileReadBytes { token, range_hint }`
-- `Effect::ExternalFilePersistToProject { token, dest_dir }`
-- or a simpler initial step: `Effect::ExternalFileOpen { token }`
+- `Effect::ExternalDropReadAll { window, token }` (P0 desktop),
+- future: range/stream reads or “persist to project” effects.
 
 The runner/platform backend is responsible for producing the data and delivering it back as an event or callback
 message (similar to `ClipboardGetText -> Event::ClipboardText`).
@@ -74,9 +79,9 @@ The core contract remains portable.
 
 ## Migration Plan (Suggested)
 
-1. Add the new token-based types alongside the current `PathBuf` events (temporary compatibility).
-2. Update demo import pipeline to use the effect-driven API.
-3. Deprecate the `PathBuf` variants and remove them in a versioned breaking change window.
+1. Switch `fret-core` external drag payloads to tokens (done).
+2. Update demo import pipeline to use the effect-driven API (done).
+3. Add stricter portability gating via `PlatformCapabilities.dnd.external_payload` (ADR 0054).
 
 ## Open Questions
 
@@ -89,4 +94,3 @@ The core contract remains portable.
 - ADR 0001: `docs/adr/0001-app-effects.md`
 - ADR 0003: `docs/adr/0003-platform-boundary.md`
 - ADR 0041: `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
-

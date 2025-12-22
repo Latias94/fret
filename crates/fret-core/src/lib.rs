@@ -25,8 +25,8 @@ pub use ids::{
 };
 pub use input::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
-    ExternalDropDataEvent, ExternalDropFileData, ImeEvent, InternalDragEvent, InternalDragKind,
-    KeyCode, Modifiers, MouseButton, PointerEvent,
+    ExternalDropDataEvent, ExternalDropFileData, ExternalDropReadError, ImeEvent,
+    InternalDragEvent, InternalDragKind, KeyCode, Modifiers, MouseButton, PointerEvent,
 };
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputKind};
 pub use panels::{PanelKey, PanelKind};

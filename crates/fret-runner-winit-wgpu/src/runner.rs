@@ -8,9 +8,9 @@ use std::{
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
-    ExternalDropDataEvent, ExternalDropFileData, ExternalDropToken, InternalDragEvent,
-    InternalDragKind, Modifiers, MouseButton, PlatformCapabilities, Point, Px, Rect, Scene, Size,
-    TextService, ViewportInputEvent,
+    ExternalDropDataEvent, ExternalDropFileData, ExternalDropReadError, ExternalDropToken,
+    InternalDragEvent, InternalDragKind, Modifiers, MouseButton, PlatformCapabilities, Point, Px,
+    Rect, Scene, Size, TextService, ViewportInputEvent,
 };
 use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
 use slotmap::SlotMap;
@@ -259,6 +259,12 @@ pub struct WinitRunnerConfig {
     pub wheel_pixel_delta_scale: f32,
     pub frame_interval: Duration,
     pub clear_color: ClearColor,
+    /// Upper bound for total bytes read via `Effect::ExternalDropReadAll` for a single token.
+    pub external_drop_max_total_bytes: u64,
+    /// Upper bound for a single file read via `Effect::ExternalDropReadAll`.
+    pub external_drop_max_file_bytes: u64,
+    /// Upper bound for number of files processed per `Effect::ExternalDropReadAll`.
+    pub external_drop_max_files: usize,
     pub wgpu_init: WgpuInit,
 }
 
@@ -292,6 +298,9 @@ impl Default for WinitRunnerConfig {
             wheel_pixel_delta_scale: 1.0,
             frame_interval: Duration::from_millis(8),
             clear_color: ClearColor::default(),
+            external_drop_max_total_bytes: 64 * 1024 * 1024,
+            external_drop_max_file_bytes: 32 * 1024 * 1024,
+            external_drop_max_files: 128,
             wgpu_init: WgpuInit::CreateDefault,
         }
     }
@@ -929,14 +938,63 @@ impl<D: WinitDriver> WinitRunner<D> {
                         };
 
                         let mut files: Vec<ExternalDropFileData> = Vec::new();
-                        for path in paths {
-                            let Ok(bytes) = std::fs::read(&path) else {
-                                continue;
-                            };
+                        let mut errors: Vec<ExternalDropReadError> = Vec::new();
+                        let mut total: u64 = 0;
+
+                        for path in paths.into_iter().take(self.config.external_drop_max_files) {
                             let name = path
                                 .file_name()
                                 .map(|n| n.to_string_lossy().to_string())
                                 .unwrap_or_else(|| path.to_string_lossy().to_string());
+
+                            let meta_len = match std::fs::metadata(&path) {
+                                Ok(m) => Some(m.len()),
+                                Err(err) => {
+                                    errors.push(ExternalDropReadError {
+                                        name,
+                                        message: format!("metadata failed: {err}"),
+                                    });
+                                    continue;
+                                }
+                            };
+
+                            if let Some(len) = meta_len {
+                                if len > self.config.external_drop_max_file_bytes {
+                                    errors.push(ExternalDropReadError {
+                                        name,
+                                        message: format!(
+                                            "file too large ({} bytes > max {})",
+                                            len, self.config.external_drop_max_file_bytes
+                                        ),
+                                    });
+                                    continue;
+                                }
+                                if total.saturating_add(len)
+                                    > self.config.external_drop_max_total_bytes
+                                {
+                                    errors.push(ExternalDropReadError {
+                                        name,
+                                        message: format!(
+                                            "total size limit exceeded (max {} bytes)",
+                                            self.config.external_drop_max_total_bytes
+                                        ),
+                                    });
+                                    break;
+                                }
+                            }
+
+                            let bytes = match std::fs::read(&path) {
+                                Ok(bytes) => bytes,
+                                Err(err) => {
+                                    errors.push(ExternalDropReadError {
+                                        name,
+                                        message: format!("read failed: {err}"),
+                                    });
+                                    continue;
+                                }
+                            };
+
+                            total = total.saturating_add(bytes.len() as u64);
                             files.push(ExternalDropFileData { name, bytes });
                         }
 
@@ -947,7 +1005,11 @@ impl<D: WinitDriver> WinitRunner<D> {
                                 unsafe { &mut *text_ptr },
                                 window,
                                 &mut state.user,
-                                &Event::ExternalDropData(ExternalDropDataEvent { token, files }),
+                                &Event::ExternalDropData(ExternalDropDataEvent {
+                                    token,
+                                    files,
+                                    errors,
+                                }),
                             );
                         }
                     }

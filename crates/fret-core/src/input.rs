@@ -322,12 +322,19 @@ pub struct ExternalDragEvent {
 pub struct ExternalDropDataEvent {
     pub token: ExternalDropToken,
     pub files: Vec<ExternalDropFileData>,
+    pub errors: Vec<ExternalDropReadError>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExternalDropFileData {
     pub name: String,
     pub bytes: Vec<u8>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExternalDropReadError {
+    pub name: String,
+    pub message: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
