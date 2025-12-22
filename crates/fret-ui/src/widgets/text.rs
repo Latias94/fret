@@ -3,8 +3,8 @@ use fret_core::{
     TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 
-use crate::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
-use fret_app::{App, CommandId, Model};
+use crate::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
+use fret_app::{CommandId, Model};
 use fret_core::KeyCode;
 
 #[derive(Debug, Clone)]
@@ -46,8 +46,8 @@ impl Text {
     }
 }
 
-impl Widget for Text {
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+impl<H: UiHost> Widget<H> for Text {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let constraints = TextConstraints {
             max_width: Some(cx.available.width),
             wrap: TextWrap::None,
@@ -59,7 +59,7 @@ impl Widget for Text {
         metrics.size
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         let Some(blob) = self.blob else {
             return;
         };
@@ -196,14 +196,14 @@ impl BoundTextInput {
         self
     }
 
-    fn sync_from_model(&mut self, app: &App, force: bool) {
-        let revision = self.model.revision(app);
+    fn sync_from_model<H: UiHost>(&mut self, app: &H, force: bool) {
+        let revision = app.models().revision(self.model);
         if revision == self.last_revision {
             return;
         }
         self.last_revision = revision;
 
-        let Some(text) = self.model.get(app) else {
+        let Some(text) = app.models().get(self.model) else {
             return;
         };
 
@@ -213,20 +213,18 @@ impl BoundTextInput {
         }
     }
 
-    fn maybe_update_model(&mut self, app: &mut App) {
+    fn maybe_update_model<H: UiHost>(&mut self, app: &mut H) {
         let text = self.input.text().to_string();
-        let _ = self.model.update(app, |v, _cx| {
-            *v = text;
-        });
+        let _ = app.models_mut().update(self.model, move |v| *v = text);
     }
 }
 
-impl Widget for BoundTextInput {
+impl<H: UiHost> Widget<H> for BoundTextInput {
     fn is_focusable(&self) -> bool {
         true
     }
 
-    fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         if cx.focus != Some(cx.node) {
             self.sync_from_model(cx.app, false);
         }
@@ -266,19 +264,19 @@ impl Widget for BoundTextInput {
         }
     }
 
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let force = !self.dirty_since_sync;
         self.sync_from_model(cx.app, force);
         self.input.layout(cx)
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.input.paint(cx);
     }
 }
 
 impl TextInput {
-    fn is_focused(&self, cx: &EventCx<'_>) -> bool {
+    fn is_focused<H: UiHost>(&self, cx: &EventCx<'_, H>) -> bool {
         cx.focus == Some(cx.node)
     }
 
@@ -394,7 +392,12 @@ impl TextInput {
         true
     }
 
-    fn caret_rect(&self, cx: &mut PaintCx<'_>, bounds: Rect, scale_factor: f32) -> Rect {
+    fn caret_rect<H: UiHost>(
+        &self,
+        cx: &mut PaintCx<'_, H>,
+        bounds: Rect,
+        scale_factor: f32,
+    ) -> Rect {
         let padding = Px(8.0);
 
         let caret_x = self
@@ -451,7 +454,7 @@ impl Default for TextInput {
     }
 }
 
-impl Widget for TextInput {
+impl<H: UiHost> Widget<H> for TextInput {
     fn is_focusable(&self) -> bool {
         true
     }
@@ -460,7 +463,7 @@ impl Widget for TextInput {
         true
     }
 
-    fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         let focused = self.is_focused(cx);
         let Some(window) = cx.window else {
             return;
@@ -656,7 +659,7 @@ impl Widget for TextInput {
         }
     }
 
-    fn command(&mut self, cx: &mut crate::CommandCx<'_>, command: &fret_app::CommandId) -> bool {
+    fn command(&mut self, cx: &mut crate::CommandCx<'_, H>, command: &fret_app::CommandId) -> bool {
         if cx.focus != Some(cx.node) {
             return false;
         }
@@ -867,7 +870,7 @@ impl Widget for TextInput {
         }
     }
 
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.last_bounds = cx.bounds;
 
         self.caret = Self::clamp_to_boundary(&self.text, self.caret);
@@ -934,7 +937,7 @@ impl Widget for TextInput {
         Size::new(cx.available.width, h)
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         let Some(window) = cx.window else {
             return;
         };

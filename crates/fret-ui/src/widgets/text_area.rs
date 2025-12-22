@@ -4,7 +4,7 @@ use fret_core::{
     SceneOp, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 
-use crate::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Theme, Widget};
+use crate::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 #[derive(Debug, Clone)]
 pub struct TextAreaStyle {
@@ -393,7 +393,7 @@ impl TextArea {
         self.affinity = CaretAffinity::Downstream;
     }
 
-    fn request_clipboard_paste(&mut self, cx: &mut CommandCx<'_>) -> bool {
+    fn request_clipboard_paste<H: UiHost>(&mut self, cx: &mut CommandCx<'_, H>) -> bool {
         let Some(window) = cx.window else {
             return true;
         };
@@ -479,7 +479,11 @@ impl TextArea {
         )
     }
 
-    fn set_caret_from_point(&mut self, cx: &mut EventCx<'_>, point: fret_core::Point) {
+    fn set_caret_from_point<H: UiHost>(
+        &mut self,
+        cx: &mut EventCx<'_, H>,
+        point: fret_core::Point,
+    ) {
         let Some(blob) = self.blob else {
             return;
         };
@@ -495,7 +499,7 @@ impl TextArea {
     }
 }
 
-impl Widget for TextArea {
+impl<H: UiHost> Widget<H> for TextArea {
     fn is_focusable(&self) -> bool {
         true
     }
@@ -504,7 +508,7 @@ impl Widget for TextArea {
         true
     }
 
-    fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme());
         match event {
             Event::Pointer(fret_core::PointerEvent::Wheel { delta, .. }) => {
@@ -694,7 +698,7 @@ impl Widget for TextArea {
         }
     }
 
-    fn command(&mut self, cx: &mut CommandCx<'_>, command: &fret_app::CommandId) -> bool {
+    fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &fret_app::CommandId) -> bool {
         if cx.focus != Some(cx.node) {
             return false;
         }
@@ -721,20 +725,21 @@ impl Widget for TextArea {
             cx.request_redraw();
         }
 
-        let hit_test_line = |this: &mut Self, cx: &mut CommandCx<'_>, at_line_end: bool| -> bool {
-            let Some(blob) = this.blob else {
-                return true;
-            };
+        let hit_test_line =
+            |this: &mut Self, cx: &mut CommandCx<'_, H>, at_line_end: bool| -> bool {
+                let Some(blob) = this.blob else {
+                    return true;
+                };
 
-            let caret_index = this.caret_display_index();
-            let caret_rect = cx.text.caret_rect(blob, caret_index, this.affinity);
-            let y = Px(caret_rect.origin.y.0 + caret_rect.size.height.0 * 0.5);
-            let x = if at_line_end { Px(1.0e6) } else { Px(-1.0e6) };
-            let hit = cx.text.hit_test_point(blob, fret_core::Point::new(x, y));
-            this.caret = this.map_display_index_to_base(hit.index);
-            this.affinity = hit.affinity;
-            true
-        };
+                let caret_index = this.caret_display_index();
+                let caret_rect = cx.text.caret_rect(blob, caret_index, this.affinity);
+                let y = Px(caret_rect.origin.y.0 + caret_rect.size.height.0 * 0.5);
+                let x = if at_line_end { Px(1.0e6) } else { Px(-1.0e6) };
+                let hit = cx.text.hit_test_point(blob, fret_core::Point::new(x, y));
+                this.caret = this.map_display_index_to_base(hit.index);
+                this.affinity = hit.affinity;
+                true
+            };
 
         match cmd {
             "text.clear" => {
@@ -1029,7 +1034,7 @@ impl Widget for TextArea {
         }
     }
 
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
 
@@ -1079,7 +1084,7 @@ impl Widget for TextArea {
         )
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
 

@@ -552,6 +552,17 @@ impl ModelStore {
         self.storage.get(model.id).map(|e| e.revision)
     }
 
+    pub fn update<T: Any, R>(
+        &mut self,
+        model: Model<T>,
+        f: impl FnOnce(&mut T) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        let mut lease = self.lease(model)?;
+        let result = f(lease.value_mut());
+        lease.mark_dirty();
+        Ok(result)
+    }
+
     fn lease<T: Any>(&mut self, model: Model<T>) -> Result<ModelLease<T>, ModelUpdateError> {
         let boxed = {
             let entry = self
