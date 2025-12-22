@@ -1,4 +1,4 @@
-use fret_app::{CommandId, DragKind, Effect, InputContext, Menu, MenuItem};
+use fret_app::{CommandId, DragKind, Effect, InputContext, Menu, MenuItem, WhenExpr};
 use fret_core::{
     Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, Edges, NodeId, PanelKey,
     RenderTargetId, Scene, SceneOp, TextBlobId, TextConstraints, TextMetrics, TextService,
@@ -1109,6 +1109,7 @@ impl Widget for DockSpace {
                                 && dock_drag.is_some()
                             {
                                 let drag = dock_drag.unwrap();
+                                let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off;
 
                                 if drag.dragging {
                                     match dock.hover.clone() {
@@ -1124,20 +1125,24 @@ impl Widget for DockSpace {
                                             invalidate_layout = true;
                                         }
                                         Some(DockDropTarget::Float { .. }) => {
-                                            pending_effects.push(Effect::Dock(
-                                                DockOp::RequestFloatPanelToNewWindow {
-                                                    source_window: drag.source_window,
-                                                    panel: drag.panel.clone(),
-                                                    anchor: Some(fret_core::WindowAnchor {
-                                                        window: self.window,
-                                                        position: *position,
-                                                    }),
-                                                },
-                                            ));
-                                            invalidate_layout = true;
+                                            if allow_tear_off {
+                                                pending_effects.push(Effect::Dock(
+                                                    DockOp::RequestFloatPanelToNewWindow {
+                                                        source_window: drag.source_window,
+                                                        panel: drag.panel.clone(),
+                                                        anchor: Some(fret_core::WindowAnchor {
+                                                            window: self.window,
+                                                            position: *position,
+                                                        }),
+                                                    },
+                                                ));
+                                                invalidate_layout = true;
+                                            }
                                         }
                                         None => {
-                                            if float_zone(self.last_bounds).contains(*position) {
+                                            if allow_tear_off
+                                                && float_zone(self.last_bounds).contains(*position)
+                                            {
                                                 pending_effects.push(Effect::Dock(
                                                     DockOp::RequestFloatPanelToNewWindow {
                                                         source_window: drag.source_window,
@@ -1208,8 +1213,9 @@ impl Widget for DockSpace {
                                 update_drag = Some((position, dragging));
 
                                 if dragging {
+                                    let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off;
                                     let bounds = self.last_bounds;
-                                    if float_zone(bounds).contains(position) {
+                                    if allow_tear_off && float_zone(bounds).contains(position) {
                                         dock.hover = Some(DockDropTarget::Float {
                                             window: self.window,
                                         });
@@ -1254,8 +1260,9 @@ impl Widget for DockSpace {
                                 }
 
                                 if dragging {
+                                    let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off;
                                     let bounds = self.last_bounds;
-                                    if float_zone(bounds).contains(position) {
+                                    if allow_tear_off && float_zone(bounds).contains(position) {
                                         dock.hover = Some(DockDropTarget::Float {
                                             window: self.window,
                                         });
@@ -1285,20 +1292,24 @@ impl Widget for DockSpace {
                                             invalidate_layout = true;
                                         }
                                         Some(DockDropTarget::Float { .. }) => {
-                                            pending_effects.push(Effect::Dock(
-                                                DockOp::RequestFloatPanelToNewWindow {
-                                                    source_window: drag.source_window,
-                                                    panel: drag.panel.clone(),
-                                                    anchor: Some(fret_core::WindowAnchor {
-                                                        window: self.window,
-                                                        position,
-                                                    }),
-                                                },
-                                            ));
-                                            invalidate_layout = true;
+                                            if allow_tear_off {
+                                                pending_effects.push(Effect::Dock(
+                                                    DockOp::RequestFloatPanelToNewWindow {
+                                                        source_window: drag.source_window,
+                                                        panel: drag.panel.clone(),
+                                                        anchor: Some(fret_core::WindowAnchor {
+                                                            window: self.window,
+                                                            position,
+                                                        }),
+                                                    },
+                                                ));
+                                                invalidate_layout = true;
+                                            }
                                         }
                                         None => {
-                                            if float_zone(self.last_bounds).contains(position) {
+                                            if allow_tear_off
+                                                && float_zone(self.last_bounds).contains(position)
+                                            {
                                                 pending_effects.push(Effect::Dock(
                                                     DockOp::RequestFloatPanelToNewWindow {
                                                         source_window: drag.source_window,
@@ -1386,8 +1397,11 @@ impl Widget for DockSpace {
 
             cx.request_focus(cx.node);
 
+            let float_when = WhenExpr::parse("ui.window_tear_off").expect("valid when expr");
+
             let inv_ctx = InputContext {
                 platform: cx.input_ctx.platform,
+                caps: cx.input_ctx.caps.clone(),
                 ui_has_modal: cx.input_ctx.ui_has_modal,
                 focus_is_text_input: cx.input_ctx.focus_is_text_input,
             };
@@ -1397,7 +1411,7 @@ impl Widget for DockSpace {
                 items: vec![
                     MenuItem::Command {
                         command: CommandId::from("dock.tab.float"),
-                        when: None,
+                        when: Some(float_when),
                     },
                     MenuItem::Separator,
                     MenuItem::Command {
@@ -1443,6 +1457,7 @@ impl Widget for DockSpace {
 
             let inv_ctx = InputContext {
                 platform: cx.input_ctx.platform,
+                caps: cx.input_ctx.caps.clone(),
                 ui_has_modal: cx.input_ctx.ui_has_modal,
                 focus_is_text_input: cx.input_ctx.focus_is_text_input,
             };
@@ -3137,7 +3152,10 @@ mod tests {
 
     #[test]
     fn compute_split_fraction_handles_small_bounds() {
-        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(300.0)));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(300.0)),
+        );
         let pos = Point::new(Px(60.0), Px(10.0));
         assert_eq!(
             compute_split_fraction(fret_core::Axis::Horizontal, bounds, bounds, bounds, pos),

@@ -37,12 +37,12 @@ use asset_drop::{
 use asset_open::{AssetOpenDecision, AssetOpenRegistry, AssetOpenRule};
 use fret_app::{
     App, CommandId, CommandMeta, CommandScope, CreateWindowKind, CreateWindowRequest, Effect,
-    Keymap, KeymapFileV1, KeymapService, Model, WindowRequest,
+    Keymap, KeymapFileV1, KeymapService, Model, WhenExpr, WindowRequest,
     keymap::{BindingV1, KeySpecV1},
 };
 use fret_core::{
-    Axis, Color, DockLayoutNodeV1, DockLayoutV1, DockNode, DockOp, DropZone, PanelKey, Rect,
-    RenderTargetId, Scene, WindowAnchor,
+    Axis, Color, DockLayoutNodeV1, DockLayoutV1, DockNode, DockOp, DropZone, PanelKey,
+    PlatformCapabilities, Rect, RenderTargetId, Scene, WindowAnchor,
 };
 use fret_editor::{
     InspectorEditKind, InspectorEditService, MarqueeSelectInteraction, PanOrbitInteraction,
@@ -2330,6 +2330,7 @@ impl WinitDriver for DemoDriver {
                 .with_description("Floats the current dock tab into a new window")
                 .with_category("Dock")
                 .with_scope(CommandScope::Widget)
+                .with_when(WhenExpr::parse("ui.window_tear_off").expect("valid when expr"))
                 .hidden(),
         );
         app.commands_mut().register(
@@ -3916,6 +3917,13 @@ impl WinitDriver for DemoDriver {
                 let _ = self.apply_theme_bytes(app, src_path, &bytes);
             }
             "dock.tab.close" | "dock.tab.float" | "dock.tab.move_left" | "dock.tab.move_right" => {
+                let allow_tear_off = app
+                    .global::<PlatformCapabilities>()
+                    .cloned()
+                    .unwrap_or_default()
+                    .ui
+                    .window_tear_off;
+
                 let Some(dock) = app.global_mut::<DockManager>() else {
                     return;
                 };
@@ -3930,14 +3938,19 @@ impl WinitDriver for DemoDriver {
                         window: dock_window,
                         panel,
                     },
-                    "dock.tab.float" => DockOp::RequestFloatPanelToNewWindow {
-                        source_window: dock_window,
-                        panel,
-                        anchor: Some(WindowAnchor {
-                            window: dock_window,
-                            position,
-                        }),
-                    },
+                    "dock.tab.float" => {
+                        if !allow_tear_off {
+                            return;
+                        }
+                        DockOp::RequestFloatPanelToNewWindow {
+                            source_window: dock_window,
+                            panel,
+                            anchor: Some(WindowAnchor {
+                                window: dock_window,
+                                position,
+                            }),
+                        }
+                    }
                     "dock.tab.move_left" | "dock.tab.move_right" => {
                         let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(tabs_node) else {
                             return;
@@ -4624,20 +4637,38 @@ impl WinitDriver for DemoDriver {
     }
 
     fn dock_op(&mut self, app: &mut App, op: DockOp) {
-        if let DockOp::RequestFloatPanelToNewWindow {
-            source_window,
-            panel,
-            anchor,
-        } = &op
-        {
-            app.push_effect(Effect::Window(WindowRequest::Create(CreateWindowRequest {
-                kind: CreateWindowKind::DockFloating {
-                    source_window: *source_window,
-                    panel: panel.clone(),
-                },
-                anchor: *anchor,
-            })));
-            return;
+        match &op {
+            DockOp::RequestFloatPanelToNewWindow {
+                source_window,
+                panel,
+                anchor,
+            } => {
+                let caps = app
+                    .global::<PlatformCapabilities>()
+                    .cloned()
+                    .unwrap_or_default();
+                if !caps.ui.window_tear_off {
+                    return;
+                }
+                app.push_effect(Effect::Window(WindowRequest::Create(CreateWindowRequest {
+                    kind: CreateWindowKind::DockFloating {
+                        source_window: *source_window,
+                        panel: panel.clone(),
+                    },
+                    anchor: *anchor,
+                })));
+                return;
+            }
+            DockOp::FloatPanelToWindow { .. } => {
+                let caps = app
+                    .global::<PlatformCapabilities>()
+                    .cloned()
+                    .unwrap_or_default();
+                if !caps.ui.window_tear_off {
+                    return;
+                }
+            }
+            _ => {}
         }
 
         let mut close_if_empty: Option<fret_core::AppWindowId> = None;
@@ -5980,7 +6011,13 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    let app = App::new();
+    let mut app = App::new();
+    let mut caps = PlatformCapabilities::default();
+    if std::env::var_os("FRET_FORCE_SINGLE_WINDOW").is_some() {
+        caps.ui.multi_window = false;
+        caps.ui.window_tear_off = false;
+    }
+    app.set_global(caps);
     let driver = DemoDriver::default();
     let mut runner = WinitRunner::new(config, app, driver);
     event_loop.run_app(&mut runner)?;

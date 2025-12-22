@@ -1,3 +1,4 @@
+pub mod capabilities;
 pub mod dock;
 pub mod dock_layout;
 pub mod dock_op;
@@ -10,6 +11,7 @@ pub mod text;
 pub mod viewport;
 pub mod window;
 
+pub use capabilities::{ExternalDragPayloadKind, PlatformCapabilities};
 pub use dock::{Axis, DockGraph, DockNode, DropZone};
 pub use dock_layout::{
     DOCK_LAYOUT_VERSION_V1, DockLayoutNodeV1, DockLayoutV1, DockLayoutWindowV1,

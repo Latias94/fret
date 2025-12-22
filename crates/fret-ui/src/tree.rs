@@ -1,5 +1,6 @@
 use crate::widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 use fret_app::{App, CommandId, Effect, InputContext, KeyChord, KeymapService, ModelId, Platform};
+use fret_core::PlatformCapabilities;
 use fret_core::{
     AppWindowId, Event, FrameId, KeyCode, NodeId, Point, PointerEvent, Rect, Scene, Size,
     TextService,
@@ -508,8 +509,13 @@ impl UiTree {
 
         let (active_layers, barrier_root) = self.active_input_layers();
         let focus_is_text_input = self.focus_is_text_input();
+        let caps = app
+            .global::<PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default();
         let input_ctx = InputContext {
             platform: Platform::current(),
+            caps,
             ui_has_modal: barrier_root.is_some(),
             focus_is_text_input,
         };
@@ -787,8 +793,13 @@ impl UiTree {
         };
 
         let (active_layers, barrier_root) = self.active_input_layers();
+        let caps = app
+            .global::<PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default();
         let input_ctx = InputContext {
             platform: Platform::current(),
+            caps,
             ui_has_modal: barrier_root.is_some(),
             focus_is_text_input: self.focus_is_text_input(),
         };

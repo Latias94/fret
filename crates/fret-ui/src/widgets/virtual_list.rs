@@ -791,6 +791,7 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
                             if let Some(window) = cx.window {
                                 let inv_ctx = InputContext {
                                     platform: cx.input_ctx.platform,
+                                    caps: cx.input_ctx.caps.clone(),
                                     ui_has_modal: cx.input_ctx.ui_has_modal,
                                     focus_is_text_input: false,
                                 };

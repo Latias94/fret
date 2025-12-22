@@ -7,7 +7,7 @@ use crate::ime_probe::ImeProbe;
 use crate::overlay_layouts::{CenteredOverlayLayout, CornerOverlayLayout};
 use crate::scene_document::SceneDocumentService;
 use fret_app::Model;
-use fret_core::{AppWindowId, Axis, Color, Px};
+use fret_core::{AppWindowId, Axis, Color, ExternalDragPayloadKind, PlatformCapabilities, Px};
 use fret_editor::{InspectorEditHint, InspectorEditLayout};
 use fret_editor::{ViewportToolManager, ViewportToolMode};
 use fret_ui::{
@@ -340,7 +340,7 @@ struct DebugHudPanel {
     text: String,
     text_blob: Option<fret_core::TextBlobId>,
     text_metrics: Option<fret_core::TextMetrics>,
-    last_key: Option<(u64, u32, u32, u32)>,
+    last_key: Option<(u64, u32, u32, u32, u8, u8, u8)>,
     last_scale_factor: Option<f32>,
     style: fret_core::TextStyle,
 }
@@ -371,11 +371,26 @@ impl DebugHudPanel {
             return false;
         };
 
+        let caps = cx
+            .app
+            .global::<PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default();
+        let payload_key = match caps.dnd.external_payload {
+            ExternalDragPayloadKind::None => 0,
+            ExternalDragPayloadKind::FilePath => 1,
+            ExternalDragPayloadKind::FileToken => 2,
+            ExternalDragPayloadKind::Text => 3,
+        };
+
         let key = (
             stats.frame_id.0,
             stats.layout_nodes_visited,
             stats.layout_nodes_performed,
             stats.paint_nodes,
+            caps.ui.multi_window as u8,
+            caps.ui.window_tear_off as u8,
+            payload_key,
         );
         if self.last_key == Some(key) && self.last_scale_factor == Some(cx.scale_factor) {
             return false;
@@ -391,7 +406,7 @@ impl DebugHudPanel {
         let paint_ms = stats.paint_time.as_secs_f64() * 1000.0;
 
         self.text = format!(
-            "UI Debug\nframe: {}\nlayout: {:.2} ms ({} / {})\npaint: {:.2} ms ({} nodes)\nfocus: {:?}\ncapture: {:?}",
+            "UI Debug\nframe: {}\nlayout: {:.2} ms ({} / {})\npaint: {:.2} ms ({} nodes)\nfocus: {:?}\ncapture: {:?}\n\ncaps.ui.multi_window: {}\ncaps.ui.window_tear_off: {}\ncaps.dnd.external_payload: {}",
             stats.frame_id.0,
             layout_ms,
             stats.layout_nodes_performed,
@@ -400,6 +415,9 @@ impl DebugHudPanel {
             stats.paint_nodes,
             stats.focus,
             stats.captured,
+            caps.ui.multi_window,
+            caps.ui.window_tear_off,
+            caps.dnd.external_payload.as_str(),
         );
 
         let constraints = fret_core::TextConstraints {

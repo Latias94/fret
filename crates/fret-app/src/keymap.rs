@@ -1,5 +1,5 @@
 use crate::{App, CommandId};
-use fret_core::{KeyCode, Modifiers};
+use fret_core::{KeyCode, Modifiers, PlatformCapabilities};
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
@@ -45,6 +45,7 @@ impl Default for Platform {
 #[derive(Debug, Clone)]
 pub struct InputContext {
     pub platform: Platform,
+    pub caps: PlatformCapabilities,
     pub ui_has_modal: bool,
     pub focus_is_text_input: bool,
 }
@@ -53,6 +54,7 @@ impl Default for InputContext {
     fn default() -> Self {
         Self {
             platform: Platform::current(),
+            caps: PlatformCapabilities::default(),
             ui_has_modal: false,
             focus_is_text_input: false,
         }

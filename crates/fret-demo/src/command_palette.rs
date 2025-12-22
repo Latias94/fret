@@ -1,4 +1,5 @@
-use fret_app::{CommandId, InputContext, KeymapService, Platform, format_sequence};
+use fret_app::{App, CommandId, InputContext, KeymapService, Platform, format_sequence};
+use fret_core::PlatformCapabilities;
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp, Size,
     TextConstraints, TextMetrics, TextStyle, TextWrap, ids::FontId,
@@ -169,9 +170,14 @@ impl CommandPalette {
         }
     }
 
-    fn normal_ctx() -> InputContext {
+    fn normal_ctx(app: &App) -> InputContext {
+        let caps = app
+            .global::<PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default();
         InputContext {
             platform: Platform::current(),
+            caps,
             ui_has_modal: false,
             focus_is_text_input: false,
         }
@@ -193,7 +199,7 @@ impl CommandPalette {
         }
 
         let style = Self::text_style();
-        let ctx = Self::normal_ctx();
+        let ctx = Self::normal_ctx(cx.app);
 
         let keymap = cx.app.global::<KeymapService>();
 

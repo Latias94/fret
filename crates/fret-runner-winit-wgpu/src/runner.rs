@@ -8,7 +8,8 @@ use std::{
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{
     Event, ExternalDragEvent, ExternalDragKind, InternalDragEvent, InternalDragKind, Modifiers,
-    MouseButton, Point, Px, Rect, Scene, Size, TextService, ViewportInputEvent,
+    MouseButton, PlatformCapabilities, Point, Px, Rect, Scene, Size, TextService,
+    ViewportInputEvent,
 };
 use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
 use slotmap::SlotMap;
@@ -532,6 +533,17 @@ struct TimerEntry {
 
 impl<D: WinitDriver> WinitRunner<D> {
     pub fn new(config: WinitRunnerConfig, app: App, driver: D) -> Self {
+        let mut app = app;
+        let caps = match app.global::<PlatformCapabilities>().cloned() {
+            Some(caps) => caps,
+            None => {
+                let caps = PlatformCapabilities::default();
+                app.set_global(caps.clone());
+                caps
+            }
+        };
+        tracing::info!(caps = ?caps, "platform capabilities");
+
         let raw_modifiers = ModifiersState::empty();
         let alt_gr_down = false;
         Self {
