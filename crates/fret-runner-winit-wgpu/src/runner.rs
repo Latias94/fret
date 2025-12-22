@@ -772,12 +772,15 @@ impl<D: WinitDriver> WinitRunner<D> {
 
     fn compute_window_position_from_anchor(&self, anchor: WindowAnchor) -> Option<Position> {
         let anchor_state = self.windows.get(anchor.window)?;
-        let outer = anchor_state.window.outer_position().ok()?;
+        // Use the client-area origin as the base; `WindowAnchor::position` is expressed in
+        // window-local logical coordinates (matching pointer events), which aligns with
+        // `inner_position` rather than `outer_position` (decorations).
+        let inner = anchor_state.window.inner_position().ok()?;
         let scale = anchor_state.window.scale_factor();
 
         let (ox, oy) = self.config.new_window_anchor_offset;
-        let mut x = outer.x as f64 + anchor.position.x.0 as f64 * scale + ox;
-        let mut y = outer.y as f64 + anchor.position.y.0 as f64 * scale + oy;
+        let mut x = inner.x as f64 + anchor.position.x.0 as f64 * scale + ox;
+        let mut y = inner.y as f64 + anchor.position.y.0 as f64 * scale + oy;
 
         // Best-effort clamping: avoid creating "off-screen" floating windows due to
         // platform-specific coordinate spaces and DPI conversions.
@@ -799,6 +802,32 @@ impl<D: WinitDriver> WinitRunner<D> {
         Some(PhysicalPosition::new(x as i32, y as i32).into())
     }
 
+    fn compute_window_position_from_cursor(
+        &self,
+        reference_window: fret_core::AppWindowId,
+    ) -> Option<Position> {
+        let screen_pos = self.cursor_screen_pos?;
+        let ref_state = self.windows.get(reference_window)?;
+        let (ox, oy) = self.config.new_window_anchor_offset;
+        let mut x = screen_pos.x + ox;
+        let mut y = screen_pos.y + oy;
+
+        if let Some(monitor) = ref_state.window.current_monitor() {
+            let pos = monitor.position();
+            let size = monitor.size();
+
+            let min_x = pos.x as f64;
+            let min_y = pos.y as f64;
+            let max_x = min_x + size.width as f64 - 40.0;
+            let max_y = min_y + size.height as f64 - 40.0;
+
+            x = x.clamp(min_x, max_x);
+            y = y.clamp(min_y, max_y);
+        }
+
+        Some(PhysicalPosition::new(x as i32, y as i32).into())
+    }
+
     fn create_window_from_request(
         &mut self,
         event_loop: &ActiveEventLoop,
@@ -809,10 +838,18 @@ impl<D: WinitDriver> WinitRunner<D> {
             .window_create_spec(&mut self.app, request)
             .unwrap_or_else(|| self.config.default_window_spec());
 
-        if spec.position.is_none()
-            && let Some(anchor) = request.anchor
-        {
-            spec.position = self.compute_window_position_from_anchor(anchor);
+        if spec.position.is_none() {
+            // For dock tear-off, prefer placing the floating window near the actual cursor
+            // screen position (Unity/ImGui feel). Anchor-based placement remains a fallback.
+            if let CreateWindowKind::DockFloating { source_window, .. } = request.kind {
+                spec.position = self.compute_window_position_from_cursor(source_window);
+            }
+
+            if spec.position.is_none()
+                && let Some(anchor) = request.anchor
+            {
+                spec.position = self.compute_window_position_from_anchor(anchor);
+            }
         }
 
         #[cfg(target_os = "macos")]
