@@ -511,7 +511,13 @@ impl DemoDriver {
                 let preferred = [Some(cx.window), cx.driver.main_window]
                     .into_iter()
                     .flatten();
-                DockManager::request_activate_panel(cx.app, cx.window, preferred, key.clone());
+                DockManager::request_activate_panel(
+                    cx.app,
+                    cx.window,
+                    preferred,
+                    key.clone(),
+                    fret_ui::dock::ActivatePanelOptions { focus: true },
+                );
                 AssetOpenDecision::Handled
             }),
         });
@@ -533,7 +539,13 @@ impl DemoDriver {
                 let preferred = [Some(cx.window), cx.driver.main_window]
                     .into_iter()
                     .flatten();
-                DockManager::request_activate_panel(cx.app, cx.window, preferred, key.clone());
+                DockManager::request_activate_panel(
+                    cx.app,
+                    cx.window,
+                    preferred,
+                    key.clone(),
+                    fret_ui::dock::ActivatePanelOptions { focus: true },
+                );
 
                 AssetOpenDecision::Handled
             }),
@@ -4557,6 +4569,7 @@ impl WinitDriver for DemoDriver {
                                 window,
                                 preferred,
                                 key.clone(),
+                                fret_ui::dock::ActivatePanelOptions { focus: true },
                             );
                         }
                     }
@@ -4564,7 +4577,13 @@ impl WinitDriver for DemoDriver {
                         let _ = self.open_scene_by_guid(app, guid);
                         let key = PanelKey::new("core.scene");
                         let preferred = [Some(window), self.main_window].into_iter().flatten();
-                        DockManager::request_activate_panel(app, window, preferred, key.clone());
+                        DockManager::request_activate_panel(
+                            app,
+                            window,
+                            preferred,
+                            key.clone(),
+                            fret_ui::dock::ActivatePanelOptions { focus: true },
+                        );
                     }
                     UnsavedContinuation::CloseWindow { window: w } => {
                         app.push_effect(Effect::Window(WindowRequest::Close(w)));
@@ -4605,7 +4624,13 @@ impl WinitDriver for DemoDriver {
                 if self.new_scene_or_prompt(app, window) {
                     let key = PanelKey::new("core.scene");
                     let preferred = [Some(window), self.main_window].into_iter().flatten();
-                    DockManager::request_activate_panel(app, window, preferred, key.clone());
+                    DockManager::request_activate_panel(
+                        app,
+                        window,
+                        preferred,
+                        key.clone(),
+                        fret_ui::dock::ActivatePanelOptions { focus: true },
+                    );
 
                     for &w in self.logical_windows.keys() {
                         app.request_redraw(w);

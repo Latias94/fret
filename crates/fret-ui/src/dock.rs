@@ -71,6 +71,32 @@ pub struct DockManager {
     viewport_content_rects: HashMap<(fret_core::AppWindowId, RenderTargetId), Rect>,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct ActivatePanelOptions {
+    pub focus: bool,
+}
+
+impl Default for ActivatePanelOptions {
+    fn default() -> Self {
+        Self { focus: false }
+    }
+}
+
+#[derive(Default)]
+struct DockFocusRequestService {
+    per_window: HashMap<fret_core::AppWindowId, PanelKey>,
+}
+
+impl DockFocusRequestService {
+    fn request(&mut self, window: fret_core::AppWindowId, panel: PanelKey) {
+        self.per_window.insert(window, panel);
+    }
+
+    fn take(&mut self, window: fret_core::AppWindowId) -> Option<PanelKey> {
+        self.per_window.remove(&window)
+    }
+}
+
 impl DockManager {
     pub fn activate_panel_tab_best_effort(
         &self,
@@ -108,6 +134,7 @@ impl DockManager {
         sender: fret_core::AppWindowId,
         preferred_windows: impl IntoIterator<Item = fret_core::AppWindowId>,
         panel: PanelKey,
+        options: ActivatePanelOptions,
     ) -> bool {
         let preferred: Vec<fret_core::AppWindowId> = preferred_windows.into_iter().collect();
         let Some((target_window, op)) = host
@@ -118,6 +145,15 @@ impl DockManager {
         };
 
         host.push_effect(Effect::Dock(op));
+        if options.focus {
+            host.with_global_mut(DockFocusRequestService::default, |service, _host| {
+                service.request(target_window, panel.clone());
+            });
+            host.push_effect(Effect::Command {
+                window: Some(target_window),
+                command: CommandId::from("dock.focus_requested_panel"),
+            });
+        }
         if target_window != sender {
             host.push_effect(Effect::Window(WindowRequest::Raise {
                 window: target_window,
@@ -1574,6 +1610,26 @@ impl Widget for DockSpace {
 
     fn command(&mut self, cx: &mut crate::widget::CommandCx<'_>, command: &CommandId) -> bool {
         match command.as_str() {
+            "dock.focus_requested_panel" => {
+                let Some(panel) = cx
+                    .app
+                    .with_global_mut(DockFocusRequestService::default, |service, _app| {
+                        service.take(self.window)
+                    })
+                else {
+                    return false;
+                };
+
+                let panel_nodes = self.panel_nodes(cx.app);
+                if let Some(node) = panel_nodes.get(&panel).copied() {
+                    cx.request_focus(node);
+                } else {
+                    cx.request_focus(cx.node);
+                }
+                cx.request_redraw();
+                cx.stop_propagation();
+                true
+            }
             "dock.tab.float" => {
                 let Some(dock) = cx.app.global_mut::<DockManager>() else {
                     return false;
