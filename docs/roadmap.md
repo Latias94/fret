@@ -36,6 +36,9 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Adopt observability strategy (tracing + inspector hooks + renderer metrics) (ADR 0036).
 - P0: Adopt workspace/repo boundaries and external `fret-components` strategy (ADR 0037).
 - P0: Adopt component authoring model (Render/RenderOnce + IntoElement) (ADR 0039).
+- P0: Decide whether `fret-ui` is embeddable vs integrated with `fret-app` (ADR 0052).
+- P0: Make external file drag payload portable (no `PathBuf` in core events) (ADR 0053).
+- P0: Introduce runtime platform capability matrix for portability (ADR 0054).
 - P0: Renderer must preserve `Scene.ops` ordering across primitive kinds (ADR 0009).
 - P0: Multi-root overlays (menus, drag previews, popups, modals) must be first-class (ADR 0011).
 - P0: Keyboard/IME split: physical keys for shortcuts, text input for editing (ADR 0012).

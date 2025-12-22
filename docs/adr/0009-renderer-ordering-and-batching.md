@@ -24,6 +24,8 @@ References:
   - `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
 - Zed/GPUI quad SDF + batching style (illustrative renderer design):
   - `repo-ref/zed/crates/gpui/src/platform/blade/shaders.wgsl`
+- Vello encoding/recording separation (useful for thinking about renderer internals, not a drop-in backend):
+  - `repo-ref/vello/doc/ARCHITECTURE.md`
 
 ## Decision
 
@@ -71,3 +73,14 @@ add soft clip, but the ordering semantics remain the same.
 - Formalize how `DrawOrder` should evolve (keep as internal/debug, or remove from the public contract).
 - Define additional “stateful” ops (transform, opacity groups, layers) while preserving order semantics.
 - Add a renderer test harness that verifies ordering for mixed primitives (quad + viewport + text).
+
+### Note on “Vello as a renderer backend”
+
+Vello is a 2D renderer with a strong internal layering:
+`Scene` → `Encoding` → `Recording` → backend execution.
+That separation is a useful reference for **how to structure renderer internals** (caching, replay, tests).
+
+However, Fret’s public contract requires strict in-order compositing across multiple primitive kinds
+and embedded engine viewports (ADR 0007 / ADR 0015). A “single-scene consume-and-render” backend
+is not directly compatible without treating it as an offscreen producer and then compositing its output
+as an image/viewport surface within the ordered `SceneOp` stream.

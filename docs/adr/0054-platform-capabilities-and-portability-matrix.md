@@ -1,0 +1,171 @@
+# ADR 0054: Platform Capabilities and Portability Matrix (Runtime, Not cfg)
+
+Status: Proposed
+Scope: `fret-platform-*` + runner contracts; consumed by commands/UI via `InputContext`/`when`
+
+## Context
+
+Fret targets:
+
+- desktop first (Windows/macOS/Linux),
+- wasm/WebGPU as a mid-term target,
+- mobile later (out of scope for near-term implementation, but should not be blocked by core contracts).
+
+Today, several assumptions are “implicitly desktop”:
+
+- multi-window is always available,
+- external drag-and-drop yields real filesystem paths,
+- clipboard supports arbitrary operations,
+- IME and text input behaviors are consistent.
+
+These assumptions leak into:
+
+- `fret-core` event payloads (e.g. external drag file paths),
+- command gating decisions (`when` expressions),
+- demo/editor behaviors.
+
+Makepad’s web backend demonstrates a useful posture:
+
+- a single entry-point message pump for wasm,
+- runtime knowledge of OS/browser capabilities,
+- dependency/resource loading handled as part of the platform loop.
+
+We want the same *conceptual* advantage without adopting Makepad’s DSL or platform stack.
+
+## Decision
+
+Introduce a **runtime capability model**: `PlatformCapabilities`.
+
+Capabilities are produced by the runner/platform backend and are:
+
+- pure data (serializable/debuggable),
+- platform-agnostic (no `winit` types, no `PathBuf`),
+- stable inputs to `when` expressions and UI/command gating.
+
+### 1) Capabilities are runtime, not compile-time
+
+We do not rely solely on `cfg(target_arch)` to decide feature availability.
+
+Rationale:
+
+- wasm environments can differ (browser quirks, permission gating),
+- desktop environments can differ (Wayland vs X11, sandboxing),
+- multi-monitor/multi-window support may be constrained by backend.
+
+### 2) Capabilities are used for gating, not for behavior forks inside widgets
+
+Widgets and commands should not grow ad-hoc platform branches.
+Instead:
+
+- commands are enabled/disabled via `when` using capabilities,
+- platform-dependent behavior is expressed via effects (ADR 0001 / ADR 0003),
+- the platform backend returns events/results (clipboard, file read, etc.).
+
+### 3) Initial capability set (P0)
+
+We define a minimal set of booleans/enums that cover the “hard portability” boundaries:
+
+- **Windows**
+  - `ui.multi_window`: `bool` (wasm/mobile: false; desktop: true)
+  - `ui.window_tear_off`: `bool` (may equal `multi_window`)
+- **Clipboard**
+  - `clipboard.text`: `bool`
+  - `clipboard.files`: `bool` (future; often false on web)
+- **External drag-and-drop**
+  - `dnd.external`: `bool`
+  - `dnd.external_payload`: enum:
+    - `none`
+    - `file_path` (desktop)
+    - `file_token` (web/sandbox; portable handle)
+    - `text` (web/desktop)
+- **IME/text input**
+  - `ime`: `bool`
+  - `ime.set_cursor_area`: `bool`
+- **Filesystem semantics**
+  - `fs.real_paths`: `bool` (false on web)
+  - `fs.file_dialogs`: `bool` (may be permission-gated)
+- **Rendering backend**
+  - `gfx.webgpu`: `bool`
+  - `gfx.wgpu`: `bool`
+
+This list is intentionally small; it can expand later, but early tokens should remain stable.
+
+### 4) Integration points
+
+#### a) `InputContext` / `when`
+
+Capabilities become part of the command resolution input context (ADR 0022 / ADR 0023):
+
+- `when` expressions may gate on capability keys (stringly keys at the expression level),
+- command palette and menus use the same gating so UI stays consistent.
+
+#### b) External drag payload portability (ADR 0053)
+
+Capabilities explicitly define whether external drag can deliver real paths.
+
+This is a contract guardrail:
+
+- if `dnd.external_payload != file_path`, core events must not expose `PathBuf`,
+- access to dropped data must go through effect-driven APIs (token/handle).
+
+#### c) Docking and multi-window (ADR 0013 / ADR 0017)
+
+When `ui.multi_window == false`:
+
+- tear-off commands should be disabled,
+- docking remains single-window, but logical layouts can still exist (persistence remains useful).
+
+### 5) Observability
+
+Capabilities must be visible in diagnostics:
+
+- log at startup (one line),
+- expose in the debug HUD/inspector (ADR 0036), so portability issues are obvious.
+
+## Consequences
+
+- wasm portability becomes a planned contract instead of a later rewrite.
+- core events and payloads can be designed without desktop-only leakage.
+- UI/menus/commands remain consistent via shared gating rules (`when`).
+
+## Alternatives Considered
+
+### A) Pure `cfg` compile-time decisions
+
+Pros: simple.
+
+Cons:
+
+- insufficient for web permission gating and backend differences,
+- encourages platform-specific code paths scattered across widgets.
+
+### B) Allow widgets to probe platform features ad-hoc
+
+Pros: flexible.
+
+Cons:
+
+- leads to inconsistent UX and hard-to-debug behavior drift,
+- breaks the “commands/menus/palette share one gating model” goal.
+
+## Next Steps
+
+1. Add a `PlatformCapabilities` data type at the platform boundary.
+2. Thread it into `InputContext` and `when` evaluation inputs.
+3. Update external DnD contracts to respect the capability matrix (ADR 0053).
+4. Add a debug surface (HUD) that prints capabilities (ADR 0036).
+
+## References
+
+- ADR 0001: `docs/adr/0001-app-effects.md`
+- ADR 0003: `docs/adr/0003-platform-boundary.md`
+- ADR 0013: `docs/adr/0013-docking-ops-and-persistence.md`
+- ADR 0017: `docs/adr/0017-multi-window-display-and-dpi.md`
+- ADR 0022: `docs/adr/0022-when-expressions.md`
+- ADR 0034: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
+- ADR 0036: `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
+- ADR 0041: `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
+- ADR 0053: `docs/adr/0053-external-drag-payload-portability.md`
+- Makepad web single entrypoint message pump:
+  - `repo-ref/makepad/platform/src/os/web/web.rs`
+

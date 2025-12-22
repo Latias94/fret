@@ -136,6 +136,8 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
 - `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
 - `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`
+- `docs/adr/0053-external-drag-payload-portability.md`
+- `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
 
 ## Engine Integration / Viewports
 
@@ -162,3 +164,6 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0037-workspace-boundaries-and-components-repository.md`
 - `docs/adr/0040-color-management-and-compositing-contracts.md`
 - `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
+- `docs/adr/0052-ui-host-runtime-boundary.md`
+- `docs/adr/0053-external-drag-payload-portability.md`
+- `docs/adr/0054-platform-capabilities-and-portability-matrix.md`

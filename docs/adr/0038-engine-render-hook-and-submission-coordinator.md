@@ -113,6 +113,25 @@ shape by extending the `WinitDriver` hook:
 This keeps the queue ownership rule intact while avoiding demo-only glue code that directly mutates the renderer
 registry during interaction.
 
+## Relationship to Vello (Reference Design)
+
+Vello’s architecture separates:
+
+- `Scene` → `Encoding` (a linearized buffer representation),
+- `Encoding` → `Recording` (an ordered list of GPU-relevant commands),
+- `Recording` → backend engine execution (currently `WgpuEngine`).
+
+This is conceptually aligned with Fret’s “engine records, runner submits” rule:
+
+- We can keep `fret-core::SceneOp` as the stable semantic contract (ADR 0002 / ADR 0009),
+- and still adopt an internal “encoding/recording” separation inside `fret-render` to improve caching,
+  debuggability, and testability, without changing queue ownership or submission ordering.
+
+Important difference: Fret’s `SceneOp` stream must support strict interleaving across primitive kinds
+(viewport surfaces, quads, text, clips) (ADR 0009), so Vello is not a drop-in UI renderer backend.
+The practical reuse story is to treat Vello as an **offscreen texture producer** (icons/vector views),
+then composite the resulting texture via Fret resource handles (`ImageId` / `RenderTargetId`).
+
 ## Consequences
 
 - Correct-by-construction ordering: engine viewport writes happen before UI samples them (ADR 0015).
@@ -177,3 +196,10 @@ Rationale:
 
 - Multi-queue engines: require explicit synchronization adapters (deferred).
 - Headless/offscreen-only runners: compatible with the contract, but not required for P0.
+
+## References
+
+- Vello architecture overview (Scene → Encoding → Recording → Engine):
+  - `repo-ref/vello/doc/ARCHITECTURE.md`
+- Vello `Recording` command list (engine-facing execution plan):
+  - `repo-ref/vello/vello/src/recording.rs`
