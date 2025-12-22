@@ -32,6 +32,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Inspector / property editing (example editor layer)**: `docs/adr/0048-inspector-property-protocol-and-editor-registry.md`
 - **Theme tokens and theme config (P0 styling)**: `docs/adr/0032-style-tokens-and-theme-resolution.md`, `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
 - **Editor-scale performance**: `docs/adr/0042-virtualization-and-large-lists.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
+- **Model observation / reactive invalidation (GPUI-style)**: `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`, `docs/adr/0031-app-owned-models-and-leasing-updates.md`, `docs/adr/0005-retained-ui-tree.md`
 - **Editor-scale lists contract (keys + data source)**: `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
 
 Note: P0 explicitly defers “dashed borders” as a general `SceneOp::Quad` feature. Implement dashed selection rectangles
@@ -115,6 +116,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
 - `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
 - `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
+- `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`
 - `docs/adr/0042-virtualization-and-large-lists.md`
 - `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
 - `docs/adr/0044-text-editing-state-and-commands.md`

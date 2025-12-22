@@ -15,7 +15,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
   - `VirtualList` (virtualization + stable keys + multi-selection) (ADR 0042 / ADR 0047)
   - `TreeView` (hierarchy-style tree over `VirtualList`)
 - MVP 12: MVP done in demo (context menu overlay + submenu + keyboard nav + focus restore)
-- MVP 13: MVP done in demo (Hierarchy selection model → Inspector panel)
+- MVP 13: MVP done in demo (Hierarchy selection model → Inspector panel; selection invalidation keeps Inspector in sync)
 - MVP 14: MVP done in demo (primitive inspector editing baseline)
 - MVP 15: MVP done in demo (Hierarchy drag & drop: reorder + reparent)
 - MVP 16: MVP done in demo (DockSpace hosts app-owned panel content via `DockPanelContentService`)
@@ -287,6 +287,7 @@ Notes:
 Status:
 
 - MVP done in `fret-demo` (see `crates/fret-demo/src/editor_shell.rs`).
+  - Note: selection changes currently invalidate the window’s dock panel content nodes to guarantee same-frame refresh; long-term this should be driven by model observation/dependency tracking (GPUI-style `notify`).
 
 References:
 
