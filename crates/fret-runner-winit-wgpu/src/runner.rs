@@ -619,6 +619,7 @@ struct DockTearoffFollow {
     window: fret_core::AppWindowId,
     source_window: fret_core::AppWindowId,
     grab_offset: Point,
+    manual_follow: bool,
 }
 
 impl<D: WinitDriver> WinitRunner<D> {
@@ -841,12 +842,12 @@ impl<D: WinitDriver> WinitRunner<D> {
 
     fn compute_window_outer_position_from_cursor_grab(
         &self,
-        reference_window: fret_core::AppWindowId,
+        target_window: fret_core::AppWindowId,
         grab_offset_logical: Point,
     ) -> Option<Position> {
         let screen_pos = self.cursor_screen_pos?;
-        let ref_state = self.windows.get(reference_window)?;
-        let scale = ref_state.window.scale_factor();
+        let state = self.windows.get(target_window)?;
+        let scale = state.window.scale_factor();
 
         if !grab_offset_logical.x.0.is_finite()
             || !grab_offset_logical.y.0.is_finite()
@@ -856,25 +857,28 @@ impl<D: WinitDriver> WinitRunner<D> {
             return None;
         }
 
-        // Convert the grab offset from client-area logical coords to outer-window physical coords.
-        // This accounts for platform window decorations (title bar, borders), matching the
-        // ImGui multi-viewport mental model (window pos is in screen space, not client space).
-        let deco_offset = if let (Ok(outer), Ok(inner)) = (
-            ref_state.window.outer_position(),
-            ref_state.window.inner_position(),
-        ) {
+        // Match ImGui's platform contract:
+        // - viewport pos is client/inner screen position (logical)
+        // - winit expects outer position
+        // - therefore: outer = desired_client - decoration_offset(window)
+        // See `repo-ref/dear-imgui-rs/backends/dear-imgui-winit/src/multi_viewport.rs:winit_set_window_pos`.
+        let deco_offset = if let (Ok(outer), Ok(inner)) =
+            (state.window.outer_position(), state.window.inner_position())
+        {
             (inner.x - outer.x, inner.y - outer.y)
         } else {
             (0, 0)
         };
 
-        let grab_outer_x = deco_offset.0 as f64 + grab_offset_logical.x.0 as f64 * scale;
-        let grab_outer_y = deco_offset.1 as f64 + grab_offset_logical.y.0 as f64 * scale;
+        let grab_client_x = grab_offset_logical.x.0 as f64 * scale;
+        let grab_client_y = grab_offset_logical.y.0 as f64 * scale;
+        let grab_outer_x = deco_offset.0 as f64 + grab_client_x;
+        let grab_outer_y = deco_offset.1 as f64 + grab_client_y;
 
         let mut x = screen_pos.x - grab_outer_x;
         let mut y = screen_pos.y - grab_outer_y;
 
-        if let Some(monitor) = ref_state.window.current_monitor() {
+        if let Some(monitor) = state.window.current_monitor() {
             let pos = monitor.position();
             let size = monitor.size();
 
@@ -901,18 +905,10 @@ impl<D: WinitDriver> WinitRunner<D> {
             .unwrap_or_else(|| self.config.default_window_spec());
 
         if spec.position.is_none() {
-            // For dock tear-off, prefer placing the floating window near the actual cursor
-            // screen position (Unity/ImGui feel). Anchor-based placement remains a fallback.
+            // For dock tear-off, initially place near the cursor; we will refine the position
+            // after the OS window exists using its own decoration offset (ImGui-style).
             if let CreateWindowKind::DockFloating { source_window, .. } = request.kind {
-                if let Some(anchor) = request.anchor {
-                    spec.position = self.compute_window_outer_position_from_cursor_grab(
-                        source_window,
-                        anchor.position,
-                    );
-                }
-                if spec.position.is_none() {
-                    spec.position = self.compute_window_position_from_cursor(source_window);
-                }
+                spec.position = self.compute_window_position_from_cursor(source_window);
             }
 
             if spec.position.is_none()
@@ -1234,6 +1230,17 @@ impl<D: WinitDriver> WinitRunner<D> {
                             if let CreateWindowKind::DockFloating { source_window, .. } =
                                 &create.kind
                             {
+                                if let Some(anchor) = create.anchor
+                                    && let Some(state) = self.windows.get(new_window)
+                                    && let Some(pos) = self
+                                        .compute_window_outer_position_from_cursor_grab(
+                                            new_window,
+                                            anchor.position,
+                                        )
+                                {
+                                    state.window.set_outer_position(pos);
+                                }
+
                                 if self.is_left_mouse_down_for_window(*source_window) {
                                     let grab_offset = create
                                         .anchor
@@ -1243,10 +1250,14 @@ impl<D: WinitDriver> WinitRunner<D> {
                                         window: new_window,
                                         source_window: *source_window,
                                         grab_offset,
+                                        manual_follow: true,
                                     });
                                     if let Some(state) = self.windows.get(new_window) {
                                         if state.window.drag_window().is_ok() {
-                                            self.dock_tearoff_follow = None;
+                                            if let Some(follow) = self.dock_tearoff_follow.as_mut()
+                                            {
+                                                follow.manual_follow = false;
+                                            }
                                         }
                                     }
                                 }
@@ -1749,10 +1760,13 @@ impl<D: WinitDriver> WinitRunner<D> {
             return false;
         };
 
-        let Some(pos) = self.compute_window_outer_position_from_cursor_grab(
-            follow.source_window,
-            follow.grab_offset,
-        ) else {
+        if !follow.manual_follow {
+            return false;
+        }
+
+        let Some(pos) =
+            self.compute_window_outer_position_from_cursor_grab(follow.window, follow.grab_offset)
+        else {
             return false;
         };
 
