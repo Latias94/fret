@@ -464,6 +464,7 @@ pub struct DockSpace {
     panel_content: HashMap<PanelKey, NodeId>,
     panel_last_sizes: HashMap<PanelKey, Size>,
     viewport_capture: Option<ViewportCaptureState>,
+    tear_off_in_flight: Option<DockTearOffKey>,
     tab_titles: HashMap<PanelKey, PreparedTabTitle>,
     empty_state: Option<PreparedTabTitle>,
     hovered_tab: Option<(DockNodeId, usize)>,
@@ -480,6 +481,13 @@ pub struct DockSpace {
     last_theme_revision: Option<u64>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+struct DockTearOffKey {
+    source_window: fret_core::AppWindowId,
+    start: Point,
+    panel: PanelKey,
+}
+
 impl DockSpace {
     pub fn new(window: fret_core::AppWindowId) -> Self {
         Self {
@@ -489,6 +497,7 @@ impl DockSpace {
             panel_content: HashMap::new(),
             panel_last_sizes: HashMap::new(),
             viewport_capture: None,
+            tear_off_in_flight: None,
             tab_titles: HashMap::new(),
             empty_state: None,
             hovered_tab: None,
@@ -781,6 +790,20 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     panel: p.panel.clone(),
                 })
         });
+
+        match dock_drag.as_ref() {
+            Some(drag) => {
+                let key = DockTearOffKey {
+                    source_window: drag.source_window,
+                    start: drag.start,
+                    panel: drag.panel.clone(),
+                };
+                if self.tear_off_in_flight.as_ref() != Some(&key) {
+                    self.tear_off_in_flight = None;
+                }
+            }
+            None => self.tear_off_in_flight = None,
+        }
 
         let mut begin_drag: Option<(Point, PanelKey)> = None;
         let mut update_drag: Option<(Point, bool)> = None;
@@ -1306,27 +1329,58 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 if dragging {
                                     let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off;
                                     let bounds = self.last_bounds;
-                                    if allow_tear_off && !bounds.contains(position) {
-                                        dock.hover = Some(DockDropTarget::Float {
-                                            window: self.window,
+                                    let requested_tear_off = allow_tear_off
+                                        && drag.source_window == self.window
+                                        && !bounds.contains(position)
+                                        && self.tear_off_in_flight.is_none();
+
+                                    if requested_tear_off {
+                                        self.tear_off_in_flight = Some(DockTearOffKey {
+                                            source_window: drag.source_window,
+                                            start: drag.start,
+                                            panel: drag.panel.clone(),
                                         });
-                                    } else if allow_tear_off
-                                        && float_zone(bounds).contains(position)
-                                    {
-                                        dock.hover = Some(DockDropTarget::Float {
-                                            window: self.window,
-                                        });
-                                    } else if bounds.contains(position) {
-                                        let layout = compute_layout_map(&dock.graph, root, bounds);
-                                        dock.hover = hit_test_drop_target(
-                                            &dock.graph,
-                                            &layout,
-                                            &self.tab_scroll,
-                                            position,
-                                        )
-                                        .map(DockDropTarget::Dock);
-                                    } else {
+                                        pending_effects.push(Effect::Dock(
+                                            DockOp::RequestFloatPanelToNewWindow {
+                                                source_window: drag.source_window,
+                                                panel: drag.panel.clone(),
+                                                anchor: Some(fret_core::WindowAnchor {
+                                                    window: self.window,
+                                                    position,
+                                                }),
+                                            },
+                                        ));
+                                        invalidate_layout = true;
+                                        end_dock_drag = true;
                                         dock.hover = None;
+                                        pending_redraws.push(self.window);
+                                        invalidate_paint = true;
+                                    }
+
+                                    if !requested_tear_off {
+                                        if allow_tear_off && !bounds.contains(position) {
+                                            dock.hover = Some(DockDropTarget::Float {
+                                                window: self.window,
+                                            });
+                                        } else if allow_tear_off
+                                            && float_zone(bounds).contains(position)
+                                        {
+                                            dock.hover = Some(DockDropTarget::Float {
+                                                window: self.window,
+                                            });
+                                        } else if bounds.contains(position) {
+                                            let layout =
+                                                compute_layout_map(&dock.graph, root, bounds);
+                                            dock.hover = hit_test_drop_target(
+                                                &dock.graph,
+                                                &layout,
+                                                &self.tab_scroll,
+                                                position,
+                                            )
+                                            .map(DockDropTarget::Dock);
+                                        } else {
+                                            dock.hover = None;
+                                        }
                                     }
                                 } else {
                                     dock.hover = None;
@@ -1488,6 +1542,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 .and_then(|d| d.payload::<DockPanelDragPayload>())
                 .is_some()
         {
+            self.tear_off_in_flight = None;
             cx.app.cancel_drag();
         }
 
