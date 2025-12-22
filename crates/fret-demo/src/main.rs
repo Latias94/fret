@@ -5646,6 +5646,7 @@ impl WinitDriver for DemoDriver {
         if inspector_enabled {
             let cursor = state.last_cursor_pos;
             let mut snapshot = DebugInspectorSnapshot::default();
+            snapshot.frame_id = app.frame_id();
             snapshot.cursor = cursor;
             snapshot.focus = state.ui.focus();
             snapshot.captured = state.ui.captured();
@@ -5685,6 +5686,7 @@ impl WinitDriver for DemoDriver {
                 let hit = state.ui.debug_hit_test(pos);
                 snapshot.hit = hit.hit;
                 snapshot.barrier_root = hit.barrier_root;
+                snapshot.active_layer_roots = hit.active_layer_roots.clone();
                 if let Some(node) = hit.barrier_root {
                     push_outline(node, barrier_color, &mut snapshot.outlines);
                 }
@@ -5699,6 +5701,8 @@ impl WinitDriver for DemoDriver {
                     }
                 }
             }
+
+            snapshot.layers = state.ui.debug_layers_in_paint_order();
 
             if let Some(node) = snapshot.focus {
                 push_outline(node, focus_color, &mut snapshot.outlines);

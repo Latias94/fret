@@ -52,11 +52,14 @@ impl DebugInspectorService {
 
 #[derive(Debug, Clone, Default)]
 pub struct DebugInspectorSnapshot {
+    pub frame_id: fret_core::FrameId,
     pub cursor: Option<fret_core::Point>,
     pub hit: Option<fret_core::NodeId>,
     pub focus: Option<fret_core::NodeId>,
     pub captured: Option<fret_core::NodeId>,
     pub barrier_root: Option<fret_core::NodeId>,
+    pub active_layer_roots: Vec<fret_core::NodeId>,
+    pub layers: Vec<fret_ui::UiDebugLayerInfo>,
     pub outlines: Vec<DebugInspectorOutline>,
 }
 
@@ -456,11 +459,83 @@ impl fret_ui::Widget for DebugHudPanel {
     }
 }
 
-struct DebugInspectorOverlay;
+struct DebugInspectorOverlay {
+    text: String,
+    text_blob: Option<fret_core::TextBlobId>,
+    text_metrics: Option<fret_core::TextMetrics>,
+    last_key: Option<(
+        Option<(i32, i32)>,
+        Option<fret_core::NodeId>,
+        Option<fret_core::NodeId>,
+        Option<fret_core::NodeId>,
+        Option<fret_core::NodeId>,
+        usize,
+        usize,
+    )>,
+    last_scale_factor: Option<f32>,
+    style: fret_core::TextStyle,
+}
 
 impl DebugInspectorOverlay {
     pub fn new() -> Self {
-        Self
+        Self {
+            text: String::new(),
+            text_blob: None,
+            text_metrics: None,
+            last_key: None,
+            last_scale_factor: None,
+            style: fret_core::TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(12.0),
+            },
+        }
+    }
+
+    fn sync_text(&mut self, cx: &mut fret_ui::PaintCx<'_>, snapshot: &DebugInspectorSnapshot) {
+        let cursor = snapshot
+            .cursor
+            .map(|p| (p.x.0.round() as i32, p.y.0.round() as i32));
+        let key = (
+            cursor,
+            snapshot.hit,
+            snapshot.focus,
+            snapshot.captured,
+            snapshot.barrier_root,
+            snapshot.active_layer_roots.len(),
+            snapshot.layers.len(),
+        );
+        if self.last_key == Some(key) && self.last_scale_factor == Some(cx.scale_factor) {
+            return;
+        }
+        self.last_key = Some(key);
+        self.last_scale_factor = Some(cx.scale_factor);
+
+        if let Some(blob) = self.text_blob.take() {
+            cx.text.release(blob);
+        }
+
+        let layer_summary = snapshot.layers.iter().filter(|l| l.visible).count();
+        let barrier = snapshot.barrier_root;
+
+        self.text = format!(
+            "UI Inspector\ncursor: {:?}\nhit: {:?}\nfocus: {:?}\ncapture: {:?}\nbarrier: {:?}\nvisible layers: {}\nactive roots: {}",
+            cursor,
+            snapshot.hit,
+            snapshot.focus,
+            snapshot.captured,
+            barrier,
+            layer_summary,
+            snapshot.active_layer_roots.len(),
+        );
+
+        let constraints = fret_core::TextConstraints {
+            max_width: Some(Px(320.0)),
+            wrap: fret_core::TextWrap::Word,
+            scale_factor: cx.scale_factor,
+        };
+        let (blob, metrics) = cx.text.prepare(&self.text, self.style, constraints);
+        self.text_blob = Some(blob);
+        self.text_metrics = Some(metrics);
     }
 }
 
@@ -475,15 +550,20 @@ impl fret_ui::Widget for DebugInspectorOverlay {
         let Some(window) = cx.window else {
             return;
         };
-        let Some(svc) = cx.app.global::<DebugInspectorService>() else {
+        let snapshot = {
+            let Some(svc) = cx.app.global::<DebugInspectorService>() else {
+                return;
+            };
+            if !svc.enabled() {
+                return;
+            }
+            svc.snapshot(window).cloned()
+        };
+        let Some(snapshot) = snapshot else {
             return;
         };
-        if !svc.enabled() {
-            return;
-        }
-        let Some(snapshot) = svc.snapshot(window) else {
-            return;
-        };
+
+        self.sync_text(cx, &snapshot);
 
         for outline in &snapshot.outlines {
             cx.scene.push(fret_core::SceneOp::Quad {
@@ -500,6 +580,55 @@ impl fret_ui::Widget for DebugInspectorOverlay {
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             });
         }
+
+        let Some(blob) = self.text_blob else {
+            return;
+        };
+        let Some(metrics) = self.text_metrics else {
+            return;
+        };
+
+        let theme = cx.theme().snapshot();
+        let pad = theme.metrics.padding_md;
+        let w = metrics.size.width + pad + pad;
+        let h = metrics.size.height + pad + pad;
+
+        let origin = snapshot
+            .cursor
+            .map(|p| fret_core::Point::new(p.x + Px(16.0), p.y + Px(16.0)))
+            .unwrap_or_else(|| {
+                fret_core::Point::new(cx.bounds.origin.x + Px(12.0), cx.bounds.origin.y + Px(12.0))
+            });
+
+        let max_x = (cx.bounds.origin.x.0 + cx.bounds.size.width.0 - w.0).max(cx.bounds.origin.x.0);
+        let max_y =
+            (cx.bounds.origin.y.0 + cx.bounds.size.height.0 - h.0).max(cx.bounds.origin.y.0);
+        let x = origin.x.0.min(max_x).max(cx.bounds.origin.x.0);
+        let y = origin.y.0.min(max_y).max(cx.bounds.origin.y.0);
+
+        let rect = fret_core::Rect::new(
+            fret_core::Point::new(Px(x), Px(y)),
+            fret_core::Size::new(w, h),
+        );
+
+        cx.scene.push(fret_core::SceneOp::Quad {
+            order: fret_core::DrawOrder(101),
+            rect,
+            background: theme.colors.panel_background,
+            border: fret_core::Edges::all(Px(1.0)),
+            border_color: theme.colors.panel_border,
+            corner_radii: fret_core::Corners::all(theme.metrics.radius_md),
+        });
+
+        cx.scene.push(fret_core::SceneOp::Text {
+            order: fret_core::DrawOrder(102),
+            origin: fret_core::Point::new(
+                rect.origin.x + pad,
+                rect.origin.y + pad + metrics.baseline,
+            ),
+            text: blob,
+            color: theme.colors.text_primary,
+        });
     }
 }
 
