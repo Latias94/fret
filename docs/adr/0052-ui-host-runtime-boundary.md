@@ -106,6 +106,41 @@ Deferred work (P1):
   - Phase 1: move host-facing types into a portable crate (`fret-runtime` or `fret-core` where appropriate).
   - Phase 2: third-party hosts implement the traits without adopting `fret-app`.
 
+## Phase Checklist (Living)
+
+This section is a **living checklist** to keep the Option B plan concrete and to prevent accidental re-coupling.
+
+### Phase 0 — Boundary exists (prototype; still uses `fret-app` host types)
+
+- [x] Introduce `UiHost` used by the `fret-ui` runtime (`crates/fret-ui/src/host.rs`).
+- [x] Implement `UiHost` for `fret_app::App` to keep the demo behavior unchanged.
+- [x] Make `crates/fret-ui/src/widgets/*` implement `Widget<H: UiHost>` (no `impl Widget for ...` in widgets).
+- [ ] Inventory non-widget runtime dependencies (`elements`, `tree`, `dock`) that still assume `fret_app::App`.
+
+### Phase 1 — Portable host-facing types (reduce `fret-app` in the public boundary)
+
+Goal: keep `fret-ui` depending on `fret-core` + a small portable “runtime boundary” crate.
+
+- [ ] Extract host-facing *types* that leak `fret_app` today (candidates: `Effect`, `CommandId`, `InputContext`,
+      `CommandRegistry`, drag session types, menu types) into a portable crate (`fret-runtime`) or `fret-core` where appropriate.
+- [ ] Keep the boundary minimal: define only “services” (scheduling, redraw, effects, commands) and avoid editor semantics.
+- [ ] Ensure portability gates exist for platform-specific features (see ADR 0054) and that payload types avoid desktop-only
+      values (see ADR 0053).
+
+### Phase 2 — Third-party host integration (no `fret-app` adoption required)
+
+- [ ] Provide a minimal example host implementation (engine/editor runtime) that drives `UiTree` via `UiHost` without
+      depending on `fret-app`.
+- [ ] Confirm wasm/WebGPU runner can implement the boundary with a single-window capability profile (see ADR 0054).
+
+## Current Coupling Hotspots (Non-exhaustive)
+
+These are the areas to watch when tightening the boundary:
+
+- `UiHost` currently references multiple `fret-app` concepts (effects, commands, drag sessions).
+- UI contexts (`EventCx`, `CommandCx`, `LayoutCx`, `PaintCx`) still embed `fret_app::InputContext` and `fret_app` command types.
+- `elements` runtime and element-local state storage may still assume host globals (see ADR 0028 / ADR 0039).
+
 ## Proposed API Shape (Sketch, not final)
 
 This is intentionally a sketch to drive discussion; the exact surface should be kept minimal.
@@ -141,3 +176,5 @@ Non-goal: redesign the entire authoring model; ADR 0028/0039 remain the authorin
 - ADR 0034: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
 - ADR 0037: `docs/adr/0037-workspace-boundaries-and-components-repository.md`
 - ADR 0051: `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`
+- ADR 0053: `docs/adr/0053-external-drag-payload-portability.md`
+- ADR 0054: `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
