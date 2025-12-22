@@ -1,5 +1,7 @@
-use crate::Theme;
-use crate::widget::{EventCx, Invalidation, PaintCx, Widget};
+use crate::{
+    Theme, UiHost,
+    widget::{EventCx, Invalidation, PaintCx, Widget},
+};
 use fret_app::{CommandId, InputContext, KeymapService, Menu, MenuItem, format_sequence};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp, Size,
@@ -255,7 +257,10 @@ impl ContextMenu {
         self.selection.truncate(depth + 1);
     }
 
-    fn ensure_prepared(&mut self, cx: &mut PaintCx<'_>) -> Option<fret_core::AppWindowId> {
+    fn ensure_prepared<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+    ) -> Option<fret_core::AppWindowId> {
         self.last_bounds = cx.bounds;
 
         let window = cx.window?;
@@ -283,7 +288,7 @@ impl ContextMenu {
         Some(window)
     }
 
-    fn rebuild_panels(&mut self, cx: &mut PaintCx<'_>, request: &ContextMenuRequest) {
+    fn rebuild_panels<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>, request: &ContextMenuRequest) {
         self.cleanup(cx.text);
         self.panels.clear();
 
@@ -328,9 +333,9 @@ impl ContextMenu {
         Rect::new(Point::new(x, y), screen)
     }
 
-    fn build_panel(
+    fn build_panel<H: UiHost>(
         &mut self,
-        cx: &mut PaintCx<'_>,
+        cx: &mut PaintCx<'_, H>,
         items: &[MenuItem],
         request: &ContextMenuRequest,
         constraints: TextConstraints,
@@ -564,7 +569,7 @@ impl ContextMenu {
         None
     }
 
-    fn close_menu(&mut self, cx: &mut EventCx<'_>, window: fret_core::AppWindowId) {
+    fn close_menu<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>, window: fret_core::AppWindowId) {
         cx.app
             .with_global_mut(ContextMenuService::default, |service, _app| {
                 service.set_pending_action(window, None);
@@ -574,9 +579,9 @@ impl ContextMenu {
         cx.stop_propagation();
     }
 
-    fn activate_command(
+    fn activate_command<H: UiHost>(
         &mut self,
-        cx: &mut EventCx<'_>,
+        cx: &mut EventCx<'_, H>,
         window: fret_core::AppWindowId,
         command: CommandId,
     ) {
@@ -589,9 +594,9 @@ impl ContextMenu {
         cx.stop_propagation();
     }
 
-    fn switch_menu_bar_menu(
+    fn switch_menu_bar_menu<H: UiHost>(
         &mut self,
-        cx: &mut EventCx<'_>,
+        cx: &mut EventCx<'_, H>,
         window: fret_core::AppWindowId,
         request: &ContextMenuRequest,
         target_index: usize,
@@ -636,18 +641,18 @@ impl Default for ContextMenu {
     }
 }
 
-impl Widget for ContextMenu {
+impl<H: UiHost> Widget<H> for ContextMenu {
     fn is_focusable(&self) -> bool {
         true
     }
 
-    fn layout(&mut self, cx: &mut crate::widget::LayoutCx<'_>) -> Size {
+    fn layout(&mut self, cx: &mut crate::widget::LayoutCx<'_, H>) -> Size {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
         cx.available
     }
 
-    fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme());
         let Some(window) = cx.window else {
             return;
@@ -845,7 +850,7 @@ impl Widget for ContextMenu {
         }
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.sync_style_from_theme(cx.theme());
         let Some(window) = self.ensure_prepared(cx) else {
             return;

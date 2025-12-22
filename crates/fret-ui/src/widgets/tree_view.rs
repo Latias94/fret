@@ -1,4 +1,7 @@
-use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use crate::{
+    UiHost,
+    widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget},
+};
 use fret_app::{CommandId, InputContext, Menu, MenuItem};
 use fret_core::{Event, KeyCode, Modifiers, MouseButton, Px};
 use std::{
@@ -333,7 +336,11 @@ impl TreeView {
         true
     }
 
-    fn maybe_handle_disclosure_click(&mut self, cx: &mut EventCx<'_>, position: fret_core::Point) {
+    fn maybe_handle_disclosure_click<H: UiHost>(
+        &mut self,
+        cx: &mut EventCx<'_, H>,
+        position: fret_core::Point,
+    ) {
         if self.dirty {
             self.rebuild();
         }
@@ -368,9 +375,9 @@ impl TreeView {
         }
     }
 
-    fn open_context_menu_at(
+    fn open_context_menu_at<H: UiHost>(
         &mut self,
-        cx: &mut EventCx<'_>,
+        cx: &mut EventCx<'_, H>,
         position: fret_core::Point,
         row_id: u64,
     ) {
@@ -472,7 +479,12 @@ impl TreeView {
         self.rebuild();
     }
 
-    fn maybe_handle_tree_keys(&mut self, cx: &mut EventCx<'_>, key: KeyCode, modifiers: Modifiers) {
+    fn maybe_handle_tree_keys<H: UiHost>(
+        &mut self,
+        cx: &mut EventCx<'_, H>,
+        key: KeyCode,
+        modifiers: Modifiers,
+    ) {
         if modifiers.ctrl || modifiers.meta || modifiers.alt {
             return;
         }
@@ -552,12 +564,12 @@ fn push_flat(out: &mut Vec<FlatRow>, expanded: &HashSet<u64>, node: &TreeNode, d
     }
 }
 
-impl Widget for TreeView {
+impl<H: UiHost> Widget<H> for TreeView {
     fn is_focusable(&self) -> bool {
         true
     }
 
-    fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         match event {
             Event::Pointer(fret_core::PointerEvent::Down {
                 position,
@@ -602,7 +614,7 @@ impl Widget for TreeView {
         self.sync_selected_from_list();
     }
 
-    fn command(&mut self, cx: &mut crate::widget::CommandCx<'_>, command: &CommandId) -> bool {
+    fn command(&mut self, cx: &mut crate::widget::CommandCx<'_, H>, command: &CommandId) -> bool {
         let Some(target) = self.context_menu_target.or(self.selected) else {
             return false;
         };
@@ -630,14 +642,14 @@ impl Widget for TreeView {
         did
     }
 
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> fret_core::Size {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> fret_core::Size {
         if self.dirty {
             self.rebuild();
         }
         self.list.layout(cx)
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.list.paint(cx);
     }
 }
