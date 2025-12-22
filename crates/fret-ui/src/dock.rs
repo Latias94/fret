@@ -516,7 +516,7 @@ impl DockSpace {
         self
     }
 
-    fn panel_nodes(&self, app: &fret_app::App) -> HashMap<PanelKey, NodeId> {
+    fn panel_nodes<H: UiHost>(&self, app: &H) -> HashMap<PanelKey, NodeId> {
         let mut out: HashMap<PanelKey, NodeId> = HashMap::new();
         if let Some(service) = app.global::<DockPanelContentService>() {
             for (panel, node) in service.panel_nodes(self.window) {
@@ -711,7 +711,7 @@ impl DockSpace {
         });
     }
 
-    fn paint_empty_state(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint_empty_state<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         let theme = cx.theme().snapshot();
         cx.scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(0),
@@ -745,8 +745,8 @@ impl DockSpace {
     }
 }
 
-impl Widget for DockSpace {
-    fn event(&mut self, cx: &mut EventCx<'_>, event: &fret_core::Event) {
+impl<H: UiHost> Widget<H> for DockSpace {
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &fret_core::Event) {
         let theme = cx.theme().snapshot();
 
         let mut pending_effects: Vec<Effect> = Vec::new();
@@ -1608,7 +1608,7 @@ impl Widget for DockSpace {
         }
     }
 
-    fn command(&mut self, cx: &mut crate::widget::CommandCx<'_>, command: &CommandId) -> bool {
+    fn command(&mut self, cx: &mut crate::widget::CommandCx<'_, H>, command: &CommandId) -> bool {
         match command.as_str() {
             "dock.focus_requested_panel" => {
                 let Some(panel) = cx
@@ -1751,7 +1751,7 @@ impl Widget for DockSpace {
         }
     }
 
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.last_bounds = cx.bounds;
         let hidden = hidden_bounds(Size::new(Px(0.0), Px(0.0)));
 
@@ -1816,7 +1816,7 @@ impl Widget for DockSpace {
         cx.available
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.last_bounds = cx.bounds;
         let Some((_chrome, layout, active_bounds, hover)) = (|| {
             let dock = cx.app.global::<DockManager>()?;
