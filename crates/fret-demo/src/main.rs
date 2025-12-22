@@ -5692,19 +5692,33 @@ impl WinitDriver for DemoDriver {
             return true;
         }
 
-        let Some(dock) = app.global_mut::<DockManager>() else {
-            return true;
-        };
+        let mut windows_to_invalidate: Vec<fret_core::AppWindowId> = Vec::new();
+        {
+            let Some(dock) = app.global_mut::<DockManager>() else {
+                return true;
+            };
 
-        let target_tabs = Self::ensure_main_tabs(dock, main);
-        let _ = dock.graph.apply_op(&DockOp::MergeWindowInto {
-            source_window: window,
-            target_window: main,
-            target_tabs,
-        });
-        self.logical_windows.remove(&window);
+            let target_tabs = Self::ensure_main_tabs(dock, main);
+            let _ = dock.graph.apply_op(&DockOp::MergeWindowInto {
+                source_window: window,
+                target_window: main,
+                target_tabs,
+            });
+            self.logical_windows.remove(&window);
 
-        app.push_effect(Effect::UiInvalidateLayout { window: main });
+            for &w in self.logical_windows.keys() {
+                if dock.graph.window_root(w).is_some() {
+                    windows_to_invalidate.push(w);
+                }
+            }
+            if dock.graph.window_root(main).is_some() {
+                windows_to_invalidate.push(main);
+            }
+        }
+
+        for w in windows_to_invalidate {
+            app.push_effect(Effect::UiInvalidateLayout { window: w });
+        }
         self.schedule_layout_persist(app);
         true
     }

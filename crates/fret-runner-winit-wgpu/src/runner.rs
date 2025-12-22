@@ -28,9 +28,49 @@ use crate::error::RunnerError;
 
 type WindowAnchor = fret_core::WindowAnchor;
 
+fn macos_window_log(args: fmt::Arguments<'_>) {
+    #[cfg(target_os = "macos")]
+    {
+        use std::{
+            io::Write,
+            sync::{Mutex, OnceLock},
+        };
+
+        if std::env::var_os("FRET_MACOS_WINDOW_LOG").is_none() {
+            return;
+        }
+
+        static LOG_FILE: OnceLock<Mutex<std::fs::File>> = OnceLock::new();
+
+        let file = LOG_FILE.get_or_init(|| {
+            let _ = std::fs::create_dir_all("target");
+            let path = std::path::Path::new("target").join("fret-macos-window.log");
+            let mut file = std::fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(path)
+                .expect("open fret-macos-window.log");
+            let _ = writeln!(
+                file,
+                "[session] pid={} time={:?}",
+                std::process::id(),
+                std::time::SystemTime::now()
+            );
+            Mutex::new(file)
+        });
+
+        let Ok(mut file) = file.lock() else {
+            return;
+        };
+
+        let _ = writeln!(file, "{}", args);
+    }
+}
+
 #[cfg(target_os = "macos")]
 #[allow(deprecated)]
-fn bring_window_to_front(window: &Window) {
+fn bring_window_to_front(window: &Window, sender: Option<&Window>) -> bool {
     use cocoa::{
         appkit::{NSApp, NSApplication, NSWindow},
         base::{id, nil},
@@ -39,6 +79,19 @@ fn bring_window_to_front(window: &Window) {
     use objc::{msg_send, sel, sel_impl};
     use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
+    unsafe fn ns_window_id(window: &Window) -> Option<id> {
+        let handle = window.window_handle().ok()?;
+        let RawWindowHandle::AppKit(h) = handle.as_raw() else {
+            return None;
+        };
+        let ns_view: id = h.ns_view.as_ptr() as id;
+        if ns_view == nil {
+            return None;
+        }
+        let ns_window: id = msg_send![ns_view, window];
+        (ns_window != nil).then_some(ns_window)
+    }
+
     unsafe {
         // macOS often keeps newly created windows behind the current key window unless we
         // explicitly activate the app and order the window front.
@@ -46,22 +99,113 @@ fn bring_window_to_front(window: &Window) {
         app.activateIgnoringOtherApps_(YES);
 
         // winit exposes an `NSView*` via raw-window-handle; resolve `NSWindow*` from it.
-        if let Ok(handle) = window.window_handle() {
-            if let RawWindowHandle::AppKit(h) = handle.as_raw() {
-                let ns_view: id = h.ns_view.as_ptr() as id;
-                let ns_window: id = msg_send![ns_view, window];
-                if ns_window != nil {
-                    ns_window.makeKeyAndOrderFront_(nil);
-                    let _: () = msg_send![ns_window, orderFrontRegardless];
-                }
-            }
+        let Some(ns_window) = ns_window_id(window) else {
+            macos_window_log(format_args!(
+                "[raise] ns_window=nil winit={:?}",
+                window.id()
+            ));
+            return false;
+        };
+
+        // Passing a sender can help macOS accept the focus change while the source window is
+        // still finishing an interaction (ImGui does this in its macOS backend).
+        let sender_window = sender.and_then(|w| ns_window_id(w)).unwrap_or(nil);
+
+        let sender_level: i64 = if sender_window != nil {
+            msg_send![sender_window, level]
+        } else {
+            -1
+        };
+        let sender_number: i32 = if sender_window != nil {
+            msg_send![sender_window, windowNumber]
+        } else {
+            0
+        };
+        let sender_ordered_index: i32 = if sender_window != nil {
+            msg_send![sender_window, orderedIndex]
+        } else {
+            -1
+        };
+        let sender_occlusion: u64 = if sender_window != nil {
+            msg_send![sender_window, occlusionState]
+        } else {
+            0
+        };
+
+        let key_window: id = msg_send![app, keyWindow];
+        let main_window: id = msg_send![app, mainWindow];
+        let is_key: bool = msg_send![ns_window, isKeyWindow];
+        let is_main: bool = msg_send![ns_window, isMainWindow];
+        let is_visible: bool = msg_send![ns_window, isVisible];
+        let occlusion: u64 = msg_send![ns_window, occlusionState];
+        let level: i64 = msg_send![ns_window, level];
+        let ordered_index: i32 = msg_send![ns_window, orderedIndex];
+        let window_number: i32 = msg_send![ns_window, windowNumber];
+        macos_window_log(format_args!(
+            "[raise-before] target={:p} sender={:p} sender_level={} sender_num={} sender_ordered_index={} sender_occl=0x{:x} key={:p} main={:p} is_key={} is_main={} visible={} occl=0x{:x} level={} ordered_index={} win_num={} winit={:?}",
+            ns_window as *const std::ffi::c_void,
+            sender_window as *const std::ffi::c_void,
+            sender_level,
+            sender_number,
+            sender_ordered_index,
+            sender_occlusion,
+            key_window as *const std::ffi::c_void,
+            main_window as *const std::ffi::c_void,
+            is_key,
+            is_main,
+            is_visible,
+            occlusion,
+            level,
+            ordered_index,
+            window_number,
+            window.id(),
+        ));
+
+        ns_window.makeKeyAndOrderFront_(sender_window);
+        if sender_window != nil {
+            // Ensure we are ordered above the source window even if macOS keeps the relative
+            // ordering unchanged (e.g. due to window levels or active interactions).
+            // NSWindowAbove = 1
+            let _: () = msg_send![ns_window, orderWindow: 1 relativeTo: sender_number];
         }
+        let _: () = msg_send![ns_window, orderFrontRegardless];
+
+        let key_window_after: id = msg_send![app, keyWindow];
+        let main_window_after: id = msg_send![app, mainWindow];
+        let is_key_after: bool = msg_send![ns_window, isKeyWindow];
+        let is_main_after: bool = msg_send![ns_window, isMainWindow];
+        let is_visible_after: bool = msg_send![ns_window, isVisible];
+        let occlusion_after: u64 = msg_send![ns_window, occlusionState];
+        let level_after: i64 = msg_send![ns_window, level];
+        let ordered_index_after: i32 = msg_send![ns_window, orderedIndex];
+        let window_number_after: i32 = msg_send![ns_window, windowNumber];
+        macos_window_log(format_args!(
+            "[raise-after]  target={:p} sender={:p} sender_level={} sender_num={} sender_ordered_index={} sender_occl=0x{:x} key={:p} main={:p} is_key={} is_main={} visible={} occl=0x{:x} level={} ordered_index={} win_num={} winit={:?}",
+            ns_window as *const std::ffi::c_void,
+            sender_window as *const std::ffi::c_void,
+            sender_level,
+            sender_number,
+            sender_ordered_index,
+            sender_occlusion,
+            key_window_after as *const std::ffi::c_void,
+            main_window_after as *const std::ffi::c_void,
+            is_key_after,
+            is_main_after,
+            is_visible_after,
+            occlusion_after,
+            level_after,
+            ordered_index_after,
+            window_number_after,
+            window.id(),
+        ));
+        true
     }
 }
 
 #[cfg(not(target_os = "macos"))]
-fn bring_window_to_front(window: &Window) {
+fn bring_window_to_front(window: &Window, _sender: Option<&Window>) -> bool {
     window.focus_window();
+    true
 }
 
 pub enum RenderTargetUpdate {
@@ -175,6 +319,7 @@ pub struct WindowCreateSpec {
     pub title: String,
     pub size: LogicalSize<f64>,
     pub position: Option<Position>,
+    pub visible: bool,
 }
 
 impl WindowCreateSpec {
@@ -183,11 +328,17 @@ impl WindowCreateSpec {
             title: title.into(),
             size,
             position: None,
+            visible: true,
         }
     }
 
     pub fn with_position(mut self, position: Position) -> Self {
         self.position = Some(position);
+        self
+    }
+
+    pub fn with_visible(mut self, visible: bool) -> Self {
+        self.visible = visible;
         self
     }
 }
@@ -328,9 +479,19 @@ struct WindowRuntime<S> {
     scene: Scene,
     cursor_pos: Point,
     pressed_buttons: fret_core::MouseButtons,
+    is_focused: bool,
     ime_allowed: bool,
     external_drag_files: Vec<std::path::PathBuf>,
     user: S,
+}
+
+#[derive(Debug, Clone)]
+struct PendingFrontRequest {
+    source_window: Option<fret_core::AppWindowId>,
+    panel: Option<fret_core::PanelKey>,
+    created_at: Instant,
+    next_attempt_at: Instant,
+    attempts_left: u8,
 }
 
 pub struct WinitRunner<D: WinitDriver> {
@@ -345,7 +506,7 @@ pub struct WinitRunner<D: WinitDriver> {
     windows: SlotMap<fret_core::AppWindowId, WindowRuntime<D::WindowState>>,
     winit_to_app: HashMap<WindowId, fret_core::AppWindowId>,
     main_window: Option<fret_core::AppWindowId>,
-    windows_pending_front: HashSet<fret_core::AppWindowId>,
+    windows_pending_front: HashMap<fret_core::AppWindowId, PendingFrontRequest>,
 
     modifiers: Modifiers,
     raw_modifiers: ModifiersState,
@@ -383,7 +544,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             windows: SlotMap::with_key(),
             winit_to_app: HashMap::new(),
             main_window: None,
-            windows_pending_front: HashSet::new(),
+            windows_pending_front: HashMap::new(),
             modifiers: map_modifiers(raw_modifiers, alt_gr_down),
             raw_modifiers,
             alt_gr_down,
@@ -412,13 +573,20 @@ impl<D: WinitDriver> WinitRunner<D> {
     ) -> Result<Arc<Window>, RunnerError> {
         let mut attrs = Window::default_attributes()
             .with_title(spec.title)
-            .with_inner_size(spec.size);
+            .with_inner_size(spec.size)
+            .with_visible(spec.visible);
         if let Some(position) = spec.position {
             attrs = attrs.with_position(position);
         }
-        Ok(Arc::new(event_loop.create_window(attrs).map_err(
-            |source| RunnerError::CreateWindowFailed { source },
-        )?))
+        let window = Arc::new(
+            event_loop
+                .create_window(attrs)
+                .map_err(|source| RunnerError::CreateWindowFailed { source })?,
+        );
+
+        macos_window_log(format_args!("[create] winit={:?}", window.id()));
+
+        Ok(window)
     }
 
     fn insert_window(
@@ -447,6 +615,7 @@ impl<D: WinitDriver> WinitRunner<D> {
                 scene: Scene::default(),
                 cursor_pos: Point::new(Px(0.0), Px(0.0)),
                 pressed_buttons: fret_core::MouseButtons::default(),
+                is_focused: false,
                 ime_allowed: false,
                 external_drag_files: Vec::new(),
                 user,
@@ -524,6 +693,15 @@ impl<D: WinitDriver> WinitRunner<D> {
         if spec.position.is_none() {
             if let Some(anchor) = request.anchor {
                 spec.position = self.compute_window_position_from_anchor(anchor);
+            }
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            // Avoid the "flash behind the source window" when tearing off a dock panel by
+            // creating the new OS window hidden, then letting the deferred raise show it.
+            if matches!(request.kind, CreateWindowKind::DockFloating { .. }) {
+                spec.visible = false;
             }
         }
 
@@ -732,11 +910,19 @@ impl<D: WinitDriver> WinitRunner<D> {
                                     }
                                 };
 
-                            if matches!(create.kind, CreateWindowKind::DockFloating { .. }) {
-                                if let Some(runtime) = self.windows.get(new_window) {
-                                    bring_window_to_front(&runtime.window);
-                                }
-                                self.windows_pending_front.insert(new_window);
+                            if let CreateWindowKind::DockFloating { source_window, .. } =
+                                &create.kind
+                            {
+                                let panel = match &create.kind {
+                                    CreateWindowKind::DockFloating { panel, .. } => Some(panel),
+                                    _ => None,
+                                };
+                                self.enqueue_window_front(
+                                    new_window,
+                                    Some(*source_window),
+                                    panel.cloned(),
+                                    now,
+                                );
                             }
 
                             self.driver
@@ -768,6 +954,105 @@ impl<D: WinitDriver> WinitRunner<D> {
                 .handle_model_changes(&mut self.app, window, &mut runtime.user, &changed);
         }
         true
+    }
+
+    fn enqueue_window_front(
+        &mut self,
+        window: fret_core::AppWindowId,
+        source_window: Option<fret_core::AppWindowId>,
+        panel: Option<fret_core::PanelKey>,
+        now: Instant,
+    ) {
+        macos_window_log(format_args!(
+            "[enqueue-front] target={:?} source={:?} now={:?}",
+            window, source_window, now
+        ));
+
+        // macOS may ignore focus changes during an active interaction in the source window.
+        // Retry a few times over subsequent event-loop turns (and stop once the window reports
+        // `Focused(true)`).
+        self.windows_pending_front.insert(
+            window,
+            PendingFrontRequest {
+                source_window,
+                panel,
+                created_at: now,
+                // Defer the first raise to `about_to_wait` (Godot uses `call_deferred`); this
+                // avoids fighting the platform while a tracked interaction is still active.
+                next_attempt_at: now,
+                attempts_left: 10,
+            },
+        );
+    }
+
+    fn process_pending_front_requests(&mut self, now: Instant) -> bool {
+        if self.windows_pending_front.is_empty() {
+            return false;
+        }
+
+        let pending = std::mem::take(&mut self.windows_pending_front);
+        let mut kept: HashMap<fret_core::AppWindowId, PendingFrontRequest> = HashMap::new();
+        let mut did_work = false;
+
+        for (window, mut req) in pending {
+            let Some(state) = self.windows.get(window) else {
+                continue;
+            };
+
+            if state.is_focused && req.attempts_left > 2 {
+                // Even after winit reports the window focused, the window ordering can still lag
+                // behind when the float was initiated from a tracked menu / drag sequence.
+                // Keep a couple more retries to ensure it actually surfaces.
+                req.attempts_left = 2;
+            }
+
+            if req.attempts_left == 0 {
+                macos_window_log(format_args!(
+                    "[front-done] target={:?} panel={:?} focused={} age_ms={} now={:?}",
+                    window,
+                    req.panel.as_ref().map(|p| &p.kind.0),
+                    state.is_focused,
+                    now.saturating_duration_since(req.created_at).as_millis(),
+                    now,
+                ));
+                continue;
+            }
+
+            if now >= req.next_attempt_at {
+                macos_window_log(format_args!(
+                    "[front-try] target={:?} panel={:?} source={:?} focused={} attempts_left={} age_ms={} now={:?}",
+                    window,
+                    req.panel.as_ref().map(|p| &p.kind.0),
+                    req.source_window,
+                    state.is_focused,
+                    req.attempts_left,
+                    now.saturating_duration_since(req.created_at).as_millis(),
+                    now,
+                ));
+                let sender = req
+                    .source_window
+                    .and_then(|id| self.windows.get(id))
+                    .map(|w| w.window.as_ref());
+                let _ = bring_window_to_front(&state.window, sender);
+                state.window.request_redraw();
+                req.attempts_left = req.attempts_left.saturating_sub(1);
+                req.next_attempt_at = now + Duration::from_millis(60);
+                did_work = true;
+            }
+
+            kept.insert(window, req);
+        }
+
+        self.windows_pending_front = kept;
+        did_work
+    }
+
+    fn next_pending_front_deadline(&self) -> Option<Instant> {
+        self.windows_pending_front
+            .values()
+            .filter(|r| r.attempts_left > 0)
+            .map(|r| r.next_attempt_at)
+            .min()
     }
 
     fn dispatch_pointer_event(
@@ -907,7 +1192,11 @@ impl<D: WinitDriver> WinitRunner<D> {
 
         if drag.kind == fret_app::DragKind::DockPanel && target != drag.source_window {
             if let Some(runtime) = self.windows.get(target) {
-                bring_window_to_front(&runtime.window);
+                let sender = self
+                    .windows
+                    .get(drag.source_window)
+                    .map(|w| w.window.as_ref());
+                let _ = bring_window_to_front(&runtime.window, sender);
             }
         }
 
@@ -1167,10 +1456,17 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 self.raw_modifiers = mods.state();
                 self.modifiers = map_modifiers(self.raw_modifiers, self.alt_gr_down);
             }
-            WindowEvent::Focused(false) => {
+            WindowEvent::Focused(focused) => {
                 if let Some(state) = self.windows.get_mut(app_window) {
-                    state.pressed_buttons = fret_core::MouseButtons::default();
+                    state.is_focused = focused;
+                    if !focused {
+                        state.pressed_buttons = fret_core::MouseButtons::default();
+                    }
                 }
+                macos_window_log(format_args!(
+                    "[focused] app_window={:?} focused={} winit={:?}",
+                    app_window, focused, window_id
+                ));
             }
             WindowEvent::Moved(position) => {
                 if let Some(state) = self.windows.get_mut(app_window) {
@@ -1481,13 +1777,6 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     return;
                 };
 
-                // On macOS, attempts to raise a newly created floating window can be ignored while
-                // a pointer interaction is still active in the source window. Re-assert the raise
-                // on the first redraw of that window.
-                if self.windows_pending_front.remove(&app_window) {
-                    bring_window_to_front(&state.window);
-                }
-
                 let (frame, view) = match state.surface.get_current_frame_view() {
                     Ok(v) => v,
                     Err(wgpu::SurfaceError::Lost) => {
@@ -1591,11 +1880,20 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
 
         let now = Instant::now();
 
+        let did_pending_front_work = self.process_pending_front_requests(now);
+
         let mut next_deadline: Option<Instant> = None;
         for entry in self.timers.values() {
             next_deadline = Some(match next_deadline {
                 Some(cur) => cur.min(entry.deadline),
                 None => entry.deadline,
+            });
+        }
+
+        if let Some(deadline) = self.next_pending_front_deadline() {
+            next_deadline = Some(match next_deadline {
+                Some(cur) => cur.min(deadline),
+                None => deadline,
             });
         }
 
@@ -1611,6 +1909,9 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
 
         if let Some(next) = next {
             event_loop.set_control_flow(ControlFlow::WaitUntil(next));
+        } else if did_pending_front_work {
+            // Ensure we keep turning the event loop while we try to raise a window on macOS.
+            event_loop.set_control_flow(ControlFlow::WaitUntil(now + Duration::from_millis(16)));
         } else {
             event_loop.set_control_flow(ControlFlow::Wait);
         }
