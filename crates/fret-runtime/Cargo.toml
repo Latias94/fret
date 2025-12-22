@@ -1,0 +1,7 @@
+[package]
+name = "fret-runtime"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fret-core = { path = "../fret-core" }

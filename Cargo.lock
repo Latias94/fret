@@ -679,6 +679,7 @@ name = "fret-app"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-runtime",
  "serde",
  "serde_json",
  "slotmap",
@@ -763,6 +764,13 @@ dependencies = [
  "tracing",
  "wgpu",
  "winit",
+]
+
+[[package]]
+name = "fret-runtime"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
 ]
 
 [[package]]
