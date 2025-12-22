@@ -1346,7 +1346,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 panel: drag.panel.clone(),
                                                 anchor: Some(fret_core::WindowAnchor {
                                                     window: self.window,
-                                                    position,
+                                                    position: drag.start,
                                                 }),
                                             },
                                         ));

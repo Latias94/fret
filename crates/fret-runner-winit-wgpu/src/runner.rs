@@ -618,6 +618,7 @@ struct TimerEntry {
 struct DockTearoffFollow {
     window: fret_core::AppWindowId,
     source_window: fret_core::AppWindowId,
+    grab_offset: Point,
 }
 
 impl<D: WinitDriver> WinitRunner<D> {
@@ -838,6 +839,57 @@ impl<D: WinitDriver> WinitRunner<D> {
         Some(PhysicalPosition::new(x as i32, y as i32).into())
     }
 
+    fn compute_window_outer_position_from_cursor_grab(
+        &self,
+        reference_window: fret_core::AppWindowId,
+        grab_offset_logical: Point,
+    ) -> Option<Position> {
+        let screen_pos = self.cursor_screen_pos?;
+        let ref_state = self.windows.get(reference_window)?;
+        let scale = ref_state.window.scale_factor();
+
+        if !grab_offset_logical.x.0.is_finite()
+            || !grab_offset_logical.y.0.is_finite()
+            || grab_offset_logical.x.0 < 0.0
+            || grab_offset_logical.y.0 < 0.0
+        {
+            return None;
+        }
+
+        // Convert the grab offset from client-area logical coords to outer-window physical coords.
+        // This accounts for platform window decorations (title bar, borders), matching the
+        // ImGui multi-viewport mental model (window pos is in screen space, not client space).
+        let deco_offset = if let (Ok(outer), Ok(inner)) = (
+            ref_state.window.outer_position(),
+            ref_state.window.inner_position(),
+        ) {
+            (inner.x - outer.x, inner.y - outer.y)
+        } else {
+            (0, 0)
+        };
+
+        let grab_outer_x = deco_offset.0 as f64 + grab_offset_logical.x.0 as f64 * scale;
+        let grab_outer_y = deco_offset.1 as f64 + grab_offset_logical.y.0 as f64 * scale;
+
+        let mut x = screen_pos.x - grab_outer_x;
+        let mut y = screen_pos.y - grab_outer_y;
+
+        if let Some(monitor) = ref_state.window.current_monitor() {
+            let pos = monitor.position();
+            let size = monitor.size();
+
+            let min_x = pos.x as f64;
+            let min_y = pos.y as f64;
+            let max_x = min_x + size.width as f64 - 40.0;
+            let max_y = min_y + size.height as f64 - 40.0;
+
+            x = x.clamp(min_x, max_x);
+            y = y.clamp(min_y, max_y);
+        }
+
+        Some(PhysicalPosition::new(x as i32, y as i32).into())
+    }
+
     fn create_window_from_request(
         &mut self,
         event_loop: &ActiveEventLoop,
@@ -852,7 +904,15 @@ impl<D: WinitDriver> WinitRunner<D> {
             // For dock tear-off, prefer placing the floating window near the actual cursor
             // screen position (Unity/ImGui feel). Anchor-based placement remains a fallback.
             if let CreateWindowKind::DockFloating { source_window, .. } = request.kind {
-                spec.position = self.compute_window_position_from_cursor(source_window);
+                if let Some(anchor) = request.anchor {
+                    spec.position = self.compute_window_outer_position_from_cursor_grab(
+                        source_window,
+                        anchor.position,
+                    );
+                }
+                if spec.position.is_none() {
+                    spec.position = self.compute_window_position_from_cursor(source_window);
+                }
             }
 
             if spec.position.is_none()
@@ -1175,9 +1235,14 @@ impl<D: WinitDriver> WinitRunner<D> {
                                 &create.kind
                             {
                                 if self.is_left_mouse_down_for_window(*source_window) {
+                                    let grab_offset = create
+                                        .anchor
+                                        .map(|a| a.position)
+                                        .unwrap_or(Point::new(Px(40.0), Px(20.0)));
                                     self.dock_tearoff_follow = Some(DockTearoffFollow {
                                         window: new_window,
                                         source_window: *source_window,
+                                        grab_offset,
                                     });
                                     if let Some(state) = self.windows.get(new_window) {
                                         if state.window.drag_window().is_ok() {
@@ -1674,35 +1739,19 @@ impl<D: WinitDriver> WinitRunner<D> {
             return false;
         };
 
-        let Some(screen_pos) = self.cursor_screen_pos else {
-            return false;
-        };
-
         let Some(state) = self.windows.get(follow.window) else {
             self.dock_tearoff_follow = None;
             return false;
         };
 
-        // Keep the window near the cursor. This is a best-effort fallback for platforms where
-        // `drag_window()` isn't available or fails outside of a `MouseInput` handler.
-        let (ox, oy) = self.config.new_window_anchor_offset;
-        let mut x = screen_pos.x + ox;
-        let mut y = screen_pos.y + oy;
+        let Some(pos) = self.compute_window_outer_position_from_cursor_grab(
+            follow.source_window,
+            follow.grab_offset,
+        ) else {
+            return false;
+        };
 
-        if let Some(monitor) = state.window.current_monitor() {
-            let pos = monitor.position();
-            let size = monitor.size();
-            let min_x = pos.x as f64;
-            let min_y = pos.y as f64;
-            let max_x = min_x + size.width as f64 - 40.0;
-            let max_y = min_y + size.height as f64 - 40.0;
-            x = x.clamp(min_x, max_x);
-            y = y.clamp(min_y, max_y);
-        }
-
-        state
-            .window
-            .set_outer_position(PhysicalPosition::new(x as i32, y as i32));
+        state.window.set_outer_position(pos);
         true
     }
 }
@@ -1761,7 +1810,15 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 // outside any window and never produce `WindowEvent::MouseInput`.
                 if self.dock_tearoff_follow.is_some() {
                     self.left_mouse_down = false;
-                    self.dock_tearoff_follow = None;
+                    if let Some(follow) = self.dock_tearoff_follow.take() {
+                        #[cfg(target_os = "macos")]
+                        self.enqueue_window_front(
+                            follow.window,
+                            Some(follow.source_window),
+                            None,
+                            Instant::now(),
+                        );
+                    }
                 }
 
                 // On macOS, releasing the mouse button outside any window may not deliver a
@@ -2230,7 +2287,15 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     ElementState::Released => {
                         if button == fret_core::MouseButton::Left {
                             self.left_mouse_down = false;
-                            self.dock_tearoff_follow = None;
+                            if let Some(follow) = self.dock_tearoff_follow.take() {
+                                #[cfg(target_os = "macos")]
+                                self.enqueue_window_front(
+                                    follow.window,
+                                    Some(follow.source_window),
+                                    None,
+                                    Instant::now(),
+                                );
+                            }
                             self.saw_left_mouse_release_this_turn = true;
                             self.route_internal_drag_drop_from_cursor();
                             // Cross-window drags are runner-routed (Enter/Over/Drop), so ensure the
