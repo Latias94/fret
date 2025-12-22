@@ -52,6 +52,7 @@ fn bring_window_to_front(window: &Window) {
                 let ns_window: id = msg_send![ns_view, window];
                 if ns_window != nil {
                     ns_window.makeKeyAndOrderFront_(nil);
+                    let _: () = msg_send![ns_window, orderFrontRegardless];
                 }
             }
         }
@@ -344,6 +345,7 @@ pub struct WinitRunner<D: WinitDriver> {
     windows: SlotMap<fret_core::AppWindowId, WindowRuntime<D::WindowState>>,
     winit_to_app: HashMap<WindowId, fret_core::AppWindowId>,
     main_window: Option<fret_core::AppWindowId>,
+    windows_pending_front: HashSet<fret_core::AppWindowId>,
 
     modifiers: Modifiers,
     raw_modifiers: ModifiersState,
@@ -381,6 +383,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             windows: SlotMap::with_key(),
             winit_to_app: HashMap::new(),
             main_window: None,
+            windows_pending_front: HashSet::new(),
             modifiers: map_modifiers(raw_modifiers, alt_gr_down),
             raw_modifiers,
             alt_gr_down,
@@ -733,6 +736,7 @@ impl<D: WinitDriver> WinitRunner<D> {
                                 if let Some(runtime) = self.windows.get(new_window) {
                                     bring_window_to_front(&runtime.window);
                                 }
+                                self.windows_pending_front.insert(new_window);
                             }
 
                             self.driver
@@ -1476,6 +1480,13 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 let Some(state) = self.windows.get_mut(app_window) else {
                     return;
                 };
+
+                // On macOS, attempts to raise a newly created floating window can be ignored while
+                // a pointer interaction is still active in the source window. Re-assert the raise
+                // on the first redraw of that window.
+                if self.windows_pending_front.remove(&app_window) {
+                    bring_window_to_front(&state.window);
+                }
 
                 let (frame, view) = match state.surface.get_current_frame_view() {
                     Ok(v) => v,

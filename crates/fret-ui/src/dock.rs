@@ -1246,6 +1246,7 @@ impl Widget for DockSpace {
                             dock.hover = None;
                         }
                         fret_core::InternalDragKind::Drop => {
+                            let prev_hover = dock.hover.clone();
                             if let Some(drag) = dock_drag.as_ref() {
                                 let mut dragging = drag.dragging;
                                 if drag.source_window != self.window && !dragging {
@@ -1318,6 +1319,15 @@ impl Widget for DockSpace {
                                 end_dock_drag = true;
                                 invalidate_paint = true;
                                 pending_redraws.push(self.window);
+                            } else {
+                                // Drop can be delivered after the drag session is already cleared
+                                // by the runner/driver. Always clear stale hover so the UI doesn't
+                                // get stuck in a highlighted state.
+                                dock.hover = None;
+                                if prev_hover.is_some() {
+                                    invalidate_paint = true;
+                                    pending_redraws.push(self.window);
+                                }
                             }
                         }
                     }
@@ -3097,7 +3107,8 @@ mod tests {
     use super::*;
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Scene, SceneOp, TextConstraints, TextMetrics, TextService, TextStyle,
+        AppWindowId, Event, InternalDragEvent, InternalDragKind, Scene, SceneOp, TextConstraints,
+        TextMetrics, TextService, TextStyle,
     };
 
     #[derive(Default)]
@@ -3152,5 +3163,51 @@ mod tests {
                 .iter()
                 .any(|op| matches!(op, SceneOp::Text { .. }))
         );
+    }
+
+    #[test]
+    fn dock_space_clears_hover_on_drop_without_drag_session() {
+        let window = AppWindowId::default();
+
+        let mut ui = crate::UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(DockSpace::new(window));
+        ui.set_root(root);
+
+        let mut app = App::new();
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![PanelKey::new("core.hierarchy")],
+                active: 0,
+            });
+            dock.graph.set_window_root(window, tabs);
+            dock.panels.insert(
+                PanelKey::new("core.hierarchy"),
+                DockPanel {
+                    title: "Hierarchy".to_string(),
+                    color: Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+            dock.hover = Some(DockDropTarget::Float { window });
+        });
+
+        let mut text = FakeTextService::default();
+        let size = Size::new(Px(800.0), Px(600.0));
+        let _bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+        ui.layout(&mut app, &mut text, root, size, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::InternalDrag(InternalDragEvent {
+                position: Point::new(Px(12.0), Px(12.0)),
+                kind: InternalDragKind::Drop,
+            }),
+        );
+
+        let hover = app.global::<DockManager>().and_then(|d| d.hover.clone());
+        assert!(hover.is_none(), "dock hover should be cleared on drop");
     }
 }
