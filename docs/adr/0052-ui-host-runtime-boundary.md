@@ -141,6 +141,80 @@ These are the areas to watch when tightening the boundary:
 - UI contexts (`EventCx`, `CommandCx`, `LayoutCx`, `PaintCx`) still embed `fret_app::InputContext` and `fret_app` command types.
 - `elements` runtime and element-local state storage may still assume host globals (see ADR 0028 / ADR 0039).
 
+## Phase 0 Inventory (What Still Couples `fret-ui` to `fret-app`)
+
+This inventory is meant to be actionable: for each item we classify the coupling and suggest a Phase 1 landing zone.
+
+### `crates/fret-ui/src/host.rs` — trait surface + default host impl
+
+Coupling:
+
+- `trait UiHost` currently mentions `fret_app::{Effect, ModelStore, CommandRegistry, DragSession, DragKind, ModelId}`.
+- `impl UiHost for fret_app::App` lives inside `fret-ui`, so `fret-ui` must depend on `fret-app`.
+
+Phase 1 recommendation:
+
+- Move `UiHost` (and any portable boundary types it needs) into a dedicated crate (e.g. `fret-runtime`).
+- Move `impl UiHost for fret_app::App` into `fret-app` (so `fret-ui` can compile without `fret-app`).
+
+### `crates/fret-ui/src/widget.rs` — UI contexts and command dispatch
+
+Coupling:
+
+- UI contexts embed `fret_app::{InputContext, CommandId, Model, ModelId}`.
+- `EventCx::dispatch_command` constructs `fret_app::Effect::Command { ... }`.
+- Default type parameters mention `fret_app::App` (even if only as a default), which implies a crate dependency.
+
+Phase 1 recommendation:
+
+- Move value types (`CommandId`, `InputContext`, model handle/ID types) to `fret-runtime` (or `fret-core` if we decide they are core contracts).
+- Move `Effect` (or at least the “UI -> host output” subset) to `fret-runtime` so `dispatch_command` does not require `fret-app`.
+- Remove `= fret_app::App` defaults from public types in `fret-ui` (or gate them behind an optional feature), so embedding hosts do not pull `fret-app`.
+
+### `crates/fret-ui/src/tree.rs` — retained UI runtime
+
+Coupling:
+
+- Depends on `fret_app::{Effect, CommandId, InputContext, Platform, KeyChord, KeymapService, ModelId}`.
+- Shortcut/keymap handling and menu metadata currently flow through `fret-app` services.
+
+Phase 1 recommendation:
+
+- Promote input/key types that are “contracts” (e.g. platform identifier, key chords) into `fret-core` or `fret-runtime`.
+- Replace `KeymapService`/`CommandRegistry` concrete dependencies with a thin host-facing service trait on the boundary (or keep them as portable concrete types in `fret-runtime` if that stays minimal).
+- Keep the retained tree algorithms in `fret-ui`; only move the host-facing glue types and services.
+
+### `crates/fret-ui/src/dock.rs` — docking runtime and UX glue
+
+Coupling:
+
+- Depends on `fret_app::{Effect, WindowRequest, CommandId, InputContext, DragKind, Menu, MenuItem, WhenExpr}`.
+- Some menu/when-expression wiring is currently routed through `fret-app`.
+
+Phase 1 recommendation:
+
+- Treat docking outputs as host-boundary messages: move `DockOp` is already in `fret-core`; the surrounding `Effect/WindowRequest/Menu/WhenExpr/InputContext`
+  should be in `fret-runtime`.
+- Ensure any platform constraints (multi-window vs single-window) are expressed via ADR 0054 capabilities, not via desktop-only types.
+
+### `crates/fret-ui/src/elements.rs` — element-local state runtime
+
+Coupling:
+
+- Minimal: generic defaults mention `fret_app::App`, but the runtime itself primarily needs `UiHost::frame_id()` and `UiHost::with_global_mut(...)`.
+
+Phase 1 recommendation:
+
+- After `UiHost` moves to `fret-runtime` and the `fret_app::App` defaults are removed/gated, `elements.rs` should become portable with little change.
+
+## Suggested Phase 1 Migration Order (Lowest churn first)
+
+1. Introduce `crates/fret-runtime` with boundary *types* used by `fret-ui` (`CommandId`, `InputContext`, `Effect` subset, `Menu`, `MenuItem`, `WhenExpr`, `WindowRequest`, drag session types).
+2. Make `fret-app` depend on `fret-runtime` and re-export these types for compatibility (temporary).
+3. Update `fret-ui` imports to use `fret-runtime` instead of `fret-app` (no behavior change).
+4. Move `impl UiHost for fret_app::App` from `fret-ui` to `fret-app`; remove `fret-ui -> fret-app` dependency.
+5. Decide whether public defaults (`= fret_app::App`) are removed entirely or gated behind a feature (default-off for embeddable builds).
+
 ## Proposed API Shape (Sketch, not final)
 
 This is intentionally a sketch to drive discussion; the exact surface should be kept minimal.
