@@ -1,6 +1,6 @@
 # ADR 0048: Inspector Property Protocol and Custom Editor Registry
 
-Status: Proposed
+Status: Accepted
 Scope: Example editor layer (out of scope for the Fret framework)
 
 ## Context
@@ -133,10 +133,15 @@ Notes:
 ## Implementation Notes (Current Prototype)
 
 - Protocol types + editor registry (example editor layer): `crates/fret-editor/src/inspector_protocol.rs`
-- Property edit request plumbing (commit-only for now): `crates/fret-editor/src/property_edit.rs`
+- Property edit request plumbing (phased edits): `crates/fret-editor/src/property_edit.rs`
 - Demo inspector uses property tree + registry to build rows and routes edits through commands/services:
   - Inspector panel: `crates/fret-demo/src/editor_shell.rs`
   - Commit handler: `crates/fret-demo/src/main.rs` (`property_edit.commit`, `inspector_edit.commit`)
+
+Phased edit validation:
+
+- Demo Inspector supports **Alt + drag** on numeric (`f32`) rows to emit `Begin/Update/Commit` and create a single undo entry.
+- Press `Esc` during the drag to emit `Cancel` (reverts the value and restores the scene dirty flag).
 
 ## References
 

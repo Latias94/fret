@@ -6,7 +6,7 @@ use crate::scene_document::SceneDocumentService;
 use crate::undo::{EditCommand, SelectionSnapshot, UndoStack};
 use crate::world::DemoWorld;
 use fret_app::{App, Model};
-use fret_core::{Color, Corners, Edges, Event, Px, Size};
+use fret_core::{AppWindowId, Color, Corners, Edges, Event, KeyCode, MouseButton, Px, Size};
 use fret_editor::{
     InspectorEditKind, InspectorEditRequest, InspectorEditService, InspectorEditorKind,
     InspectorEditorRegistry, ProjectEntryKind, ProjectSelectionService, ProjectService,
@@ -945,6 +945,7 @@ pub struct InspectorPanel {
     last_scene_revision: Option<u64>,
     last_selected: Option<u64>,
     list: VirtualList<InspectorDataSource>,
+    scrub: Option<NumberScrubState>,
 }
 
 impl InspectorPanel {
@@ -962,6 +963,7 @@ impl InspectorPanel {
             last_scene_revision: None,
             last_selected: None,
             list,
+            scrub: None,
         }
     }
 
@@ -1007,12 +1009,110 @@ impl InspectorPanel {
     }
 }
 
+#[derive(Debug, Clone)]
+struct NumberScrubState {
+    window: AppWindowId,
+    targets: Vec<u64>,
+    path: PropertyPath,
+    start_x: Px,
+    base: f32,
+    current: f32,
+}
+
 impl Widget for InspectorPanel {
     fn is_focusable(&self) -> bool {
         true
     }
 
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+        if let Some(scrub) = self.scrub.as_mut() {
+            match event {
+                Event::Pointer(fret_core::PointerEvent::Move {
+                    position,
+                    modifiers,
+                    ..
+                }) => {
+                    let dx = position.x.0 - scrub.start_x.0;
+                    let mut step = 0.01f32;
+                    if modifiers.shift {
+                        step = 0.001;
+                    }
+                    if modifiers.ctrl || modifiers.meta {
+                        step = 0.05;
+                    }
+                    let next = scrub.base + dx * step;
+                    if (next - scrub.current).abs() >= 1.0e-6 {
+                        scrub.current = next;
+                        cx.app
+                            .with_global_mut(PropertyEditService::default, |s, _app| {
+                                s.set(
+                                    scrub.window,
+                                    PropertyEditRequest {
+                                        targets: scrub.targets.clone(),
+                                        path: scrub.path.clone(),
+                                        value: PropertyValue::F32(next),
+                                        kind: PropertyEditKind::Update,
+                                    },
+                                );
+                            });
+                        cx.dispatch_command(fret_app::CommandId::from("property_edit.commit"));
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                    }
+                    cx.stop_propagation();
+                    return;
+                }
+                Event::Pointer(fret_core::PointerEvent::Up { button, .. }) => {
+                    if *button == MouseButton::Left {
+                        let done = self.scrub.take().unwrap();
+                        cx.release_pointer_capture();
+                        cx.app
+                            .with_global_mut(PropertyEditService::default, |s, _app| {
+                                s.set(
+                                    done.window,
+                                    PropertyEditRequest {
+                                        targets: done.targets,
+                                        path: done.path,
+                                        value: PropertyValue::F32(done.current),
+                                        kind: PropertyEditKind::Commit,
+                                    },
+                                );
+                            });
+                        cx.dispatch_command(fret_app::CommandId::from("property_edit.commit"));
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                Event::KeyDown {
+                    key: KeyCode::Escape,
+                    ..
+                } => {
+                    let canceled = self.scrub.take().unwrap();
+                    cx.release_pointer_capture();
+                    cx.app
+                        .with_global_mut(PropertyEditService::default, |s, _app| {
+                            s.set(
+                                canceled.window,
+                                PropertyEditRequest {
+                                    targets: canceled.targets,
+                                    path: canceled.path,
+                                    value: PropertyValue::F32(canceled.base),
+                                    kind: PropertyEditKind::Cancel,
+                                },
+                            );
+                        });
+                    cx.dispatch_command(fret_app::CommandId::from("property_edit.commit"));
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+                _ => {}
+            }
+        }
+
         if let Event::Pointer(fret_core::PointerEvent::Down {
             position,
             button: fret_core::MouseButton::Left,
@@ -1058,6 +1158,49 @@ impl Widget for InspectorPanel {
                         return;
                     }
                     InspectorRowAction::EditValue { request } => {
+                        if modifiers.alt && request.kind == InspectorEditKind::F32 {
+                            let base = self
+                                .world
+                                .get(cx.app)
+                                .and_then(|w| {
+                                    request.targets.first().and_then(|&id| {
+                                        w.get_property(id, &request.path).and_then(|v| match v {
+                                            PropertyValue::F32(f) => Some(f),
+                                            _ => None,
+                                        })
+                                    })
+                                })
+                                .unwrap_or(0.0);
+
+                            cx.request_focus(cx.node);
+                            cx.capture_pointer(cx.node);
+
+                            cx.app
+                                .with_global_mut(PropertyEditService::default, |s, _app| {
+                                    s.set(
+                                        window,
+                                        PropertyEditRequest {
+                                            targets: request.targets.clone(),
+                                            path: request.path.clone(),
+                                            value: PropertyValue::F32(base),
+                                            kind: PropertyEditKind::Begin,
+                                        },
+                                    );
+                                });
+                            cx.dispatch_command(fret_app::CommandId::from("property_edit.commit"));
+
+                            self.scrub = Some(NumberScrubState {
+                                window,
+                                targets: request.targets,
+                                path: request.path,
+                                start_x: position.x,
+                                base,
+                                current: base,
+                            });
+                            cx.stop_propagation();
+                            return;
+                        }
+
                         let mut request = request;
                         request.anchor = self.list.row_rect(row_index);
                         cx.app

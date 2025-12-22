@@ -3140,7 +3140,17 @@ mod tests {
         let mut scene = Scene::default();
         ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
 
-        assert!(scene.ops.iter().any(|op| matches!(op, SceneOp::Quad { .. })));
-        assert!(scene.ops.iter().any(|op| matches!(op, SceneOp::Text { .. })));
+        assert!(
+            scene
+                .ops
+                .iter()
+                .any(|op| matches!(op, SceneOp::Quad { .. }))
+        );
+        assert!(
+            scene
+                .ops
+                .iter()
+                .any(|op| matches!(op, SceneOp::Text { .. }))
+        );
     }
 }

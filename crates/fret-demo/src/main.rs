@@ -44,9 +44,9 @@ use fret_core::{
 use fret_editor::{
     InspectorEditKind, InspectorEditService, MarqueeSelectInteraction, PanOrbitInteraction,
     PanOrbitKind, ProjectSelectionService, ProjectService, PropertyEditKind, PropertyEditRequest,
-    PropertyEditService, PropertyValue, RotateGizmoInteraction, TranslateAxisConstraint,
-    TranslateGizmoInteraction, ViewportInteraction, ViewportToolManager, ViewportToolMode,
-    parse_value,
+    PropertyEditService, PropertyPath, PropertyValue, RotateGizmoInteraction,
+    TranslateAxisConstraint, TranslateGizmoInteraction, ViewportInteraction, ViewportToolManager,
+    ViewportToolMode, parse_value,
 };
 use fret_render::{Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{
@@ -203,6 +203,15 @@ struct DemoDriver {
     asset_drop_registry: AssetDropRegistry,
     last_scene_chrome_rev: Option<(u64, u64)>,
     asset_open_registry: AssetOpenRegistry,
+    active_property_edits: HashMap<fret_core::AppWindowId, ActivePropertyEdit>,
+}
+
+#[derive(Debug, Clone)]
+struct ActivePropertyEdit {
+    targets: Vec<u64>,
+    path: PropertyPath,
+    before: Vec<Option<PropertyValue>>,
+    was_dirty: bool,
 }
 
 fn load_theme(app: &mut App) {
@@ -3277,7 +3286,9 @@ impl WinitDriver for DemoDriver {
             // blank.
             let mut allow_restore_windows = imported_main_root;
             if !imported_main_root || dock.graph.window_root(main_window).is_none() {
-                tracing::warn!("layout.json present but main root could not be restored; falling back to default layout");
+                tracing::warn!(
+                    "layout.json present but main root could not be restored; falling back to default layout"
+                );
                 allow_restore_windows = false;
                 let tabs_left = dock.graph.insert_node(DockNode::Tabs {
                     tabs: vec![key_hierarchy.clone(), key_project.clone()],
@@ -4125,7 +4136,7 @@ impl WinitDriver for DemoDriver {
                     return;
                 };
 
-                let before: Vec<Option<PropertyValue>> = self
+                let current_before: Vec<Option<PropertyValue>> = self
                     .world
                     .and_then(|world| world.get(app))
                     .map(|w| {
@@ -4137,27 +4148,118 @@ impl WinitDriver for DemoDriver {
                     })
                     .unwrap_or_default();
 
-                let after = request.value.clone();
+                match request.kind {
+                    PropertyEditKind::Begin => {
+                        let was_dirty = Self::is_scene_dirty(app);
+                        self.active_property_edits.insert(
+                            window,
+                            ActivePropertyEdit {
+                                targets: request.targets.clone(),
+                                path: request.path.clone(),
+                                before: current_before,
+                                was_dirty,
+                            },
+                        );
 
-                if let Some(world) = self.world {
-                    let _ = world.update(app, |w, _cx| {
-                        w.apply_property_value(&request.targets, &request.path, after.clone());
-                    });
-                }
+                        if let Some(world) = self.world {
+                            let after = request.value.clone();
+                            let _ = world.update(app, |w, _cx| {
+                                w.apply_property_value(&request.targets, &request.path, after);
+                            });
+                        }
+                        self.mark_scene_dirty(app);
 
-                if let Some(stack) = self.undo {
-                    let cmd = EditCommand::SetProperties {
-                        targets: request.targets,
-                        path: request.path,
-                        before,
-                        after,
-                    };
-                    let _ = stack.update(app, |s, _cx| s.push(cmd));
-                }
-                self.mark_scene_dirty(app);
+                        for &w in self.logical_windows.keys() {
+                            app.request_redraw(w);
+                        }
+                    }
+                    PropertyEditKind::Update => {
+                        if self.active_property_edits.get(&window).is_none() {
+                            let was_dirty = Self::is_scene_dirty(app);
+                            self.active_property_edits.insert(
+                                window,
+                                ActivePropertyEdit {
+                                    targets: request.targets.clone(),
+                                    path: request.path.clone(),
+                                    before: current_before,
+                                    was_dirty,
+                                },
+                            );
+                        }
 
-                for &w in self.logical_windows.keys() {
-                    app.request_redraw(w);
+                        if let Some(world) = self.world {
+                            let after = request.value.clone();
+                            let _ = world.update(app, |w, _cx| {
+                                w.apply_property_value(&request.targets, &request.path, after);
+                            });
+                        }
+                        self.mark_scene_dirty(app);
+
+                        for &w in self.logical_windows.keys() {
+                            app.request_redraw(w);
+                        }
+                    }
+                    PropertyEditKind::Commit => {
+                        let active = self.active_property_edits.remove(&window);
+                        let before = active
+                            .as_ref()
+                            .filter(|a| a.targets == request.targets && a.path == request.path)
+                            .map(|a| a.before.clone())
+                            .unwrap_or(current_before);
+                        let after = request.value.clone();
+
+                        if let Some(world) = self.world {
+                            let _ = world.update(app, |w, _cx| {
+                                w.apply_property_value(
+                                    &request.targets,
+                                    &request.path,
+                                    after.clone(),
+                                );
+                            });
+                        }
+
+                        if let Some(stack) = self.undo {
+                            let cmd = EditCommand::SetProperties {
+                                targets: request.targets,
+                                path: request.path,
+                                before,
+                                after,
+                            };
+                            let _ = stack.update(app, |s, _cx| s.push(cmd));
+                        }
+                        self.mark_scene_dirty(app);
+
+                        for &w in self.logical_windows.keys() {
+                            app.request_redraw(w);
+                        }
+                    }
+                    PropertyEditKind::Cancel => {
+                        let active = self.active_property_edits.remove(&window);
+                        let Some(active) = active else {
+                            return;
+                        };
+
+                        if let Some(world) = self.world {
+                            let _ = world.update(app, |w, _cx| {
+                                for (id, before) in
+                                    active.targets.iter().copied().zip(active.before.iter())
+                                {
+                                    let Some(value) = before.clone() else {
+                                        continue;
+                                    };
+                                    let _ = w.set_property(id, &active.path, value);
+                                }
+                            });
+                        }
+
+                        app.with_global_mut(SceneDocumentService::default, |s, _app| {
+                            s.set_dirty(active.was_dirty);
+                        });
+
+                        for &w in self.logical_windows.keys() {
+                            app.request_redraw(w);
+                        }
+                    }
                 }
             }
             "edit.undo" => {

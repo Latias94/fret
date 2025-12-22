@@ -4,7 +4,10 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PropertyEditKind {
+    Begin,
+    Update,
     Commit,
+    Cancel,
 }
 
 #[derive(Debug, Clone)]
@@ -12,7 +15,6 @@ pub struct PropertyEditRequest {
     pub targets: Vec<u64>,
     pub path: PropertyPath,
     pub value: PropertyValue,
-    #[allow(dead_code)]
     pub kind: PropertyEditKind,
 }
 
