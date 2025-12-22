@@ -108,55 +108,54 @@ impl<H: UiHost> Widget<H> for Toolbar {
             return;
         }
 
-        match event {
-            Event::Pointer(pe) => match pe {
-                fret_core::PointerEvent::Move { position, .. } => {
-                    let hovered = self.item_index_at(*position);
-                    if hovered != self.hovered {
-                        self.hovered = hovered;
-                        cx.invalidate_self(Invalidation::Paint);
-                        cx.request_redraw();
-                    }
-                }
-                fret_core::PointerEvent::Down {
-                    position, button, ..
-                } => {
-                    if *button != MouseButton::Left {
-                        return;
-                    }
-                    let Some(i) = self.item_index_at(*position) else {
-                        return;
-                    };
-                    self.pressed = Some(i);
-                    cx.capture_pointer(cx.node);
+        let Event::Pointer(pe) = event else {
+            return;
+        };
+        match pe {
+            fret_core::PointerEvent::Move { position, .. } => {
+                let hovered = self.item_index_at(*position);
+                if hovered != self.hovered {
+                    self.hovered = hovered;
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
-                    cx.stop_propagation();
                 }
-                fret_core::PointerEvent::Up {
-                    position, button, ..
-                } => {
-                    if *button != MouseButton::Left {
-                        return;
-                    }
-                    let pressed = self.pressed.take();
-                    cx.release_pointer_capture();
-
-                    let hovered = self.item_index_at(*position);
-                    if pressed.is_some() && pressed == hovered {
-                        if let Some(i) = pressed {
-                            if let Some(item) = self.items.get(i) {
-                                cx.dispatch_command(item.command.clone());
-                            }
-                        }
-                    }
-
-                    cx.invalidate_self(Invalidation::Paint);
-                    cx.request_redraw();
-                    cx.stop_propagation();
+            }
+            fret_core::PointerEvent::Down {
+                position, button, ..
+            } => {
+                if *button != MouseButton::Left {
+                    return;
                 }
-                _ => {}
-            },
+                let Some(i) = self.item_index_at(*position) else {
+                    return;
+                };
+                self.pressed = Some(i);
+                cx.capture_pointer(cx.node);
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                cx.stop_propagation();
+            }
+            fret_core::PointerEvent::Up {
+                position, button, ..
+            } => {
+                if *button != MouseButton::Left {
+                    return;
+                }
+                let pressed = self.pressed.take();
+                cx.release_pointer_capture();
+
+                let hovered = self.item_index_at(*position);
+                if pressed == hovered
+                    && let Some(i) = pressed
+                    && let Some(item) = self.items.get(i)
+                {
+                    cx.dispatch_command(item.command.clone());
+                }
+
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                cx.stop_propagation();
+            }
             _ => {}
         }
     }

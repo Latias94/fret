@@ -229,27 +229,29 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
             self.sync_from_model(cx.app, false);
         }
 
-        if cx.focus == Some(cx.node) {
-            if let Event::KeyDown { key, modifiers, .. } = event {
-                if !modifiers.shift && !modifiers.ctrl && !modifiers.alt && !modifiers.meta {
-                    match key {
-                        KeyCode::Enter => {
-                            if let Some(cmd) = self.submit_command.clone() {
-                                cx.dispatch_command(cmd);
-                                cx.stop_propagation();
-                                return;
-                            }
-                        }
-                        KeyCode::Escape => {
-                            if let Some(cmd) = self.cancel_command.clone() {
-                                cx.dispatch_command(cmd);
-                                cx.stop_propagation();
-                                return;
-                            }
-                        }
-                        _ => {}
+        if cx.focus == Some(cx.node)
+            && let Event::KeyDown { key, modifiers, .. } = event
+            && !modifiers.shift
+            && !modifiers.ctrl
+            && !modifiers.alt
+            && !modifiers.meta
+        {
+            match key {
+                KeyCode::Enter => {
+                    if let Some(cmd) = self.submit_command.clone() {
+                        cx.dispatch_command(cmd);
+                        cx.stop_propagation();
+                        return;
                     }
                 }
+                KeyCode::Escape => {
+                    if let Some(cmd) = self.cancel_command.clone() {
+                        cx.dispatch_command(cmd);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                _ => {}
             }
         }
 
@@ -607,7 +609,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     return;
                 }
                 if self.preedit.is_empty() {
-                    let sanitized = text.replace('\n', " ").replace('\r', " ");
+                    let sanitized = text.replace(['\n', '\r'], " ");
                     if !sanitized.is_empty() {
                         self.replace_selection(&sanitized);
                         cx.invalidate_self(Invalidation::Layout);
@@ -1077,7 +1079,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             ),
             caret_local.size,
         );
-        if self.last_sent_cursor.map_or(true, |r| r != caret) {
+        if self.last_sent_cursor != Some(caret) {
             self.last_sent_cursor = Some(caret);
             cx.app.push_effect(Effect::ImeSetCursorArea {
                 window,

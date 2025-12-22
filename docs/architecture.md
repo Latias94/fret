@@ -68,11 +68,13 @@ In both cases, surface creation must use the same `wgpu::Instance` as the device
 ## Crate Layout (Workspace)
 
 - `crates/fret-core`: platform-agnostic core (IDs, geometry, docking model, layout/input contracts).
+- `crates/fret-runtime`: host-facing runtime boundary traits + portable value types used by `fret-ui` (ADR 0052).
 - `crates/fret-app`: app runtime (global services, models/entities, scheduling, command/action dispatch).
 - `crates/fret-platform`: winit-backed platform IO helpers (window creation, event translation, clipboard/IME/DnD).
 - `crates/fret-runner-winit-wgpu`: desktop runner wiring winit + wgpu + renderer (composition + presentation).
 - `crates/fret-render`: wgpu-based renderer building blocks (context/device bootstrap, rendering backends).
 - `crates/fret-ui`: UI runtime (layout, hit-testing, focus routing, display list builder).
+- `crates/fret-ui-app`: integration convenience layer that binds `fret-ui` to `fret-app::App` for first-party apps/demos.
 - `crates/fret`: public facade crate (re-exports).
 - `crates/fret-demo`: runnable demo app (docking + persistence + viewports prototypes).
 

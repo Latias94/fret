@@ -30,6 +30,12 @@ impl AssetMetaV1 {
     }
 }
 
+impl Default for AssetMetaV1 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ProjectEntryKind {
     Directory,

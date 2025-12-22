@@ -118,12 +118,12 @@ impl DockGraph {
 
         if zone == DropZone::Center {
             let mut index = insert_index;
-            if source_window == target_window && source_tabs == target_tabs {
-                if let Some(i) = index.as_mut() {
-                    if *i > source_index {
-                        *i = i.saturating_sub(1);
-                    }
-                }
+            if source_window == target_window
+                && source_tabs == target_tabs
+                && let Some(i) = index.as_mut()
+                && *i > source_index
+            {
+                *i = i.saturating_sub(1);
             }
 
             let ok = self.insert_panel_into_tabs_at(target_tabs, panel, index);
@@ -326,9 +326,7 @@ impl DockGraph {
     }
 
     fn first_tabs_in_subtree(&self, node: DockNodeId) -> Option<DockNodeId> {
-        let Some(n) = self.nodes.get(node) else {
-            return None;
-        };
+        let n = self.nodes.get(node)?;
         match n {
             DockNode::Tabs { .. } => Some(node),
             DockNode::Split { children, .. } => children
@@ -343,9 +341,7 @@ impl DockGraph {
         node: DockNodeId,
         panel: &PanelKey,
     ) -> Option<(DockNodeId, usize)> {
-        let Some(n) = self.nodes.get(node) else {
-            return None;
-        };
+        let n = self.nodes.get(node)?;
         match n {
             DockNode::Tabs { tabs, .. } => tabs.iter().position(|p| p == panel).map(|i| (node, i)),
             DockNode::Split { children, .. } => children
@@ -364,7 +360,7 @@ impl DockGraph {
         let Some(DockNode::Tabs { tabs: list, active }) = self.nodes.get_mut(tabs) else {
             return false;
         };
-        if list.iter().any(|p| *p == panel) {
+        if list.contains(&panel) {
             return true;
         }
 
@@ -426,13 +422,11 @@ impl DockGraph {
     }
 
     fn find_parent_in_subtree(&self, node: DockNodeId, target: DockNodeId) -> Option<DockNodeId> {
-        let Some(n) = self.nodes.get(node) else {
-            return None;
-        };
+        let n = self.nodes.get(node)?;
         match n {
             DockNode::Tabs { .. } => None,
             DockNode::Split { children, .. } => {
-                if children.iter().any(|&c| c == target) {
+                if children.contains(&target) {
                     return Some(node);
                 }
                 children

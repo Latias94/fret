@@ -93,17 +93,16 @@ Immediate (P0) contract to lock:
 Prototype implementation (P0, landed):
 
 - Introduce a minimal `UiHost` trait used by the `fret-ui` runtime.
+- Place `UiHost` (and portable host-facing value types) in `fret-runtime` so `fret-ui` does not depend on `fret-app`.
 - Implement `UiHost` for `fret_app::App` so the demo behavior stays unchanged.
-- Use default type parameters so most framework-facing types remain ergonomic:
-  - `Widget<H: UiHost = fret_app::App>`
-  - `EventCx<'_, H>`, `LayoutCx<'_, H>`, etc.
+- Preserve integrated-app ergonomics via a bridge crate:
+  - `fret-ui-app` provides `fret-app`-bound type aliases (`UiTree`, `EventCx`, etc.) and common re-exports.
 
 Deferred work (P1):
 
-- Consider extracting `UiHost` into a small dedicated crate (e.g. `fret-runtime`) once the trait surface stabilizes.
 - Reduce host trait coupling to `fret_app` types over time (phase approach):
-  - Phase 0: boundary exists, but host types may still come from `fret_app` (current).
-  - Phase 1: move host-facing types into a portable crate (`fret-runtime` or `fret-core` where appropriate).
+  - Phase 0: boundary exists (host-generic `fret-ui`).
+  - Phase 1: host-facing types are portable (`fret-runtime` or `fret-core` where appropriate).
   - Phase 2: third-party hosts implement the traits without adopting `fret-app`.
 
 ## Phase Checklist (Living)
@@ -112,17 +111,19 @@ This section is a **living checklist** to keep the Option B plan concrete and to
 
 ### Phase 0 — Boundary exists (prototype; still uses `fret-app` host types)
 
-- [x] Introduce `UiHost` used by the `fret-ui` runtime (`crates/fret-ui/src/host.rs`).
-- [x] Implement `UiHost` for `fret_app::App` to keep the demo behavior unchanged.
+- [x] Introduce `UiHost` used by the `fret-ui` runtime (`crates/fret-runtime/src/ui_host.rs`).
+- [x] Implement `UiHost` for `fret_app::App` to keep the demo behavior unchanged (`crates/fret-app/src/ui_host.rs`).
 - [x] Make `crates/fret-ui/src/widgets/*` implement `Widget<H: UiHost>` (no `impl Widget for ...` in widgets).
-- [ ] Inventory non-widget runtime dependencies (`elements`, `tree`, `dock`) that still assume `fret_app::App`.
+- [x] Remove the `fret-ui -> fret-app` dependency.
+- [x] Provide an integrated-app bridge crate (`crates/fret-ui-app`) for demo/editor ergonomics.
+- [ ] Inventory remaining coupling inside `UiHost` and consider splitting into smaller service traits.
 
 ### Phase 1 — Portable host-facing types (reduce `fret-app` in the public boundary)
 
 Goal: keep `fret-ui` depending on `fret-core` + a small portable “runtime boundary” crate.
 
-- [ ] Extract host-facing *types* that leak `fret_app` today (candidates: `Effect`, `CommandId`, `InputContext`,
-      `CommandRegistry`, drag session types, menu types) into a portable crate (`fret-runtime`) or `fret-core` where appropriate.
+- [x] Extract host-facing *types* that leaked `fret_app` (e.g. `Effect`, `CommandId`, `InputContext`,
+      drag session types, menu types) into `fret-runtime` (or `fret-core` where appropriate).
 - [ ] Keep the boundary minimal: define only “services” (scheduling, redraw, effects, commands) and avoid editor semantics.
 - [ ] Ensure portability gates exist for platform-specific features (see ADR 0054) and that payload types avoid desktop-only
       values (see ADR 0053).
@@ -137,83 +138,46 @@ Goal: keep `fret-ui` depending on `fret-core` + a small portable “runtime boun
 
 These are the areas to watch when tightening the boundary:
 
-- `UiHost` currently references multiple `fret-app` concepts (effects, commands, drag sessions).
-- UI contexts (`EventCx`, `CommandCx`, `LayoutCx`, `PaintCx`) still embed `fret_app::InputContext` and `fret_app` command types.
+- `UiHost` still represents multiple host services (effects, commands, drag sessions, scheduling). The types are now portable
+  (`fret-runtime`), but the trait surface may still be split further over time.
+- UI contexts (`EventCx`, `CommandCx`, `LayoutCx`, `PaintCx`) embed portable boundary types (`fret-runtime`), and dispatch
+  host outputs as `Effect`.
 - `elements` runtime and element-local state storage may still assume host globals (see ADR 0028 / ADR 0039).
 
-## Phase 0 Inventory (What Still Couples `fret-ui` to `fret-app`)
+## Post-Phase1 Inventory (Current Boundary Shape)
 
-This inventory is meant to be actionable: for each item we classify the coupling and suggest a Phase 1 landing zone.
+This inventory is meant to stay actionable: it lists where the UI runtime still assumes “host services”, even though the
+types are now portable and no longer tie `fret-ui` to `fret-app`.
 
-### `crates/fret-ui/src/host.rs` — trait surface + default host impl
+### `crates/fret-runtime/src/ui_host.rs` — host service surface
 
-Coupling:
+Notes:
 
-- `trait UiHost` currently mentions `fret_app::{Effect, ModelStore, CommandRegistry, DragSession, DragKind, ModelId}`.
-- `impl UiHost for fret_app::App` lives inside `fret-ui`, so `fret-ui` must depend on `fret-app`.
-
-Phase 1 recommendation:
-
-- Move `UiHost` (and any portable boundary types it needs) into a dedicated crate (e.g. `fret-runtime`).
-- Move `impl UiHost for fret_app::App` into `fret-app` (so `fret-ui` can compile without `fret-app`).
-
-### `crates/fret-ui/src/widget.rs` — UI contexts and command dispatch
-
-Coupling:
-
-- UI contexts embed `fret_app::{InputContext, CommandId, Model, ModelId}`.
-- `EventCx::dispatch_command` constructs `fret_app::Effect::Command { ... }`.
-- Default type parameters mention `fret_app::App` (even if only as a default), which implies a crate dependency.
-
-Phase 1 recommendation:
-
-- Move value types (`CommandId`, `InputContext`, model handle/ID types) to `fret-runtime` (or `fret-core` if we decide they are core contracts).
-- Move `Effect` (or at least the “UI -> host output” subset) to `fret-runtime` so `dispatch_command` does not require `fret-app`.
-- Remove `= fret_app::App` defaults from public types in `fret-ui` (or gate them behind an optional feature), so embedding hosts do not pull `fret-app`.
+- The trait currently bundles multiple services (globals, models, commands, scheduling, drag sessions, effect output).
+- Next tightening step is likely *splitting* into smaller service traits (e.g. `EffectSink`, `Globals`, `Models`, `Commands`, `Timers`, `DragHost`)
+  so third-party hosts can implement only what they need.
 
 ### `crates/fret-ui/src/tree.rs` — retained UI runtime
 
-Coupling:
+Notes:
 
-- Depends on `fret_app::{Effect, CommandId, InputContext, Platform, KeyChord, KeymapService, ModelId}`.
-- Shortcut/keymap handling and menu metadata currently flow through `fret-app` services.
-
-Phase 1 recommendation:
-
-- Promote input/key types that are “contracts” (e.g. platform identifier, key chords) into `fret-core` or `fret-runtime`.
-- Replace `KeymapService`/`CommandRegistry` concrete dependencies with a thin host-facing service trait on the boundary (or keep them as portable concrete types in `fret-runtime` if that stays minimal).
-- Keep the retained tree algorithms in `fret-ui`; only move the host-facing glue types and services.
-
-### `crates/fret-ui/src/dock.rs` — docking runtime and UX glue
-
-Coupling:
-
-- Depends on `fret_app::{Effect, WindowRequest, CommandId, InputContext, DragKind, Menu, MenuItem, WhenExpr}`.
-- Some menu/when-expression wiring is currently routed through `fret-app`.
-
-Phase 1 recommendation:
-
-- Treat docking outputs as host-boundary messages: move `DockOp` is already in `fret-core`; the surrounding `Effect/WindowRequest/Menu/WhenExpr/InputContext`
-  should be in `fret-runtime`.
-- Ensure any platform constraints (multi-window vs single-window) are expressed via ADR 0054 capabilities, not via desktop-only types.
+- The retained tree currently expects to resolve shortcuts and dispatch commands via host globals (`KeymapService`) and
+  command metadata; these live in the host runtime but are portable value types.
+- If we want a smaller host surface for embedding, this is the hotspot to refactor: either introduce a thin host-facing
+  trait for keymap/commands, or keep the concrete services in `fret-runtime` and treat them as part of the public contract.
 
 ### `crates/fret-ui/src/elements.rs` — element-local state runtime
 
-Coupling:
+Notes:
 
-- Minimal: generic defaults mention `fret_app::App`, but the runtime itself primarily needs `UiHost::frame_id()` and `UiHost::with_global_mut(...)`.
+- This is close to portable already; it mostly needs a global `ElementRuntime` store and frame/tick IDs.
 
-Phase 1 recommendation:
+### `crates/fret-ui-app` — integrated ergonomics
 
-- After `UiHost` moves to `fret-runtime` and the `fret_app::App` defaults are removed/gated, `elements.rs` should become portable with little change.
+Notes:
 
-## Suggested Phase 1 Migration Order (Lowest churn first)
-
-1. Introduce `crates/fret-runtime` with boundary *types* used by `fret-ui` (`CommandId`, `InputContext`, `Effect` subset, `Menu`, `MenuItem`, `WhenExpr`, `WindowRequest`, drag session types).
-2. Make `fret-app` depend on `fret-runtime` and re-export these types for compatibility (temporary).
-3. Update `fret-ui` imports to use `fret-runtime` instead of `fret-app` (no behavior change).
-4. Move `impl UiHost for fret_app::App` from `fret-ui` to `fret-app`; remove `fret-ui -> fret-app` dependency.
-5. Decide whether public defaults (`= fret_app::App`) are removed entirely or gated behind a feature (default-off for embeddable builds).
+- `fret-ui-app` is intentionally optional and exists only to keep first-party apps ergonomic (`impl Widget for ...`,
+  `UiTree` aliases, etc.) while the core UI runtime stays embeddable.
 
 ## Proposed API Shape (Sketch, not final)
 
@@ -233,11 +197,10 @@ Non-goal: redesign the entire authoring model; ADR 0028/0039 remain the authorin
 
 ## Next Steps
 
-1. Inventory `fret-ui -> fret-app` dependencies and categorize them:
-   - essential host services vs accidental convenience.
-2. Keep tightening `UiHost` to the smallest “host services” surface we can get away with.
+1. Keep tightening `UiHost` to the smallest “host services” surface we can get away with (consider splitting into smaller traits).
+2. Provide a minimal example host implementation (not using `fret-app`) that can drive `UiTree` for embedding validation.
 3. Move element-local state storage to be UI-runtime-owned where possible (avoid requiring host globals).
-4. If/when a dedicated trait crate exists, update `docs/architecture.md` crate layout accordingly.
+4. Keep runner/backends integrated for now; revisit runner genericity only when a real third-party host needs it.
 
 ## References
 

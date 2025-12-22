@@ -46,6 +46,12 @@ impl PropertyPath {
     }
 }
 
+impl Default for PropertyPath {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum PropertyValue {
     Bool(bool),

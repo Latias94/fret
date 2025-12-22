@@ -172,7 +172,7 @@ impl ObservationIndex {
         let prev = prev.unwrap_or_default();
         let next = self.by_node.get(&node).cloned().unwrap_or_default();
 
-        for (model, _) in &prev {
+        for model in prev.keys() {
             if next.contains_key(model) {
                 continue;
             }
@@ -326,14 +326,14 @@ impl<H: UiHost> UiTree<H> {
         self.replaying_pending_shortcut = true;
 
         for stroke in keystrokes {
-            if let Some(service) = app.global::<KeymapService>() {
-                if let Some(command) = service.keymap.resolve(ctx, stroke.chord) {
-                    app.push_effect(Effect::Command {
-                        window: self.window,
-                        command,
-                    });
-                    continue;
-                }
+            if let Some(service) = app.global::<KeymapService>()
+                && let Some(command) = service.keymap.resolve(ctx, stroke.chord)
+            {
+                app.push_effect(Effect::Command {
+                    window: self.window,
+                    command,
+                });
+                continue;
             }
 
             let down = Event::KeyDown {
@@ -544,30 +544,30 @@ impl<H: UiHost> UiTree<H> {
             focus_is_text_input,
         };
 
-        if !self.replaying_pending_shortcut && !self.pending_shortcut.keystrokes.is_empty() {
-            if self.pending_shortcut.focus.is_some() && self.pending_shortcut.focus != self.focus {
-                self.clear_pending_shortcut(app);
-            } else if self.pending_shortcut.barrier_root != barrier_root {
-                self.clear_pending_shortcut(app);
-            }
+        if !self.replaying_pending_shortcut
+            && !self.pending_shortcut.keystrokes.is_empty()
+            && ((self.pending_shortcut.focus.is_some()
+                && self.pending_shortcut.focus != self.focus)
+                || self.pending_shortcut.barrier_root != barrier_root)
+        {
+            self.clear_pending_shortcut(app);
         }
 
-        if let Event::Timer { token } = event {
-            if !self.replaying_pending_shortcut
-                && !self.pending_shortcut.keystrokes.is_empty()
-                && self.pending_shortcut.timer == Some(*token)
-            {
-                let pending = std::mem::take(&mut self.pending_shortcut);
-                if let Some(command) = pending.fallback {
-                    app.push_effect(Effect::Command {
-                        window: self.window,
-                        command,
-                    });
-                } else {
-                    self.replay_captured_keystrokes(app, text, &input_ctx, pending.keystrokes);
-                }
-                return;
+        if let Event::Timer { token } = event
+            && !self.replaying_pending_shortcut
+            && !self.pending_shortcut.keystrokes.is_empty()
+            && self.pending_shortcut.timer == Some(*token)
+        {
+            let pending = std::mem::take(&mut self.pending_shortcut);
+            if let Some(command) = pending.fallback {
+                app.push_effect(Effect::Command {
+                    window: self.window,
+                    command,
+                });
+            } else {
+                self.replay_captured_keystrokes(app, text, &input_ctx, pending.keystrokes);
             }
+            return;
         }
 
         if let Event::TextInput(text) = event {
@@ -612,19 +612,18 @@ impl<H: UiHost> UiTree<H> {
                 // Allow key-repeat only for explicitly repeatable commands (e.g. text editing).
                 if let Some(service) = app.global::<KeymapService>() {
                     let chord = KeyChord::new(*key, *modifiers);
-                    if let Some(command) = service.keymap.resolve(&input_ctx, chord) {
-                        if app
+                    if let Some(command) = service.keymap.resolve(&input_ctx, chord)
+                        && app
                             .commands()
                             .get(command.clone())
                             .is_some_and(|m| m.repeatable)
-                        {
-                            self.suppress_text_input_until_key_up = Some(*key);
-                            app.push_effect(Effect::Command {
-                                window: self.window,
-                                command,
-                            });
-                            return;
-                        }
+                    {
+                        self.suppress_text_input_until_key_up = Some(*key);
+                        app.push_effect(Effect::Command {
+                            window: self.window,
+                            command,
+                        });
+                        return;
                     }
                 }
             } else if let Some(service) = app.global::<KeymapService>() {
@@ -796,10 +795,8 @@ impl<H: UiHost> UiTree<H> {
             };
         }
 
-        if needs_redraw {
-            if let Some(window) = self.window {
-                app.request_redraw(window);
-            }
+        if needs_redraw && let Some(window) = self.window {
+            app.request_redraw(window);
         }
     }
 
@@ -901,10 +898,8 @@ impl<H: UiHost> UiTree<H> {
             };
         }
 
-        if needs_redraw {
-            if let Some(window) = self.window {
-                app.request_redraw(window);
-            }
+        if needs_redraw && let Some(window) = self.window {
+            app.request_redraw(window);
         }
 
         handled
@@ -1317,10 +1312,8 @@ impl<H: UiHost> UiTree<H> {
             did_invalidate = true;
         }
 
-        if did_invalidate {
-            if let Some(window) = self.window {
-                app.request_redraw(window);
-            }
+        if did_invalidate && let Some(window) = self.window {
+            app.request_redraw(window);
         }
 
         did_invalidate
@@ -1363,7 +1356,7 @@ impl<H: UiHost> UiTree<H> {
         let Some(node_root) = self.node_root(node) else {
             return false;
         };
-        layer_roots.iter().any(|r| *r == node_root)
+        layer_roots.contains(&node_root)
     }
 
     fn node_layer(&self, node: NodeId) -> Option<UiLayerId> {
@@ -1376,6 +1369,24 @@ impl<H: UiHost> UiTree<H> {
             node = parent;
         }
         self.nodes.contains_key(node).then_some(node)
+    }
+}
+
+fn pointer_position(pe: &PointerEvent) -> Point {
+    match pe {
+        PointerEvent::Move { position, .. }
+        | PointerEvent::Down { position, .. }
+        | PointerEvent::Up { position, .. }
+        | PointerEvent::Wheel { position, .. } => *position,
+    }
+}
+
+fn event_position(event: &Event) -> Option<Point> {
+    match event {
+        Event::Pointer(pe) => Some(pointer_position(pe)),
+        Event::ExternalDrag(e) => Some(e.position),
+        Event::InternalDrag(e) => Some(e.position),
+        _ => None,
     }
 }
 
@@ -1446,7 +1457,7 @@ mod tests {
         let node = ui.create_node(ObservingWidget { model });
         ui.set_root(node);
 
-        let mut text = FakeTextService::default();
+        let mut text = FakeTextService;
         let bounds = Rect::new(
             Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
             Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
@@ -1469,23 +1480,5 @@ mod tests {
         let n = ui.nodes.get(node).unwrap();
         assert!(n.invalidation.layout);
         assert!(n.invalidation.paint);
-    }
-}
-
-fn pointer_position(pe: &PointerEvent) -> Point {
-    match pe {
-        PointerEvent::Move { position, .. }
-        | PointerEvent::Down { position, .. }
-        | PointerEvent::Up { position, .. }
-        | PointerEvent::Wheel { position, .. } => *position,
-    }
-}
-
-fn event_position(event: &Event) -> Option<Point> {
-    match event {
-        Event::Pointer(pe) => Some(pointer_position(pe)),
-        Event::ExternalDrag(e) => Some(e.position),
-        Event::InternalDrag(e) => Some(e.position),
-        _ => None,
     }
 }

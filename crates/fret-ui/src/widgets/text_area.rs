@@ -526,25 +526,25 @@ impl<H: UiHost> Widget<H> for TextArea {
                     return;
                 }
 
-                if let Some((track, thumb)) = self.scrollbar_geometry(self.last_bounds) {
-                    if track.contains(*position) {
-                        if thumb.contains(*position) {
-                            self.dragging_thumb = true;
-                            self.drag_pointer_start_y = position.y;
-                            self.drag_offset_start_y = self.offset_y;
-                            cx.capture_pointer(cx.node);
-                        } else {
-                            let centered = Px(position.y.0 - thumb.size.height.0 * 0.5);
-                            self.set_offset_from_thumb_y(self.last_bounds, centered);
-                            self.clamp_offset(self.last_content_height, self.last_viewport_height);
-                        }
-
-                        self.ensure_caret_visible = false;
-                        cx.invalidate_self(Invalidation::Paint);
-                        cx.request_redraw();
-                        cx.stop_propagation();
-                        return;
+                if let Some((track, thumb)) = self.scrollbar_geometry(self.last_bounds)
+                    && track.contains(*position)
+                {
+                    if thumb.contains(*position) {
+                        self.dragging_thumb = true;
+                        self.drag_pointer_start_y = position.y;
+                        self.drag_offset_start_y = self.offset_y;
+                        cx.capture_pointer(cx.node);
+                    } else {
+                        let centered = Px(position.y.0 - thumb.size.height.0 * 0.5);
+                        self.set_offset_from_thumb_y(self.last_bounds, centered);
+                        self.clamp_offset(self.last_content_height, self.last_viewport_height);
                     }
+
+                    self.ensure_caret_visible = false;
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
                 }
 
                 cx.request_focus(cx.node);
@@ -1113,9 +1113,7 @@ impl<H: UiHost> Widget<H> for TextArea {
         cx.scene.push(SceneOp::PushClipRect { rect: inner });
 
         let map_base_to_display = |idx: usize| -> usize {
-            if self.preedit.is_empty() {
-                idx
-            } else if idx <= self.caret {
+            if self.preedit.is_empty() || idx <= self.caret {
                 idx
             } else {
                 idx + self.preedit.len()
@@ -1232,7 +1230,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                     window,
                     enabled: true,
                 });
-                if self.last_sent_cursor.map_or(true, |r| r != caret_rect) {
+                if self.last_sent_cursor != Some(caret_rect) {
                     self.last_sent_cursor = Some(caret_rect);
                     cx.app.push_effect(Effect::ImeSetCursorArea {
                         window,

@@ -195,41 +195,41 @@ impl<H: UiHost> Widget<H> for AppMenuBar {
 
         self.sync_open_state(cx.app, window);
 
-        match event {
-            Event::Pointer(pe) => match pe {
-                fret_core::PointerEvent::Move { position, .. } => {
-                    let hovered = self.menu_index_at(*position);
-                    if hovered != self.hovered {
-                        self.hovered = hovered;
-                        cx.invalidate_self(Invalidation::Paint);
-                        cx.request_redraw();
-                    }
-
-                    if let (Some(open), Some(h)) = (self.open_index, hovered) {
-                        if open != h {
-                            self.open_menu(cx, window, h);
-                        }
-                    }
+        let Event::Pointer(pe) = event else {
+            return;
+        };
+        match pe {
+            fret_core::PointerEvent::Move { position, .. } => {
+                let hovered = self.menu_index_at(*position);
+                if hovered != self.hovered {
+                    self.hovered = hovered;
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
                 }
-                fret_core::PointerEvent::Down {
-                    position, button, ..
-                } => {
-                    if *button != MouseButton::Left {
-                        return;
-                    }
-                    let Some(i) = self.menu_index_at(*position) else {
-                        return;
-                    };
 
-                    if self.open_index == Some(i) {
-                        self.close_menu(cx);
-                        return;
-                    }
-
-                    self.open_menu(cx, window, i);
+                if let (Some(open), Some(h)) = (self.open_index, hovered)
+                    && open != h
+                {
+                    self.open_menu(cx, window, h);
                 }
-                _ => {}
-            },
+            }
+            fret_core::PointerEvent::Down {
+                position, button, ..
+            } => {
+                if *button != MouseButton::Left {
+                    return;
+                }
+                let Some(i) = self.menu_index_at(*position) else {
+                    return;
+                };
+
+                if self.open_index == Some(i) {
+                    self.close_menu(cx);
+                    return;
+                }
+
+                self.open_menu(cx, window, i);
+            }
             _ => {}
         }
     }

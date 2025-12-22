@@ -5,7 +5,7 @@ mod targets;
 mod text;
 
 pub use error::RenderError;
-pub use renderer::{ClearColor, Renderer};
+pub use renderer::{ClearColor, RenderSceneParams, Renderer};
 pub use surface::SurfaceState;
 pub use targets::{RenderTargetColorSpace, RenderTargetDescriptor, RenderTargetRegistry};
 

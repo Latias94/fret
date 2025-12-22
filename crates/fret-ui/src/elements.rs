@@ -188,15 +188,15 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             .cur_unkeyed_fingerprints
             .insert(list_id, fingerprints.clone());
 
-        if let Some(prev) = self.window_state.prev_unkeyed_fingerprints.get(&list_id) {
-            if prev != &fingerprints && items.len() > 1 {
-                if cfg!(debug_assertions) {
-                    tracing::warn!(
-                        list_id = format_args!("{list_id:#x}"),
-                        "unkeyed element list order changed; add explicit keys to preserve state"
-                    );
-                }
-            }
+        if let Some(prev) = self.window_state.prev_unkeyed_fingerprints.get(&list_id)
+            && prev != &fingerprints
+            && items.len() > 1
+            && cfg!(debug_assertions)
+        {
+            tracing::warn!(
+                list_id = format_args!("{list_id:#x}"),
+                "unkeyed element list order changed; add explicit keys to preserve state"
+            );
         }
 
         self.scope(|cx| {

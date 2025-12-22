@@ -48,7 +48,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 41: prototype implemented in demo (unsaved changes guard: opening a new scene or closing a window with the Scene panel prompts Save/Don't Save/Cancel; winit close requests are routed through `Event::WindowCloseRequested`)
 - MVP 42: prototype implemented in demo (scene workflow P0: New Scene + Save As; File menu and Cmd/Ctrl shortcuts)
 - MVP 43: prototype implemented (portability gates): runtime platform capability matrix (ADR 0054) + begin removing desktop-only payload assumptions (ADR 0053).
-- MVP 44: prototype implemented (host boundary): introduce `UiHost` and generic widget contexts (ADR 0052) to keep `fret-ui` embeddable.
+- MVP 44: implemented (host boundary): `UiHost` in `fret-runtime`, `fret-ui` is host-generic (no `fret-app` dependency), and `fret-ui-app` preserves demo/editor ergonomics (ADR 0052).
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -963,23 +963,28 @@ Goal: keep the UI runtime embeddable for third-party engines/editors (GPUI-like 
   - `tick_id`/`frame_id` and timer token allocation,
   - internal drag session access (for docking/DnD UX).
 - Implement the trait for `fret_app::App` so the demo behavior remains unchanged.
-- Make widget contexts generic with a default host type parameter:
-  - `Widget<H: UiHost = fret_app::App>`
-  - `EventCx<'_, H>`, `LayoutCx<'_, H>`, etc.
+- Keep `fret-ui` host-generic (no dependency on `fret-app`).
+- Preserve demo/editor ergonomics via an integration convenience layer (`fret-ui-app`).
 
 **Non-goals**
 
-- A fully host-agnostic API surface (host-facing types may still come from `fret-app` in the first iteration).
-- Shipping a new crate boundary (`fret-runtime`) immediately (can be done once the trait surface stabilizes).
+- A fully host-agnostic API surface (host-facing types may still be refined over time).
+- A production-ready third-party runner/backend (this MVP locks the core trait boundary).
 
 **Definition of Done**
 
 - `cargo test --workspace` passes with no demo behavior changes required.
-- `fret-ui` runtime contexts/types no longer hard-code `fret_app::App`.
+- `fret-ui` compiles without depending on `fret-app`.
+- `UiHost` (and portable boundary value types) live in `fret-runtime`.
+- `fret-demo` compiles without being forced into host generics everywhere (via `fret-ui-app`).
 
 Status:
 
-- Prototype implemented in `fret-ui` (still iterating on the minimal trait surface).
+- Implemented:
+  - `UiHost` moved to `fret-runtime`
+  - `fret-app::App` implements `UiHost`
+  - `fret-ui` is host-generic and no longer depends on `fret-app`
+  - `fret-ui-app` provides `fret-app`-bound type aliases for demo/editor ergonomics
 
 References:
 

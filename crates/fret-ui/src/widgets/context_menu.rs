@@ -375,7 +375,7 @@ impl ContextMenu {
 
                     let enabled = meta
                         .and_then(|m| m.when.as_ref())
-                        .map_or(true, |expr| expr.eval(&request.input_ctx));
+                        .is_none_or(|expr| expr.eval(&request.input_ctx));
 
                     let shortcut = keymap.and_then(|service| {
                         service
@@ -523,9 +523,7 @@ impl ContextMenu {
         // Best-effort fallback: if the pointer is within the overall menu bar strip (with a small
         // vertical slop), pick the nearest entry by x. This avoids “click closes menu, second click
         // opens” when bounds drift slightly due to platform DPI rounding or async window metrics.
-        let Some(bar) = Self::menu_bar_bounds(menu_bar) else {
-            return None;
-        };
+        let bar = Self::menu_bar_bounds(menu_bar)?;
         let slop_y = 6.0;
         let y0 = bar.origin.y.0 - slop_y;
         let y1 = bar.origin.y.0 + bar.size.height.0 + slop_y;
@@ -689,10 +687,10 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         let Some(row) = panel.rows.iter().find(|r| r.raw_index == raw) else {
                             return;
                         };
-                        if let PreparedRowKind::Command(cmd) = &row.kind {
-                            if row.enabled {
-                                self.activate_command(cx, window, cmd.clone());
-                            }
+                        if let PreparedRowKind::Command(cmd) = &row.kind
+                            && row.enabled
+                        {
+                            self.activate_command(cx, window, cmd.clone());
                         }
                     }
                     KeyCode::ArrowDown | KeyCode::ArrowUp => {
@@ -744,14 +742,14 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         let Some(row) = panel.rows.iter().find(|r| r.raw_index == raw) else {
                             return;
                         };
-                        if matches!(row.kind, PreparedRowKind::Submenu) {
-                            if self.open_path.len() == depth {
-                                self.open_path.push(raw);
-                                self.set_selection_raw(depth + 1, None);
-                                cx.invalidate_self(Invalidation::Paint);
-                                cx.request_redraw();
-                                cx.stop_propagation();
-                            }
+                        if matches!(row.kind, PreparedRowKind::Submenu)
+                            && self.open_path.len() == depth
+                        {
+                            self.open_path.push(raw);
+                            self.set_selection_raw(depth + 1, None);
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                            cx.stop_propagation();
                         }
                     }
                     KeyCode::ArrowLeft => {
@@ -789,15 +787,12 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
                         }
-                    } else if let Some(menu_bar) = request.menu_bar.as_ref() {
-                        if let Some(index) = Self::menu_bar_entry_at_or_nearest(menu_bar, *position)
-                        {
-                            if index != menu_bar.open_index {
-                                if self.switch_menu_bar_menu(cx, window, &request, index) {
-                                    cx.stop_propagation();
-                                }
-                            }
-                        }
+                    } else if let Some(menu_bar) = request.menu_bar.as_ref()
+                        && let Some(index) = Self::menu_bar_entry_at_or_nearest(menu_bar, *position)
+                        && index != menu_bar.open_index
+                        && self.switch_menu_bar_menu(cx, window, &request, index)
+                    {
+                        cx.stop_propagation();
                     }
                 }
                 fret_core::PointerEvent::Down {
@@ -832,16 +827,15 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         return;
                     }
 
-                    if let Some(menu_bar) = request.menu_bar.as_ref() {
-                        if let Some(index) = Self::menu_bar_entry_at_or_nearest(menu_bar, *position)
-                        {
-                            if index == menu_bar.open_index {
-                                self.close_menu(cx, window);
-                            } else if self.switch_menu_bar_menu(cx, window, &request, index) {
-                                cx.stop_propagation();
-                            }
-                            return;
+                    if let Some(menu_bar) = request.menu_bar.as_ref()
+                        && let Some(index) = Self::menu_bar_entry_at_or_nearest(menu_bar, *position)
+                    {
+                        if index == menu_bar.open_index {
+                            self.close_menu(cx, window);
+                        } else if self.switch_menu_bar_menu(cx, window, &request, index) {
+                            cx.stop_propagation();
                         }
+                        return;
                     }
 
                     self.close_menu(cx, window);
@@ -987,7 +981,7 @@ impl<H: UiHost> Widget<H> for ContextMenu {
 fn visible_menu_indices(
     items: &[MenuItem],
     ctx: &InputContext,
-    commands: &CommandRegistry,
+    _commands: &CommandRegistry,
 ) -> Vec<usize> {
     let mut out: Vec<usize> = Vec::new();
 
@@ -1004,7 +998,7 @@ fn visible_menu_indices(
                 if when.as_ref().is_some_and(|w| !w.eval(ctx)) {
                     continue;
                 }
-                if visible_menu_indices(items, ctx, commands)
+                if visible_menu_indices(items, ctx, _commands)
                     .into_iter()
                     .any(|idx| !matches!(items[idx], MenuItem::Separator))
                 {

@@ -36,23 +36,12 @@ impl Default for Platform {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct InputContext {
     pub platform: Platform,
     pub caps: PlatformCapabilities,
     pub ui_has_modal: bool,
     pub focus_is_text_input: bool,
-}
-
-impl Default for InputContext {
-    fn default() -> Self {
-        Self {
-            platform: Platform::current(),
-            caps: PlatformCapabilities::default(),
-            ui_has_modal: false,
-            focus_is_text_input: false,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

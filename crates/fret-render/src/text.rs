@@ -267,8 +267,7 @@ impl TextSystem {
 
             // WebGPU requires `bytes_per_row` to be aligned; pad each row as needed.
             let bytes_per_row = upload.w;
-            let aligned_bytes_per_row = ((bytes_per_row + wgpu::COPY_BYTES_PER_ROW_ALIGNMENT - 1)
-                / wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
+            let aligned_bytes_per_row = bytes_per_row.div_ceil(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
                 * wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
             let aligned_bytes_per_row = aligned_bytes_per_row.max(bytes_per_row);
 
@@ -676,7 +675,7 @@ fn layout_text(
             let descent_px = ll.max_descent.max(0.0);
             let height_px = ll
                 .line_height_opt
-                .unwrap_or_else(|| ascent_px + descent_px)
+                .unwrap_or(ascent_px + descent_px)
                 .max(0.0);
 
             first_ascent_px.get_or_insert(ascent_px);

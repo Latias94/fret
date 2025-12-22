@@ -106,45 +106,6 @@ fn eval_ident_str_opt<'a>(ctx: &'a InputContext, name: &str) -> Option<&'a str> 
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::WhenExpr;
-    use crate::InputContext;
-    use fret_core::{ExternalDragPayloadKind, PlatformCapabilities};
-
-    #[test]
-    fn when_expr_can_eval_capability_bools() {
-        let mut ctx = InputContext::default();
-        ctx.caps = PlatformCapabilities::default();
-        ctx.caps.ui.multi_window = false;
-
-        assert!(!WhenExpr::parse("ui.multi_window").unwrap().eval(&ctx));
-        assert!(
-            WhenExpr::parse("cap.ui.multi_window == false")
-                .unwrap()
-                .eval(&ctx)
-        );
-    }
-
-    #[test]
-    fn when_expr_can_eval_capability_strings() {
-        let mut ctx = InputContext::default();
-        ctx.caps = PlatformCapabilities::default();
-        ctx.caps.dnd.external_payload = ExternalDragPayloadKind::FileToken;
-
-        assert!(
-            WhenExpr::parse("dnd.external_payload == \"file_token\"")
-                .unwrap()
-                .eval(&ctx)
-        );
-        assert!(
-            WhenExpr::parse("cap.dnd.external_payload != \"file_path\"")
-                .unwrap()
-                .eval(&ctx)
-        );
-    }
-}
-
 struct Parser<'a> {
     input: &'a str,
     pos: usize,
@@ -306,5 +267,42 @@ fn expr_to_value(expr: Expr) -> Result<Value, String> {
         Expr::Str(s) => Ok(Value::Str(s)),
         Expr::Ident(s) => Ok(Value::Ident(s)),
         _ => Err("expected literal or identifier".into()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::WhenExpr;
+    use crate::InputContext;
+    use fret_core::ExternalDragPayloadKind;
+
+    #[test]
+    fn when_expr_can_eval_capability_bools() {
+        let mut ctx = InputContext::default();
+        ctx.caps.ui.multi_window = false;
+
+        assert!(!WhenExpr::parse("ui.multi_window").unwrap().eval(&ctx));
+        assert!(
+            WhenExpr::parse("cap.ui.multi_window == false")
+                .unwrap()
+                .eval(&ctx)
+        );
+    }
+
+    #[test]
+    fn when_expr_can_eval_capability_strings() {
+        let mut ctx = InputContext::default();
+        ctx.caps.dnd.external_payload = ExternalDragPayloadKind::FileToken;
+
+        assert!(
+            WhenExpr::parse("dnd.external_payload == \"file_token\"")
+                .unwrap()
+                .eval(&ctx)
+        );
+        assert!(
+            WhenExpr::parse("cap.dnd.external_payload != \"file_path\"")
+                .unwrap()
+                .eval(&ctx)
+        );
     }
 }

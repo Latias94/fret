@@ -92,17 +92,15 @@ pub trait VirtualListDataSource {
     type Key: Copy + Eq + Hash;
 
     fn len(&self) -> usize;
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
     fn key_at(&self, index: usize) -> Self::Key;
     fn row_at(&self, index: usize) -> VirtualListRow<'_>;
 
     fn index_of_key(&self, key: Self::Key) -> Option<usize> {
         let len = self.len();
-        for i in 0..len {
-            if self.key_at(i) == key {
-                return Some(i);
-            }
-        }
-        None
+        (0..len).find(|&i| self.key_at(i) == key)
     }
 }
 
@@ -323,10 +321,10 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         self.prepared_dirty = true;
         self.selected_keys
             .retain(|key| self.data.index_of_key(*key).is_some());
-        if let Some(anchor) = self.selection_anchor {
-            if self.data.index_of_key(anchor).is_none() {
-                self.selection_anchor = None;
-            }
+        if let Some(anchor) = self.selection_anchor
+            && self.data.index_of_key(anchor).is_none()
+        {
+            self.selection_anchor = None;
         }
         if let Some(lead) = self.selection_lead {
             self.selection_lead_index = self.data.index_of_key(lead);
@@ -748,24 +746,24 @@ impl<H: UiHost, D: VirtualListDataSource> Widget<H> for VirtualList<D> {
                     modifiers,
                 } => {
                     if *button == MouseButton::Left {
-                        if let Some((track, thumb)) = self.scrollbar_geometry() {
-                            if track.contains(*position) {
-                                if thumb.contains(*position) {
-                                    self.dragging_thumb = true;
-                                    self.drag_pointer_start_y = position.y;
-                                    self.drag_offset_start_y = self.offset_y;
-                                    cx.capture_pointer(cx.node);
-                                } else {
-                                    let centered = Px(position.y.0 - thumb.size.height.0 * 0.5);
-                                    self.set_offset_from_thumb_y(centered);
-                                    self.clamp_offset();
-                                }
-
-                                cx.invalidate_self(Invalidation::Paint);
-                                cx.request_redraw();
-                                cx.stop_propagation();
-                                return;
+                        if let Some((track, thumb)) = self.scrollbar_geometry()
+                            && track.contains(*position)
+                        {
+                            if thumb.contains(*position) {
+                                self.dragging_thumb = true;
+                                self.drag_pointer_start_y = position.y;
+                                self.drag_offset_start_y = self.offset_y;
+                                cx.capture_pointer(cx.node);
+                            } else {
+                                let centered = Px(position.y.0 - thumb.size.height.0 * 0.5);
+                                self.set_offset_from_thumb_y(centered);
+                                self.clamp_offset();
                             }
+
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                            cx.stop_propagation();
+                            return;
                         }
                     } else if *button != MouseButton::Right {
                         return;

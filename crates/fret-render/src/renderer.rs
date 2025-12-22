@@ -206,6 +206,15 @@ pub struct Renderer {
     render_targets: RenderTargetRegistry,
 }
 
+pub struct RenderSceneParams<'a> {
+    pub format: wgpu::TextureFormat,
+    pub target_view: &'a wgpu::TextureView,
+    pub scene: &'a Scene,
+    pub clear: ClearColor,
+    pub scale_factor: f32,
+    pub viewport_size: (u32, u32),
+}
+
 impl Renderer {
     pub fn new(device: &wgpu::Device) -> Self {
         let uniform_bind_group_layout =
@@ -671,13 +680,16 @@ impl Renderer {
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        format: wgpu::TextureFormat,
-        target_view: &wgpu::TextureView,
-        scene: &Scene,
-        clear: ClearColor,
-        scale_factor: f32,
-        viewport_size: (u32, u32),
+        params: RenderSceneParams<'_>,
     ) -> wgpu::CommandBuffer {
+        let RenderSceneParams {
+            format,
+            target_view,
+            scene,
+            clear,
+            scale_factor,
+            viewport_size,
+        } = params;
         self.ensure_viewport_pipeline(device, format);
         self.ensure_pipeline(device, format);
         self.ensure_text_pipeline(device, format);

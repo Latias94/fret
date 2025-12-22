@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum ExternalDragPayloadKind {
     None,
+    #[default]
     FilePath,
     FileToken,
     Text,
@@ -17,12 +18,6 @@ impl ExternalDragPayloadKind {
             Self::FileToken => "file_token",
             Self::Text => "text",
         }
-    }
-}
-
-impl Default for ExternalDragPayloadKind {
-    fn default() -> Self {
-        Self::FilePath
     }
 }
 

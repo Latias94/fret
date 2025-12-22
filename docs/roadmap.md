@@ -36,7 +36,7 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Adopt observability strategy (tracing + inspector hooks + renderer metrics) (ADR 0036).
 - P0: Adopt workspace/repo boundaries and external `fret-components` strategy (ADR 0037).
 - P0: Adopt component authoring model (Render/RenderOnce + IntoElement) (ADR 0039).
-- P0: Introduce a `UiHost` boundary so `fret-ui` can be embedded by third-party hosts (ADR 0052). (prototype implemented)
+- P0: Introduce a `UiHost` boundary so `fret-ui` can be embedded by third-party hosts (ADR 0052). (done; `fret-runtime` + `fret-ui-app`)
 - P0: Make external file drag payload portable (no `PathBuf` in core events) (ADR 0053). (done)
 - P0: Introduce runtime platform capability matrix for portability (ADR 0054). (done)
 - P0: Renderer must preserve `Scene.ops` ordering across primitive kinds (ADR 0009).
@@ -240,6 +240,11 @@ all later UI work inherits the same command/focus/clipboard semantics instead of
 - Display list / scene primitives contract.
 - Cross-platform input event types (including IME events as data-only).
 
+### `fret-runtime` (P0)
+
+- Host-facing runtime boundary traits and portable value types used by `fret-ui` (ADR 0052).
+- Defines the “UI -> host outputs” (`Effect`) and input/command/theme/menu boundary types.
+
 ### `fret-app` (P0)
 
 - `App` runtime: globals, models, command registry, plugin registry.
@@ -251,6 +256,11 @@ all later UI work inherits the same command/focus/clipboard semantics instead of
 - Invalidation, layout widgets, hit-testing.
 - Focus, capture, command routing.
 - Dock UI (`DockSpace`) as a widget consuming `DockManager`.
+
+### `fret-ui-app` (P0)
+
+- Optional integration convenience layer that binds `fret-ui` to `fret-app::App` (type aliases + re-exports).
+- Keeps first-party app/demo code ergonomic while the core UI runtime stays embeddable.
 
 ### `fret-platform` (P0)
 

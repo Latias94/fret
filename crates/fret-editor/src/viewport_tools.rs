@@ -1,33 +1,18 @@
 use fret_core::{AppWindowId, Modifiers, MouseButton, RenderTargetId};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ViewportToolMode {
+    #[default]
     Select,
     Move,
     Rotate,
 }
 
-impl Default for ViewportToolMode {
-    fn default() -> Self {
-        Self::Select
-    }
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ViewportToolManager {
     pub active: ViewportToolMode,
     pub interaction: Option<ViewportInteraction>,
     pub hover_rotate: Option<(AppWindowId, RenderTargetId)>,
-}
-
-impl Default for ViewportToolManager {
-    fn default() -> Self {
-        Self {
-            active: ViewportToolMode::default(),
-            interaction: None,
-            hover_rotate: None,
-        }
-    }
 }
 
 #[allow(dead_code)]

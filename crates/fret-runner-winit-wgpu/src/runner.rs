@@ -284,13 +284,11 @@ pub enum WgpuInit {
     /// and assumes the adapter/device are compatible with those surfaces.
     Provided(WgpuContext),
     /// Create the GPU context via a host callback given the main window.
-    Factory(
-        Box<
-            dyn FnOnce(Arc<Window>) -> Result<(WgpuContext, wgpu::Surface<'static>), RunnerError>
-                + 'static,
-        >,
-    ),
+    Factory(Box<WgpuFactoryFn>),
 }
+
+type WgpuFactoryFn =
+    dyn FnOnce(Arc<Window>) -> Result<(WgpuContext, wgpu::Surface<'static>), RunnerError> + 'static;
 
 impl Default for WinitRunnerConfig {
     fn default() -> Self {
@@ -370,6 +368,7 @@ pub trait WinitDriver {
 
     fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, _renderer: &mut Renderer) {}
 
+    #[allow(clippy::too_many_arguments)]
     fn record_engine_frame(
         &mut self,
         app: &mut App,
@@ -396,6 +395,7 @@ pub trait WinitDriver {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn record_engine_commands(
         &mut self,
         _app: &mut App,
@@ -464,6 +464,7 @@ pub trait WinitDriver {
         event: &Event,
     );
 
+    #[allow(clippy::too_many_arguments)]
     fn render(
         &mut self,
         app: &mut App,
@@ -750,10 +751,10 @@ impl<D: WinitDriver> WinitRunner<D> {
             .window_create_spec(&mut self.app, request)
             .unwrap_or_else(|| self.config.default_window_spec());
 
-        if spec.position.is_none() {
-            if let Some(anchor) = request.anchor {
-                spec.position = self.compute_window_position_from_anchor(anchor);
-            }
+        if spec.position.is_none()
+            && let Some(anchor) = request.anchor
+        {
+            spec.position = self.compute_window_position_from_anchor(anchor);
         }
 
         #[cfg(target_os = "macos")]
@@ -1291,12 +1292,12 @@ impl<D: WinitDriver> WinitRunner<D> {
                 let prev_pos = self.internal_drag_hover_pos.take().unwrap_or_default();
                 self.dispatch_internal_drag_event(prev, InternalDragKind::Leave, prev_pos);
             }
-            if let Some(next) = hovered {
-                if let Some(pos) = self.local_pos_for_window(next, screen_pos) {
-                    self.dispatch_internal_drag_event(next, InternalDragKind::Enter, pos);
-                    self.internal_drag_hover_window = Some(next);
-                    self.internal_drag_hover_pos = Some(pos);
-                }
+            if let Some(next) = hovered
+                && let Some(pos) = self.local_pos_for_window(next, screen_pos)
+            {
+                self.dispatch_internal_drag_event(next, InternalDragKind::Enter, pos);
+                self.internal_drag_hover_window = Some(next);
+                self.internal_drag_hover_pos = Some(pos);
             }
         }
 
@@ -1352,21 +1353,22 @@ impl<D: WinitDriver> WinitRunner<D> {
             return false;
         };
 
-        if drag.kind == fret_app::DragKind::DockPanel && target != drag.source_window {
-            if let Some(runtime) = self.windows.get(target) {
-                let sender = self
-                    .windows
-                    .get(drag.source_window)
-                    .map(|w| w.window.as_ref());
-                let _ = bring_window_to_front(&runtime.window, sender);
-            }
+        if drag.kind == fret_app::DragKind::DockPanel
+            && target != drag.source_window
+            && let Some(runtime) = self.windows.get(target)
+        {
+            let sender = self
+                .windows
+                .get(drag.source_window)
+                .map(|w| w.window.as_ref());
+            let _ = bring_window_to_front(&runtime.window, sender);
         }
 
-        if let Some(prev) = self.internal_drag_hover_window.take() {
-            if prev != target {
-                let prev_pos = self.internal_drag_hover_pos.take().unwrap_or_default();
-                self.dispatch_internal_drag_event(prev, InternalDragKind::Leave, prev_pos);
-            }
+        if let Some(prev) = self.internal_drag_hover_window.take()
+            && prev != target
+        {
+            let prev_pos = self.internal_drag_hover_pos.take().unwrap_or_default();
+            self.dispatch_internal_drag_event(prev, InternalDragKind::Leave, prev_pos);
         }
         self.internal_drag_hover_window = Some(target);
         self.internal_drag_hover_pos = Some(pos);
@@ -1668,16 +1670,16 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                                     repeat,
                                 },
                             );
-                            if let Some(text) = event.text {
-                                if let Some(text) = sanitize_text_input(text.as_str()) {
-                                    self.driver.handle_event(
-                                        &mut self.app,
-                                        unsafe { &mut *text_ptr },
-                                        app_window,
-                                        &mut state.user,
-                                        &Event::TextInput(text),
-                                    );
-                                }
+                            if let Some(text) = event.text
+                                && let Some(text) = sanitize_text_input(text.as_str())
+                            {
+                                self.driver.handle_event(
+                                    &mut self.app,
+                                    unsafe { &mut *text_ptr },
+                                    app_window,
+                                    &mut state.user,
+                                    &Event::TextInput(text),
+                                );
                             }
                         }
                         ElementState::Released => {
@@ -2070,12 +2072,14 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 let ui_cmd = renderer.render_scene(
                     &context.device,
                     &context.queue,
-                    state.surface.format(),
-                    &view,
-                    &state.scene,
-                    self.config.clear_color,
-                    scale_factor,
-                    state.surface.size(),
+                    fret_render::RenderSceneParams {
+                        format: state.surface.format(),
+                        target_view: &view,
+                        scene: &state.scene,
+                        clear: self.config.clear_color,
+                        scale_factor,
+                        viewport_size: state.surface.size(),
+                    },
                 );
 
                 let mut cmd_buffers = engine_frame.command_buffers;

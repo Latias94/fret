@@ -20,7 +20,7 @@ pub fn parse_value(kind: InspectorEditKind, input: &str) -> Option<PropertyValue
         },
         InspectorEditKind::Vec3 => {
             let parts: Vec<&str> = input
-                .split(|c| c == ',' || c == ' ')
+                .split([',', ' '])
                 .map(str::trim)
                 .filter(|s| !s.is_empty())
                 .collect();

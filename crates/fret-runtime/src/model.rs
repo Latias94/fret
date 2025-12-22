@@ -53,7 +53,7 @@ impl<T> Model<T> {
         host.model_revision(self)
     }
 
-    pub fn get<'a, H: ModelHost>(self, host: &'a H) -> Option<&'a T>
+    pub fn get<H: ModelHost>(self, host: &H) -> Option<&T>
     where
         T: Any,
     {
@@ -239,10 +239,10 @@ impl ModelStore {
                 dirty: false,
             }),
             Err(boxed) => {
-                if let Some(entry) = self.storage.get_mut(model.id) {
-                    if entry.value.is_none() {
-                        entry.value = Some(boxed);
-                    }
+                if let Some(entry) = self.storage.get_mut(model.id)
+                    && entry.value.is_none()
+                {
+                    entry.value = Some(boxed);
                 }
                 Err(ModelUpdateError::TypeMismatch)
             }

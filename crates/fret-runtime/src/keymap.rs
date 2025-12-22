@@ -232,10 +232,10 @@ impl Keymap {
             if !b.platform.matches(ctx.platform) {
                 continue;
             }
-            if let Some(expr) = b.when.as_ref() {
-                if !expr.eval(ctx) {
-                    continue;
-                }
+            if let Some(expr) = b.when.as_ref()
+                && !expr.eval(ctx)
+            {
+                continue;
             }
             return b.command.clone();
         }
@@ -255,10 +255,10 @@ impl Keymap {
             if !b.platform.matches(ctx.platform) {
                 continue;
             }
-            if let Some(expr) = b.when.as_ref() {
-                if !expr.eval(ctx) {
-                    continue;
-                }
+            if let Some(expr) = b.when.as_ref()
+                && !expr.eval(ctx)
+            {
+                continue;
             }
 
             if b.sequence.len() < sequence.len() {
@@ -322,10 +322,10 @@ impl Keymap {
             if !b.platform.matches(ctx.platform) {
                 continue;
             }
-            if let Some(expr) = b.when.as_ref() {
-                if !expr.eval(ctx) {
-                    continue;
-                }
+            if let Some(expr) = b.when.as_ref()
+                && !expr.eval(ctx)
+            {
+                continue;
             }
             if seen.insert(b.sequence.clone()) {
                 order.push(b.sequence.clone());
@@ -333,15 +333,11 @@ impl Keymap {
             effective.insert(b.sequence.clone(), b.command.clone());
         }
 
-        for seq in order {
-            if effective
-                .get(&seq)
+        order.into_iter().find(|seq| {
+            effective
+                .get(seq)
                 .is_some_and(|c| c.as_ref() == Some(command))
-            {
-                return Some(seq);
-            }
-        }
-        None
+        })
     }
 }
 

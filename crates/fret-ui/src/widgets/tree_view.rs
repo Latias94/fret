@@ -213,10 +213,10 @@ impl TreeView {
 
         self.list.set_selected_keys(visible, lead);
 
-        if let Some(lead) = lead {
-            if let Some(index) = self.id_to_index.get(&lead).copied() {
-                self.list.ensure_visible(index);
-            }
+        if let Some(lead) = lead
+            && let Some(index) = self.id_to_index.get(&lead).copied()
+        {
+            self.list.ensure_visible(index);
         }
     }
 
