@@ -94,7 +94,7 @@ should not be treated as Fret framework deliverables (see ADR 0027):
 These are not framework commitments (ADR 0027), but they are essential to reaching Unity/Godot-like “feel” early and to
 validate that the framework contracts are sufficient.
 
-- Inspector P0: engine-agnostic property protocol + custom editor registry + minimal built-in editors (ADR 0048). (prototype implemented in demo; see `docs/mvp.md` MVP 17)
+- Inspector P0: engine-agnostic property protocol + custom editor registry + minimal built-in editors (ADR 0048). (prototype implemented in demo; see `docs/mvp.md` MVP 17; two-column inline rows + Alt+drag scrubbing)
 - Viewport tools P0: input capture + tool routing + overlay rendering over viewport surfaces (ADR 0049, built on ADR 0025). (prototype implemented in demo; see `docs/mvp.md` MVP 18)
 - Viewport picking P0: click-to-select + selection highlight overlays (demo-driven; see `docs/mvp.md` MVP 19).
 - Gizmo P0: translate tool with explicit drag phases, capture rules, and basic polish (axis constraints + snapping stub) (prototype implemented in demo; see `docs/mvp.md` MVP 20 + MVP 25).

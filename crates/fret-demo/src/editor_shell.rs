@@ -6,15 +6,17 @@ use crate::scene_document::SceneDocumentService;
 use crate::undo::{EditCommand, SelectionSnapshot, UndoStack};
 use crate::world::DemoWorld;
 use fret_app::{App, Model};
-use fret_core::{AppWindowId, Color, Corners, Edges, Event, KeyCode, MouseButton, Px, Size};
+use fret_core::{
+    AppWindowId, Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect,
+    SceneOp, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
+};
 use fret_editor::{
     InspectorEditKind, InspectorEditRequest, InspectorEditService, InspectorEditorKind,
     InspectorEditorRegistry, ProjectEntryKind, ProjectSelectionService, ProjectService,
     PropertyEditKind, PropertyEditRequest, PropertyEditService, PropertyLeaf, PropertyMeta,
     PropertyNode, PropertyPath, PropertyTree, PropertyTypeTag, PropertyValue,
 };
-use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, TreeView, VirtualList, Widget};
-use std::borrow::Cow;
+use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, ThemeSnapshot, TreeView, Widget};
 
 #[derive(Debug, Default, Clone)]
 pub struct DemoSelection {
@@ -308,13 +310,6 @@ impl InspectorDataSource {
         Self { rows }
     }
 
-    fn row_text(&self, index: usize) -> String {
-        match &self.rows[index] {
-            InspectorRow::Header { label } => label.clone(),
-            InspectorRow::Property { label, value, .. } => format!("{label}: {value}"),
-        }
-    }
-
     fn action_at(&self, index: usize) -> Option<InspectorRowAction> {
         match self.rows.get(index)? {
             InspectorRow::Property { action, .. } => action.clone(),
@@ -323,21 +318,62 @@ impl InspectorDataSource {
     }
 }
 
-impl fret_ui::VirtualListDataSource for InspectorDataSource {
-    type Key = usize;
+#[derive(Debug, Clone)]
+struct PreparedText {
+    blob: fret_core::TextBlobId,
+    metrics: TextMetrics,
+}
 
-    fn len(&self) -> usize {
-        self.rows.len()
-    }
+#[derive(Debug, Clone)]
+enum PreparedValue {
+    Text(PreparedText),
+    Vec3([PreparedText; 3]),
+}
 
-    fn key_at(&self, index: usize) -> Self::Key {
-        index
-    }
+#[derive(Debug, Clone)]
+struct PreparedInspectorRow {
+    kind: PreparedInspectorRowKind,
+    action: Option<InspectorRowAction>,
+}
 
-    fn row_at(&self, index: usize) -> fret_ui::VirtualListRow<'_> {
-        // Allocates on demand; row count is small for the inspector MVP.
-        fret_ui::VirtualListRow::new(Cow::Owned(self.row_text(index)))
-    }
+#[derive(Debug, Clone)]
+enum PreparedInspectorRowKind {
+    Header {
+        label: PreparedText,
+    },
+    Property {
+        label: PreparedText,
+        value: PreparedValue,
+        value_kind: InspectorEditKind,
+    },
+}
+
+#[derive(Debug, Clone)]
+enum ScrubValue {
+    F32 {
+        base: f32,
+        current: f32,
+    },
+    Vec3 {
+        axis: usize,
+        base: [f32; 3],
+        current: [f32; 3],
+    },
+}
+
+#[derive(Debug, Clone)]
+struct ScrubState {
+    window: AppWindowId,
+    targets: Vec<u64>,
+    path: PropertyPath,
+    start_x: Px,
+    value: ScrubValue,
+}
+
+#[derive(Debug, Clone)]
+struct ToggleGlyph {
+    blob: fret_core::TextBlobId,
+    metrics: TextMetrics,
 }
 
 pub struct HierarchyPanel {
@@ -944,15 +980,22 @@ pub struct InspectorPanel {
     last_project_tree_revision: Option<u64>,
     last_scene_revision: Option<u64>,
     last_selected: Option<u64>,
-    list: VirtualList<InspectorDataSource>,
-    scrub: Option<NumberScrubState>,
+    data: InspectorDataSource,
+    prepared: Vec<PreparedInspectorRow>,
+    toggle_glyph: Option<ToggleGlyph>,
+    last_theme_revision: Option<u64>,
+    last_scale_factor: Option<f32>,
+    text_style: TextStyle,
+    hover_row: Option<usize>,
+    scroll_y: Px,
+    content_h: Px,
+    last_bounds: Rect,
+    label_col_w: Px,
+    scrub: Option<ScrubState>,
 }
 
 impl InspectorPanel {
     pub fn new(selection: Model<DemoSelection>, world: Model<DemoWorld>) -> Self {
-        let mut list = VirtualList::new(InspectorDataSource::empty()).with_row_height(Px(22.0));
-        list.clear_selection();
-
         Self {
             selection,
             world,
@@ -962,12 +1005,25 @@ impl InspectorPanel {
             last_project_tree_revision: None,
             last_scene_revision: None,
             last_selected: None,
-            list,
+            data: InspectorDataSource::empty(),
+            prepared: Vec::new(),
+            toggle_glyph: None,
+            last_theme_revision: None,
+            last_scale_factor: None,
+            text_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(13.0),
+            },
+            hover_row: None,
+            scroll_y: Px(0.0),
+            content_h: Px(0.0),
+            last_bounds: Rect::default(),
+            label_col_w: Px(180.0),
             scrub: None,
         }
     }
 
-    fn maybe_refresh(&mut self, app: &App) -> bool {
+    fn maybe_refresh(&mut self, app: &App, text: &mut dyn fret_core::TextService) -> bool {
         let revision = self.selection.revision(app);
         let world_revision = self.world.revision(app);
         let project_revision = app
@@ -1003,20 +1059,234 @@ impl InspectorPanel {
         self.last_project_tree_revision = project_tree_revision;
         self.last_scene_revision = Some(scene_revision);
 
-        self.list
-            .set_data(InspectorDataSource::new(app, self.world, selected));
+        self.release_prepared(text);
+        self.data = InspectorDataSource::new(app, self.world, selected);
+        self.hover_row = None;
         true
     }
-}
 
-#[derive(Debug, Clone)]
-struct NumberScrubState {
-    window: AppWindowId,
-    targets: Vec<u64>,
-    path: PropertyPath,
-    start_x: Px,
-    base: f32,
-    current: f32,
+    fn row_height() -> Px {
+        Px(22.0)
+    }
+
+    fn padding(theme: ThemeSnapshot) -> (Px, Px) {
+        (theme.metrics.padding_md, theme.metrics.padding_sm)
+    }
+
+    fn clamp_scroll(&mut self, viewport_h: Px) {
+        let max_scroll = Px((self.content_h.0 - viewport_h.0).max(0.0));
+        self.scroll_y = Px(self.scroll_y.0.clamp(0.0, max_scroll.0));
+    }
+
+    fn release_prepared(&mut self, text: &mut dyn fret_core::TextService) {
+        if let Some(glyph) = self.toggle_glyph.take() {
+            text.release(glyph.blob);
+        }
+        for row in self.prepared.drain(..) {
+            match row.kind {
+                PreparedInspectorRowKind::Header { label } => {
+                    text.release(label.blob);
+                }
+                PreparedInspectorRowKind::Property { label, value, .. } => {
+                    text.release(label.blob);
+                    match value {
+                        PreparedValue::Text(v) => text.release(v.blob),
+                        PreparedValue::Vec3(v) => {
+                            for comp in v {
+                                text.release(comp.blob);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn ensure_prepared(&mut self, cx: &mut LayoutCx<'_>) {
+        let theme = cx.theme().snapshot();
+        let needs_rebuild = self.prepared.is_empty()
+            || self.last_theme_revision != Some(theme.revision)
+            || self.last_scale_factor != Some(cx.scale_factor);
+        if !needs_rebuild {
+            return;
+        }
+
+        self.release_prepared(cx.text);
+        self.last_theme_revision = Some(theme.revision);
+        self.last_scale_factor = Some(cx.scale_factor);
+
+        let label_constraints = TextConstraints {
+            max_width: Some(Px(360.0)),
+            wrap: TextWrap::None,
+            scale_factor: cx.scale_factor,
+        };
+        let value_constraints = TextConstraints {
+            max_width: Some(Px(640.0)),
+            wrap: TextWrap::None,
+            scale_factor: cx.scale_factor,
+        };
+
+        for row in &self.data.rows {
+            match row {
+                InspectorRow::Header { label } => {
+                    let (blob, metrics) =
+                        cx.text.prepare(label, self.text_style, label_constraints);
+                    self.prepared.push(PreparedInspectorRow {
+                        kind: PreparedInspectorRowKind::Header {
+                            label: PreparedText { blob, metrics },
+                        },
+                        action: None,
+                    });
+                }
+                InspectorRow::Property {
+                    label,
+                    value,
+                    action,
+                } => {
+                    let (l_blob, l_metrics) =
+                        cx.text.prepare(label, self.text_style, label_constraints);
+
+                    let value_kind = match action {
+                        Some(InspectorRowAction::EditValue { request }) => request.kind,
+                        _ => InspectorEditKind::String,
+                    };
+
+                    let prepared_value = if value_kind == InspectorEditKind::Vec3 {
+                        let parts: Vec<&str> = value
+                            .split(|c| c == ',' || c == ' ')
+                            .map(str::trim)
+                            .filter(|s| !s.is_empty())
+                            .collect();
+                        let mut texts: [String; 3] =
+                            ["—".to_string(), "—".to_string(), "—".to_string()];
+                        if parts.len() == 3 {
+                            if let (Ok(x), Ok(y), Ok(z)) = (
+                                parts[0].parse::<f32>(),
+                                parts[1].parse::<f32>(),
+                                parts[2].parse::<f32>(),
+                            ) {
+                                texts = [format!("{x:.3}"), format!("{y:.3}"), format!("{z:.3}")];
+                            } else {
+                                texts = [
+                                    parts[0].to_string(),
+                                    parts[1].to_string(),
+                                    parts[2].to_string(),
+                                ];
+                            }
+                        }
+                        let (xb, xm) =
+                            cx.text
+                                .prepare(texts[0].as_str(), self.text_style, value_constraints);
+                        let (yb, ym) =
+                            cx.text
+                                .prepare(texts[1].as_str(), self.text_style, value_constraints);
+                        let (zb, zm) =
+                            cx.text
+                                .prepare(texts[2].as_str(), self.text_style, value_constraints);
+                        PreparedValue::Vec3([
+                            PreparedText {
+                                blob: xb,
+                                metrics: xm,
+                            },
+                            PreparedText {
+                                blob: yb,
+                                metrics: ym,
+                            },
+                            PreparedText {
+                                blob: zb,
+                                metrics: zm,
+                            },
+                        ])
+                    } else {
+                        let (v_blob, v_metrics) =
+                            cx.text.prepare(value, self.text_style, value_constraints);
+                        PreparedValue::Text(PreparedText {
+                            blob: v_blob,
+                            metrics: v_metrics,
+                        })
+                    };
+
+                    self.prepared.push(PreparedInspectorRow {
+                        kind: PreparedInspectorRowKind::Property {
+                            label: PreparedText {
+                                blob: l_blob,
+                                metrics: l_metrics,
+                            },
+                            value: prepared_value,
+                            value_kind,
+                        },
+                        action: action.clone(),
+                    });
+                }
+            }
+        }
+
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            scale_factor: cx.scale_factor,
+        };
+        let (blob, metrics) = cx.text.prepare("✓", self.text_style, constraints);
+        self.toggle_glyph = Some(ToggleGlyph { blob, metrics });
+    }
+
+    fn layout_columns(&mut self, theme: ThemeSnapshot, bounds: Rect) {
+        let (pad_x, _pad_y) = Self::padding(theme);
+        let width = bounds.size.width.0;
+        let min_w = 120.0f32;
+        let max_w = 260.0f32.min(width * 0.55);
+
+        let mut desired = 0.0f32;
+        for row in &self.prepared {
+            let PreparedInspectorRowKind::Property { label, .. } = &row.kind else {
+                continue;
+            };
+            desired = desired.max(label.metrics.size.width.0);
+        }
+        desired = (desired + pad_x.0 * 2.0).clamp(min_w, max_w);
+        self.label_col_w = Px(desired);
+    }
+
+    fn row_index_at(&self, theme: ThemeSnapshot, pos: Point) -> Option<usize> {
+        if !self.last_bounds.contains(pos) {
+            return None;
+        }
+        let (_pad_x, pad_y) = Self::padding(theme);
+        let top = self.last_bounds.origin.y.0 + pad_y.0;
+        let local_y = pos.y.0 + self.scroll_y.0 - top;
+        if local_y < 0.0 {
+            return None;
+        }
+        let index = (local_y / Self::row_height().0).floor() as isize;
+        if index < 0 {
+            return None;
+        }
+        let index = index as usize;
+        (index < self.prepared.len()).then_some(index)
+    }
+
+    fn row_rect(&self, theme: ThemeSnapshot, index: usize) -> Rect {
+        let (_pad_x, pad_y) = Self::padding(theme);
+        let y = self.last_bounds.origin.y.0 + pad_y.0 - self.scroll_y.0
+            + Self::row_height().0 * index as f32;
+        Rect::new(
+            Point::new(self.last_bounds.origin.x, Px(y)),
+            Size::new(self.last_bounds.size.width, Self::row_height()),
+        )
+    }
+
+    fn value_rect(&self, row_rect: Rect) -> Rect {
+        Rect::new(
+            Point::new(
+                Px(row_rect.origin.x.0 + self.label_col_w.0),
+                row_rect.origin.y,
+            ),
+            Size::new(
+                Px((row_rect.size.width.0 - self.label_col_w.0).max(0.0)),
+                row_rect.size.height,
+            ),
+        )
+    }
 }
 
 impl Widget for InspectorPanel {
@@ -1025,6 +1295,8 @@ impl Widget for InspectorPanel {
     }
 
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+        let theme = cx.theme().snapshot();
+
         if let Some(scrub) = self.scrub.as_mut() {
             match event {
                 Event::Pointer(fret_core::PointerEvent::Move {
@@ -1040,25 +1312,47 @@ impl Widget for InspectorPanel {
                     if modifiers.ctrl || modifiers.meta {
                         step = 0.05;
                     }
-                    let next = scrub.base + dx * step;
-                    if (next - scrub.current).abs() >= 1.0e-6 {
-                        scrub.current = next;
-                        cx.app
-                            .with_global_mut(PropertyEditService::default, |s, _app| {
-                                s.set(
-                                    scrub.window,
-                                    PropertyEditRequest {
-                                        targets: scrub.targets.clone(),
-                                        path: scrub.path.clone(),
-                                        value: PropertyValue::F32(next),
-                                        kind: PropertyEditKind::Update,
-                                    },
-                                );
-                            });
-                        cx.dispatch_command(fret_app::CommandId::from("property_edit.commit"));
-                        cx.invalidate_self(Invalidation::Paint);
-                        cx.request_redraw();
-                    }
+
+                    let next_value = match &mut scrub.value {
+                        ScrubValue::F32 { base, current } => {
+                            let next = *base + dx * step;
+                            if (next - *current).abs() < 1.0e-6 {
+                                cx.stop_propagation();
+                                return;
+                            }
+                            *current = next;
+                            PropertyValue::F32(next)
+                        }
+                        ScrubValue::Vec3 {
+                            axis,
+                            base,
+                            current,
+                        } => {
+                            let next = base[*axis] + dx * step;
+                            if (next - current[*axis]).abs() < 1.0e-6 {
+                                cx.stop_propagation();
+                                return;
+                            }
+                            current[*axis] = next;
+                            PropertyValue::Vec3(*current)
+                        }
+                    };
+
+                    cx.app
+                        .with_global_mut(PropertyEditService::default, |s, _app| {
+                            s.set(
+                                scrub.window,
+                                PropertyEditRequest {
+                                    targets: scrub.targets.clone(),
+                                    path: scrub.path.clone(),
+                                    value: next_value,
+                                    kind: PropertyEditKind::Update,
+                                },
+                            );
+                        });
+                    cx.dispatch_command(fret_app::CommandId::from("property_edit.commit"));
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
                     cx.stop_propagation();
                     return;
                 }
@@ -1073,7 +1367,14 @@ impl Widget for InspectorPanel {
                                     PropertyEditRequest {
                                         targets: done.targets,
                                         path: done.path,
-                                        value: PropertyValue::F32(done.current),
+                                        value: match done.value {
+                                            ScrubValue::F32 { current, .. } => {
+                                                PropertyValue::F32(current)
+                                            }
+                                            ScrubValue::Vec3 { current, .. } => {
+                                                PropertyValue::Vec3(current)
+                                            }
+                                        },
                                         kind: PropertyEditKind::Commit,
                                     },
                                 );
@@ -1098,7 +1399,10 @@ impl Widget for InspectorPanel {
                                 PropertyEditRequest {
                                     targets: canceled.targets,
                                     path: canceled.path,
-                                    value: PropertyValue::F32(canceled.base),
+                                    value: match canceled.value {
+                                        ScrubValue::F32 { base, .. } => PropertyValue::F32(base),
+                                        ScrubValue::Vec3 { base, .. } => PropertyValue::Vec3(base),
+                                    },
                                     kind: PropertyEditKind::Cancel,
                                 },
                             );
@@ -1113,33 +1417,59 @@ impl Widget for InspectorPanel {
             }
         }
 
+        match event {
+            Event::Pointer(fret_core::PointerEvent::Wheel { delta, .. }) => {
+                if delta.y.0.abs() > 0.0 {
+                    self.scroll_y = Px(self.scroll_y.0 - delta.y.0);
+                    self.clamp_scroll(self.last_bounds.size.height);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+            }
+            Event::Pointer(fret_core::PointerEvent::Move { position, .. }) => {
+                let hovered = self.row_index_at(theme, *position);
+                if hovered != self.hover_row {
+                    self.hover_row = hovered;
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                }
+            }
+            _ => {}
+        }
+
         if let Event::Pointer(fret_core::PointerEvent::Down {
             position,
             button: fret_core::MouseButton::Left,
             modifiers,
         }) = event
         {
-            if modifiers.ctrl || modifiers.meta || modifiers.shift || modifiers.alt {
-                self.list.event(cx, event);
-                return;
-            }
-
             let Some(window) = cx.window else {
-                self.list.event(cx, event);
                 return;
             };
 
-            let Some(row_index) = self.list.row_index_at(*position) else {
-                self.list.event(cx, event);
+            if self.prepared.is_empty() {
                 return;
             };
-            if let Some(action) = self.list.data().action_at(row_index) {
+
+            let Some(row_index) = self.row_index_at(theme, *position) else {
+                return;
+            };
+
+            let row_rect = self.row_rect(theme, row_index);
+            let value_rect = self.value_rect(row_rect);
+
+            if let Some(action) = self.data.action_at(row_index) {
                 match action {
                     InspectorRowAction::ToggleBool {
                         targets,
                         path,
                         current,
                     } => {
+                        if !value_rect.contains(*position) {
+                            return;
+                        }
                         let next = current.map(|v| !v).unwrap_or(true);
                         cx.app
                             .with_global_mut(PropertyEditService::default, |s, _app| {
@@ -1158,19 +1488,53 @@ impl Widget for InspectorPanel {
                         return;
                     }
                     InspectorRowAction::EditValue { request } => {
-                        if modifiers.alt && request.kind == InspectorEditKind::F32 {
+                        if modifiers.alt
+                            && (request.kind == InspectorEditKind::F32
+                                || request.kind == InspectorEditKind::Vec3)
+                            && value_rect.contains(*position)
+                        {
                             let base = self
                                 .world
                                 .get(cx.app)
                                 .and_then(|w| {
                                     request.targets.first().and_then(|&id| {
                                         w.get_property(id, &request.path).and_then(|v| match v {
-                                            PropertyValue::F32(f) => Some(f),
+                                            PropertyValue::F32(f) => Some(PropertyValue::F32(f)),
+                                            PropertyValue::Vec3(v) => Some(PropertyValue::Vec3(v)),
                                             _ => None,
                                         })
                                     })
                                 })
-                                .unwrap_or(0.0);
+                                .unwrap_or_else(|| match request.kind {
+                                    InspectorEditKind::Vec3 => PropertyValue::Vec3([0.0, 0.0, 0.0]),
+                                    _ => PropertyValue::F32(0.0),
+                                });
+
+                            let scrub_value = match (request.kind, &base) {
+                                (InspectorEditKind::Vec3, PropertyValue::Vec3(v)) => {
+                                    let (pad_x, _pad_y) = Self::padding(theme);
+                                    let inner_x0 = value_rect.origin.x.0 + pad_x.0;
+                                    let inner_w =
+                                        (value_rect.size.width.0 - pad_x.0 * 2.0).max(1.0);
+                                    let rel_x = (position.x.0 - inner_x0)
+                                        .clamp(0.0, (inner_w - 1.0).max(0.0));
+                                    let seg_w = (inner_w / 3.0).max(1.0);
+                                    let axis = (rel_x / seg_w).floor().clamp(0.0, 2.0) as usize;
+                                    ScrubValue::Vec3 {
+                                        axis,
+                                        base: *v,
+                                        current: *v,
+                                    }
+                                }
+                                (_, PropertyValue::F32(f)) => ScrubValue::F32 {
+                                    base: *f,
+                                    current: *f,
+                                },
+                                _ => ScrubValue::F32 {
+                                    base: 0.0,
+                                    current: 0.0,
+                                },
+                            };
 
                             cx.request_focus(cx.node);
                             cx.capture_pointer(cx.node);
@@ -1182,27 +1546,26 @@ impl Widget for InspectorPanel {
                                         PropertyEditRequest {
                                             targets: request.targets.clone(),
                                             path: request.path.clone(),
-                                            value: PropertyValue::F32(base),
+                                            value: base.clone(),
                                             kind: PropertyEditKind::Begin,
                                         },
                                     );
                                 });
                             cx.dispatch_command(fret_app::CommandId::from("property_edit.commit"));
 
-                            self.scrub = Some(NumberScrubState {
+                            self.scrub = Some(ScrubState {
                                 window,
                                 targets: request.targets,
                                 path: request.path,
                                 start_x: position.x,
-                                base,
-                                current: base,
+                                value: scrub_value,
                             });
                             cx.stop_propagation();
                             return;
                         }
 
                         let mut request = request;
-                        request.anchor = self.list.row_rect(row_index);
+                        request.anchor = Some(value_rect);
                         cx.app
                             .with_global_mut(InspectorEditService::default, |service, _app| {
                                 service.set_request(window, request);
@@ -1214,16 +1577,233 @@ impl Widget for InspectorPanel {
                 }
             }
         }
-        self.list.event(cx, event);
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
-        let _ = self.maybe_refresh(cx.app);
-        self.list.layout(cx)
+        let _ = self.maybe_refresh(cx.app, cx.text);
+        self.last_bounds = cx.bounds;
+        self.ensure_prepared(cx);
+
+        let theme = cx.theme().snapshot();
+        let (_pad_x, pad_y) = Self::padding(theme);
+        self.content_h = Px(pad_y.0 * 2.0 + Self::row_height().0 * self.prepared.len() as f32);
+        self.clamp_scroll(cx.bounds.size.height);
+        self.layout_columns(theme, cx.bounds);
+
+        Size::new(cx.available.width, cx.available.height)
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_>) {
-        let _ = self.maybe_refresh(cx.app);
-        self.list.paint(cx);
+        let _ = self.maybe_refresh(cx.app, cx.text);
+        let theme = cx.theme().snapshot();
+
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(0),
+            rect: cx.bounds,
+            background: theme.colors.panel_background,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(0.0)),
+        });
+
+        if self.prepared.is_empty() {
+            return;
+        }
+
+        let (pad_x, pad_y) = Self::padding(theme);
+        let row_h = Self::row_height();
+        let start_y = cx.bounds.origin.y.0 + pad_y.0 - self.scroll_y.0;
+
+        for (i, row) in self.prepared.iter().enumerate() {
+            let y = start_y + row_h.0 * i as f32;
+            let rect = Rect::new(
+                Point::new(cx.bounds.origin.x, Px(y)),
+                Size::new(cx.bounds.size.width, row_h),
+            );
+
+            if rect.origin.y.0 + rect.size.height.0 < cx.bounds.origin.y.0
+                || rect.origin.y.0 > cx.bounds.origin.y.0 + cx.bounds.size.height.0
+            {
+                continue;
+            }
+
+            let hovered = self.hover_row == Some(i);
+            if hovered {
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(1),
+                    rect,
+                    background: theme.colors.hover_background,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+
+            match &row.kind {
+                PreparedInspectorRowKind::Header { label } => {
+                    let origin = Point::new(
+                        Px(rect.origin.x.0 + pad_x.0),
+                        Px(rect.origin.y.0
+                            + (rect.size.height.0 - label.metrics.size.height.0) * 0.5
+                            + label.metrics.baseline.0),
+                    );
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(2),
+                        origin,
+                        text: label.blob,
+                        color: theme.colors.text_muted,
+                    });
+                }
+                PreparedInspectorRowKind::Property {
+                    label,
+                    value,
+                    value_kind,
+                } => {
+                    let label_origin = Point::new(
+                        Px(rect.origin.x.0 + pad_x.0),
+                        Px(rect.origin.y.0
+                            + (rect.size.height.0 - label.metrics.size.height.0) * 0.5
+                            + label.metrics.baseline.0),
+                    );
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(2),
+                        origin: label_origin,
+                        text: label.blob,
+                        color: theme.colors.text_primary,
+                    });
+
+                    let value_rect = self.value_rect(rect);
+                    let inner = Rect::new(
+                        Point::new(Px(value_rect.origin.x.0 + pad_x.0), value_rect.origin.y),
+                        Size::new(
+                            Px((value_rect.size.width.0 - pad_x.0 * 2.0).max(0.0)),
+                            value_rect.size.height,
+                        ),
+                    );
+
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(2),
+                        rect: Rect::new(
+                            Point::new(
+                                Px(value_rect.origin.x.0 + pad_x.0 * 0.5),
+                                Px(value_rect.origin.y.0 + 3.0),
+                            ),
+                            Size::new(
+                                Px((value_rect.size.width.0 - pad_x.0).max(0.0)),
+                                Px((value_rect.size.height.0 - 6.0).max(0.0)),
+                            ),
+                        ),
+                        background: theme.colors.list_background,
+                        border: Edges::all(Px(1.0)),
+                        border_color: theme.colors.panel_border,
+                        corner_radii: Corners::all(theme.metrics.radius_sm),
+                    });
+
+                    match value {
+                        PreparedValue::Text(value) => {
+                            let is_toggle =
+                                matches!(row.action, Some(InspectorRowAction::ToggleBool { .. }));
+                            let toggle_offset_x = if is_toggle { Px(20.0) } else { Px(0.0) };
+                            let origin = Point::new(
+                                Px(inner.origin.x.0 + toggle_offset_x.0),
+                                Px(rect.origin.y.0
+                                    + (rect.size.height.0 - value.metrics.size.height.0) * 0.5
+                                    + value.metrics.baseline.0),
+                            );
+                            cx.scene.push(SceneOp::Text {
+                                order: DrawOrder(3),
+                                origin,
+                                text: value.blob,
+                                color: theme.colors.text_primary,
+                            });
+                        }
+                        PreparedValue::Vec3(comps) => {
+                            let seg_w = Px((inner.size.width.0 / 3.0).max(1.0));
+                            for (axis, comp) in comps.iter().enumerate() {
+                                let seg = Rect::new(
+                                    Point::new(
+                                        Px(inner.origin.x.0 + seg_w.0 * axis as f32),
+                                        inner.origin.y,
+                                    ),
+                                    Size::new(seg_w, inner.size.height),
+                                );
+                                cx.scene.push(SceneOp::Quad {
+                                    order: DrawOrder(3),
+                                    rect: Rect::new(
+                                        Point::new(
+                                            Px(seg.origin.x.0 + 2.0),
+                                            Px(seg.origin.y.0 + 4.0),
+                                        ),
+                                        Size::new(
+                                            Px((seg.size.width.0 - 4.0).max(0.0)),
+                                            Px((seg.size.height.0 - 8.0).max(0.0)),
+                                        ),
+                                    ),
+                                    background: theme.colors.panel_background,
+                                    border: Edges::all(Px(1.0)),
+                                    border_color: theme.colors.panel_border,
+                                    corner_radii: Corners::all(theme.metrics.radius_sm),
+                                });
+
+                                let x = seg.origin.x.0
+                                    + (seg.size.width.0 - comp.metrics.size.width.0) * 0.5;
+                                let y = rect.origin.y.0
+                                    + (rect.size.height.0 - comp.metrics.size.height.0) * 0.5
+                                    + comp.metrics.baseline.0;
+                                cx.scene.push(SceneOp::Text {
+                                    order: DrawOrder(4),
+                                    origin: Point::new(Px(x), Px(y)),
+                                    text: comp.blob,
+                                    color: theme.colors.text_primary,
+                                });
+                            }
+                        }
+                    }
+
+                    if matches!(row.action, Some(InspectorRowAction::ToggleBool { .. })) {
+                        let box_size = Px(14.0);
+                        let box_rect = Rect::new(
+                            Point::new(
+                                Px(value_rect.origin.x.0 + pad_x.0),
+                                Px(rect.origin.y.0 + (rect.size.height.0 - box_size.0) * 0.5),
+                            ),
+                            Size::new(box_size, box_size),
+                        );
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(5),
+                            rect: box_rect,
+                            background: theme.colors.panel_background,
+                            border: Edges::all(Px(1.0)),
+                            border_color: theme.colors.panel_border,
+                            corner_radii: Corners::all(Px(3.0)),
+                        });
+
+                        if let Some(InspectorRowAction::ToggleBool { current, .. }) = &row.action {
+                            if current.unwrap_or(false) {
+                                if let Some(glyph) = self.toggle_glyph.as_ref() {
+                                    let ox = box_rect.origin.x.0
+                                        + (box_rect.size.width.0 - glyph.metrics.size.width.0)
+                                            * 0.5;
+                                    let oy = box_rect.origin.y.0
+                                        + (box_rect.size.height.0 - glyph.metrics.size.height.0)
+                                            * 0.5
+                                        + glyph.metrics.baseline.0;
+                                    cx.scene.push(SceneOp::Text {
+                                        order: DrawOrder(6),
+                                        origin: Point::new(Px(ox), Px(oy)),
+                                        text: glyph.blob,
+                                        color: theme.colors.accent,
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    if *value_kind == InspectorEditKind::F32 {
+                        // Intentionally left minimal: f32 is shown as a single field.
+                    }
+                }
+            }
+        }
     }
 }

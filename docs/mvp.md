@@ -19,7 +19,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 14: MVP done in demo (primitive inspector editing baseline)
 - MVP 15: MVP done in demo (Hierarchy drag & drop: reorder + reparent)
 - MVP 16: MVP done in demo (DockSpace hosts app-owned panel content via `DockPanelContentService`)
-- MVP 17: prototype implemented in demo (property tree + editor registry + mixed values; bool/string/f32/vec3 editors)
+- MVP 17: prototype implemented in demo (property tree + editor registry + mixed values; bool/string/f32/vec3 editors; two-column inline rows + per-axis Vec3 scrubbing)
 - MVP 18: prototype implemented in demo (ToolManager with capture + marquee select + pan/orbit drag interactions)
 - MVP 19: prototype implemented in demo (viewport click-to-select + selection highlight overlay)
 - MVP 20: prototype implemented in demo (translate gizmo stub: overlay + explicit drag phases; Q/W tool switching; Esc cancel rollback)
@@ -325,6 +325,7 @@ Goal: make the Inspector minimally editable so the “select → inspect → edi
 Status:
 
 - MVP done in `fret-demo` (see `crates/fret-demo/src/editor_shell.rs` and `crates/fret-demo/src/inspector_edit.rs`).
+  - Inspector rows are two-column with inline value cells; Vec3 is shown as three inline fields and supports Alt+drag per-axis scrubbing.
 
 References:
 
