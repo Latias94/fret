@@ -1,6 +1,6 @@
 # ADR 0054: Platform Capabilities and Portability Matrix (Runtime, Not cfg)
 
-Status: Proposed
+Status: Accepted
 Scope: `fret-platform-*` + runner contracts; consumed by commands/UI via `InputContext`/`when`
 
 ## Context
@@ -150,10 +150,15 @@ Cons:
 
 ## Next Steps
 
-1. Add a `PlatformCapabilities` data type at the platform boundary.
-2. Thread it into `InputContext` and `when` evaluation inputs.
-3. Update external DnD contracts to respect the capability matrix (ADR 0053).
-4. Add a debug surface (HUD) that prints capabilities (ADR 0036).
+Implemented:
+
+1. Added a `PlatformCapabilities` data type at the platform boundary.
+2. Threaded it into `InputContext` and `when` evaluation inputs.
+3. Updated external DnD contracts to respect the capability matrix (ADR 0053).
+
+Remaining:
+
+1. Add a small debug surface (HUD/inspector) that prints capabilities (ADR 0036).
 
 ## References
 
@@ -168,4 +173,3 @@ Cons:
 - ADR 0053: `docs/adr/0053-external-drag-payload-portability.md`
 - Makepad web single entrypoint message pump:
   - `repo-ref/makepad/platform/src/os/web/web.rs`
-

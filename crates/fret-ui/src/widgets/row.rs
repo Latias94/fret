@@ -1,4 +1,7 @@
-use crate::widget::{LayoutCx, PaintCx, Widget};
+use crate::{
+    UiHost,
+    widget::{LayoutCx, PaintCx, Widget},
+};
 use fret_core::{Point, Px, Rect, Size};
 
 pub struct Row {
@@ -31,8 +34,8 @@ impl Default for Row {
     }
 }
 
-impl Widget for Row {
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+impl<H: UiHost> Widget<H> for Row {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let pad = self.padding.0.max(0.0);
         let spacing = self.spacing.0.max(0.0);
 
@@ -96,7 +99,7 @@ impl Widget for Row {
         Size::new(Px(total_w.0.min(cx.available.width.0)), total_h)
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         for &child in cx.children {
             if let Some(bounds) = cx.child_bounds(child) {
                 cx.paint(child, bounds);

@@ -1,5 +1,8 @@
 use crate::ThemeSnapshot;
-use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use crate::{
+    UiHost,
+    widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget},
+};
 use fret_app::CommandId;
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp, Size,
@@ -97,8 +100,8 @@ impl Toolbar {
     }
 }
 
-impl Widget for Toolbar {
-    fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+impl<H: UiHost> Widget<H> for Toolbar {
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme().snapshot());
 
         if self.items.is_empty() {
@@ -158,7 +161,7 @@ impl Widget for Toolbar {
         }
     }
 
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.sync_style_from_theme(cx.theme().snapshot());
 
         for item in self.prepared.drain(..) {
@@ -214,7 +217,7 @@ impl Widget for Toolbar {
         Size::new(width, height)
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         if self.items.is_empty() || cx.bounds.size.height.0 <= 0.0 {
             return;
         }

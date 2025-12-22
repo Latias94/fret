@@ -1,4 +1,7 @@
-use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use crate::{
+    UiHost,
+    widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget},
+};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, PointerEvent, Px, Rect, SceneOp,
     Size,
@@ -104,8 +107,8 @@ impl Default for Scroll {
     }
 }
 
-impl Widget for Scroll {
-    fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+impl<H: UiHost> Widget<H> for Scroll {
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.scrollbar_width = cx.theme().metrics.scrollbar_width;
         let Event::Pointer(pe) = event else {
             return;
@@ -188,7 +191,7 @@ impl Widget for Scroll {
         }
     }
 
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.scrollbar_width = cx.theme().metrics.scrollbar_width;
         self.last_bounds = cx.bounds;
         let Some(&child) = cx.children.first() else {
@@ -230,7 +233,7 @@ impl Widget for Scroll {
         cx.available
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.scrollbar_width = cx.theme().metrics.scrollbar_width;
         self.last_bounds = cx.bounds;
         let Some(&child) = cx.children.first() else {

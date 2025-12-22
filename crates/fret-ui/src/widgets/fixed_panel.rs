@@ -1,4 +1,7 @@
-use crate::widget::{LayoutCx, PaintCx, Widget};
+use crate::{
+    UiHost,
+    widget::{LayoutCx, PaintCx, Widget},
+};
 use fret_core::{Color, Corners, DrawOrder, Edges, Px, Rect, SceneOp, Size};
 
 pub struct FixedPanel {
@@ -12,8 +15,8 @@ impl FixedPanel {
     }
 }
 
-impl Widget for FixedPanel {
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+impl<H: UiHost> Widget<H> for FixedPanel {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let size = Size::new(cx.available.width, self.height);
         let rect = Rect::new(cx.bounds.origin, size);
         if let Some(&child) = cx.children.first() {
@@ -22,7 +25,7 @@ impl Widget for FixedPanel {
         size
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: cx.bounds,

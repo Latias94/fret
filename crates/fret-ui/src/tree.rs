@@ -1,5 +1,8 @@
-use crate::widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};
-use fret_app::{App, CommandId, Effect, InputContext, KeyChord, KeymapService, ModelId, Platform};
+use crate::{
+    UiHost,
+    widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget},
+};
+use fret_app::{CommandId, Effect, InputContext, KeyChord, KeymapService, ModelId, Platform};
 use fret_core::PlatformCapabilities;
 use fret_core::{
     AppWindowId, Event, FrameId, KeyCode, NodeId, Point, PointerEvent, Rect, Scene, Size,
@@ -62,8 +65,8 @@ struct UiLayer {
     hit_testable: bool,
 }
 
-pub struct Node {
-    pub widget: Option<Box<dyn Widget>>,
+pub struct Node<H: UiHost = fret_app::App> {
+    pub widget: Option<Box<dyn Widget<H>>>,
     pub parent: Option<NodeId>,
     pub children: Vec<NodeId>,
     pub bounds: Rect,
@@ -71,8 +74,8 @@ pub struct Node {
     pub invalidation: InvalidationFlags,
 }
 
-impl Node {
-    pub fn new(widget: impl Widget + 'static) -> Self {
+impl<H: UiHost> Node<H> {
+    pub fn new(widget: impl Widget<H> + 'static) -> Self {
         Self {
             widget: Some(Box::new(widget)),
             parent: None,
@@ -187,9 +190,8 @@ impl ObservationIndex {
     }
 }
 
-#[derive(Default)]
-pub struct UiTree {
-    nodes: SlotMap<NodeId, Node>,
+pub struct UiTree<H: UiHost = fret_app::App> {
+    nodes: SlotMap<NodeId, Node<H>>,
     layers: SlotMap<UiLayerId, UiLayer>,
     layer_order: Vec<UiLayerId>,
     root_to_layer: HashMap<NodeId, UiLayerId>,
@@ -207,7 +209,29 @@ pub struct UiTree {
     debug_stats: UiDebugFrameStats,
 }
 
-impl UiTree {
+impl<H: UiHost> Default for UiTree<H> {
+    fn default() -> Self {
+        Self {
+            nodes: SlotMap::with_key(),
+            layers: SlotMap::with_key(),
+            layer_order: Vec::new(),
+            root_to_layer: HashMap::new(),
+            base_layer: None,
+            focus: None,
+            captured: None,
+            window: None,
+            suppress_text_input_until_key_up: None,
+            pending_shortcut: PendingShortcut::default(),
+            replaying_pending_shortcut: false,
+            observed_in_layout: ObservationIndex::default(),
+            observed_in_paint: ObservationIndex::default(),
+            debug_enabled: false,
+            debug_stats: UiDebugFrameStats::default(),
+        }
+    }
+}
+
+impl<H: UiHost> UiTree<H> {
     pub fn new() -> Self {
         Self::default()
     }
@@ -266,14 +290,14 @@ impl UiTree {
         }
     }
 
-    fn clear_pending_shortcut(&mut self, app: &mut App) {
+    fn clear_pending_shortcut(&mut self, app: &mut H) {
         if let Some(token) = self.pending_shortcut.timer.take() {
             app.push_effect(Effect::CancelTimer { token });
         }
         self.pending_shortcut = PendingShortcut::default();
     }
 
-    fn schedule_pending_shortcut_timeout(&mut self, app: &mut App) {
+    fn schedule_pending_shortcut_timeout(&mut self, app: &mut H) {
         if self.pending_shortcut.keystrokes.is_empty() {
             return;
         }
@@ -293,7 +317,7 @@ impl UiTree {
 
     fn replay_captured_keystrokes(
         &mut self,
-        app: &mut App,
+        app: &mut H,
         text_service: &mut dyn TextService,
         ctx: &InputContext,
         keystrokes: Vec<CapturedKeystroke>,
@@ -346,7 +370,7 @@ impl UiTree {
         self.focus = focus;
     }
 
-    pub fn create_node(&mut self, widget: impl Widget + 'static) -> NodeId {
+    pub fn create_node(&mut self, widget: impl Widget<H> + 'static) -> NodeId {
         self.nodes.insert(Node::new(widget))
     }
 
@@ -443,7 +467,7 @@ impl UiTree {
 
     pub fn layout_all(
         &mut self,
-        app: &mut App,
+        app: &mut H,
         text: &mut dyn TextService,
         bounds: Rect,
         scale_factor: f32,
@@ -472,7 +496,7 @@ impl UiTree {
 
     pub fn paint_all(
         &mut self,
-        app: &mut App,
+        app: &mut H,
         text: &mut dyn TextService,
         bounds: Rect,
         scene: &mut Scene,
@@ -499,7 +523,7 @@ impl UiTree {
         }
     }
 
-    pub fn dispatch_event(&mut self, app: &mut App, text: &mut dyn TextService, event: &Event) {
+    pub fn dispatch_event(&mut self, app: &mut H, text: &mut dyn TextService, event: &Event) {
         let Some(base_root) = self
             .base_layer
             .and_then(|id| self.layers.get(id).map(|l| l.root))
@@ -781,7 +805,7 @@ impl UiTree {
 
     pub fn dispatch_command(
         &mut self,
-        app: &mut App,
+        app: &mut H,
         text: &mut dyn TextService,
         command: &fret_app::CommandId,
     ) -> bool {
@@ -888,7 +912,7 @@ impl UiTree {
 
     fn dispatch_focus_traversal(
         &mut self,
-        app: &mut App,
+        app: &mut H,
         command: &fret_app::CommandId,
         active_layers: &[NodeId],
         barrier_root: Option<NodeId>,
@@ -1003,7 +1027,7 @@ impl UiTree {
 
     pub fn layout(
         &mut self,
-        app: &mut App,
+        app: &mut H,
         text: &mut dyn TextService,
         root: NodeId,
         available: Size,
@@ -1018,7 +1042,7 @@ impl UiTree {
 
     pub fn layout_in(
         &mut self,
-        app: &mut App,
+        app: &mut H,
         text: &mut dyn TextService,
         root: NodeId,
         bounds: Rect,
@@ -1029,7 +1053,7 @@ impl UiTree {
 
     pub fn paint(
         &mut self,
-        app: &mut App,
+        app: &mut H,
         text: &mut dyn TextService,
         root: NodeId,
         bounds: Rect,
@@ -1042,7 +1066,7 @@ impl UiTree {
     fn with_widget_mut<R>(
         &mut self,
         node: NodeId,
-        f: impl FnOnce(&mut dyn Widget, &mut UiTree) -> R,
+        f: impl FnOnce(&mut dyn Widget<H>, &mut UiTree<H>) -> R,
     ) -> R {
         let widget = self
             .nodes
@@ -1059,7 +1083,7 @@ impl UiTree {
 
     fn layout_node(
         &mut self,
-        app: &mut App,
+        app: &mut H,
         text: &mut dyn TextService,
         node: NodeId,
         bounds: Rect,
@@ -1088,8 +1112,8 @@ impl UiTree {
                 self.debug_stats.layout_nodes_performed.saturating_add(1);
         }
 
-        let tree_ptr: *mut UiTree = self;
-        let app_ptr: *mut App = app;
+        let tree_ptr: *mut UiTree<H> = self;
+        let app_ptr: *mut H = app;
         let text_ptr: *mut dyn TextService = text;
         let sf = scale_factor;
         let mut layout_child = move |child: NodeId, bounds: Rect| -> Size {
@@ -1136,7 +1160,7 @@ impl UiTree {
 
     fn paint_node(
         &mut self,
-        app: &mut App,
+        app: &mut H,
         text: &mut dyn TextService,
         node: NodeId,
         bounds: Rect,
@@ -1147,9 +1171,9 @@ impl UiTree {
             self.debug_stats.paint_nodes = self.debug_stats.paint_nodes.saturating_add(1);
         }
 
-        let tree_ref: *const UiTree = self as *const UiTree;
-        let tree_ptr: *mut UiTree = self;
-        let app_ptr: *mut App = app;
+        let tree_ref: *const UiTree<H> = self as *const UiTree<H>;
+        let tree_ptr: *mut UiTree<H> = self;
+        let app_ptr: *mut H = app;
         let text_ptr: *mut dyn TextService = text;
         let scene_ptr: *mut Scene = scene;
         let sf = scale_factor;
@@ -1251,7 +1275,7 @@ impl UiTree {
         self.mark_invalidation(node, inv);
     }
 
-    pub fn propagate_model_changes(&mut self, app: &mut App, changed: &[ModelId]) -> bool {
+    pub fn propagate_model_changes(&mut self, app: &mut H, changed: &[ModelId]) -> bool {
         if changed.is_empty() {
             return false;
         }

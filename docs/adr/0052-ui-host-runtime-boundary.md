@@ -1,6 +1,6 @@
 # ADR 0052: UI Host Runtime Boundary (Embeddable Core vs Integrated App)
 
-Status: Proposed
+Status: Accepted (Prototype implemented; still iterating)
 Scope: Workspace-level crate boundaries (`fret-ui`, `fret-app`, runner/platform)
 
 ## Context
@@ -83,16 +83,28 @@ Cons:
 
 ## Decision
 
-We **intend to converge on Option B**, but implement it incrementally.
+We converge on **Option B**, implemented incrementally.
 
 Immediate (P0) contract to lock:
 
 - Do not move more `fret-app::App` concepts into `fret-ui` public APIs.
 - Any new framework-level dependencies from `fret-ui` should be expressible via small traits.
 
-Deferred implementation (P1) work:
+Prototype implementation (P0, landed):
 
-- Introduce `fret-runtime` traits and refactor `fret-ui` to depend on them, with `fret-app` as the default host.
+- Introduce a minimal `UiHost` trait used by the `fret-ui` runtime.
+- Implement `UiHost` for `fret_app::App` so the demo behavior stays unchanged.
+- Use default type parameters so most framework-facing types remain ergonomic:
+  - `Widget<H: UiHost = fret_app::App>`
+  - `EventCx<'_, H>`, `LayoutCx<'_, H>`, etc.
+
+Deferred work (P1):
+
+- Consider extracting `UiHost` into a small dedicated crate (e.g. `fret-runtime`) once the trait surface stabilizes.
+- Reduce host trait coupling to `fret_app` types over time (phase approach):
+  - Phase 0: boundary exists, but host types may still come from `fret_app` (current).
+  - Phase 1: move host-facing types into a portable crate (`fret-runtime` or `fret-core` where appropriate).
+  - Phase 2: third-party hosts implement the traits without adopting `fret-app`.
 
 ## Proposed API Shape (Sketch, not final)
 
@@ -114,9 +126,9 @@ Non-goal: redesign the entire authoring model; ADR 0028/0039 remain the authorin
 
 1. Inventory `fret-ui -> fret-app` dependencies and categorize them:
    - essential host services vs accidental convenience.
-2. Draft the minimal trait surface in a new crate (`fret-runtime`) without changing behavior.
+2. Keep tightening `UiHost` to the smallest “host services” surface we can get away with.
 3. Move element-local state storage to be UI-runtime-owned where possible (avoid requiring host globals).
-4. Update `docs/architecture.md` crate layout once the trait crate exists.
+4. If/when a dedicated trait crate exists, update `docs/architecture.md` crate layout accordingly.
 
 ## References
 
@@ -129,4 +141,3 @@ Non-goal: redesign the entire authoring model; ADR 0028/0039 remain the authorin
 - ADR 0034: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
 - ADR 0037: `docs/adr/0037-workspace-boundaries-and-components-repository.md`
 - ADR 0051: `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`
-

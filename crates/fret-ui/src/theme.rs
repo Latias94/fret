@@ -2,6 +2,8 @@ use fret_core::{Color, Px};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::OnceLock};
 
+use crate::UiHost;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ThemeConfig {
@@ -111,7 +113,7 @@ impl Theme {
         }
     }
 
-    pub fn global(app: &fret_app::App) -> &Theme {
+    pub fn global<H: UiHost>(app: &H) -> &Theme {
         if let Some(theme) = app.global::<Theme>() {
             theme
         } else {
@@ -119,7 +121,7 @@ impl Theme {
         }
     }
 
-    pub fn global_mut(app: &mut fret_app::App) -> &mut Theme {
+    pub fn global_mut<H: UiHost>(app: &mut H) -> &mut Theme {
         if app.global::<Theme>().is_none() {
             app.set_global(default_theme().clone());
         }

@@ -21,7 +21,7 @@ If we keep `PathBuf` in `fret-core` events, we will face a breaking change when 
 - Allow desktop backends to provide high-quality UX (file names, multiple file drops, best-effort hover).
 - Avoid forcing the UI layer to read files directly from OS paths.
 
-## Decision (Proposed)
+## Decision
 
 Replace “external file drag payload = `PathBuf`” with a portable representation based on **opaque handles**.
 

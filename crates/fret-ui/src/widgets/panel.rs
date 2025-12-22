@@ -1,4 +1,7 @@
-use crate::widget::{LayoutCx, PaintCx, Widget};
+use crate::{
+    UiHost,
+    widget::{LayoutCx, PaintCx, Widget},
+};
 use fret_core::{Color, Corners, DrawOrder, Edges, Px, SceneOp, Size};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -35,12 +38,12 @@ impl ColoredPanel {
     }
 }
 
-impl Widget for ColoredPanel {
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+impl<H: UiHost> Widget<H> for ColoredPanel {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         cx.available
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         if let Some((bg, alpha)) = self.theme_background {
             let theme = cx.theme();
             if self.last_theme_revision != Some(theme.revision()) {

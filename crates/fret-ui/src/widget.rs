@@ -1,6 +1,6 @@
-use crate::Theme;
+use crate::{Theme, UiHost};
 use fret_app::InputContext;
-use fret_app::{App, CommandId, Model, ModelId};
+use fret_app::{CommandId, Model, ModelId};
 use fret_core::{AppWindowId, Event, NodeId, Rect, Scene, Size, TextService};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -10,8 +10,8 @@ pub enum Invalidation {
     HitTest,
 }
 
-pub struct EventCx<'a> {
-    pub app: &'a mut App,
+pub struct EventCx<'a, H: UiHost = fret_app::App> {
+    pub app: &'a mut H,
     pub text: &'a mut dyn TextService,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
@@ -25,7 +25,7 @@ pub struct EventCx<'a> {
     pub stop_propagation: bool,
 }
 
-impl<'a> EventCx<'a> {
+impl<'a, H: UiHost> EventCx<'a, H> {
     pub fn theme(&self) -> &Theme {
         Theme::global(&*self.app)
     }
@@ -69,8 +69,8 @@ impl<'a> EventCx<'a> {
     }
 }
 
-pub struct CommandCx<'a> {
-    pub app: &'a mut App,
+pub struct CommandCx<'a, H: UiHost = fret_app::App> {
+    pub app: &'a mut H,
     pub text: &'a mut dyn TextService,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
@@ -81,7 +81,7 @@ pub struct CommandCx<'a> {
     pub stop_propagation: bool,
 }
 
-impl<'a> CommandCx<'a> {
+impl<'a, H: UiHost> CommandCx<'a, H> {
     pub fn theme(&self) -> &Theme {
         Theme::global(&*self.app)
     }
@@ -110,8 +110,8 @@ impl<'a> CommandCx<'a> {
     }
 }
 
-pub struct LayoutCx<'a> {
-    pub app: &'a mut App,
+pub struct LayoutCx<'a, H: UiHost = fret_app::App> {
+    pub app: &'a mut H,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
     pub focus: Option<NodeId>,
@@ -124,7 +124,7 @@ pub struct LayoutCx<'a> {
     pub layout_child: &'a mut dyn FnMut(NodeId, Rect) -> Size,
 }
 
-impl<'a> LayoutCx<'a> {
+impl<'a, H: UiHost> LayoutCx<'a, H> {
     pub fn theme(&self) -> &Theme {
         Theme::global(&*self.app)
     }
@@ -143,8 +143,8 @@ impl<'a> LayoutCx<'a> {
     }
 }
 
-pub struct PaintCx<'a> {
-    pub app: &'a mut App,
+pub struct PaintCx<'a, H: UiHost = fret_app::App> {
+    pub app: &'a mut H,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
     pub focus: Option<NodeId>,
@@ -158,7 +158,7 @@ pub struct PaintCx<'a> {
     pub child_bounds: &'a dyn Fn(NodeId) -> Option<Rect>,
 }
 
-impl<'a> PaintCx<'a> {
+impl<'a, H: UiHost> PaintCx<'a, H> {
     pub fn theme(&self) -> &Theme {
         Theme::global(&*self.app)
     }
@@ -176,9 +176,9 @@ impl<'a> PaintCx<'a> {
     }
 }
 
-pub trait Widget {
-    fn event(&mut self, _cx: &mut EventCx<'_>, _event: &Event) {}
-    fn command(&mut self, _cx: &mut CommandCx<'_>, _command: &CommandId) -> bool {
+pub trait Widget<H: UiHost = fret_app::App> {
+    fn event(&mut self, _cx: &mut EventCx<'_, H>, _event: &Event) {}
+    fn command(&mut self, _cx: &mut CommandCx<'_, H>, _command: &CommandId) -> bool {
         false
     }
     fn is_focusable(&self) -> bool {
@@ -187,8 +187,8 @@ pub trait Widget {
     fn is_text_input(&self) -> bool {
         false
     }
-    fn layout(&mut self, _cx: &mut LayoutCx<'_>) -> Size {
+    fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
         Size::default()
     }
-    fn paint(&mut self, _cx: &mut PaintCx<'_>) {}
+    fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
 }

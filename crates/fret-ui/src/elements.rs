@@ -1,4 +1,3 @@
-use fret_app::App;
 use fret_core::{AppWindowId, FrameId, Rect};
 use std::{
     any::{Any, TypeId},
@@ -6,6 +5,8 @@ use std::{
     hash::{Hash, Hasher},
     panic::Location,
 };
+
+use crate::UiHost;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct GlobalElementId(pub u64);
@@ -74,8 +75,8 @@ impl WindowElementState {
     }
 }
 
-pub struct ElementCx<'a> {
-    pub app: &'a mut App,
+pub struct ElementCx<'a, H: UiHost = fret_app::App> {
+    pub app: &'a mut H,
     pub window: AppWindowId,
     pub frame_id: FrameId,
     pub bounds: Rect,
@@ -84,9 +85,9 @@ pub struct ElementCx<'a> {
     child_counters: Vec<u32>,
 }
 
-impl<'a> ElementCx<'a> {
+impl<'a, H: UiHost> ElementCx<'a, H> {
     pub fn new(
-        app: &'a mut App,
+        app: &'a mut H,
         runtime: &'a mut ElementRuntime,
         window: AppWindowId,
         bounds: Rect,
@@ -109,7 +110,7 @@ impl<'a> ElementCx<'a> {
     }
 
     pub fn new_for_root_name(
-        app: &'a mut App,
+        app: &'a mut H,
         runtime: &'a mut ElementRuntime,
         window: AppWindowId,
         bounds: Rect,
@@ -236,12 +237,12 @@ pub fn global_root(window: AppWindowId, name: &str) -> GlobalElementId {
     GlobalElementId(h.finish())
 }
 
-pub fn with_element_cx<R>(
-    app: &mut App,
+pub fn with_element_cx<H: UiHost, R>(
+    app: &mut H,
     window: AppWindowId,
     bounds: Rect,
     root_name: &str,
-    f: impl FnOnce(&mut ElementCx<'_>) -> R,
+    f: impl FnOnce(&mut ElementCx<'_, H>) -> R,
 ) -> R {
     app.with_global_mut(ElementRuntime::new, |runtime, app| {
         let mut cx = ElementCx::new_for_root_name(app, runtime, window, bounds, root_name);

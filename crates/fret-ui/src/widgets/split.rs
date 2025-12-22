@@ -1,4 +1,7 @@
-use crate::widget::{LayoutCx, PaintCx, Widget};
+use crate::{
+    UiHost,
+    widget::{LayoutCx, PaintCx, Widget},
+};
 use fret_core::{Axis, Point, Px, Rect, Size};
 
 pub struct Split {
@@ -12,8 +15,8 @@ impl Split {
     }
 }
 
-impl Widget for Split {
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+impl<H: UiHost> Widget<H> for Split {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let Some((&a, rest)) = cx.children.split_first() else {
             return Size::default();
         };
@@ -48,7 +51,7 @@ impl Widget for Split {
         cx.available
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         let Some((&a, rest)) = cx.children.split_first() else {
             return;
         };

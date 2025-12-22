@@ -1,5 +1,7 @@
-use crate::Theme;
-use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use crate::{
+    Theme, UiHost,
+    widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget},
+};
 use fret_app::{CommandId, Effect, InputContext, Menu, MenuItem};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp,
@@ -724,12 +726,12 @@ impl<D: VirtualListDataSource> VirtualList<D> {
     }
 }
 
-impl<D: VirtualListDataSource> Widget for VirtualList<D> {
+impl<H: UiHost, D: VirtualListDataSource> Widget<H> for VirtualList<D> {
     fn is_focusable(&self) -> bool {
         true
     }
 
-    fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme());
         match event {
             Event::Pointer(pe) => match pe {
@@ -894,7 +896,7 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
         }
     }
 
-    fn command(&mut self, cx: &mut crate::widget::CommandCx<'_>, command: &CommandId) -> bool {
+    fn command(&mut self, cx: &mut crate::widget::CommandCx<'_, H>, command: &CommandId) -> bool {
         match command.as_str() {
             "virtual_list.copy_label" => {
                 let Some(key) = self.context_menu_target.or(self.selection_lead) else {
@@ -919,7 +921,7 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
         }
     }
 
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
 
@@ -931,7 +933,7 @@ impl<D: VirtualListDataSource> Widget for VirtualList<D> {
         cx.available
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
         self.last_viewport_height = cx.bounds.size.height;

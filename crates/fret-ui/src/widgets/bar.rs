@@ -1,4 +1,7 @@
-use crate::widget::{LayoutCx, PaintCx, Widget};
+use crate::{
+    UiHost,
+    widget::{LayoutCx, PaintCx, Widget},
+};
 use fret_core::{Color, Corners, DrawOrder, Edges, Px, Rect, SceneOp, Size};
 
 use super::panel::PanelThemeBackground;
@@ -36,8 +39,8 @@ impl Bar {
     }
 }
 
-impl Widget for Bar {
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+impl<H: UiHost> Widget<H> for Bar {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let Some(&child) = cx.children.first() else {
             return Size::new(cx.available.width, Px(0.0));
         };
@@ -55,7 +58,7 @@ impl Widget for Bar {
         Size::new(cx.available.width, height)
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.sync_theme(cx.theme());
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),

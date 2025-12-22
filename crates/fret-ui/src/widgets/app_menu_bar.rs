@@ -1,5 +1,8 @@
 use crate::ThemeSnapshot;
-use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use crate::{
+    UiHost,
+    widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget},
+};
 use fret_app::{InputContext, Menu, MenuBar};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp, Size,
@@ -73,13 +76,13 @@ impl AppMenuBar {
         self.corner_radius = theme.metrics.radius_md;
     }
 
-    fn current_menu_serial(app: &fret_app::App, window: fret_core::AppWindowId) -> Option<u64> {
+    fn current_menu_serial<H: UiHost>(app: &H, window: fret_core::AppWindowId) -> Option<u64> {
         app.global::<ContextMenuService>()
             .and_then(|s| s.request(window))
             .map(|(serial, _)| serial)
     }
 
-    fn sync_open_state(&mut self, app: &fret_app::App, window: fret_core::AppWindowId) {
+    fn sync_open_state<H: UiHost>(&mut self, app: &H, window: fret_core::AppWindowId) {
         let current = app
             .global::<ContextMenuService>()
             .and_then(|s| s.request(window));
@@ -106,7 +109,12 @@ impl AppMenuBar {
         None
     }
 
-    fn open_menu(&mut self, cx: &mut EventCx<'_>, window: fret_core::AppWindowId, index: usize) {
+    fn open_menu<H: UiHost>(
+        &mut self,
+        cx: &mut EventCx<'_, H>,
+        window: fret_core::AppWindowId,
+        index: usize,
+    ) {
         let Some(prepared) = self.prepared.iter().find(|m| m.index == index) else {
             return;
         };
@@ -164,13 +172,13 @@ impl AppMenuBar {
             });
 
         self.open_index = Some(index);
-        self.open_serial = Self::current_menu_serial(cx.app, window);
+        self.open_serial = Self::current_menu_serial(&*cx.app, window);
 
         cx.dispatch_command(fret_app::CommandId::from("context_menu.open"));
         cx.stop_propagation();
     }
 
-    fn close_menu(&mut self, cx: &mut EventCx<'_>) {
+    fn close_menu<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>) {
         self.open_index = None;
         self.open_serial = None;
         cx.dispatch_command(fret_app::CommandId::from("context_menu.close"));
@@ -178,8 +186,8 @@ impl AppMenuBar {
     }
 }
 
-impl Widget for AppMenuBar {
-    fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
+impl<H: UiHost> Widget<H> for AppMenuBar {
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme().snapshot());
         let Some(window) = cx.window else {
             return;
@@ -226,7 +234,7 @@ impl Widget for AppMenuBar {
         }
     }
 
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.sync_style_from_theme(cx.theme().snapshot());
         if let Some(window) = cx.window {
             self.sync_open_state(cx.app, window);
@@ -275,7 +283,7 @@ impl Widget for AppMenuBar {
         Size::new(cx.available.width, self.height)
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         let theme = cx.theme().snapshot();
         self.sync_style_from_theme(theme);
         let Some(window) = cx.window else {

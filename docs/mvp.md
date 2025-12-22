@@ -47,7 +47,8 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 40: prototype implemented in demo (asset open registry: Project double-click/Enter routes through `asset.open_selected`; `.scene` opens Scene doc, text-like assets open Text Probe)
 - MVP 41: prototype implemented in demo (unsaved changes guard: opening a new scene or closing a window with the Scene panel prompts Save/Don't Save/Cancel; winit close requests are routed through `Event::WindowCloseRequested`)
 - MVP 42: prototype implemented in demo (scene workflow P0: New Scene + Save As; File menu and Cmd/Ctrl shortcuts)
-- MVP 43: planned (portability gates): runtime platform capability matrix (ADR 0054) + begin removing desktop-only payload assumptions (ADR 0053).
+- MVP 43: prototype implemented (portability gates): runtime platform capability matrix (ADR 0054) + begin removing desktop-only payload assumptions (ADR 0053).
+- MVP 44: prototype implemented (host boundary): introduce `UiHost` and generic widget contexts (ADR 0052) to keep `fret-ui` embeddable.
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -939,12 +940,50 @@ runtime capability matrix that drives `when` gating and platform IO boundaries.
 - `when` expressions can gate on capability keys, and menus/palette reflect the same gating.
 - Demo can simulate “single-window mode” by forcing capabilities and shows tear-off commands disabled.
 
+Status:
+
+- Prototype implemented in the runner + demo (capabilities threaded into `InputContext` and `when`).
+
 References:
 
 - `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
 - `docs/adr/0053-external-drag-payload-portability.md`
 - Makepad’s wasm entrypoint message pump (reference posture, not an API dependency):
   - `repo-ref/makepad/platform/src/os/web/web.rs`
+
+## MVP 44 — UiHost Boundary P0 (Embeddable UI Runtime)
+
+Goal: keep the UI runtime embeddable for third-party engines/editors (GPUI-like adoption) without forcing them to adopt the full `fret-app` runtime.
+
+**Scope**
+
+- Introduce a minimal host trait used by `fret-ui` (`UiHost`):
+  - globals, model store access, command registry access,
+  - request redraw + push effects,
+  - `tick_id`/`frame_id` and timer token allocation,
+  - internal drag session access (for docking/DnD UX).
+- Implement the trait for `fret_app::App` so the demo behavior remains unchanged.
+- Make widget contexts generic with a default host type parameter:
+  - `Widget<H: UiHost = fret_app::App>`
+  - `EventCx<'_, H>`, `LayoutCx<'_, H>`, etc.
+
+**Non-goals**
+
+- A fully host-agnostic API surface (host-facing types may still come from `fret-app` in the first iteration).
+- Shipping a new crate boundary (`fret-runtime`) immediately (can be done once the trait surface stabilizes).
+
+**Definition of Done**
+
+- `cargo test --workspace` passes with no demo behavior changes required.
+- `fret-ui` runtime contexts/types no longer hard-code `fret_app::App`.
+
+Status:
+
+- Prototype implemented in `fret-ui` (still iterating on the minimal trait surface).
+
+References:
+
+- `docs/adr/0052-ui-host-runtime-boundary.md`
 
 ## Parking Lot (Explicitly Deferred)
 

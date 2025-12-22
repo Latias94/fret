@@ -1,4 +1,7 @@
-use crate::widget::{LayoutCx, PaintCx, Widget};
+use crate::{
+    UiHost,
+    widget::{LayoutCx, PaintCx, Widget},
+};
 use fret_core::{Point, Px, Rect, Size};
 
 pub struct Column {
@@ -31,8 +34,8 @@ impl Default for Column {
     }
 }
 
-impl Widget for Column {
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+impl<H: UiHost> Widget<H> for Column {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let pad = self.padding.0.max(0.0);
         let inner_origin = Point::new(
             Px(cx.bounds.origin.x.0 + pad),
@@ -65,7 +68,7 @@ impl Widget for Column {
         Size::new(cx.available.width, total_h)
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         for &child in cx.children {
             if let Some(bounds) = cx.child_bounds(child) {
                 cx.paint(child, bounds);

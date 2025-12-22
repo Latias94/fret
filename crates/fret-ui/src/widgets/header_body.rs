@@ -1,4 +1,7 @@
-use crate::widget::{LayoutCx, PaintCx, Widget};
+use crate::{
+    UiHost,
+    widget::{LayoutCx, PaintCx, Widget},
+};
 use fret_core::{Point, Px, Rect, Size};
 
 pub struct HeaderBody {
@@ -21,8 +24,8 @@ impl HeaderBody {
     }
 }
 
-impl Widget for HeaderBody {
-    fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
+impl<H: UiHost> Widget<H> for HeaderBody {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let mut header_h = Px(self.header_height.0.max(0.0).min(cx.available.height.0));
 
         if let Some(&header) = cx.children.first() {
@@ -54,7 +57,7 @@ impl Widget for HeaderBody {
         cx.available
     }
 
-    fn paint(&mut self, cx: &mut PaintCx<'_>) {
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         for &child in cx.children {
             if let Some(bounds) = cx.child_bounds(child) {
                 cx.paint(child, bounds);
