@@ -1460,7 +1460,7 @@ mod tests {
             n.invalidation.clear();
         }
 
-        let _ = app.update(model, |_app, v| {
+        let _ = model.update(&mut app, |v, _cx| {
             *v += 1;
         });
         let changed = app.take_changed_models();

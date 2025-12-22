@@ -771,6 +771,10 @@ name = "fret-runtime"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "serde",
+ "serde_json",
+ "slotmap",
+ "thiserror 2.0.17",
 ]
 
 [[package]]
