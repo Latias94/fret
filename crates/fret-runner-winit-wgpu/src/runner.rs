@@ -95,6 +95,11 @@ fn bring_window_to_front(window: &Window, sender: Option<&Window>) -> bool {
     }
 
     unsafe {
+        // If the window was created hidden (we do this for DockFloating to avoid the initial flash
+        // behind the source window), ensure it is visible before we query/raise the NSWindow.
+        // Otherwise `ns_view.window` can be nil and the raise attempt becomes a no-op.
+        window.set_visible(true);
+
         // macOS often keeps newly created windows behind the current key window unless we
         // explicitly activate the app and order the window front.
         let app = NSApp();
@@ -171,6 +176,10 @@ fn bring_window_to_front(window: &Window, sender: Option<&Window>) -> bool {
             let _: () = msg_send![ns_window, orderWindow: 1 relativeTo: sender_number];
         }
         let _: () = msg_send![ns_window, orderFrontRegardless];
+
+        // Keep winit’s internal focus bookkeeping aligned; in practice this also improves the
+        // success rate of the ordering change when the source window is in a tracked interaction.
+        window.focus_window();
 
         let key_window_after: id = msg_send![app, keyWindow];
         let main_window_after: id = msg_send![app, mainWindow];
