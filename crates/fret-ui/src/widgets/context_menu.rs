@@ -486,6 +486,66 @@ impl ContextMenu {
         Rect::new(Point::new(Px(right_x), Px(y)), screen)
     }
 
+    fn menu_bar_bounds(menu_bar: &MenuBarContextMenu) -> Option<Rect> {
+        let mut it = menu_bar.entries.iter();
+        let first = it.next()?;
+
+        let mut min_x = first.bounds.origin.x.0;
+        let mut min_y = first.bounds.origin.y.0;
+        let mut max_x = first.bounds.origin.x.0 + first.bounds.size.width.0;
+        let mut max_y = first.bounds.origin.y.0 + first.bounds.size.height.0;
+
+        for entry in it {
+            min_x = min_x.min(entry.bounds.origin.x.0);
+            min_y = min_y.min(entry.bounds.origin.y.0);
+            max_x = max_x.max(entry.bounds.origin.x.0 + entry.bounds.size.width.0);
+            max_y = max_y.max(entry.bounds.origin.y.0 + entry.bounds.size.height.0);
+        }
+
+        Some(Rect::new(
+            Point::new(Px(min_x), Px(min_y)),
+            Size::new(Px((max_x - min_x).max(0.0)), Px((max_y - min_y).max(0.0))),
+        ))
+    }
+
+    fn menu_bar_entry_at_or_nearest(menu_bar: &MenuBarContextMenu, pos: Point) -> Option<usize> {
+        if let Some(entry) = menu_bar.entries.iter().find(|e| e.bounds.contains(pos)) {
+            return Some(entry.index);
+        }
+
+        // Best-effort fallback: if the pointer is within the overall menu bar strip (with a small
+        // vertical slop), pick the nearest entry by x. This avoids “click closes menu, second click
+        // opens” when bounds drift slightly due to platform DPI rounding or async window metrics.
+        let Some(bar) = Self::menu_bar_bounds(menu_bar) else {
+            return None;
+        };
+        let slop_y = 6.0;
+        let y0 = bar.origin.y.0 - slop_y;
+        let y1 = bar.origin.y.0 + bar.size.height.0 + slop_y;
+        if pos.y.0 < y0 || pos.y.0 > y1 {
+            return None;
+        }
+
+        let mut best: Option<(usize, f32)> = None;
+        for entry in &menu_bar.entries {
+            let x0 = entry.bounds.origin.x.0;
+            let x1 = entry.bounds.origin.x.0 + entry.bounds.size.width.0;
+            let dx = if pos.x.0 < x0 {
+                x0 - pos.x.0
+            } else if pos.x.0 > x1 {
+                pos.x.0 - x1
+            } else {
+                0.0
+            };
+            match best {
+                None => best = Some((entry.index, dx)),
+                Some((_, best_dx)) if dx < best_dx => best = Some((entry.index, dx)),
+                _ => {}
+            }
+        }
+        best.map(|(i, _)| i)
+    }
+
     fn hit_test(&self, point: Point) -> Option<(usize, usize)> {
         for (panel_index, panel) in self.panels.iter().enumerate().rev() {
             if !panel.bounds.contains(point) {
@@ -723,13 +783,10 @@ impl Widget for ContextMenu {
                             cx.request_redraw();
                         }
                     } else if let Some(menu_bar) = request.menu_bar.as_ref() {
-                        if let Some(entry) = menu_bar
-                            .entries
-                            .iter()
-                            .find(|e| e.bounds.contains(*position))
+                        if let Some(index) = Self::menu_bar_entry_at_or_nearest(menu_bar, *position)
                         {
-                            if entry.index != menu_bar.open_index {
-                                if self.switch_menu_bar_menu(cx, window, &request, entry.index) {
+                            if index != menu_bar.open_index {
+                                if self.switch_menu_bar_menu(cx, window, &request, index) {
                                     cx.stop_propagation();
                                 }
                             }
@@ -769,14 +826,11 @@ impl Widget for ContextMenu {
                     }
 
                     if let Some(menu_bar) = request.menu_bar.as_ref() {
-                        if let Some(entry) = menu_bar
-                            .entries
-                            .iter()
-                            .find(|e| e.bounds.contains(*position))
+                        if let Some(index) = Self::menu_bar_entry_at_or_nearest(menu_bar, *position)
                         {
-                            if entry.index == menu_bar.open_index {
+                            if index == menu_bar.open_index {
                                 self.close_menu(cx, window);
-                            } else if self.switch_menu_bar_menu(cx, window, &request, entry.index) {
+                            } else if self.switch_menu_bar_menu(cx, window, &request, index) {
                                 cx.stop_propagation();
                             }
                             return;

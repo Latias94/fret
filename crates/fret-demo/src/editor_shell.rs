@@ -752,6 +752,16 @@ impl Widget for HierarchyPanel {
 
     fn event(&mut self, cx: &mut EventCx<'_>, event: &Event) {
         if let Event::InternalDrag(drag) = event {
+            // Only handle internal drags that carry a Project payload. Unconditionally stopping
+            // propagation breaks cross-window DockPanel drags (DockSpace must still observe them).
+            let is_project_drag = cx
+                .app
+                .drag()
+                .and_then(|d| d.payload::<ProjectDragPayload>())
+                .is_some();
+            if !is_project_drag {
+                return;
+            }
             match drag.kind {
                 fret_core::InternalDragKind::Enter | fret_core::InternalDragKind::Over => {
                     let next = self.asset_drop_preview_at(cx.app, drag.position);
