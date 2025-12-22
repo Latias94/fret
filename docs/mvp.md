@@ -47,6 +47,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - MVP 40: prototype implemented in demo (asset open registry: Project double-click/Enter routes through `asset.open_selected`; `.scene` opens Scene doc, text-like assets open Text Probe)
 - MVP 41: prototype implemented in demo (unsaved changes guard: opening a new scene or closing a window with the Scene panel prompts Save/Don't Save/Cancel; winit close requests are routed through `Event::WindowCloseRequested`)
 - MVP 42: prototype implemented in demo (scene workflow P0: New Scene + Save As; File menu and Cmd/Ctrl shortcuts)
+- MVP 43: planned (portability gates): runtime platform capability matrix (ADR 0054) + begin removing desktop-only payload assumptions (ADR 0053).
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -911,6 +912,39 @@ Goal: validate an editor-grade “preview loop” without committing the framewo
 Status:
 
 - Prototype implemented in `fret-demo` (`demo.play.toggle`).
+
+## MVP 43 — Platform Capabilities P0 (Runtime Matrix + Gating)
+
+Goal: make the wasm/WebGPU path a **contracted portability target** rather than a future rewrite by introducing a
+runtime capability matrix that drives `when` gating and platform IO boundaries.
+
+**Scope**
+
+- Add a `PlatformCapabilities` data model at the platform boundary (ADR 0054).
+- Thread capabilities into the command routing context so menus/palette/shortcuts can gate consistently (ADR 0022 / ADR 0023).
+- Use capabilities to disable unsupported features rather than relying on ad-hoc `cfg` branches:
+  - multi-window tear-off docking (ADR 0013 / ADR 0017),
+  - external file drag payload shape (ADR 0053),
+  - clipboard/text-only fallbacks.
+- Expose capabilities in debug diagnostics (HUD/inspector) (ADR 0036).
+
+**Non-goals**
+
+- Shipping a web runner (this MVP only locks the portability contract and wires the data through).
+- Solving all web permission/policy UX (future).
+
+**Definition of Done**
+
+- A single source of truth for platform feature availability exists at runtime (`PlatformCapabilities`).
+- `when` expressions can gate on capability keys, and menus/palette reflect the same gating.
+- Demo can simulate “single-window mode” by forcing capabilities and shows tear-off commands disabled.
+
+References:
+
+- `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
+- `docs/adr/0053-external-drag-payload-portability.md`
+- Makepad’s wasm entrypoint message pump (reference posture, not an API dependency):
+  - `repo-ref/makepad/platform/src/os/web/web.rs`
 
 ## Parking Lot (Explicitly Deferred)
 
