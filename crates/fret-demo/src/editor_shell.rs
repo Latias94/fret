@@ -16,7 +16,10 @@ use fret_editor::{
     PropertyEditKind, PropertyEditRequest, PropertyEditService, PropertyLeaf, PropertyMeta,
     PropertyNode, PropertyPath, PropertyTree, PropertyTypeTag, PropertyValue,
 };
-use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, ThemeSnapshot, TreeView, Widget};
+use fret_ui::{
+    DockPanelContentService, EventCx, Invalidation, LayoutCx, PaintCx, ThemeSnapshot, TreeView,
+    Widget,
+};
 
 #[derive(Debug, Default, Clone)]
 pub struct DemoSelection {
@@ -593,6 +596,14 @@ impl HierarchyPanel {
                 s.set_selected_guid(None);
             });
 
+        if let Some(window) = cx.window {
+            if let Some(content) = cx.app.global::<DockPanelContentService>() {
+                for (_panel, node) in content.panel_nodes(window) {
+                    cx.invalidate(node, Invalidation::Layout);
+                    cx.invalidate(node, Invalidation::Paint);
+                }
+            }
+        }
         cx.request_redraw();
     }
 
