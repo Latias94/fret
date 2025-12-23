@@ -332,6 +332,33 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         self
     }
 
+    pub fn with_wrap(mut self, wrap: TextWrap) -> Self {
+        self.style.wrap = wrap;
+        self.heights_dirty = true;
+        self
+    }
+
+    pub fn set_wrap(&mut self, wrap: TextWrap) {
+        if self.style.wrap == wrap {
+            return;
+        }
+        self.style.wrap = wrap;
+        self.prepared_dirty = true;
+        self.heights_dirty = true;
+        self.measured_heights_by_key.clear();
+        self.clamp_offset();
+    }
+
+    pub fn invalidate_measurements(&mut self) {
+        if !matches!(self.row_height, VirtualListRowHeight::Measured { .. }) {
+            return;
+        }
+        self.measured_heights_by_key.clear();
+        self.prepared_dirty = true;
+        self.heights_dirty = true;
+        self.clamp_offset();
+    }
+
     pub fn with_style(mut self, style: VirtualListStyle) -> Self {
         self.style = style;
         self.style_override = true;

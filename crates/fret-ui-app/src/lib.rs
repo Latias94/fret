@@ -18,7 +18,8 @@ pub use fret_ui::{
     PanelThemeBackground, Row, Scroll, Split, Stack, Text, TextArea, TextAreaStyle, TextInput,
     Theme, ThemeConfig, ThemeSnapshot, Toolbar, ToolbarItem, TreeNode, TreeView, TreeViewStyle,
     UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiHost, UiLayerId, VecStringDataSource,
-    ViewportPanel, VirtualList, VirtualListDataSource, VirtualListRow, VirtualListStyle,
+    ViewportPanel, VirtualList, VirtualListDataSource, VirtualListRow, VirtualListRowHeight,
+    VirtualListStyle,
 };
 
 pub use fret_ui::{
