@@ -10,7 +10,7 @@ use fret_core::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
     ExternalDropDataEvent, ExternalDropFileData, ExternalDropReadError, ExternalDropToken,
     InternalDragEvent, InternalDragKind, Modifiers, MouseButton, PlatformCapabilities, Point, Px,
-    Rect, Scene, Size, TextService, ViewportInputEvent,
+    Rect, Scene, Size, TextService, ViewportInputEvent, WindowMetricsService,
 };
 use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
 use slotmap::SlotMap;
@@ -23,7 +23,7 @@ use winit::{
     },
     event_loop::{ActiveEventLoop, ControlFlow},
     keyboard::{Key, ModifiersState, NamedKey},
-    window::{Window, WindowId},
+    window::{Window, WindowId, WindowLevel},
 };
 
 use crate::error::RunnerError;
@@ -620,6 +620,7 @@ struct DockTearoffFollow {
     source_window: fret_core::AppWindowId,
     grab_offset: Point,
     manual_follow: bool,
+    last_outer_pos: Option<PhysicalPosition<i32>>,
 }
 
 impl<D: WinitDriver> WinitRunner<D> {
@@ -753,6 +754,19 @@ impl<D: WinitDriver> WinitRunner<D> {
             }
         });
 
+        if let Some(state) = self.windows.get(id) {
+            let size_phys = state.window.inner_size();
+            let size_logical: winit::dpi::LogicalSize<f32> =
+                size_phys.to_logical(state.window.scale_factor());
+            self.app
+                .with_global_mut(WindowMetricsService::default, |svc, _app| {
+                    svc.set_inner_size(
+                        id,
+                        Size::new(Px(size_logical.width), Px(size_logical.height)),
+                    );
+                });
+        }
+
         let winit_id = self.windows[id].window.id();
         self.winit_to_app.insert(winit_id, id);
         Ok(id)
@@ -777,6 +791,10 @@ impl<D: WinitDriver> WinitRunner<D> {
         if let Some(state) = self.windows.remove(window) {
             self.winit_to_app.remove(&state.window.id());
         }
+        self.app
+            .with_global_mut(WindowMetricsService::default, |svc, _app| {
+                svc.remove(window);
+            });
         if Some(window) == self.main_window {
             self.main_window = None;
         }
@@ -857,6 +875,27 @@ impl<D: WinitDriver> WinitRunner<D> {
             return None;
         }
 
+        // Clamp the grab point to the target window's current client size. During tear-off, the
+        // grab offset comes from the source window's client coordinates; if the new floating
+        // window is smaller, keeping the original offset would place the cursor outside the new
+        // window (visible as a fixed offset between cursor and window).
+        let target_inner = state.window.inner_size();
+        let target_inner_logical: winit::dpi::LogicalSize<f32> = target_inner.to_logical(scale);
+        let max_x = target_inner_logical.width;
+        let max_y = target_inner_logical.height;
+        let mut grab_x = grab_offset_logical.x.0;
+        let mut grab_y = grab_offset_logical.y.0;
+        if max_x.is_finite() && max_x > 0.0 {
+            grab_x = grab_x.min(max_x).max(0.0);
+        } else {
+            grab_x = 0.0;
+        }
+        if max_y.is_finite() && max_y > 0.0 {
+            grab_y = grab_y.min(max_y).max(0.0);
+        } else {
+            grab_y = 0.0;
+        }
+
         // Match ImGui's platform contract:
         // - viewport pos is client/inner screen position (logical)
         // - winit expects outer position
@@ -870,8 +909,8 @@ impl<D: WinitDriver> WinitRunner<D> {
             (0, 0)
         };
 
-        let grab_client_x = grab_offset_logical.x.0 as f64 * scale;
-        let grab_client_y = grab_offset_logical.y.0 as f64 * scale;
+        let grab_client_x = grab_x as f64 * scale;
+        let grab_client_y = grab_y as f64 * scale;
         let grab_outer_x = deco_offset.0 as f64 + grab_client_x;
         let grab_outer_y = deco_offset.1 as f64 + grab_client_y;
 
@@ -1230,6 +1269,20 @@ impl<D: WinitDriver> WinitRunner<D> {
                             if let CreateWindowKind::DockFloating { source_window, .. } =
                                 &create.kind
                             {
+                                #[cfg(target_os = "macos")]
+                                {
+                                    // When tearing off during an active drag, macOS may create the
+                                    // new window behind the source window. Bring it to front
+                                    // immediately so the subsequent `drag_window()` (if used)
+                                    // behaves like ImGui's multi-viewport UX.
+                                    let sender =
+                                        self.windows.get(*source_window).map(|w| w.window.as_ref());
+                                    if let Some(state) = self.windows.get(new_window) {
+                                        let _ =
+                                            bring_window_to_front(state.window.as_ref(), sender);
+                                    }
+                                }
+
                                 if let Some(anchor) = create.anchor
                                     && let Some(state) = self.windows.get(new_window)
                                     && let Some(pos) = self
@@ -1246,20 +1299,21 @@ impl<D: WinitDriver> WinitRunner<D> {
                                         .anchor
                                         .map(|a| a.position)
                                         .unwrap_or(Point::new(Px(40.0), Px(20.0)));
+                                    if let Some(state) = self.windows.get(new_window) {
+                                        state.window.set_window_level(WindowLevel::AlwaysOnTop);
+                                    }
                                     self.dock_tearoff_follow = Some(DockTearoffFollow {
                                         window: new_window,
                                         source_window: *source_window,
                                         grab_offset,
                                         manual_follow: true,
+                                        last_outer_pos: None,
                                     });
-                                    if let Some(state) = self.windows.get(new_window) {
-                                        if state.window.drag_window().is_ok() {
-                                            if let Some(follow) = self.dock_tearoff_follow.as_mut()
-                                            {
-                                                follow.manual_follow = false;
-                                            }
-                                        }
-                                    }
+                                    // Do not call `drag_window()` here. ImGui drives multi-viewport
+                                    // window movement by updating the platform window position in
+                                    // response to mouse motion; native OS dragging tends to
+                                    // introduce a fixed cursor offset and prevents reliable
+                                    // hit-testing of other windows under the moving viewport.
                                 }
                                 let panel = match &create.kind {
                                     CreateWindowKind::DockFloating { panel, .. } => Some(panel),
@@ -1275,6 +1329,20 @@ impl<D: WinitDriver> WinitRunner<D> {
 
                             self.driver
                                 .window_created(&mut self.app, &create, new_window);
+
+                            // If this window was created as part of an active dock tear-off drag,
+                            // update the drag session's source window so dropping over another
+                            // window emits `DockOp::MovePanel` with the correct `source_window`.
+                            if let CreateWindowKind::DockFloating { source_window, .. } =
+                                create.kind
+                                && let Some(drag) = self.app.drag_mut()
+                                && drag.kind == fret_app::DragKind::DockPanel
+                                && drag.source_window == source_window
+                            {
+                                drag.source_window = new_window;
+                                drag.current_window = new_window;
+                            }
+
                             self.app.request_redraw(new_window);
                         }
                         WindowRequest::Raise {
@@ -1443,16 +1511,15 @@ impl<D: WinitDriver> WinitRunner<D> {
         ));
 
         // If the mouse was released outside any window, winit may not deliver a `MouseInput`
-        // event to the source window. Synthesize a Drop targeted at the source window using an
-        // out-of-bounds local position so DockSpace treats it as a tear-off request.
+        // event to any window. Use the regular cursor-based drop routing so docking back into an
+        // existing window still works (ImGui-style).
         if let Some(d) = self.app.drag_mut() {
             if d.kind == fret_app::DragKind::DockPanel {
                 d.dragging = true;
             }
         }
-        self.dispatch_internal_drag_event(source_window, InternalDragKind::Drop, {
-            Point::new(Px(-32.0), Px(-32.0))
-        });
+
+        self.route_internal_drag_drop_from_cursor();
         dock_tearoff_log(format_args!(
             "[poll-drop] dispatched target={:?}",
             source_window
@@ -1529,12 +1596,21 @@ impl<D: WinitDriver> WinitRunner<D> {
             return false;
         };
 
+        // When a dock tear-off window is following the cursor, the cursor is always "inside" that
+        // moving window. Prefer other windows under the cursor so we can dock back into the main
+        // window (ImGui-style).
+        let prefer_not = self
+            .dock_tearoff_follow
+            .filter(|_| drag.kind == fret_app::DragKind::DockPanel)
+            .map(|f| f.window);
+
         // Prefer the window we already hovered, if the cursor is still inside it. This makes
         // cross-window drag hover stable even when OS windows overlap and we don't have z-order.
         let hovered = self
             .internal_drag_hover_window
             .filter(|w| self.screen_pos_in_window(*w, screen_pos))
-            .or_else(|| self.window_under_cursor(screen_pos, None));
+            .filter(|w| Some(*w) != prefer_not)
+            .or_else(|| self.window_under_cursor(screen_pos, prefer_not));
         let hovered = hovered.or_else(|| {
             // For dock tear-off, keep delivering `InternalDrag::Over` to the source window even
             // when the cursor is outside all windows so the UI can react before mouse-up.
@@ -1588,11 +1664,17 @@ impl<D: WinitDriver> WinitRunner<D> {
             return false;
         };
 
+        let prefer_not = self
+            .dock_tearoff_follow
+            .filter(|_| drag.kind == fret_app::DragKind::DockPanel)
+            .map(|f| f.window);
+
         // Prefer the last hovered window if possible; window overlap makes hit-testing ambiguous.
         let target = self
             .internal_drag_hover_window
             .filter(|w| self.screen_pos_in_window(*w, screen_pos))
-            .or_else(|| self.window_under_cursor(screen_pos, None))
+            .filter(|w| Some(*w) != prefer_not)
+            .or_else(|| self.window_under_cursor(screen_pos, prefer_not))
             .or(self.internal_drag_hover_window);
         // If the cursor is outside all windows (Unity/ImGui-style tear-off), still deliver the
         // drop to the source window using the last known screen cursor position.
@@ -1751,27 +1833,80 @@ impl<D: WinitDriver> WinitRunner<D> {
     }
 
     fn update_dock_tearoff_follow(&mut self) -> bool {
-        let Some(follow) = self.dock_tearoff_follow else {
-            return false;
+        let (window, grab_offset, manual_follow, last_outer_pos) = match self.dock_tearoff_follow {
+            Some(follow) => (
+                follow.window,
+                follow.grab_offset,
+                follow.manual_follow,
+                follow.last_outer_pos,
+            ),
+            None => return false,
         };
 
-        let Some(state) = self.windows.get(follow.window) else {
-            self.dock_tearoff_follow = None;
-            return false;
-        };
-
-        if !follow.manual_follow {
+        if !manual_follow {
             return false;
         }
 
-        let Some(pos) =
-            self.compute_window_outer_position_from_cursor_grab(follow.window, follow.grab_offset)
+        if self.windows.get(window).is_none() {
+            self.dock_tearoff_follow = None;
+            return false;
+        }
+
+        let Some(pos) = self.compute_window_outer_position_from_cursor_grab(window, grab_offset)
         else {
             return false;
         };
 
-        state.window.set_outer_position(pos);
+        let next_phys = {
+            let Some(state) = self.windows.get(window) else {
+                self.dock_tearoff_follow = None;
+                return false;
+            };
+            let scale_factor = state.window.scale_factor();
+            let next_phys = match pos {
+                Position::Physical(p) => p,
+                Position::Logical(p) => p.to_physical::<i32>(scale_factor),
+            };
+            next_phys
+        };
+
+        // Avoid spamming redundant position updates (helps reduce stutter on high-frequency
+        // input devices).
+        if last_outer_pos.is_some_and(|prev| prev == next_phys) {
+            return false;
+        }
+
+        if let Some(state) = self.windows.get(window) {
+            // Keep the moving window visible while docking back into another window (ImGui-style).
+            state.window.set_window_level(WindowLevel::AlwaysOnTop);
+            state.window.set_outer_position(pos);
+        }
+
+        dock_tearoff_log(format_args!(
+            "[follow-move] window={:?} cursor={:?} outer_pos={:?}",
+            window, self.cursor_screen_pos, next_phys
+        ));
+
+        if let Some(follow) = self.dock_tearoff_follow.as_mut() {
+            follow.last_outer_pos = Some(next_phys);
+        }
+
         true
+    }
+
+    fn stop_dock_tearoff_follow(&mut self, now: Instant, raise_on_macos: bool) {
+        let Some(follow) = self.dock_tearoff_follow.take() else {
+            return;
+        };
+
+        if let Some(state) = self.windows.get(follow.window) {
+            state.window.set_window_level(WindowLevel::Normal);
+        }
+
+        #[cfg(target_os = "macos")]
+        if raise_on_macos {
+            self.enqueue_window_front(follow.window, Some(follow.source_window), None, now);
+        }
     }
 }
 
@@ -1825,19 +1960,14 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 state: ElementState::Released,
                 ..
             } => {
-                // When a floating dock window is following the cursor, a mouse release may occur
-                // outside any window and never produce `WindowEvent::MouseInput`.
-                if self.dock_tearoff_follow.is_some() {
-                    self.left_mouse_down = false;
-                    if let Some(follow) = self.dock_tearoff_follow.take() {
-                        #[cfg(target_os = "macos")]
-                        self.enqueue_window_front(
-                            follow.window,
-                            Some(follow.source_window),
-                            None,
-                            Instant::now(),
-                        );
-                    }
+                // This fallback path is only for releases that occur outside all windows, where
+                // winit may not emit `WindowEvent::MouseInput`. When releasing over any window,
+                // prefer the regular window event path; otherwise we can incorrectly "force tear-off"
+                // even when the user is trying to dock back into another window.
+                if let Some(pos) = self.cursor_screen_pos
+                    && self.window_under_cursor(pos, None).is_some()
+                {
+                    return;
                 }
 
                 // On macOS, releasing the mouse button outside any window may not deliver a
@@ -1867,9 +1997,9 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                             d.dragging = true;
                         }
                     }
-                    self.dispatch_internal_drag_event(source_window, InternalDragKind::Drop, {
-                        Point::new(Px(-32.0), Px(-32.0))
-                    });
+                    // Route the drop using the current cursor position, so docking into another
+                    // window works even when the `MouseInput` event is missing.
+                    self.route_internal_drag_drop_from_cursor();
                     dock_tearoff_log(format_args!(
                         "[device-drop] dispatched target={:?}",
                         source_window
@@ -1879,7 +2009,12 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     self.app.cancel_drag();
                     let _ = self.clear_internal_drag_hover_if_needed();
                 }
-                self.dock_tearoff_follow = None;
+                // When a floating dock window is following the cursor, a mouse release may occur
+                // outside any window and never produce `WindowEvent::MouseInput`.
+                if self.dock_tearoff_follow.is_some() {
+                    self.left_mouse_down = false;
+                    self.stop_dock_tearoff_follow(Instant::now(), true);
+                }
                 self.drain_effects(event_loop);
             }
             _ => {}
@@ -2192,6 +2327,13 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 if let Some(state) = self.windows.get_mut(app_window) {
                     let scale = state.window.scale_factor() as f32;
                     let logical: winit::dpi::LogicalSize<f32> = size.to_logical(scale as f64);
+                    self.app
+                        .with_global_mut(WindowMetricsService::default, |svc, _app| {
+                            svc.set_inner_size(
+                                app_window,
+                                Size::new(Px(logical.width), Px(logical.height)),
+                            );
+                        });
                     self.driver.handle_event(
                         &mut self.app,
                         unsafe { &mut *text_ptr },
@@ -2311,17 +2453,9 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     ElementState::Released => {
                         if button == fret_core::MouseButton::Left {
                             self.left_mouse_down = false;
-                            if let Some(follow) = self.dock_tearoff_follow.take() {
-                                #[cfg(target_os = "macos")]
-                                self.enqueue_window_front(
-                                    follow.window,
-                                    Some(follow.source_window),
-                                    None,
-                                    Instant::now(),
-                                );
-                            }
                             self.saw_left_mouse_release_this_turn = true;
                             self.route_internal_drag_drop_from_cursor();
+                            self.stop_dock_tearoff_follow(Instant::now(), true);
                             // Cross-window drags are runner-routed (Enter/Over/Drop), so ensure the
                             // drag session cannot get "stuck" if no widget ends it.
                             if self.app.drag().is_some_and(|d| d.cross_window_hover) {
@@ -2476,7 +2610,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
         if let Some(follow) = self.dock_tearoff_follow
             && !self.is_left_mouse_down_for_window(follow.source_window)
         {
-            self.dock_tearoff_follow = None;
+            self.stop_dock_tearoff_follow(Instant::now(), false);
         }
 
         self.drain_effects(event_loop);
