@@ -1,11 +1,11 @@
 use crate::ThemeSnapshot;
 use crate::{
     UiHost,
-    widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget},
+    widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp, Size,
-    TextConstraints, TextMetrics, TextStyle, TextWrap,
+    Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp, SemanticsRole,
+    Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 use fret_runtime::{CommandId, InputContext, Menu, MenuBar};
 
@@ -187,6 +187,10 @@ impl AppMenuBar {
 }
 
 impl<H: UiHost> Widget<H> for AppMenuBar {
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        cx.set_role(SemanticsRole::Menu);
+    }
+
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme().snapshot());
         let Some(window) = cx.window else {

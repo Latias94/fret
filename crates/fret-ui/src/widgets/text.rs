@@ -1,5 +1,5 @@
 use fret_core::{
-    Color, DrawOrder, Event, FontId, ImeEvent, MouseButton, Px, Rect, SceneOp, Size,
+    Color, DrawOrder, Event, FontId, ImeEvent, MouseButton, Px, Rect, SceneOp, SemanticsRole, Size,
     TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 
@@ -47,6 +47,10 @@ impl Text {
 }
 
 impl<H: UiHost> Widget<H> for Text {
+    fn semantics(&mut self, cx: &mut crate::widget::SemanticsCx<'_, H>) {
+        cx.set_role(SemanticsRole::Text);
+    }
+
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let constraints = TextConstraints {
             max_width: Some(cx.available.width),
@@ -463,6 +467,10 @@ impl<H: UiHost> Widget<H> for TextInput {
 
     fn is_text_input(&self) -> bool {
         true
+    }
+
+    fn semantics(&mut self, cx: &mut crate::widget::SemanticsCx<'_, H>) {
+        cx.set_role(SemanticsRole::TextField);
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {

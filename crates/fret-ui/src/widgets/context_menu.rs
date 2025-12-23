@@ -1,10 +1,10 @@
 use crate::{
     Theme, UiHost,
-    widget::{EventCx, Invalidation, PaintCx, Widget},
+    widget::{EventCx, Invalidation, PaintCx, SemanticsCx, Widget},
 };
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp, Size,
-    TextConstraints, TextMetrics, TextStyle, TextWrap,
+    Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp,
+    SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 use fret_runtime::{
     CommandId, CommandRegistry, InputContext, KeymapService, Menu, MenuItem, format_sequence,
@@ -642,6 +642,10 @@ impl Default for ContextMenu {
 }
 
 impl<H: UiHost> Widget<H> for ContextMenu {
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        cx.set_role(SemanticsRole::Menu);
+    }
+
     fn is_focusable(&self) -> bool {
         true
     }

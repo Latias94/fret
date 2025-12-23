@@ -1,8 +1,8 @@
 use fret_core::{
     Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, Edges, NodeId, PanelKey,
-    RenderTargetId, Scene, SceneOp, TextBlobId, TextConstraints, TextMetrics, TextService,
-    TextStyle, TextWrap, ViewportFit, ViewportInputEvent, ViewportInputKind, ViewportMapping,
-    WindowAnchor, WindowMetricsService,
+    RenderTargetId, Scene, SceneOp, SemanticsRole, TextBlobId, TextConstraints, TextMetrics,
+    TextService, TextStyle, TextWrap, ViewportFit, ViewportInputEvent, ViewportInputKind,
+    ViewportMapping, WindowAnchor, WindowMetricsService,
     geometry::{Point, Px, Rect, Size},
 };
 use fret_runtime::{
@@ -16,7 +16,7 @@ use std::{
 
 use crate::{
     UiHost,
-    widget::{EventCx, LayoutCx, PaintCx, Widget},
+    widget::{EventCx, LayoutCx, PaintCx, SemanticsCx, Widget},
     widgets::{ContextMenuRequest, ContextMenuService},
 };
 
@@ -820,6 +820,10 @@ impl DockSpace {
 }
 
 impl<H: UiHost> Widget<H> for DockSpace {
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        cx.set_role(SemanticsRole::Panel);
+    }
+
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &fret_core::Event) {
         let theme = cx.theme().snapshot();
 

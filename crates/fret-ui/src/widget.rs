@@ -1,5 +1,7 @@
 use crate::{Theme, UiHost};
-use fret_core::{AppWindowId, Event, NodeId, Rect, Scene, Size, TextService};
+use fret_core::{
+    AppWindowId, Event, NodeId, Rect, Scene, SemanticsFlags, SemanticsRole, Size, TextService,
+};
 use fret_runtime::{CommandId, Effect, InputContext, Model, ModelId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -175,6 +177,36 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
     }
 }
 
+pub struct SemanticsCx<'a, H: UiHost> {
+    pub app: &'a mut H,
+    pub node: NodeId,
+    pub window: Option<AppWindowId>,
+    pub bounds: Rect,
+    pub children: &'a [NodeId],
+    pub focus: Option<NodeId>,
+    pub captured: Option<NodeId>,
+    pub(crate) role: &'a mut SemanticsRole,
+    pub(crate) flags: &'a mut SemanticsFlags,
+}
+
+impl<'a, H: UiHost> SemanticsCx<'a, H> {
+    pub fn set_role(&mut self, role: SemanticsRole) {
+        *self.role = role;
+    }
+
+    pub fn set_disabled(&mut self, disabled: bool) {
+        self.flags.disabled = disabled;
+    }
+
+    pub fn set_selected(&mut self, selected: bool) {
+        self.flags.selected = selected;
+    }
+
+    pub fn set_expanded(&mut self, expanded: bool) {
+        self.flags.expanded = expanded;
+    }
+}
+
 pub trait Widget<H: UiHost> {
     fn event(&mut self, _cx: &mut EventCx<'_, H>, _event: &Event) {}
     fn command(&mut self, _cx: &mut CommandCx<'_, H>, _command: &CommandId) -> bool {
@@ -190,4 +222,5 @@ pub trait Widget<H: UiHost> {
         Size::default()
     }
     fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    fn semantics(&mut self, _cx: &mut SemanticsCx<'_, H>) {}
 }

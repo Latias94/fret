@@ -1,6 +1,6 @@
 use crate::{
     UiHost,
-    widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget},
+    widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
 use fret_core::PlatformCapabilities;
 use fret_core::{
@@ -500,7 +500,7 @@ impl<H: UiHost> UiTree<H> {
             let _ = self.layout_in(app, text, root, bounds, scale_factor);
         }
 
-        self.refresh_semantics_snapshot();
+        self.refresh_semantics_snapshot(app);
 
         if let Some(started) = started {
             self.debug_stats.layout_time = started.elapsed();
@@ -1399,11 +1399,15 @@ impl<H: UiHost> UiTree<H> {
         (roots, barrier_root)
     }
 
-    fn refresh_semantics_snapshot(&mut self) {
+    fn refresh_semantics_snapshot(&mut self, app: &mut H) {
         let Some(window) = self.window else {
             self.semantics = None;
             return;
         };
+
+        let base_root = self
+            .base_layer
+            .and_then(|id| self.layers.get(id).map(|l| l.root));
 
         let visible_layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
         if visible_layers.is_empty() {
@@ -1446,26 +1450,60 @@ impl<H: UiHost> UiTree<H> {
                 if !visited.insert(id) {
                     continue;
                 }
-                let Some(node) = self.nodes.get(id) else {
-                    continue;
+                let (parent, bounds, children, is_text_input) = {
+                    let Some(node) = self.nodes.get(id) else {
+                        continue;
+                    };
+                    (
+                        node.parent,
+                        node.bounds,
+                        node.children.clone(),
+                        node.widget.as_ref().is_some_and(|w| w.is_text_input()),
+                    )
                 };
+
+                let mut role = if Some(id) == base_root {
+                    SemanticsRole::Window
+                } else {
+                    SemanticsRole::Generic
+                };
+                // Heuristic baseline: text-input widgets should surface as text fields even if
+                // they don't implement an explicit semantics hook yet.
+                if is_text_input {
+                    role = SemanticsRole::TextField;
+                }
+
+                let mut flags = fret_core::SemanticsFlags {
+                    focused: focus == Some(id),
+                    captured: captured == Some(id),
+                    ..fret_core::SemanticsFlags::default()
+                };
+
+                // Allow widgets to override semantics metadata.
+                if let Some(widget) = self.nodes.get_mut(id).and_then(|n| n.widget.as_mut()) {
+                    let mut cx = SemanticsCx {
+                        app,
+                        node: id,
+                        window: self.window,
+                        bounds,
+                        children: &children,
+                        focus,
+                        captured,
+                        role: &mut role,
+                        flags: &mut flags,
+                    };
+                    widget.semantics(&mut cx);
+                }
+
                 nodes.push(SemanticsNode {
                     id,
-                    parent: node.parent,
-                    role: if node.parent.is_none() {
-                        SemanticsRole::Window
-                    } else {
-                        SemanticsRole::Generic
-                    },
-                    bounds: node.bounds,
-                    flags: fret_core::SemanticsFlags {
-                        focused: focus == Some(id),
-                        captured: captured == Some(id),
-                        ..fret_core::SemanticsFlags::default()
-                    },
+                    parent,
+                    role,
+                    bounds,
+                    flags,
                 });
                 // Preserve a stable-ish order: visit children in declared order.
-                for &child in node.children.iter().rev() {
+                for &child in children.iter().rev() {
                     stack.push(child);
                 }
             }
@@ -1636,6 +1674,18 @@ mod tests {
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         assert_eq!(snap.roots.len(), 2);
         assert_eq!(snap.barrier_root, Some(overlay_root));
+        assert_eq!(
+            snap.nodes.iter().find(|n| n.id == base).unwrap().role,
+            SemanticsRole::Window
+        );
+        assert_ne!(
+            snap.nodes
+                .iter()
+                .find(|n| n.id == overlay_root)
+                .unwrap()
+                .role,
+            SemanticsRole::Window
+        );
         assert!(snap.nodes.iter().any(|n| n.id == base));
         assert!(snap.nodes.iter().any(|n| n.id == base_child));
         assert!(snap.nodes.iter().any(|n| n.id == overlay_root));

@@ -1,10 +1,10 @@
 use crate::{
     Theme, UiHost,
-    widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget},
+    widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp,
-    Size, TextConstraints, TextStyle, TextWrap,
+    SemanticsRole, Size, TextConstraints, TextStyle, TextWrap,
 };
 use fret_runtime::{CommandId, Effect, InputContext, Menu, MenuItem};
 use std::{borrow::Cow, collections::HashSet, hash::Hash, sync::Arc};
@@ -727,6 +727,10 @@ impl<D: VirtualListDataSource> VirtualList<D> {
 impl<H: UiHost, D: VirtualListDataSource> Widget<H> for VirtualList<D> {
     fn is_focusable(&self) -> bool {
         true
+    }
+
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        cx.set_role(SemanticsRole::List);
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {

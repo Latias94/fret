@@ -1,6 +1,6 @@
 use fret_core::{
     CaretAffinity, Color, Corners, DrawOrder, Edges, Event, ImeEvent, MouseButton, Px, Rect,
-    SceneOp, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
+    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 use fret_runtime::Effect;
 
@@ -506,6 +506,10 @@ impl<H: UiHost> Widget<H> for TextArea {
 
     fn is_text_input(&self) -> bool {
         true
+    }
+
+    fn semantics(&mut self, cx: &mut crate::widget::SemanticsCx<'_, H>) {
+        cx.set_role(SemanticsRole::TextField);
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
