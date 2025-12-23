@@ -77,6 +77,11 @@ Baseline approach:
 - measure/layout only visible items,
 - update the size cache for items that changed, and request another layout pass if needed.
 
+To avoid “jumping” when estimated sizes are replaced by measured sizes, the scroll model should preserve a
+stable **scroll anchor** (typically the first visible item + an in-item offset). When the size cache changes,
+adjust the scroll offset by the delta of the anchor item’s prefix sum so that the same content stays under the
+cursor/viewport.
+
 The caching key must include:
 
 - item stable key,

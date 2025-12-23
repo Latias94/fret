@@ -18,10 +18,13 @@ impl ImeProbe {
     }
 
     fn caret_rect(&self, bounds: Rect) -> Rect {
-        let x = (bounds.origin.x.0 + self.caret_x.0).clamp(
-            bounds.origin.x.0 + 8.0,
-            bounds.origin.x.0 + bounds.size.width.0 - 8.0,
-        );
+        let min_x = bounds.origin.x.0 + 8.0;
+        let max_x = bounds.origin.x.0 + bounds.size.width.0 - 8.0;
+        let x = if max_x >= min_x {
+            (bounds.origin.x.0 + self.caret_x.0).clamp(min_x, max_x)
+        } else {
+            min_x
+        };
         Rect::new(
             fret_core::Point::new(Px(x), bounds.origin.y + Px(18.0)),
             Size::new(Px(2.0), Px(18.0)),

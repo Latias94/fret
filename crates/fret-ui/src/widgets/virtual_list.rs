@@ -783,7 +783,6 @@ impl<D: VirtualListDataSource> VirtualList<D> {
                         self.heights_by_index[index] = h;
                         self.heights_tree.add(index, h.0 - prev.0);
                         self.last_content_height = self.heights_tree.total();
-                        self.clamp_offset();
                     }
                 }
                 h
@@ -835,6 +834,9 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         scale_factor: f32,
         width: Px,
     ) {
+        let anchor = self.capture_scroll_anchor();
+        let anchor_top = anchor.map(|(index, _)| self.row_top_offset(index));
+
         for row in self.prepared.drain(..) {
             text.release(row.blob);
         }
@@ -851,6 +853,11 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             self.prepare_row(text, scale_factor, width, i);
         }
         self.prepared.sort_by_key(|r| r.index);
+
+        if let Some(anchor) = anchor {
+            self.restore_scroll_anchor(anchor, anchor_top);
+            self.clamp_offset();
+        }
     }
 
     fn ensure_prepared(
@@ -859,6 +866,9 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         scale_factor: f32,
         width: Px,
     ) {
+        let anchor = self.capture_scroll_anchor();
+        let anchor_top = anchor.map(|(index, _)| self.row_top_offset(index));
+
         if self.prepared_dirty {
             self.prepared_dirty = false;
             self.rebuild_prepared_rows(text, scale_factor, width);
@@ -902,6 +912,11 @@ impl<D: VirtualListDataSource> VirtualList<D> {
 
         self.last_visible = visible;
         self.last_prepared_width = width;
+
+        if let Some(anchor) = anchor {
+            self.restore_scroll_anchor(anchor, anchor_top);
+            self.clamp_offset();
+        }
     }
 
     fn update_hover(&mut self, content: Rect, position: fret_core::Point) -> bool {
@@ -918,6 +933,52 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             return true;
         }
         false
+    }
+
+    fn capture_scroll_anchor(&self) -> Option<(usize, Px)> {
+        if !matches!(self.row_height, VirtualListRowHeight::Measured { .. }) {
+            return None;
+        }
+        if self.data.len() == 0 || self.heights_by_index.is_empty() {
+            return None;
+        }
+
+        let y = self.offset_y.0.max(0.0);
+        let mut index = self.heights_tree.lower_bound(y);
+        if index >= self.data.len() {
+            index = self.data.len().saturating_sub(1);
+        }
+        let top = self.row_top_offset(index).0;
+        let in_row = Px((y - top).max(0.0));
+        Some((index, in_row))
+    }
+
+    fn restore_scroll_anchor(&mut self, anchor: (usize, Px), old_top: Option<Px>) {
+        if !matches!(self.row_height, VirtualListRowHeight::Measured { .. }) {
+            return;
+        }
+
+        let (index, in_row) = anchor;
+        if index >= self.data.len() || self.heights_by_index.is_empty() {
+            return;
+        }
+
+        let new_top = self.row_top_offset(index);
+        if let Some(old_top) = old_top
+            && old_top == new_top
+        {
+            return;
+        }
+
+        let row_h = self.row_height_at(index).0.max(0.0);
+        let mut clamped_in_row = in_row.0.max(0.0);
+        if row_h > 0.0 {
+            clamped_in_row = clamped_in_row.min(row_h);
+        } else {
+            clamped_in_row = 0.0;
+        }
+
+        self.offset_y = Px(new_top.0 + clamped_in_row);
     }
 
     fn handle_keyboard_nav(&mut self, key: KeyCode, modifiers: Modifiers) -> bool {
@@ -1434,5 +1495,76 @@ mod tests {
 
         let hit = list.row_index_at(Point::new(Px(10.0), Px(6.0)));
         assert_eq!(hit, Some(1));
+    }
+
+    #[test]
+    fn measured_row_height_updates_preserve_scroll_anchor() {
+        let mut app = TestHost::new();
+        let mut text = FakeTextService::default();
+
+        let data = TestDataSource {
+            rows: vec![
+                "aaaaaaaaaa".to_string(), // height 10
+                "bbbbbbbbbb".to_string(), // height 10
+                "c".to_string(),          // height 1 (min wins -> 4)
+            ],
+        };
+
+        let style = VirtualListStyle {
+            padding_y: Px(0.0),
+            ..VirtualListStyle::default()
+        };
+
+        let mut list =
+            VirtualList::new(data).with_row_height(VirtualListRowHeight::Measured { min: Px(4.0) });
+        list = list.with_style(style);
+
+        // Scroll to the third row using the initial min heights (2 * 4px = 8px).
+        list.offset_y = Px(8.0);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(4.0)));
+
+        let mut observe_model = |_model, _inv| {};
+        let mut layout_child =
+            |_child: NodeId, _bounds: Rect| -> Size { panic!("virtual list has no children") };
+
+        let mut layout_cx = LayoutCx {
+            app: &mut app,
+            node: NodeId::default(),
+            window: Some(AppWindowId::default()),
+            focus: None,
+            children: &[],
+            bounds,
+            available: bounds.size,
+            scale_factor: 1.0,
+            text: &mut text,
+            observe_model: &mut observe_model,
+            layout_child: &mut layout_child,
+        };
+        let _ = list.layout(&mut layout_cx);
+
+        let mut scene = Scene::default();
+        let mut paint_child = |_child: NodeId, _bounds: Rect| {};
+        let child_bounds = |_child: NodeId| None;
+        let mut paint_cx = PaintCx {
+            app: &mut app,
+            node: NodeId::default(),
+            window: Some(AppWindowId::default()),
+            focus: None,
+            children: &[],
+            bounds,
+            scale_factor: 1.0,
+            text: &mut text,
+            observe_model: &mut observe_model,
+            scene: &mut scene,
+            paint_child: &mut paint_child,
+            child_bounds: &child_bounds,
+        };
+
+        // Overscan prepares and measures rows above the viewport, which changes their heights.
+        list.paint(&mut paint_cx);
+
+        // The top of row 2 becomes 10 + 10 = 20 after measurement; we should stay anchored.
+        assert_eq!(list.offset_y, Px(20.0));
     }
 }
