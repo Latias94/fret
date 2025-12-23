@@ -4,6 +4,104 @@ use std::{collections::HashMap, sync::OnceLock};
 
 use crate::UiHost;
 
+fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
+    HashMap::from([
+        (
+            "color.surface.background".to_string(),
+            colors.surface_background,
+        ),
+        (
+            "color.panel.background".to_string(),
+            colors.panel_background,
+        ),
+        ("color.panel.border".to_string(), colors.panel_border),
+        ("color.text.primary".to_string(), colors.text_primary),
+        ("color.text.muted".to_string(), colors.text_muted),
+        ("color.text.disabled".to_string(), colors.text_disabled),
+        ("color.accent".to_string(), colors.accent),
+        (
+            "color.selection.background".to_string(),
+            colors.selection_background,
+        ),
+        (
+            "color.hover.background".to_string(),
+            colors.hover_background,
+        ),
+        ("color.focus.ring".to_string(), colors.focus_ring),
+        ("color.menu.background".to_string(), colors.menu_background),
+        ("color.menu.border".to_string(), colors.menu_border),
+        ("color.menu.item.hover".to_string(), colors.menu_item_hover),
+        (
+            "color.menu.item.selected".to_string(),
+            colors.menu_item_selected,
+        ),
+        ("color.list.background".to_string(), colors.list_background),
+        ("color.list.border".to_string(), colors.list_border),
+        ("color.list.row.hover".to_string(), colors.list_row_hover),
+        (
+            "color.list.row.selected".to_string(),
+            colors.list_row_selected,
+        ),
+        ("color.scrollbar.track".to_string(), colors.scrollbar_track),
+        ("color.scrollbar.thumb".to_string(), colors.scrollbar_thumb),
+        (
+            "color.scrollbar.thumb.hover".to_string(),
+            colors.scrollbar_thumb_hover,
+        ),
+        (
+            "color.viewport.selection.fill".to_string(),
+            colors.viewport_selection_fill,
+        ),
+        (
+            "color.viewport.selection.stroke".to_string(),
+            colors.viewport_selection_stroke,
+        ),
+        ("color.viewport.marker".to_string(), colors.viewport_marker),
+        (
+            "color.viewport.drag_line.pan".to_string(),
+            colors.viewport_drag_line_pan,
+        ),
+        (
+            "color.viewport.drag_line.orbit".to_string(),
+            colors.viewport_drag_line_orbit,
+        ),
+        (
+            "color.viewport.gizmo.x".to_string(),
+            colors.viewport_gizmo_x,
+        ),
+        (
+            "color.viewport.gizmo.y".to_string(),
+            colors.viewport_gizmo_y,
+        ),
+        (
+            "color.viewport.gizmo.handle.background".to_string(),
+            colors.viewport_gizmo_handle_background,
+        ),
+        (
+            "color.viewport.gizmo.handle.border".to_string(),
+            colors.viewport_gizmo_handle_border,
+        ),
+        (
+            "color.viewport.rotate_gizmo".to_string(),
+            colors.viewport_rotate_gizmo,
+        ),
+    ])
+}
+
+fn default_metric_tokens(metrics: ThemeMetrics) -> HashMap<String, Px> {
+    HashMap::from([
+        ("metric.radius.sm".to_string(), metrics.radius_sm),
+        ("metric.radius.md".to_string(), metrics.radius_md),
+        ("metric.radius.lg".to_string(), metrics.radius_lg),
+        ("metric.padding.sm".to_string(), metrics.padding_sm),
+        ("metric.padding.md".to_string(), metrics.padding_md),
+        (
+            "metric.scrollbar.width".to_string(),
+            metrics.scrollbar_width,
+        ),
+    ])
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ThemeConfig {
@@ -97,12 +195,22 @@ pub struct Theme {
     pub url: Option<String>,
     pub colors: ThemeColors,
     pub metrics: ThemeMetrics,
+    extra_colors: HashMap<String, Color>,
+    extra_metrics: HashMap<String, Px>,
     revision: u64,
 }
 
 impl Theme {
     pub fn revision(&self) -> u64 {
         self.revision
+    }
+
+    pub fn color_by_key(&self, key: &str) -> Option<Color> {
+        self.extra_colors.get(key).copied()
+    }
+
+    pub fn metric_by_key(&self, key: &str) -> Option<Px> {
+        self.extra_metrics.get(key).copied()
     }
 
     pub fn snapshot(&self) -> ThemeSnapshot {
@@ -135,10 +243,14 @@ impl Theme {
 
         let mut changed = false;
 
+        let mut next_colors = default_color_tokens(self.colors);
+        let mut next_metrics = default_metric_tokens(self.metrics);
+
         macro_rules! apply_color {
             ($key:literal, $field:expr) => {
                 if let Some(v) = cfg.colors.get($key) {
                     if let Some(c) = parse_hex_srgb_to_linear(v) {
+                        next_colors.insert($key.to_string(), c);
                         if $field != c {
                             $field = c;
                             changed = true;
@@ -152,6 +264,7 @@ impl Theme {
             ($key:literal, $field:expr) => {
                 if let Some(v) = cfg.metrics.get($key).copied() {
                     let px = Px(v);
+                    next_metrics.insert($key.to_string(), px);
                     if $field != px {
                         $field = px;
                         changed = true;
@@ -232,6 +345,31 @@ impl Theme {
         apply_metric!("metric.padding.md", self.metrics.padding_md);
         apply_metric!("metric.scrollbar.width", self.metrics.scrollbar_width);
 
+        for (k, v) in &cfg.colors {
+            if next_colors.contains_key(k) {
+                continue;
+            }
+            if let Some(c) = parse_hex_srgb_to_linear(v) {
+                next_colors.insert(k.clone(), c);
+            }
+        }
+
+        for (k, v) in &cfg.metrics {
+            if next_metrics.contains_key(k) {
+                continue;
+            }
+            next_metrics.insert(k.clone(), Px(*v));
+        }
+
+        if self.extra_colors != next_colors {
+            self.extra_colors = next_colors;
+            changed = true;
+        }
+        if self.extra_metrics != next_metrics {
+            self.extra_metrics = next_metrics;
+            changed = true;
+        }
+
         if changed {
             self.revision = self.revision.saturating_add(1);
         }
@@ -240,20 +378,16 @@ impl Theme {
 
 fn default_theme() -> &'static Theme {
     static DEFAULT: OnceLock<Theme> = OnceLock::new();
-    DEFAULT.get_or_init(|| Theme {
-        name: "Fret Default (Dark)".to_string(),
-        author: Some("Fret".to_string()),
-        url: None,
-        revision: 1,
-        metrics: ThemeMetrics {
+    DEFAULT.get_or_init(|| {
+        let metrics = ThemeMetrics {
             radius_sm: Px(6.0),
             radius_md: Px(8.0),
             radius_lg: Px(10.0),
             padding_sm: Px(8.0),
             padding_md: Px(10.0),
             scrollbar_width: Px(10.0),
-        },
-        colors: ThemeColors {
+        };
+        let colors = ThemeColors {
             surface_background: parse_hex_srgb_to_linear("#24272E").unwrap(),
             panel_background: parse_hex_srgb_to_linear("#2B3038").unwrap(),
             panel_border: parse_hex_srgb_to_linear("#3A424D").unwrap(),
@@ -286,7 +420,18 @@ fn default_theme() -> &'static Theme {
             viewport_gizmo_handle_background: parse_hex_srgb_to_linear("#1E2229FF").unwrap(),
             viewport_gizmo_handle_border: parse_hex_srgb_to_linear("#D7DEE9FF").unwrap(),
             viewport_rotate_gizmo: parse_hex_srgb_to_linear("#FFC44AFF").unwrap(),
-        },
+        };
+
+        Theme {
+            name: "Fret Default (Dark)".to_string(),
+            author: Some("Fret".to_string()),
+            url: None,
+            revision: 1,
+            metrics,
+            colors,
+            extra_colors: default_color_tokens(colors),
+            extra_metrics: default_metric_tokens(metrics),
+        }
     })
 }
 

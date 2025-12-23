@@ -81,6 +81,21 @@ Current policy:
 - Treat these `Accepted` ADRs as “hard contracts”.
 - If a new hard-to-change design decision appears during implementation, add a new ADR as `Status: Proposed`,
   review it, then promote to `Accepted` before expanding surface area.
+- Prefer **updating** an existing ADR section over creating many micro-ADRs (keep the index usable).
+
+When to write (or significantly update) an ADR:
+
+- Cross-crate boundaries or dependency direction (`fret-core`/`fret-ui`/runner/platform/render).
+- Long-lived file formats (layout/theme/keymap/project/scene) or their versioning/migration rules.
+- Input/focus/capture/command routing semantics or window/app scope rules.
+- Display list / renderer semantics (`SceneOp` meaning, ordering, blending, clipping, AA, pixels).
+- Portability contracts (wasm/WebGPU capability gaps, payload shapes, “no PathBuf” style constraints).
+- Caching/invalidation semantics that affect correctness, determinism, or replay/recording behavior.
+
+MVP guidance:
+
+- Each MVP item in `docs/mvp.md` should link to the ADRs that define its non-negotiable contracts.
+- If a prototype reveals an incorrect assumption, update the ADR first, then adjust the implementation.
 
 ## Example Editor App Notes (Out of Scope for Fret Framework)
 
@@ -143,11 +158,16 @@ validate that the framework contracts are sufficient.
 - P1: Layout contract: `layout_in(child, rect)` stores child bounds for hit-test/paint. (prototype implemented)
 - P1: Optional `Flex`/`Grid` widget backed by `taffy` (defer until needed; no `UiTree` refactor).
 - P0: Virtualization contract for editor-scale lists/tables/editors (no unbounded children in layout engines). (ADR 0042) (prototype implemented: `fret-ui` `VirtualList`)
-- P1: Theme/tokens (typed tokens; theme content app-owned) (ADR 0032).
-- P1: Spin up `fret-components` repo workspace and establish the “editor kit” structure (ADR 0037):
-  - `fret-components-ui` (shadcn-inspired primitives/composites),
-  - `fret-components-tree`, `fret-components-inspector`, `fret-components-table`,
-  - (optional early) `fret-components-charts`.
+- P1: Theme/tokens (typed core tokens + extensible namespaced keys for component ecosystems) (ADR 0032 / ADR 0050). (prototype implemented)
+- P1: Spin up `fret-components` repo workspace and establish a **general-purpose** component library baseline (ADR 0037):
+  - `fret-components-ui` (token-driven primitives/composites; shadcn-inspired; not editor-specific),
+  - `fret-components-icons` (icon registry + sets; atlas-friendly; renderer-agnostic),
+  - optional later: `fret-components-editor` (editor-only patterns: inspector/table/tree wrappers).
+
+Notes:
+
+- Prefer “Tailwind-like primitives” as an internal authoring model: small typed tokens + recipe/variant composition (not CSS strings).
+- `repo-ref/fret-ui-precision` is the design reference for token taxonomy and component recipes; `repo-ref/gpui-component` is the Rust ecosystem reference for themes + component ergonomics.
 
 ### M3 — Display List Contract + Renderer MVP
 

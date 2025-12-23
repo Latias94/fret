@@ -60,6 +60,27 @@ Component library patterns (primitives + themes + examples):
 - High-level overview and positioning:
   - `repo-ref/gpui-component/README.md`
 
+## `fret-ui-precision` (UI design reference: Tailwind-like tokens + recipes)
+
+This is a pinned **design sandbox** (React + Tailwind) used to validate editor UI composition and theming before
+committing to framework-level contracts.
+
+What to borrow (conceptually):
+
+- A 2-axis token model:
+  - *Theme colors* (surface/text/semantic colors),
+  - *UI style* tokens (spacing/radius/shadows/motion knobs).
+- “Recipes” (utility compositions) for consistent component chrome (buttons, inspector rows, panels, tabs).
+
+Where to look:
+
+- Theming + tokens architecture notes:
+  - `repo-ref/fret-ui-precision/docs/`
+- Tailwind token mapping:
+  - `repo-ref/fret-ui-precision/tailwind.config.ts`
+- Token usage and component recipes:
+  - `repo-ref/fret-ui-precision/src/index.css`
+
 ## Godot (Editor docking + viewports + frame counters)
 
 Useful for editor workflow and persistence patterns:
@@ -111,3 +132,20 @@ These are not “pinned code”, but they are useful high-level references when 
 - https://zed.dev/blog/gpui-ownership (app-owned models and borrow-friendly updates)
 
 When citing behavior from these posts in ADRs, include the URL and the date you accessed it.
+
+## Makepad (Portability posture + redraw/caching vocabulary)
+
+Useful as a reference posture for wasm/mobile portability and redraw/caching vocabulary (do not copy APIs):
+
+- Web entrypoint message pump:
+  - `repo-ref/makepad/platform/src/os/web/web.rs`
+- Incremental redraw / drawlist rebuild skipping:
+  - `repo-ref/makepad/draw/src/draw_list_2d.rs` (search `begin_maybe`)
+- “Computed tokens” theme approach (inspiration for future derived tokens; not required for P0):
+  - `repo-ref/makepad/widgets/src/theme_desktop_dark.rs`
+
+## Vello (Rendering pipeline layering vocabulary)
+
+Useful as a vocabulary reference for “recording” separation, caching, and testability (not a drop-in backend):
+
+- `repo-ref/vello/doc/ARCHITECTURE.md`

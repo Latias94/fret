@@ -162,3 +162,20 @@ For `fret-components`:
 Current status:
 
 - Implemented in this workspace as `crates/fret-runner-winit-wgpu`.
+
+## Clarification (2025): General-purpose UI first, editor kit is layered
+
+Although Fret’s motivating use case is an editor, the component ecosystem should remain **general-purpose by default**:
+
+- `fret-components-ui` should target application UIs (forms, navigation, dialogs, lists) and avoid engine/editor domain concepts.
+- Editor-only patterns (inspector, hierarchy, scene graph affordances) should live in separate crates (e.g. `fret-components-editor`) or in the app.
+
+Component styling guidance:
+
+- Prefer a “Tailwind-like” internal authoring model: small typed tokens + recipe/variant composition, not CSS selector strings.
+- Namespaced theme keys (ADR 0050 §5.1) are the extensibility escape hatch for component libraries and plugins.
+
+Reference posture:
+
+- `repo-ref/gpui-component` for Rust component ergonomics + theme schema patterns.
+- `repo-ref/fret-ui-precision` for token taxonomy and “recipe” composition vocabulary (as a design reference, not an API dependency).

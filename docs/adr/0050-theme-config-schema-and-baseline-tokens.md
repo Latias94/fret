@@ -147,6 +147,18 @@ considered part of the contract.
 The theme service must expose a monotonic `theme_revision` that changes when theme values change.
 Widgets may cache resolved styles keyed by `theme_revision`.
 
+### 5.1) Extension tokens (namespaced dotted keys)
+
+In addition to the baseline typed tokens above, the theme system stores **all parsed theme entries**
+in a key/value map so that component libraries can consume namespaced tokens without changing `fret-ui`.
+
+- Unknown keys are allowed and preserved (e.g. `component.button.*`, `engine.node_graph.*`).
+- Components may query by string key (best effort) and fall back when missing.
+- Extensions must be namespaced to avoid collisions.
+
+This aligns with the “typed API for core + string keys for extensibility” model used by editor-grade
+frameworks and keeps `fret-ui` reusable for third-party component ecosystems.
+
 ### 6) Boundary: theme vs renderer/viewport clear
 
 The theme system is responsible for **UI chrome** (panels, lists, menus, text inputs) and should

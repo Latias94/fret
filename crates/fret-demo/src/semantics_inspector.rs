@@ -266,7 +266,8 @@ impl SemanticsPanel {
             return;
         }
         self.last_revision = Some(entry.revision);
-        self.list.set_data(SemanticsListDataSource::from_entry(entry));
+        self.list
+            .set_data(SemanticsListDataSource::from_entry(entry));
     }
 }
 

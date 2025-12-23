@@ -4,6 +4,14 @@ This document is the **current execution plan** that complements `docs/roadmap.m
 
 Completed stage definitions are archived in `docs/mvp-archive.md` to keep this file actionable.
 
+## ADR Policy (How MVP Work Locks Contracts)
+
+MVP work is allowed to prototype quickly, but changes that affect “hard-to-change” semantics must be recorded in ADRs.
+
+- MVP items should link to the ADRs that define their contracts (input/focus, display list semantics, portability, persistence).
+- If an MVP uncovers a wrong assumption, update the ADR before broadening usage (more widgets, more panels, more apps).
+- Prefer updating an existing ADR over creating many micro-ADRs; new ADRs are for new contract surfaces.
+
 ## Current Workspace Status
 
 - MVP 0–6: done (see `docs/mvp-archive.md`)
@@ -14,6 +22,7 @@ Completed stage definitions are archived in `docs/mvp-archive.md` to keep this f
 - Editor-scale list widgets: prototype implemented
   - `VirtualList` (virtualization + stable keys + multi-selection) (ADR 0042 / ADR 0047)
   - `TreeView` (hierarchy-style tree over `VirtualList`)
+- Theme tokens: baseline typed tokens + extensible namespaced keys for component ecosystems (ADR 0032 / ADR 0050). (prototype implemented)
 - MVP 12: MVP done in demo (context menu overlay + submenu + keyboard nav + focus restore)
 - MVP 13: MVP done in demo (Hierarchy selection model → Inspector panel; selection invalidation keeps Inspector in sync)
 - MVP 14: MVP done in demo (primitive inspector editing baseline)
@@ -989,6 +998,49 @@ Status:
 References:
 
 - `docs/adr/0052-ui-host-runtime-boundary.md`
+
+## MVP 45 — Component Primitives P0 (Token-Driven Recipes + Variants)
+
+Goal: establish a **general-purpose** component library baseline (GPUI-component-like) that is:
+
+- token-driven (ADR 0032 / ADR 0050),
+- ergonomic for applications (not editor-only),
+- extensible via namespaced theme keys and component variants.
+
+**Scope**
+
+- Define a minimal “primitives + recipes” set suitable for building real apps:
+  - `Button`, `IconButton`, `Checkbox`, `TextField`, `Select` (subset is fine),
+  - `Tabs` + `Toolbar` baseline (enough to replace ad-hoc chrome in the demo).
+- Establish a consistent variants model (typed):
+  - `size` (`sm/md/lg`), `intent` (`default/primary/danger`), `state` (hover/active/disabled).
+- Drive visuals exclusively from theme tokens:
+  - baseline tokens in `fret-ui`,
+  - component-specific tokens via namespaced dotted keys (e.g. `component.button.*`).
+- Validate with a small demo surface that uses the new primitives to ensure the API composes.
+
+**Non-goals**
+
+- CSS-like selector strings or a runtime “utility class” parser.
+- Advanced effects (blur/glow/shadow) unless a renderer semantics ADR lands first.
+
+**Definition of Done**
+
+- A minimal component crate exists (likely in a separate `fret-components` repo; can be incubated locally first).
+- The demo replaces at least one ad-hoc UI region with these primitives without losing behavior.
+- Theme customization works by editing `theme.json` (no code changes needed for simple recolors/spacing tweaks).
+
+Status:
+
+- Planned.
+
+References:
+
+- `docs/adr/0037-workspace-boundaries-and-components-repository.md`
+- `docs/adr/0032-style-tokens-and-theme-resolution.md`
+- `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
+- `repo-ref/gpui-component/crates/ui`
+- `repo-ref/fret-ui-precision/docs/`
 
 ## Parking Lot (Explicitly Deferred)
 
