@@ -28,6 +28,7 @@ pub use row::Row;
 pub use scroll::Scroll;
 pub use split::Split;
 pub use stack::Stack;
+pub use text::TextInputStyle;
 pub use text::{BoundTextInput, Text, TextInput};
 pub use text_area::{TextArea, TextAreaStyle};
 pub use toolbar::{Toolbar, ToolbarItem};

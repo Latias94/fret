@@ -42,9 +42,15 @@ use fret_app::{
     Keymap, KeymapFileV1, KeymapService, Model, WhenExpr, WindowRequest,
     keymap::{BindingV1, KeySpecV1},
 };
+use fret_components_ui::{
+    StyleRefinement,
+    button::{Button, ButtonIntent, ButtonSize, ButtonVariant},
+    frame::Frame,
+    text_field::TextField,
+};
 use fret_core::{
     Axis, Color, DockLayoutNodeV1, DockLayoutV1, DockNode, DockOp, DropZone, PanelKey,
-    PlatformCapabilities, Rect, RenderTargetId, Scene, WindowAnchor,
+    PlatformCapabilities, Px, Rect, RenderTargetId, Scene, WindowAnchor,
 };
 use fret_editor::{
     InspectorEditKind, InspectorEditService, MarqueeSelectInteraction, PanOrbitInteraction,
@@ -1313,6 +1319,7 @@ impl DemoDriver {
                     PanelKey::new("core.inspector"),
                     PanelKey::new("core.text_probe"),
                     PanelKey::new("core.semantics"),
+                    PanelKey::new("core.ui_kit"),
                 ],
             )
             .with_fractions(0.26, 0.72);
@@ -3344,6 +3351,15 @@ impl WinitDriver for DemoDriver {
                 viewport: None,
             },
         );
+        let key_ui_kit = PanelKey::new("core.ui_kit");
+        dock.insert_panel(
+            key_ui_kit.clone(),
+            DockPanel {
+                title: "UI Kit".to_string(),
+                color: theme.colors.panel_background,
+                viewport: None,
+            },
+        );
 
         if let Some(layout) = Self::load_layout_file() {
             let missing_color = Color {
@@ -3613,6 +3629,7 @@ impl WinitDriver for DemoDriver {
         let key_game = PanelKey::new("core.game");
         let key_text_probe = PanelKey::new("core.text_probe");
         let key_semantics = PanelKey::new("core.semantics");
+        let key_ui_kit = PanelKey::new("core.ui_kit");
 
         let hierarchy_node = ui.create_node(HierarchyPanel::new(selection, hierarchy, undo));
         let project_node = ui.create_node(ProjectPanel::new());
@@ -3625,6 +3642,56 @@ impl WinitDriver for DemoDriver {
         ));
         let text_probe_node = ui.create_node(TextProbePanel::new(TEXT_PROBE_DEFAULT));
         let semantics_node = ui.create_node(SemanticsPanel::new());
+
+        // MVP45 probe: token-driven, shadcn-style primitives (domain-agnostic).
+        let ui_kit_text = app.models_mut().insert("Hello, components.".to_string());
+        let ui_kit_root = ui.create_node(fret_ui_app::Column::new().with_spacing(Px(10.0)));
+
+        let ui_kit_buttons_frame = ui.create_node(Frame::new(
+            StyleRefinement::default()
+                .rounded_md()
+                .border_1()
+                .px_3()
+                .py_1(),
+        ));
+        let ui_kit_buttons = ui.create_node(fret_ui_app::Row::new().with_spacing(Px(10.0)));
+        let ui_kit_primary = ui.create_node(
+            Button::new("Primary")
+                .intent(ButtonIntent::Primary)
+                .size(ButtonSize::Md),
+        );
+        let ui_kit_default = ui.create_node(
+            Button::new("Default")
+                .variant(ButtonVariant::Default)
+                .size(ButtonSize::Md),
+        );
+        let ui_kit_ghost = ui.create_node(
+            Button::new("Ghost")
+                .variant(ButtonVariant::Ghost)
+                .size(ButtonSize::Md),
+        );
+        let ui_kit_disabled = ui.create_node(
+            Button::new("Disabled")
+                .disabled(true)
+                .variant(ButtonVariant::Default),
+        );
+        ui.add_child(ui_kit_buttons, ui_kit_primary);
+        ui.add_child(ui_kit_buttons, ui_kit_default);
+        ui.add_child(ui_kit_buttons, ui_kit_ghost);
+        ui.add_child(ui_kit_buttons, ui_kit_disabled);
+        ui.add_child(ui_kit_buttons_frame, ui_kit_buttons);
+
+        ui.add_child(ui_kit_root, ui_kit_buttons_frame);
+        let ui_kit_text_field = ui.create_node(
+            TextField::new(ui_kit_text).refine_style(
+                StyleRefinement::default()
+                    .rounded_md()
+                    .border_1()
+                    .px_3()
+                    .py_1(),
+            ),
+        );
+        ui.add_child(ui_kit_root, ui_kit_text_field);
         ui.add_child(layers.dockspace_node, hierarchy_node);
         ui.add_child(layers.dockspace_node, project_node);
         ui.add_child(layers.dockspace_node, inspector_node);
@@ -3632,6 +3699,7 @@ impl WinitDriver for DemoDriver {
         ui.add_child(layers.dockspace_node, game_drop_node);
         ui.add_child(layers.dockspace_node, text_probe_node);
         ui.add_child(layers.dockspace_node, semantics_node);
+        ui.add_child(layers.dockspace_node, ui_kit_root);
 
         app.with_global_mut(DockPanelContentService::default, |s, _app| {
             s.set(window, key_hierarchy, hierarchy_node);
@@ -3641,6 +3709,7 @@ impl WinitDriver for DemoDriver {
             s.set(window, key_game, game_drop_node);
             s.set(window, key_text_probe, text_probe_node);
             s.set(window, key_semantics, semantics_node);
+            s.set(window, key_ui_kit, ui_kit_root);
         });
         Self::WindowState {
             ui,

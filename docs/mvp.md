@@ -1026,13 +1026,15 @@ Goal: establish a **general-purpose** component library baseline (GPUI-component
 
 **Definition of Done**
 
-- A minimal component crate exists (likely in a separate `fret-components` repo; can be incubated locally first).
+- A minimal component crate exists (may be incubated in-tree first, then extracted to a separate `fret-components` repo).
 - The demo replaces at least one ad-hoc UI region with these primitives without losing behavior.
 - Theme customization works by editing `theme.json` (no code changes needed for simple recolors/spacing tweaks).
 
 Status:
 
-- Planned.
+- Prototype implemented (incubated in this repo):
+  - `crates/fret-components-ui`: token-driven components + Tailwind-like typed style refinements.
+  - `fret-demo`: adds a `UI Kit` panel (`PanelKey` `core.ui_kit`) to validate composition and theme-driven styling.
 
 References:
 

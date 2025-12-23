@@ -687,6 +687,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-components-ui"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+ "tracing",
+]
+
+[[package]]
 name = "fret-core"
 version = "0.1.0"
 dependencies = [
@@ -701,6 +711,7 @@ dependencies = [
  "anyhow",
  "bytemuck",
  "fret-app",
+ "fret-components-ui",
  "fret-core",
  "fret-editor",
  "fret-render",

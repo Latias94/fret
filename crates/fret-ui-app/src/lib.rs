@@ -16,10 +16,10 @@ pub use fret_ui::{
     ContextMenuService, ContextMenuStyle, DockManager, DockPanel, DockPanelContentService,
     DockSpace, FixedPanel, GlobalElementId, HeaderBody, Invalidation, PaintCachePolicy,
     PanelThemeBackground, Row, Scroll, Split, Stack, Text, TextArea, TextAreaStyle, TextInput,
-    Theme, ThemeConfig, ThemeSnapshot, Toolbar, ToolbarItem, TreeNode, TreeView, TreeViewStyle,
-    UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiHost, UiLayerId, VecStringDataSource,
-    ViewportPanel, VirtualList, VirtualListDataSource, VirtualListRow, VirtualListRowHeight,
-    VirtualListStyle,
+    TextInputStyle, Theme, ThemeConfig, ThemeSnapshot, Toolbar, ToolbarItem, TreeNode, TreeView,
+    TreeViewStyle, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiHost, UiLayerId,
+    VecStringDataSource, ViewportPanel, VirtualList, VirtualListDataSource, VirtualListRow,
+    VirtualListRowHeight, VirtualListStyle,
 };
 
 pub use fret_ui::{

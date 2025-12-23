@@ -168,6 +168,7 @@ Notes:
 
 - Prefer “Tailwind-like primitives” as an internal authoring model: small typed tokens + recipe/variant composition (not CSS strings).
 - `repo-ref/fret-ui-precision` is the design reference for token taxonomy and component recipes; `repo-ref/gpui-component` is the Rust ecosystem reference for themes + component ergonomics.
+- `repo-ref/ui` (shadcn/ui) and `repo-ref/tailwindcss` provide upstream vocabulary for component variants and token scales.
 
 ### M3 — Display List Contract + Renderer MVP
 

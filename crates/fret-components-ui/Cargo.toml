@@ -1,0 +1,11 @@
+[package]
+name = "fret-components-ui"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fret-core = { path = "../fret-core" }
+fret-runtime = { path = "../fret-runtime" }
+fret-ui = { path = "../fret-ui" }
+tracing.workspace = true
+

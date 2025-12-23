@@ -162,6 +162,8 @@ For `fret-components`:
 Current status:
 
 - Implemented in this workspace as `crates/fret-runner-winit-wgpu`.
+- MVP45 incubation: `crates/fret-components-ui` exists in-tree to validate the component API and token wiring before
+  extracting to a separate `fret-components` repository.
 
 ## Clarification (2025): General-purpose UI first, editor kit is layered
 

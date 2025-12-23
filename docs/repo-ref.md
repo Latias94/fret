@@ -29,6 +29,8 @@ As a baseline, this workspace currently has:
 - `repo-ref/gpui-component`: `5bb53ef9ff2b`
 - `repo-ref/godot`: `1ea6b0ccff99`
 - `repo-ref/dear-imgui-rs`: `a3261f5ed219`
+- `repo-ref/ui` (shadcn/ui): `ccafdaf7c6f6`
+- `repo-ref/tailwindcss`: `1628713453e6`
 
 ## GPUI / Zed (Rendering, Elements, Text, Scene)
 
@@ -80,6 +82,31 @@ Where to look:
   - `repo-ref/fret-ui-precision/tailwind.config.ts`
 - Token usage and component recipes:
   - `repo-ref/fret-ui-precision/src/index.css`
+
+## shadcn/ui (Component recipes + variants vocabulary)
+
+This is the upstream reference for shadcn component structure, variants, and interaction affordances.
+We do **not** copy the React implementation, but we do borrow:
+
+- component decomposition (primitives vs composites),
+- variants vocabulary (`variant`/`size`/`intent`),
+- UX details (focus ring, disabled states, loading patterns).
+
+Where to look:
+
+- Component recipes live in the v4 registry sources:
+  - `repo-ref/ui/apps/v4/registry/` (e.g. `*/ui/button.tsx`, `*/ui/input.tsx`, `*/ui/popover.tsx`)
+
+## TailwindCSS (Token scales + naming conventions)
+
+This is the upstream reference for token scales and naming conventions (spacing, radii, typography, colors).
+Fret will not implement Tailwind’s runtime/class parser; instead, we use the vocabulary to define typed tokens and
+compose component “recipes” (see MVP 45).
+
+Where to look:
+
+- `repo-ref/tailwindcss/packages/`
+- `repo-ref/tailwindcss/crates/` (for how Tailwind models tokens/scales internally)
 
 ## Godot (Editor docking + viewports + frame counters)
 
