@@ -4,8 +4,8 @@ use crate::{
 };
 use fret_core::PlatformCapabilities;
 use fret_core::{
-    AppWindowId, Event, FrameId, KeyCode, NodeId, Point, PointerEvent, Rect, Scene, Size,
-    TextService,
+    AppWindowId, Event, FrameId, KeyCode, NodeId, Point, PointerEvent, Rect, Scene, SemanticsNode,
+    SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, TextService,
 };
 use fret_runtime::{
     CommandId, DragKind, Effect, InputContext, KeyChord, KeymapService, ModelId, Platform,
@@ -210,6 +210,8 @@ pub struct UiTree<H: UiHost> {
 
     debug_enabled: bool,
     debug_stats: UiDebugFrameStats,
+
+    semantics: Option<SemanticsSnapshot>,
 }
 
 impl<H: UiHost> Default for UiTree<H> {
@@ -231,6 +233,7 @@ impl<H: UiHost> Default for UiTree<H> {
             observed_in_paint: ObservationIndex::default(),
             debug_enabled: false,
             debug_stats: UiDebugFrameStats::default(),
+            semantics: None,
         }
     }
 }
@@ -246,6 +249,10 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn debug_stats(&self) -> UiDebugFrameStats {
         self.debug_stats
+    }
+
+    pub fn semantics_snapshot(&self) -> Option<&SemanticsSnapshot> {
+        self.semantics.as_ref()
     }
 
     pub fn captured(&self) -> Option<NodeId> {
@@ -492,6 +499,8 @@ impl<H: UiHost> UiTree<H> {
         for root in roots {
             let _ = self.layout_in(app, text, root, bounds, scale_factor);
         }
+
+        self.refresh_semantics_snapshot();
 
         if let Some(started) = started {
             self.debug_stats.layout_time = started.elapsed();
@@ -1390,6 +1399,88 @@ impl<H: UiHost> UiTree<H> {
         (roots, barrier_root)
     }
 
+    fn refresh_semantics_snapshot(&mut self) {
+        let Some(window) = self.window else {
+            self.semantics = None;
+            return;
+        };
+
+        let visible_layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+        if visible_layers.is_empty() {
+            self.semantics = Some(SemanticsSnapshot {
+                window,
+                ..SemanticsSnapshot::default()
+            });
+            return;
+        }
+
+        let mut barrier_index: Option<usize> = None;
+        for (idx, layer) in visible_layers.iter().enumerate() {
+            if self.layers[*layer].blocks_underlay_input {
+                barrier_index = Some(idx);
+            }
+        }
+        let barrier_root = barrier_index.map(|idx| self.layers[visible_layers[idx]].root);
+
+        let mut roots: Vec<SemanticsRoot> = Vec::with_capacity(visible_layers.len());
+        for (z, layer_id) in visible_layers.iter().enumerate() {
+            let layer = &self.layers[*layer_id];
+            roots.push(SemanticsRoot {
+                root: layer.root,
+                visible: layer.visible,
+                blocks_underlay_input: layer.blocks_underlay_input,
+                hit_testable: layer.hit_testable,
+                z_index: z as u32,
+            });
+        }
+
+        let focus = self.focus;
+        let captured = self.captured;
+
+        let mut nodes: Vec<SemanticsNode> = Vec::new();
+        let mut visited: std::collections::HashSet<NodeId> = std::collections::HashSet::new();
+
+        for root in roots.iter().map(|r| r.root) {
+            let mut stack: Vec<NodeId> = vec![root];
+            while let Some(id) = stack.pop() {
+                if !visited.insert(id) {
+                    continue;
+                }
+                let Some(node) = self.nodes.get(id) else {
+                    continue;
+                };
+                nodes.push(SemanticsNode {
+                    id,
+                    parent: node.parent,
+                    role: if node.parent.is_none() {
+                        SemanticsRole::Window
+                    } else {
+                        SemanticsRole::Generic
+                    },
+                    bounds: node.bounds,
+                    flags: fret_core::SemanticsFlags {
+                        focused: focus == Some(id),
+                        captured: captured == Some(id),
+                        ..fret_core::SemanticsFlags::default()
+                    },
+                });
+                // Preserve a stable-ish order: visit children in declared order.
+                for &child in node.children.iter().rev() {
+                    stack.push(child);
+                }
+            }
+        }
+
+        self.semantics = Some(SemanticsSnapshot {
+            window,
+            roots,
+            barrier_root,
+            focus,
+            captured,
+            nodes,
+        });
+    }
+
     fn node_in_any_layer(&self, node: NodeId, layer_roots: &[NodeId]) -> bool {
         let Some(node_root) = self.node_root(node) else {
             return false;
@@ -1518,5 +1609,35 @@ mod tests {
         let n = ui.nodes.get(node).unwrap();
         assert!(n.invalidation.layout);
         assert!(n.invalidation.paint);
+    }
+
+    #[test]
+    fn semantics_snapshot_includes_visible_roots_and_barrier() {
+        let mut app = crate::test_host::TestHost::new();
+
+        let mut ui = UiTree::new();
+        ui.set_window(AppWindowId::default());
+
+        let base = ui.create_node(crate::Stack::new());
+        ui.set_root(base);
+        let base_child = ui.create_node(crate::Stack::new());
+        ui.add_child(base, base_child);
+
+        let overlay_root = ui.create_node(crate::Stack::new());
+        ui.push_overlay_root(overlay_root, true);
+
+        let mut text = FakeTextService;
+        let bounds = Rect::new(
+            Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+        );
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert_eq!(snap.roots.len(), 2);
+        assert_eq!(snap.barrier_root, Some(overlay_root));
+        assert!(snap.nodes.iter().any(|n| n.id == base));
+        assert!(snap.nodes.iter().any(|n| n.id == base_child));
+        assert!(snap.nodes.iter().any(|n| n.id == overlay_root));
     }
 }

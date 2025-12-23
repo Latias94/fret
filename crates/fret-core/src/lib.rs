@@ -7,6 +7,7 @@ pub mod ids;
 pub mod input;
 pub mod panels;
 pub mod scene;
+pub mod semantics;
 pub mod text;
 pub mod viewport;
 pub mod window;
@@ -31,6 +32,9 @@ pub use input::{
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputKind};
 pub use panels::{PanelKey, PanelKind};
 pub use scene::{Color, DrawOrder, Scene, SceneOp};
+pub use semantics::{
+    SemanticsFlags, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot,
+};
 pub use text::{
     CaretAffinity, HitTestResult, TextConstraints, TextMetrics, TextService, TextStyle, TextWrap,
 };
