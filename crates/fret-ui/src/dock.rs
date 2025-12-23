@@ -459,6 +459,21 @@ struct PreparedTabTitle {
     title_hash: u64,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct PreparedGlyph {
+    blob: TextBlobId,
+    metrics: TextMetrics,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DockHintGlyphs {
+    center: PreparedGlyph,
+    left: PreparedGlyph,
+    right: PreparedGlyph,
+    top: PreparedGlyph,
+    bottom: PreparedGlyph,
+}
+
 pub struct DockSpace {
     pub window: fret_core::AppWindowId,
     last_bounds: Rect,
@@ -474,13 +489,16 @@ pub struct DockSpace {
     pressed_tab_close: Option<(DockNodeId, usize, PanelKey)>,
     tab_scroll: HashMap<DockNodeId, Px>,
     tab_close_glyph: Option<PreparedTabTitle>,
+    dock_hint_glyphs: Option<DockHintGlyphs>,
     tab_text_style: TextStyle,
     tab_close_style: TextStyle,
+    dock_hint_style: TextStyle,
     empty_state_style: TextStyle,
     last_empty_state_scale_factor: Option<f32>,
     last_empty_state_theme_revision: Option<u64>,
     last_tab_text_scale_factor: Option<f32>,
     last_theme_revision: Option<u64>,
+    last_dock_hint_scale_factor: Option<f32>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -507,6 +525,7 @@ impl DockSpace {
             pressed_tab_close: None,
             tab_scroll: HashMap::new(),
             tab_close_glyph: None,
+            dock_hint_glyphs: None,
             tab_text_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
@@ -514,6 +533,10 @@ impl DockSpace {
             tab_close_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
+            },
+            dock_hint_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(15.0),
             },
             empty_state_style: TextStyle {
                 font: fret_core::FontId::default(),
@@ -523,6 +546,7 @@ impl DockSpace {
             last_empty_state_theme_revision: None,
             last_tab_text_scale_factor: None,
             last_theme_revision: None,
+            last_dock_hint_scale_factor: None,
         }
     }
 
@@ -723,6 +747,41 @@ impl DockSpace {
             blob,
             metrics,
             title_hash: 0,
+        });
+    }
+
+    fn rebuild_dock_hint_glyphs(&mut self, text: &mut dyn TextService, scale_factor: f32) {
+        if self.last_dock_hint_scale_factor == Some(scale_factor) && self.dock_hint_glyphs.is_some()
+        {
+            return;
+        }
+        self.last_dock_hint_scale_factor = Some(scale_factor);
+
+        if let Some(prev) = self.dock_hint_glyphs.take() {
+            for glyph in [prev.center, prev.left, prev.right, prev.top, prev.bottom] {
+                text.release(glyph.blob);
+            }
+        }
+
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            scale_factor,
+        };
+
+        let mut prepare = |ch: &str| -> PreparedGlyph {
+            let (blob, metrics) = text.prepare(ch, self.dock_hint_style, constraints);
+            PreparedGlyph { blob, metrics }
+        };
+
+        // Use simple Unicode arrows instead of SVG so we can render with our existing SceneOps.
+        // This keeps the framework lightweight while still providing ImGui-like affordances.
+        self.dock_hint_glyphs = Some(DockHintGlyphs {
+            center: prepare("▣"),
+            left: prepare("←"),
+            right: prepare("→"),
+            top: prepare("↑"),
+            bottom: prepare("↓"),
         });
     }
 
@@ -1894,6 +1953,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let scale_factor = cx.scale_factor;
         if let Some(dock) = cx.app.global::<DockManager>() {
             self.rebuild_tab_titles(cx.text, theme, scale_factor, dock, &layout);
+            self.rebuild_dock_hint_glyphs(cx.text, scale_factor);
 
             let mut visible_tabs_nodes: HashSet<DockNodeId> = HashSet::new();
             for (&node_id, &rect) in &layout {
@@ -2009,6 +2069,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         if is_dock_dragging {
             paint_drop_hints(
                 cx.theme().snapshot(),
+                self.dock_hint_glyphs,
                 hover.clone(),
                 self.window,
                 cx.bounds,
@@ -2832,8 +2893,10 @@ fn dock_drop_edge_thickness(rect: Rect) -> Px {
     let min_dim = rect.size.width.0.min(rect.size.height.0);
     // Keep split zones usable on large panels, but avoid making "center tab" drops difficult.
     // Also keep the thickness sane on small panels.
-    let base = (min_dim * 0.20).clamp(12.0, 64.0);
-    let cap = (min_dim * 0.33).clamp(8.0, 64.0);
+    // ImGui-style: edge splits should be easy to hit even on big panels; we still cap it so the
+    // center/tab drop remains a first-class target.
+    let base = (min_dim * 0.24).clamp(16.0, 96.0);
+    let cap = (min_dim * 0.40).clamp(12.0, 96.0);
     Px(base.min(cap))
 }
 
@@ -2957,6 +3020,20 @@ fn hit_test_drop_target(
                 zone: DropZone::Center,
                 insert_index: Some(insert_index),
             });
+        }
+
+        // ImGui-style direction-pad hit targets near the center of the hovered dock node.
+        // This makes split docking discoverable and avoids requiring the cursor to be near edges.
+        let cx = rect.origin.x.0 + rect.size.width.0 * 0.5;
+        let cy = rect.origin.y.0 + rect.size.height.0 * 0.5;
+        for (zone, hint_rect) in dock_hint_rects(cx, cy) {
+            if hint_rect.contains(position) {
+                return Some(HoverTarget {
+                    tabs: node,
+                    zone,
+                    insert_index: None,
+                });
+            }
         }
 
         let thickness = dock_drop_edge_thickness(rect).0;
@@ -3275,6 +3352,7 @@ fn paint_drop_overlay(
 
 fn paint_drop_hints(
     theme: crate::ThemeSnapshot,
+    glyphs: Option<DockHintGlyphs>,
     target: Option<DockDropTarget>,
     _window: fret_core::AppWindowId,
     _bounds: Rect,
@@ -3295,10 +3373,6 @@ fn paint_drop_hints(
 
     let cx = rect.origin.x.0 + rect.size.width.0 * 0.5;
     let cy = rect.origin.y.0 + rect.size.height.0 * 0.5;
-
-    let size = Px(26.0);
-    let gap = Px(8.0);
-    let step = Px(size.0 + gap.0);
 
     let inactive_bg = Color {
         a: 0.64,
@@ -3321,13 +3395,7 @@ fn paint_drop_hints(
     let border = Edges::all(Px(2.0));
     let corner_radii = fret_core::Corners::all(Px(theme.metrics.radius_sm.0.max(4.0)));
 
-    for (zone, dx, dy) in [
-        (DropZone::Center, 0.0, 0.0),
-        (DropZone::Left, -(step.0), 0.0),
-        (DropZone::Right, step.0, 0.0),
-        (DropZone::Top, 0.0, -(step.0)),
-        (DropZone::Bottom, 0.0, step.0),
-    ] {
+    for (zone, hint_rect) in dock_hint_rects(cx, cy) {
         let is_active = zone == target.zone;
         let bg = if is_active { active_bg } else { inactive_bg };
         let stroke = if is_active {
@@ -3338,16 +3406,65 @@ fn paint_drop_hints(
 
         scene.push(SceneOp::Quad {
             order,
-            rect: Rect::new(
-                Point::new(Px(cx + dx - size.0 * 0.5), Px(cy + dy - size.0 * 0.5)),
-                Size::new(size, size),
-            ),
+            rect: hint_rect,
             background: bg,
             border,
             border_color: stroke,
             corner_radii,
         });
+
+        let Some(glyphs) = glyphs else {
+            continue;
+        };
+
+        let glyph = match zone {
+            DropZone::Center => glyphs.center,
+            DropZone::Left => glyphs.left,
+            DropZone::Right => glyphs.right,
+            DropZone::Top => glyphs.top,
+            DropZone::Bottom => glyphs.bottom,
+        };
+
+        // Center the glyph inside the hint rect (baseline-aligned).
+        let text_x =
+            hint_rect.origin.x.0 + (hint_rect.size.width.0 - glyph.metrics.size.width.0) * 0.5;
+        let text_y = hint_rect.origin.y.0
+            + (hint_rect.size.height.0 - glyph.metrics.size.height.0) * 0.5
+            + glyph.metrics.baseline.0;
+
+        scene.push(SceneOp::Text {
+            order: fret_core::DrawOrder(order.0 + 1),
+            origin: Point::new(Px(text_x), Px(text_y)),
+            text: glyph.blob,
+            color: Color {
+                a: if is_active { 0.98 } else { 0.92 },
+                ..theme.colors.text_primary
+            },
+        });
     }
+}
+
+fn dock_hint_rects(cx: f32, cy: f32) -> [(DropZone, Rect); 5] {
+    // Match the mental model of ImGui docking: an explicit 5-way “direction pad” near the
+    // center of the hovered dock node. Hit-testing uses the same rects.
+    let size = Px(34.0);
+    let gap = Px(10.0);
+    let step = Px(size.0 + gap.0);
+
+    let mk = |dx: f32, dy: f32| -> Rect {
+        Rect::new(
+            Point::new(Px(cx + dx - size.0 * 0.5), Px(cy + dy - size.0 * 0.5)),
+            Size::new(size, size),
+        )
+    };
+
+    [
+        (DropZone::Center, mk(0.0, 0.0)),
+        (DropZone::Left, mk(-step.0, 0.0)),
+        (DropZone::Right, mk(step.0, 0.0)),
+        (DropZone::Top, mk(0.0, -step.0)),
+        (DropZone::Bottom, mk(0.0, step.0)),
+    ]
 }
 
 fn dock_space_regions(bounds: Rect) -> (Rect, Rect) {
@@ -3636,5 +3753,41 @@ mod tests {
             )),
             "expected DockSpace to receive the drop even when hit-testing fails"
         );
+    }
+
+    #[test]
+    fn dock_drop_hint_rects_can_select_zone() {
+        let window = AppWindowId::default();
+
+        let mut dock = DockManager::default();
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.hierarchy")],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+
+        let rect = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut layout = std::collections::HashMap::new();
+        layout.insert(tabs, rect);
+        let tab_scroll = std::collections::HashMap::new();
+
+        let cx = rect.origin.x.0 + rect.size.width.0 * 0.5;
+        let cy = rect.origin.y.0 + rect.size.height.0 * 0.5;
+        for (expected, hint_rect) in dock_hint_rects(cx, cy) {
+            if expected == DropZone::Center {
+                continue;
+            }
+            let position = Point::new(
+                Px(hint_rect.origin.x.0 + hint_rect.size.width.0 * 0.5),
+                Px(hint_rect.origin.y.0 + hint_rect.size.height.0 * 0.5),
+            );
+            let hit = hit_test_drop_target(&dock.graph, &layout, &tab_scroll, position)
+                .expect("hit should resolve to a dock target");
+            assert_eq!(hit.zone, expected);
+            assert!(hit.insert_index.is_none());
+        }
     }
 }
