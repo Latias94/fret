@@ -1,12 +1,12 @@
-use fret_core::{AppWindowId, FrameId, SemanticsSnapshot};
+use fret_core::{AppWindowId, FrameId, KeyCode, Px, SemanticsSnapshot, TextWrap};
+use fret_ui_app::VirtualListRowHeight;
 use fret_ui_app::{
     App, EventCx, GenericWidget, LayoutCx, PaintCx, VirtualList, VirtualListDataSource,
     VirtualListRow,
 };
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::Arc,
-    time::{Duration, Instant},
 };
 
 #[derive(Debug, Clone)]
@@ -20,15 +20,16 @@ pub struct SemanticsInspectorEntry {
 pub struct SemanticsInspectorService {
     next_revision: u64,
     per_window: HashMap<AppWindowId, SemanticsInspectorEntry>,
-    last_update_at: HashMap<AppWindowId, Instant>,
+    pending_requests: HashSet<AppWindowId>,
 }
 
 impl SemanticsInspectorService {
-    pub fn should_sample(&self, window: AppWindowId, now: Instant) -> bool {
-        const MIN_INTERVAL: Duration = Duration::from_millis(250);
-        self.last_update_at
-            .get(&window)
-            .is_none_or(|last| now.duration_since(*last) >= MIN_INTERVAL)
+    pub fn request(&mut self, window: AppWindowId) {
+        self.pending_requests.insert(window);
+    }
+
+    pub fn should_sample(&self, window: AppWindowId, _now: std::time::Instant) -> bool {
+        self.pending_requests.contains(&window)
     }
 
     pub fn set_snapshot(
@@ -36,11 +37,11 @@ impl SemanticsInspectorService {
         window: AppWindowId,
         frame_id: FrameId,
         snapshot: Arc<SemanticsSnapshot>,
-        now: Instant,
+        _now: std::time::Instant,
     ) {
         self.next_revision = self.next_revision.saturating_add(1);
         let revision = self.next_revision;
-        self.last_update_at.insert(window, now);
+        self.pending_requests.remove(&window);
         self.per_window.insert(
             window,
             SemanticsInspectorEntry {
@@ -52,8 +53,8 @@ impl SemanticsInspectorService {
     }
 
     pub fn clear_window(&mut self, window: AppWindowId) {
+        self.pending_requests.remove(&window);
         self.per_window.remove(&window);
-        self.last_update_at.remove(&window);
     }
 
     pub fn snapshot(&self, window: AppWindowId) -> Option<&SemanticsInspectorEntry> {
@@ -62,24 +63,140 @@ impl SemanticsInspectorService {
 }
 
 #[derive(Debug, Clone)]
+struct SemanticsListLine {
+    text: String,
+    indent_x: Px,
+}
+
+#[derive(Debug, Clone)]
 struct SemanticsListDataSource {
-    frame_id: Option<FrameId>,
-    snapshot: Option<Arc<SemanticsSnapshot>>,
+    lines: Vec<SemanticsListLine>,
 }
 
 impl SemanticsListDataSource {
     fn empty() -> Self {
-        Self {
-            frame_id: None,
-            snapshot: None,
-        }
+        Self { lines: Vec::new() }
     }
 
     fn from_entry(entry: &SemanticsInspectorEntry) -> Self {
-        Self {
-            frame_id: Some(entry.frame_id),
-            snapshot: Some(entry.snapshot.clone()),
+        let snap = &entry.snapshot;
+
+        let mut depth_by_id: HashMap<fret_core::NodeId, usize> = HashMap::new();
+        let mut parent_by_id: HashMap<fret_core::NodeId, Option<fret_core::NodeId>> =
+            HashMap::new();
+        for n in &snap.nodes {
+            parent_by_id.insert(n.id, n.parent);
         }
+
+        fn depth_for(
+            id: fret_core::NodeId,
+            parent_by_id: &HashMap<fret_core::NodeId, Option<fret_core::NodeId>>,
+            depth_by_id: &mut HashMap<fret_core::NodeId, usize>,
+        ) -> usize {
+            if let Some(d) = depth_by_id.get(&id) {
+                return *d;
+            }
+            let mut depth = 0usize;
+            let mut current = id;
+            let mut guard = 0usize;
+            while let Some(Some(parent)) = parent_by_id.get(&current) {
+                depth = depth.saturating_add(1);
+                current = *parent;
+                guard = guard.saturating_add(1);
+                if guard > 128 {
+                    break;
+                }
+            }
+            depth_by_id.insert(id, depth);
+            depth
+        }
+
+        let mut lines: Vec<SemanticsListLine> =
+            Vec::with_capacity(4 + snap.roots.len() + snap.nodes.len());
+
+        lines.push(SemanticsListLine {
+            indent_x: Px(0.0),
+            text: format!(
+                "Semantics frame={:?} roots={} nodes={} barrier={:?} focus={:?} captured={:?}",
+                entry.frame_id,
+                snap.roots.len(),
+                snap.nodes.len(),
+                snap.barrier_root,
+                snap.focus,
+                snap.captured
+            ),
+        });
+        lines.push(SemanticsListLine {
+            indent_x: Px(0.0),
+            text: String::new(),
+        });
+
+        lines.push(SemanticsListLine {
+            indent_x: Px(0.0),
+            text: "Roots".to_string(),
+        });
+        for r in &snap.roots {
+            lines.push(SemanticsListLine {
+                indent_x: Px(0.0),
+                text: format!(
+                    "z={} id={:?} visible={} hit_testable={} blocks_underlay_input={}",
+                    r.z_index, r.root, r.visible, r.hit_testable, r.blocks_underlay_input
+                ),
+            });
+        }
+
+        lines.push(SemanticsListLine {
+            indent_x: Px(0.0),
+            text: String::new(),
+        });
+
+        lines.push(SemanticsListLine {
+            indent_x: Px(0.0),
+            text: "Nodes".to_string(),
+        });
+        for n in &snap.nodes {
+            let mut flags: Vec<&'static str> = Vec::new();
+            if n.flags.focused {
+                flags.push("focused");
+            }
+            if n.flags.captured {
+                flags.push("captured");
+            }
+            if n.flags.disabled {
+                flags.push("disabled");
+            }
+            if n.flags.selected {
+                flags.push("selected");
+            }
+            if n.flags.expanded {
+                flags.push("expanded");
+            }
+            let flags_text = if flags.is_empty() {
+                "-".to_string()
+            } else {
+                flags.join("|")
+            };
+
+            let depth = depth_for(n.id, &parent_by_id, &mut depth_by_id);
+            let indent_x = Px(depth as f32 * 12.0);
+
+            lines.push(SemanticsListLine {
+                indent_x,
+                text: format!(
+                    "id={:?} role={:?} flags={} parent={:?} bounds=({:.1},{:.1})+({:.1},{:.1})",
+                    n.id,
+                    n.role,
+                    flags_text,
+                    n.parent,
+                    n.bounds.origin.x.0,
+                    n.bounds.origin.y.0,
+                    n.bounds.size.width.0,
+                    n.bounds.size.height.0
+                ),
+            });
+        }
+
+        Self { lines }
     }
 }
 
@@ -87,11 +204,7 @@ impl VirtualListDataSource for SemanticsListDataSource {
     type Key = usize;
 
     fn len(&self) -> usize {
-        let Some(snap) = self.snapshot.as_ref() else {
-            return 1;
-        };
-        // header + blank + roots + blank + nodes
-        1 + 1 + snap.roots.len() + 1 + snap.nodes.len()
+        self.lines.len().max(1)
     }
 
     fn key_at(&self, index: usize) -> Self::Key {
@@ -99,82 +212,16 @@ impl VirtualListDataSource for SemanticsListDataSource {
     }
 
     fn row_at(&self, index: usize) -> VirtualListRow<'_> {
-        let Some(snap) = self.snapshot.as_ref() else {
-            return VirtualListRow::new(
-                "No semantics snapshot (open the Semantics panel in a window).",
-            );
-        };
-
-        if index == 0 {
-            return VirtualListRow::new(format!(
-                "Semantics — frame={:?}  roots={}  nodes={}  barrier={:?}  focus={:?}  captured={:?}",
-                self.frame_id.unwrap_or_default(),
-                snap.roots.len(),
-                snap.nodes.len(),
-                snap.barrier_root,
-                snap.focus,
-                snap.captured
-            ));
+        if self.lines.is_empty() {
+            return VirtualListRow::new("No semantics snapshot (press R to refresh).");
         }
 
-        if index == 1 {
-            return VirtualListRow::new("");
+        let idx = index.min(self.lines.len().saturating_sub(1));
+        let line = &self.lines[idx];
+        VirtualListRow {
+            text: line.text.as_str().into(),
+            indent_x: line.indent_x,
         }
-
-        let roots_start = 2;
-        let roots_end = roots_start + snap.roots.len();
-        if index >= roots_start && index < roots_end {
-            let r = &snap.roots[index - roots_start];
-            return VirtualListRow::new(format!(
-                "root z={} id={:?} visible={} hit_testable={} blocks_underlay_input={}",
-                r.z_index, r.root, r.visible, r.hit_testable, r.blocks_underlay_input
-            ));
-        }
-
-        let nodes_start = roots_end + 1;
-        if index == nodes_start - 1 {
-            return VirtualListRow::new("");
-        }
-
-        let node_index = index.saturating_sub(nodes_start);
-        if node_index >= snap.nodes.len() {
-            return VirtualListRow::new("");
-        }
-        let n = &snap.nodes[node_index];
-
-        let mut flags: Vec<&'static str> = Vec::new();
-        if n.flags.focused {
-            flags.push("focused");
-        }
-        if n.flags.captured {
-            flags.push("captured");
-        }
-        if n.flags.disabled {
-            flags.push("disabled");
-        }
-        if n.flags.selected {
-            flags.push("selected");
-        }
-        if n.flags.expanded {
-            flags.push("expanded");
-        }
-        let flags = if flags.is_empty() {
-            "-".to_string()
-        } else {
-            flags.join("|")
-        };
-
-        VirtualListRow::new(format!(
-            "{:?} parent={:?} role={:?} flags={} bounds=({}, {}) + ({}, {})",
-            n.id,
-            n.parent,
-            n.role,
-            flags,
-            n.bounds.origin.x.0,
-            n.bounds.origin.y.0,
-            n.bounds.size.width.0,
-            n.bounds.size.height.0
-        ))
     }
 
     fn index_of_key(&self, key: Self::Key) -> Option<usize> {
@@ -190,31 +237,36 @@ pub struct SemanticsPanel {
 impl SemanticsPanel {
     pub fn new() -> Self {
         Self {
-            list: VirtualList::new(SemanticsListDataSource::empty()),
+            list: VirtualList::new(SemanticsListDataSource::empty())
+                .with_row_height(VirtualListRowHeight::Fixed(Px(20.0)))
+                .with_wrap(TextWrap::None),
             last_revision: None,
         }
     }
 
-    fn maybe_refresh(&mut self, app: &App, window: AppWindowId) -> bool {
+    fn request_snapshot(&mut self, app: &mut App, window: AppWindowId) {
+        app.global_mut::<SemanticsInspectorService>()
+            .map(|s| s.request(window));
+    }
+
+    fn maybe_refresh(&mut self, app: &mut App, window: AppWindowId) {
         let Some(entry) = app
             .global::<SemanticsInspectorService>()
             .and_then(|s| s.snapshot(window))
         else {
-            let changed = self.last_revision.is_some();
-            self.last_revision = None;
-            if changed {
+            self.request_snapshot(app, window);
+            if self.last_revision.is_some() {
+                self.last_revision = None;
                 self.list.set_data(SemanticsListDataSource::empty());
             }
-            return changed;
+            return;
         };
 
         if self.last_revision == Some(entry.revision) {
-            return false;
+            return;
         }
         self.last_revision = Some(entry.revision);
-        self.list
-            .set_data(SemanticsListDataSource::from_entry(entry));
-        true
+        self.list.set_data(SemanticsListDataSource::from_entry(entry));
     }
 }
 
@@ -223,7 +275,20 @@ impl GenericWidget<App> for SemanticsPanel {
         let Some(window) = cx.window else {
             return;
         };
-        let _ = self.maybe_refresh(cx.app, window);
+
+        if let fret_core::Event::KeyDown { key, modifiers, .. } = event {
+            if *key == KeyCode::KeyR
+                && !modifiers.shift
+                && !modifiers.ctrl
+                && !modifiers.alt
+                && !modifiers.meta
+                && !modifiers.alt_gr
+            {
+                self.request_snapshot(cx.app, window);
+            }
+        }
+
+        self.maybe_refresh(cx.app, window);
         self.list.event(cx, event);
     }
 
@@ -231,7 +296,7 @@ impl GenericWidget<App> for SemanticsPanel {
         let Some(window) = cx.window else {
             return cx.available;
         };
-        let _ = self.maybe_refresh(cx.app, window);
+        self.maybe_refresh(cx.app, window);
         self.list.layout(cx)
     }
 
@@ -239,7 +304,7 @@ impl GenericWidget<App> for SemanticsPanel {
         let Some(window) = cx.window else {
             return;
         };
-        let _ = self.maybe_refresh(cx.app, window);
+        self.maybe_refresh(cx.app, window);
         self.list.paint(cx);
     }
 }
