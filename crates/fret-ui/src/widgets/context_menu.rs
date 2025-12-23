@@ -642,6 +642,16 @@ impl Default for ContextMenu {
 }
 
 impl<H: UiHost> Widget<H> for ContextMenu {
+    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+        self.cleanup(text);
+        self.last_serial = None;
+        self.open_path.clear();
+        self.selection.clear();
+        self.hover_panel = None;
+        self.hover_row = None;
+        self.panels.clear();
+    }
+
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         cx.set_role(SemanticsRole::Menu);
     }

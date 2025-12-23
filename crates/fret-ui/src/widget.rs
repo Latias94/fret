@@ -212,6 +212,7 @@ pub trait Widget<H: UiHost> {
     fn command(&mut self, _cx: &mut CommandCx<'_, H>, _command: &CommandId) -> bool {
         false
     }
+    fn cleanup_resources(&mut self, _text: &mut dyn TextService) {}
     fn is_focusable(&self) -> bool {
         false
     }

@@ -6,6 +6,7 @@ mod context_menu;
 mod fixed_panel;
 mod header_body;
 mod panel;
+mod popover;
 mod row;
 mod scroll;
 mod split;
@@ -24,6 +25,7 @@ pub use context_menu::{ContextMenu, ContextMenuRequest, ContextMenuService, Cont
 pub use fixed_panel::FixedPanel;
 pub use header_body::HeaderBody;
 pub use panel::{ColoredPanel, PanelThemeBackground};
+pub use popover::{Popover, PopoverItem, PopoverRequest, PopoverService, PopoverStyle};
 pub use row::Row;
 pub use scroll::Scroll;
 pub use split::Split;

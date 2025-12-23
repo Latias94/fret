@@ -7,6 +7,7 @@ mod style;
 
 pub mod button;
 pub mod frame;
+pub mod select;
 pub mod text_field;
 
 pub use style::{ColorRef, MetricRef, StyleRefinement};

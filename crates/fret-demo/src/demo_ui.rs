@@ -136,6 +136,8 @@ pub struct DemoLayers {
     pub external_dnd: UiLayerId,
     pub command_palette: UiLayerId,
     pub command_palette_node: fret_core::NodeId,
+    pub popover: UiLayerId,
+    pub popover_node: fret_core::NodeId,
     pub context_menu: UiLayerId,
     pub context_menu_node: fret_core::NodeId,
     pub inspector_edit: UiLayerId,
@@ -983,6 +985,10 @@ Goal: foundation for Console/Inspector/code editor.",
     let context_menu = ui.push_overlay_root(context_menu_node, true);
     ui.set_layer_visible(context_menu, false);
 
+    let popover_node = ui.create_node(fret_ui_app::Popover::new());
+    let popover = ui.push_overlay_root(popover_node, true);
+    ui.set_layer_visible(popover, false);
+
     let inspector_root = ui.create_node(InspectorEditLayout::new(Px(420.0), Px(110.0)));
     let inspector_edit = ui.push_overlay_root(inspector_root, true);
     ui.set_layer_visible(inspector_edit, false);
@@ -1028,6 +1034,8 @@ Goal: foundation for Console/Inspector/code editor.",
             external_dnd,
             command_palette,
             command_palette_node,
+            popover,
+            popover_node,
             context_menu,
             context_menu_node,
             inspector_edit,

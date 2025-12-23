@@ -1033,7 +1033,8 @@ Goal: establish a **general-purpose** component library baseline (GPUI-component
 Status:
 
 - Prototype implemented (incubated in this repo):
-  - `crates/fret-components-ui`: token-driven components + Tailwind-like typed style refinements.
+  - `crates/fret-components-ui`: token-driven components + Tailwind-like typed style refinements (`Button`, `TextField`, `Select`).
+  - `fret-ui`: `Popover` + `PopoverService` (anchored overlay primitive used by `Select`).
   - `fret-demo`: adds a `UI Kit` panel (`PanelKey` `core.ui_kit`) to validate composition and theme-driven styling.
 
 References:
@@ -1043,6 +1044,7 @@ References:
 - `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
 - `repo-ref/gpui-component/crates/ui`
 - `repo-ref/fret-ui-precision/docs/`
+  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx`
 
 ## Parking Lot (Explicitly Deferred)
 

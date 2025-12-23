@@ -1290,6 +1290,23 @@ impl<H: UiHost> UiTree<H> {
         self.paint_node(app, text, root, bounds, scene, scale_factor);
     }
 
+    pub fn cleanup_subtree(&mut self, text: &mut dyn TextService, root: NodeId) {
+        self.cleanup_subtree_inner(text, root);
+    }
+
+    fn cleanup_subtree_inner(&mut self, text: &mut dyn TextService, node: NodeId) {
+        let Some(n) = self.nodes.get(node) else {
+            return;
+        };
+        let children = n.children.clone();
+
+        self.with_widget_mut(node, |widget, _tree| widget.cleanup_resources(text));
+
+        for child in children {
+            self.cleanup_subtree_inner(text, child);
+        }
+    }
+
     fn with_widget_mut<R>(
         &mut self,
         node: NodeId,

@@ -46,6 +46,7 @@ use fret_components_ui::{
     StyleRefinement,
     button::{Button, ButtonIntent, ButtonSize, ButtonVariant},
     frame::Frame,
+    select::{Select, SelectOption},
     text_field::TextField,
 };
 use fret_core::{
@@ -65,6 +66,7 @@ use fret_runner_winit_wgpu::{
     WinitRunnerConfig,
 };
 use fret_ui_app::Invalidation;
+use fret_ui_app::PopoverService;
 use fret_ui_app::dock::ViewportMarquee;
 use fret_ui_app::{
     ContextMenuService, DockManager, DockPanel, DockPanelContentService, Theme, ThemeConfig,
@@ -241,6 +243,7 @@ struct DemoWindowState {
     layers: DemoLayers,
     palette_previous_focus: Option<fret_core::NodeId>,
     context_menu_previous_focus: Option<fret_core::NodeId>,
+    popover_previous_focus: Option<fret_core::NodeId>,
     inspector_edit_previous_focus: Option<fret_core::NodeId>,
     unsaved_dialog_previous_focus: Option<fret_core::NodeId>,
     inspector_edit_buffer: Model<String>,
@@ -2278,6 +2281,21 @@ impl WinitDriver for DemoDriver {
         );
 
         app.commands_mut().register(
+            CommandId::from("popover.open"),
+            CommandMeta::new("Open Popover")
+                .with_description("Internal: opens a popover overlay")
+                .with_category("View")
+                .hidden(),
+        );
+        app.commands_mut().register(
+            CommandId::from("popover.close"),
+            CommandMeta::new("Close Popover")
+                .with_description("Closes the popover overlay")
+                .with_category("View")
+                .hidden(),
+        );
+
+        app.commands_mut().register(
             CommandId::from("inspector_edit.open"),
             CommandMeta::new("Open Inspector Edit")
                 .with_description("Internal: opens the inspector value editor popup")
@@ -3645,6 +3663,7 @@ impl WinitDriver for DemoDriver {
 
         // MVP45 probe: token-driven, shadcn-style primitives (domain-agnostic).
         let ui_kit_text = app.models_mut().insert("Hello, components.".to_string());
+        let ui_kit_select = app.models_mut().insert(0usize);
         let ui_kit_root = ui.create_node(fret_ui_app::Column::new().with_spacing(Px(10.0)));
 
         let ui_kit_buttons_frame = ui.create_node(Frame::new(
@@ -3692,6 +3711,25 @@ impl WinitDriver for DemoDriver {
             ),
         );
         ui.add_child(ui_kit_root, ui_kit_text_field);
+
+        let ui_kit_select_node = ui.create_node(
+            Select::new(
+                ui_kit_select,
+                vec![
+                    SelectOption::new("Option A"),
+                    SelectOption::new("Option B"),
+                    SelectOption::new("Option C"),
+                ],
+            )
+            .refine_style(
+                StyleRefinement::default()
+                    .rounded_md()
+                    .border_1()
+                    .px_3()
+                    .py_1(),
+            ),
+        );
+        ui.add_child(ui_kit_root, ui_kit_select_node);
         ui.add_child(layers.dockspace_node, hierarchy_node);
         ui.add_child(layers.dockspace_node, project_node);
         ui.add_child(layers.dockspace_node, inspector_node);
@@ -3716,6 +3754,7 @@ impl WinitDriver for DemoDriver {
             layers,
             palette_previous_focus: None,
             context_menu_previous_focus: None,
+            popover_previous_focus: None,
             inspector_edit_previous_focus: None,
             unsaved_dialog_previous_focus: None,
             inspector_edit_buffer,
@@ -4047,6 +4086,9 @@ impl WinitDriver for DemoDriver {
             "command_palette.toggle" => {
                 let vis = state.ui.is_layer_visible(state.layers.command_palette);
                 if vis {
+                    state
+                        .ui
+                        .cleanup_subtree(text, state.layers.command_palette_node);
                     state
                         .ui
                         .set_layer_visible(state.layers.command_palette, false);
@@ -4613,6 +4655,9 @@ impl WinitDriver for DemoDriver {
                 if state.ui.is_layer_visible(state.layers.command_palette) {
                     state
                         .ui
+                        .cleanup_subtree(text, state.layers.command_palette_node);
+                    state
+                        .ui
                         .set_layer_visible(state.layers.command_palette, false);
                     if let Some(prev) = state.palette_previous_focus.take() {
                         state.ui.set_focus(Some(prev));
@@ -4640,6 +4685,9 @@ impl WinitDriver for DemoDriver {
             }
             "context_menu.close" => {
                 if state.ui.is_layer_visible(state.layers.context_menu) {
+                    state
+                        .ui
+                        .cleanup_subtree(text, state.layers.context_menu_node);
                     state.ui.set_layer_visible(state.layers.context_menu, false);
                 }
 
@@ -4655,6 +4703,40 @@ impl WinitDriver for DemoDriver {
                 });
 
                 if let Some(prev) = state.context_menu_previous_focus.take() {
+                    state.ui.set_focus(Some(prev));
+                }
+
+                app.request_redraw(window);
+            }
+            "popover.open" => {
+                if state.ui.is_layer_visible(state.layers.command_palette) {
+                    return;
+                }
+
+                let has_request = app
+                    .global::<PopoverService>()
+                    .and_then(|s| s.request(window))
+                    .is_some();
+                if !has_request {
+                    return;
+                }
+
+                state.popover_previous_focus = state.ui.focus();
+                state.ui.set_layer_visible(state.layers.popover, true);
+                state.ui.set_focus(Some(state.layers.popover_node));
+                app.request_redraw(window);
+            }
+            "popover.close" => {
+                if state.ui.is_layer_visible(state.layers.popover) {
+                    state.ui.cleanup_subtree(text, state.layers.popover_node);
+                    state.ui.set_layer_visible(state.layers.popover, false);
+                }
+
+                app.with_global_mut(PopoverService::default, |service, _app| {
+                    service.clear_request(window);
+                });
+
+                if let Some(prev) = state.popover_previous_focus.take() {
                     state.ui.set_focus(Some(prev));
                 }
 
