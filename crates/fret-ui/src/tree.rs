@@ -12,6 +12,7 @@ use fret_runtime::{
 };
 use slotmap::SlotMap;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 const PENDING_SHORTCUT_TIMEOUT: Duration = Duration::from_millis(1000);
@@ -211,7 +212,8 @@ pub struct UiTree<H: UiHost> {
     debug_enabled: bool,
     debug_stats: UiDebugFrameStats,
 
-    semantics: Option<SemanticsSnapshot>,
+    semantics: Option<Arc<SemanticsSnapshot>>,
+    semantics_requested: bool,
 }
 
 impl<H: UiHost> Default for UiTree<H> {
@@ -234,6 +236,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_enabled: false,
             debug_stats: UiDebugFrameStats::default(),
             semantics: None,
+            semantics_requested: false,
         }
     }
 }
@@ -251,8 +254,16 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats
     }
 
+    pub fn request_semantics_snapshot(&mut self) {
+        self.semantics_requested = true;
+    }
+
     pub fn semantics_snapshot(&self) -> Option<&SemanticsSnapshot> {
-        self.semantics.as_ref()
+        self.semantics.as_deref()
+    }
+
+    pub fn semantics_snapshot_arc(&self) -> Option<Arc<SemanticsSnapshot>> {
+        self.semantics.clone()
     }
 
     pub fn captured(&self) -> Option<NodeId> {
@@ -500,7 +511,10 @@ impl<H: UiHost> UiTree<H> {
             let _ = self.layout_in(app, text, root, bounds, scale_factor);
         }
 
-        self.refresh_semantics_snapshot(app);
+        if self.semantics_requested {
+            self.semantics_requested = false;
+            self.refresh_semantics_snapshot(app);
+        }
 
         if let Some(started) = started {
             self.debug_stats.layout_time = started.elapsed();
@@ -1411,10 +1425,10 @@ impl<H: UiHost> UiTree<H> {
 
         let visible_layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
         if visible_layers.is_empty() {
-            self.semantics = Some(SemanticsSnapshot {
+            self.semantics = Some(Arc::new(SemanticsSnapshot {
                 window,
                 ..SemanticsSnapshot::default()
-            });
+            }));
             return;
         }
 
@@ -1441,26 +1455,18 @@ impl<H: UiHost> UiTree<H> {
         let focus = self.focus;
         let captured = self.captured;
 
-        let mut nodes: Vec<SemanticsNode> = Vec::new();
-        let mut visited: std::collections::HashSet<NodeId> = std::collections::HashSet::new();
+        let mut nodes: Vec<SemanticsNode> = Vec::with_capacity(self.nodes.len());
 
         for root in roots.iter().map(|r| r.root) {
             let mut stack: Vec<NodeId> = vec![root];
             while let Some(id) = stack.pop() {
-                if !visited.insert(id) {
+                let Some(node) = self.nodes.get_mut(id) else {
                     continue;
-                }
-                let (parent, bounds, children, is_text_input) = {
-                    let Some(node) = self.nodes.get(id) else {
-                        continue;
-                    };
-                    (
-                        node.parent,
-                        node.bounds,
-                        node.children.clone(),
-                        node.widget.as_ref().is_some_and(|w| w.is_text_input()),
-                    )
                 };
+                let parent = node.parent;
+                let bounds = node.bounds;
+                let children = node.children.as_slice();
+                let is_text_input = node.widget.as_ref().is_some_and(|w| w.is_text_input());
 
                 let mut role = if Some(id) == base_root {
                     SemanticsRole::Window
@@ -1479,14 +1485,19 @@ impl<H: UiHost> UiTree<H> {
                     ..fret_core::SemanticsFlags::default()
                 };
 
+                // Preserve a stable-ish order: visit children in declared order.
+                for &child in children.iter().rev() {
+                    stack.push(child);
+                }
+
                 // Allow widgets to override semantics metadata.
-                if let Some(widget) = self.nodes.get_mut(id).and_then(|n| n.widget.as_mut()) {
+                if let Some(widget) = node.widget.as_mut() {
                     let mut cx = SemanticsCx {
                         app,
                         node: id,
-                        window: self.window,
+                        window: Some(window),
                         bounds,
-                        children: &children,
+                        children,
                         focus,
                         captured,
                         role: &mut role,
@@ -1502,21 +1513,17 @@ impl<H: UiHost> UiTree<H> {
                     bounds,
                     flags,
                 });
-                // Preserve a stable-ish order: visit children in declared order.
-                for &child in children.iter().rev() {
-                    stack.push(child);
-                }
             }
         }
 
-        self.semantics = Some(SemanticsSnapshot {
+        self.semantics = Some(Arc::new(SemanticsSnapshot {
             window,
             roots,
             barrier_root,
             focus,
             captured,
             nodes,
-        });
+        }));
     }
 
     fn node_in_any_layer(&self, node: NodeId, layer_roots: &[NodeId]) -> bool {
@@ -1629,6 +1636,7 @@ mod tests {
             Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
             Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
         );
+        ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut text, bounds, 1.0);
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
@@ -1669,6 +1677,7 @@ mod tests {
             Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
             Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
         );
+        ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut text, bounds, 1.0);
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");

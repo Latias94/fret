@@ -5760,24 +5760,28 @@ impl WinitDriver for DemoDriver {
                 .set_layer_visible(state.layers.debug_inspector, inspector_enabled);
         }
 
-        state.ui.layout_all(app, text, bounds, scale_factor);
-
         let key_semantics = PanelKey::new("core.semantics");
         let semantics_visible = app
             .global::<DockManager>()
             .is_some_and(|dock| dock_panel_is_active(&dock.graph, window, &key_semantics));
         let now = Instant::now();
-        let should_sample = semantics_visible
+        let should_sample_semantics = semantics_visible
             && app
                 .global::<SemanticsInspectorService>()
                 .is_some_and(|s| s.should_sample(window, now));
+        if should_sample_semantics {
+            state.ui.request_semantics_snapshot();
+        }
 
-        if should_sample {
+        state.ui.layout_all(app, text, bounds, scale_factor);
+
+        if should_sample_semantics {
             let frame_id = app.frame_id();
-            if let Some(snapshot) = state.ui.semantics_snapshot().cloned() {
-                if let Some(svc) = app.global_mut::<SemanticsInspectorService>() {
-                    svc.set_snapshot(window, frame_id, snapshot, now);
-                }
+            if let (Some(snapshot), Some(svc)) = (
+                state.ui.semantics_snapshot_arc(),
+                app.global_mut::<SemanticsInspectorService>(),
+            ) {
+                svc.set_snapshot(window, frame_id, snapshot, now);
             } else {
                 app.global_mut::<SemanticsInspectorService>()
                     .map(|s| s.clear_window(window));

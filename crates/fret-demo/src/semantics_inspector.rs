@@ -25,7 +25,7 @@ pub struct SemanticsInspectorService {
 
 impl SemanticsInspectorService {
     pub fn should_sample(&self, window: AppWindowId, now: Instant) -> bool {
-        const MIN_INTERVAL: Duration = Duration::from_millis(100);
+        const MIN_INTERVAL: Duration = Duration::from_millis(250);
         self.last_update_at
             .get(&window)
             .is_none_or(|last| now.duration_since(*last) >= MIN_INTERVAL)
@@ -35,7 +35,7 @@ impl SemanticsInspectorService {
         &mut self,
         window: AppWindowId,
         frame_id: FrameId,
-        snapshot: SemanticsSnapshot,
+        snapshot: Arc<SemanticsSnapshot>,
         now: Instant,
     ) {
         self.next_revision = self.next_revision.saturating_add(1);
@@ -46,7 +46,7 @@ impl SemanticsInspectorService {
             SemanticsInspectorEntry {
                 revision,
                 frame_id,
-                snapshot: Arc::new(snapshot),
+                snapshot,
             },
         );
     }
