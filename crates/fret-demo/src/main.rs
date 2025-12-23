@@ -11,6 +11,7 @@ mod overlay_layouts;
 mod project_panel;
 mod scene_background;
 mod scene_document;
+mod semantics_inspector;
 mod text_probe_panel;
 mod undo;
 mod unsaved_changes;
@@ -26,6 +27,7 @@ use editor_shell::{DemoSelection, HierarchyPanel, InspectorPanel};
 use hierarchy::DemoHierarchy;
 use project_panel::ProjectPanel;
 use scene_background::{SceneBackgroundRenderer, SceneCameraParams};
+use semantics_inspector::{SemanticsInspectorService, SemanticsPanel};
 use undo::{EditCommand, UndoStack};
 use viewport_targets::{ViewportTarget, ViewportTargets};
 use world::DemoWorld;
@@ -101,6 +103,33 @@ The quick brown fox jumps over the lazy dog. 1234567890.
 Symbols: []{}() <> /\\ | _-+=* &%$#@! ?
 Unicode: 你好，世界。日本語。한글. 😀✨
 "#;
+
+fn dock_panel_is_active(
+    graph: &fret_core::DockGraph,
+    window: fret_core::AppWindowId,
+    panel: &PanelKey,
+) -> bool {
+    fn subtree_contains_active_panel(
+        graph: &fret_core::DockGraph,
+        node: fret_core::DockNodeId,
+        panel: &PanelKey,
+    ) -> bool {
+        let Some(node) = graph.node(node) else {
+            return false;
+        };
+        match node {
+            DockNode::Tabs { tabs, active } => tabs.get(*active).is_some_and(|p| p == panel),
+            DockNode::Split { children, .. } => children
+                .iter()
+                .copied()
+                .any(|child| subtree_contains_active_panel(graph, child, panel)),
+        }
+    }
+
+    graph
+        .window_root(window)
+        .is_some_and(|root| subtree_contains_active_panel(graph, root, panel))
+}
 
 fn project_renamed_candidate(file_name: &str, attempt: u32) -> String {
     if attempt == 0 {
@@ -1249,6 +1278,7 @@ impl DemoDriver {
                 vec![
                     PanelKey::new("core.inspector"),
                     PanelKey::new("core.text_probe"),
+                    PanelKey::new("core.semantics"),
                 ],
             )
             .with_fractions(0.26, 0.72);
@@ -2006,6 +2036,7 @@ impl WinitDriver for DemoDriver {
         app.set_global(PropertyEditService::default());
         app.set_global(DebugHudService::default());
         app.set_global(DebugInspectorService::default());
+        app.set_global(SemanticsInspectorService::default());
         load_theme(app);
         self.ensure_theme_hot_reload(app, main_window);
         self.install_asset_drop_rules();
@@ -2049,6 +2080,13 @@ impl WinitDriver for DemoDriver {
                 .with_description("Toggles the UI inspector overlay (hit-test + bounds outlines)")
                 .with_category("View")
                 .with_keywords(["debug", "inspector", "ui", "hit-test"]),
+        );
+        app.commands_mut().register(
+            CommandId::from("debug.semantics.open"),
+            CommandMeta::new("Open Semantics Inspector")
+                .with_description("Opens the Semantics inspector panel (roles/flags/bounds)")
+                .with_category("View")
+                .with_keywords(["debug", "semantics", "a11y", "accessibility"]),
         );
 
         app.commands_mut().register(
@@ -3263,6 +3301,15 @@ impl WinitDriver for DemoDriver {
                 viewport: None,
             },
         );
+        let key_semantics = PanelKey::new("core.semantics");
+        dock.insert_panel(
+            key_semantics.clone(),
+            DockPanel {
+                title: "Semantics".to_string(),
+                color: theme.colors.panel_background,
+                viewport: None,
+            },
+        );
 
         if let Some(layout) = Self::load_layout_file() {
             let missing_color = Color {
@@ -3306,7 +3353,11 @@ impl WinitDriver for DemoDriver {
                     active: 0,
                 });
                 let tabs_inspector = dock.graph.insert_node(DockNode::Tabs {
-                    tabs: vec![key_inspector.clone(), key_text_probe.clone()],
+                    tabs: vec![
+                        key_inspector.clone(),
+                        key_text_probe.clone(),
+                        key_semantics.clone(),
+                    ],
                     active: 0,
                 });
                 let right = dock.graph.insert_node(DockNode::Split {
@@ -3367,6 +3418,21 @@ impl WinitDriver for DemoDriver {
                 }
             }
 
+            let semantics_present = dock
+                .graph
+                .collect_panels_in_window(main_window)
+                .iter()
+                .any(|p| p == &key_semantics);
+            if !semantics_present {
+                if let Some(tabs) = dock.graph.first_tabs_in_window(main_window) {
+                    if let Some(DockNode::Tabs { tabs: list, .. }) = dock.graph.node_mut(tabs) {
+                        if !list.contains(&key_semantics) {
+                            list.push(key_semantics.clone());
+                        }
+                    }
+                }
+            }
+
             if allow_restore_windows {
                 for w in &layout.windows {
                     if w.logical_window_id == "main" {
@@ -3390,7 +3456,7 @@ impl WinitDriver for DemoDriver {
                 active: 0,
             });
             let tabs_inspector = dock.graph.insert_node(DockNode::Tabs {
-                tabs: vec![key_inspector, key_text_probe],
+                tabs: vec![key_inspector, key_text_probe, key_semantics],
                 active: 0,
             });
             let right = dock.graph.insert_node(DockNode::Split {
@@ -3512,6 +3578,7 @@ impl WinitDriver for DemoDriver {
         let key_scene = PanelKey::new("core.scene");
         let key_game = PanelKey::new("core.game");
         let key_text_probe = PanelKey::new("core.text_probe");
+        let key_semantics = PanelKey::new("core.semantics");
 
         let hierarchy_node = ui.create_node(HierarchyPanel::new(selection, hierarchy, undo));
         let project_node = ui.create_node(ProjectPanel::new());
@@ -3523,12 +3590,14 @@ impl WinitDriver for DemoDriver {
             key_game.clone(),
         ));
         let text_probe_node = ui.create_node(TextProbePanel::new(TEXT_PROBE_DEFAULT));
+        let semantics_node = ui.create_node(SemanticsPanel::new());
         ui.add_child(layers.dockspace_node, hierarchy_node);
         ui.add_child(layers.dockspace_node, project_node);
         ui.add_child(layers.dockspace_node, inspector_node);
         ui.add_child(layers.dockspace_node, scene_drop_node);
         ui.add_child(layers.dockspace_node, game_drop_node);
         ui.add_child(layers.dockspace_node, text_probe_node);
+        ui.add_child(layers.dockspace_node, semantics_node);
 
         app.with_global_mut(DockPanelContentService::default, |s, _app| {
             s.set(window, key_hierarchy, hierarchy_node);
@@ -3537,6 +3606,7 @@ impl WinitDriver for DemoDriver {
             s.set(window, key_scene, scene_drop_node);
             s.set(window, key_game, game_drop_node);
             s.set(window, key_text_probe, text_probe_node);
+            s.set(window, key_semantics, semantics_node);
         });
         Self::WindowState {
             ui,
@@ -3855,6 +3925,21 @@ impl WinitDriver for DemoDriver {
                     app.request_redraw(w);
                 }
                 tracing::info!(enabled, "toggled ui inspector");
+            }
+            "debug.semantics.open" => {
+                let key = PanelKey::new("core.semantics");
+                let preferred = [Some(window), self.main_window].into_iter().flatten();
+                let activated = DockManager::request_activate_panel(
+                    app,
+                    window,
+                    preferred,
+                    key,
+                    fret_ui_app::dock::ActivatePanelOptions { focus: true },
+                );
+                for &w in self.logical_windows.keys() {
+                    app.request_redraw(w);
+                }
+                tracing::info!(activated, "opened semantics inspector");
             }
             "command_palette.toggle" => {
                 let vis = state.ui.is_layer_visible(state.layers.command_palette);
@@ -5676,6 +5761,28 @@ impl WinitDriver for DemoDriver {
         }
 
         state.ui.layout_all(app, text, bounds, scale_factor);
+
+        let key_semantics = PanelKey::new("core.semantics");
+        let semantics_visible = app
+            .global::<DockManager>()
+            .is_some_and(|dock| dock_panel_is_active(&dock.graph, window, &key_semantics));
+        let now = Instant::now();
+        let should_sample = semantics_visible
+            && app
+                .global::<SemanticsInspectorService>()
+                .is_some_and(|s| s.should_sample(window, now));
+
+        if should_sample {
+            let frame_id = app.frame_id();
+            if let Some(snapshot) = state.ui.semantics_snapshot().cloned() {
+                if let Some(svc) = app.global_mut::<SemanticsInspectorService>() {
+                    svc.set_snapshot(window, frame_id, snapshot, now);
+                }
+            } else {
+                app.global_mut::<SemanticsInspectorService>()
+                    .map(|s| s.clear_window(window));
+            }
+        }
 
         if inspector_enabled {
             let cursor = state.last_cursor_pos;

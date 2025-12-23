@@ -767,6 +767,10 @@ pub fn build_demo_ui(
                                 command: fret_app::CommandId::from("debug.inspector.toggle"),
                                 when: None,
                             },
+                            fret_app::MenuItem::Command {
+                                command: fret_app::CommandId::from("debug.semantics.open"),
+                                when: None,
+                            },
                             fret_app::MenuItem::Separator,
                             fret_app::MenuItem::Submenu {
                                 title: Arc::<str>::from("Theme"),
