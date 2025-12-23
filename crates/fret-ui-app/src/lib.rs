@@ -14,11 +14,11 @@ pub use fret_ui::widgets;
 pub use fret_ui::{
     AppMenuBar, Bar, BoundTextInput, Clip, ColoredPanel, Column, ContextMenu, ContextMenuRequest,
     ContextMenuService, ContextMenuStyle, DockManager, DockPanel, DockPanelContentService,
-    DockSpace, FixedPanel, GlobalElementId, HeaderBody, Invalidation, PanelThemeBackground, Row,
-    Scroll, Split, Stack, Text, TextArea, TextAreaStyle, TextInput, Theme, ThemeConfig,
-    ThemeSnapshot, Toolbar, ToolbarItem, TreeNode, TreeView, TreeViewStyle, UiDebugFrameStats,
-    UiDebugHitTest, UiDebugLayerInfo, UiHost, UiLayerId, VecStringDataSource, ViewportPanel,
-    VirtualList, VirtualListDataSource, VirtualListRow, VirtualListStyle,
+    DockSpace, FixedPanel, GlobalElementId, HeaderBody, Invalidation, PaintCachePolicy,
+    PanelThemeBackground, Row, Scroll, Split, Stack, Text, TextArea, TextAreaStyle, TextInput,
+    Theme, ThemeConfig, ThemeSnapshot, Toolbar, ToolbarItem, TreeNode, TreeView, TreeViewStyle,
+    UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiHost, UiLayerId, VecStringDataSource,
+    ViewportPanel, VirtualList, VirtualListDataSource, VirtualListRow, VirtualListStyle,
 };
 
 pub use fret_ui::{

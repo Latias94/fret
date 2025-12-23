@@ -31,7 +31,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Viewport tools and overlays (example editor layer)**: `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
 - **Inspector / property editing (example editor layer)**: `docs/adr/0048-inspector-property-protocol-and-editor-registry.md`
 - **Theme tokens and theme config (P0 styling)**: `docs/adr/0032-style-tokens-and-theme-resolution.md`, `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
-- **Editor-scale performance**: `docs/adr/0042-virtualization-and-large-lists.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
+- **Editor-scale performance**: `docs/adr/0042-virtualization-and-large-lists.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`, `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
 - **Model observation / reactive invalidation (GPUI-style)**: `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`, `docs/adr/0031-app-owned-models-and-leasing-updates.md`, `docs/adr/0005-retained-ui-tree.md`
 - **Editor-scale lists contract (keys + data source)**: `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
 
@@ -65,6 +65,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0034-timers-animation-and-redraw-scheduling.md` (event-driven scheduling + continuous mode)
 - `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md` (hybrid layout, editor-friendly)
 - `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md` (profiling and inspector hooks)
+- `docs/adr/0055-frame-recording-and-subtree-replay-caching.md` (recording/replay caching for editor-scale UI)
 - `docs/adr/0037-workspace-boundaries-and-components-repository.md` (workspace boundaries + external components repo)
 - `docs/adr/0038-engine-render-hook-and-submission-coordinator.md` (engine integration without queue ownership)
 - `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md` (composable authoring layer)
@@ -118,6 +119,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`
 - `docs/adr/0042-virtualization-and-large-lists.md`
+- `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
 - `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
 - `docs/adr/0044-text-editing-state-and-commands.md`
 - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`

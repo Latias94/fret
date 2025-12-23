@@ -16,6 +16,7 @@ pub struct Scroll {
     last_content_height: Px,
     last_viewport_height: Px,
     scrollbar_width: Px,
+    last_layout_offset_y: Px,
 }
 
 impl Scroll {
@@ -29,6 +30,7 @@ impl Scroll {
             last_content_height: Px(0.0),
             last_viewport_height: Px(0.0),
             scrollbar_width: Px(10.0),
+            last_layout_offset_y: Px(0.0),
         }
     }
 
@@ -193,6 +195,8 @@ impl<H: UiHost> Widget<H> for Scroll {
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.scrollbar_width = cx.theme().metrics.scrollbar_width;
+        let prev_bounds = self.last_bounds;
+        let prev_viewport_height = self.last_viewport_height;
         self.last_bounds = cx.bounds;
         let Some(&child) = cx.children.first() else {
             return cx.available;
@@ -200,36 +204,50 @@ impl<H: UiHost> Widget<H> for Scroll {
 
         let scrollbar_w = self.scrollbar_width;
 
-        // Measure content with unconstrained height (very simple MVP).
+        let can_skip_measure = self.last_content_height.0 > 0.0
+            && prev_bounds.size == cx.bounds.size
+            && prev_viewport_height == cx.available.height
+            && self.offset_y != self.last_layout_offset_y;
+
         let mut content_width = cx.available.width;
-        let mut content_size = cx.layout_in(
-            child,
-            Rect::new(cx.bounds.origin, Size::new(content_width, Px(1.0e9))),
-        );
+        let mut content_height = self.last_content_height;
+        let mut show_scrollbar = content_height.0 > cx.available.height.0;
 
-        self.last_content_height = content_size.height;
-        self.last_viewport_height = cx.available.height;
-
-        let show_scrollbar = content_size.height.0 > cx.available.height.0;
-        if show_scrollbar {
-            content_width = Px((cx.available.width.0 - scrollbar_w.0).max(0.0));
-            content_size = cx.layout_in(
+        if !can_skip_measure {
+            // Measure content with unconstrained height (very simple MVP).
+            let mut content_size = cx.layout_in(
                 child,
                 Rect::new(cx.bounds.origin, Size::new(content_width, Px(1.0e9))),
             );
-            self.last_content_height = content_size.height;
+            content_height = content_size.height;
+
+            show_scrollbar = content_height.0 > cx.available.height.0;
+            if show_scrollbar {
+                content_width = Px((cx.available.width.0 - scrollbar_w.0).max(0.0));
+                content_size = cx.layout_in(
+                    child,
+                    Rect::new(cx.bounds.origin, Size::new(content_width, Px(1.0e9))),
+                );
+                content_height = content_size.height;
+            }
+
+            self.last_content_height = content_height;
+        } else if show_scrollbar {
+            content_width = Px((cx.available.width.0 - scrollbar_w.0).max(0.0));
         }
 
-        self.clamp_offset(content_size.height, cx.available.height);
+        self.last_viewport_height = cx.available.height;
+        self.clamp_offset(content_height, cx.available.height);
 
         // Layout child at a translated origin to implement scrolling.
         let origin = Point::new(
             cx.bounds.origin.x,
             Px(cx.bounds.origin.y.0 - self.offset_y.0),
         );
-        let child_bounds = Rect::new(origin, Size::new(content_width, content_size.height));
+        let child_bounds = Rect::new(origin, Size::new(content_width, content_height));
         let _ = cx.layout_in(child, child_bounds);
 
+        self.last_layout_offset_y = self.offset_y;
         cx.available
     }
 

@@ -33,5 +33,6 @@ pub use text_area::{TextArea, TextAreaStyle};
 pub use toolbar::{Toolbar, ToolbarItem};
 pub use tree_view::{TreeNode, TreeView, TreeViewStyle};
 pub use virtual_list::{
-    VecStringDataSource, VirtualList, VirtualListDataSource, VirtualListRow, VirtualListStyle,
+    VecStringDataSource, VirtualList, VirtualListDataSource, VirtualListRow, VirtualListRowHeight,
+    VirtualListStyle,
 };

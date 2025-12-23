@@ -3,6 +3,7 @@ use fret_core::{
     geometry::{Corners, Edges, Rect},
     scene::{Color, Scene, SceneOp},
 };
+use std::collections::HashMap;
 
 use crate::targets::{RenderTargetDescriptor, RenderTargetRegistry};
 use crate::text::TextSystem;
@@ -204,6 +205,14 @@ pub struct Renderer {
     text_system: TextSystem,
 
     render_targets: RenderTargetRegistry,
+
+    viewport_bind_groups: HashMap<fret_core::RenderTargetId, (u64, wgpu::BindGroup)>,
+    render_target_revisions: HashMap<fret_core::RenderTargetId, u64>,
+    render_targets_generation: u64,
+
+    scene_encoding_cache_key: Option<SceneEncodingCacheKey>,
+    scene_encoding_cache: SceneEncoding,
+    scene_encoding_scratch: SceneEncoding,
 }
 
 pub struct RenderSceneParams<'a> {
@@ -213,6 +222,33 @@ pub struct RenderSceneParams<'a> {
     pub clear: ClearColor,
     pub scale_factor: f32,
     pub viewport_size: (u32, u32),
+}
+
+#[derive(Default)]
+struct SceneEncoding {
+    instances: Vec<QuadInstance>,
+    viewport_vertices: Vec<ViewportVertex>,
+    text_vertices: Vec<TextVertex>,
+    ordered_draws: Vec<OrderedDraw>,
+}
+
+impl SceneEncoding {
+    fn clear(&mut self) {
+        self.instances.clear();
+        self.viewport_vertices.clear();
+        self.text_vertices.clear();
+        self.ordered_draws.clear();
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct SceneEncodingCacheKey {
+    format: wgpu::TextureFormat,
+    viewport_size: (u32, u32),
+    scale_factor_bits: u32,
+    scene_fingerprint: u64,
+    scene_ops_len: usize,
+    render_targets_generation: u64,
 }
 
 impl Renderer {
@@ -350,6 +386,12 @@ impl Renderer {
             text_vertex_capacity,
             text_system,
             render_targets: RenderTargetRegistry::default(),
+            viewport_bind_groups: HashMap::new(),
+            render_target_revisions: HashMap::new(),
+            render_targets_generation: 0,
+            scene_encoding_cache_key: None,
+            scene_encoding_cache: SceneEncoding::default(),
+            scene_encoding_scratch: SceneEncoding::default(),
         }
     }
 
@@ -357,7 +399,10 @@ impl Renderer {
         &mut self,
         desc: RenderTargetDescriptor,
     ) -> fret_core::RenderTargetId {
-        self.render_targets.register(desc)
+        let id = self.render_targets.register(desc);
+        self.render_target_revisions.insert(id, 1);
+        self.render_targets_generation = self.render_targets_generation.saturating_add(1);
+        id
     }
 
     pub fn update_render_target(
@@ -365,11 +410,24 @@ impl Renderer {
         id: fret_core::RenderTargetId,
         desc: RenderTargetDescriptor,
     ) -> bool {
-        self.render_targets.update(id, desc)
+        if !self.render_targets.update(id, desc) {
+            return false;
+        }
+        let next = self.render_target_revisions.get(&id).copied().unwrap_or(0) + 1;
+        self.render_target_revisions.insert(id, next);
+        self.viewport_bind_groups.remove(&id);
+        self.render_targets_generation = self.render_targets_generation.saturating_add(1);
+        true
     }
 
     pub fn unregister_render_target(&mut self, id: fret_core::RenderTargetId) -> bool {
-        self.render_targets.unregister(id)
+        if !self.render_targets.unregister(id) {
+            return false;
+        }
+        self.render_target_revisions.remove(&id);
+        self.viewport_bind_groups.remove(&id);
+        self.render_targets_generation = self.render_targets_generation.saturating_add(1);
+        true
     }
 
     fn ensure_viewport_pipeline(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
@@ -702,10 +760,259 @@ impl Renderer {
 
         self.text_system.flush_uploads(queue);
 
-        let mut instances: Vec<QuadInstance> = Vec::new();
-        let mut viewport_vertices: Vec<ViewportVertex> = Vec::new();
-        let mut text_vertices: Vec<TextVertex> = Vec::new();
-        let mut ordered_draws: Vec<OrderedDraw> = Vec::new();
+        let key = SceneEncodingCacheKey {
+            format,
+            viewport_size,
+            scale_factor_bits: scale_factor.to_bits(),
+            scene_fingerprint: scene.fingerprint(),
+            scene_ops_len: scene.ops_len(),
+            render_targets_generation: self.render_targets_generation,
+        };
+
+        let cache_hit = self.scene_encoding_cache_key == Some(key);
+        let encoding = if cache_hit {
+            std::mem::take(&mut self.scene_encoding_cache)
+        } else {
+            let mut encoding = std::mem::take(&mut self.scene_encoding_scratch);
+            encoding.clear();
+            self.encode_scene_ops_into(scene, scale_factor, viewport_size, &mut encoding);
+
+            // Preserve the old cache's allocations for reuse.
+            self.scene_encoding_scratch = std::mem::take(&mut self.scene_encoding_cache);
+            self.scene_encoding_cache_key = Some(key);
+            encoding
+        };
+
+        self.prepare_viewport_bind_groups(device, &encoding.ordered_draws);
+
+        let instances = &encoding.instances;
+        let viewport_vertices = &encoding.viewport_vertices;
+        let text_vertices = &encoding.text_vertices;
+
+        self.ensure_instance_capacity(device, instances.len());
+        self.ensure_viewport_vertex_capacity(device, viewport_vertices.len());
+        self.ensure_text_vertex_capacity(device, text_vertices.len());
+
+        let instance_buffer_index = self.instance_buffer_index;
+        self.instance_buffer_index = (self.instance_buffer_index + 1) % self.instance_buffers.len();
+        let instance_buffer = &self.instance_buffers[instance_buffer_index];
+        if !instances.is_empty() {
+            queue.write_buffer(instance_buffer, 0, bytemuck::cast_slice(&instances));
+        }
+
+        let viewport_vertex_buffer_index = self.viewport_vertex_buffer_index;
+        self.viewport_vertex_buffer_index =
+            (self.viewport_vertex_buffer_index + 1) % self.viewport_vertex_buffers.len();
+        let viewport_vertex_buffer = &self.viewport_vertex_buffers[viewport_vertex_buffer_index];
+        if !viewport_vertices.is_empty() {
+            queue.write_buffer(
+                viewport_vertex_buffer,
+                0,
+                bytemuck::cast_slice(&viewport_vertices),
+            );
+        }
+
+        let text_vertex_buffer_index = self.text_vertex_buffer_index;
+        self.text_vertex_buffer_index =
+            (self.text_vertex_buffer_index + 1) % self.text_vertex_buffers.len();
+        let text_vertex_buffer = &self.text_vertex_buffers[text_vertex_buffer_index];
+        if !text_vertices.is_empty() {
+            queue.write_buffer(text_vertex_buffer, 0, bytemuck::cast_slice(&text_vertices));
+        }
+
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("fret renderer encoder"),
+        });
+
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("fret renderer pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: target_view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(clear.0),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+
+            enum ActivePipeline {
+                None,
+                Quad,
+                Viewport,
+                Text,
+            }
+
+            let quad_pipeline = self
+                .quad_pipeline
+                .as_ref()
+                .expect("quad pipeline must exist");
+            let viewport_pipeline = self
+                .viewport_pipeline
+                .as_ref()
+                .expect("viewport pipeline must exist");
+            let text_pipeline = self
+                .text_pipeline
+                .as_ref()
+                .expect("text pipeline must exist");
+
+            let mut active_pipeline = ActivePipeline::None;
+
+            for item in &encoding.ordered_draws {
+                match item {
+                    OrderedDraw::Quad(draw) => {
+                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                            continue;
+                        }
+
+                        if !matches!(active_pipeline, ActivePipeline::Quad) {
+                            pass.set_pipeline(quad_pipeline);
+                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                            pass.set_vertex_buffer(0, instance_buffer.slice(..));
+                            active_pipeline = ActivePipeline::Quad;
+                        }
+
+                        pass.set_scissor_rect(
+                            draw.scissor.x,
+                            draw.scissor.y,
+                            draw.scissor.w,
+                            draw.scissor.h,
+                        );
+                        pass.draw(
+                            0..6,
+                            draw.first_instance..(draw.first_instance + draw.instance_count),
+                        );
+                    }
+                    OrderedDraw::Viewport(draw) => {
+                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                            continue;
+                        }
+
+                        if !matches!(active_pipeline, ActivePipeline::Viewport) {
+                            pass.set_pipeline(viewport_pipeline);
+                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                            pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
+                            active_pipeline = ActivePipeline::Viewport;
+                        }
+
+                        let Some((_, bind_group)) = self.viewport_bind_groups.get(&draw.target)
+                        else {
+                            // Missing bind group should only happen if the target vanished
+                            // between encoding and rendering.
+                            continue;
+                        };
+                        pass.set_bind_group(1, bind_group, &[]);
+                        pass.set_scissor_rect(
+                            draw.scissor.x,
+                            draw.scissor.y,
+                            draw.scissor.w,
+                            draw.scissor.h,
+                        );
+                        pass.draw(
+                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                            0..1,
+                        );
+                    }
+                    OrderedDraw::Text(draw) => {
+                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                            continue;
+                        }
+
+                        if !matches!(active_pipeline, ActivePipeline::Text) {
+                            pass.set_pipeline(text_pipeline);
+                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                            pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
+                            pass.set_bind_group(1, self.text_system.atlas_bind_group(), &[]);
+                            active_pipeline = ActivePipeline::Text;
+                        }
+
+                        pass.set_scissor_rect(
+                            draw.scissor.x,
+                            draw.scissor.y,
+                            draw.scissor.w,
+                            draw.scissor.h,
+                        );
+                        pass.draw(
+                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                            0..1,
+                        );
+                    }
+                }
+            }
+        }
+
+        let cmd = encoder.finish();
+
+        // Keep the most recent encoding for potential reuse on the next frame.
+        if cache_hit {
+            self.scene_encoding_cache_key = Some(key);
+        }
+        self.scene_encoding_cache = encoding;
+        cmd
+    }
+
+    fn prepare_viewport_bind_groups(&mut self, device: &wgpu::Device, draws: &[OrderedDraw]) {
+        for item in draws {
+            let OrderedDraw::Viewport(draw) = item else {
+                continue;
+            };
+
+            let target = draw.target;
+            let Some(view) = self.render_targets.get(target) else {
+                continue;
+            };
+
+            let revision = self
+                .render_target_revisions
+                .get(&target)
+                .copied()
+                .unwrap_or(0);
+            let needs_rebuild = match self.viewport_bind_groups.get(&target) {
+                Some((cached, _)) => *cached != revision,
+                None => true,
+            };
+            if !needs_rebuild {
+                continue;
+            }
+
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("fret viewport texture bind group"),
+                layout: &self.viewport_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Sampler(&self.viewport_sampler),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::TextureView(view),
+                    },
+                ],
+            });
+
+            self.viewport_bind_groups
+                .insert(target, (revision, bind_group));
+        }
+    }
+
+    fn encode_scene_ops_into(
+        &mut self,
+        scene: &Scene,
+        scale_factor: f32,
+        viewport_size: (u32, u32),
+        encoding: &mut SceneEncoding,
+    ) {
+        encoding.clear();
+        let instances = &mut encoding.instances;
+        let viewport_vertices = &mut encoding.viewport_vertices;
+        let text_vertices = &mut encoding.text_vertices;
+        let ordered_draws = &mut encoding.ordered_draws;
 
         let mut scissor_stack: Vec<ScissorRect> =
             vec![ScissorRect::full(viewport_size.0, viewport_size.1)];
@@ -731,7 +1038,7 @@ impl Renderer {
             }};
         }
 
-        for op in &scene.ops {
+        for op in scene.ops() {
             match op {
                 SceneOp::PushClipRect { rect } => {
                     let Some(new_scissor) = scissor_from_rect(*rect, scale_factor, viewport_size)
@@ -943,180 +1250,6 @@ impl Renderer {
         }
 
         flush_quad_batch!();
-
-        self.ensure_instance_capacity(device, instances.len());
-        self.ensure_viewport_vertex_capacity(device, viewport_vertices.len());
-        self.ensure_text_vertex_capacity(device, text_vertices.len());
-
-        let instance_buffer_index = self.instance_buffer_index;
-        self.instance_buffer_index = (self.instance_buffer_index + 1) % self.instance_buffers.len();
-        let instance_buffer = &self.instance_buffers[instance_buffer_index];
-        if !instances.is_empty() {
-            queue.write_buffer(instance_buffer, 0, bytemuck::cast_slice(&instances));
-        }
-
-        let viewport_vertex_buffer_index = self.viewport_vertex_buffer_index;
-        self.viewport_vertex_buffer_index =
-            (self.viewport_vertex_buffer_index + 1) % self.viewport_vertex_buffers.len();
-        let viewport_vertex_buffer = &self.viewport_vertex_buffers[viewport_vertex_buffer_index];
-        if !viewport_vertices.is_empty() {
-            queue.write_buffer(
-                viewport_vertex_buffer,
-                0,
-                bytemuck::cast_slice(&viewport_vertices),
-            );
-        }
-
-        let text_vertex_buffer_index = self.text_vertex_buffer_index;
-        self.text_vertex_buffer_index =
-            (self.text_vertex_buffer_index + 1) % self.text_vertex_buffers.len();
-        let text_vertex_buffer = &self.text_vertex_buffers[text_vertex_buffer_index];
-        if !text_vertices.is_empty() {
-            queue.write_buffer(text_vertex_buffer, 0, bytemuck::cast_slice(&text_vertices));
-        }
-
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("fret renderer encoder"),
-        });
-
-        {
-            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("fret renderer pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: target_view,
-                    depth_slice: None,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(clear.0),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-                multiview_mask: None,
-            });
-
-            enum ActivePipeline {
-                None,
-                Quad,
-                Viewport,
-                Text,
-            }
-
-            let quad_pipeline = self
-                .quad_pipeline
-                .as_ref()
-                .expect("quad pipeline must exist");
-            let viewport_pipeline = self
-                .viewport_pipeline
-                .as_ref()
-                .expect("viewport pipeline must exist");
-            let text_pipeline = self
-                .text_pipeline
-                .as_ref()
-                .expect("text pipeline must exist");
-
-            let mut active_pipeline = ActivePipeline::None;
-
-            for item in &ordered_draws {
-                match item {
-                    OrderedDraw::Quad(draw) => {
-                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                            continue;
-                        }
-
-                        if !matches!(active_pipeline, ActivePipeline::Quad) {
-                            pass.set_pipeline(quad_pipeline);
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
-                            pass.set_vertex_buffer(0, instance_buffer.slice(..));
-                            active_pipeline = ActivePipeline::Quad;
-                        }
-
-                        pass.set_scissor_rect(
-                            draw.scissor.x,
-                            draw.scissor.y,
-                            draw.scissor.w,
-                            draw.scissor.h,
-                        );
-                        pass.draw(
-                            0..6,
-                            draw.first_instance..(draw.first_instance + draw.instance_count),
-                        );
-                    }
-                    OrderedDraw::Viewport(draw) => {
-                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                            continue;
-                        }
-                        let Some(view) = self.render_targets.get(draw.target) else {
-                            continue;
-                        };
-
-                        if !matches!(active_pipeline, ActivePipeline::Viewport) {
-                            pass.set_pipeline(viewport_pipeline);
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
-                            pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
-                            active_pipeline = ActivePipeline::Viewport;
-                        }
-
-                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                            label: Some("fret viewport texture bind group"),
-                            layout: &self.viewport_bind_group_layout,
-                            entries: &[
-                                wgpu::BindGroupEntry {
-                                    binding: 0,
-                                    resource: wgpu::BindingResource::Sampler(
-                                        &self.viewport_sampler,
-                                    ),
-                                },
-                                wgpu::BindGroupEntry {
-                                    binding: 1,
-                                    resource: wgpu::BindingResource::TextureView(view),
-                                },
-                            ],
-                        });
-
-                        pass.set_bind_group(1, &bind_group, &[]);
-                        pass.set_scissor_rect(
-                            draw.scissor.x,
-                            draw.scissor.y,
-                            draw.scissor.w,
-                            draw.scissor.h,
-                        );
-                        pass.draw(
-                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                            0..1,
-                        );
-                    }
-                    OrderedDraw::Text(draw) => {
-                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                            continue;
-                        }
-
-                        if !matches!(active_pipeline, ActivePipeline::Text) {
-                            pass.set_pipeline(text_pipeline);
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
-                            pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
-                            pass.set_bind_group(1, self.text_system.atlas_bind_group(), &[]);
-                            active_pipeline = ActivePipeline::Text;
-                        }
-
-                        pass.set_scissor_rect(
-                            draw.scissor.x,
-                            draw.scissor.y,
-                            draw.scissor.w,
-                            draw.scissor.h,
-                        );
-                        pass.draw(
-                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                            0..1,
-                        );
-                    }
-                }
-            }
-        }
-
-        encoder.finish()
     }
 }
 

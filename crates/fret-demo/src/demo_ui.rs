@@ -341,7 +341,7 @@ struct DebugHudPanel {
     text: String,
     text_blob: Option<fret_core::TextBlobId>,
     text_metrics: Option<fret_core::TextMetrics>,
-    last_key: Option<(u64, u32, u32, u32, u8, u8, u8)>,
+    last_key: Option<(u64, u32, u32, u32, u32, u32, u32, u8, u8, u8)>,
     last_scale_factor: Option<f32>,
     style: fret_core::TextStyle,
 }
@@ -377,7 +377,7 @@ impl DebugHudPanel {
             .global::<PlatformCapabilities>()
             .cloned()
             .unwrap_or_default();
-        let payload_key = match caps.dnd.external_payload {
+        let payload_key: u8 = match caps.dnd.external_payload {
             ExternalDragPayloadKind::None => 0,
             ExternalDragPayloadKind::FilePath => 1,
             ExternalDragPayloadKind::FileToken => 2,
@@ -389,6 +389,9 @@ impl DebugHudPanel {
             stats.layout_nodes_visited,
             stats.layout_nodes_performed,
             stats.paint_nodes,
+            stats.paint_nodes_performed,
+            stats.paint_cache_hits,
+            stats.paint_cache_misses,
             caps.ui.multi_window as u8,
             caps.ui.window_tear_off as u8,
             payload_key,
@@ -407,13 +410,17 @@ impl DebugHudPanel {
         let paint_ms = stats.paint_time.as_secs_f64() * 1000.0;
 
         self.text = format!(
-            "UI Debug\nframe: {}\nlayout: {:.2} ms ({} / {})\npaint: {:.2} ms ({} nodes)\nfocus: {:?}\ncapture: {:?}\n\ncaps.ui.multi_window: {}\ncaps.ui.window_tear_off: {}\ncaps.dnd.external_payload: {}",
+            "UI Debug\nframe: {}\nlayout: {:.2} ms ({} / {})\npaint: {:.2} ms ({} / {} nodes)\npaint cache: {} hit / {} miss ({} ops)\nfocus: {:?}\ncapture: {:?}\n\ncaps.ui.multi_window: {}\ncaps.ui.window_tear_off: {}\ncaps.dnd.external_payload: {}",
             stats.frame_id.0,
             layout_ms,
             stats.layout_nodes_performed,
             stats.layout_nodes_visited,
             paint_ms,
+            stats.paint_nodes_performed,
             stats.paint_nodes,
+            stats.paint_cache_hits,
+            stats.paint_cache_misses,
+            stats.paint_cache_replayed_ops,
             stats.focus,
             stats.captured,
             caps.ui.multi_window,

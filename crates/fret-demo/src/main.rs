@@ -69,9 +69,12 @@ use std::{
     collections::HashMap,
     collections::VecDeque,
     ffi::OsString,
-    fs::File,
+    fmt,
+    fs::{File, OpenOptions},
     hash::{Hash, Hasher},
+    io::Write,
     path::{Path, PathBuf},
+    sync::{Mutex, OnceLock},
     time::{Duration, Instant, SystemTime},
 };
 use text_probe_panel::{TextProbePanel, TextProbeService};
@@ -103,6 +106,37 @@ The quick brown fox jumps over the lazy dog. 1234567890.
 Symbols: []{}() <> /\\ | _-+=* &%$#@! ?
 Unicode: 你好，世界。日本語。한글. 😀✨
 "#;
+
+fn perf_log(args: fmt::Arguments<'_>) {
+    if std::env::var_os("FRET_PERF_LOG").is_none() {
+        return;
+    }
+
+    static LOG_FILE: OnceLock<Mutex<File>> = OnceLock::new();
+
+    let file = LOG_FILE.get_or_init(|| {
+        let _ = std::fs::create_dir_all("target");
+        let path = std::path::Path::new("target").join("fret-perf.log");
+        let mut file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(path)
+            .expect("open fret-perf.log");
+        let _ = writeln!(
+            file,
+            "[session] pid={} time={:?}",
+            std::process::id(),
+            SystemTime::now()
+        );
+        Mutex::new(file)
+    });
+
+    let Ok(mut file) = file.lock() else {
+        return;
+    };
+    let _ = writeln!(file, "{}", args);
+}
 
 fn dock_panel_is_active(
     graph: &fret_core::DockGraph,
@@ -5737,6 +5771,7 @@ impl WinitDriver for DemoDriver {
         text: &mut dyn fret_core::TextService,
         scene: &mut Scene,
     ) {
+        state.ui.ingest_paint_cache_source(scene);
         scene.clear();
         self.sync_scene_chrome(app);
         self.sync_viewport_selection_overlay_for_window(app, window);
@@ -5744,7 +5779,8 @@ impl WinitDriver for DemoDriver {
         let hud_enabled = app
             .global::<DebugHudService>()
             .is_some_and(|hud| hud.enabled());
-        state.ui.set_debug_enabled(hud_enabled);
+        let perf_log_enabled = std::env::var_os("FRET_PERF_LOG").is_some();
+        state.ui.set_debug_enabled(hud_enabled || perf_log_enabled);
         if state.ui.is_layer_visible(state.layers.debug_hud) != hud_enabled {
             state
                 .ui
@@ -5764,6 +5800,13 @@ impl WinitDriver for DemoDriver {
         let semantics_visible = app
             .global::<DockManager>()
             .is_some_and(|dock| dock_panel_is_active(&dock.graph, window, &key_semantics));
+
+        // Caching is an optimization: treat interactive inspection/picking tools as a first-class
+        // input to the cache policy to keep debug output consistent and complete (ADR 0036 /
+        // ADR 0055). The semantics panel itself does not require disabling paint cache: it relies
+        // on the semantics snapshot pass, not on paint-time side effects.
+        state.ui.set_inspection_active(inspector_enabled);
+
         let now = Instant::now();
         let should_sample_semantics = semantics_visible
             && app
@@ -5866,6 +5909,24 @@ impl WinitDriver for DemoDriver {
             let stats = state.ui.debug_stats();
             app.global_mut::<DebugHudService>()
                 .map(|hud| hud.set_stats(window, stats));
+        }
+
+        if perf_log_enabled {
+            let stats = state.ui.debug_stats();
+            perf_log(format_args!(
+                "frame={:?} window={:?} cache_enabled={} inspection_active={} layout_ms={:.3} paint_ms={:.3} layout_performed={} paint_performed={} cache_hits={} cache_misses={} replayed_ops={}",
+                stats.frame_id,
+                window,
+                state.ui.paint_cache_enabled(),
+                state.ui.inspection_active(),
+                stats.layout_time.as_secs_f64() * 1000.0,
+                stats.paint_time.as_secs_f64() * 1000.0,
+                stats.layout_nodes_performed,
+                stats.paint_nodes_performed,
+                stats.paint_cache_hits,
+                stats.paint_cache_misses,
+                stats.paint_cache_replayed_ops,
+            ));
         }
     }
 

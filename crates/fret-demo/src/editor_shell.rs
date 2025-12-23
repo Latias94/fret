@@ -1041,7 +1041,48 @@ impl InspectorPanel {
         }
     }
 
-    fn maybe_refresh(&mut self, app: &App, text: &mut dyn fret_core::TextService) -> bool {
+    fn rows_compatible(a: &InspectorRow, b: &InspectorRow) -> bool {
+        match (a, b) {
+            (InspectorRow::Header { label: la }, InspectorRow::Header { label: lb }) => la == lb,
+            (
+                InspectorRow::Property {
+                    label: la,
+                    action: aa,
+                    ..
+                },
+                InspectorRow::Property {
+                    label: lb,
+                    action: ab,
+                    ..
+                },
+            ) => {
+                if la != lb {
+                    return false;
+                }
+                match (aa, ab) {
+                    (None, None) => true,
+                    (
+                        Some(InspectorRowAction::ToggleBool { .. }),
+                        Some(InspectorRowAction::ToggleBool { .. }),
+                    ) => true,
+                    (
+                        Some(InspectorRowAction::EditValue { request: ra }),
+                        Some(InspectorRowAction::EditValue { request: rb }),
+                    ) => ra.kind == rb.kind,
+                    _ => false,
+                }
+            }
+            _ => false,
+        }
+    }
+
+    fn maybe_refresh(
+        &mut self,
+        app: &App,
+        text: &mut dyn fret_core::TextService,
+        theme: ThemeSnapshot,
+        scale_factor: f32,
+    ) -> bool {
         let revision = self.selection.revision(app);
         let world_revision = self.world.revision(app);
         let project_revision = app
@@ -1070,6 +1111,20 @@ impl InspectorPanel {
             .map(|s| s.selected_entities.clone())
             .unwrap_or_default();
 
+        let new_data = InspectorDataSource::new(app, self.world, selected);
+
+        let structure_changed = revision != self.last_revision
+            || self.last_project_revision != Some(project_revision)
+            || self.last_project_tree_revision != project_tree_revision
+            || self.last_scene_revision != Some(scene_revision)
+            || self.data.rows.len() != new_data.rows.len()
+            || self
+                .data
+                .rows
+                .iter()
+                .zip(&new_data.rows)
+                .any(|(a, b)| !Self::rows_compatible(a, b));
+
         self.last_selected = lead;
         self.last_revision = revision;
         self.last_world_revision = world_revision;
@@ -1077,10 +1132,93 @@ impl InspectorPanel {
         self.last_project_tree_revision = project_tree_revision;
         self.last_scene_revision = Some(scene_revision);
 
-        self.release_prepared(text);
-        self.data = InspectorDataSource::new(app, self.world, selected);
-        self.hover_row = None;
-        true
+        if structure_changed {
+            self.release_prepared(text);
+            self.data = new_data;
+            self.hover_row = None;
+            self.ensure_prepared(text, theme, scale_factor);
+            return true;
+        }
+
+        let mut changed = false;
+        if self.data.rows.len() == new_data.rows.len() {
+            let label_constraints = TextConstraints {
+                max_width: Some(Px(360.0)),
+                wrap: TextWrap::None,
+                scale_factor,
+            };
+            let value_constraints = TextConstraints {
+                max_width: Some(Px(640.0)),
+                wrap: TextWrap::None,
+                scale_factor,
+            };
+
+            for (i, next) in new_data.rows.iter().enumerate() {
+                let Some(prev) = self.data.rows.get_mut(i) else {
+                    continue;
+                };
+                match (prev, next) {
+                    (
+                        InspectorRow::Header { label: prev_label },
+                        InspectorRow::Header { label: next_label },
+                    ) => {
+                        if prev_label == next_label {
+                            continue;
+                        }
+                        *prev_label = next_label.clone();
+                        if let Some(prepared) = self.prepared.get_mut(i)
+                            && let PreparedInspectorRowKind::Header { label } = &mut prepared.kind
+                        {
+                            text.release(label.blob);
+                            let (blob, metrics) =
+                                text.prepare(prev_label, self.text_style, label_constraints);
+                            label.blob = blob;
+                            label.metrics = metrics;
+                        }
+                        changed = true;
+                    }
+                    (
+                        InspectorRow::Property {
+                            value: prev_value,
+                            action: prev_action,
+                            ..
+                        },
+                        InspectorRow::Property {
+                            value: next_value,
+                            action: next_action,
+                            ..
+                        },
+                    ) => {
+                        let value_changed = prev_value != next_value;
+                        *prev_value = next_value.clone();
+                        *prev_action = next_action.clone();
+                        if value_changed {
+                            if let Some(prepared) = self.prepared.get_mut(i)
+                                && let PreparedInspectorRowKind::Property {
+                                    value, value_kind, ..
+                                } = &mut prepared.kind
+                            {
+                                prepared.action = next_action.clone();
+                                Self::update_prepared_value(
+                                    text,
+                                    value,
+                                    *value_kind,
+                                    prev_value,
+                                    self.text_style,
+                                    value_constraints,
+                                );
+                            }
+                            changed = true;
+                        } else if let Some(prepared) = self.prepared.get_mut(i) {
+                            prepared.action = next_action.clone();
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        changed
     }
 
     fn row_height() -> Px {
@@ -1120,35 +1258,39 @@ impl InspectorPanel {
         }
     }
 
-    fn ensure_prepared(&mut self, cx: &mut LayoutCx<'_>) {
-        let theme = cx.theme().snapshot();
+    fn ensure_prepared(
+        &mut self,
+        text: &mut dyn fret_core::TextService,
+        theme: ThemeSnapshot,
+        scale_factor: f32,
+    ) {
         let needs_rebuild = self.prepared.is_empty()
+            || self.prepared.len() != self.data.rows.len()
             || self.last_theme_revision != Some(theme.revision)
-            || self.last_scale_factor != Some(cx.scale_factor);
+            || self.last_scale_factor != Some(scale_factor);
         if !needs_rebuild {
             return;
         }
 
-        self.release_prepared(cx.text);
+        self.release_prepared(text);
         self.last_theme_revision = Some(theme.revision);
-        self.last_scale_factor = Some(cx.scale_factor);
+        self.last_scale_factor = Some(scale_factor);
 
         let label_constraints = TextConstraints {
             max_width: Some(Px(360.0)),
             wrap: TextWrap::None,
-            scale_factor: cx.scale_factor,
+            scale_factor,
         };
         let value_constraints = TextConstraints {
             max_width: Some(Px(640.0)),
             wrap: TextWrap::None,
-            scale_factor: cx.scale_factor,
+            scale_factor,
         };
 
         for row in &self.data.rows {
             match row {
                 InspectorRow::Header { label } => {
-                    let (blob, metrics) =
-                        cx.text.prepare(label, self.text_style, label_constraints);
+                    let (blob, metrics) = text.prepare(label, self.text_style, label_constraints);
                     self.prepared.push(PreparedInspectorRow {
                         kind: PreparedInspectorRowKind::Header {
                             label: PreparedText { blob, metrics },
@@ -1162,7 +1304,7 @@ impl InspectorPanel {
                     action,
                 } => {
                     let (l_blob, l_metrics) =
-                        cx.text.prepare(label, self.text_style, label_constraints);
+                        text.prepare(label, self.text_style, label_constraints);
 
                     let value_kind = match action {
                         Some(InspectorRowAction::EditValue { request }) => request.kind,
@@ -1193,14 +1335,11 @@ impl InspectorPanel {
                             }
                         }
                         let (xb, xm) =
-                            cx.text
-                                .prepare(texts[0].as_str(), self.text_style, value_constraints);
+                            text.prepare(texts[0].as_str(), self.text_style, value_constraints);
                         let (yb, ym) =
-                            cx.text
-                                .prepare(texts[1].as_str(), self.text_style, value_constraints);
+                            text.prepare(texts[1].as_str(), self.text_style, value_constraints);
                         let (zb, zm) =
-                            cx.text
-                                .prepare(texts[2].as_str(), self.text_style, value_constraints);
+                            text.prepare(texts[2].as_str(), self.text_style, value_constraints);
                         PreparedValue::Vec3([
                             PreparedText {
                                 blob: xb,
@@ -1217,7 +1356,7 @@ impl InspectorPanel {
                         ])
                     } else {
                         let (v_blob, v_metrics) =
-                            cx.text.prepare(value, self.text_style, value_constraints);
+                            text.prepare(value, self.text_style, value_constraints);
                         PreparedValue::Text(PreparedText {
                             blob: v_blob,
                             metrics: v_metrics,
@@ -1242,10 +1381,66 @@ impl InspectorPanel {
         let constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
-            scale_factor: cx.scale_factor,
+            scale_factor,
         };
-        let (blob, metrics) = cx.text.prepare("✓", self.text_style, constraints);
+        let (blob, metrics) = text.prepare("✓", self.text_style, constraints);
         self.toggle_glyph = Some(ToggleGlyph { blob, metrics });
+    }
+
+    fn update_prepared_value(
+        text: &mut dyn fret_core::TextService,
+        prepared: &mut PreparedValue,
+        value_kind: InspectorEditKind,
+        value: &str,
+        text_style: TextStyle,
+        constraints: TextConstraints,
+    ) {
+        match prepared {
+            PreparedValue::Text(v) => {
+                text.release(v.blob);
+            }
+            PreparedValue::Vec3(v) => {
+                for comp in v {
+                    text.release(comp.blob);
+                }
+            }
+        }
+
+        *prepared = if value_kind == InspectorEditKind::Vec3 {
+            let parts: Vec<&str> = value
+                .split(|c| c == ',' || c == ' ')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .collect();
+            let mut texts: [String; 3] = ["—".to_string(), "—".to_string(), "—".to_string()];
+            if parts.len() == 3 {
+                texts = [
+                    parts[0].to_string(),
+                    parts[1].to_string(),
+                    parts[2].to_string(),
+                ];
+            }
+            let (xb, xm) = text.prepare(texts[0].as_str(), text_style, constraints);
+            let (yb, ym) = text.prepare(texts[1].as_str(), text_style, constraints);
+            let (zb, zm) = text.prepare(texts[2].as_str(), text_style, constraints);
+            PreparedValue::Vec3([
+                PreparedText {
+                    blob: xb,
+                    metrics: xm,
+                },
+                PreparedText {
+                    blob: yb,
+                    metrics: ym,
+                },
+                PreparedText {
+                    blob: zb,
+                    metrics: zm,
+                },
+            ])
+        } else {
+            let (blob, metrics) = text.prepare(value, text_style, constraints);
+            PreparedValue::Text(PreparedText { blob, metrics })
+        };
     }
 
     fn layout_columns(&mut self, theme: ThemeSnapshot, bounds: Rect) {
@@ -1289,7 +1484,7 @@ impl InspectorPanel {
             return None;
         }
         let index = index as usize;
-        (index < self.prepared.len()).then_some(index)
+        (index < self.data.rows.len()).then_some(index)
     }
 
     fn row_rect(&self, theme: ThemeSnapshot, index: usize) -> Rect {
@@ -1608,15 +1803,14 @@ impl GenericWidget<App> for InspectorPanel {
 
     fn layout(&mut self, cx: &mut LayoutCx<'_>) -> Size {
         cx.observe_model(self.selection, Invalidation::Layout);
-        cx.observe_model(self.world, Invalidation::Layout);
-
-        let _ = self.maybe_refresh(cx.app, cx.text);
-        self.last_bounds = cx.bounds;
-        self.ensure_prepared(cx);
 
         let theme = cx.theme().snapshot();
+        let _ = self.maybe_refresh(cx.app, cx.text, theme, cx.scale_factor);
+        self.last_bounds = cx.bounds;
+        self.ensure_prepared(cx.text, theme, cx.scale_factor);
+
         let (_pad_x, pad_y) = Self::padding(theme);
-        self.content_h = Px(pad_y.0 * 2.0 + Self::row_height().0 * self.prepared.len() as f32);
+        self.content_h = Px(pad_y.0 * 2.0 + Self::row_height().0 * self.data.rows.len() as f32);
         self.clamp_scroll(cx.bounds.size.height);
         self.layout_columns(theme, cx.bounds);
 
@@ -1627,8 +1821,15 @@ impl GenericWidget<App> for InspectorPanel {
         cx.observe_model(self.selection, Invalidation::Paint);
         cx.observe_model(self.world, Invalidation::Paint);
 
-        let _ = self.maybe_refresh(cx.app, cx.text);
         let theme = cx.theme().snapshot();
+        let _ = self.maybe_refresh(cx.app, cx.text, theme, cx.scale_factor);
+        self.ensure_prepared(cx.text, theme, cx.scale_factor);
+        self.last_bounds = cx.bounds;
+
+        let (_pad_x, pad_y) = Self::padding(theme);
+        self.content_h = Px(pad_y.0 * 2.0 + Self::row_height().0 * self.data.rows.len() as f32);
+        self.clamp_scroll(cx.bounds.size.height);
+        self.layout_columns(theme, cx.bounds);
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
@@ -1647,18 +1848,18 @@ impl GenericWidget<App> for InspectorPanel {
         let row_h = Self::row_height();
         let start_y = cx.bounds.origin.y.0 + pad_y.0 - self.scroll_y.0;
 
-        for (i, row) in self.prepared.iter().enumerate() {
+        let viewport_h = Px((cx.bounds.size.height.0 - pad_y.0 * 2.0).max(0.0));
+        let start = (self.scroll_y.0 / row_h.0).floor().max(0.0) as usize;
+        let end = (((self.scroll_y.0 + viewport_h.0) / row_h.0).ceil() as usize + 1)
+            .min(self.prepared.len());
+
+        for i in start..end {
+            let row = &self.prepared[i];
             let y = start_y + row_h.0 * i as f32;
             let rect = Rect::new(
                 Point::new(cx.bounds.origin.x, Px(y)),
                 Size::new(cx.bounds.size.width, row_h),
             );
-
-            if rect.origin.y.0 + rect.size.height.0 < cx.bounds.origin.y.0
-                || rect.origin.y.0 > cx.bounds.origin.y.0 + cx.bounds.size.height.0
-            {
-                continue;
-            }
 
             let hovered = self.hover_row == Some(i);
             if hovered {

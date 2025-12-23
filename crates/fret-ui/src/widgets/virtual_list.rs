@@ -11,9 +11,100 @@ use std::{borrow::Cow, collections::HashSet, hash::Hash, sync::Arc};
 
 use super::context_menu::{ContextMenuRequest, ContextMenuService};
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum VirtualListRowHeight {
+    Fixed(Px),
+    Measured { min: Px },
+}
+
+impl Default for VirtualListRowHeight {
+    fn default() -> Self {
+        Self::Fixed(Px(20.0))
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+struct FenwickTree {
+    tree: Vec<f32>,
+}
+
+impl FenwickTree {
+    fn lowbit(i: usize) -> usize {
+        i & i.wrapping_neg()
+    }
+
+    fn rebuild_from_px(&mut self, values: &[Px]) {
+        let n = values.len();
+        self.tree.clear();
+        self.tree.resize(n + 1, 0.0);
+        for (i, v) in values.iter().enumerate() {
+            self.tree[i + 1] = v.0;
+        }
+        for i in 1..=n {
+            let j = i + Self::lowbit(i);
+            if j <= n {
+                self.tree[j] += self.tree[i];
+            }
+        }
+    }
+
+    fn total(&self) -> Px {
+        Px(self.prefix_sum(self.tree.len().saturating_sub(1)))
+    }
+
+    fn prefix_sum(&self, end: usize) -> f32 {
+        let mut i = end.min(self.tree.len().saturating_sub(1));
+        let mut sum = 0.0;
+        while i > 0 {
+            sum += self.tree[i];
+            i &= i - 1;
+        }
+        sum
+    }
+
+    fn offset_of_index(&self, index: usize) -> Px {
+        Px(self.prefix_sum(index))
+    }
+
+    fn add(&mut self, index: usize, delta: f32) {
+        let mut i = index + 1;
+        while i < self.tree.len() {
+            self.tree[i] += delta;
+            i += Self::lowbit(i);
+        }
+    }
+
+    fn lower_bound(&self, target: f32) -> usize {
+        let n = self.tree.len().saturating_sub(1);
+        if n == 0 {
+            return 0;
+        }
+
+        let mut idx = 0usize;
+        let mut bit = 1usize;
+        while bit << 1 <= n {
+            bit <<= 1;
+        }
+
+        let mut acc = 0.0f32;
+        let mut b = bit;
+        while b != 0 {
+            let next = idx + b;
+            if next <= n && acc + self.tree[next] <= target {
+                acc += self.tree[next];
+                idx = next;
+            }
+            b >>= 1;
+        }
+
+        idx
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct VirtualListStyle {
     pub padding_x: Px,
+    pub padding_y: Px,
     pub background: Color,
     pub border: Edges,
     pub border_color: Color,
@@ -22,12 +113,14 @@ pub struct VirtualListStyle {
     pub row_selected: Color,
     pub text_color: Color,
     pub text_style: TextStyle,
+    pub wrap: TextWrap,
 }
 
 impl Default for VirtualListStyle {
     fn default() -> Self {
         Self {
             padding_x: Px(8.0),
+            padding_y: Px(2.0),
             background: Color {
                 r: 0.10,
                 g: 0.10,
@@ -64,6 +157,7 @@ impl Default for VirtualListStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
             },
+            wrap: TextWrap::None,
         }
     }
 }
@@ -144,12 +238,13 @@ struct PreparedRow<K> {
     indent_x: Px,
     blob: fret_core::TextBlobId,
     metrics: fret_core::TextMetrics,
+    height: Px,
 }
 
 #[derive(Debug)]
 pub struct VirtualList<D: VirtualListDataSource> {
     data: D,
-    row_height: Px,
+    row_height: VirtualListRowHeight,
     style: VirtualListStyle,
     style_override: bool,
     last_theme_revision: Option<u64>,
@@ -174,6 +269,14 @@ pub struct VirtualList<D: VirtualListDataSource> {
     prepared: Vec<PreparedRow<D::Key>>,
     last_prepared_width: Px,
     prepared_dirty: bool,
+
+    measured_heights_by_key: std::collections::HashMap<D::Key, Px>,
+    heights_by_index: Vec<Px>,
+    heights_tree: FenwickTree,
+    heights_dirty: bool,
+    last_height_width: Px,
+    last_height_scale_factor: Option<f32>,
+    last_height_theme_revision: Option<u64>,
 }
 
 impl VirtualList<VecStringDataSource> {
@@ -190,7 +293,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
     pub fn new(data: D) -> Self {
         Self {
             data,
-            row_height: Px(20.0),
+            row_height: VirtualListRowHeight::default(),
             style: VirtualListStyle::default(),
             style_override: false,
             last_theme_revision: None,
@@ -212,11 +315,20 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             prepared: Vec::new(),
             last_prepared_width: Px(0.0),
             prepared_dirty: false,
+
+            measured_heights_by_key: std::collections::HashMap::new(),
+            heights_by_index: Vec::new(),
+            heights_tree: FenwickTree::default(),
+            heights_dirty: true,
+            last_height_width: Px(0.0),
+            last_height_scale_factor: None,
+            last_height_theme_revision: None,
         }
     }
 
-    pub fn with_row_height(mut self, height: Px) -> Self {
+    pub fn with_row_height(mut self, height: VirtualListRowHeight) -> Self {
         self.row_height = height;
+        self.heights_dirty = true;
         self
     }
 
@@ -248,9 +360,15 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         self.style.row_hover = theme.colors.list_row_hover;
         self.style.row_selected = theme.colors.list_row_selected;
         self.style.text_color = theme.colors.text_primary;
+
+        // Font and row height participate in measurement; force height cache refresh.
+        self.heights_dirty = true;
+        if matches!(self.row_height, VirtualListRowHeight::Measured { .. }) {
+            self.measured_heights_by_key.clear();
+        }
     }
 
-    pub fn row_height(&self) -> Px {
+    pub fn row_height(&self) -> VirtualListRowHeight {
         self.row_height
     }
 
@@ -319,6 +437,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         self.data = data;
         self.hovered = None;
         self.prepared_dirty = true;
+        self.heights_dirty = true;
         self.selected_keys
             .retain(|key| self.data.index_of_key(*key).is_some());
         if let Some(anchor) = self.selection_anchor
@@ -428,20 +547,109 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         }
     }
 
+    fn min_row_height(&self) -> Px {
+        match self.row_height {
+            VirtualListRowHeight::Fixed(h) => h,
+            VirtualListRowHeight::Measured { min } => min,
+        }
+    }
+
+    fn row_height_at(&self, index: usize) -> Px {
+        self.heights_by_index
+            .get(index)
+            .copied()
+            .unwrap_or_else(|| self.min_row_height())
+    }
+
+    fn row_top_offset(&self, index: usize) -> Px {
+        self.heights_tree.offset_of_index(index)
+    }
+
+    fn ensure_heights(&mut self, content_width: Px, scale_factor: f32, theme_revision: u64) {
+        let len = self.data.len();
+        if len == 0 {
+            self.heights_by_index.clear();
+            self.heights_tree.rebuild_from_px(&[]);
+            self.last_content_height = Px(0.0);
+            self.heights_dirty = false;
+            self.last_height_width = content_width;
+            self.last_height_scale_factor = Some(scale_factor);
+            self.last_height_theme_revision = Some(theme_revision);
+            return;
+        }
+
+        if matches!(self.row_height, VirtualListRowHeight::Measured { .. }) {
+            let width_changed = self.last_height_width != content_width;
+            let scale_changed = self.last_height_scale_factor != Some(scale_factor);
+            let theme_changed = self.last_height_theme_revision != Some(theme_revision);
+            if width_changed || scale_changed || theme_changed {
+                self.measured_heights_by_key.clear();
+                self.heights_dirty = true;
+            }
+        }
+
+        if !self.heights_dirty && self.heights_by_index.len() == len {
+            self.last_content_height = self.heights_tree.total();
+            self.last_height_width = content_width;
+            self.last_height_scale_factor = Some(scale_factor);
+            self.last_height_theme_revision = Some(theme_revision);
+            return;
+        }
+
+        self.heights_by_index.clear();
+        self.heights_by_index.reserve(len);
+
+        match self.row_height {
+            VirtualListRowHeight::Fixed(h) => {
+                self.heights_by_index.resize(len, h);
+            }
+            VirtualListRowHeight::Measured { min } => {
+                for i in 0..len {
+                    let key = self.data.key_at(i);
+                    let h = self
+                        .measured_heights_by_key
+                        .get(&key)
+                        .copied()
+                        .unwrap_or(min);
+                    self.heights_by_index.push(h);
+                }
+            }
+        }
+
+        self.heights_tree.rebuild_from_px(&self.heights_by_index);
+        self.last_content_height = self.heights_tree.total();
+        self.clamp_offset();
+
+        self.heights_dirty = false;
+        self.last_height_width = content_width;
+        self.last_height_scale_factor = Some(scale_factor);
+        self.last_height_theme_revision = Some(theme_revision);
+    }
+
     fn row_index_from_y(&self, local_y: Px) -> Option<usize> {
-        if self.data.len() == 0 || self.row_height.0 <= 0.0 {
+        if self.data.len() == 0 || self.min_row_height().0 <= 0.0 {
             return None;
         }
-        let y = (local_y.0 + self.offset_y.0).max(0.0);
-        let idx = (y / self.row_height.0).floor() as isize;
-        if idx < 0 {
-            return None;
+
+        match self.row_height {
+            VirtualListRowHeight::Fixed(h) => {
+                let y = (local_y.0 + self.offset_y.0).max(0.0);
+                let idx = (y / h.0).floor() as isize;
+                if idx < 0 {
+                    return None;
+                }
+                let idx = idx as usize;
+                if idx >= self.data.len() {
+                    return None;
+                }
+                Some(idx)
+            }
+            VirtualListRowHeight::Measured { .. } => {
+                let y = (local_y.0 + self.offset_y.0).max(0.0);
+                let idx = self.heights_tree.lower_bound(y);
+                (idx < self.data.len()).then_some(idx)
+            }
         }
-        let idx = idx as usize;
-        if idx >= self.data.len() {
-            return None;
-        }
-        Some(idx)
     }
 
     pub fn row_index_at(&self, position: fret_core::Point) -> Option<usize> {
@@ -458,19 +666,20 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             return None;
         }
         let content = self.content_bounds();
-        let y = content.origin.y.0 + index as f32 * self.row_height.0 - self.offset_y.0;
+        let y = content.origin.y.0 + self.row_top_offset(index).0 - self.offset_y.0;
+        let h = self.row_height_at(index);
         Some(Rect::new(
             fret_core::Point::new(content.origin.x, Px(y)),
-            Size::new(content.size.width, self.row_height),
+            Size::new(content.size.width, h),
         ))
     }
 
     pub fn ensure_visible(&mut self, index: usize) {
-        if self.row_height.0 <= 0.0 || self.last_viewport_height.0 <= 0.0 {
+        if self.min_row_height().0 <= 0.0 || self.last_viewport_height.0 <= 0.0 {
             return;
         }
-        let row_top = index as f32 * self.row_height.0;
-        let row_bottom = row_top + self.row_height.0;
+        let row_top = self.row_top_offset(index).0;
+        let row_bottom = row_top + self.row_height_at(index).0;
         let viewport_top = self.offset_y.0;
         let viewport_bottom = self.offset_y.0 + self.last_viewport_height.0;
 
@@ -549,34 +758,75 @@ impl<D: VirtualListDataSource> VirtualList<D> {
     ) {
         let key = self.data.key_at(index);
         let row = self.data.row_at(index);
-        let indent_x = row.indent_x.0;
-        let max_width = Px((width.0 - self.style.padding_x.0 * 2.0 - indent_x).max(0.0));
+        let indent_x = row.indent_x;
+        let row_text = row.text;
+
+        let indent_x_f = indent_x.0;
+        let max_width = Px((width.0 - self.style.padding_x.0 * 2.0 - indent_x_f).max(0.0));
         let constraints = TextConstraints {
             max_width: Some(max_width),
-            wrap: TextWrap::None,
+            wrap: self.style.wrap,
             scale_factor,
         };
-        let (blob, metrics) = text.prepare(row.text.as_ref(), self.style.text_style, constraints);
+        let (blob, metrics) = text.prepare(row_text.as_ref(), self.style.text_style, constraints);
+        drop(row_text);
+
+        let height = match self.row_height {
+            VirtualListRowHeight::Fixed(h) => h,
+            VirtualListRowHeight::Measured { min } => {
+                let measured = Px(metrics.size.height.0 + self.style.padding_y.0 * 2.0);
+                let h = Px(measured.0.max(min.0));
+                self.measured_heights_by_key.insert(key, h);
+                if index < self.heights_by_index.len() {
+                    let prev = self.heights_by_index[index];
+                    if prev != h {
+                        self.heights_by_index[index] = h;
+                        self.heights_tree.add(index, h.0 - prev.0);
+                        self.last_content_height = self.heights_tree.total();
+                        self.clamp_offset();
+                    }
+                }
+                h
+            }
+        };
+
         self.prepared.push(PreparedRow {
             index,
             key,
-            indent_x: row.indent_x,
+            indent_x,
             blob,
             metrics,
+            height,
         });
     }
 
     fn compute_visible_range(&self) -> VisibleRange {
-        if self.data.len() == 0 || self.row_height.0 <= 0.0 || self.last_viewport_height.0 <= 0.0 {
+        if self.data.len() == 0
+            || self.min_row_height().0 <= 0.0
+            || self.last_viewport_height.0 <= 0.0
+        {
             return VisibleRange { start: 0, end: 0 };
         }
 
-        let start = (self.offset_y.0 / self.row_height.0).floor().max(0.0) as usize;
-        let viewport_rows = (self.last_viewport_height.0 / self.row_height.0).ceil() as usize;
         let overscan = 2usize;
-        let start = start.saturating_sub(overscan);
-        let end = (start + viewport_rows + overscan * 2).min(self.data.len());
-        VisibleRange { start, end }
+        match self.row_height {
+            VirtualListRowHeight::Fixed(h) => {
+                let start = (self.offset_y.0 / h.0).floor().max(0.0) as usize;
+                let viewport_rows = (self.last_viewport_height.0 / h.0).ceil() as usize;
+                let start = start.saturating_sub(overscan);
+                let end = (start + viewport_rows + overscan * 2).min(self.data.len());
+                VisibleRange { start, end }
+            }
+            VirtualListRowHeight::Measured { .. } => {
+                let top = self.offset_y.0.max(0.0);
+                let bottom = (self.offset_y.0 + self.last_viewport_height.0).max(top);
+                let start = self.heights_tree.lower_bound(top);
+                let end = self.heights_tree.lower_bound(bottom) + 1;
+                let start = start.saturating_sub(overscan);
+                let end = (end + overscan).min(self.data.len());
+                VisibleRange { start, end }
+            }
+        }
     }
 
     fn rebuild_prepared_rows(
@@ -683,10 +933,11 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             .lead_index()
             .unwrap_or(0)
             .min(self.data.len().saturating_sub(1));
-        let viewport_rows = if self.row_height.0 <= 0.0 {
+        let base_row_h = self.min_row_height();
+        let viewport_rows = if base_row_h.0 <= 0.0 {
             1
         } else {
-            (self.last_viewport_height.0 / self.row_height.0)
+            (self.last_viewport_height.0 / base_row_h.0)
                 .floor()
                 .max(1.0) as usize
         };
@@ -735,6 +986,15 @@ impl<H: UiHost, D: VirtualListDataSource> Widget<H> for VirtualList<D> {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme());
+        if self.heights_dirty {
+            let theme_rev = cx.theme().revision();
+            let scale_factor = self.last_height_scale_factor.unwrap_or(1.0);
+            let mut content_width = self.last_bounds.size.width;
+            if self.last_content_height.0 > self.last_viewport_height.0 {
+                content_width = Px((content_width.0 - self.scrollbar_width.0).max(0.0));
+            }
+            self.ensure_heights(content_width, scale_factor, theme_rev);
+        }
         match event {
             Event::Pointer(pe) => match pe {
                 fret_core::PointerEvent::Wheel { delta, .. } => {
@@ -927,10 +1187,18 @@ impl<H: UiHost, D: VirtualListDataSource> Widget<H> for VirtualList<D> {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
 
-        let count = self.data.len();
-        self.last_content_height = Px(count as f32 * self.row_height.0);
         self.last_viewport_height = cx.available.height;
-        self.clamp_offset();
+        let theme_rev = cx.theme().revision();
+
+        let mut content_width = cx.available.width;
+        self.ensure_heights(content_width, cx.scale_factor, theme_rev);
+        if self.last_content_height.0 > self.last_viewport_height.0 {
+            let w = Px((cx.available.width.0 - self.scrollbar_width.0).max(0.0));
+            if w != content_width {
+                content_width = w;
+                self.ensure_heights(content_width, cx.scale_factor, theme_rev);
+            }
+        }
 
         cx.available
     }
@@ -939,8 +1207,16 @@ impl<H: UiHost, D: VirtualListDataSource> Widget<H> for VirtualList<D> {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
         self.last_viewport_height = cx.bounds.size.height;
-        self.last_content_height = Px(self.data.len() as f32 * self.row_height.0);
-        self.clamp_offset();
+        let theme_rev = cx.theme().revision();
+        let mut content_width = cx.bounds.size.width;
+        self.ensure_heights(content_width, cx.scale_factor, theme_rev);
+        if self.last_content_height.0 > self.last_viewport_height.0 {
+            let w = Px((cx.bounds.size.width.0 - self.scrollbar_width.0).max(0.0));
+            if w != content_width {
+                content_width = w;
+                self.ensure_heights(content_width, cx.scale_factor, theme_rev);
+            }
+        }
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
@@ -955,12 +1231,11 @@ impl<H: UiHost, D: VirtualListDataSource> Widget<H> for VirtualList<D> {
         self.ensure_prepared(cx.text, cx.scale_factor, content.size.width);
         cx.scene.push(SceneOp::PushClipRect { rect: content });
 
-        let row_h = self.row_height;
         for row in &self.prepared {
-            let y = content.origin.y.0 + row.index as f32 * row_h.0 - self.offset_y.0;
+            let y = content.origin.y.0 + self.row_top_offset(row.index).0 - self.offset_y.0;
             let row_rect = Rect::new(
                 fret_core::Point::new(content.origin.x, Px(y)),
-                Size::new(content.size.width, row_h),
+                Size::new(content.size.width, row.height),
             );
 
             let is_selected = self.selected_keys.contains(&row.key);
@@ -983,7 +1258,7 @@ impl<H: UiHost, D: VirtualListDataSource> Widget<H> for VirtualList<D> {
             }
 
             let text_x = Px(row_rect.origin.x.0 + self.style.padding_x.0 + row.indent_x.0);
-            let inner_y = row_rect.origin.y.0 + ((row_h.0 - row.metrics.size.height.0) * 0.5);
+            let inner_y = row_rect.origin.y.0 + ((row.height.0 - row.metrics.size.height.0) * 0.5);
             let text_y = Px(inner_y + row.metrics.baseline.0);
             cx.scene.push(SceneOp::Text {
                 order: DrawOrder(0),
@@ -1029,5 +1304,135 @@ impl<H: UiHost, D: VirtualListDataSource> Widget<H> for VirtualList<D> {
                 corner_radii: Corners::all(radius),
             });
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_host::TestHost;
+    use fret_core::{AppWindowId, NodeId, Point, Rect, Scene, Size, TextBlobId, TextMetrics};
+
+    #[derive(Default)]
+    struct FakeTextService;
+
+    impl fret_core::TextService for FakeTextService {
+        fn prepare(
+            &mut self,
+            text: &str,
+            _style: TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            let h = Px((text.len().max(1)) as f32);
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(80.0), h),
+                    baseline: Px(h.0 * 0.7),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    #[derive(Debug, Clone)]
+    struct TestDataSource {
+        rows: Vec<String>,
+    }
+
+    impl VirtualListDataSource for TestDataSource {
+        type Key = usize;
+
+        fn len(&self) -> usize {
+            self.rows.len()
+        }
+
+        fn key_at(&self, index: usize) -> Self::Key {
+            index
+        }
+
+        fn row_at(&self, index: usize) -> VirtualListRow<'_> {
+            VirtualListRow::new(self.rows[index].as_str())
+        }
+    }
+
+    #[test]
+    fn measured_row_height_affects_row_rect_and_hit_testing() {
+        let mut app = TestHost::new();
+        let mut text = FakeTextService::default();
+
+        let data = TestDataSource {
+            rows: vec![
+                "aaa".to_string(),      // height 3
+                "bbbbbbbb".to_string(), // height 8
+                "ccccc".to_string(),    // height 5
+            ],
+        };
+
+        let style = VirtualListStyle {
+            padding_y: Px(0.0),
+            ..VirtualListStyle::default()
+        };
+
+        let mut list =
+            VirtualList::new(data).with_row_height(VirtualListRowHeight::Measured { min: Px(4.0) });
+        list = list.with_style(style);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(200.0)),
+        );
+
+        let mut observe_model = |_model, _inv| {};
+        let mut layout_child =
+            |_child: NodeId, _bounds: Rect| -> Size { panic!("virtual list has no children") };
+
+        let mut layout_cx = LayoutCx {
+            app: &mut app,
+            node: NodeId::default(),
+            window: Some(AppWindowId::default()),
+            focus: None,
+            children: &[],
+            bounds,
+            available: bounds.size,
+            scale_factor: 1.0,
+            text: &mut text,
+            observe_model: &mut observe_model,
+            layout_child: &mut layout_child,
+        };
+        let _ = list.layout(&mut layout_cx);
+
+        let mut scene = Scene::default();
+        let mut paint_child = |_child: NodeId, _bounds: Rect| {};
+        let child_bounds = |_child: NodeId| None;
+        let mut paint_cx = PaintCx {
+            app: &mut app,
+            node: NodeId::default(),
+            window: Some(AppWindowId::default()),
+            focus: None,
+            children: &[],
+            bounds,
+            scale_factor: 1.0,
+            text: &mut text,
+            observe_model: &mut observe_model,
+            scene: &mut scene,
+            paint_child: &mut paint_child,
+            child_bounds: &child_bounds,
+        };
+        list.paint(&mut paint_cx);
+
+        let r0 = list.row_rect(0).expect("row 0 rect");
+        let r1 = list.row_rect(1).expect("row 1 rect");
+        let r2 = list.row_rect(2).expect("row 2 rect");
+
+        assert_eq!(r0.size.height, Px(4.0)); // min wins (3 -> 4)
+        assert_eq!(r1.size.height, Px(8.0));
+        assert_eq!(r2.size.height, Px(5.0));
+        assert_eq!(r1.origin.y, Px(4.0));
+        assert_eq!(r2.origin.y, Px(12.0));
+
+        let hit = list.row_index_at(Point::new(Px(10.0), Px(6.0)));
+        assert_eq!(hit, Some(1));
     }
 }

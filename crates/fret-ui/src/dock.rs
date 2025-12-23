@@ -3568,13 +3568,13 @@ mod tests {
 
         assert!(
             scene
-                .ops
+                .ops()
                 .iter()
                 .any(|op| matches!(op, SceneOp::Quad { .. }))
         );
         assert!(
             scene
-                .ops
+                .ops()
                 .iter()
                 .any(|op| matches!(op, SceneOp::Text { .. }))
         );

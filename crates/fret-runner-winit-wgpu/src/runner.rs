@@ -519,6 +519,12 @@ pub trait WinitDriver {
     );
 
     #[allow(clippy::too_many_arguments)]
+    /// Render the UI into `scene`.
+    ///
+    /// Notes:
+    /// - `scene` is **not cleared by the runner**; drivers should clear it before recording
+    ///   the current frame.
+    /// - This allows drivers to ingest the previous frame's recorded ops for replay caching.
     fn render(
         &mut self,
         app: &mut App,
@@ -2527,8 +2533,6 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 let physical = state.window.inner_size();
                 let logical: winit::dpi::LogicalSize<f32> =
                     physical.to_logical(state.window.scale_factor());
-
-                state.scene.clear();
 
                 let bounds = Rect::new(
                     Point::new(Px(0.0), Px(0.0)),

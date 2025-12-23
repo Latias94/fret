@@ -31,7 +31,7 @@ pub use input::{
 };
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputKind};
 pub use panels::{PanelKey, PanelKind};
-pub use scene::{Color, DrawOrder, Scene, SceneOp};
+pub use scene::{Color, DrawOrder, Scene, SceneOp, SceneRecording};
 pub use semantics::{
     SemanticsFlags, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot,
 };

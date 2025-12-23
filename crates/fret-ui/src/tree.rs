@@ -1,11 +1,11 @@
 use crate::{
-    UiHost,
+    Theme, UiHost,
     widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
 use fret_core::PlatformCapabilities;
 use fret_core::{
-    AppWindowId, Event, FrameId, KeyCode, NodeId, Point, PointerEvent, Rect, Scene, SemanticsNode,
-    SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, TextService,
+    AppWindowId, Event, FrameId, KeyCode, NodeId, Point, PointerEvent, Rect, Scene, SceneOp,
+    SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, TextService,
 };
 use fret_runtime::{
     CommandId, DragKind, Effect, InputContext, KeyChord, KeymapService, ModelId, Platform,
@@ -43,9 +43,16 @@ pub struct InvalidationFlags {
 impl InvalidationFlags {
     pub fn mark(&mut self, inv: Invalidation) {
         match inv {
-            Invalidation::Layout => self.layout = true,
             Invalidation::Paint => self.paint = true,
-            Invalidation::HitTest => self.hit_test = true,
+            Invalidation::Layout => {
+                self.layout = true;
+                self.paint = true;
+            }
+            Invalidation::HitTest => {
+                self.hit_test = true;
+                self.layout = true;
+                self.paint = true;
+            }
         }
     }
 
@@ -53,6 +60,77 @@ impl InvalidationFlags {
         self.layout = false;
         self.paint = false;
         self.hit_test = false;
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct PaintCacheKey {
+    width_bits: u32,
+    height_bits: u32,
+    scale_factor_bits: u32,
+    theme_revision: u64,
+}
+
+impl PaintCacheKey {
+    fn new(bounds: Rect, scale_factor: f32, theme_revision: u64) -> Self {
+        Self {
+            width_bits: bounds.size.width.0.to_bits(),
+            height_bits: bounds.size.height.0.to_bits(),
+            scale_factor_bits: scale_factor.to_bits(),
+            theme_revision,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PaintCacheEntry {
+    generation: u64,
+    key: PaintCacheKey,
+    origin: Point,
+    start: u32,
+    end: u32,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum PaintCachePolicy {
+    /// Enable caching unless the UI is in an inspection/probe mode (e.g. picking, semantics).
+    #[default]
+    Auto,
+    /// Always enable caching.
+    Enabled,
+    /// Always disable caching.
+    Disabled,
+}
+
+#[derive(Debug, Default)]
+struct PaintCacheState {
+    generation: u64,
+    prev_ops: Vec<SceneOp>,
+    prev_fingerprint: u64,
+    source_generation: u64,
+    target_generation: u64,
+    hits: u32,
+    misses: u32,
+    replayed_ops: u32,
+}
+
+impl PaintCacheState {
+    fn begin_frame(&mut self) {
+        self.source_generation = self.generation;
+        self.target_generation = self.generation.saturating_add(1);
+        self.hits = 0;
+        self.misses = 0;
+        self.replayed_ops = 0;
+    }
+
+    fn finish_frame(&mut self) {
+        self.generation = self.target_generation;
+    }
+
+    fn invalidate_recording(&mut self) {
+        self.prev_ops.clear();
+        self.prev_fingerprint = 0;
+        self.generation = self.generation.saturating_add(1);
     }
 }
 
@@ -75,6 +153,7 @@ pub struct Node<H: UiHost> {
     pub bounds: Rect,
     pub measured_size: Size,
     pub invalidation: InvalidationFlags,
+    paint_cache: Option<PaintCacheEntry>,
 }
 
 impl<H: UiHost> Node<H> {
@@ -90,6 +169,7 @@ impl<H: UiHost> Node<H> {
                 paint: true,
                 hit_test: true,
             },
+            paint_cache: None,
         }
     }
 }
@@ -102,6 +182,10 @@ pub struct UiDebugFrameStats {
     pub layout_nodes_visited: u32,
     pub layout_nodes_performed: u32,
     pub paint_nodes: u32,
+    pub paint_nodes_performed: u32,
+    pub paint_cache_hits: u32,
+    pub paint_cache_misses: u32,
+    pub paint_cache_replayed_ops: u32,
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
 }
@@ -212,6 +296,10 @@ pub struct UiTree<H: UiHost> {
     debug_enabled: bool,
     debug_stats: UiDebugFrameStats,
 
+    paint_cache_policy: PaintCachePolicy,
+    inspection_active: bool,
+    paint_cache: PaintCacheState,
+
     semantics: Option<Arc<SemanticsSnapshot>>,
     semantics_requested: bool,
 }
@@ -235,6 +323,9 @@ impl<H: UiHost> Default for UiTree<H> {
             observed_in_paint: ObservationIndex::default(),
             debug_enabled: false,
             debug_stats: UiDebugFrameStats::default(),
+            paint_cache_policy: PaintCachePolicy::Auto,
+            inspection_active: false,
+            paint_cache: PaintCacheState::default(),
             semantics: None,
             semantics_requested: false,
         }
@@ -252,6 +343,48 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn debug_stats(&self) -> UiDebugFrameStats {
         self.debug_stats
+    }
+
+    pub fn set_paint_cache_policy(&mut self, policy: PaintCachePolicy) {
+        self.paint_cache_policy = policy;
+    }
+
+    pub fn paint_cache_policy(&self) -> PaintCachePolicy {
+        self.paint_cache_policy
+    }
+
+    pub fn set_inspection_active(&mut self, active: bool) {
+        self.inspection_active = active;
+    }
+
+    pub fn inspection_active(&self) -> bool {
+        self.inspection_active
+    }
+
+    pub fn set_paint_cache_enabled(&mut self, enabled: bool) {
+        self.set_paint_cache_policy(if enabled {
+            PaintCachePolicy::Enabled
+        } else {
+            PaintCachePolicy::Disabled
+        });
+    }
+
+    pub fn paint_cache_enabled(&self) -> bool {
+        match self.paint_cache_policy {
+            PaintCachePolicy::Auto => !self.inspection_active,
+            PaintCachePolicy::Enabled => true,
+            PaintCachePolicy::Disabled => false,
+        }
+    }
+
+    /// Ingests the previous frame's recorded ops from `scene`.
+    ///
+    /// Call this **before** clearing `scene` for the next frame.
+    pub fn ingest_paint_cache_source(&mut self, scene: &mut Scene) {
+        scene.swap_storage(
+            &mut self.paint_cache.prev_ops,
+            &mut self.paint_cache.prev_fingerprint,
+        );
     }
 
     pub fn request_semantics_snapshot(&mut self) {
@@ -533,8 +666,19 @@ impl<H: UiHost> UiTree<H> {
         if self.debug_enabled {
             self.debug_stats.frame_id = app.frame_id();
             self.debug_stats.paint_nodes = 0;
+            self.debug_stats.paint_nodes_performed = 0;
+            self.debug_stats.paint_cache_hits = 0;
+            self.debug_stats.paint_cache_misses = 0;
+            self.debug_stats.paint_cache_replayed_ops = 0;
             self.debug_stats.focus = self.focus;
             self.debug_stats.captured = self.captured;
+        }
+
+        let cache_enabled = self.paint_cache_enabled();
+        if cache_enabled {
+            self.paint_cache.begin_frame();
+        } else {
+            self.paint_cache.invalidate_recording();
         }
 
         let roots: Vec<NodeId> = self
@@ -543,6 +687,15 @@ impl<H: UiHost> UiTree<H> {
             .collect();
         for root in roots {
             self.paint(app, text, root, bounds, scene, scale_factor);
+        }
+
+        if cache_enabled {
+            self.paint_cache.finish_frame();
+            if self.debug_enabled {
+                self.debug_stats.paint_cache_hits = self.paint_cache.hits;
+                self.debug_stats.paint_cache_misses = self.paint_cache.misses;
+                self.debug_stats.paint_cache_replayed_ops = self.paint_cache.replayed_ops;
+            }
         }
 
         if let Some(started) = started {
@@ -839,7 +992,13 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if let Some(focus) = requested_focus {
-                self.focus = Some(focus);
+                if self.focus != Some(focus) {
+                    if let Some(prev) = self.focus {
+                        self.mark_invalidation(prev, Invalidation::Paint);
+                    }
+                    self.focus = Some(focus);
+                    self.mark_invalidation(focus, Invalidation::Paint);
+                }
             }
 
             if let Some(capture) = requested_capture {
@@ -946,7 +1105,13 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if let Some(focus) = requested_focus {
-                self.focus = Some(focus);
+                if self.focus != Some(focus) {
+                    if let Some(prev) = self.focus {
+                        self.mark_invalidation(prev, Invalidation::Paint);
+                    }
+                    self.focus = Some(focus);
+                    self.mark_invalidation(focus, Invalidation::Paint);
+                }
             }
 
             if did_handle || stop_propagation {
@@ -1016,7 +1181,13 @@ impl<H: UiHost> UiTree<H> {
             }
         };
 
-        self.focus = Some(next);
+        if self.focus != Some(next) {
+            if let Some(prev) = self.focus {
+                self.mark_invalidation(prev, Invalidation::Paint);
+            }
+            self.focus = Some(next);
+            self.mark_invalidation(next, Invalidation::Paint);
+        }
         if let Some(window) = self.window {
             app.request_redraw(window);
         }
@@ -1159,6 +1330,25 @@ impl<H: UiHost> UiTree<H> {
             n.bounds = bounds;
         }
 
+        if !invalidated
+            && prev_bounds.size == bounds.size
+            && prev_bounds.origin != bounds.origin
+            && measured != Size::default()
+        {
+            let delta = Point::new(
+                bounds.origin.x - prev_bounds.origin.x,
+                bounds.origin.y - prev_bounds.origin.y,
+            );
+            if delta.x.0 != 0.0 || delta.y.0 != 0.0 {
+                if let Some(children) = self.nodes.get(node).map(|n| n.children.clone()) {
+                    for child in children {
+                        self.translate_subtree_bounds(child, delta);
+                    }
+                }
+            }
+            return measured;
+        }
+
         let needs_layout = invalidated || prev_bounds != bounds;
         if !needs_layout {
             return measured;
@@ -1214,6 +1404,19 @@ impl<H: UiHost> UiTree<H> {
         size
     }
 
+    fn translate_subtree_bounds(&mut self, node: NodeId, delta: Point) {
+        let mut stack = vec![node];
+        while let Some(id) = stack.pop() {
+            let Some(n) = self.nodes.get_mut(id) else {
+                continue;
+            };
+            n.bounds.origin = Point::new(n.bounds.origin.x + delta.x, n.bounds.origin.y + delta.y);
+            for &child in &n.children {
+                stack.push(child);
+            }
+        }
+    }
+
     fn paint_node(
         &mut self,
         app: &mut H,
@@ -1253,11 +1456,63 @@ impl<H: UiHost> UiTree<H> {
             n.bounds = bounds;
         }
 
+        let (invalidated, prev_cache) = match self.nodes.get(node) {
+            Some(n) => (n.invalidation.paint, n.paint_cache),
+            None => return,
+        };
+
+        let theme_revision = Theme::global(&*app).revision();
+        let key = PaintCacheKey::new(bounds, sf, theme_revision);
+        let cache_enabled = self.paint_cache_enabled();
+
+        if cache_enabled && !invalidated {
+            if let Some(prev) = prev_cache
+                && prev.generation == self.paint_cache.source_generation
+                && prev.key == key
+            {
+                let start = scene.ops_len();
+                let range = prev.start as usize..prev.end as usize;
+                if range.start <= range.end && range.end <= self.paint_cache.prev_ops.len() {
+                    let delta = Point::new(
+                        bounds.origin.x - prev.origin.x,
+                        bounds.origin.y - prev.origin.y,
+                    );
+                    scene.replay_ops_translated(&self.paint_cache.prev_ops[range.clone()], delta);
+                    let end = scene.ops_len();
+
+                    if let Some(n) = self.nodes.get_mut(node) {
+                        n.paint_cache = Some(PaintCacheEntry {
+                            generation: self.paint_cache.target_generation,
+                            key,
+                            origin: bounds.origin,
+                            start: start as u32,
+                            end: end as u32,
+                        });
+                        n.invalidation.paint = false;
+                    }
+
+                    self.paint_cache.hits = self.paint_cache.hits.saturating_add(1);
+                    self.paint_cache.replayed_ops = self
+                        .paint_cache
+                        .replayed_ops
+                        .saturating_add((end - start) as u32);
+                    return;
+                }
+            }
+            self.paint_cache.misses = self.paint_cache.misses.saturating_add(1);
+        }
+
         let mut observations: Vec<(ModelId, Invalidation)> = Vec::new();
         let mut observe_model = |model: ModelId, inv: Invalidation| {
             observations.push((model, inv));
         };
 
+        if self.debug_enabled {
+            self.debug_stats.paint_nodes_performed =
+                self.debug_stats.paint_nodes_performed.saturating_add(1);
+        }
+
+        let start = scene.ops_len();
         self.with_widget_mut(node, |widget, tree| {
             let children: Vec<NodeId> = tree
                 .nodes
@@ -1280,10 +1535,20 @@ impl<H: UiHost> UiTree<H> {
             };
             widget.paint(&mut cx);
         });
+        let end = scene.ops_len();
 
         self.observed_in_paint.record(node, observations);
         if let Some(n) = self.nodes.get_mut(node) {
             n.invalidation.paint = false;
+            if cache_enabled {
+                n.paint_cache = Some(PaintCacheEntry {
+                    generation: self.paint_cache.target_generation,
+                    key,
+                    origin: bounds.origin,
+                    start: start as u32,
+                    end: end as u32,
+                });
+            }
         }
     }
 
@@ -1567,8 +1832,15 @@ fn event_position(event: &Event) -> Option<Point> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fret_core::{Scene, TextConstraints, TextMetrics, TextService, TextStyle, TextWrap};
+    use fret_core::{
+        Color, Corners, DrawOrder, Edges, Scene, SceneOp, TextConstraints, TextMetrics,
+        TextService, TextStyle, TextWrap,
+    };
     use fret_runtime::Model;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
 
     #[derive(Default)]
     struct FakeTextService;
@@ -1627,6 +1899,7 @@ mod tests {
 
         let mut ui = UiTree::new();
         ui.set_window(AppWindowId::default());
+        ui.set_paint_cache_enabled(true);
 
         let node = ui.create_node(ObservingWidget { model });
         ui.set_root(node);
@@ -1655,6 +1928,116 @@ mod tests {
         let n = ui.nodes.get(node).unwrap();
         assert!(n.invalidation.layout);
         assert!(n.invalidation.paint);
+    }
+
+    struct CountingPaintWidget {
+        paints: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for CountingPaintWidget {
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            self.paints.fetch_add(1, Ordering::SeqCst);
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(0),
+                rect: cx.bounds,
+                background: Color::TRANSPARENT,
+                border: Edges::default(),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::default(),
+            });
+        }
+    }
+
+    #[test]
+    fn paint_cache_replays_subtree_ops_when_clean() {
+        let mut app = crate::test_host::TestHost::new();
+
+        let paints = Arc::new(AtomicUsize::new(0));
+        let mut ui = UiTree::new();
+        ui.set_window(AppWindowId::default());
+        ui.set_paint_cache_enabled(true);
+
+        let node = ui.create_node(CountingPaintWidget {
+            paints: paints.clone(),
+        });
+        ui.set_root(node);
+
+        let mut text = FakeTextService;
+        let bounds = Rect::new(
+            Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+        );
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+        assert_eq!(paints.load(Ordering::SeqCst), 1);
+        assert_eq!(scene.ops_len(), 1);
+
+        ui.ingest_paint_cache_source(&mut scene);
+        scene.clear();
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+        assert_eq!(paints.load(Ordering::SeqCst), 1);
+        assert_eq!(scene.ops_len(), 1);
+
+        ui.invalidate(node, Invalidation::Paint);
+
+        ui.ingest_paint_cache_source(&mut scene);
+        scene.clear();
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+        assert_eq!(paints.load(Ordering::SeqCst), 2);
+        assert_eq!(scene.ops_len(), 1);
+
+        let bounds2 = Rect::new(
+            Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            Size::new(fret_core::Px(200.0), fret_core::Px(100.0)),
+        );
+        ui.ingest_paint_cache_source(&mut scene);
+        scene.clear();
+        ui.paint_all(&mut app, &mut text, bounds2, &mut scene, 1.0);
+        assert_eq!(paints.load(Ordering::SeqCst), 3);
+        assert_eq!(scene.ops_len(), 1);
+    }
+
+    #[test]
+    fn paint_cache_replays_ops_when_node_translates() {
+        let mut app = crate::test_host::TestHost::new();
+
+        let paints = Arc::new(AtomicUsize::new(0));
+        let mut ui = UiTree::new();
+        ui.set_window(AppWindowId::default());
+        ui.set_paint_cache_enabled(true);
+
+        let node = ui.create_node(CountingPaintWidget {
+            paints: paints.clone(),
+        });
+        ui.set_root(node);
+
+        let mut text = FakeTextService;
+        let mut scene = Scene::default();
+
+        let bounds_a = Rect::new(
+            Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+        );
+        ui.paint_all(&mut app, &mut text, bounds_a, &mut scene, 1.0);
+        assert_eq!(paints.load(Ordering::SeqCst), 1);
+        assert_eq!(scene.ops_len(), 1);
+
+        ui.ingest_paint_cache_source(&mut scene);
+        scene.clear();
+
+        let bounds_b = Rect::new(
+            Point::new(fret_core::Px(20.0), fret_core::Px(15.0)),
+            Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+        );
+        ui.paint_all(&mut app, &mut text, bounds_b, &mut scene, 1.0);
+        assert_eq!(paints.load(Ordering::SeqCst), 1);
+        assert_eq!(scene.ops_len(), 1);
+
+        match scene.ops()[0] {
+            SceneOp::Quad { rect, .. } => assert_eq!(rect, bounds_b),
+            _ => panic!("expected quad op"),
+        }
     }
 
     #[test]
