@@ -1240,39 +1240,19 @@ impl DemoDriver {
                 return false;
             };
 
-            let key_scene = PanelKey::new("core.scene");
-            let key_game = PanelKey::new("core.game");
-            let key_text_probe = PanelKey::new("core.text_probe");
-            let key_project = PanelKey::new("core.project");
-            let key_inspector = PanelKey::new("core.inspector");
-            let key_hierarchy = PanelKey::new("core.hierarchy");
-
-            // Rebuild a clean dock graph (panels remain registered).
-            dock.graph = fret_core::DockGraph::new();
-
-            let tabs_left = dock.graph.insert_node(DockNode::Tabs {
-                tabs: vec![key_hierarchy, key_project],
-                active: 0,
-            });
-            let tabs_scene = dock.graph.insert_node(DockNode::Tabs {
-                tabs: vec![key_scene, key_game],
-                active: 0,
-            });
-            let tabs_inspector = dock.graph.insert_node(DockNode::Tabs {
-                tabs: vec![key_inspector, key_text_probe],
-                active: 0,
-            });
-            let right = dock.graph.insert_node(DockNode::Split {
-                axis: Axis::Vertical,
-                children: vec![tabs_scene, tabs_inspector],
-                fractions: vec![0.72, 0.28],
-            });
-            let root_dock = dock.graph.insert_node(DockNode::Split {
-                axis: Axis::Horizontal,
-                children: vec![tabs_left, right],
-                fractions: vec![0.26, 0.74],
-            });
-            dock.graph.set_window_root(main_window, root_dock);
+            let spec = fret_core::EditorDockLayoutSpec::new(
+                vec![
+                    PanelKey::new("core.hierarchy"),
+                    PanelKey::new("core.project"),
+                ],
+                vec![PanelKey::new("core.scene"), PanelKey::new("core.game")],
+                vec![
+                    PanelKey::new("core.inspector"),
+                    PanelKey::new("core.text_probe"),
+                ],
+            )
+            .with_fractions(0.26, 0.72);
+            dock.graph = fret_core::DockLayoutBuilder::default_editor_layout(main_window, spec);
 
             for w in &windows_to_close {
                 dock.graph.remove_window_root(*w);

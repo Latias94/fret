@@ -14,8 +14,8 @@ pub mod window;
 pub use capabilities::{ExternalDragPayloadKind, PlatformCapabilities};
 pub use dock::{Axis, DockGraph, DockNode, DropZone};
 pub use dock_layout::{
-    DOCK_LAYOUT_VERSION_V1, DockLayoutNodeV1, DockLayoutV1, DockLayoutWindowV1,
-    DockWindowPlacementV1,
+    DOCK_LAYOUT_VERSION_V1, DockLayoutBuilder, DockLayoutNodeV1, DockLayoutV1, DockLayoutWindowV1,
+    DockWindowPlacementV1, EditorDockLayoutSpec,
 };
 pub use dock_op::DockOp;
 pub use geometry::{Corners, Edges, Point, Px, Rect, Size};

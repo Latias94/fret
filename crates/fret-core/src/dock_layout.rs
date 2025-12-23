@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{Axis, PanelKey};
+use crate::{AppWindowId, Axis, DockGraph, DockNode, DockNodeId, PanelKey};
 
 pub const DOCK_LAYOUT_VERSION_V1: u32 = 1;
 
@@ -57,4 +57,131 @@ pub enum DockLayoutNodeV1 {
         tabs: Vec<PanelKey>,
         active: usize,
     },
+}
+
+#[derive(Debug, Clone)]
+pub struct EditorDockLayoutSpec {
+    pub left_tabs: Vec<PanelKey>,
+    pub main_tabs: Vec<PanelKey>,
+    pub bottom_tabs: Vec<PanelKey>,
+    pub left_fraction: f32,
+    pub main_fraction: f32,
+    pub active_left: usize,
+    pub active_main: usize,
+    pub active_bottom: usize,
+}
+
+impl EditorDockLayoutSpec {
+    pub fn new(
+        left_tabs: Vec<PanelKey>,
+        main_tabs: Vec<PanelKey>,
+        bottom_tabs: Vec<PanelKey>,
+    ) -> Self {
+        Self {
+            left_tabs,
+            main_tabs,
+            bottom_tabs,
+            left_fraction: 0.26,
+            main_fraction: 0.72,
+            active_left: 0,
+            active_main: 0,
+            active_bottom: 0,
+        }
+    }
+
+    pub fn with_fractions(mut self, left_fraction: f32, main_fraction: f32) -> Self {
+        self.left_fraction = left_fraction;
+        self.main_fraction = main_fraction;
+        self
+    }
+}
+
+/// Convenience helpers to build a `DockGraph` (runtime dock tree) without manually calling
+/// `DockGraph::insert_node` everywhere.
+#[derive(Debug, Default)]
+pub struct DockLayoutBuilder {
+    graph: DockGraph,
+}
+
+impl DockLayoutBuilder {
+    pub fn new() -> Self {
+        Self {
+            graph: DockGraph::new(),
+        }
+    }
+
+    pub fn into_graph(self) -> DockGraph {
+        self.graph
+    }
+
+    pub fn tabs(&mut self, tabs: Vec<PanelKey>, active: usize) -> DockNodeId {
+        self.graph.insert_node(DockNode::Tabs { tabs, active })
+    }
+
+    pub fn split_h(
+        &mut self,
+        left: DockNodeId,
+        right: DockNodeId,
+        left_fraction: f32,
+    ) -> DockNodeId {
+        self.graph.insert_node(DockNode::Split {
+            axis: Axis::Horizontal,
+            children: vec![left, right],
+            fractions: vec![left_fraction, (1.0 - left_fraction).max(0.0)],
+        })
+    }
+
+    pub fn split_v(
+        &mut self,
+        top: DockNodeId,
+        bottom: DockNodeId,
+        top_fraction: f32,
+    ) -> DockNodeId {
+        self.graph.insert_node(DockNode::Split {
+            axis: Axis::Vertical,
+            children: vec![top, bottom],
+            fractions: vec![top_fraction, (1.0 - top_fraction).max(0.0)],
+        })
+    }
+
+    pub fn set_window_root(&mut self, window: AppWindowId, root: DockNodeId) {
+        self.graph.set_window_root(window, root);
+    }
+
+    /// Builds a Unity-like editor default layout:
+    /// - left: (Hierarchy, Project, ...)
+    /// - right: top (Scene, Game, ...), bottom (Inspector, Console/Text Probe, ...)
+    pub fn default_editor_layout(window: AppWindowId, spec: EditorDockLayoutSpec) -> DockGraph {
+        let mut b = DockLayoutBuilder::new();
+        let left = b.tabs(spec.left_tabs, spec.active_left);
+        let top = b.tabs(spec.main_tabs, spec.active_main);
+        let bottom = b.tabs(spec.bottom_tabs, spec.active_bottom);
+        let right = b.split_v(top, bottom, spec.main_fraction);
+        let root = b.split_h(left, right, spec.left_fraction);
+        b.set_window_root(window, root);
+        b.into_graph()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builder_default_editor_layout_sets_window_root() {
+        let window = AppWindowId::default();
+        let spec = EditorDockLayoutSpec::new(
+            vec![
+                PanelKey::new("core.hierarchy"),
+                PanelKey::new("core.project"),
+            ],
+            vec![PanelKey::new("core.scene"), PanelKey::new("core.game")],
+            vec![
+                PanelKey::new("core.inspector"),
+                PanelKey::new("core.text_probe"),
+            ],
+        );
+        let graph = DockLayoutBuilder::default_editor_layout(window, spec);
+        assert!(graph.window_root(window).is_some());
+    }
 }
