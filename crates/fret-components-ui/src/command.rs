@@ -165,6 +165,28 @@ fn matches_query(item: &CommandItem, q: &str) -> bool {
         .any(|k| k.as_ref().to_ascii_lowercase().contains(q))
 }
 
+pub fn visible_item_ids(items: &[CommandItem], query: &str) -> Vec<Arc<str>> {
+    let q = query.trim().to_ascii_lowercase();
+    let mut filtered: Vec<CommandItem> = items
+        .iter()
+        .cloned()
+        .filter(|i| matches_query(i, &q))
+        .collect();
+
+    filtered.sort_by(|a, b| {
+        let ag = a.group.as_deref().unwrap_or("");
+        let bg = b.group.as_deref().unwrap_or("");
+        ag.cmp(bg)
+            .then_with(|| a.label.as_ref().cmp(b.label.as_ref()))
+    });
+
+    filtered
+        .into_iter()
+        .filter(|i| i.enabled)
+        .map(|i| i.id)
+        .collect()
+}
+
 /// shadcn-inspired command list (search + grouped results) backed by `fret-ui::VirtualList`.
 ///
 /// This widget is intentionally generic: it does not execute app commands. It only exposes the
@@ -395,5 +417,30 @@ impl<H: UiHost> Widget<H> for CommandList {
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         <VirtualList<CommandDataSource> as Widget<H>>::paint(&mut self.list, cx);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn visible_item_ids_sorts_by_group_and_label_and_skips_disabled() {
+        let items = vec![
+            CommandItem::new("b", "Bravo").group("B"),
+            CommandItem::new("a", "Alpha").group("A"),
+            CommandItem::new("a2", "Alpha 2").group("A"),
+            CommandItem::new("x", "Disabled").group("A").disabled(),
+        ];
+
+        let ids = visible_item_ids(&items, "");
+        assert_eq!(
+            ids,
+            vec![
+                Arc::<str>::from("a"),
+                Arc::<str>::from("a2"),
+                Arc::<str>::from("b")
+            ]
+        );
     }
 }

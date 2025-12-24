@@ -40,6 +40,7 @@ Scope: this is a pragmatic “what’s missing / what’s broken / what’s next
 - Inputs: `TextField`, `Checkbox`, `Switch`, `Select`, `Slider`
 - Overlays: `TooltipArea`, `DropdownMenuButton`, `Dialog`
 - Data: `ListView` (virtualized), `ScrollArea`, `ProgressBar`, `Tabs`, `Separator`, `Frame`
+- Command palette: `CommandList` + `command_palette::install_command_palette` (cmdk-style shell wiring)
 
 ### Tailwind-like primitives (typed)
 

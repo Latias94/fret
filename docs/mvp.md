@@ -1036,6 +1036,7 @@ Status:
 - Prototype implemented (incubated in this repo):
   - `crates/fret-components-ui`: token-driven components + Tailwind-like typed style refinements (`Button`, `IconButton`, `TextField`, `Select`, `Checkbox`, `Switch`, `Separator`, `Tabs`, `Toolbar`).
     - Tailwind-like primitive vocabulary is now explicit and reusable: `Space` + `Radius` (typed) backed by theme extension tokens (`component.space.*`, `component.radius.*`).
+    - `command_palette::install_command_palette` provides a one-call subtree install pattern (input + list + keyboard nav) for app ergonomics.
   - `crates/fret-components-icons`: renderer-agnostic icon registry + small builtin glyph fallback set.
   - `fret-ui`: `Popover` + `PopoverService` (anchored overlay primitive used by `Select`).
   - `fret-ui`: `CommandPaletteOverlay` + `WindowOverlays` open/close policy for a cmdk/shadcn-style command palette shell.

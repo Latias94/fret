@@ -1,10 +1,14 @@
-use fret_app::{App, Effect, Menu, MenuItem, WindowRequest};
+use fret_app::{
+    App, BindingV1, Effect, KeySpecV1, Keymap, KeymapFileV1, KeymapService, Menu, MenuItem,
+    WindowRequest,
+};
 use fret_components_icons::IconId;
 use fret_components_ui::{
     Size as ComponentSize, StyleRefinement,
     button::{Button, ButtonIntent, ButtonVariant},
     checkbox::Checkbox,
     command::{CommandItem, CommandList},
+    command_palette::install_command_palette,
     dropdown_menu::DropdownMenuButton,
     frame::Frame,
     icon_button::IconButton,
@@ -306,31 +310,13 @@ fn build_ui_kit_contents(
     );
     ui.add_child(palette_open_row, open_palette);
 
-    // Command palette overlay content (shadcn/cmdk style shell).
-    let palette_query = app.models_mut().insert(String::new());
-    let palette_selection = app.models_mut().insert(None::<Arc<str>>);
-
-    let palette_content = ui.create_node(Column::new().with_spacing(Px(10.0)));
-    ui.add_child(command_palette_root, palette_content);
-
-    let palette_query_field = ui.create_node(
-        TextField::new(palette_query)
-            .with_size(ComponentSize::Medium)
-            .with_cancel_command(fret_app::CommandId::from("command_palette.close")),
+    let _palette = install_command_palette(
+        ui,
+        app,
+        command_palette_root,
+        command_items,
+        ComponentSize::Medium,
     );
-    ui.add_child(palette_content, palette_query_field);
-
-    let palette_list_panel = ui.create_node(FixedPanel::new(Px(300.0), Color::TRANSPARENT));
-    ui.add_child(palette_content, palette_list_panel);
-
-    let palette_list = ui.create_node(
-        CommandList::new(command_items, palette_query)
-            .with_size(ComponentSize::Medium)
-            .with_selection_model(palette_selection)
-            .with_close_command(fret_app::CommandId::from("command_palette.close"))
-            .activate_on_enter(true),
-    );
-    ui.add_child(palette_list_panel, palette_list);
 
     let scroll_area_label = ui.create_node(Text::new("ScrollArea"));
     ui.add_child(col, scroll_area_label);
@@ -796,6 +782,44 @@ fn main() -> anyhow::Result<()> {
 
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
+    app.set_global(KeymapService::default());
+    app.with_global_mut(KeymapService::default, |svc, _app| {
+        // Cmd/Ctrl+K to toggle the command palette (shadcn/cmdk convention).
+        let file = KeymapFileV1 {
+            keymap_version: 1,
+            bindings: vec![
+                BindingV1 {
+                    command: Some("command_palette.toggle".to_string()),
+                    platform: Some("macos".to_string()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["meta".to_string()],
+                        key: "KeyK".to_string(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("command_palette.toggle".to_string()),
+                    platform: Some("windows".to_string()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".to_string()],
+                        key: "KeyK".to_string(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("command_palette.toggle".to_string()),
+                    platform: Some("linux".to_string()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".to_string()],
+                        key: "KeyK".to_string(),
+                    },
+                },
+            ],
+        };
+
+        svc.keymap = Keymap::from_v1(file).unwrap_or_else(|_| Keymap::empty());
+    });
     let driver = UiKitDriver::default();
     let mut runner = WinitRunner::new(config, app, driver);
     event_loop.run_app(&mut runner)?;
