@@ -11,7 +11,7 @@ use fret_ui::{DialogRequest, DialogService, EventCx, UiHost};
 ///
 /// Notes:
 /// - The application must have a `DialogOverlay` installed in an overlay layer (e.g. via
-///   `fret_ui::WindowOverlays`).
+///   `fret_components_ui::WindowOverlays`).
 pub fn open_dialog<H: UiHost>(
     cx: &mut EventCx<'_, H>,
     window: AppWindowId,

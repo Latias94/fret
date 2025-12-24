@@ -151,4 +151,4 @@ Practical gaps to prioritize for parity:
 Update:
 
 - The palette-style shell is now prototype implemented via `fret-ui` `CommandPaletteOverlay` +
-  `WindowOverlays` commands (`command_palette.open/close/toggle`) and wired in `fret-demo --bin ui_kit`.
+  `crates/fret-components-ui` `WindowOverlays` commands (`command_palette.open/close/toggle`) and wired in `fret-demo --bin ui_kit`.

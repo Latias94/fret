@@ -7,7 +7,6 @@ pub use fret_app::App;
 
 pub use fret_ui::dock;
 pub use fret_ui::elements;
-pub use fret_ui::overlays;
 pub use fret_ui::theme;
 pub use fret_ui::tree;
 pub use fret_ui::widgets;
@@ -23,7 +22,7 @@ pub use fret_ui::{
     TooltipRequest, TooltipService, TooltipStyle, TreeNode, TreeView, TreeViewStyle,
     UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiHost, UiLayerId, VecStringDataSource,
     ViewportPanel, VirtualList, VirtualListDataSource, VirtualListRow, VirtualListRowHeight,
-    VirtualListStyle, WindowOverlays,
+    VirtualListStyle,
 };
 
 pub use fret_ui::{

@@ -1204,8 +1204,7 @@ impl<H: UiHost> UiTree<H> {
                 if !layer.wants_pointer_move_events || !layer.visible {
                     continue;
                 }
-                let _ =
-                    self.dispatch_event_to_node_chain(app, text, &input_ctx, layer.root, event);
+                let _ = self.dispatch_event_to_node_chain(app, text, &input_ctx, layer.root, event);
             }
         }
     }

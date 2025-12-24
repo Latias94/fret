@@ -1,18 +1,20 @@
-use crate::{
-    UiHost,
-    tree::{UiLayerId, UiTree},
-    widgets::{
-        CommandPaletteOverlay, ContextMenu, ContextMenuService, DialogOverlay, DialogService,
-        Popover, PopoverService, ToastOverlay, TooltipOverlay,
-    },
-};
 use fret_core::{AppWindowId, NodeId, TextService};
 use fret_runtime::{CommandId, Effect};
+use fret_ui::{
+    ContextMenu, ContextMenuService, DialogOverlay, DialogService, Popover, PopoverService,
+    ToastOverlay, TooltipOverlay, UiHost,
+    tree::{UiLayerId, UiTree},
+    widgets::CommandPaletteOverlay,
+};
 
 /// Standard window-level UI overlays (tooltips, popovers, context menus).
 ///
 /// This helper exists to reduce per-app boilerplate: many apps want the same overlay widgets wired
 /// into `UiTree` layers with consistent open/close + focus restoration behavior.
+///
+/// Design note:
+/// - This type lives in `fret-components-ui` (not `fret-ui`) so higher-level policy and shadcn-style
+///   composition can evolve without bloating the runtime crate (see ADR 0037, MVP 48).
 #[derive(Debug)]
 pub struct WindowOverlays {
     _tooltip_node: NodeId,
@@ -277,9 +279,12 @@ impl WindowOverlays {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_host::TestHost;
-    use crate::widget::{LayoutCx, PaintCx, Widget};
-    use fret_core::{Px, Rect, Scene, Size, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_app::App;
+    use fret_core::{Px, Rect, Scene, Size, geometry::Point};
+    use fret_ui::{
+        UiTree,
+        widget::{LayoutCx, PaintCx, Widget},
+    };
 
     #[derive(Default)]
     struct FakeTextService;
@@ -288,12 +293,12 @@ mod tests {
         fn prepare(
             &mut self,
             _text: &str,
-            _style: TextStyle,
-            _constraints: TextConstraints,
-        ) -> (fret_core::TextBlobId, TextMetrics) {
+            _style: fret_core::TextStyle,
+            _constraints: fret_core::TextConstraints,
+        ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
             (
                 fret_core::TextBlobId::default(),
-                TextMetrics {
+                fret_core::TextMetrics {
                     size: Size::new(Px(10.0), Px(10.0)),
                     baseline: Px(8.0),
                 },
@@ -319,20 +324,20 @@ mod tests {
 
     #[test]
     fn command_palette_open_focuses_first_focusable_descendant() {
-        let mut host = TestHost::new();
+        let mut host = App::new();
         let mut text = FakeTextService::default();
 
         let window = AppWindowId::default();
-        let mut ui = UiTree::new();
+        let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(crate::widgets::Stack::new());
+        let root = ui.create_node(fret_ui::Stack::new());
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
 
         let palette_root = overlays.command_palette_node();
-        let content_root = ui.create_node(crate::widgets::Column::new());
+        let content_root = ui.create_node(fret_ui::Column::new());
         ui.add_child(palette_root, content_root);
 
         let focus_target = ui.create_node(Focusable);
@@ -353,7 +358,7 @@ mod tests {
             &mut host,
             &mut text,
             Rect::new(
-                fret_core::Point::new(Px(0.0), Px(0.0)),
+                Point::new(Px(0.0), Px(0.0)),
                 Size::new(Px(800.0), Px(600.0)),
             ),
             1.0,
@@ -362,7 +367,7 @@ mod tests {
             &mut host,
             &mut text,
             Rect::new(
-                fret_core::Point::new(Px(0.0), Px(0.0)),
+                Point::new(Px(0.0), Px(0.0)),
                 Size::new(Px(800.0), Px(600.0)),
             ),
             &mut scene,

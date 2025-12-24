@@ -1,7 +1,6 @@
 pub mod dock;
 pub mod elements;
 pub mod host;
-pub mod overlays;
 pub mod resize_handle;
 #[cfg(test)]
 mod test_host;
@@ -13,7 +12,6 @@ pub mod widgets;
 pub use dock::{DockManager, DockPanel, DockPanelContentService, DockSpace, ViewportPanel};
 pub use elements::{ElementCx, ElementRuntime, GlobalElementId};
 pub use host::UiHost;
-pub use overlays::WindowOverlays;
 pub use resize_handle::ResizeHandle;
 pub use theme::{Theme, ThemeConfig, ThemeSnapshot};
 pub use tree::{

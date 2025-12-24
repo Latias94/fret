@@ -1194,7 +1194,8 @@ This is a deliberate, “no fear” refactor MVP to prevent slow drift and perpe
 
 Status:
 
-- Planned.
+- In progress:
+  - `WindowOverlays` moved from `fret-ui` into `crates/fret-components-ui` to keep overlay policy/component ergonomics out of the runtime crate.
 
 References:
 

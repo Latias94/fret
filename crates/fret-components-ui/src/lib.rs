@@ -29,9 +29,11 @@ pub mod tabs;
 pub mod text_field;
 pub mod toolbar;
 pub mod tooltip;
+pub mod window_overlays;
 
 pub use combobox::Combobox;
 pub use sizing::{Sizable, Size};
 pub use style::{ColorRef, MetricRef, Radius, Space, StyleRefinement};
 
 pub use resizable_panel_group::ResizablePanelGroup;
+pub use window_overlays::WindowOverlays;
