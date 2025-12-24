@@ -1475,9 +1475,13 @@ impl<H: UiHost, D: VirtualListDataSource> Widget<H> for VirtualList<D> {
         }
         match event {
             Event::Pointer(pe) => match pe {
-                fret_core::PointerEvent::Wheel { delta, .. } => {
+                fret_core::PointerEvent::Wheel {
+                    position, delta, ..
+                } => {
                     self.offset_y = Px((self.offset_y.0 - delta.y.0).max(0.0));
                     self.clamp_offset();
+                    let content = self.content_bounds();
+                    self.update_hover(content, *position);
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();
@@ -2151,7 +2155,7 @@ mod tests {
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(200.0), Px(100.0)),
+            Size::new(Px(200.0), Px(40.0)),
         );
         let mut cx = EventCx {
             app: &mut app,
@@ -2178,6 +2182,58 @@ mod tests {
         list.event(&mut cx, &event);
 
         assert_eq!(list.hovered, Some(0));
+    }
+
+    #[test]
+    fn wheel_scroll_updates_hover_under_pointer() {
+        let mut app = TestHost::new();
+        let mut text = FakeTextService::default();
+
+        let data = TestDataSource {
+            rows: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+        };
+        let mut list =
+            VirtualList::new(data).with_row_height(VirtualListRowHeight::Fixed(Px(20.0)));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(40.0)),
+        );
+
+        // Pre-seed layout-dependent fields so scrolling is meaningful in the test.
+        let theme_rev = Theme::global(&app).revision();
+        list.last_bounds = bounds;
+        list.last_viewport_height = bounds.size.height;
+        list.ensure_heights(bounds.size.width, 1.0, theme_rev);
+        assert_eq!(list.max_offset(), Px(20.0));
+
+        let mut cx = EventCx {
+            app: &mut app,
+            text: &mut text,
+            node: NodeId::default(),
+            window: Some(AppWindowId::default()),
+            input_ctx: InputContext::default(),
+            children: &[],
+            focus: None,
+            captured: None,
+            bounds,
+            invalidations: Vec::new(),
+            requested_focus: None,
+            requested_capture: None,
+            requested_cursor: None,
+            stop_propagation: false,
+        };
+
+        // No prior pointer move: wheel scroll should still update hover based on the wheel position.
+        let wheel = Event::Pointer(fret_core::PointerEvent::Wheel {
+            position: Point::new(Px(10.0), Px(10.0)),
+            delta: Point::new(Px(0.0), Px(-20.0)),
+            modifiers: Modifiers::default(),
+        });
+        list.event(&mut cx, &wheel);
+
+        assert_eq!(list.offset_y, Px(20.0));
+        assert_eq!(list.hovered, Some(1));
     }
 
     #[test]

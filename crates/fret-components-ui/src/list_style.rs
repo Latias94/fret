@@ -24,9 +24,9 @@ pub fn list_style(theme: &Theme, size: Size) -> VirtualListStyle {
 
     style.padding_x = size.list_px(theme);
     style.padding_y = size.list_py(theme);
-    style.row_gap_y = theme
-        .metric_by_key("metric.list.row_gap_y")
-        .unwrap_or(Px(0.0));
+    if let Some(gap) = theme.metric_by_key("metric.list.row_gap_y") {
+        style.row_gap_y = gap;
+    }
     style.trailing_gap_x = theme
         .metric_by_key("metric.list.trailing_gap_x")
         .unwrap_or(theme.metrics.padding_sm);
