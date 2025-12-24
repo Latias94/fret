@@ -54,6 +54,14 @@ Scope: this is a pragmatic “what’s missing / what’s broken / what’s next
 
 Demo: `cargo run -p fret-demo --bin ui_kit`
 
+### Theme sanity check (baseline-only)
+
+To verify that component spacing/radius stays consistent even when a theme omits `component.*` tokens,
+copy `themes/fret-baseline-only.json` to `.fret/theme.json` and run the UI kit demo:
+
+- `cp themes/fret-baseline-only.json .fret/theme.json`
+- `cargo run -p fret-demo --bin ui_kit`
+
 ## Known issues (current)
 
 ### VirtualList row highlighting feels “too tight” (UX)

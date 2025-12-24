@@ -1,0 +1,36 @@
+{
+  "name": "Fret Baseline Only (No component.* tokens)",
+  "author": "Fret",
+  "url": "https://github.com/Latias94/fret",
+  "colors": {
+    "color.surface.background": "#0B1020",
+    "color.panel.background": "#0F172A",
+    "color.panel.border": "#24324D",
+    "color.text.primary": "#E5E7EB",
+    "color.text.muted": "#9CA3AF",
+    "color.text.disabled": "#6B7280",
+    "color.accent": "#60A5FA",
+    "color.selection.background": "#60A5FA4D",
+    "color.hover.background": "#111C33",
+    "color.focus.ring": "#60A5FACC",
+    "color.menu.background": "#0F172A",
+    "color.menu.border": "#24324D",
+    "color.menu.item.hover": "#111C33",
+    "color.menu.item.selected": "#60A5FA4D",
+    "color.list.background": "#0F172A",
+    "color.list.border": "#24324D",
+    "color.list.row.hover": "#111C33",
+    "color.list.row.selected": "#60A5FA4D",
+    "color.scrollbar.track": "#070B14",
+    "color.scrollbar.thumb": "#374151",
+    "color.scrollbar.thumb.hover": "#4B5563"
+  },
+  "metrics": {
+    "metric.radius.sm": 6.0,
+    "metric.radius.md": 8.0,
+    "metric.radius.lg": 12.0,
+    "metric.padding.sm": 10.0,
+    "metric.padding.md": 12.0,
+    "metric.scrollbar.width": 10.0
+  }
+}
