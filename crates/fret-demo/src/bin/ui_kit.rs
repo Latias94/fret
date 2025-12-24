@@ -5,7 +5,7 @@ use fret_app::{
 use fret_components_icons::IconId;
 use fret_components_ui::{
     ContextMenuService, DialogAction, DialogRequest, DialogService, PopoverService,
-    Size as ComponentSize, StyleRefinement, ToastAction, TooltipService, WindowOverlays,
+    Size as ComponentSize, Space, StyleRefinement, ToastAction, TooltipService, WindowOverlays,
     button::{Button, ButtonIntent, ButtonVariant},
     checkbox::Checkbox,
     combobox::Combobox,
@@ -340,36 +340,78 @@ fn build_ui_kit_contents(
         ui.add_child(scroll_area_content, row);
     }
 
-    let list_view_label = ui.create_node(Text::new("ListView (virtualized)"));
-    ui.add_child(col, list_view_label);
+    let list_matrix_label = ui.create_node(Text::new("Lists (size matrix: xs/sm/md/lg)"));
+    ui.add_child(col, list_matrix_label);
 
-    let items: Vec<String> = (0..20_000).map(|i| format!("Item {}", i + 1)).collect();
-    let items_model = app.models_mut().insert(items);
-    let selection_model = app.models_mut().insert(None::<usize>);
+    let list_items: Vec<String> = (0..2_000).map(|i| format!("Item {}", i + 1)).collect();
+    let list_items_model = app.models_mut().insert(list_items);
 
-    let list_panel = ui.create_node(FixedPanel::new(Px(220.0), Color::TRANSPARENT));
-    ui.add_child(col, list_panel);
+    for size in [
+        ComponentSize::XSmall,
+        ComponentSize::Small,
+        ComponentSize::Medium,
+        ComponentSize::Large,
+    ] {
+        let group_frame = ui.create_node(Frame::new(
+            StyleRefinement::default()
+                .rounded_md()
+                .border_1()
+                .px_3()
+                .py(Space::N2),
+        ));
+        ui.add_child(col, group_frame);
 
-    let list_view =
-        ui.create_node(ListView::new(items_model).with_selection_model(selection_model));
-    ui.add_child(list_panel, list_view);
+        let group = ui.create_node(Column::new().with_spacing(Px(8.0)));
+        ui.add_child(group_frame, group);
 
-    let rich_list_label = ui.create_node(Text::new("VirtualList (rich rows)"));
-    ui.add_child(col, rich_list_label);
+        let header = ui.create_node(Text::new(format!("Size {}", size.as_str())));
+        ui.add_child(group, header);
 
-    let rich_list_panel = ui.create_node(FixedPanel::new(Px(260.0), Color::TRANSPARENT));
-    ui.add_child(col, rich_list_panel);
+        let list_view_label = ui.create_node(Text::new("ListView"));
+        ui.add_child(group, list_view_label);
 
-    let rich_list_size = ComponentSize::Large;
-    let rich_list_min_h = rich_list_size.list_row_h(Theme::global(app));
-    let rich_list = ui.create_node(
-        VirtualList::new(UiKitRichListDataSource { len: 2000 }).with_row_height(
-            VirtualListRowHeight::Measured {
-                min: rich_list_min_h,
-            },
-        ),
-    );
-    ui.add_child(rich_list_panel, rich_list);
+        let list_panel = ui.create_node(FixedPanel::new(Px(140.0), Color::TRANSPARENT));
+        ui.add_child(group, list_panel);
+
+        let selection_model = app.models_mut().insert(None::<usize>);
+        let list_view = ui.create_node(
+            ListView::new(list_items_model)
+                .with_selection_model(selection_model)
+                .with_size(size),
+        );
+        ui.add_child(list_panel, list_view);
+
+        let command_list_label = ui.create_node(Text::new("CommandList"));
+        ui.add_child(group, command_list_label);
+
+        let command_list_panel = ui.create_node(FixedPanel::new(Px(180.0), Color::TRANSPARENT));
+        ui.add_child(group, command_list_panel);
+
+        let query_model = app.models_mut().insert(String::new());
+        let selection_model = app.models_mut().insert(None::<Arc<str>>);
+        let command_list = ui.create_node(
+            CommandList::new(command_items, query_model)
+                .with_size(size)
+                .with_selection_model(selection_model),
+        );
+        ui.add_child(command_list_panel, command_list);
+
+        let rich_list_label = ui.create_node(Text::new("VirtualList (rich rows)"));
+        ui.add_child(group, rich_list_label);
+
+        let rich_list_panel = ui.create_node(FixedPanel::new(Px(180.0), Color::TRANSPARENT));
+        ui.add_child(group, rich_list_panel);
+
+        let rich_list_min_h = size.list_row_h(Theme::global(app));
+        let rich_list = ui.create_node(
+            VirtualList::new(UiKitRichListDataSource { len: 2000 }).with_row_height(
+                VirtualListRowHeight::Measured {
+                    min: rich_list_min_h,
+                },
+            ),
+        );
+        ui.add_child(rich_list_panel, rich_list);
+    }
 
     let separator = ui.create_node(Separator::horizontal());
     ui.add_child(col, separator);
