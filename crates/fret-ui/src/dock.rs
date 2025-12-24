@@ -438,6 +438,7 @@ struct DividerDragState {
     axis: fret_core::Axis,
     bounds: Rect,
     fraction: f32,
+    grab_offset: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -451,6 +452,9 @@ const DOCK_TAB_H: Px = Px(28.0);
 const DOCK_TAB_W: Px = Px(120.0);
 const DOCK_TAB_CLOSE_SIZE: Px = Px(16.0);
 const DOCK_TAB_CLOSE_GAP: Px = Px(6.0);
+const DOCK_SPLIT_HANDLE_HIT_THICKNESS: Px = Px(6.0);
+const DOCK_SPLIT_HANDLE_PAINT_THICKNESS: Px = Px(4.0);
+const DOCK_SPLIT_HANDLE_GAP: Px = DOCK_SPLIT_HANDLE_HIT_THICKNESS;
 
 #[derive(Debug, Clone, Copy)]
 struct PreparedTabTitle {
@@ -1090,6 +1094,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     divider.bounds,
                                     left,
                                     right,
+                                    divider.grab_offset,
                                     *position,
                                 )
                             {
@@ -2100,8 +2105,83 @@ fn compute_layout_map(
     bounds: Rect,
 ) -> std::collections::HashMap<DockNodeId, Rect> {
     let mut layout = std::collections::HashMap::new();
-    graph.compute_layout(root, bounds, &mut layout);
+    compute_layout_map_impl(graph, root, bounds, &mut layout);
     layout
+}
+
+fn compute_layout_map_impl(
+    graph: &DockGraph,
+    node: DockNodeId,
+    bounds: Rect,
+    out: &mut std::collections::HashMap<DockNodeId, Rect>,
+) {
+    let Some(n) = graph.node(node) else {
+        return;
+    };
+
+    out.insert(node, bounds);
+    match n {
+        DockNode::Tabs { .. } => {}
+        DockNode::Split {
+            axis,
+            children,
+            fractions,
+        } => {
+            let count = children.len().min(fractions.len());
+            if count == 0 {
+                return;
+            }
+
+            let total: f32 = fractions.iter().take(count).sum();
+            let total = if total <= 0.0 { 1.0 } else { total };
+
+            let axis_len = match axis {
+                fret_core::Axis::Horizontal => bounds.size.width.0,
+                fret_core::Axis::Vertical => bounds.size.height.0,
+            };
+            if !axis_len.is_finite() || axis_len <= 0.0 {
+                return;
+            }
+
+            let gaps = count.saturating_sub(1) as f32;
+            let mut gap = DOCK_SPLIT_HANDLE_GAP.0;
+            if gaps == 0.0 || axis_len <= gap * gaps {
+                gap = 0.0;
+            }
+
+            let available = axis_len - gap * gaps;
+            if !available.is_finite() || available <= 0.0 {
+                return;
+            }
+
+            let mut cursor = 0.0;
+            for i in 0..count {
+                let f = (fractions[i] / total).max(0.0);
+                let (child_axis_len, next_cursor) = if i + 1 == count {
+                    let remaining = (available - cursor).max(0.0);
+                    (remaining, available)
+                } else {
+                    let len = available * f;
+                    (len, cursor + len)
+                };
+
+                let origin_axis = cursor + gap * (i as f32);
+                let child_rect = match axis {
+                    fret_core::Axis::Horizontal => Rect {
+                        origin: Point::new(Px(bounds.origin.x.0 + origin_axis), bounds.origin.y),
+                        size: Size::new(Px(child_axis_len), bounds.size.height),
+                    },
+                    fret_core::Axis::Vertical => Rect {
+                        origin: Point::new(bounds.origin.x, Px(bounds.origin.y.0 + origin_axis)),
+                        size: Size::new(bounds.size.width, Px(child_axis_len)),
+                    },
+                };
+
+                cursor = next_cursor;
+                compute_layout_map_impl(graph, children[i], child_rect, out);
+            }
+        }
+    }
 }
 
 fn hidden_bounds(size: Size) -> Rect {
@@ -3092,8 +3172,6 @@ fn hit_test_split_handle(
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     position: Point,
 ) -> Option<DividerDragState> {
-    let thickness = Px(6.0);
-
     for (&node, &bounds) in layout.iter() {
         let Some(DockNode::Split {
             axis,
@@ -3113,36 +3191,27 @@ fn hit_test_split_handle(
         let Some(left) = layout.get(&children[0]).copied() else {
             continue;
         };
-        let Some(_right) = layout.get(&children[1]).copied() else {
+        let Some(right) = layout.get(&children[1]).copied() else {
             continue;
         };
 
-        let handle = match axis {
-            fret_core::Axis::Horizontal => {
-                let x = left.origin.x.0 + left.size.width.0 - thickness.0 * 0.5;
-                Rect {
-                    origin: Point::new(Px(x), bounds.origin.y),
-                    size: Size::new(thickness, bounds.size.height),
-                }
-            }
-            fret_core::Axis::Vertical => {
-                let y = left.origin.y.0 + left.size.height.0 - thickness.0 * 0.5;
-                Rect {
-                    origin: Point::new(bounds.origin.x, Px(y)),
-                    size: Size::new(bounds.size.width, thickness),
-                }
-            }
-        };
+        let handle = split_handle_rect(*axis, bounds, left, right, DOCK_SPLIT_HANDLE_HIT_THICKNESS);
 
         if handle.contains(position) {
             let total = fractions.iter().take(2).sum::<f32>();
             let total = if total <= 0.0 { 1.0 } else { total };
             let f0 = fractions.first().copied().unwrap_or(0.5) / total;
+            let center = split_handle_center(*axis, left, right);
+            let grab_offset = match axis {
+                fret_core::Axis::Horizontal => position.x.0 - center,
+                fret_core::Axis::Vertical => position.y.0 - center,
+            };
             return Some(DividerDragState {
                 split: node,
                 axis: *axis,
                 bounds,
                 fraction: f0,
+                grab_offset,
             });
         }
     }
@@ -3150,32 +3219,101 @@ fn hit_test_split_handle(
     None
 }
 
+fn split_gap(axis: fret_core::Axis, first: Rect, second: Rect) -> f32 {
+    let gap = match axis {
+        fret_core::Axis::Horizontal => second.origin.x.0 - (first.origin.x.0 + first.size.width.0),
+        fret_core::Axis::Vertical => second.origin.y.0 - (first.origin.y.0 + first.size.height.0),
+    };
+    if gap.is_finite() { gap.max(0.0) } else { 0.0 }
+}
+
+fn split_handle_center(axis: fret_core::Axis, first: Rect, second: Rect) -> f32 {
+    let gap = split_gap(axis, first, second);
+    match axis {
+        fret_core::Axis::Horizontal => {
+            let start = first.origin.x.0 + first.size.width.0;
+            if gap > 0.0 { start + gap * 0.5 } else { start }
+        }
+        fret_core::Axis::Vertical => {
+            let start = first.origin.y.0 + first.size.height.0;
+            if gap > 0.0 { start + gap * 0.5 } else { start }
+        }
+    }
+}
+
+fn split_handle_rect(
+    axis: fret_core::Axis,
+    bounds: Rect,
+    first: Rect,
+    second: Rect,
+    thickness: Px,
+) -> Rect {
+    let gap = split_gap(axis, first, second);
+    if gap > 0.0 {
+        match axis {
+            fret_core::Axis::Horizontal => Rect {
+                origin: Point::new(Px(first.origin.x.0 + first.size.width.0), bounds.origin.y),
+                size: Size::new(Px(gap), bounds.size.height),
+            },
+            fret_core::Axis::Vertical => Rect {
+                origin: Point::new(bounds.origin.x, Px(first.origin.y.0 + first.size.height.0)),
+                size: Size::new(bounds.size.width, Px(gap)),
+            },
+        }
+    } else {
+        let center = split_handle_center(axis, first, second);
+        match axis {
+            fret_core::Axis::Horizontal => Rect {
+                origin: Point::new(Px(center - thickness.0 * 0.5), bounds.origin.y),
+                size: Size::new(thickness, bounds.size.height),
+            },
+            fret_core::Axis::Vertical => Rect {
+                origin: Point::new(bounds.origin.x, Px(center - thickness.0 * 0.5)),
+                size: Size::new(bounds.size.width, thickness),
+            },
+        }
+    }
+}
+
 fn compute_split_fraction(
     axis: fret_core::Axis,
     bounds: Rect,
-    _first: Rect,
-    _second: Rect,
+    first: Rect,
+    second: Rect,
+    grab_offset: f32,
     position: Point,
 ) -> Option<f32> {
     let min_px = 120.0;
     match axis {
         fret_core::Axis::Horizontal => {
             let w = bounds.size.width.0;
-            if !w.is_finite() || w <= min_px * 2.0 {
+            if !w.is_finite() {
                 return None;
             }
-            let max_x = (w - min_px).max(min_px);
-            let x = (position.x.0 - bounds.origin.x.0).clamp(min_px, max_x);
-            Some(x / w)
+            let gap = split_gap(axis, first, second);
+            let avail = w - gap;
+            if !avail.is_finite() || avail <= min_px * 2.0 {
+                return None;
+            }
+            let max_x = (avail - min_px).max(min_px);
+            let anchor = position.x.0 - grab_offset - bounds.origin.x.0;
+            let x = (anchor - gap * 0.5).clamp(min_px, max_x);
+            Some(x / avail)
         }
         fret_core::Axis::Vertical => {
             let h = bounds.size.height.0;
-            if !h.is_finite() || h <= min_px * 2.0 {
+            if !h.is_finite() {
                 return None;
             }
-            let max_y = (h - min_px).max(min_px);
-            let y = (position.y.0 - bounds.origin.y.0).clamp(min_px, max_y);
-            Some(y / h)
+            let gap = split_gap(axis, first, second);
+            let avail = h - gap;
+            if !avail.is_finite() || avail <= min_px * 2.0 {
+                return None;
+            }
+            let max_y = (avail - min_px).max(min_px);
+            let anchor = position.y.0 - grab_offset - bounds.origin.y.0;
+            let y = (anchor - gap * 0.5).clamp(min_px, max_y);
+            Some(y / avail)
         }
     }
 }
@@ -3185,7 +3323,6 @@ fn paint_split_handles(
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     scene: &mut Scene,
 ) {
-    let thickness = Px(4.0);
     for (&node, &bounds) in layout.iter() {
         let Some(DockNode::Split { axis, children, .. }) = graph.node(node) else {
             continue;
@@ -3196,22 +3333,45 @@ fn paint_split_handles(
         let Some(first) = layout.get(&children[0]).copied() else {
             continue;
         };
+        let Some(second) = layout.get(&children[1]).copied() else {
+            continue;
+        };
 
-        let rect = match axis {
-            fret_core::Axis::Horizontal => Rect {
-                origin: Point::new(
-                    Px(first.origin.x.0 + first.size.width.0 - thickness.0 * 0.5),
-                    bounds.origin.y,
-                ),
-                size: Size::new(thickness, bounds.size.height),
-            },
-            fret_core::Axis::Vertical => Rect {
-                origin: Point::new(
-                    bounds.origin.x,
-                    Px(first.origin.y.0 + first.size.height.0 - thickness.0 * 0.5),
-                ),
-                size: Size::new(bounds.size.width, thickness),
-            },
+        let handle = split_handle_rect(
+            *axis,
+            bounds,
+            first,
+            second,
+            DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+        );
+        let gap = split_gap(*axis, first, second);
+        let rect = if gap > 0.0 {
+            match axis {
+                fret_core::Axis::Horizontal => {
+                    let paint_w = DOCK_SPLIT_HANDLE_PAINT_THICKNESS.0.min(handle.size.width.0);
+                    Rect {
+                        origin: Point::new(
+                            Px(handle.origin.x.0 + (handle.size.width.0 - paint_w) * 0.5),
+                            handle.origin.y,
+                        ),
+                        size: Size::new(Px(paint_w), handle.size.height),
+                    }
+                }
+                fret_core::Axis::Vertical => {
+                    let paint_h = DOCK_SPLIT_HANDLE_PAINT_THICKNESS
+                        .0
+                        .min(handle.size.height.0);
+                    Rect {
+                        origin: Point::new(
+                            handle.origin.x,
+                            Px(handle.origin.y.0 + (handle.size.height.0 - paint_h) * 0.5),
+                        ),
+                        size: Size::new(handle.size.width, Px(paint_h)),
+                    }
+                }
+            }
+        } else {
+            handle
         };
 
         scene.push(SceneOp::Quad {
@@ -3529,9 +3689,14 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(120.0), Px(300.0)),
         );
+        let first = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(60.0), Px(300.0)));
+        let second = Rect::new(
+            Point::new(Px(60.0), Px(0.0)),
+            Size::new(Px(60.0), Px(300.0)),
+        );
         let pos = Point::new(Px(60.0), Px(10.0));
         assert_eq!(
-            compute_split_fraction(fret_core::Axis::Horizontal, bounds, bounds, bounds, pos),
+            compute_split_fraction(fret_core::Axis::Horizontal, bounds, first, second, 0.0, pos),
             None
         );
     }
@@ -3542,9 +3707,11 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(f32::NAN), Px(300.0)),
         );
+        let first = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(0.0), Px(300.0)));
+        let second = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(0.0), Px(300.0)));
         let pos = Point::new(Px(60.0), Px(10.0));
         assert_eq!(
-            compute_split_fraction(fret_core::Axis::Horizontal, bounds, bounds, bounds, pos),
+            compute_split_fraction(fret_core::Axis::Horizontal, bounds, first, second, 0.0, pos),
             None
         );
     }

@@ -39,6 +39,10 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Introduce a `UiHost` boundary so `fret-ui` can be embedded by third-party hosts (ADR 0052). (done; `fret-runtime` + `fret-ui-app`)
 - P0: Make external file drag payload portable (no `PathBuf` in core events) (ADR 0053). (done)
 - P0: Introduce runtime platform capability matrix for portability (ADR 0054). (done)
+- P0: Introduce a portable system cursor boundary (cursor icon + per-window cursor routing + overlay precedence).
+  - Rationale: editor-grade resizing/docking needs OS cursor affordances; without a stable boundary, each widget
+    invents its own heuristics and portability will suffer.
+  - Planned as MVP 46 (see `docs/mvp.md`).
 - P0: Renderer must preserve `Scene.ops` ordering across primitive kinds (ADR 0009).
 - P0: Multi-root overlays (menus, drag previews, popups, modals) must be first-class (ADR 0011).
 - P0: Keyboard/IME split: physical keys for shortcuts, text input for editing (ADR 0012).
@@ -96,6 +100,35 @@ MVP guidance:
 
 - Each MVP item in `docs/mvp.md` should link to the ADRs that define its non-negotiable contracts.
 - If a prototype reveals an incorrect assumption, update the ADR first, then adjust the implementation.
+
+## Framework Capability Promotions (From Demo/Widgets to Core)
+
+These are recurring “editor-grade UX” needs that should be expressed as **portable framework contracts**
+(`fret-core`/`fret-runtime` + runner effects), not re-implemented ad-hoc in individual widgets or demos.
+
+The goal is a GPUI-like reuse story: third-party hosts and component ecosystems can rely on the same behavior.
+
+P0 / near-term (schedule as MVPs/refactors):
+
+- **System cursor + pointer feedback**: portable cursor icons, per-window cursor routing, overlay precedence, and
+  reusable resize-handle primitives (planned as MVP 46 in `docs/mvp.md`).
+- **Resizable layout primitive**: a reusable split/resize container (panel group) so “dock splits”, “inspector
+  sidebars”, and “data table column resize” share hit-testing and cursor behavior (pairs naturally with MVP 46).
+- **Pointer lock / relative motion** (viewport navigation): a portable effect boundary for “orbit/pan camera”
+  interactions where OS cursor constraints differ (desktop vs web); capability-gated and opt-in.
+
+P1 / medium-term (app polish; after primitives settle):
+
+- **Tooltip / hover help service**: delayed tooltips, follow-cursor placement, and consistent overlay ordering
+  (build on existing overlay roots and `PopoverService`).
+- **Window policy hooks**: standardized “raise/focus on create”, window activation transfer, and predictable
+  z-order behavior across platforms (reduce demo-specific fixes).
+
+P2 / later (portability/product completeness):
+
+- **Native dialogs**: open/save file dialogs, open folder, reveal-in-file-manager (effect-driven and capability-gated).
+- **External integrations**: open URL, system notifications (portable subset).
+- **Rich clipboard**: images/files (beyond text), with explicit portability constraints.
 
 ## Example Editor App Notes (Out of Scope for Fret Framework)
 
@@ -201,6 +234,7 @@ Remaining work (still P0, but can iterate after MVP2):
     - dock drag hint overlay and tab drop indicators (Godot-style),
     - dock context menu actions (float, close, move left/right, etc.),
     - debounced layout persistence (delay disk writes during interactive drags).
+    - system cursor affordances for split/resize handles (MVP 46).
 
 ### M5 — Engine Viewports
 

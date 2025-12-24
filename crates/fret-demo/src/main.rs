@@ -1981,11 +1981,30 @@ impl WinitDriver for DemoDriver {
             for y in 0..tex_h {
                 for x in 0..tex_w {
                     let i = ((y * tex_w + x) * 4) as usize;
-                    let checker = ((x / 16) ^ (y / 16)) & 1;
-                    let base = if checker == 0 { 28u8 } else { 40u8 };
-                    let r = base.saturating_add(((x * 255) / tex_w.max(1)) as u8 / 3);
-                    let g = base.saturating_add(((y * 255) / tex_h.max(1)) as u8 / 3);
-                    let b = base.saturating_add(80);
+                    let checker = ((x / 8) ^ (y / 8)) & 1;
+                    let quad_x = if x < tex_w / 2 { 0 } else { 1 };
+                    let quad_y = if y < tex_h / 2 { 0 } else { 1 };
+
+                    let (mut r, mut g, mut b) = match (quad_x, quad_y) {
+                        (0, 0) => (220u8, 70u8, 70u8),
+                        (1, 0) => (70u8, 220u8, 70u8),
+                        (0, 1) => (70u8, 70u8, 220u8),
+                        (1, 1) => (220u8, 200u8, 70u8),
+                        _ => (160u8, 160u8, 160u8),
+                    };
+
+                    let shade = if checker == 0 { 220u8 } else { 140u8 };
+                    r = ((r as u16 * shade as u16) / 255) as u8;
+                    g = ((g as u16 * shade as u16) / 255) as u8;
+                    b = ((b as u16 * shade as u16) / 255) as u8;
+
+                    let grid = x % 16 == 0 || y % 16 == 0;
+                    if grid {
+                        r = 235;
+                        g = 235;
+                        b = 235;
+                    }
+
                     pixels[i] = r;
                     pixels[i + 1] = g;
                     pixels[i + 2] = b;
@@ -3861,9 +3880,16 @@ impl WinitDriver for DemoDriver {
             ));
             let ui_kit_image_col =
                 ui.create_node(fret_ui_app::Column::new().with_spacing(Px(10.0)));
+
+            let full = ui.create_node(
+                Image::new(img)
+                    .with_size(Size::new(Px(320.0), Px(240.0)))
+                    .with_uv(fret_core::UvRect::FULL),
+            );
+            ui.add_child(ui_kit_image_col, full);
+
             let row_top = ui.create_node(fret_ui_app::Row::new().with_spacing(Px(10.0)));
             let row_bottom = ui.create_node(fret_ui_app::Row::new().with_spacing(Px(10.0)));
-
             let w = Px(160.0);
             let h = Px(120.0);
             let tl = ui.create_node(Image::new(img).with_size(Size::new(w, h)).with_uv(

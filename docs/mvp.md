@@ -58,6 +58,7 @@ MVP work is allowed to prototype quickly, but changes that affect “hard-to-cha
 - MVP 42: prototype implemented in demo (scene workflow P0: New Scene + Save As; File menu and Cmd/Ctrl shortcuts)
 - MVP 43: prototype implemented (portability gates): runtime platform capability matrix (ADR 0054) + begin removing desktop-only payload assumptions (ADR 0053).
 - MVP 44: implemented (host boundary): `UiHost` in `fret-runtime`, `fret-ui` is host-generic (no `fret-app` dependency), and `fret-ui-app` preserves demo/editor ergonomics (ADR 0052).
+- MVP 46: planned (framework capability): system cursor + pointer feedback boundary (resize handles, hover cursors, per-window cursor routing).
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -1046,6 +1047,57 @@ References:
 - `repo-ref/gpui-component/crates/ui`
 - `repo-ref/fret-ui-precision/docs/`
   - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx`
+
+## MVP 46 — Pointer Feedback P0 (System Cursor + Resize Handles)
+
+Goal: make “editor-grade pointer affordances” a **framework capability**, not ad-hoc per-widget behavior.
+
+This closes a UX gap observed in the demo: resize handles and split dividers can be dragged, but the OS cursor
+does not reflect the affordance (e.g. column/row resize) because there is no portable cursor API boundary yet.
+
+**Scope**
+
+- Add a portable “system cursor icon” contract to the UI→host boundary:
+  - define a `CursorIcon` type (portable subset),
+  - add an effect to request cursor changes per window (e.g. `Effect::CursorSetIcon { window, icon }`),
+  - gate the feature via `PlatformCapabilities` (for future wasm/mobile).
+- Define a deterministic cursor resolution model for retained UI:
+  - a per-window “cursor intent” channel derived from hit-testing (topmost wins),
+  - stable behavior across multiple roots/overlays (context menus, popovers, drag previews),
+  - reset-to-default when leaving all cursor areas.
+- Provide a general-purpose `ResizeHandle` primitive in the component ecosystem:
+  - consistent hit target size + visual styling,
+  - emits resize drag events and requests the correct cursor icon,
+  - reusable by docking splits, resizable panels, data tables, etc.
+- Adopt the primitive in `DockSpace` split handles (demo-visible validation).
+
+**Non-goals**
+
+- Pixel-perfect parity with every platform cursor set (desktop-first; wasm/mobile can be partial/no-op).
+- Advanced “cursor regions” like text I-beam selection shaping beyond a portable enum.
+
+**Definition of Done**
+
+- Hovering a `DockSpace` split handle shows an OS resize cursor (col/row resize) and restores on exit.
+- Dragging a split handle keeps the resize cursor during the drag, even across window boundaries.
+- The behavior is deterministic with overlays:
+  - context menus/popovers can override cursors when hovered,
+  - drag preview windows do not “trap” the cursor resolution for docking back.
+- The cursor API is documented and linked to the relevant ADRs (update, don’t add a micro-ADR unless needed):
+  - `docs/adr/0001-app-effects.md`
+  - `docs/adr/0003-platform-boundary.md`
+  - `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
+
+Status:
+
+- Planned (no stable contract shipped yet).
+
+References:
+
+- `repo-ref/zed/crates/workspace/src/dock.rs` (resize handle as element + cursor)
+- `repo-ref/gpui-component/crates/ui/src/resizable/resize_handle.rs` (cursor + occlude + drag behavior)
+- `docs/adr/0011-overlays-and-multi-root.md`
+- `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
 
 ## Parking Lot (Explicitly Deferred)
 
