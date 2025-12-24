@@ -3592,7 +3592,10 @@ fn paint_drop_hints(
     if min_x.is_finite() && min_y.is_finite() && max_x.is_finite() && max_y.is_finite() {
         let plate = Rect::new(
             Point::new(Px(min_x - pad.0), Px(min_y - pad.0)),
-            Size::new(Px((max_x - min_x + pad.0 * 2.0).max(0.0)), Px((max_y - min_y + pad.0 * 2.0).max(0.0))),
+            Size::new(
+                Px((max_x - min_x + pad.0 * 2.0).max(0.0)),
+                Px((max_y - min_y + pad.0 * 2.0).max(0.0)),
+            ),
         );
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(order.0 - 2),

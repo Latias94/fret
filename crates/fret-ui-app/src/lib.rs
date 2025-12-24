@@ -17,10 +17,11 @@ pub use fret_ui::{
     DockSpace, FixedPanel, GlobalElementId, HeaderBody, Image, Invalidation, PaintCachePolicy,
     PanelThemeBackground, Popover, PopoverItem, PopoverRequest, PopoverService, PopoverStyle,
     ResizableSplit, Row, Scroll, Split, Stack, Text, TextArea, TextAreaStyle, TextInput,
-    TextInputStyle, Theme, ThemeConfig, ThemeSnapshot, Toolbar, ToolbarItem, TreeNode, TreeView,
-    TreeViewStyle, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiHost, UiLayerId,
-    VecStringDataSource, ViewportPanel, VirtualList, VirtualListDataSource, VirtualListRow,
-    VirtualListRowHeight, VirtualListStyle,
+    TextInputStyle, Theme, ThemeConfig, ThemeSnapshot, Toolbar, ToolbarItem, TooltipOverlay,
+    TooltipRequest, TooltipService, TooltipStyle, TreeNode, TreeView, TreeViewStyle,
+    UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiHost, UiLayerId, VecStringDataSource,
+    ViewportPanel, VirtualList, VirtualListDataSource, VirtualListRow, VirtualListRowHeight,
+    VirtualListStyle,
 };
 
 pub use fret_ui::{

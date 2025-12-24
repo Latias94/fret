@@ -111,6 +111,27 @@ impl Tabs {
         let _ = app.models_mut().update(self.model, |v| *v = index);
     }
 
+    fn translate_prepared(&mut self, delta: Point) {
+        if delta.x.0 == 0.0 && delta.y.0 == 0.0 {
+            return;
+        }
+        for tab in &mut self.prepared {
+            tab.rect.origin = Point::new(tab.rect.origin.x + delta.x, tab.rect.origin.y + delta.y);
+        }
+    }
+
+    fn sync_bounds(&mut self, bounds: Rect) {
+        let prev = self.last_bounds;
+        if prev != Rect::default() && prev.origin != bounds.origin && !self.prepared.is_empty() {
+            let delta = Point::new(
+                bounds.origin.x - prev.origin.x,
+                bounds.origin.y - prev.origin.y,
+            );
+            self.translate_prepared(delta);
+        }
+        self.last_bounds = bounds;
+    }
+
     fn sync_style_from_theme(&mut self, theme: &Theme) {
         if self.last_theme_revision == Some(theme.revision()) {
             return;
@@ -230,6 +251,7 @@ impl<H: UiHost> Widget<H> for Tabs {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme());
+        self.sync_bounds(cx.bounds);
 
         let selected = self.selected_index(cx.app);
 
@@ -330,6 +352,7 @@ impl<H: UiHost> Widget<H> for Tabs {
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.sync_style_from_theme(cx.theme());
         cx.observe_model(self.model, Invalidation::Paint);
+        self.sync_bounds(cx.bounds);
 
         let scale_bits = cx.scale_factor.to_bits();
         if self.prepared_scale_factor_bits != Some(scale_bits) {
@@ -437,5 +460,107 @@ impl<H: UiHost> Widget<H> for Tabs {
                 corner_radii: Corners::all(self.resolved.radius),
             });
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, Color, Event, Modifiers, Point, PointerEvent, Px, Rect, Scene, SceneOp, Size,
+        TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle,
+    };
+    use fret_ui::{Column, FixedPanel, Scroll, UiTree};
+
+    #[derive(Default)]
+    struct FakeText;
+
+    impl TextService for FakeText {
+        fn prepare(
+            &mut self,
+            text: &str,
+            _style: TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            let w = Px((text.chars().count() as f32) * 7.0);
+            let h = Px(10.0);
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: fret_core::Size::new(w, h),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    fn min_text_y(scene: &Scene) -> Option<Px> {
+        scene
+            .ops()
+            .iter()
+            .filter_map(|op| match op {
+                SceneOp::Text { origin, .. } => Some(origin.y),
+                _ => None,
+            })
+            .min_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal))
+    }
+
+    #[test]
+    fn tabs_paint_tracks_scroll_translation_without_layout() {
+        let mut app = App::new();
+        let mut ui = UiTree::<App>::new();
+        ui.set_window(AppWindowId::default());
+        ui.set_paint_cache_enabled(false);
+
+        let scroll = ui.create_node(Scroll::new());
+        ui.set_root(scroll);
+        let col = ui.create_node(Column::new());
+        ui.add_child(scroll, col);
+
+        let model = app.models_mut().insert(0usize);
+        let tabs = ui.create_node(Tabs::new(
+            model,
+            vec!["Scene", "Game", "Inspector", "Console"],
+        ));
+        ui.add_child(col, tabs);
+
+        // Make the column tall enough to scroll.
+        let spacer = ui.create_node(FixedPanel::new(Px(800.0), Color::TRANSPARENT));
+        ui.add_child(col, spacer);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+        let mut text = FakeText::default();
+        let mut scene = Scene::default();
+
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+        let y0 = min_text_y(&scene).expect("text drawn");
+
+        // Scroll down (content moves up).
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::Pointer(PointerEvent::Wheel {
+                position: Point::new(Px(10.0), Px(10.0)),
+                delta: Point::new(Px(0.0), Px(-50.0)),
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        scene.clear();
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+        let y1 = min_text_y(&scene).expect("text drawn after scroll");
+
+        assert!(
+            y1.0 < y0.0 - 1.0,
+            "expected tabs text to move with scroll: before={y0:?} after={y1:?}"
+        );
     }
 }

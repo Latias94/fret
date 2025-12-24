@@ -9,3 +9,6 @@ fret-runtime = { path = "../fret-runtime" }
 fret-ui = { path = "../fret-ui" }
 fret-components-icons = { path = "../fret-components-icons" }
 tracing.workspace = true
+
+[dev-dependencies]
+fret-app = { path = "../fret-app" }

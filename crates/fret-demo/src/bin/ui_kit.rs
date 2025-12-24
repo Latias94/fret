@@ -1,9 +1,10 @@
-use fret_app::{App, Effect, WindowRequest};
+use fret_app::{App, Effect, Menu, MenuItem, WindowRequest};
 use fret_components_icons::IconId;
 use fret_components_ui::{
     StyleRefinement,
     button::{Button, ButtonIntent, ButtonSize, ButtonVariant},
     checkbox::Checkbox,
+    dropdown_menu::DropdownMenuButton,
     frame::Frame,
     icon_button::IconButton,
     select::{Select, SelectOption},
@@ -12,16 +13,17 @@ use fret_components_ui::{
     tabs::Tabs,
     text_field::TextField,
     toolbar::Toolbar,
+    tooltip::TooltipArea,
 };
 use fret_core::{AppWindowId, NodeId, PlatformCapabilities, Px, Rect, Scene, Size, TextService};
 use fret_render::{ImageColorSpace, ImageDescriptor, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui_app::{
-    ColoredPanel, Column, ContextMenu, ContextMenuService, Invalidation, PanelThemeBackground,
-    FixedPanel, Popover, PopoverService, ResizableSplit, Row, Scroll, Stack, Text, Theme,
-    ThemeConfig,
-    UiLayerId, UiTree,
+    ColoredPanel, Column, ContextMenu, ContextMenuService, FixedPanel, Invalidation,
+    PanelThemeBackground, Popover, PopoverService, ResizableSplit, Row, Scroll, Stack, Text, Theme,
+    ThemeConfig, TooltipOverlay, TooltipService, UiLayerId, UiTree,
 };
+use std::sync::Arc;
 use winit::event_loop::EventLoop;
 
 #[derive(Debug)]
@@ -172,14 +174,55 @@ fn build_ui_kit_contents(
             .py_1(),
     ));
     let icons = ui.create_node(Row::new().with_spacing(Px(10.0)));
+    let icon_play_tip = ui.create_node(TooltipArea::new("Play"));
     let icon_play = ui.create_node(IconButton::new(IconId::new("play")));
+    ui.add_child(icon_play_tip, icon_play);
+    ui.add_child(icons, icon_play_tip);
+
+    let icon_settings_tip = ui.create_node(TooltipArea::new("Settings"));
     let icon_settings = ui.create_node(IconButton::new(IconId::new("settings")));
+    ui.add_child(icon_settings_tip, icon_settings);
+    ui.add_child(icons, icon_settings_tip);
+
+    let icon_close_tip = ui.create_node(TooltipArea::new("Close"));
     let icon_close = ui.create_node(IconButton::new(IconId::new("close")));
-    ui.add_child(icons, icon_play);
-    ui.add_child(icons, icon_settings);
-    ui.add_child(icons, icon_close);
+    ui.add_child(icon_close_tip, icon_close);
+    ui.add_child(icons, icon_close_tip);
     ui.add_child(icons_frame, icons);
     ui.add_child(col, icons_frame);
+
+    let dropdown_menu = Menu {
+        title: Arc::from("Actions"),
+        items: vec![
+            MenuItem::Command {
+                command: fret_app::CommandId::from("ui_kit.action.one"),
+                when: None,
+            },
+            MenuItem::Command {
+                command: fret_app::CommandId::from("ui_kit.action.two"),
+                when: None,
+            },
+            MenuItem::Separator,
+            MenuItem::Submenu {
+                title: Arc::from("More"),
+                when: None,
+                items: vec![MenuItem::Command {
+                    command: fret_app::CommandId::from("ui_kit.action.three"),
+                    when: None,
+                }],
+            },
+        ],
+    };
+    let dropdown = ui.create_node(
+        DropdownMenuButton::new("DropdownMenu", dropdown_menu).refine_style(
+            StyleRefinement::default()
+                .rounded_md()
+                .border_1()
+                .px_3()
+                .py_1(),
+        ),
+    );
+    ui.add_child(col, dropdown);
 
     if let Some(img) = image {
         let image_frame = ui.create_node(Frame::new(
@@ -278,6 +321,7 @@ impl WinitDriver for UiKitDriver {
     fn init(&mut self, app: &mut App, _main_window: AppWindowId) {
         app.with_global_mut(PopoverService::default, |_svc, _app| {});
         app.with_global_mut(ContextMenuService::default, |_svc, _app| {});
+        app.with_global_mut(TooltipService::default, |_svc, _app| {});
         load_theme(app);
     }
 
@@ -377,6 +421,9 @@ impl WinitDriver for UiKitDriver {
             scroll,
             self.ui_kit_image.as_ref().map(|i| i.id),
         );
+
+        let tooltip_node = ui.create_node(TooltipOverlay::new());
+        let _tooltip_layer = ui.push_overlay_root_ex(tooltip_node, false, false);
 
         let popover_node = ui.create_node(Popover::new());
         let popover_layer = ui.push_overlay_root(popover_node, true);

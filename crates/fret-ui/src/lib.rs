@@ -23,6 +23,7 @@ pub use widgets::{
     ContextMenuService, ContextMenuStyle, FixedPanel, HeaderBody, Image, PanelThemeBackground,
     Popover, PopoverItem, PopoverRequest, PopoverService, PopoverStyle, ResizableSplit, Row,
     Scroll, Split, Stack, Text, TextArea, TextAreaStyle, TextInput, TextInputStyle, Toolbar,
-    ToolbarItem, TreeNode, TreeView, TreeViewStyle, VecStringDataSource, VirtualList,
-    VirtualListDataSource, VirtualListRow, VirtualListRowHeight, VirtualListStyle,
+    ToolbarItem, TooltipOverlay, TooltipRequest, TooltipService, TooltipStyle, TreeNode, TreeView,
+    TreeViewStyle, VecStringDataSource, VirtualList, VirtualListDataSource, VirtualListRow,
+    VirtualListRowHeight, VirtualListStyle,
 };

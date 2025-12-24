@@ -96,7 +96,9 @@ impl Switch {
 
         let bg_off = component_color(
             "component.switch.bg_off",
-            ColorFallback::ThemePanelBackground,
+            // On dark themes, using `panel_background` often makes the track invisible against
+            // the surrounding panel. Prefer `surface_background` as a baseline.
+            ColorFallback::ThemeSurfaceBackground,
         )
         .resolve(theme);
         let bg_on =
@@ -105,7 +107,9 @@ impl Switch {
             .resolve(theme);
         let knob = component_color(
             "component.switch.knob",
-            ColorFallback::ThemeSurfaceBackground,
+            // The knob should stay visible even when `surface_background` and `panel_background`
+            // are close; `text_primary` is a robust fallback across themes.
+            ColorFallback::ThemeTextPrimary,
         )
         .resolve(theme);
         let knob_disabled = component_color(
@@ -143,6 +147,7 @@ impl<H: UiHost> Widget<H> for Switch {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_from_theme(cx.theme());
+        self.last_bounds = cx.bounds;
 
         match event {
             Event::Pointer(pe) => match pe {

@@ -181,6 +181,10 @@ impl<H: UiHost> Widget<H> for Select {
             return;
         };
 
+        // `UiTree` may translate bounds without re-running layout (e.g. scroll). Keep our anchor
+        // rect up-to-date for hit-testing and popover placement.
+        self.last_bounds = cx.bounds;
+
         if self.sync_result(cx.app, window, cx.node) {
             cx.invalidate_self(Invalidation::Layout);
             cx.invalidate_self(Invalidation::Paint);

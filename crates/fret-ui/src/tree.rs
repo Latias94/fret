@@ -711,6 +711,15 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
+        let tooltip_move_guard: Option<(AppWindowId, u64)> = (|| {
+            if !matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+                return None;
+            }
+            let window = self.window?;
+            let svc = app.global::<crate::TooltipService>()?;
+            Some((window, svc.touch_counter()))
+        })();
+
         let (active_layers, barrier_root) = self.active_input_layers();
         let focus_is_text_input = self.focus_is_text_input();
         let caps = app
@@ -1044,6 +1053,15 @@ impl<H: UiHost> UiTree<H> {
 
         if needs_redraw && let Some(window) = self.window {
             app.request_redraw(window);
+        }
+
+        if let Some((window, before)) = tooltip_move_guard
+            && let Some(svc) = app.global::<crate::TooltipService>()
+            && svc.touch_counter() == before
+        {
+            app.with_global_mut(crate::TooltipService::default, |svc, app| {
+                svc.clear_request(app, window);
+            });
         }
     }
 
@@ -1877,7 +1895,7 @@ fn event_position(event: &Event) -> Option<Point> {
 mod tests {
     use super::*;
     use fret_core::{
-        Color, Corners, DrawOrder, Edges, Scene, SceneOp, TextConstraints, TextMetrics,
+        Color, Corners, DrawOrder, Edges, Px, Scene, SceneOp, TextConstraints, TextMetrics,
         TextService, TextStyle, TextWrap,
     };
     use fret_runtime::Model;
@@ -2125,5 +2143,78 @@ mod tests {
         assert!(snap.nodes.iter().any(|n| n.id == base));
         assert!(snap.nodes.iter().any(|n| n.id == base_child));
         assert!(snap.nodes.iter().any(|n| n.id == overlay_root));
+    }
+
+    #[test]
+    fn event_cx_bounds_tracks_translated_nodes() {
+        struct BoundsProbe {
+            out: Model<Point>,
+        }
+
+        impl BoundsProbe {
+            fn new(out: Model<Point>) -> Self {
+                Self { out }
+            }
+        }
+
+        impl<H: UiHost> Widget<H> for BoundsProbe {
+            fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+                if !matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+                    return;
+                }
+                let origin = cx.bounds.origin;
+                let _ = cx.app.models_mut().update(self.out, |v| *v = origin);
+            }
+
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                cx.available
+            }
+        }
+
+        let mut app = crate::test_host::TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let out = app.models_mut().insert(Point::new(Px(0.0), Px(0.0)));
+
+        let mut ui = UiTree::new();
+        ui.set_window(AppWindowId::default());
+
+        let root = ui.create_node(crate::Stack::new());
+        let probe = ui.create_node(BoundsProbe::new(out));
+        ui.add_child(root, probe);
+        ui.set_root(root);
+
+        let mut text = FakeTextService;
+        let size = Size::new(Px(120.0), Px(40.0));
+
+        ui.layout_in(
+            &mut app,
+            &mut text,
+            root,
+            Rect::new(Point::new(Px(0.0), Px(0.0)), size),
+            1.0,
+        );
+
+        // Layout again with the same size but translated origin: the tree uses a fast-path that
+        // translates node bounds without re-running widget.layout for the subtree.
+        ui.layout_in(
+            &mut app,
+            &mut text,
+            root,
+            Rect::new(Point::new(Px(0.0), Px(100.0)), size),
+            1.0,
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::Pointer(PointerEvent::Move {
+                position: Point::new(Px(10.0), Px(110.0)),
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        let origin = app.models().get(out).copied().unwrap_or_default();
+        assert_eq!(origin, Point::new(Px(0.0), Px(100.0)));
     }
 }

@@ -214,12 +214,7 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
 
                     split_log(format_args!(
                         "move dragging=true node={:?} captured={:?} pos={:?} bounds={:?} center={:.2} next={:.4}",
-                        cx.node,
-                        cx.captured,
-                        position,
-                        cx.bounds,
-                        handle_center,
-                        next
+                        cx.node, cx.captured, position, cx.bounds, handle_center, next
                     ));
 
                     cx.set_cursor_icon(
@@ -297,12 +292,7 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
                 cx.request_redraw();
                 split_log(format_args!(
                     "down hit=true node={:?} captured(before)={:?} pos={:?} handle={:?} grab_offset={:.2} fraction={:.4}",
-                    cx.node,
-                    cx.captured,
-                    position,
-                    self.last_handle_rect,
-                    grab_offset,
-                    fraction
+                    cx.node, cx.captured, position, self.last_handle_rect, grab_offset, fraction
                 ));
                 cx.stop_propagation();
             }

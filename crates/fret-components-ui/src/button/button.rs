@@ -342,6 +342,7 @@ impl<H: UiHost> Widget<H> for Button {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme());
+        self.last_bounds = cx.bounds;
 
         let Event::Pointer(pe) = event else {
             return;

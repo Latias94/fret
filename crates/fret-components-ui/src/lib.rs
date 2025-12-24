@@ -7,6 +7,7 @@ mod style;
 
 pub mod button;
 pub mod checkbox;
+pub mod dropdown_menu;
 pub mod frame;
 pub mod icon_button;
 pub mod select;
@@ -15,5 +16,6 @@ pub mod switch;
 pub mod tabs;
 pub mod text_field;
 pub mod toolbar;
+pub mod tooltip;
 
 pub use style::{ColorRef, MetricRef, StyleRefinement};

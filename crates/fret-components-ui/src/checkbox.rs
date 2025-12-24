@@ -198,6 +198,7 @@ impl<H: UiHost> Widget<H> for Checkbox {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme());
+        self.last_bounds = cx.bounds;
 
         match event {
             Event::Pointer(pe) => match pe {
