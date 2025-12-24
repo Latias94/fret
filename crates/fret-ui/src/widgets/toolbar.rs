@@ -35,7 +35,8 @@ impl ToolbarItem {
 #[derive(Debug)]
 struct PreparedItem {
     selected: bool,
-    blob: fret_core::TextBlobId,
+    label: Arc<str>,
+    blob: Option<fret_core::TextBlobId>,
     metrics: TextMetrics,
     bounds: Rect,
 }
@@ -43,6 +44,8 @@ struct PreparedItem {
 pub struct Toolbar {
     items: Vec<ToolbarItem>,
     prepared: Vec<PreparedItem>,
+    pending_release: Vec<fret_core::TextBlobId>,
+    prepared_scale_factor_bits: Option<u32>,
     hovered: Option<usize>,
     pressed: Option<usize>,
     style: TextStyle,
@@ -58,6 +61,8 @@ impl Toolbar {
         Self {
             items,
             prepared: Vec::new(),
+            pending_release: Vec::new(),
+            prepared_scale_factor_bits: None,
             hovered: None,
             pressed: None,
             style: TextStyle {
@@ -74,7 +79,11 @@ impl Toolbar {
 
     pub fn set_items(&mut self, items: Vec<ToolbarItem>) {
         self.items = items;
-        self.prepared.clear();
+        for item in self.prepared.drain(..) {
+            if let Some(blob) = item.blob {
+                self.pending_release.push(blob);
+            }
+        }
         self.hovered = None;
         self.pressed = None;
     }
@@ -101,6 +110,18 @@ impl Toolbar {
 }
 
 impl<H: UiHost> Widget<H> for Toolbar {
+    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+        for blob in self.pending_release.drain(..) {
+            text.release(blob);
+        }
+        for item in self.prepared.drain(..) {
+            if let Some(blob) = item.blob {
+                text.release(blob);
+            }
+        }
+        self.prepared_scale_factor_bits = None;
+    }
+
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme().snapshot());
 
@@ -163,10 +184,6 @@ impl<H: UiHost> Widget<H> for Toolbar {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.sync_style_from_theme(cx.theme().snapshot());
 
-        for item in self.prepared.drain(..) {
-            cx.text.release(item.blob);
-        }
-
         if self.items.is_empty() {
             self.hovered = None;
             self.pressed = None;
@@ -179,11 +196,13 @@ impl<H: UiHost> Widget<H> for Toolbar {
             scale_factor: cx.scale_factor,
         };
 
+        let prev = std::mem::take(&mut self.prepared);
+
         let mut max_metrics_h = Px(0.0);
         for item in &self.items {
-            let (_, metrics) = cx
+            let metrics = cx
                 .text
-                .prepare(item.label.as_ref(), self.style, text_constraints);
+                .measure(item.label.as_ref(), self.style, text_constraints);
             max_metrics_h = Px(max_metrics_h.0.max(metrics.size.height.0));
         }
 
@@ -194,19 +213,30 @@ impl<H: UiHost> Widget<H> for Toolbar {
         let y = cx.bounds.origin.y.0;
 
         for item in &self.items {
-            let (blob, metrics) =
-                cx.text
-                    .prepare(item.label.as_ref(), self.style, text_constraints);
+            let label = item.label.clone();
+            let metrics = cx
+                .text
+                .measure(label.as_ref(), self.style, text_constraints);
             let w = Px(metrics.size.width.0 + self.padding_x.0 * 2.0);
             let bounds = Rect::new(Point::new(Px(x), Px(y)), Size::new(w, height));
             x += w.0 + self.gap.0.max(0.0);
 
+            let blob = prev.iter().find(|p| p.label == label).and_then(|p| p.blob);
             self.prepared.push(PreparedItem {
                 selected: item.selected,
+                label,
                 blob,
                 metrics,
                 bounds,
             });
+        }
+
+        for item in prev {
+            if let Some(blob) = item.blob
+                && !self.prepared.iter().any(|p| p.blob == Some(blob))
+            {
+                self.pending_release.push(blob);
+            }
         }
 
         let end_x = (x - self.gap.0.max(0.0)).max(cx.bounds.origin.x.0);
@@ -217,12 +247,32 @@ impl<H: UiHost> Widget<H> for Toolbar {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        for blob in self.pending_release.drain(..) {
+            cx.text.release(blob);
+        }
+
         if self.items.is_empty() || cx.bounds.size.height.0 <= 0.0 {
             return;
         }
 
         let theme = cx.theme().snapshot();
         self.sync_style_from_theme(theme);
+
+        let scale_bits = cx.scale_factor.to_bits();
+        if self.prepared_scale_factor_bits != Some(scale_bits) {
+            for item in &mut self.prepared {
+                if let Some(blob) = item.blob.take() {
+                    cx.text.release(blob);
+                }
+            }
+            self.prepared_scale_factor_bits = Some(scale_bits);
+        }
+
+        let text_constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            scale_factor: cx.scale_factor,
+        };
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
@@ -233,7 +283,15 @@ impl<H: UiHost> Widget<H> for Toolbar {
             corner_radii: Corners::all(Px(0.0)),
         });
 
-        for (i, item) in self.prepared.iter().enumerate() {
+        for (i, item) in self.prepared.iter_mut().enumerate() {
+            if item.blob.is_none() {
+                let (blob, metrics) =
+                    cx.text
+                        .prepare(item.label.as_ref(), self.style, text_constraints);
+                item.blob = Some(blob);
+                item.metrics = metrics;
+            }
+
             let hovered = self.hovered == Some(i);
             let pressed = self.pressed == Some(i);
 
@@ -261,10 +319,11 @@ impl<H: UiHost> Widget<H> for Toolbar {
             let inner_y = item.bounds.origin.y.0
                 + ((item.bounds.size.height.0 - item.metrics.size.height.0) * 0.5);
             let text_y = Px(inner_y + item.metrics.baseline.0);
+            let Some(blob) = item.blob else { continue };
             cx.scene.push(SceneOp::Text {
                 order: DrawOrder(2),
                 origin: Point::new(text_x, text_y),
-                text: item.blob,
+                text: blob,
                 color: theme.colors.text_primary,
             });
         }

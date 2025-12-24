@@ -14,6 +14,7 @@ pub struct Text {
     color: Color,
     blob: Option<fret_core::TextBlobId>,
     metrics: Option<TextMetrics>,
+    prepared_scale_factor_bits: Option<u32>,
 }
 
 impl Text {
@@ -32,6 +33,7 @@ impl Text {
             },
             blob: None,
             metrics: None,
+            prepared_scale_factor_bits: None,
         }
     }
 
@@ -47,6 +49,13 @@ impl Text {
 }
 
 impl<H: UiHost> Widget<H> for Text {
+    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+        if let Some(blob) = self.blob.take() {
+            text.release(blob);
+        }
+        self.prepared_scale_factor_bits = None;
+    }
+
     fn semantics(&mut self, cx: &mut crate::widget::SemanticsCx<'_, H>) {
         cx.set_role(SemanticsRole::Text);
     }
@@ -57,19 +66,33 @@ impl<H: UiHost> Widget<H> for Text {
             wrap: TextWrap::None,
             scale_factor: cx.scale_factor,
         };
-        let (blob, metrics) = cx.text.prepare(&self.text, self.style, constraints);
-        self.blob = Some(blob);
+        let metrics = cx.text.measure(&self.text, self.style, constraints);
         self.metrics = Some(metrics);
         metrics.size
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        let Some(blob) = self.blob else {
-            return;
+        let constraints = TextConstraints {
+            max_width: Some(cx.bounds.size.width),
+            wrap: TextWrap::None,
+            scale_factor: cx.scale_factor,
         };
-        let Some(metrics) = self.metrics else {
-            return;
-        };
+
+        let scale_bits = cx.scale_factor.to_bits();
+        let needs_prepare =
+            self.blob.is_none() || self.prepared_scale_factor_bits != Some(scale_bits);
+        if needs_prepare {
+            if let Some(blob) = self.blob.take() {
+                cx.text.release(blob);
+            }
+            let (blob, metrics) = cx.text.prepare(&self.text, self.style, constraints);
+            self.blob = Some(blob);
+            self.metrics = Some(metrics);
+            self.prepared_scale_factor_bits = Some(scale_bits);
+        }
+
+        let Some(blob) = self.blob else { return };
+        let Some(metrics) = self.metrics else { return };
 
         let origin = fret_core::geometry::Point::new(
             cx.bounds.origin.x,
@@ -190,6 +213,8 @@ pub struct TextInput {
     preedit_blob: Option<fret_core::TextBlobId>,
     preedit_metrics: Option<TextMetrics>,
     caret_stops: Vec<(usize, Px)>,
+    pending_release: Vec<fret_core::TextBlobId>,
+    prepared_scale_factor_bits: Option<u32>,
     last_bounds: Rect,
     last_sent_cursor: Option<Rect>,
     last_text_input_tick: Option<fret_core::TickId>,
@@ -223,6 +248,8 @@ impl TextInput {
             preedit_blob: None,
             preedit_metrics: None,
             caret_stops: Vec::new(),
+            pending_release: Vec::new(),
+            prepared_scale_factor_bits: None,
             last_bounds: Rect::default(),
             last_sent_cursor: None,
             last_text_input_tick: None,
@@ -265,6 +292,7 @@ impl TextInput {
     }
 
     pub fn set_text(&mut self, text: impl Into<String>) {
+        self.queue_release_all_text_blobs();
         self.text = text.into();
         self.caret = self.text.len();
         self.selection_anchor = self.caret;
@@ -280,6 +308,32 @@ impl TextInput {
         self.preedit_metrics = None;
         self.caret_stops.clear();
         self.last_sent_cursor = None;
+    }
+
+    fn queue_release_all_text_blobs(&mut self) {
+        for blob in [
+            self.text_blob.take(),
+            self.prefix_blob.take(),
+            self.suffix_blob.take(),
+            self.preedit_blob.take(),
+        ]
+        .into_iter()
+        .flatten()
+        {
+            self.pending_release.push(blob);
+        }
+        self.text_metrics = None;
+        self.prefix_metrics = None;
+        self.suffix_metrics = None;
+        self.preedit_metrics = None;
+        self.caret_stops.clear();
+        self.prepared_scale_factor_bits = None;
+    }
+
+    fn flush_pending_releases(&mut self, text: &mut dyn fret_core::TextService) {
+        for blob in self.pending_release.drain(..) {
+            text.release(blob);
+        }
     }
 }
 
@@ -584,6 +638,16 @@ impl Default for TextInput {
 }
 
 impl<H: UiHost> Widget<H> for TextInput {
+    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+        self.queue_release_all_text_blobs();
+        self.flush_pending_releases(text);
+        self.text_metrics = None;
+        self.prefix_metrics = None;
+        self.suffix_metrics = None;
+        self.preedit_metrics = None;
+        self.caret_stops.clear();
+    }
+
     fn is_focusable(&self) -> bool {
         true
     }
@@ -619,7 +683,10 @@ impl<H: UiHost> Widget<H> for TextInput {
                 let padding = Px(8.0);
                 let local_x =
                     Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)).max(0.0));
-                self.caret = self.caret_from_x(local_x);
+                self.caret = self
+                    .text_blob
+                    .map(|blob| cx.text.hit_test_x(blob, local_x))
+                    .unwrap_or_else(|| self.caret_from_x(local_x));
                 self.selection_anchor = self.caret;
                 self.preedit.clear();
                 self.preedit_cursor = None;
@@ -635,7 +702,10 @@ impl<H: UiHost> Widget<H> for TextInput {
                 let padding = Px(8.0);
                 let local_x =
                     Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)).max(0.0));
-                self.caret = self.caret_from_x(local_x);
+                self.caret = self
+                    .text_blob
+                    .map(|blob| cx.text.hit_test_x(blob, local_x))
+                    .unwrap_or_else(|| self.caret_from_x(local_x));
                 self.preedit.clear();
                 self.preedit_cursor = None;
                 cx.invalidate_self(Invalidation::Paint);
@@ -1013,56 +1083,8 @@ impl<H: UiHost> Widget<H> for TextInput {
             wrap: TextWrap::None,
             scale_factor: cx.scale_factor,
         };
-
-        let old_text_blob = self.text_blob.take();
-        let old_prefix_blob = self.prefix_blob.take();
-        let old_suffix_blob = self.suffix_blob.take();
-        let old_preedit_blob = self.preedit_blob.take();
-
-        self.text_blob = None;
-        self.text_metrics = None;
-        self.prefix_blob = None;
-        self.prefix_metrics = None;
-        self.suffix_blob = None;
-        self.suffix_metrics = None;
-        self.preedit_blob = None;
-        self.preedit_metrics = None;
-
-        let (blob, metrics) = cx.text.prepare(&self.text, self.style, base_constraints);
-        self.text_blob = Some(blob);
+        let metrics = cx.text.measure(&self.text, self.style, base_constraints);
         self.text_metrics = Some(metrics);
-        cx.text.caret_stops(blob, &mut self.caret_stops);
-
-        if !self.preedit.is_empty() {
-            let (prefix_blob, prefix_metrics) =
-                cx.text
-                    .prepare(&self.text[..self.caret], self.style, base_constraints);
-            let (suffix_blob, suffix_metrics) =
-                cx.text
-                    .prepare(&self.text[self.caret..], self.style, base_constraints);
-            let (pre_blob, pre_metrics) =
-                cx.text.prepare(&self.preedit, self.style, base_constraints);
-
-            self.prefix_blob = Some(prefix_blob);
-            self.prefix_metrics = Some(prefix_metrics);
-            self.suffix_blob = Some(suffix_blob);
-            self.suffix_metrics = Some(suffix_metrics);
-            self.preedit_blob = Some(pre_blob);
-            self.preedit_metrics = Some(pre_metrics);
-        }
-
-        if let Some(b) = old_text_blob {
-            cx.text.release(b);
-        }
-        if let Some(b) = old_prefix_blob {
-            cx.text.release(b);
-        }
-        if let Some(b) = old_suffix_blob {
-            cx.text.release(b);
-        }
-        if let Some(b) = old_preedit_blob {
-            cx.text.release(b);
-        }
 
         let base_h = self.text_metrics.map(|m| m.size.height.0).unwrap_or(16.0);
         let h = Px(34.0_f32.max(base_h + 12.0));
@@ -1070,6 +1092,8 @@ impl<H: UiHost> Widget<H> for TextInput {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        self.flush_pending_releases(cx.text);
+
         let Some(window) = cx.window else {
             return;
         };
@@ -1082,6 +1106,68 @@ impl<H: UiHost> Widget<H> for TextInput {
         } else {
             self.chrome_style.border_color
         };
+
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            scale_factor: cx.scale_factor,
+        };
+
+        let scale_bits = cx.scale_factor.to_bits();
+        if self.prepared_scale_factor_bits != Some(scale_bits) {
+            self.queue_release_all_text_blobs();
+            self.flush_pending_releases(cx.text);
+            self.prepared_scale_factor_bits = Some(scale_bits);
+        }
+
+        if self.text_blob.is_none() {
+            let (blob, metrics) = cx.text.prepare(&self.text, self.style, constraints);
+            self.text_blob = Some(blob);
+            self.text_metrics = Some(metrics);
+            cx.text.caret_stops(blob, &mut self.caret_stops);
+        }
+
+        if self.preedit.is_empty() {
+            if self.prefix_blob.is_some()
+                || self.suffix_blob.is_some()
+                || self.preedit_blob.is_some()
+            {
+                self.queue_release_all_text_blobs();
+                // The call above also clears `text_blob`, so re-prepare it.
+                self.flush_pending_releases(cx.text);
+                let (blob, metrics) = cx.text.prepare(&self.text, self.style, constraints);
+                self.text_blob = Some(blob);
+                self.text_metrics = Some(metrics);
+                cx.text.caret_stops(blob, &mut self.caret_stops);
+            }
+        } else if self.prefix_blob.is_none()
+            || self.suffix_blob.is_none()
+            || self.preedit_blob.is_none()
+        {
+            // Preedit mode: render prefix/preedit/suffix as separate runs.
+            self.queue_release_all_text_blobs();
+            self.flush_pending_releases(cx.text);
+
+            let (blob, metrics) = cx.text.prepare(&self.text, self.style, constraints);
+            self.text_blob = Some(blob);
+            self.text_metrics = Some(metrics);
+            cx.text.caret_stops(blob, &mut self.caret_stops);
+
+            let (prefix_blob, prefix_metrics) =
+                cx.text
+                    .prepare(&self.text[..self.caret], self.style, constraints);
+            let (suffix_blob, suffix_metrics) =
+                cx.text
+                    .prepare(&self.text[self.caret..], self.style, constraints);
+            let (pre_blob, pre_metrics) = cx.text.prepare(&self.preedit, self.style, constraints);
+
+            self.prefix_blob = Some(prefix_blob);
+            self.prefix_metrics = Some(prefix_metrics);
+            self.suffix_blob = Some(suffix_blob);
+            self.suffix_metrics = Some(suffix_metrics);
+            self.preedit_blob = Some(pre_blob);
+            self.preedit_metrics = Some(pre_metrics);
+        }
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),

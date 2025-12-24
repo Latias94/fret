@@ -16,7 +16,8 @@ use super::context_menu::{
 #[derive(Debug)]
 struct PreparedMenu {
     index: usize,
-    blob: fret_core::TextBlobId,
+    title: std::sync::Arc<str>,
+    blob: Option<fret_core::TextBlobId>,
     metrics: TextMetrics,
     bounds: Rect,
 }
@@ -24,6 +25,8 @@ struct PreparedMenu {
 pub struct AppMenuBar {
     menu_bar: MenuBar,
     prepared: Vec<PreparedMenu>,
+    pending_release: Vec<fret_core::TextBlobId>,
+    prepared_scale_factor_bits: Option<u32>,
     hovered: Option<usize>,
     open_index: Option<usize>,
     open_serial: Option<u64>,
@@ -41,6 +44,8 @@ impl AppMenuBar {
         Self {
             menu_bar,
             prepared: Vec::new(),
+            pending_release: Vec::new(),
+            prepared_scale_factor_bits: None,
             hovered: None,
             open_index: None,
             open_serial: None,
@@ -59,7 +64,11 @@ impl AppMenuBar {
 
     pub fn set_menu_bar(&mut self, menu_bar: MenuBar) {
         self.menu_bar = menu_bar;
-        self.prepared.clear();
+        for item in self.prepared.drain(..) {
+            if let Some(blob) = item.blob {
+                self.pending_release.push(blob);
+            }
+        }
         self.hovered = None;
         self.open_index = None;
         self.open_serial = None;
@@ -187,6 +196,18 @@ impl AppMenuBar {
 }
 
 impl<H: UiHost> Widget<H> for AppMenuBar {
+    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+        for blob in self.pending_release.drain(..) {
+            text.release(blob);
+        }
+        for item in self.prepared.drain(..) {
+            if let Some(blob) = item.blob {
+                text.release(blob);
+            }
+        }
+        self.prepared_scale_factor_bits = None;
+    }
+
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         cx.set_role(SemanticsRole::Menu);
     }
@@ -244,21 +265,19 @@ impl<H: UiHost> Widget<H> for AppMenuBar {
             self.sync_open_state(cx.app, window);
         }
 
-        for item in self.prepared.drain(..) {
-            cx.text.release(item.blob);
-        }
-
         let constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
             scale_factor: cx.scale_factor,
         };
 
+        let prev = std::mem::take(&mut self.prepared);
+
         let mut max_metrics_h = Px(0.0);
         for menu in &self.menu_bar.menus {
-            let (_, metrics) = cx
+            let metrics = cx
                 .text
-                .prepare(menu.title.as_ref(), self.style, constraints);
+                .measure(menu.title.as_ref(), self.style, constraints);
             max_metrics_h = Px(max_metrics_h.0.max(metrics.size.height.0));
         }
 
@@ -269,25 +288,41 @@ impl<H: UiHost> Widget<H> for AppMenuBar {
         let mut x = cx.bounds.origin.x.0 + self.gap.0.max(0.0);
 
         for (index, menu) in self.menu_bar.menus.iter().enumerate() {
-            let (blob, metrics) = cx
-                .text
-                .prepare(menu.title.as_ref(), self.style, constraints);
+            let title: std::sync::Arc<str> = menu.title.clone();
+            let metrics = cx.text.measure(title.as_ref(), self.style, constraints);
             let w = Px(metrics.size.width.0 + self.padding_x.0 * 2.0);
             let bounds = Rect::new(Point::new(Px(x), Px(y)), Size::new(w, row_h));
             x += w.0 + self.gap.0.max(0.0);
 
+            let blob = prev
+                .iter()
+                .find(|m| m.index == index && m.title == title)
+                .and_then(|m| m.blob);
             self.prepared.push(PreparedMenu {
                 index,
+                title,
                 blob,
                 metrics,
                 bounds,
             });
         }
 
+        for item in prev {
+            if let Some(blob) = item.blob
+                && !self.prepared.iter().any(|m| m.blob == Some(blob))
+            {
+                self.pending_release.push(blob);
+            }
+        }
+
         Size::new(cx.available.width, self.height)
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        for blob in self.pending_release.drain(..) {
+            cx.text.release(blob);
+        }
+
         let theme = cx.theme().snapshot();
         self.sync_style_from_theme(theme);
         let Some(window) = cx.window else {
@@ -305,7 +340,36 @@ impl<H: UiHost> Widget<H> for AppMenuBar {
             corner_radii: Corners::all(Px(0.0)),
         });
 
-        for item in &self.prepared {
+        let scale_bits = cx.scale_factor.to_bits();
+        if self.prepared_scale_factor_bits != Some(scale_bits) {
+            for item in &mut self.prepared {
+                if let Some(blob) = item.blob.take() {
+                    cx.text.release(blob);
+                }
+            }
+            self.prepared_scale_factor_bits = Some(scale_bits);
+        }
+
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            scale_factor: cx.scale_factor,
+        };
+
+        for item in &mut self.prepared {
+            let blob = match item.blob {
+                Some(b) => b,
+                None => {
+                    // Paint-time preparation ensures compatibility with subtree replay caching.
+                    let (b, m) = cx
+                        .text
+                        .prepare(item.title.as_ref(), self.style, constraints);
+                    item.blob = Some(b);
+                    item.metrics = m;
+                    b
+                }
+            };
+
             let hovered = self.hovered == Some(item.index);
             let active = self.open_index == Some(item.index);
 
@@ -336,7 +400,7 @@ impl<H: UiHost> Widget<H> for AppMenuBar {
             cx.scene.push(SceneOp::Text {
                 order: DrawOrder(2),
                 origin: Point::new(text_x, text_y),
-                text: item.blob,
+                text: blob,
                 color: theme.colors.text_primary,
             });
         }

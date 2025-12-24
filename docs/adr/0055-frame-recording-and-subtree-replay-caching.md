@@ -111,6 +111,10 @@ Caching must be **strictly subordinate** to invalidation:
 
 - If a widget changes anything that affects layout/paint/hit-test, it must request invalidation.
 - Cache hits are allowed only when the relevant invalidation flags are clear.
+- Resource lifetime must remain compatible with replay:
+  - cached `SceneOp` ranges may reference external handles such as `TextBlobId`,
+  - therefore widgets must not release/replace those handles in `layout()` (which can run even when `paint()` is replayed),
+  - releases should happen in `paint()` (when repainting) and/or `cleanup_resources()`.
 
 Model observation (ADR 0051) is a first-class part of the closed loop:
 

@@ -6,6 +6,14 @@ use fret_runtime::Effect;
 
 use crate::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct PreparedKey {
+    max_width_bits: u32,
+    wrap: TextWrap,
+    scale_bits: u32,
+    show_scrollbar: bool,
+}
+
 #[derive(Debug, Clone)]
 pub struct TextAreaStyle {
     pub padding: Px,
@@ -84,6 +92,10 @@ pub struct TextArea {
 
     blob: Option<fret_core::TextBlobId>,
     metrics: Option<TextMetrics>,
+    pending_release: Vec<fret_core::TextBlobId>,
+    prepared_key: Option<PreparedKey>,
+    text_dirty: bool,
+    show_scrollbar: bool,
 
     offset_y: Px,
     scrollbar_width: Px,
@@ -126,6 +138,10 @@ impl Default for TextArea {
             last_theme_revision: None,
             blob: None,
             metrics: None,
+            pending_release: Vec::new(),
+            prepared_key: None,
+            text_dirty: true,
+            show_scrollbar: false,
             offset_y: Px(0.0),
             scrollbar_width: Px(10.0),
             dragging_thumb: false,
@@ -164,6 +180,7 @@ impl TextArea {
         self.ensure_caret_visible = true;
         self.preedit.clear();
         self.preedit_cursor = None;
+        self.text_dirty = true;
         self
     }
 
@@ -224,6 +241,7 @@ impl TextArea {
         self.preedit.clear();
         self.preedit_cursor = None;
         self.affinity = CaretAffinity::Downstream;
+        self.text_dirty = true;
     }
 
     fn preedit_cursor_end(&self) -> usize {
@@ -375,6 +393,7 @@ impl TextArea {
         self.selection_anchor = self.caret;
         self.clear_preedit();
         self.affinity = CaretAffinity::Downstream;
+        self.text_dirty = true;
         true
     }
 
@@ -391,6 +410,20 @@ impl TextArea {
         }
         self.clear_preedit();
         self.affinity = CaretAffinity::Downstream;
+        self.text_dirty = true;
+    }
+
+    fn queue_release_blob(&mut self) {
+        if let Some(blob) = self.blob.take() {
+            self.pending_release.push(blob);
+        }
+        self.prepared_key = None;
+    }
+
+    fn flush_pending_releases(&mut self, text: &mut dyn fret_core::TextService) {
+        for blob in self.pending_release.drain(..) {
+            text.release(blob);
+        }
     }
 
     fn request_clipboard_paste<H: UiHost>(&mut self, cx: &mut CommandCx<'_, H>) -> bool {
@@ -506,6 +539,13 @@ impl<H: UiHost> Widget<H> for TextArea {
 
     fn is_text_input(&self) -> bool {
         true
+    }
+
+    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+        self.queue_release_blob();
+        self.flush_pending_releases(text);
+        self.metrics = None;
+        self.prepared_key = None;
     }
 
     fn semantics(&mut self, cx: &mut crate::widget::SemanticsCx<'_, H>) {
@@ -691,6 +731,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                             self.preedit_cursor = *cursor;
                             self.selection_anchor = self.caret;
                             self.affinity = CaretAffinity::Downstream;
+                            self.text_dirty = true;
                         }
                         self.ensure_caret_visible = true;
                         cx.invalidate_self(Invalidation::Layout);
@@ -971,6 +1012,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 self.caret = prev;
                 self.selection_anchor = self.caret;
                 self.affinity = CaretAffinity::Downstream;
+                self.text_dirty = true;
                 self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Layout);
                 cx.request_redraw();
@@ -990,6 +1032,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 self.text.replace_range(self.caret..next, "");
                 self.selection_anchor = self.caret;
                 self.affinity = CaretAffinity::Downstream;
+                self.text_dirty = true;
                 self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Layout);
                 cx.request_redraw();
@@ -1010,6 +1053,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 self.caret = prev;
                 self.selection_anchor = self.caret;
                 self.affinity = CaretAffinity::Downstream;
+                self.text_dirty = true;
                 self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Layout);
                 cx.request_redraw();
@@ -1029,6 +1073,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 self.text.replace_range(self.caret..next, "");
                 self.selection_anchor = self.caret;
                 self.affinity = CaretAffinity::Downstream;
+                self.text_dirty = true;
                 self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Layout);
                 cx.request_redraw();
@@ -1056,23 +1101,15 @@ impl<H: UiHost> Widget<H> for TextArea {
             wrap: self.wrap,
             scale_factor: cx.scale_factor,
         };
-
-        let old_blob = self.blob.take();
-
-        let (mut blob, mut metrics) = cx.text.prepare(layout_text, self.text_style, constraints);
+        let mut metrics = cx.text.measure(layout_text, self.text_style, constraints);
         let show_scrollbar = metrics.size.height.0 > inner.size.height.0;
         if show_scrollbar {
-            cx.text.release(blob);
             constraints.max_width = Some(Px((inner.size.width.0 - scrollbar_w.0).max(0.0)));
-            (blob, metrics) = cx.text.prepare(layout_text, self.text_style, constraints);
+            metrics = cx.text.measure(layout_text, self.text_style, constraints);
         }
 
-        self.blob = Some(blob);
         self.metrics = Some(metrics);
-
-        if let Some(b) = old_blob {
-            cx.text.release(b);
-        }
+        self.show_scrollbar = show_scrollbar;
 
         let Some(metrics) = self.metrics else {
             return Size::new(cx.available.width, self.min_height);
@@ -1091,6 +1128,42 @@ impl<H: UiHost> Widget<H> for TextArea {
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
+        self.flush_pending_releases(cx.text);
+
+        let inner = self.inner_bounds();
+
+        let max_width = if self.show_scrollbar {
+            Px((inner.size.width.0 - self.scrollbar_width.0).max(0.0))
+        } else {
+            inner.size.width
+        };
+        let constraints = TextConstraints {
+            max_width: Some(max_width),
+            wrap: self.wrap,
+            scale_factor: cx.scale_factor,
+        };
+        let key = PreparedKey {
+            max_width_bits: max_width.0.to_bits(),
+            wrap: self.wrap,
+            scale_bits: cx.scale_factor.to_bits(),
+            show_scrollbar: self.show_scrollbar,
+        };
+
+        if self.text_dirty || self.blob.is_none() || self.prepared_key != Some(key) {
+            self.queue_release_blob();
+            self.flush_pending_releases(cx.text);
+            let layout_text = match self.layout_text() {
+                Some(s) => std::borrow::Cow::Owned(s),
+                None => std::borrow::Cow::Borrowed(self.text.as_str()),
+            };
+            let (blob, metrics) =
+                cx.text
+                    .prepare(layout_text.as_ref(), self.text_style, constraints);
+            self.blob = Some(blob);
+            self.metrics = Some(metrics);
+            self.prepared_key = Some(key);
+            self.text_dirty = false;
+        }
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
