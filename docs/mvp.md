@@ -1202,7 +1202,7 @@ Status:
     - Overlay widgets moved from `fret-ui` into `crates/fret-components-ui` (context menu, popover, dialog, command palette shell, menubar, toast, tooltip).
     - `EventCx::open_context_menu*` centralizes “open menu” wiring so runtime widgets (e.g. docking) don’t depend on component surfaces.
   - Next:
-    - Implement token drift mitigation fallback rules for `Space`/`Radius` vs baseline `metric.*` tokens. (done: `Space` now falls back to `metric.padding.*` when `component.space.*` is missing)
+    - Implement token drift mitigation fallback rules for `Space`/`Radius` vs baseline `metric.*` tokens. (done: `Space` and `Radius` now fall back to baseline `metric.*` when `component.*` is missing)
 
 References:
 

@@ -89,16 +89,29 @@ impl MetricFallback {
     fn resolve(&self, theme: &Theme) -> Px {
         match *self {
             Self::Px(px) => px,
-            Self::ThemeRadiusSm => theme.metrics.radius_sm,
-            Self::ThemeRadiusMd => theme.metrics.radius_md,
-            Self::ThemeRadiusLg => theme.metrics.radius_lg,
-            Self::ThemePaddingSm => theme.metrics.padding_sm,
-            Self::ThemePaddingMd => theme.metrics.padding_md,
+            Self::ThemeRadiusSm => theme
+                .metric_by_key("metric.radius.sm")
+                .unwrap_or(theme.metrics.radius_sm),
+            Self::ThemeRadiusMd => theme
+                .metric_by_key("metric.radius.md")
+                .unwrap_or(theme.metrics.radius_md),
+            Self::ThemeRadiusLg => theme
+                .metric_by_key("metric.radius.lg")
+                .unwrap_or(theme.metrics.radius_lg),
+            Self::ThemePaddingSm => theme
+                .metric_by_key("metric.padding.sm")
+                .unwrap_or(theme.metrics.padding_sm),
+            Self::ThemePaddingMd => theme
+                .metric_by_key("metric.padding.md")
+                .unwrap_or(theme.metrics.padding_md),
             Self::ThemePaddingSmMulDiv { mul, div } => {
                 if div == 0 {
                     return Px(0.0);
                 }
-                Px(theme.metrics.padding_sm.0 * (mul as f32) / (div as f32))
+                let base = theme
+                    .metric_by_key("metric.padding.sm")
+                    .unwrap_or(theme.metrics.padding_sm);
+                Px(base.0 * (mul as f32) / (div as f32))
             }
         }
     }
@@ -331,12 +344,13 @@ mod tests {
     }
 
     #[test]
-    fn radius_falls_back_to_theme_metrics() {
+    fn radius_falls_back_to_baseline_metric_tokens() {
         let mut app = fret_app::App::default();
 
         let cfg = ThemeConfig {
             name: "Test".to_string(),
             metrics: std::collections::HashMap::from([
+                ("metric.radius.sm".to_string(), 11.0),
                 ("metric.radius.md".to_string(), 9.0),
                 ("component.radius.md".to_string(), 12.0),
             ]),
@@ -346,9 +360,6 @@ mod tests {
 
         let theme = Theme::global(&app);
         assert_eq!(MetricRef::radius(Radius::Md).resolve(theme), Px(12.0));
-        assert_eq!(
-            MetricRef::radius(Radius::Sm).resolve(theme),
-            theme.metrics.radius_sm
-        );
+        assert_eq!(MetricRef::radius(Radius::Sm).resolve(theme), Px(11.0));
     }
 }

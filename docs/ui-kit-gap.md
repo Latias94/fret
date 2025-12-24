@@ -50,7 +50,7 @@ Scope: this is a pragmatic “what’s missing / what’s broken / what’s next
 - Default themes ship a minimal Tailwind-like metric scale via extension keys:
   - `component.space.*` (`0`, `0p5`, `1`, `1p5`, `2`, `2p5`, `3`, `3p5`, `4`, `5`, `6`, `8`, `10`, `11`)
   - `component.radius.*` (`sm`, `md`, `lg`)
-- Fallback rule: when `component.space.*` tokens are missing, `Space` falls back to baseline `metric.padding.*` (and a scale derived from `metric.padding.sm`) to avoid theme drift.
+- Fallback rule: when `component.space.*` / `component.radius.*` tokens are missing, `Space`/`Radius` fall back to baseline `metric.*` tokens (and a scale derived from `metric.padding.sm`) to avoid theme drift.
 
 Demo: `cargo run -p fret-demo --bin ui_kit`
 
