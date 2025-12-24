@@ -250,10 +250,10 @@ impl Size {
             theme,
             "list.row_h",
             match self {
-                Self::XSmall => Px(22.0),
-                Self::Small => Px(26.0),
-                Self::Medium => Px(30.0),
-                Self::Large => Px(34.0),
+                Self::XSmall => Px(24.0),
+                Self::Small => Px(28.0),
+                Self::Medium => Px(32.0),
+                Self::Large => Px(36.0),
             },
         )
     }
