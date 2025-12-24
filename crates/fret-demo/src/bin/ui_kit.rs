@@ -14,6 +14,7 @@ use fret_components_ui::{
     icon_button::IconButton,
     list_view::ListView,
     progress::ProgressBar,
+    resizable_panel_group::ResizablePanelGroup,
     scroll_area::ScrollArea,
     select::{Select, SelectOption},
     separator::Separator,
@@ -31,9 +32,9 @@ use fret_render::{ImageColorSpace, ImageDescriptor, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui_app::{
     ColoredPanel, Column, ContextMenuService, DialogAction, DialogRequest, DialogService,
-    FixedPanel, Invalidation, PanelThemeBackground, PopoverService, ResizableSplit, Row, Scroll,
-    Stack, Text, Theme, ThemeConfig, TooltipService, UiTree, VirtualList, VirtualListDataSource,
-    VirtualListRow, VirtualListRowHeight, WindowOverlays,
+    FixedPanel, Invalidation, PanelThemeBackground, PopoverService, Row, Scroll, Stack, Text, Theme,
+    ThemeConfig, TooltipService, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
+    VirtualListRowHeight, WindowOverlays,
 };
 use std::sync::Arc;
 use winit::event_loop::EventLoop;
@@ -466,7 +467,7 @@ fn build_ui_kit_contents(
     ui.add_child(toolbar, toolbar_settings);
     ui.add_child(col, toolbar);
 
-    // Framework-level layout primitive demo: resizable split with a thick hit target and
+    // Component-level layout primitive demo: resizable panel group with a thick hit target and
     // hairline divider, using a `Model<f32>` for persistence.
     let split_sep = ui.create_node(Separator::horizontal());
     ui.add_child(col, split_sep);
@@ -475,7 +476,7 @@ fn build_ui_kit_contents(
 
     let split_fraction = app.models_mut().insert(0.5f32);
     let split = ui.create_node(
-        ResizableSplit::new(fret_core::Axis::Horizontal, split_fraction)
+        ResizablePanelGroup::horizontal(split_fraction)
             .with_min_px(Px(140.0))
             .with_hit_thickness(Px(8.0))
             .with_paint_device_px(1.0),

@@ -17,6 +17,7 @@ pub mod frame;
 pub mod icon_button;
 pub mod list_view;
 pub mod progress;
+pub mod resizable_panel_group;
 pub mod scroll_area;
 pub mod select;
 pub mod separator;
@@ -29,3 +30,5 @@ pub mod tooltip;
 
 pub use sizing::{Sizable, Size};
 pub use style::{ColorRef, MetricRef, Radius, Space, StyleRefinement};
+
+pub use resizable_panel_group::ResizablePanelGroup;

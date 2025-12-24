@@ -3399,7 +3399,9 @@ fn paint_split_handles(
         }
         .paint(
             scene,
-            fret_core::DrawOrder(9_000),
+            // Keep split handle under component focus rings (typically DrawOrder(1)),
+            // while still painting above panel backgrounds (DrawOrder(0)).
+            fret_core::DrawOrder(0),
             bounds,
             center,
             scale_factor,

@@ -377,7 +377,8 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
         }
         .paint(
             cx.scene,
-            DrawOrder(9_000),
+            // Paint the divider below focus rings (DrawOrder(1)) so it doesn't "cut" focus outlines.
+            DrawOrder(0),
             cx.bounds,
             center,
             cx.scale_factor,
