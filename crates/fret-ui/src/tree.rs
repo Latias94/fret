@@ -2278,58 +2278,6 @@ mod tests {
     }
 
     #[test]
-    fn toast_timer_dismissal_is_routed_without_focus() {
-        let window = AppWindowId::default();
-
-        let mut app = crate::test_host::TestHost::new();
-        let mut ui = UiTree::new();
-        ui.set_window(window);
-
-        // Base root exists; focus will default to this node, not the toast overlay.
-        let base = ui.create_node(ObservingWidget {
-            model: app.models_mut().insert(0u32),
-        });
-        ui.set_root(base);
-
-        // Install the toast overlay layer (as WindowOverlays would).
-        let toast_node = ui.create_node(crate::ToastOverlay::new());
-        let toast_layer = ui.push_overlay_root_ex(toast_node, false, true);
-        ui.set_layer_wants_timer_events(toast_layer, true);
-
-        // Push a toast and capture its timer token.
-        let token = app.with_global_mut(crate::ToastService::default, |svc, app| {
-            svc.push(app, window, crate::ToastRequest::new("Hello toast"));
-            svc.debug_first_timer(window)
-                .expect("toast should schedule a timer")
-        });
-
-        let mut text = FakeTextService;
-        let bounds = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(200.0), Px(200.0)),
-        );
-        ui.layout_all(&mut app, &mut text, bounds, 1.0);
-
-        assert_eq!(
-            app.global::<crate::ToastService>()
-                .map(|s| s.count(window))
-                .unwrap_or(0),
-            1
-        );
-
-        // Timer events have no pointer position and would normally be routed to focus; the UiTree
-        // should intercept toast timers at the framework level.
-        ui.dispatch_event(&mut app, &mut text, &Event::Timer { token });
-
-        assert_eq!(
-            app.global::<crate::ToastService>()
-                .map(|s| s.count(window))
-                .unwrap_or(0),
-            0
-        );
-    }
-
-    #[test]
     fn paint_cache_replays_ops_when_node_translates() {
         let mut app = crate::test_host::TestHost::new();
 

@@ -4,7 +4,7 @@ use fret_app::{
 };
 use fret_components_icons::IconId;
 use fret_components_ui::{
-    Size as ComponentSize, StyleRefinement, WindowOverlays,
+    Size as ComponentSize, StyleRefinement, ToastAction, TooltipService, WindowOverlays,
     button::{Button, ButtonIntent, ButtonVariant},
     checkbox::Checkbox,
     combobox::Combobox,
@@ -32,11 +32,10 @@ use fret_core::{
 };
 use fret_render::{ImageColorSpace, ImageDescriptor, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
-use fret_ui_app::widgets::ToastAction;
 use fret_ui_app::{
     ColoredPanel, Column, ContextMenuService, DialogAction, DialogRequest, DialogService,
     FixedPanel, Invalidation, PanelThemeBackground, PopoverService, Row, Scroll, Stack, Text,
-    Theme, ThemeConfig, TooltipService, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
+    Theme, ThemeConfig, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
     VirtualListRowHeight,
 };
 use std::sync::Arc;

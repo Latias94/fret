@@ -27,6 +27,7 @@ pub mod sonner;
 pub mod switch;
 pub mod tabs;
 pub mod text_field;
+pub mod toast;
 pub mod toolbar;
 pub mod tooltip;
 pub mod window_overlays;
@@ -34,6 +35,8 @@ pub mod window_overlays;
 pub use combobox::Combobox;
 pub use sizing::{Sizable, Size};
 pub use style::{ColorRef, MetricRef, Radius, Space, StyleRefinement};
+pub use toast::{ToastAction, ToastKind, ToastOverlay, ToastRequest, ToastService, ToastStyle};
+pub use tooltip::{TooltipArea, TooltipOverlay, TooltipRequest, TooltipService, TooltipStyle};
 
 pub use resizable_panel_group::ResizablePanelGroup;
 pub use window_overlays::WindowOverlays;

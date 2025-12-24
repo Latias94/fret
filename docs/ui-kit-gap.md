@@ -31,7 +31,7 @@ Scope: this is a pragmatic “what’s missing / what’s broken / what’s next
 
 - `VirtualList` (virtualization + selection + keyboard nav)
 - `Scroll` (scroll container) and scrollbar rendering
-- `DialogOverlay` / `TooltipOverlay` / `ContextMenu` / `Popover` overlay primitives
+- `DialogOverlay` / `ContextMenu` / `Popover` overlay primitives (tooltip/toast surfaces live in the component kit)
 - `TreeView`, `TextArea`, `ResizableSplit`, `Dock` (docking + multi-window)
 
 ### Component kit (`crates/fret-components-ui`)
@@ -110,7 +110,7 @@ optional integration with `@tanstack/react-virtual` / `react-window`. For Fret, 
 
 - `Command` (command UI): searchable list + groups + shortcuts + keyboard navigation
 - `Popover` + `HoverCard` equivalents: anchored overlays and hover previews
-- `Toast`/`Sonner`: transient notifications + stacking + timers (prototype implemented: `fret-ui` `ToastOverlay` + `ToastService`, plus `fret-components-ui::sonner::toast(...)` facade)
+- `Toast`/`Sonner`: transient notifications + stacking + timers (prototype implemented: `crates/fret-components-ui` `ToastOverlay` + `ToastService`, plus `fret-components-ui::sonner::toast(...)` facade)
 - `Menubar`: application menus (native integration later; custom first is ok)
 - `Combobox`: typeahead + filtering + virtualization for large option sets
 

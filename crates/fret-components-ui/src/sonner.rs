@@ -5,7 +5,9 @@
 //! so this module focuses on making the call sites ergonomic and consistent.
 
 use fret_core::AppWindowId;
-use fret_ui::{ToastAction, ToastKind, ToastRequest, ToastService, UiHost};
+use fret_ui::UiHost;
+
+use crate::{ToastAction, ToastKind, ToastRequest, ToastService};
 
 pub fn toast<H: UiHost>(app: &mut H, window: AppWindowId, request: ToastRequest) {
     app.with_global_mut(ToastService::default, |svc, app| {

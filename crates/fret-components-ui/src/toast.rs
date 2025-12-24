@@ -1,12 +1,9 @@
-use crate::{
-    Theme, UiHost,
-    widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget},
-};
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
     Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 use fret_runtime::{CommandId, Effect, Model};
+use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -732,5 +729,82 @@ impl<H: UiHost> Widget<H> for ToastOverlay {
         self.last_bounds = Rect::default();
         self.last_scale_factor_bits = None;
         self.hovered_toast = None;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+
+    #[derive(Default)]
+    struct FakeTextService;
+
+    impl fret_core::TextService for FakeTextService {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: TextStyle,
+            _constraints: TextConstraints,
+        ) -> (fret_core::TextBlobId, TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    #[test]
+    fn toast_timer_dismissal_is_routed_without_focus() {
+        let window = AppWindowId::default();
+
+        let mut app = App::new();
+        let mut ui: fret_ui::UiTree<App> = fret_ui::UiTree::new();
+        ui.set_window(window);
+
+        let base = ui.create_node(fret_ui::Stack::new());
+        ui.set_root(base);
+
+        let toast_node = ui.create_node(ToastOverlay::new());
+        let toast_layer = ui.push_overlay_root_ex(toast_node, false, true);
+        ui.set_layer_wants_timer_events(toast_layer, true);
+
+        let token = app.with_global_mut(ToastService::default, |svc, app| {
+            svc.push(app, window, ToastRequest::new("Hello toast"));
+            svc.debug_first_timer(window)
+                .expect("toast should schedule a timer")
+        });
+
+        let mut text = FakeTextService::default();
+        ui.layout_all(
+            &mut app,
+            &mut text,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(200.0), Px(200.0)),
+            ),
+            1.0,
+        );
+
+        assert_eq!(
+            app.global::<ToastService>()
+                .map(|s| s.count(window))
+                .unwrap_or(0),
+            1
+        );
+
+        ui.dispatch_event(&mut app, &mut text, &Event::Timer { token });
+
+        assert_eq!(
+            app.global::<ToastService>()
+                .map(|s| s.count(window))
+                .unwrap_or(0),
+            0
+        );
     }
 }
