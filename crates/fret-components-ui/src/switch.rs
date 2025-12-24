@@ -1,5 +1,5 @@
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Px, Rect, SceneOp,
+    Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, Px, Rect, SceneOp,
     SemanticsRole, Size,
 };
 use fret_runtime::Model;
@@ -152,6 +152,9 @@ impl<H: UiHost> Widget<H> for Switch {
                         self.hovered = hovered;
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
+                    }
+                    if !self.disabled && (hovered || cx.captured == Some(cx.node)) {
+                        cx.set_cursor_icon(CursorIcon::Pointer);
                     }
                 }
                 fret_core::PointerEvent::Down {

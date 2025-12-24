@@ -42,7 +42,7 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Introduce a portable system cursor boundary (cursor icon + per-window cursor routing + overlay precedence).
   - Rationale: editor-grade resizing/docking needs OS cursor affordances; without a stable boundary, each widget
     invents its own heuristics and portability will suffer.
-  - Planned as MVP 46 (see `docs/mvp.md`).
+  - Implemented as MVP 46 (prototype; see `docs/mvp.md`).
 - P0: Renderer must preserve `Scene.ops` ordering across primitive kinds (ADR 0009).
 - P0: Multi-root overlays (menus, drag previews, popups, modals) must be first-class (ADR 0011).
 - P0: Keyboard/IME split: physical keys for shortcuts, text input for editing (ADR 0012).

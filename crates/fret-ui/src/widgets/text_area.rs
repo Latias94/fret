@@ -613,6 +613,19 @@ impl<H: UiHost> Widget<H> for TextArea {
             Event::Pointer(fret_core::PointerEvent::Move {
                 position, buttons, ..
             }) => {
+                // Show the I-beam cursor when hovering the editable text region.
+                if cx.captured == Some(cx.node) {
+                    cx.set_cursor_icon(fret_core::CursorIcon::Text);
+                } else if self.last_bounds.contains(*position) {
+                    if let Some((track, _thumb)) = self.scrollbar_geometry(self.last_bounds)
+                        && track.contains(*position)
+                    {
+                        // Keep the default cursor over the scrollbar.
+                    } else if self.content_bounds().contains(*position) {
+                        cx.set_cursor_icon(fret_core::CursorIcon::Text);
+                    }
+                }
+
                 if !buttons.left {
                     return;
                 }
@@ -1386,5 +1399,83 @@ impl<H: UiHost> Widget<H> for TextArea {
                 corner_radii: Corners::all(radius),
             });
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::UiTree;
+    use crate::test_host::TestHost;
+    use fret_core::{
+        AppWindowId, Event, PlatformCapabilities, Point, Px, Size, TextConstraints, TextMetrics,
+        TextService, TextStyle,
+    };
+    use fret_runtime::Effect;
+
+    #[derive(Default)]
+    struct FakeTextService;
+
+    impl TextService for FakeTextService {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: TextStyle,
+            _constraints: TextConstraints,
+        ) -> (fret_core::TextBlobId, TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    #[test]
+    fn text_area_hover_sets_text_cursor_effect() {
+        let window = AppWindowId::default();
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(TextArea::default());
+        ui.set_root(root);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut text = FakeTextService::default();
+
+        let _ = ui.layout(
+            &mut app,
+            &mut text,
+            root,
+            Size::new(Px(300.0), Px(200.0)),
+            1.0,
+        );
+        let _ = app.take_effects();
+
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                position: Point::new(Px(12.0), Px(12.0)),
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        let effects = app.take_effects();
+        assert!(
+            effects.iter().any(|e| matches!(
+                e,
+                Effect::CursorSetIcon { window: w, icon }
+                    if *w == window && *icon == fret_core::CursorIcon::Text
+            )),
+            "expected a text cursor effect when hovering a text area"
+        );
     }
 }

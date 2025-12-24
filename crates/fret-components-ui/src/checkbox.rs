@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp,
-    SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
+    Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect,
+    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
@@ -207,6 +207,9 @@ impl<H: UiHost> Widget<H> for Checkbox {
                         self.hovered = hovered;
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
+                    }
+                    if !self.disabled && (hovered || cx.captured == Some(cx.node)) {
+                        cx.set_cursor_icon(CursorIcon::Pointer);
                     }
                 }
                 fret_core::PointerEvent::Down {

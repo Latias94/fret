@@ -1090,7 +1090,7 @@ does not reflect the affordance (e.g. column/row resize) because there is no por
 
 Status:
 
-- Prototype implemented (desktop runner + dock split handles).
+- Prototype implemented (desktop runner + dock split handles; `TextInput`/`TextArea` and common component widgets set hover cursors).
 
 References:
 
