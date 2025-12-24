@@ -30,7 +30,7 @@ pub use split::Split;
 pub use stack::Stack;
 pub use text::TextInputStyle;
 pub use text::{BoundTextInput, Text, TextInput};
-pub use text_area::{TextArea, TextAreaStyle};
+pub use text_area::{BoundTextArea, TextArea, TextAreaStyle};
 pub use toolbar::{Toolbar, ToolbarItem};
 pub use tree_view::{TreeNode, TreeView, TreeViewStyle};
 pub use virtual_list::{

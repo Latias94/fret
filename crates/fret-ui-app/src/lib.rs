@@ -12,14 +12,14 @@ pub use fret_ui::tree;
 pub use fret_ui::widgets;
 
 pub use fret_ui::{
-    Bar, BoundTextInput, Clip, ColoredPanel, Column, ContextMenuRequest, ContextMenuService,
-    DockManager, DockPanel, DockPanelContentService, DockSpace, FixedPanel, GlobalElementId,
-    HeaderBody, Image, Invalidation, PaintCachePolicy, PanelThemeBackground, ResizableSplit, Row,
-    Scroll, Split, Stack, Text, TextArea, TextAreaStyle, TextInput, TextInputStyle, Theme,
-    ThemeConfig, ThemeSnapshot, Toolbar, ToolbarItem, TreeNode, TreeView, TreeViewStyle,
-    UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiHost, UiLayerId, VecStringDataSource,
-    ViewportPanel, VirtualList, VirtualListDataSource, VirtualListRow, VirtualListRowHeight,
-    VirtualListStyle,
+    Bar, BoundTextArea, BoundTextInput, Clip, ColoredPanel, Column, ContextMenuRequest,
+    ContextMenuService, DockManager, DockPanel, DockPanelContentService, DockSpace, FixedPanel,
+    GlobalElementId, HeaderBody, Image, Invalidation, PaintCachePolicy, PanelThemeBackground,
+    ResizableSplit, Row, Scroll, Split, Stack, Text, TextArea, TextAreaStyle, TextInput,
+    TextInputStyle, Theme, ThemeConfig, ThemeSnapshot, Toolbar, ToolbarItem, TreeNode, TreeView,
+    TreeViewStyle, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiHost, UiLayerId,
+    VecStringDataSource, ViewportPanel, VirtualList, VirtualListDataSource, VirtualListRow,
+    VirtualListRowHeight, VirtualListStyle,
 };
 
 pub use fret_ui::{

@@ -23,7 +23,7 @@ pub use tree::{
 };
 pub use widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 pub use widgets::{
-    Bar, BoundTextInput, Clip, ColoredPanel, Column, FixedPanel, HeaderBody, Image,
+    Bar, BoundTextArea, BoundTextInput, Clip, ColoredPanel, Column, FixedPanel, HeaderBody, Image,
     PanelThemeBackground, ResizableSplit, Row, Scroll, Split, Stack, Text, TextArea, TextAreaStyle,
     TextInput, TextInputStyle, Toolbar, ToolbarItem, TreeNode, TreeView, TreeViewStyle,
     VecStringDataSource, VirtualList, VirtualListDataSource, VirtualListRow, VirtualListRowHeight,

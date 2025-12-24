@@ -2,7 +2,7 @@ use fret_core::{
     CaretAffinity, Color, Corners, DrawOrder, Edges, Event, ImeEvent, MouseButton, Px, Rect,
     SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
-use fret_runtime::Effect;
+use fret_runtime::{Effect, Model};
 
 use crate::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
@@ -16,7 +16,8 @@ struct PreparedKey {
 
 #[derive(Debug, Clone)]
 pub struct TextAreaStyle {
-    pub padding: Px,
+    pub padding_x: Px,
+    pub padding_y: Px,
     pub background: Color,
     pub border: Edges,
     pub border_color: Color,
@@ -31,7 +32,8 @@ pub struct TextAreaStyle {
 impl Default for TextAreaStyle {
     fn default() -> Self {
         Self {
-            padding: Px(10.0),
+            padding_x: Px(10.0),
+            padding_y: Px(10.0),
             background: Color {
                 r: 0.12,
                 g: 0.12,
@@ -173,7 +175,11 @@ impl TextArea {
         Self::default().with_text(text)
     }
 
-    pub fn with_text(mut self, text: impl Into<String>) -> Self {
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    pub fn set_text(&mut self, text: impl Into<String>) {
         self.text = text.into();
         self.caret = self.text.len();
         self.selection_anchor = self.caret;
@@ -181,6 +187,11 @@ impl TextArea {
         self.preedit.clear();
         self.preedit_cursor = None;
         self.text_dirty = true;
+        self.preferred_x = None;
+    }
+
+    pub fn with_text(mut self, text: impl Into<String>) -> Self {
+        self.set_text(text);
         self
     }
 
@@ -216,7 +227,8 @@ impl TextArea {
         }
         self.last_theme_revision = Some(theme.revision());
 
-        self.style.padding = theme.metrics.padding_md;
+        self.style.padding_x = theme.metrics.padding_md;
+        self.style.padding_y = theme.metrics.padding_md;
         self.style.background = theme.colors.panel_background;
         self.style.border_color = theme.colors.panel_border;
         self.style.corner_radii = Corners::all(theme.metrics.radius_md);
@@ -502,12 +514,16 @@ impl TextArea {
     }
 
     fn inner_bounds(&self) -> Rect {
-        let p = self.style.padding;
+        let px = self.style.padding_x;
+        let py = self.style.padding_y;
         Rect::new(
-            fret_core::Point::new(self.last_bounds.origin.x + p, self.last_bounds.origin.y + p),
+            fret_core::Point::new(
+                self.last_bounds.origin.x + px,
+                self.last_bounds.origin.y + py,
+            ),
             Size::new(
-                Px((self.last_bounds.size.width.0 - p.0 * 2.0).max(0.0)),
-                Px((self.last_bounds.size.height.0 - p.0 * 2.0).max(0.0)),
+                Px((self.last_bounds.size.width.0 - px.0 * 2.0).max(0.0)),
+                Px((self.last_bounds.size.height.0 - py.0 * 2.0).max(0.0)),
             ),
         )
     }
@@ -1134,7 +1150,7 @@ impl<H: UiHost> Widget<H> for TextArea {
 
         Size::new(
             cx.available.width,
-            Px((metrics.size.height.0 + self.style.padding.0 * 2.0).max(self.min_height.0)),
+            Px((metrics.size.height.0 + self.style.padding_y.0 * 2.0).max(self.min_height.0)),
         )
     }
 
@@ -1399,6 +1415,130 @@ impl<H: UiHost> Widget<H> for TextArea {
                 corner_radii: Corners::all(radius),
             });
         }
+    }
+}
+
+pub struct BoundTextArea {
+    model: Model<String>,
+    last_revision: Option<u64>,
+    dirty_since_sync: bool,
+    area: TextArea,
+}
+
+impl BoundTextArea {
+    pub fn new(model: Model<String>) -> Self {
+        Self {
+            model,
+            last_revision: None,
+            dirty_since_sync: false,
+            area: TextArea::default(),
+        }
+    }
+
+    pub fn with_text_style(mut self, style: TextStyle) -> Self {
+        self.area.text_style = style;
+        self.area.text_dirty = true;
+        self
+    }
+
+    pub fn set_text_style(&mut self, style: TextStyle) {
+        self.area.text_style = style;
+        self.area.text_dirty = true;
+    }
+
+    pub fn with_min_height(mut self, min_height: Px) -> Self {
+        self.area.min_height = min_height;
+        self
+    }
+
+    pub fn set_min_height(&mut self, min_height: Px) {
+        self.area.min_height = min_height;
+    }
+
+    pub fn with_style(mut self, style: TextAreaStyle) -> Self {
+        self.area.style = style;
+        self.area.style_override = true;
+        self.area.last_theme_revision = None;
+        self
+    }
+
+    pub fn set_style(&mut self, style: TextAreaStyle) {
+        self.area.style = style;
+        self.area.style_override = true;
+        self.area.last_theme_revision = None;
+    }
+
+    fn sync_from_model<H: UiHost>(&mut self, app: &H, force: bool) {
+        let revision = app.models().revision(self.model);
+        if revision == self.last_revision {
+            return;
+        }
+        self.last_revision = revision;
+
+        let Some(text) = app.models().get(self.model) else {
+            return;
+        };
+
+        if force || !self.dirty_since_sync {
+            self.area.set_text(text.clone());
+            self.dirty_since_sync = false;
+        }
+    }
+
+    fn maybe_update_model<H: UiHost>(&mut self, app: &mut H) {
+        let text = self.area.text.clone();
+        if app
+            .models_mut()
+            .update(self.model, move |v| *v = text)
+            .is_ok()
+        {
+            self.dirty_since_sync = false;
+            self.last_revision = app.models().revision(self.model);
+        }
+    }
+}
+
+impl<H: UiHost> Widget<H> for BoundTextArea {
+    fn is_focusable(&self) -> bool {
+        true
+    }
+
+    fn is_text_input(&self) -> bool {
+        true
+    }
+
+    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+        <TextArea as Widget<H>>::cleanup_resources(&mut self.area, text);
+    }
+
+    fn semantics(&mut self, cx: &mut crate::widget::SemanticsCx<'_, H>) {
+        self.area.semantics(cx);
+    }
+
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        if cx.focus != Some(cx.node) {
+            self.sync_from_model(cx.app, false);
+        }
+
+        let before = self.area.text.clone();
+        self.area.event(cx, event);
+        if self.area.text != before {
+            self.dirty_since_sync = true;
+            self.maybe_update_model(cx.app);
+            cx.invalidate_self(Invalidation::Layout);
+            cx.invalidate_self(Invalidation::Paint);
+            cx.request_redraw();
+        }
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        let force = !self.dirty_since_sync;
+        self.sync_from_model(cx.app, force);
+        self.area.layout(cx)
+    }
+
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        self.area.paint(cx);
     }
 }
 

@@ -24,6 +24,7 @@ use fret_components_ui::{
     sonner,
     switch::Switch,
     tabs::Tabs,
+    text_area_field::TextAreaField,
     text_field::TextField,
     toolbar::Toolbar,
     tooltip::TooltipArea,
@@ -222,6 +223,24 @@ fn build_ui_kit_contents(
     ui.add_child(col, field_sm);
     ui.add_child(col, field_md);
     ui.add_child(col, field_lg);
+
+    let textarea_model = app.models_mut().insert(
+        "Multiline text area (shadcn-inspired)\n\n- Uses BoundTextArea + component chrome\n- Token/size-driven padding and text\n"
+            .to_string(),
+    );
+    let textarea = ui.create_node(
+        TextAreaField::new(textarea_model)
+            .with_size(ComponentSize::Medium)
+            .with_min_height(Px(140.0))
+            .refine_style(
+                StyleRefinement::default()
+                    .rounded_md()
+                    .border_1()
+                    .px_3()
+                    .py(Space::N2),
+            ),
+    );
+    ui.add_child(col, textarea);
 
     let buttons_frame = ui.create_node(Frame::new(
         StyleRefinement::default()

@@ -422,7 +422,14 @@ impl BoundTextInput {
 
     fn maybe_update_model<H: UiHost>(&mut self, app: &mut H) {
         let text = self.input.text().to_string();
-        let _ = app.models_mut().update(self.model, move |v| *v = text);
+        if app
+            .models_mut()
+            .update(self.model, move |v| *v = text)
+            .is_ok()
+        {
+            self.dirty_since_sync = false;
+            self.last_revision = app.models().revision(self.model);
+        }
     }
 }
 
