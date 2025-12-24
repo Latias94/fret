@@ -26,7 +26,8 @@ pub use widgets::{
     DialogAction, DialogOverlay, DialogRequest, DialogService, DialogStyle, FixedPanel, HeaderBody,
     Image, PanelThemeBackground, Popover, PopoverItem, PopoverRequest, PopoverService,
     PopoverStyle, ResizableSplit, Row, Scroll, Split, Stack, Text, TextArea, TextAreaStyle,
-    TextInput, TextInputStyle, Toolbar, ToolbarItem, TooltipOverlay, TooltipRequest,
-    TooltipService, TooltipStyle, TreeNode, TreeView, TreeViewStyle, VecStringDataSource,
-    VirtualList, VirtualListDataSource, VirtualListRow, VirtualListRowHeight, VirtualListStyle,
+    TextInput, TextInputStyle, ToastAction, ToastKind, ToastOverlay, ToastRequest, ToastService,
+    ToastStyle, Toolbar, ToolbarItem, TooltipOverlay, TooltipRequest, TooltipService, TooltipStyle,
+    TreeNode, TreeView, TreeViewStyle, VecStringDataSource, VirtualList, VirtualListDataSource,
+    VirtualListRow, VirtualListRowHeight, VirtualListStyle,
 };

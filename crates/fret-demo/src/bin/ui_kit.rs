@@ -20,6 +20,7 @@ use fret_components_ui::{
     select::{Select, SelectOption},
     separator::Separator,
     slider::Slider,
+    sonner,
     switch::Switch,
     tabs::Tabs,
     text_field::TextField,
@@ -31,10 +32,11 @@ use fret_core::{
 };
 use fret_render::{ImageColorSpace, ImageDescriptor, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
+use fret_ui_app::widgets::ToastAction;
 use fret_ui_app::{
     ColoredPanel, Column, ContextMenuService, DialogAction, DialogRequest, DialogService,
-    FixedPanel, Invalidation, PanelThemeBackground, PopoverService, Row, Scroll, Stack, Text, Theme,
-    ThemeConfig, TooltipService, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
+    FixedPanel, Invalidation, PanelThemeBackground, PopoverService, Row, Scroll, Stack, Text,
+    Theme, ThemeConfig, TooltipService, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
     VirtualListRowHeight, WindowOverlays,
 };
 use std::sync::Arc;
@@ -467,9 +469,31 @@ fn build_ui_kit_contents(
     let combobox_title = ui.create_node(Text::new("Combobox (typeahead)"));
     ui.add_child(col, combobox_title);
     let combobox = ui.create_node(
-        Combobox::new(combobox_items, combobox_selection, combobox_query).with_size(ComponentSize::Medium),
+        Combobox::new(combobox_items, combobox_selection, combobox_query)
+            .with_size(ComponentSize::Medium),
     );
     ui.add_child(col, combobox);
+
+    let toast_row = ui.create_node(Row::new().with_spacing(Px(10.0)));
+    let toast_success = ui.create_node(
+        Button::new("Toast: Success")
+            .intent(ButtonIntent::Primary)
+            .on_click("ui_kit.toast.success"),
+    );
+    let toast_error = ui.create_node(
+        Button::new("Toast: Error")
+            .intent(ButtonIntent::Danger)
+            .on_click("ui_kit.toast.error"),
+    );
+    let toast_action = ui.create_node(
+        Button::new("Toast: Action")
+            .variant(ButtonVariant::Ghost)
+            .on_click("ui_kit.toast.action"),
+    );
+    ui.add_child(toast_row, toast_success);
+    ui.add_child(toast_row, toast_error);
+    ui.add_child(toast_row, toast_action);
+    ui.add_child(col, toast_row);
 
     let toolbar = ui.create_node(
         Toolbar::new().refine_style(
@@ -717,6 +741,24 @@ impl WinitDriver for UiKitDriver {
             }
             "ui_kit.dialog.cancelled" => {
                 tracing::info!("dialog cancelled");
+            }
+            "ui_kit.toast.success" => {
+                sonner::toast_success(app, window, "Build completed");
+            }
+            "ui_kit.toast.error" => {
+                sonner::toast_error(app, window, "Build failed");
+            }
+            "ui_kit.toast.action" => {
+                sonner::toast_action(
+                    app,
+                    window,
+                    "New update available",
+                    "Restart to apply changes.",
+                    ToastAction::new("Restart", fret_app::CommandId::from("ui_kit.toast.restart")),
+                );
+            }
+            "ui_kit.toast.restart" => {
+                tracing::info!("toast action: restart");
             }
             _ => {}
         }

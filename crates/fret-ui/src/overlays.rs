@@ -3,7 +3,7 @@ use crate::{
     tree::{UiLayerId, UiTree},
     widgets::{
         CommandPaletteOverlay, ContextMenu, ContextMenuService, DialogOverlay, DialogService,
-        Popover, PopoverService, TooltipOverlay,
+        Popover, PopoverService, ToastOverlay, TooltipOverlay,
     },
 };
 use fret_core::{AppWindowId, NodeId, TextService};
@@ -16,6 +16,7 @@ use fret_runtime::{CommandId, Effect};
 #[derive(Debug)]
 pub struct WindowOverlays {
     _tooltip_node: NodeId,
+    _toast_node: NodeId,
 
     command_palette_layer: UiLayerId,
     command_palette_node: NodeId,
@@ -39,6 +40,11 @@ impl WindowOverlays {
         let tooltip_node = ui.create_node(TooltipOverlay::new());
         let _ = ui.push_overlay_root_ex(tooltip_node, false, false);
 
+        // Toasts should be visually on top but pointer-transparent outside toast bounds.
+        // The overlay is hit-testable and relies on per-widget hit testing (`Widget::hit_test`).
+        let toast_node = ui.create_node(ToastOverlay::new());
+        let _ = ui.push_overlay_root_ex(toast_node, false, true);
+
         let command_palette_node = ui.create_node(CommandPaletteOverlay::new());
         let command_palette_layer = ui.push_overlay_root(command_palette_node, true);
         ui.set_layer_visible(command_palette_layer, false);
@@ -57,6 +63,7 @@ impl WindowOverlays {
 
         Self {
             _tooltip_node: tooltip_node,
+            _toast_node: toast_node,
             command_palette_layer,
             command_palette_node,
             command_palette_previous_focus: None,

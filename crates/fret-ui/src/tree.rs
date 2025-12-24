@@ -787,6 +787,18 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
+        // Framework-level timer routing for global services that are not tied to focus.
+        if let Event::Timer { token } = event
+            && let Some(window) = self.window
+        {
+            let handled = app.with_global_mut(crate::ToastService::default, |svc, app| {
+                svc.handle_timer(app, window, *token)
+            });
+            if handled {
+                return;
+            }
+        }
+
         if let Event::TextInput(text) = event {
             if !self.replaying_pending_shortcut
                 && self.pending_shortcut.capture_next_text_input_key.is_some()
@@ -1667,7 +1679,12 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        Some(node)
+        let hit = n
+            .widget
+            .as_ref()
+            .map(|w| w.hit_test(n.bounds, position))
+            .unwrap_or(true);
+        hit.then_some(node)
     }
 
     fn mark_invalidation(&mut self, node: NodeId, inv: Invalidation) {
@@ -2086,6 +2103,125 @@ mod tests {
         ui.paint_all(&mut app, &mut text, bounds2, &mut scene, 1.0);
         assert_eq!(paints.load(Ordering::SeqCst), 3);
         assert_eq!(scene.ops_len(), 1);
+    }
+
+    struct TransparentOverlay;
+
+    impl<H: UiHost> Widget<H> for TransparentOverlay {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+    }
+
+    struct ClickCounter {
+        clicks: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for ClickCounter {
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if matches!(
+                event,
+                Event::Pointer(fret_core::PointerEvent::Up {
+                    button: fret_core::MouseButton::Left,
+                    ..
+                })
+            ) {
+                let _ = cx.app.models_mut().update(self.clicks, |v| *v += 1);
+                cx.stop_propagation();
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    #[test]
+    fn hit_test_can_make_overlay_pointer_transparent() {
+        let window = AppWindowId::default();
+
+        let mut app = crate::test_host::TestHost::new();
+        let clicks = app.models_mut().insert(0u32);
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let base = ui.create_node(ClickCounter { clicks });
+        ui.set_root(base);
+
+        let overlay = ui.create_node(TransparentOverlay);
+        let _ = ui.push_overlay_root_ex(overlay, false, true);
+
+        let mut text = FakeTextService;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        let value = app.models().get(clicks).copied().unwrap_or(0);
+        assert_eq!(value, 1);
+    }
+
+    #[test]
+    fn toast_timer_dismissal_is_routed_without_focus() {
+        let window = AppWindowId::default();
+
+        let mut app = crate::test_host::TestHost::new();
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        // Base root exists; focus will default to this node, not the toast overlay.
+        let base = ui.create_node(ObservingWidget {
+            model: app.models_mut().insert(0u32),
+        });
+        ui.set_root(base);
+
+        // Install the toast overlay layer (as WindowOverlays would).
+        let toast_node = ui.create_node(crate::ToastOverlay::new());
+        let _ = ui.push_overlay_root_ex(toast_node, false, true);
+
+        // Push a toast and capture its timer token.
+        let token = app.with_global_mut(crate::ToastService::default, |svc, app| {
+            svc.push(app, window, crate::ToastRequest::new("Hello toast"));
+            svc.debug_first_timer(window)
+                .expect("toast should schedule a timer")
+        });
+
+        let mut text = FakeTextService;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(200.0)),
+        );
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        assert_eq!(
+            app.global::<crate::ToastService>()
+                .map(|s| s.count(window))
+                .unwrap_or(0),
+            1
+        );
+
+        // Timer events have no pointer position and would normally be routed to focus; the UiTree
+        // should intercept toast timers at the framework level.
+        ui.dispatch_event(&mut app, &mut text, &Event::Timer { token });
+
+        assert_eq!(
+            app.global::<crate::ToastService>()
+                .map(|s| s.count(window))
+                .unwrap_or(0),
+            0
+        );
     }
 
     #[test]

@@ -1033,12 +1033,14 @@ Goal: establish a **general-purpose** component library baseline (GPUI-component
 
 Status:
 
-- Prototype implemented (incubated in this repo):
+  - Prototype implemented (incubated in this repo):
   - `crates/fret-components-ui`: token-driven components + Tailwind-like typed style refinements (`Button`, `IconButton`, `TextField`, `Select`, `Checkbox`, `Switch`, `Separator`, `Tabs`, `Toolbar`).
     - Tailwind-like primitive vocabulary is now explicit and reusable: `Space` + `Radius` (typed) backed by theme extension tokens (`component.space.*`, `component.radius.*`).
     - `command_palette::install_command_palette` provides a one-call subtree install pattern (input + list + keyboard nav) for app ergonomics.
     - `ResizablePanelGroup` provides a component-level naming surface for the resizable split primitive (shadcn-style vocabulary).
     - `Combobox` provides a minimal typeahead + anchored list interaction (focus stays in input; list is `Popover`-backed).
+    - `sonner::toast(...)` provides a shadcn-style facade for transient notifications.
+  - `fret-ui`: `ToastOverlay` + `ToastService` for Sonner-style transient notifications (stacking + timers + pointer pass-through).
   - `crates/fret-components-icons`: renderer-agnostic icon registry + small builtin glyph fallback set.
   - `fret-ui`: `Popover` + `PopoverService` (anchored overlay primitive used by `Select`).
   - `fret-ui`: `CommandPaletteOverlay` + `WindowOverlays` open/close policy for a cmdk/shadcn-style command palette shell.

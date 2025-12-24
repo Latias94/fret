@@ -1,6 +1,7 @@
 use crate::{Theme, UiHost};
 use fret_core::{
-    AppWindowId, Event, NodeId, Rect, Scene, SemanticsFlags, SemanticsRole, Size, TextService,
+    AppWindowId, Event, NodeId, Point, Rect, Scene, SemanticsFlags, SemanticsRole, Size,
+    TextService,
 };
 use fret_runtime::{CommandId, Effect, InputContext, Model, ModelId};
 
@@ -222,6 +223,15 @@ pub trait Widget<H: UiHost> {
         false
     }
     fn cleanup_resources(&mut self, _text: &mut dyn TextService) {}
+    /// Hit-test predicate for pointer input targeting.
+    ///
+    /// Returning `false` makes the node "transparent" to hit-testing (events fall through to
+    /// underlay layers / widgets).
+    ///
+    /// Default: `true` (bounds-based hit testing).
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        true
+    }
     fn is_focusable(&self) -> bool {
         false
     }

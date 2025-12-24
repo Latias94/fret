@@ -2153,10 +2153,7 @@ mod tests {
         let mut list =
             VirtualList::new(data).with_row_height(VirtualListRowHeight::Fixed(Px(20.0)));
 
-        let bounds = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(200.0), Px(40.0)),
-        );
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
         let mut cx = EventCx {
             app: &mut app,
             text: &mut text,
@@ -2195,10 +2192,7 @@ mod tests {
         let mut list =
             VirtualList::new(data).with_row_height(VirtualListRowHeight::Fixed(Px(20.0)));
 
-        let bounds = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(200.0), Px(40.0)),
-        );
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
 
         // Pre-seed layout-dependent fields so scrolling is meaningful in the test.
         let theme_rev = Theme::global(&app).revision();

@@ -2,10 +2,12 @@ use std::sync::Arc;
 
 use fret_core::{Event, KeyCode, Modifiers, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
-use fret_ui::{BoundTextInput, EventCx, Invalidation, LayoutCx, PaintCx, PopoverRequest, UiHost, Widget};
+use fret_ui::{
+    BoundTextInput, EventCx, Invalidation, LayoutCx, PaintCx, PopoverRequest, UiHost, Widget,
+};
 
-use crate::style::StyleRefinement;
 use crate::Size;
+use crate::style::StyleRefinement;
 
 fn matches_query(label: &str, q: &str) -> bool {
     let q = q.trim();
@@ -50,7 +52,11 @@ pub struct Combobox {
 }
 
 impl Combobox {
-    pub fn new(items: Model<Vec<String>>, selection: Model<Option<usize>>, query: Model<String>) -> Self {
+    pub fn new(
+        items: Model<Vec<String>>,
+        selection: Model<Option<usize>>,
+        query: Model<String>,
+    ) -> Self {
         Self {
             items,
             selection,
@@ -168,11 +174,13 @@ impl Combobox {
 
         self.active_filtered = Some(picked);
 
-        let _ = cx.app.models_mut().update(self.selection, |v| *v = Some(picked));
         let _ = cx
             .app
             .models_mut()
-            .update(self.query, |v| *v = items.get(picked).cloned().unwrap_or_default());
+            .update(self.selection, |v| *v = Some(picked));
+        let _ = cx.app.models_mut().update(self.query, |v| {
+            *v = items.get(picked).cloned().unwrap_or_default()
+        });
 
         cx.invalidate_self(Invalidation::Layout);
         cx.invalidate_self(Invalidation::Paint);
@@ -220,11 +228,13 @@ impl Combobox {
         if picked >= items.len() {
             return false;
         }
-        let _ = cx.app.models_mut().update(self.selection, |v| *v = Some(picked));
         let _ = cx
             .app
             .models_mut()
-            .update(self.query, |v| *v = items.get(picked).cloned().unwrap_or_default());
+            .update(self.selection, |v| *v = Some(picked));
+        let _ = cx.app.models_mut().update(self.query, |v| {
+            *v = items.get(picked).cloned().unwrap_or_default()
+        });
         self.set_open(cx, false);
         cx.stop_propagation();
         true
@@ -379,7 +389,9 @@ impl<H: UiHost> Widget<H> for Combobox {
         }
 
         // Toggle open on click.
-        if let Event::Pointer(fret_core::PointerEvent::Up { position, button, .. }) = event
+        if let Event::Pointer(fret_core::PointerEvent::Up {
+            position, button, ..
+        }) = event
             && *button == fret_core::MouseButton::Left
             && self.last_bounds.contains(*position)
         {
@@ -433,4 +445,3 @@ impl<H: UiHost> Widget<H> for Combobox {
         self.input.semantics(cx);
     }
 }
-

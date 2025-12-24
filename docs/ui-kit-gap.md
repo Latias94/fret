@@ -110,7 +110,7 @@ optional integration with `@tanstack/react-virtual` / `react-window`. For Fret, 
 
 - `Command` (command UI): searchable list + groups + shortcuts + keyboard navigation
 - `Popover` + `HoverCard` equivalents: anchored overlays and hover previews
-- `Toast`/`Sonner`: transient notifications + stacking + timers
+- `Toast`/`Sonner`: transient notifications + stacking + timers (prototype implemented: `fret-ui` `ToastOverlay` + `ToastService`, plus `fret-components-ui::sonner::toast(...)` facade)
 - `Menubar`: application menus (native integration later; custom first is ok)
 - `Combobox`: typeahead + filtering + virtualization for large option sets
 

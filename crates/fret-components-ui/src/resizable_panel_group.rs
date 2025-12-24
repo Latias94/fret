@@ -63,4 +63,3 @@ impl<H: UiHost> UiWidget<H> for ResizablePanelGroup {
         <ResizableSplit as UiWidget<H>>::paint(&mut self.inner, cx);
     }
 }
-

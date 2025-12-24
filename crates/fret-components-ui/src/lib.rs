@@ -7,9 +7,9 @@ mod list_style;
 mod sizing;
 mod style;
 
-pub mod combobox;
 pub mod button;
 pub mod checkbox;
+pub mod combobox;
 pub mod command;
 pub mod command_palette;
 pub mod dialog;
@@ -23,6 +23,7 @@ pub mod scroll_area;
 pub mod select;
 pub mod separator;
 pub mod slider;
+pub mod sonner;
 pub mod switch;
 pub mod tabs;
 pub mod text_field;
