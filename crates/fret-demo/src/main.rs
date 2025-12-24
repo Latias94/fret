@@ -3859,9 +3859,54 @@ impl WinitDriver for DemoDriver {
                     .px_3()
                     .py_1(),
             ));
-            let ui_kit_image_node =
-                ui.create_node(Image::new(img).with_size(Size::new(Px(256.0), Px(192.0))));
-            ui.add_child(ui_kit_image_frame, ui_kit_image_node);
+            let ui_kit_image_col =
+                ui.create_node(fret_ui_app::Column::new().with_spacing(Px(10.0)));
+            let row_top = ui.create_node(fret_ui_app::Row::new().with_spacing(Px(10.0)));
+            let row_bottom = ui.create_node(fret_ui_app::Row::new().with_spacing(Px(10.0)));
+
+            let w = Px(160.0);
+            let h = Px(120.0);
+            let tl = ui.create_node(Image::new(img).with_size(Size::new(w, h)).with_uv(
+                fret_core::UvRect {
+                    u0: 0.0,
+                    v0: 0.0,
+                    u1: 0.5,
+                    v1: 0.5,
+                },
+            ));
+            let tr = ui.create_node(Image::new(img).with_size(Size::new(w, h)).with_uv(
+                fret_core::UvRect {
+                    u0: 0.5,
+                    v0: 0.0,
+                    u1: 1.0,
+                    v1: 0.5,
+                },
+            ));
+            let bl = ui.create_node(Image::new(img).with_size(Size::new(w, h)).with_uv(
+                fret_core::UvRect {
+                    u0: 0.0,
+                    v0: 0.5,
+                    u1: 0.5,
+                    v1: 1.0,
+                },
+            ));
+            let br = ui.create_node(Image::new(img).with_size(Size::new(w, h)).with_uv(
+                fret_core::UvRect {
+                    u0: 0.5,
+                    v0: 0.5,
+                    u1: 1.0,
+                    v1: 1.0,
+                },
+            ));
+
+            ui.add_child(row_top, tl);
+            ui.add_child(row_top, tr);
+            ui.add_child(row_bottom, bl);
+            ui.add_child(row_bottom, br);
+            ui.add_child(ui_kit_image_col, row_top);
+            ui.add_child(ui_kit_image_col, row_bottom);
+
+            ui.add_child(ui_kit_image_frame, ui_kit_image_col);
             ui.add_child(ui_kit_root, ui_kit_image_frame);
         }
 

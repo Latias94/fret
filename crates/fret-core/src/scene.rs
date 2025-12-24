@@ -103,6 +103,14 @@ pub enum SceneOp {
         opacity: f32,
     },
 
+    ImageRegion {
+        order: DrawOrder,
+        rect: Rect,
+        image: ImageId,
+        uv: UvRect,
+        opacity: f32,
+    },
+
     Text {
         order: DrawOrder,
         origin: Point,
@@ -116,6 +124,23 @@ pub enum SceneOp {
         target: RenderTargetId,
         opacity: f32,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct UvRect {
+    pub u0: f32,
+    pub v0: f32,
+    pub u1: f32,
+    pub v1: f32,
+}
+
+impl UvRect {
+    pub const FULL: Self = Self {
+        u0: 0.0,
+        v0: 0.0,
+        u1: 1.0,
+        v1: 1.0,
+    };
 }
 
 fn mix_u64(mut state: u64, value: u64) -> u64 {
@@ -207,6 +232,23 @@ fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             state = mix_u64(state, image.data().as_ffi());
             mix_f32(state, opacity)
         }
+        SceneOp::ImageRegion {
+            order,
+            rect,
+            image,
+            uv,
+            opacity,
+        } => {
+            let mut state = mix_u64(state, 7);
+            state = mix_u64(state, u64::from(order.0));
+            state = mix_rect(state, rect);
+            state = mix_u64(state, image.data().as_ffi());
+            state = mix_f32(state, uv.u0);
+            state = mix_f32(state, uv.v0);
+            state = mix_f32(state, uv.u1);
+            state = mix_f32(state, uv.v1);
+            mix_f32(state, opacity)
+        }
         SceneOp::Text {
             order,
             origin,
@@ -272,6 +314,19 @@ fn translate_scene_op(op: SceneOp, delta: Point) -> SceneOp {
             order,
             rect: translate_rect(rect, delta),
             image,
+            opacity,
+        },
+        SceneOp::ImageRegion {
+            order,
+            rect,
+            image,
+            uv,
+            opacity,
+        } => SceneOp::ImageRegion {
+            order,
+            rect: translate_rect(rect, delta),
+            image,
+            uv,
             opacity,
         },
         SceneOp::Text {

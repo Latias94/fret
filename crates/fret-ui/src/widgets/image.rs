@@ -1,4 +1,4 @@
-use fret_core::{DrawOrder, Event, ImageId, SceneOp, SemanticsRole, Size};
+use fret_core::{DrawOrder, Event, ImageId, SceneOp, SemanticsRole, Size, UvRect};
 
 use crate::{LayoutCx, PaintCx, UiHost, Widget};
 
@@ -6,6 +6,7 @@ pub struct Image {
     image: ImageId,
     opacity: f32,
     desired_size: Option<Size>,
+    uv: Option<UvRect>,
 }
 
 impl Image {
@@ -14,6 +15,7 @@ impl Image {
             image,
             opacity: 1.0,
             desired_size: None,
+            uv: None,
         }
     }
 
@@ -24,6 +26,11 @@ impl Image {
 
     pub fn with_size(mut self, size: Size) -> Self {
         self.desired_size = Some(size);
+        self
+    }
+
+    pub fn with_uv(mut self, uv: UvRect) -> Self {
+        self.uv = Some(uv);
         self
     }
 }
@@ -44,11 +51,22 @@ impl<H: UiHost> Widget<H> for Image {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        cx.scene.push(SceneOp::Image {
-            order: DrawOrder(0),
-            rect: cx.bounds,
-            image: self.image,
-            opacity: self.opacity.clamp(0.0, 1.0),
-        });
+        let opacity = self.opacity.clamp(0.0, 1.0);
+        if let Some(uv) = self.uv {
+            cx.scene.push(SceneOp::ImageRegion {
+                order: DrawOrder(0),
+                rect: cx.bounds,
+                image: self.image,
+                uv,
+                opacity,
+            });
+        } else {
+            cx.scene.push(SceneOp::Image {
+                order: DrawOrder(0),
+                rect: cx.bounds,
+                image: self.image,
+                opacity,
+            });
+        }
     }
 }

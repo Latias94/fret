@@ -1291,6 +1291,84 @@ impl Renderer {
                         image: *image,
                     }));
                 }
+                SceneOp::ImageRegion { .. } => {
+                    flush_quad_batch!();
+                    let SceneOp::ImageRegion {
+                        rect,
+                        image,
+                        uv,
+                        opacity,
+                        ..
+                    } = op
+                    else {
+                        unreachable!();
+                    };
+                    if *opacity <= 0.0 {
+                        continue;
+                    }
+                    if self.images.get(*image).is_none() {
+                        continue;
+                    }
+                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
+                    if w <= 0.0 || h <= 0.0 {
+                        continue;
+                    }
+
+                    let first_vertex = viewport_vertices.len() as u32;
+                    let o = opacity.clamp(0.0, 1.0);
+
+                    let x0 = x;
+                    let y0 = y;
+                    let x1 = x + w;
+                    let y1 = y + h;
+
+                    let (u0, v0, u1, v1) = (uv.u0, uv.v0, uv.u1, uv.v1);
+                    viewport_vertices.extend_from_slice(&[
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [u0, v0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y0],
+                            uv: [u1, v0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [u1, v1],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [u0, v0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [u1, v1],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y1],
+                            uv: [u0, v1],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                    ]);
+
+                    ordered_draws.push(OrderedDraw::Image(ImageDraw {
+                        scissor: current_scissor,
+                        first_vertex,
+                        vertex_count: 6,
+                        image: *image,
+                    }));
+                }
                 SceneOp::Text {
                     origin,
                     text,
