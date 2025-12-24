@@ -7,7 +7,9 @@ use fret_components_ui::{
     dropdown_menu::DropdownMenuButton,
     frame::Frame,
     icon_button::IconButton,
+    list_view::ListView,
     progress::ProgressBar,
+    scroll_area::ScrollArea,
     select::{Select, SelectOption},
     separator::Separator,
     slider::Slider,
@@ -17,7 +19,9 @@ use fret_components_ui::{
     toolbar::Toolbar,
     tooltip::TooltipArea,
 };
-use fret_core::{AppWindowId, NodeId, PlatformCapabilities, Px, Rect, Scene, Size, TextService};
+use fret_core::{
+    AppWindowId, Color, NodeId, PlatformCapabilities, Px, Rect, Scene, Size, TextService,
+};
 use fret_render::{ImageColorSpace, ImageDescriptor, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui_app::{
@@ -172,6 +176,39 @@ fn build_ui_kit_contents(
         ],
     ));
     ui.add_child(col, select);
+
+    let scroll_area_label = ui.create_node(Text::new("ScrollArea"));
+    ui.add_child(col, scroll_area_label);
+
+    let scroll_area_panel = ui.create_node(FixedPanel::new(Px(160.0), Color::TRANSPARENT));
+    ui.add_child(col, scroll_area_panel);
+
+    let scroll_area = ui.create_node(
+        ScrollArea::new().refine_style(StyleRefinement::default().rounded_md().border_1()),
+    );
+    ui.add_child(scroll_area_panel, scroll_area);
+
+    let scroll_area_content =
+        ui.create_node(Column::new().with_padding(Px(12.0)).with_spacing(Px(6.0)));
+    ui.add_child(scroll_area, scroll_area_content);
+    for i in 0..8 {
+        let row = ui.create_node(Text::new(format!("ScrollArea row {}", i + 1)));
+        ui.add_child(scroll_area_content, row);
+    }
+
+    let list_view_label = ui.create_node(Text::new("ListView (virtualized)"));
+    ui.add_child(col, list_view_label);
+
+    let items: Vec<String> = (0..20_000).map(|i| format!("Item {}", i + 1)).collect();
+    let items_model = app.models_mut().insert(items);
+    let selection_model = app.models_mut().insert(None::<usize>);
+
+    let list_panel = ui.create_node(FixedPanel::new(Px(220.0), Color::TRANSPARENT));
+    ui.add_child(col, list_panel);
+
+    let list_view =
+        ui.create_node(ListView::new(items_model).with_selection_model(selection_model));
+    ui.add_child(list_panel, list_view);
 
     let separator = ui.create_node(Separator::horizontal());
     ui.add_child(col, separator);
