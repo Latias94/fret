@@ -5,7 +5,8 @@ use fret_app::{
 use fret_components_icons::IconId;
 use fret_components_ui::{
     ContextMenuService, DialogAction, DialogRequest, DialogService, PopoverService,
-    Size as ComponentSize, Space, StyleRefinement, ToastAction, TooltipService, WindowOverlays,
+    Size as ComponentSize, Space, StyleRefinement, StyledExt as _, ToastAction, TooltipService,
+    WindowOverlays,
     button::{Button, ButtonIntent, ButtonVariant},
     checkbox::Checkbox,
     combobox::Combobox,
@@ -247,7 +248,7 @@ fn build_ui_kit_contents(
             .rounded_md()
             .border_1()
             .px_3()
-            .py_1(),
+            .py_2(),
     ));
     let buttons = ui.create_node(Row::new().with_spacing(Px(10.0)));
     let primary = ui.create_node(
@@ -544,13 +545,13 @@ fn build_ui_kit_contents(
         ],
     };
     let dropdown = ui.create_node(
-        DropdownMenuButton::new("DropdownMenu", dropdown_menu).refine_style(
-            StyleRefinement::default()
-                .rounded_md()
-                .border_1()
-                .px_3()
-                .py_1(),
-        ),
+        DropdownMenuButton::new("DropdownMenu", dropdown_menu)
+            .styled()
+            .rounded_md()
+            .border_1()
+            .px_3()
+            .py_2()
+            .finish(),
     );
     ui.add_child(col, dropdown);
 

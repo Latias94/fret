@@ -231,6 +231,34 @@ pub struct StyleRefinement {
 }
 
 impl StyleRefinement {
+    pub fn merge(mut self, other: StyleRefinement) -> Self {
+        if other.padding_x.is_some() {
+            self.padding_x = other.padding_x;
+        }
+        if other.padding_y.is_some() {
+            self.padding_y = other.padding_y;
+        }
+        if other.min_height.is_some() {
+            self.min_height = other.min_height;
+        }
+        if other.radius.is_some() {
+            self.radius = other.radius;
+        }
+        if other.border_width.is_some() {
+            self.border_width = other.border_width;
+        }
+        if other.background.is_some() {
+            self.background = other.background;
+        }
+        if other.border_color.is_some() {
+            self.border_color = other.border_color;
+        }
+        if other.text_color.is_some() {
+            self.text_color = other.text_color;
+        }
+        self
+    }
+
     pub fn px(mut self, space: Space) -> Self {
         self.padding_x = Some(MetricRef::space(space));
         self
@@ -253,6 +281,10 @@ impl StyleRefinement {
     }
 
     // Tailwind-like spacing scale, backed by namespaced tokens.
+    pub fn px_1(self) -> Self {
+        self.px(Space::N1)
+    }
+
     pub fn px_2(self) -> Self {
         self.px(Space::N2)
     }
@@ -261,8 +293,40 @@ impl StyleRefinement {
         self.px(Space::N3)
     }
 
+    pub fn px_4(self) -> Self {
+        self.px(Space::N4)
+    }
+
     pub fn py_1(self) -> Self {
         self.py(Space::N1)
+    }
+
+    pub fn py_2(self) -> Self {
+        self.py(Space::N2)
+    }
+
+    pub fn py_3(self) -> Self {
+        self.py(Space::N3)
+    }
+
+    pub fn py_4(self) -> Self {
+        self.py(Space::N4)
+    }
+
+    pub fn p_1(self) -> Self {
+        self.p(Space::N1)
+    }
+
+    pub fn p_2(self) -> Self {
+        self.p(Space::N2)
+    }
+
+    pub fn p_3(self) -> Self {
+        self.p(Space::N3)
+    }
+
+    pub fn p_4(self) -> Self {
+        self.p(Space::N4)
     }
 
     pub fn rounded_md(self) -> Self {

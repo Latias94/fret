@@ -6,6 +6,7 @@
 mod list_style;
 mod sizing;
 mod style;
+mod styled;
 
 pub mod app_menu_bar;
 pub mod button;
@@ -45,6 +46,7 @@ pub use context_menu::{ContextMenu, ContextMenuStyle};
 pub use dialog_overlay::{DialogAction, DialogOverlay, DialogRequest, DialogService, DialogStyle};
 pub use sizing::{Sizable, Size};
 pub use style::{ColorRef, MetricRef, Radius, Space, StyleRefinement};
+pub use styled::{Stylable, Styled, StyledExt};
 pub use text_area_field::TextAreaField;
 pub use toast::{ToastAction, ToastKind, ToastOverlay, ToastRequest, ToastService, ToastStyle};
 pub use tooltip::{TooltipArea, TooltipOverlay, TooltipRequest, TooltipService, TooltipStyle};
