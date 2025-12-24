@@ -150,10 +150,10 @@ impl<H: UiHost> Widget<H> for Toolbar {
         );
 
         let inner_width = Px((cx.available.width.0 - pad_x * 2.0).max(0.0));
-        let inner_height = Px((self.resolved.height.0 - pad_y * 2.0).max(0.0));
+        let resolved_height = self.resolved.height.0.max(0.0);
 
         let mut remaining_w = inner_width.0;
-        let mut max_h = 0.0f32;
+        let mut max_pref_h = 0.0f32;
         let mut placements: Vec<(fret_core::NodeId, fret_core::Point, Size)> = Vec::new();
         let mut x = inner_origin.x.0;
 
@@ -169,13 +169,14 @@ impl<H: UiHost> Widget<H> for Toolbar {
                 Size::new(Px(remaining_w), Px(1.0e9)),
             );
             let child_size = cx.layout_in(child, probe);
+            max_pref_h = max_pref_h.max(child_size.height.0.max(0.0));
 
             let w = if is_last {
                 Px(remaining_w)
             } else {
                 Px(child_size.width.0.min(remaining_w))
             };
-            let h = Px(child_size.height.0.min(inner_height.0).max(0.0));
+            let h = Px(child_size.height.0.max(0.0));
             placements.push((
                 child,
                 fret_core::Point::new(Px(x), inner_origin.y),
@@ -184,17 +185,21 @@ impl<H: UiHost> Widget<H> for Toolbar {
 
             x += w.0;
             remaining_w = (remaining_w - w.0).max(0.0);
-            max_h = max_h.max(h.0);
         }
 
+        // Ensure the toolbar is tall enough for its contents, even if the theme token is too small.
+        let min_height = (max_pref_h + pad_y * 2.0).max(resolved_height);
+        let inner_height = Px((min_height - pad_y * 2.0).max(0.0));
+
         for (child, origin, size) in placements {
-            let dy = ((inner_height.0 - size.height.0).max(0.0)) * 0.5;
+            let h = Px(size.height.0.min(inner_height.0).max(0.0));
+            let dy = ((inner_height.0 - h.0).max(0.0)) * 0.5;
             let child_origin = fret_core::Point::new(origin.x, Px(origin.y.0 + dy));
-            let bounds = Rect::new(child_origin, Size::new(size.width, Px(inner_height.0)));
+            let bounds = Rect::new(child_origin, Size::new(size.width, h));
             let _ = cx.layout_in(child, bounds);
         }
 
-        let h = self.resolved.height.0.max(0.0).min(cx.available.height.0);
+        let h = min_height.min(cx.available.height.0);
         Size::new(cx.available.width, Px(h))
     }
 

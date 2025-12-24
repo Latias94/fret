@@ -1038,6 +1038,7 @@ Status:
   - `crates/fret-components-icons`: renderer-agnostic icon registry + small builtin glyph fallback set.
   - `fret-ui`: `Popover` + `PopoverService` (anchored overlay primitive used by `Select`).
   - `fret-demo`: adds a `UI Kit` panel (`PanelKey` `core.ui_kit`) to validate composition and theme-driven styling.
+  - `fret-demo --bin ui_kit`: standalone UI Kit window (no docking/editor shell) to validate component ergonomics and overlays in isolation.
 
 References:
 

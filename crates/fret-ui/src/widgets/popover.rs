@@ -6,7 +6,7 @@ use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, NodeId, Point, Px, Rect,
     SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
-use fret_runtime::CommandId;
+use fret_runtime::{CommandId, Effect};
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Debug, Clone)]
@@ -236,6 +236,7 @@ impl Popover {
             .with_global_mut(PopoverService::default, |service, _app| {
                 service.set_result(window, request.owner, index);
             });
+        cx.app.push_effect(Effect::UiInvalidateLayout { window });
         self.cleanup(cx.text);
         cx.dispatch_command(CommandId::from("popover.close"));
         cx.stop_propagation();

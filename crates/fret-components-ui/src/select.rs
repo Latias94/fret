@@ -241,6 +241,20 @@ impl<H: UiHost> Widget<H> for Select {
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        if let Some(window) = cx.window {
+            if self.sync_result(cx.app, window, cx.node) {
+                // The selected label can change without a direct pointer event on the select
+                // itself (e.g. selection happens inside the popover overlay). Ensure we refresh
+                // our cached text in the next paint.
+                if let Some(blob) = self.label_blob.take() {
+                    cx.text.release(blob);
+                }
+                self.label_metrics = None;
+                self.label_scale_factor_bits = None;
+                self.last_label = None;
+            }
+        }
+
         self.last_bounds = cx.bounds;
         cx.observe_model(self.model, Invalidation::Layout);
 
