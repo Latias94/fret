@@ -56,8 +56,10 @@ use fret_components_ui::{
     checkbox::Checkbox,
     frame::Frame,
     icon_button::IconButton,
+    progress::ProgressBar,
     select::{Select, SelectOption},
     separator::Separator,
+    slider::Slider,
     switch::Switch,
     tabs::Tabs,
     text_field::TextField,
@@ -3772,6 +3774,7 @@ impl WinitDriver for DemoDriver {
         let ui_kit_select = app.models_mut().insert(0usize);
         let ui_kit_checkbox = app.models_mut().insert(false);
         let ui_kit_switch = app.models_mut().insert(false);
+        let ui_kit_slider = app.models_mut().insert(0.35f32);
         let ui_kit_tabs = app.models_mut().insert(0usize);
         let ui_kit_root = ui.create_node(fret_ui_app::Column::new().with_spacing(Px(10.0)));
 
@@ -3830,6 +3833,13 @@ impl WinitDriver for DemoDriver {
         ui.add_child(ui_kit_switch_row, ui_kit_switch_node);
         ui.add_child(ui_kit_switch_row, ui_kit_switch_label);
         ui.add_child(ui_kit_root, ui_kit_switch_row);
+
+        let ui_kit_slider_label = ui.create_node(fret_ui_app::Text::new("Slider / Progress"));
+        ui.add_child(ui_kit_root, ui_kit_slider_label);
+        let ui_kit_slider_node = ui.create_node(Slider::new(ui_kit_slider).range(0.0, 1.0));
+        ui.add_child(ui_kit_root, ui_kit_slider_node);
+        let ui_kit_progress_node = ui.create_node(ProgressBar::new(ui_kit_slider));
+        ui.add_child(ui_kit_root, ui_kit_progress_node);
 
         let ui_kit_select_node = ui.create_node(
             Select::new(

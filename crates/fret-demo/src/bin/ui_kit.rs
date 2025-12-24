@@ -7,8 +7,10 @@ use fret_components_ui::{
     dropdown_menu::DropdownMenuButton,
     frame::Frame,
     icon_button::IconButton,
+    progress::ProgressBar,
     select::{Select, SelectOption},
     separator::Separator,
+    slider::Slider,
     switch::Switch,
     tabs::Tabs,
     text_field::TextField,
@@ -150,6 +152,14 @@ fn build_ui_kit_contents(
     ui.add_child(switch_row, switch_node);
     ui.add_child(switch_row, switch_label);
     ui.add_child(col, switch_row);
+
+    let slider_model = app.models_mut().insert(0.35f32);
+    let slider_label = ui.create_node(Text::new("Slider / Progress"));
+    ui.add_child(col, slider_label);
+    let slider = ui.create_node(Slider::new(slider_model).range(0.0, 1.0));
+    ui.add_child(col, slider);
+    let progress = ui.create_node(ProgressBar::new(slider_model));
+    ui.add_child(col, progress);
 
     let select_model = app.models_mut().insert(0usize);
     let select = ui.create_node(Select::new(

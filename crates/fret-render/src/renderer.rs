@@ -90,6 +90,27 @@ fn corners_to_vec4(c: Corners) -> [f32; 4] {
     ]
 }
 
+fn clamp_corner_radii_for_rect(rect_w: f32, rect_h: f32, corner_radii: [f32; 4]) -> [f32; 4] {
+    let mut max_radius = if rect_w.is_finite() && rect_h.is_finite() {
+        rect_w.min(rect_h) * 0.5
+    } else {
+        0.0
+    };
+    if !max_radius.is_finite() || max_radius <= 0.0 {
+        max_radius = 0.0;
+    }
+
+    corner_radii.map(|r| {
+        if !r.is_finite() || r <= 0.0 {
+            0.0
+        } else if max_radius == 0.0 {
+            0.0
+        } else {
+            r.min(max_radius)
+        }
+    })
+}
+
 fn edges_to_vec4(e: Edges) -> [f32; 4] {
     [e.left.0, e.top.0, e.right.0, e.bottom.0]
 }
@@ -1207,10 +1228,12 @@ impl Renderer {
                         quad_batch = Some((current_scissor, instances.len() as u32));
                     }
 
+                    let corner_radii =
+                        clamp_corner_radii_for_rect(w, h, corners_to_vec4(*corner_radii));
                     instances.push(QuadInstance {
                         rect: [x, y, w, h],
                         color: color_to_linear_rgba_premul(*background),
-                        corner_radii: corners_to_vec4(*corner_radii),
+                        corner_radii,
                         border: edges_to_vec4(*border),
                         border_color: color_to_linear_rgba_premul(*border_color),
                     });
@@ -1832,7 +1855,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 
 #[cfg(test)]
 mod tests {
-    use super::{QUAD_SHADER, TEXT_SHADER, VIEWPORT_SHADER};
+    use super::{QUAD_SHADER, TEXT_SHADER, VIEWPORT_SHADER, clamp_corner_radii_for_rect};
 
     #[test]
     fn shaders_parse_as_wgsl() {
@@ -1844,5 +1867,17 @@ mod tests {
             naga::front::wgsl::parse_str(src)
                 .unwrap_or_else(|err| panic!("WGSL parse failed for {name} shader: {err}"));
         }
+    }
+
+    #[test]
+    fn corner_radii_are_clamped_to_half_min_rect_dim() {
+        let radii = clamp_corner_radii_for_rect(100.0, 6.0, [999.0, 999.0, 999.0, 999.0]);
+        assert_eq!(radii, [3.0, 3.0, 3.0, 3.0]);
+    }
+
+    #[test]
+    fn corner_radii_clamp_is_nan_safe() {
+        let radii = clamp_corner_radii_for_rect(f32::NAN, 6.0, [999.0, -1.0, f32::NAN, 0.0]);
+        assert_eq!(radii, [0.0, 0.0, 0.0, 0.0]);
     }
 }

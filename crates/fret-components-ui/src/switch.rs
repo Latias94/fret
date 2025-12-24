@@ -96,9 +96,9 @@ impl Switch {
 
         let bg_off = component_color(
             "component.switch.bg_off",
-            // On dark themes, using `panel_background` often makes the track invisible against
-            // the surrounding panel. Prefer `surface_background` as a baseline.
-            ColorFallback::ThemeSurfaceBackground,
+            // On dark themes, `panel_background`/`surface_background` can be too close to the
+            // surrounding panel. `hover_background` is typically a subtle but visible overlay.
+            ColorFallback::ThemeHoverBackground,
         )
         .resolve(theme);
         let bg_on =
