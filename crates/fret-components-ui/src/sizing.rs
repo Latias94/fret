@@ -1,4 +1,4 @@
-use fret_core::Px;
+use fret_core::{FontId, Px, TextStyle};
 use fret_ui::Theme;
 
 /// Component sizing vocabulary inspired by Tailwind/shadcn and gpui-component.
@@ -102,6 +102,13 @@ impl Size {
                 Self::Large => Px(14.0),
             },
         )
+    }
+
+    pub fn control_text_style(self, theme: &Theme) -> TextStyle {
+        TextStyle {
+            font: FontId::default(),
+            size: self.control_text_px(theme),
+        }
     }
 
     pub fn control_radius(self, theme: &Theme) -> Px {

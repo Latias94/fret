@@ -10,6 +10,7 @@ use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
 use crate::style::{
     ColorFallback, MetricFallback, StyleRefinement, component_color, component_metric,
 };
+use crate::{Sizable, Size as ComponentSize};
 
 #[derive(Debug, Clone)]
 struct PreparedText {
@@ -21,6 +22,7 @@ pub struct DropdownMenuButton {
     label: Arc<str>,
     menu: Menu,
     style: StyleRefinement,
+    size: ComponentSize,
     hovered: bool,
     pressed: bool,
     last_bounds: Rect,
@@ -28,6 +30,7 @@ pub struct DropdownMenuButton {
     label_prepared: Option<PreparedText>,
     chevron_prepared: Option<PreparedText>,
     prepared_scale_factor_bits: Option<u32>,
+    prepared_theme_revision: Option<u64>,
     resolved: ResolvedStyle,
 }
 
@@ -43,6 +46,7 @@ struct ResolvedStyle {
     bg_active: Color,
     border: Color,
     text: Color,
+    text_size: Px,
 }
 
 impl Default for ResolvedStyle {
@@ -63,6 +67,7 @@ impl Default for ResolvedStyle {
                 b: 1.0,
                 a: 1.0,
             },
+            text_size: Px(13.0),
         }
     }
 }
@@ -73,6 +78,7 @@ impl DropdownMenuButton {
             label: label.into(),
             menu,
             style: StyleRefinement::default(),
+            size: ComponentSize::Medium,
             hovered: false,
             pressed: false,
             last_bounds: Rect::default(),
@@ -80,13 +86,24 @@ impl DropdownMenuButton {
             label_prepared: None,
             chevron_prepared: None,
             prepared_scale_factor_bits: None,
+            prepared_theme_revision: None,
             resolved: ResolvedStyle::default(),
         }
+    }
+
+    pub fn with_size(mut self, size: ComponentSize) -> Self {
+        self.size = size;
+        self.last_theme_revision = None;
+        self.prepared_scale_factor_bits = None;
+        self.prepared_theme_revision = None;
+        self
     }
 
     pub fn refine_style(mut self, style: StyleRefinement) -> Self {
         self.style = style;
         self.last_theme_revision = None;
+        self.prepared_scale_factor_bits = None;
+        self.prepared_theme_revision = None;
         self
     }
 
@@ -103,7 +120,7 @@ impl DropdownMenuButton {
             .unwrap_or_else(|| {
                 component_metric(
                     "component.dropdown_menu.padding_x",
-                    MetricFallback::Px(Px(10.0)),
+                    MetricFallback::Px(self.size.button_px(theme)),
                 )
             })
             .resolve(theme);
@@ -114,7 +131,7 @@ impl DropdownMenuButton {
             .unwrap_or_else(|| {
                 component_metric(
                     "component.dropdown_menu.padding_y",
-                    MetricFallback::Px(Px(6.0)),
+                    MetricFallback::Px(self.size.button_py(theme)),
                 )
             })
             .resolve(theme);
@@ -125,7 +142,7 @@ impl DropdownMenuButton {
             .unwrap_or_else(|| {
                 component_metric(
                     "component.dropdown_menu.min_height",
-                    MetricFallback::Px(Px(28.0)),
+                    MetricFallback::Px(self.size.button_h(theme)),
                 )
             })
             .resolve(theme);
@@ -190,6 +207,10 @@ impl DropdownMenuButton {
                 ColorFallback::ThemeTextPrimary,
             ))
             .resolve(theme);
+
+        let text_size = theme
+            .metric_by_key("component.dropdown_menu.text_px")
+            .unwrap_or_else(|| self.size.control_text_px(theme));
         self.resolved = ResolvedStyle {
             padding_x,
             padding_y,
@@ -201,7 +222,11 @@ impl DropdownMenuButton {
             bg_active,
             border,
             text,
+            text_size,
         };
+
+        self.prepared_scale_factor_bits = None;
+        self.prepared_theme_revision = None;
     }
 
     fn close_menu<H: UiHost>(&self, cx: &mut EventCx<'_, H>) {
@@ -234,7 +259,9 @@ impl DropdownMenuButton {
 
     fn ensure_prepared<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         let scale_bits = cx.scale_factor.to_bits();
+        let theme_rev = cx.theme().revision();
         if self.prepared_scale_factor_bits == Some(scale_bits)
+            && self.prepared_theme_revision == Some(theme_rev)
             && self.label_prepared.is_some()
             && self.chevron_prepared.is_some()
         {
@@ -243,6 +270,7 @@ impl DropdownMenuButton {
 
         self.cleanup_prepared(cx.text);
         self.prepared_scale_factor_bits = Some(scale_bits);
+        self.prepared_theme_revision = Some(theme_rev);
 
         let constraints = TextConstraints {
             max_width: None,
@@ -252,7 +280,7 @@ impl DropdownMenuButton {
 
         let style = TextStyle {
             font: fret_core::FontId::default(),
-            size: Px(13.0),
+            size: self.resolved.text_size,
         };
 
         let (label_blob, label_metrics) = cx.text.prepare(self.label.as_ref(), style, constraints);
@@ -276,6 +304,13 @@ impl DropdownMenuButton {
             text.release(p.blob);
         }
         self.prepared_scale_factor_bits = None;
+        self.prepared_theme_revision = None;
+    }
+}
+
+impl Sizable for DropdownMenuButton {
+    fn with_size(self, size: ComponentSize) -> Self {
+        DropdownMenuButton::with_size(self, size)
     }
 }
 
@@ -361,7 +396,7 @@ impl<H: UiHost> Widget<H> for DropdownMenuButton {
         };
         let style = TextStyle {
             font: fret_core::FontId::default(),
-            size: Px(13.0),
+            size: self.resolved.text_size,
         };
         let label_metrics = cx.text.measure(self.label.as_ref(), style, constraints);
         let chevron_metrics = cx.text.measure("▾", style, constraints);

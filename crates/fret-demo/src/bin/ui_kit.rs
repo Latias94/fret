@@ -4,6 +4,7 @@ use fret_components_ui::{
     Size as ComponentSize, StyleRefinement,
     button::{Button, ButtonIntent, ButtonVariant},
     checkbox::Checkbox,
+    command::{CommandItem, CommandList},
     dropdown_menu::DropdownMenuButton,
     frame::Frame,
     icon_button::IconButton,
@@ -236,6 +237,62 @@ fn build_ui_kit_contents(
         ],
     ));
     ui.add_child(col, select);
+
+    let command_title = ui.create_node(Text::new("Command (search + virtual list)"));
+    ui.add_child(col, command_title);
+
+    let command_query = app.models_mut().insert(String::new());
+    let command_selection = app.models_mut().insert(None::<Arc<str>>);
+    let command_items = app.models_mut().insert(vec![
+        CommandItem::new("file.open", "Open File")
+            .group("File")
+            .shortcut("⌘O")
+            .keyword("open")
+            .keyword("file"),
+        CommandItem::new("file.save", "Save")
+            .group("File")
+            .shortcut("⌘S")
+            .keyword("save"),
+        CommandItem::new("edit.undo", "Undo")
+            .group("Edit")
+            .shortcut("⌘Z")
+            .keyword("undo"),
+        CommandItem::new("edit.redo", "Redo")
+            .group("Edit")
+            .shortcut("⇧⌘Z")
+            .keyword("redo"),
+        CommandItem::new("view.reset_layout", "Reset Layout")
+            .group("View")
+            .keyword("layout")
+            .detail("Restore default docking layout"),
+        CommandItem::new("disabled.example", "Disabled item").disabled(),
+    ]);
+
+    let command_frame = ui.create_node(Frame::new(
+        StyleRefinement::default()
+            .rounded_md()
+            .border_1()
+            .px_3()
+            .py_1(),
+    ));
+    ui.add_child(col, command_frame);
+
+    let command_col = ui.create_node(Column::new().with_spacing(Px(8.0)));
+    ui.add_child(command_frame, command_col);
+
+    let command_query_field =
+        ui.create_node(TextField::new(command_query).with_size(ComponentSize::Medium));
+    ui.add_child(command_col, command_query_field);
+
+    let command_list_panel = ui.create_node(FixedPanel::new(Px(180.0), Color::TRANSPARENT));
+    ui.add_child(command_col, command_list_panel);
+
+    let command_list = ui.create_node(
+        CommandList::new(command_items, command_query)
+            .with_size(ComponentSize::Medium)
+            .with_selection_model(command_selection),
+    );
+    ui.add_child(command_list_panel, command_list);
 
     let scroll_area_label = ui.create_node(Text::new("ScrollArea"));
     ui.add_child(col, scroll_area_label);

@@ -97,7 +97,7 @@ optional integration with `@tanstack/react-virtual` / `react-window`. For Fret, 
 
 ### P0 (core app UI)
 
-- `Command` (command palette): fuzzy search + groups + shortcuts + keyboard navigation
+- `Command` (command UI): searchable list + groups + shortcuts + keyboard navigation
 - `Popover` + `HoverCard` equivalents: anchored overlays and hover previews
 - `Toast`/`Sonner`: transient notifications + stacking + timers
 - `Menubar`: application menus (native integration later; custom first is ok)
@@ -133,7 +133,6 @@ Practical gaps to prioritize for parity:
 
 ## Next steps (recommended)
 
-1. Land the component size/density contract (MVP 47 / ADR 0056), then migrate existing UI kit controls.
-2. Add a component-level “Command palette” built on top of:
-   - `Dialog` + `TextField` + `VirtualList` (groups, separators, shortcut trailing)
-3. Expand `ListView` API beyond `Vec<String>` (leading/secondary/trailing + group headers/separators).
+1. Expand `Command` beyond the list: add a palette-style shell (overlay/backdrop + open/close + focus policy) and
+   keyboard navigation parity with shadcn/cmdk (Down/Up/Enter) while keeping the list virtualized.
+2. Expand `ListView` API beyond `Vec<String>` (leading/secondary/trailing + group headers/separators).
