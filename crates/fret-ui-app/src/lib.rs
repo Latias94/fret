@@ -14,7 +14,7 @@ pub use fret_ui::widgets;
 pub use fret_ui::{
     AppMenuBar, Bar, BoundTextInput, Clip, ColoredPanel, Column, ContextMenu, ContextMenuRequest,
     ContextMenuService, ContextMenuStyle, DockManager, DockPanel, DockPanelContentService,
-    DockSpace, FixedPanel, GlobalElementId, HeaderBody, Invalidation, PaintCachePolicy,
+    DockSpace, FixedPanel, GlobalElementId, HeaderBody, Image, Invalidation, PaintCachePolicy,
     PanelThemeBackground, Popover, PopoverItem, PopoverRequest, PopoverService, PopoverStyle, Row,
     Scroll, Split, Stack, Text, TextArea, TextAreaStyle, TextInput, TextInputStyle, Theme,
     ThemeConfig, ThemeSnapshot, Toolbar, ToolbarItem, TreeNode, TreeView, TreeViewStyle,

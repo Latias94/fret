@@ -1,10 +1,12 @@
 mod error;
+mod images;
 mod renderer;
 mod surface;
 mod targets;
 mod text;
 
 pub use error::RenderError;
+pub use images::{ImageColorSpace, ImageDescriptor, ImageRegistry};
 pub use renderer::{ClearColor, RenderSceneParams, Renderer};
 pub use surface::SurfaceState;
 pub use targets::{RenderTargetColorSpace, RenderTargetDescriptor, RenderTargetRegistry};

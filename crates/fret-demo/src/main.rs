@@ -32,6 +32,13 @@ use undo::{EditCommand, UndoStack};
 use viewport_targets::{ViewportTarget, ViewportTargets};
 use world::DemoWorld;
 
+struct UiKitImage {
+    id: fret_core::ImageId,
+    #[allow(dead_code)]
+    texture: wgpu::Texture,
+    _view: wgpu::TextureView,
+}
+
 use asset_drop::{
     AssetDropDecision, AssetDropRegistry, AssetDropRule, AssetDropService, AssetDropTarget,
     CurrentSceneService,
@@ -58,7 +65,7 @@ use fret_components_ui::{
 };
 use fret_core::{
     Axis, Color, DockLayoutNodeV1, DockLayoutV1, DockNode, DockOp, DropZone, PanelKey,
-    PlatformCapabilities, Px, Rect, RenderTargetId, Scene, WindowAnchor,
+    PlatformCapabilities, Px, Rect, RenderTargetId, Scene, Size, WindowAnchor,
 };
 use fret_editor::{
     InspectorEditKind, InspectorEditService, MarqueeSelectInteraction, PanOrbitInteraction,
@@ -67,7 +74,7 @@ use fret_editor::{
     TranslateAxisConstraint, TranslateGizmoInteraction, ViewportInteraction, ViewportToolManager,
     ViewportToolMode, parse_value,
 };
-use fret_render::{Renderer, WgpuContext};
+use fret_render::{ImageColorSpace, ImageDescriptor, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{
     EngineFrameUpdate, RenderTargetUpdate, WindowCreateSpec, WinitDriver, WinitRunner,
     WinitRunnerConfig,
@@ -76,7 +83,7 @@ use fret_ui_app::Invalidation;
 use fret_ui_app::PopoverService;
 use fret_ui_app::dock::ViewportMarquee;
 use fret_ui_app::{
-    ContextMenuService, DockManager, DockPanel, DockPanelContentService, Theme, ThemeConfig,
+    ContextMenuService, DockManager, DockPanel, DockPanelContentService, Image, Theme, ThemeConfig,
     UiTree, ViewportPanel,
 };
 use scene_document::{SceneDocumentService, SceneSnapshot};
@@ -262,6 +269,7 @@ struct DemoDriver {
     main_window: Option<fret_core::AppWindowId>,
     viewport_targets: Option<ViewportTargets>,
     background: Option<SceneBackgroundRenderer>,
+    ui_kit_image: Option<UiKitImage>,
     logical_windows: HashMap<fret_core::AppWindowId, String>,
     window_placements: HashMap<fret_core::AppWindowId, fret_core::DockWindowPlacementV1>,
     next_floating_index: u32,
@@ -1946,6 +1954,78 @@ impl WinitDriver for DemoDriver {
             &context.device,
             ViewportTarget::FORMAT,
         ));
+
+        if self.ui_kit_image.is_none() {
+            let tex_w = 128u32;
+            let tex_h = 96u32;
+            let format = wgpu::TextureFormat::Rgba8UnormSrgb;
+
+            let texture = context.device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("fret-demo ui kit image"),
+                size: wgpu::Extent3d {
+                    width: tex_w,
+                    height: tex_h,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                view_formats: &[],
+            });
+
+            let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+            let mut pixels: Vec<u8> = vec![0; (tex_w * tex_h * 4) as usize];
+            for y in 0..tex_h {
+                for x in 0..tex_w {
+                    let i = ((y * tex_w + x) * 4) as usize;
+                    let checker = ((x / 16) ^ (y / 16)) & 1;
+                    let base = if checker == 0 { 28u8 } else { 40u8 };
+                    let r = base.saturating_add(((x * 255) / tex_w.max(1)) as u8 / 3);
+                    let g = base.saturating_add(((y * 255) / tex_h.max(1)) as u8 / 3);
+                    let b = base.saturating_add(80);
+                    pixels[i] = r;
+                    pixels[i + 1] = g;
+                    pixels[i + 2] = b;
+                    pixels[i + 3] = 255;
+                }
+            }
+
+            context.queue.write_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture: &texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::All,
+                },
+                &pixels,
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(tex_w * 4),
+                    rows_per_image: Some(tex_h),
+                },
+                wgpu::Extent3d {
+                    width: tex_w,
+                    height: tex_h,
+                    depth_or_array_layers: 1,
+                },
+            );
+
+            let id = renderer.register_image(ImageDescriptor {
+                view: view.clone(),
+                size: (tex_w, tex_h),
+                format,
+                color_space: ImageColorSpace::Srgb,
+            });
+
+            self.ui_kit_image = Some(UiKitImage {
+                id,
+                texture,
+                _view: view,
+            });
+        }
         let mut targets = ViewportTargets::default();
         targets.insert(
             PanelKey::new("core.scene"),
@@ -3770,6 +3850,20 @@ impl WinitDriver for DemoDriver {
         ui.add_child(ui_kit_icons_row, ui_kit_icon_close);
         ui.add_child(ui_kit_icons_frame, ui_kit_icons_row);
         ui.add_child(ui_kit_root, ui_kit_icons_frame);
+
+        if let Some(img) = self.ui_kit_image.as_ref().map(|i| i.id) {
+            let ui_kit_image_frame = ui.create_node(Frame::new(
+                StyleRefinement::default()
+                    .rounded_md()
+                    .border_1()
+                    .px_3()
+                    .py_1(),
+            ));
+            let ui_kit_image_node =
+                ui.create_node(Image::new(img).with_size(Size::new(Px(256.0), Px(192.0))));
+            ui.add_child(ui_kit_image_frame, ui_kit_image_node);
+            ui.add_child(ui_kit_root, ui_kit_image_frame);
+        }
 
         let ui_kit_tabs_node = ui.create_node(Tabs::new(
             ui_kit_tabs,

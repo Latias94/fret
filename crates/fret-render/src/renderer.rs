@@ -5,6 +5,7 @@ use fret_core::{
 };
 use std::collections::HashMap;
 
+use crate::images::{ImageDescriptor, ImageRegistry};
 use crate::targets::{RenderTargetDescriptor, RenderTargetRegistry};
 use crate::text::TextSystem;
 
@@ -162,6 +163,13 @@ struct ViewportDraw {
     target: fret_core::RenderTargetId,
 }
 
+struct ImageDraw {
+    scissor: ScissorRect,
+    first_vertex: u32,
+    vertex_count: u32,
+    image: fret_core::ImageId,
+}
+
 struct TextDraw {
     scissor: ScissorRect,
     first_vertex: u32,
@@ -171,6 +179,7 @@ struct TextDraw {
 enum OrderedDraw {
     Quad(DrawCall),
     Viewport(ViewportDraw),
+    Image(ImageDraw),
     Text(TextDraw),
 }
 
@@ -205,10 +214,15 @@ pub struct Renderer {
     text_system: TextSystem,
 
     render_targets: RenderTargetRegistry,
+    images: ImageRegistry,
 
     viewport_bind_groups: HashMap<fret_core::RenderTargetId, (u64, wgpu::BindGroup)>,
     render_target_revisions: HashMap<fret_core::RenderTargetId, u64>,
     render_targets_generation: u64,
+
+    image_bind_groups: HashMap<fret_core::ImageId, (u64, wgpu::BindGroup)>,
+    image_revisions: HashMap<fret_core::ImageId, u64>,
+    images_generation: u64,
 
     scene_encoding_cache_key: Option<SceneEncodingCacheKey>,
     scene_encoding_cache: SceneEncoding,
@@ -249,6 +263,7 @@ struct SceneEncodingCacheKey {
     scene_fingerprint: u64,
     scene_ops_len: usize,
     render_targets_generation: u64,
+    images_generation: u64,
 }
 
 impl Renderer {
@@ -386,9 +401,13 @@ impl Renderer {
             text_vertex_capacity,
             text_system,
             render_targets: RenderTargetRegistry::default(),
+            images: ImageRegistry::default(),
             viewport_bind_groups: HashMap::new(),
             render_target_revisions: HashMap::new(),
             render_targets_generation: 0,
+            image_bind_groups: HashMap::new(),
+            image_revisions: HashMap::new(),
+            images_generation: 0,
             scene_encoding_cache_key: None,
             scene_encoding_cache: SceneEncoding::default(),
             scene_encoding_scratch: SceneEncoding::default(),
@@ -403,6 +422,34 @@ impl Renderer {
         self.render_target_revisions.insert(id, 1);
         self.render_targets_generation = self.render_targets_generation.saturating_add(1);
         id
+    }
+
+    pub fn register_image(&mut self, desc: ImageDescriptor) -> fret_core::ImageId {
+        let id = self.images.register(desc);
+        self.image_revisions.insert(id, 1);
+        self.images_generation = self.images_generation.saturating_add(1);
+        id
+    }
+
+    pub fn update_image(&mut self, id: fret_core::ImageId, desc: ImageDescriptor) -> bool {
+        if !self.images.update(id, desc) {
+            return false;
+        }
+        let next = self.image_revisions.get(&id).copied().unwrap_or(0) + 1;
+        self.image_revisions.insert(id, next);
+        self.image_bind_groups.remove(&id);
+        self.images_generation = self.images_generation.saturating_add(1);
+        true
+    }
+
+    pub fn unregister_image(&mut self, id: fret_core::ImageId) -> bool {
+        if !self.images.unregister(id) {
+            return false;
+        }
+        self.image_revisions.remove(&id);
+        self.image_bind_groups.remove(&id);
+        self.images_generation = self.images_generation.saturating_add(1);
+        true
     }
 
     pub fn update_render_target(
@@ -767,6 +814,7 @@ impl Renderer {
             scene_fingerprint: scene.fingerprint(),
             scene_ops_len: scene.ops_len(),
             render_targets_generation: self.render_targets_generation,
+            images_generation: self.images_generation,
         };
 
         let cache_hit = self.scene_encoding_cache_key == Some(key);
@@ -784,6 +832,7 @@ impl Renderer {
         };
 
         self.prepare_viewport_bind_groups(device, &encoding.ordered_draws);
+        self.prepare_image_bind_groups(device, &encoding.ordered_draws);
 
         let instances = &encoding.instances;
         let viewport_vertices = &encoding.viewport_vertices;
@@ -919,6 +968,33 @@ impl Renderer {
                             0..1,
                         );
                     }
+                    OrderedDraw::Image(draw) => {
+                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                            continue;
+                        }
+
+                        if !matches!(active_pipeline, ActivePipeline::Viewport) {
+                            pass.set_pipeline(viewport_pipeline);
+                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                            pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
+                            active_pipeline = ActivePipeline::Viewport;
+                        }
+
+                        let Some((_, bind_group)) = self.image_bind_groups.get(&draw.image) else {
+                            continue;
+                        };
+                        pass.set_bind_group(1, bind_group, &[]);
+                        pass.set_scissor_rect(
+                            draw.scissor.x,
+                            draw.scissor.y,
+                            draw.scissor.w,
+                            draw.scissor.h,
+                        );
+                        pass.draw(
+                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                            0..1,
+                        );
+                    }
                     OrderedDraw::Text(draw) => {
                         if draw.scissor.w == 0 || draw.scissor.h == 0 {
                             continue;
@@ -998,6 +1074,45 @@ impl Renderer {
 
             self.viewport_bind_groups
                 .insert(target, (revision, bind_group));
+        }
+    }
+
+    fn prepare_image_bind_groups(&mut self, device: &wgpu::Device, draws: &[OrderedDraw]) {
+        for item in draws {
+            let OrderedDraw::Image(draw) = item else {
+                continue;
+            };
+
+            let image = draw.image;
+            let Some(view) = self.images.get(image) else {
+                continue;
+            };
+
+            let revision = self.image_revisions.get(&image).copied().unwrap_or(0);
+            let needs_rebuild = match self.image_bind_groups.get(&image) {
+                Some((cached, _)) => *cached != revision,
+                None => true,
+            };
+            if !needs_rebuild {
+                continue;
+            }
+
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("fret image texture bind group"),
+                layout: &self.viewport_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Sampler(&self.viewport_sampler),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::TextureView(view),
+                    },
+                ],
+            });
+
+            self.image_bind_groups.insert(image, (revision, bind_group));
         }
     }
 
@@ -1101,9 +1216,80 @@ impl Renderer {
                     });
                 }
                 SceneOp::Image { .. } => {
-                    // Not implemented yet. Flush to preserve ordering when this primitive is
-                    // implemented later.
                     flush_quad_batch!();
+                    let SceneOp::Image {
+                        rect,
+                        image,
+                        opacity,
+                        ..
+                    } = op
+                    else {
+                        unreachable!();
+                    };
+                    if *opacity <= 0.0 {
+                        continue;
+                    }
+                    if self.images.get(*image).is_none() {
+                        continue;
+                    }
+                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
+                    if w <= 0.0 || h <= 0.0 {
+                        continue;
+                    }
+
+                    let first_vertex = viewport_vertices.len() as u32;
+                    let o = opacity.clamp(0.0, 1.0);
+
+                    let x0 = x;
+                    let y0 = y;
+                    let x1 = x + w;
+                    let y1 = y + h;
+
+                    viewport_vertices.extend_from_slice(&[
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [0.0, 0.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y0],
+                            uv: [1.0, 0.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [1.0, 1.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [0.0, 0.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [1.0, 1.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y1],
+                            uv: [0.0, 1.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                    ]);
+
+                    ordered_draws.push(OrderedDraw::Image(ImageDraw {
+                        scissor: current_scissor,
+                        first_vertex,
+                        vertex_count: 6,
+                        image: *image,
+                    }));
                 }
                 SceneOp::Text {
                     origin,
