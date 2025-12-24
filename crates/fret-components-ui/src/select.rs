@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp, SemanticsRole, Size,
-    TextConstraints, TextMetrics, TextStyle, TextWrap,
+    Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp, SemanticsRole,
+    Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::{
@@ -45,6 +45,8 @@ pub struct Select {
 
     label_blob: Option<fret_core::TextBlobId>,
     label_metrics: Option<TextMetrics>,
+    label_scale_factor_bits: Option<u32>,
+    last_label: Option<Arc<str>>,
 }
 
 impl Select {
@@ -60,6 +62,8 @@ impl Select {
             last_theme_revision: None,
             label_blob: None,
             label_metrics: None,
+            label_scale_factor_bits: None,
+            last_label: None,
         }
     }
 
@@ -155,6 +159,15 @@ impl Select {
 }
 
 impl<H: UiHost> Widget<H> for Select {
+    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+        if let Some(b) = self.label_blob.take() {
+            text.release(b);
+        }
+        self.label_metrics = None;
+        self.label_scale_factor_bits = None;
+        self.last_label = None;
+    }
+
     fn is_focusable(&self) -> bool {
         true
     }
@@ -226,16 +239,12 @@ impl<H: UiHost> Widget<H> for Select {
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.last_bounds = cx.bounds;
+        cx.observe_model(self.model, Invalidation::Layout);
 
         let theme = Theme::global(&*cx.app);
         if self.last_theme_revision != Some(theme.revision()) {
             self.last_theme_revision = Some(theme.revision());
         }
-
-        if let Some(b) = self.label_blob.take() {
-            cx.text.release(b);
-        }
-        self.label_metrics = None;
 
         let label = self.current_label(cx.app);
         let style = TextStyle {
@@ -260,9 +269,7 @@ impl<H: UiHost> Widget<H> for Select {
             wrap: TextWrap::None,
             scale_factor: cx.scale_factor,
         };
-        let (blob, metrics) = cx.text.prepare(label.as_ref(), style, constraints);
-        self.label_blob = Some(blob);
-        self.label_metrics = Some(metrics);
+        let metrics = cx.text.measure(label.as_ref(), style, constraints);
 
         let h = Px((metrics.size.height.0 + pad_y.0 * 2.0).max(28.0));
         Size::new(cx.available.width, Px(h.0.min(cx.available.height.0)))
@@ -270,6 +277,7 @@ impl<H: UiHost> Widget<H> for Select {
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.last_bounds = cx.bounds;
+        cx.observe_model(self.model, Invalidation::Paint);
         let theme = cx.theme().snapshot();
 
         let focused = cx.focus == Some(cx.node);
@@ -279,11 +287,7 @@ impl<H: UiHost> Widget<H> for Select {
             .clone()
             .map(|c| c.resolve(cx.theme()))
             .unwrap_or(theme.colors.panel_border);
-        let border_color = if focused {
-            cx.theme().colors.focus_ring
-        } else {
-            base_border
-        };
+        let border_color = base_border;
 
         let background = self
             .style
@@ -325,6 +329,65 @@ impl<H: UiHost> Widget<H> for Select {
             corner_radii: Corners::all(radius),
         });
 
+        if focused {
+            // Draw an inset focus ring so it doesn't get clipped by parent clip/scissor.
+            let inset = Px(1.0);
+            let w = (cx.bounds.size.width.0 - inset.0 * 2.0).max(0.0);
+            let h = (cx.bounds.size.height.0 - inset.0 * 2.0).max(0.0);
+            let rect = Rect::new(
+                Point::new(
+                    Px(cx.bounds.origin.x.0 + inset.0),
+                    Px(cx.bounds.origin.y.0 + inset.0),
+                ),
+                Size::new(Px(w), Px(h)),
+            );
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(1),
+                rect,
+                background: Color {
+                    a: 0.0,
+                    ..cx.theme().colors.focus_ring
+                },
+                border: Edges::all(Px(2.0)),
+                border_color: cx.theme().colors.focus_ring,
+                corner_radii: Corners::all(radius),
+            });
+        }
+
+        let scale_bits = cx.scale_factor.to_bits();
+        let label = self.current_label(cx.app);
+
+        let needs_prepare = self.label_blob.is_none()
+            || self.label_scale_factor_bits != Some(scale_bits)
+            || self.last_label.as_ref().is_none_or(|l| **l != *label);
+
+        if needs_prepare {
+            if let Some(b) = self.label_blob.take() {
+                cx.text.release(b);
+            }
+
+            let style = TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(13.0),
+            };
+            let pad_x = self
+                .style
+                .padding_x
+                .clone()
+                .map(|m| m.resolve(cx.theme()))
+                .unwrap_or(theme.metrics.padding_md);
+            let constraints = TextConstraints {
+                max_width: Some(Px((cx.bounds.size.width.0 - pad_x.0 * 2.0).max(0.0))),
+                wrap: TextWrap::None,
+                scale_factor: cx.scale_factor,
+            };
+            let (blob, metrics) = cx.text.prepare(label.as_ref(), style, constraints);
+            self.label_blob = Some(blob);
+            self.label_metrics = Some(metrics);
+            self.label_scale_factor_bits = Some(scale_bits);
+            self.last_label = Some(label);
+        }
+
         let Some(blob) = self.label_blob else {
             return;
         };
@@ -337,7 +400,7 @@ impl<H: UiHost> Widget<H> for Select {
             cx.bounds.origin.y.0 + ((cx.bounds.size.height.0 - metrics.size.height.0) * 0.5);
         let text_y = Px(inner_y + metrics.baseline.0);
         cx.scene.push(SceneOp::Text {
-            order: DrawOrder(1),
+            order: DrawOrder(2),
             origin: Point::new(text_x, text_y),
             text: blob,
             color: theme.colors.text_primary,

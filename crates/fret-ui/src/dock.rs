@@ -1953,12 +1953,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             return cx.available;
         };
 
-        let theme = cx.theme().snapshot();
-        let scale_factor = cx.scale_factor;
         if let Some(dock) = cx.app.global::<DockManager>() {
-            self.rebuild_tab_titles(cx.text, theme, scale_factor, dock, &layout);
-            self.rebuild_dock_hint_glyphs(cx.text, scale_factor);
-
             let mut visible_tabs_nodes: HashSet<DockNodeId> = HashSet::new();
             for (&node_id, &rect) in &layout {
                 let Some(DockNode::Tabs { tabs, active }) = dock.graph.node(node_id) else {
@@ -2015,6 +2010,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
             self.paint_empty_state(cx);
             return;
         };
+
+        let theme = cx.theme().snapshot();
+        if let Some(dock) = cx.app.global::<DockManager>() {
+            self.rebuild_tab_titles(cx.text, theme, cx.scale_factor, dock, &layout);
+            self.rebuild_dock_hint_glyphs(cx.text, cx.scale_factor);
+        }
 
         if let Some(dock) = cx.app.global_mut::<DockManager>() {
             dock.clear_viewport_layout_for_window(self.window);

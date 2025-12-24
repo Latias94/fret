@@ -6,8 +6,11 @@
 mod style;
 
 pub mod button;
+pub mod checkbox;
 pub mod frame;
 pub mod select;
+pub mod tabs;
 pub mod text_field;
+pub mod toolbar;
 
 pub use style::{ColorRef, MetricRef, StyleRefinement};

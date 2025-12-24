@@ -45,9 +45,12 @@ use fret_app::{
 use fret_components_ui::{
     StyleRefinement,
     button::{Button, ButtonIntent, ButtonSize, ButtonVariant},
+    checkbox::Checkbox,
     frame::Frame,
     select::{Select, SelectOption},
+    tabs::Tabs,
     text_field::TextField,
+    toolbar::Toolbar,
 };
 use fret_core::{
     Axis, Color, DockLayoutNodeV1, DockLayoutV1, DockNode, DockOp, DropZone, PanelKey,
@@ -3664,6 +3667,8 @@ impl WinitDriver for DemoDriver {
         // MVP45 probe: token-driven, shadcn-style primitives (domain-agnostic).
         let ui_kit_text = app.models_mut().insert("Hello, components.".to_string());
         let ui_kit_select = app.models_mut().insert(0usize);
+        let ui_kit_checkbox = app.models_mut().insert(false);
+        let ui_kit_tabs = app.models_mut().insert(0usize);
         let ui_kit_root = ui.create_node(fret_ui_app::Column::new().with_spacing(Px(10.0)));
 
         let ui_kit_buttons_frame = ui.create_node(Frame::new(
@@ -3712,6 +3717,9 @@ impl WinitDriver for DemoDriver {
         );
         ui.add_child(ui_kit_root, ui_kit_text_field);
 
+        let ui_kit_checkbox_node = ui.create_node(Checkbox::new(ui_kit_checkbox, "Enable option"));
+        ui.add_child(ui_kit_root, ui_kit_checkbox_node);
+
         let ui_kit_select_node = ui.create_node(
             Select::new(
                 ui_kit_select,
@@ -3730,6 +3738,32 @@ impl WinitDriver for DemoDriver {
             ),
         );
         ui.add_child(ui_kit_root, ui_kit_select_node);
+
+        let ui_kit_tabs_node = ui.create_node(Tabs::new(
+            ui_kit_tabs,
+            vec!["Scene", "Game", "Inspector", "Console"],
+        ));
+        ui.add_child(ui_kit_root, ui_kit_tabs_node);
+
+        let ui_kit_toolbar = ui.create_node(
+            Toolbar::new().refine_style(
+                StyleRefinement::default()
+                    .rounded_md()
+                    .border_1()
+                    .px_3()
+                    .py_1(),
+            ),
+        );
+        let ui_kit_toolbar_primary = ui.create_node(
+            Button::new("Play")
+                .intent(ButtonIntent::Primary)
+                .variant(ButtonVariant::Default),
+        );
+        let ui_kit_toolbar_ghost =
+            ui.create_node(Button::new("Settings").variant(ButtonVariant::Ghost));
+        ui.add_child(ui_kit_toolbar, ui_kit_toolbar_primary);
+        ui.add_child(ui_kit_toolbar, ui_kit_toolbar_ghost);
+        ui.add_child(ui_kit_root, ui_kit_toolbar);
         ui.add_child(layers.dockspace_node, hierarchy_node);
         ui.add_child(layers.dockspace_node, project_node);
         ui.add_child(layers.dockspace_node, inspector_node);

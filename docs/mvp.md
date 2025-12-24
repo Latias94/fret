@@ -1033,7 +1033,7 @@ Goal: establish a **general-purpose** component library baseline (GPUI-component
 Status:
 
 - Prototype implemented (incubated in this repo):
-  - `crates/fret-components-ui`: token-driven components + Tailwind-like typed style refinements (`Button`, `TextField`, `Select`).
+  - `crates/fret-components-ui`: token-driven components + Tailwind-like typed style refinements (`Button`, `TextField`, `Select`, `Checkbox`, `Tabs`, `Toolbar`).
   - `fret-ui`: `Popover` + `PopoverService` (anchored overlay primitive used by `Select`).
   - `fret-demo`: adds a `UI Kit` panel (`PanelKey` `core.ui_kit`) to validate composition and theme-driven styling.
 

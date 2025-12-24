@@ -49,6 +49,7 @@ pub struct Button {
     pressed: bool,
     last_bounds: Rect,
     prepared: Option<PreparedText>,
+    prepared_scale_factor_bits: Option<u32>,
     last_theme_revision: Option<u64>,
     resolved: ResolvedButtonStyle,
 }
@@ -110,6 +111,7 @@ impl Button {
             pressed: false,
             last_bounds: Rect::default(),
             prepared: None,
+            prepared_scale_factor_bits: None,
             last_theme_revision: None,
             resolved: ResolvedButtonStyle::default(),
         }
@@ -322,6 +324,13 @@ fn resolve_button_colors(
 }
 
 impl<H: UiHost> Widget<H> for Button {
+    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+        if let Some(prepared) = self.prepared.take() {
+            text.release(prepared.blob);
+        }
+        self.prepared_scale_factor_bits = None;
+    }
+
     fn is_focusable(&self) -> bool {
         true
     }
@@ -394,10 +403,6 @@ impl<H: UiHost> Widget<H> for Button {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
 
-        if let Some(prepared) = self.prepared.take() {
-            cx.text.release(prepared.blob);
-        }
-
         let text_style = TextStyle {
             font: FontId::default(),
             size: Px(13.0),
@@ -407,8 +412,7 @@ impl<H: UiHost> Widget<H> for Button {
             wrap: TextWrap::None,
             scale_factor: cx.scale_factor,
         };
-        let (blob, metrics) = cx.text.prepare(&self.label, text_style, text_constraints);
-        self.prepared = Some(PreparedText { blob, metrics });
+        let metrics = cx.text.measure(&self.label, text_style, text_constraints);
 
         let pad_x = self.resolved.padding_x.0.max(0.0);
         let pad_y = self.resolved.padding_y.0.max(0.0);
@@ -424,6 +428,29 @@ impl<H: UiHost> Widget<H> for Button {
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
+
+        let scale_bits = cx.scale_factor.to_bits();
+        if self.prepared_scale_factor_bits != Some(scale_bits) {
+            if let Some(prepared) = self.prepared.take() {
+                cx.text.release(prepared.blob);
+            }
+            self.prepared_scale_factor_bits = None;
+        }
+
+        if self.prepared.is_none() {
+            let text_style = TextStyle {
+                font: FontId::default(),
+                size: Px(13.0),
+            };
+            let text_constraints = TextConstraints {
+                max_width: None,
+                wrap: TextWrap::None,
+                scale_factor: cx.scale_factor,
+            };
+            let (blob, metrics) = cx.text.prepare(&self.label, text_style, text_constraints);
+            self.prepared = Some(PreparedText { blob, metrics });
+            self.prepared_scale_factor_bits = Some(scale_bits);
+        }
 
         let Some(prepared) = self.prepared.as_ref() else {
             return;
