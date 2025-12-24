@@ -965,6 +965,11 @@ impl<H: UiHost> UiTree<H> {
                     .get(node_id)
                     .map(|n| n.children.clone())
                     .unwrap_or_default();
+                let bounds = tree
+                    .nodes
+                    .get(node_id)
+                    .map(|n| n.bounds)
+                    .unwrap_or_default();
                 let mut cx = EventCx {
                     app,
                     text: unsafe { &mut *text_ptr },
@@ -974,6 +979,7 @@ impl<H: UiHost> UiTree<H> {
                     children: &children,
                     focus: tree.focus,
                     captured: tree.captured,
+                    bounds,
                     invalidations: Vec::new(),
                     requested_focus: None,
                     requested_capture: None,

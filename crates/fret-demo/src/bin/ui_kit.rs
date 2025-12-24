@@ -18,7 +18,9 @@ use fret_render::{ImageColorSpace, ImageDescriptor, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui_app::{
     ColoredPanel, Column, ContextMenu, ContextMenuService, Invalidation, PanelThemeBackground,
-    Popover, PopoverService, Row, Scroll, Stack, Text, Theme, ThemeConfig, UiLayerId, UiTree,
+    FixedPanel, Popover, PopoverService, ResizableSplit, Row, Scroll, Stack, Text, Theme,
+    ThemeConfig,
+    UiLayerId, UiTree,
 };
 use winit::event_loop::EventLoop;
 
@@ -220,6 +222,54 @@ fn build_ui_kit_contents(
     ui.add_child(toolbar, toolbar_play);
     ui.add_child(toolbar, toolbar_settings);
     ui.add_child(col, toolbar);
+
+    // Framework-level layout primitive demo: resizable split with a thick hit target and
+    // hairline divider, using a `Model<f32>` for persistence.
+    let split_sep = ui.create_node(Separator::horizontal());
+    ui.add_child(col, split_sep);
+    let split_title = ui.create_node(Text::new("Resizable split (prototype)"));
+    ui.add_child(col, split_title);
+
+    let split_fraction = app.models_mut().insert(0.5f32);
+    let split = ui.create_node(
+        ResizableSplit::new(fret_core::Axis::Horizontal, split_fraction)
+            .with_min_px(Px(140.0))
+            .with_hit_thickness(Px(8.0))
+            .with_paint_device_px(1.0),
+    );
+
+    // `Column` measures children with a very large available height. Constrain the demo split's
+    // height so it stays visually reasonable and makes dragging obvious.
+    let split_frame = ui.create_node(FixedPanel::new(Px(220.0), fret_core::Color::TRANSPARENT));
+    ui.add_child(col, split_frame);
+    ui.add_child(split_frame, split);
+
+    let left = ui.create_node(Stack::new());
+    let right = ui.create_node(Stack::new());
+
+    let left_bg = ui.create_node(ColoredPanel::themed(PanelThemeBackground::Panel, 1.0));
+    let right_bg = ui.create_node(ColoredPanel::themed(PanelThemeBackground::Surface, 1.0));
+
+    let left_body = ui.create_node(Column::new().with_padding(Px(10.0)).with_spacing(Px(6.0)));
+    let right_body = ui.create_node(Column::new().with_padding(Px(10.0)).with_spacing(Px(6.0)));
+
+    let left_label = ui.create_node(Text::new("Left pane"));
+    let left_hint = ui.create_node(Text::new("Drag the divider to resize."));
+    ui.add_child(left_body, left_label);
+    ui.add_child(left_body, left_hint);
+
+    let right_label = ui.create_node(Text::new("Right pane"));
+    let right_hint = ui.create_node(Text::new("Hit target is thicker than the hairline."));
+    ui.add_child(right_body, right_label);
+    ui.add_child(right_body, right_hint);
+
+    ui.add_child(left, left_bg);
+    ui.add_child(left, left_body);
+    ui.add_child(right, right_bg);
+    ui.add_child(right, right_body);
+
+    ui.add_child(split, left);
+    ui.add_child(split, right);
 }
 
 impl WinitDriver for UiKitDriver {

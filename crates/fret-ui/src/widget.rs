@@ -20,6 +20,7 @@ pub struct EventCx<'a, H: UiHost> {
     pub children: &'a [NodeId],
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
+    pub bounds: Rect,
     pub invalidations: Vec<(NodeId, Invalidation)>,
     pub requested_focus: Option<NodeId>,
     pub requested_capture: Option<Option<NodeId>>,

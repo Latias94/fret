@@ -21,8 +21,8 @@ pub use widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 pub use widgets::{
     AppMenuBar, Bar, BoundTextInput, Clip, ColoredPanel, Column, ContextMenu, ContextMenuRequest,
     ContextMenuService, ContextMenuStyle, FixedPanel, HeaderBody, Image, PanelThemeBackground,
-    Popover, PopoverItem, PopoverRequest, PopoverService, PopoverStyle, Row, Scroll, Split, Stack,
-    Text, TextArea, TextAreaStyle, TextInput, TextInputStyle, Toolbar, ToolbarItem, TreeNode,
-    TreeView, TreeViewStyle, VecStringDataSource, VirtualList, VirtualListDataSource,
-    VirtualListRow, VirtualListRowHeight, VirtualListStyle,
+    Popover, PopoverItem, PopoverRequest, PopoverService, PopoverStyle, ResizableSplit, Row,
+    Scroll, Split, Stack, Text, TextArea, TextAreaStyle, TextInput, TextInputStyle, Toolbar,
+    ToolbarItem, TreeNode, TreeView, TreeViewStyle, VecStringDataSource, VirtualList,
+    VirtualListDataSource, VirtualListRow, VirtualListRowHeight, VirtualListStyle,
 };
