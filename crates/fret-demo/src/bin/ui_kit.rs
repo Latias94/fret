@@ -1,5 +1,5 @@
 use fret_app::{
-    App, BindingV1, Effect, KeySpecV1, Keymap, KeymapFileV1, KeymapService, Menu, MenuItem,
+    App, BindingV1, Effect, KeySpecV1, Keymap, KeymapFileV1, KeymapService, Menu, MenuItem, Model,
     WindowRequest,
 };
 use fret_components_icons::IconId;
@@ -59,6 +59,9 @@ struct UiKitWindowState {
     ui: UiTree,
     root: NodeId,
     overlays: WindowOverlays,
+    theme_candidates: Vec<ThemeCandidate>,
+    theme_selected: Model<usize>,
+    theme_last_selected: usize,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -93,6 +96,49 @@ impl VirtualListDataSource for UiKitRichListDataSource {
     }
 }
 
+#[derive(Debug, Clone)]
+struct ThemeCandidate {
+    path: String,
+    name: String,
+}
+
+fn load_theme_candidate(path: &str) -> Option<ThemeCandidate> {
+    let bytes = std::fs::read(path).ok()?;
+    let cfg = ThemeConfig::from_slice(&bytes).ok()?;
+    Some(ThemeCandidate {
+        path: path.to_string(),
+        name: cfg.name,
+    })
+}
+
+fn discover_theme_candidates() -> Vec<ThemeCandidate> {
+    let mut out = Vec::new();
+
+    if let Some(candidate) = load_theme_candidate("./.fret/theme.json") {
+        out.push(candidate);
+    }
+
+    let Ok(dir) = std::fs::read_dir("./themes") else {
+        return out;
+    };
+
+    let mut theme_paths: Vec<String> = dir
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|ext| ext == "json"))
+        .map(|p| p.to_string_lossy().to_string())
+        .collect();
+    theme_paths.sort();
+
+    for path in theme_paths {
+        if let Some(candidate) = load_theme_candidate(&path) {
+            out.push(candidate);
+        }
+    }
+
+    out
+}
+
 fn load_theme(app: &mut App) {
     let candidates = [
         "./.fret/theme.json",
@@ -123,6 +169,8 @@ fn build_ui_kit_contents(
     parent: NodeId,
     image: Option<fret_core::ImageId>,
     command_palette_root: NodeId,
+    theme_selected: Model<usize>,
+    theme_options: Vec<SelectOption>,
 ) {
     let col = ui.create_node(Column::new().with_padding(Px(16.0)).with_spacing(Px(12.0)));
     ui.add_child(parent, col);
@@ -134,6 +182,19 @@ fn build_ui_kit_contents(
         "Token-driven primitives (shadcn-inspired) + retained UI runtime.",
     ));
     ui.add_child(col, subtitle);
+
+    let theme_title = ui.create_node(Text::new("Theme (hot reload)"));
+    ui.add_child(col, theme_title);
+    let theme_row = ui.create_node(Row::new().with_spacing(Px(10.0)));
+    let theme_label = ui.create_node(Text::new("Theme"));
+    let theme_select = ui.create_node(
+        Select::new(theme_selected, theme_options)
+            .with_size(ComponentSize::Small)
+            .placeholder("Select theme..."),
+    );
+    ui.add_child(theme_row, theme_label);
+    ui.add_child(theme_row, theme_select);
+    ui.add_child(col, theme_row);
 
     let size_title = ui.create_node(Text::new("Size matrix (xs/sm/md/lg)"));
     ui.add_child(col, size_title);
@@ -708,15 +769,41 @@ impl WinitDriver for UiKitDriver {
 
         let overlays = WindowOverlays::install(&mut ui);
 
+        let theme_candidates = discover_theme_candidates();
+        let current_theme_name = Theme::global(app).name.clone();
+        let initial_theme_index = theme_candidates
+            .iter()
+            .position(|c| c.name == current_theme_name)
+            .unwrap_or(0);
+        let theme_selected = app.models_mut().insert(initial_theme_index);
+        let theme_last_selected = initial_theme_index;
+        let theme_options = if theme_candidates.is_empty() {
+            vec![SelectOption::new("No themes found").disabled()]
+        } else {
+            theme_candidates
+                .iter()
+                .map(|c| SelectOption::new(c.name.clone()))
+                .collect()
+        };
+
         build_ui_kit_contents(
             app,
             &mut ui,
             scroll,
             self.ui_kit_image.as_ref().map(|i| i.id),
             overlays.command_palette_node(),
+            theme_selected,
+            theme_options,
         );
 
-        UiKitWindowState { ui, root, overlays }
+        UiKitWindowState {
+            ui,
+            root,
+            overlays,
+            theme_candidates,
+            theme_selected,
+            theme_last_selected,
+        }
     }
 
     fn handle_event(
@@ -831,11 +918,52 @@ impl WinitDriver for UiKitDriver {
     fn handle_model_changes(
         &mut self,
         app: &mut App,
-        _window: AppWindowId,
+        window: AppWindowId,
         state: &mut Self::WindowState,
         changed: &[fret_app::ModelId],
     ) {
         state.ui.propagate_model_changes(app, changed);
+
+        if !changed.contains(&state.theme_selected.id()) {
+            return;
+        }
+
+        let selected = state
+            .theme_selected
+            .get(&*app)
+            .copied()
+            .unwrap_or(state.theme_last_selected);
+        if selected == state.theme_last_selected {
+            return;
+        }
+
+        state.theme_last_selected = selected;
+        let Some(candidate) = state.theme_candidates.get(selected) else {
+            return;
+        };
+
+        let bytes = match std::fs::read(&candidate.path) {
+            Ok(bytes) => bytes,
+            Err(err) => {
+                tracing::error!(error = %err, path = %candidate.path, "failed to read theme file");
+                sonner::toast_error(app, window, "Failed to read theme file");
+                return;
+            }
+        };
+
+        match ThemeConfig::from_slice(&bytes) {
+            Ok(cfg) => {
+                Theme::global_mut(app).apply_config(&cfg);
+                tracing::info!(theme = %cfg.name, path = %candidate.path, "loaded theme");
+                state.ui.invalidate(state.root, Invalidation::Layout);
+                state.ui.invalidate(state.root, Invalidation::Paint);
+                app.request_redraw(window);
+            }
+            Err(err) => {
+                tracing::error!(error = %err, path = %candidate.path, "failed to parse theme file");
+                sonner::toast_error(app, window, "Failed to parse theme file");
+            }
+        }
     }
 
     fn render(
