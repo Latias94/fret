@@ -435,6 +435,16 @@ impl<H: UiHost> Widget<H> for ToastOverlay {
         };
         self.sync_style_from_theme(cx.theme());
 
+        if let Event::Timer { token } = event {
+            let handled = cx.app.with_global_mut(ToastService::default, |svc, app| {
+                svc.handle_timer(app, window, *token)
+            });
+            if handled {
+                cx.stop_propagation();
+            }
+            return;
+        }
+
         // Hover state.
         if let Event::Pointer(fret_core::PointerEvent::Move { position, .. }) = event {
             let next = self.hit_test_toast(*position);

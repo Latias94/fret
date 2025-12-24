@@ -144,6 +144,8 @@ struct UiLayer {
     visible: bool,
     blocks_underlay_input: bool,
     hit_testable: bool,
+    wants_pointer_move_events: bool,
+    wants_timer_events: bool,
 }
 
 pub struct Node<H: UiHost> {
@@ -197,6 +199,8 @@ pub struct UiDebugLayerInfo {
     pub visible: bool,
     pub blocks_underlay_input: bool,
     pub hit_testable: bool,
+    pub wants_pointer_move_events: bool,
+    pub wants_timer_events: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -333,6 +337,88 @@ impl<H: UiHost> Default for UiTree<H> {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn dispatch_event_to_node_chain(
+        &mut self,
+        app: &mut H,
+        text: &mut dyn TextService,
+        input_ctx: &InputContext,
+        start: NodeId,
+        event: &Event,
+    ) -> bool {
+        let text_ptr: *mut dyn TextService = text;
+
+        let mut node_id = start;
+        loop {
+            let (invalidations, requested_focus, requested_capture, stop_propagation, parent) =
+                self.with_widget_mut(node_id, |widget, tree| {
+                    let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                    let children: Vec<NodeId> = tree
+                        .nodes
+                        .get(node_id)
+                        .map(|n| n.children.clone())
+                        .unwrap_or_default();
+                    let bounds = tree
+                        .nodes
+                        .get(node_id)
+                        .map(|n| n.bounds)
+                        .unwrap_or_default();
+                    let mut cx = EventCx {
+                        app,
+                        text: unsafe { &mut *text_ptr },
+                        node: node_id,
+                        window: tree.window,
+                        input_ctx: input_ctx.clone(),
+                        children: &children,
+                        focus: tree.focus,
+                        captured: tree.captured,
+                        bounds,
+                        invalidations: Vec::new(),
+                        requested_focus: None,
+                        requested_capture: None,
+                        requested_cursor: None,
+                        stop_propagation: false,
+                    };
+                    widget.event(&mut cx, event);
+                    (
+                        cx.invalidations,
+                        cx.requested_focus,
+                        cx.requested_capture,
+                        cx.stop_propagation,
+                        parent,
+                    )
+                });
+
+            for (id, inv) in invalidations {
+                self.mark_invalidation(id, inv);
+            }
+
+            if let Some(focus) = requested_focus {
+                if self.focus != Some(focus) {
+                    if let Some(prev) = self.focus {
+                        self.mark_invalidation(prev, Invalidation::Paint);
+                    }
+                    self.focus = Some(focus);
+                    self.mark_invalidation(focus, Invalidation::Paint);
+                }
+            }
+
+            if let Some(capture) = requested_capture {
+                self.captured = capture;
+            };
+
+            if self.captured.is_some() || stop_propagation {
+                return true;
+            }
+
+            node_id = match parent {
+                Some(parent) => parent,
+                None => break,
+            };
+        }
+
+        false
+    }
+
     pub fn new() -> Self {
         Self::default()
     }
@@ -430,6 +516,8 @@ impl<H: UiHost> UiTree<H> {
                     visible: layer.visible,
                     blocks_underlay_input: layer.blocks_underlay_input,
                     hit_testable: layer.hit_testable,
+                    wants_pointer_move_events: layer.wants_pointer_move_events,
+                    wants_timer_events: layer.wants_timer_events,
                 })
             })
             .collect()
@@ -540,6 +628,8 @@ impl<H: UiHost> UiTree<H> {
             visible: true,
             blocks_underlay_input: false,
             hit_testable: true,
+            wants_pointer_move_events: false,
+            wants_timer_events: false,
         });
         self.root_to_layer.insert(root, id);
         self.layer_order.insert(0, id);
@@ -562,6 +652,8 @@ impl<H: UiHost> UiTree<H> {
             visible: true,
             blocks_underlay_input,
             hit_testable,
+            wants_pointer_move_events: false,
+            wants_timer_events: false,
         });
         self.root_to_layer.insert(root, id);
         self.layer_order.push(id);
@@ -592,6 +684,20 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn is_layer_visible(&self, layer: UiLayerId) -> bool {
         self.layers.get(layer).is_some_and(|l| l.visible)
+    }
+
+    pub fn set_layer_wants_pointer_move_events(&mut self, layer: UiLayerId, wants: bool) {
+        let Some(l) = self.layers.get_mut(layer) else {
+            return;
+        };
+        l.wants_pointer_move_events = wants;
+    }
+
+    pub fn set_layer_wants_timer_events(&mut self, layer: UiLayerId, wants: bool) {
+        let Some(l) = self.layers.get_mut(layer) else {
+            return;
+        };
+        l.wants_timer_events = wants;
     }
 
     fn update_layer_root(&mut self, layer: UiLayerId, root: NodeId) {
@@ -739,15 +845,6 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        let tooltip_move_guard: Option<(AppWindowId, u64)> = (|| {
-            if !matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
-                return None;
-            }
-            let window = self.window?;
-            let svc = app.global::<crate::TooltipService>()?;
-            Some((window, svc.touch_counter()))
-        })();
-
         let (active_layers, barrier_root) = self.active_input_layers();
         let focus_is_text_input = self.focus_is_text_input();
         let caps = app
@@ -786,16 +883,20 @@ impl<H: UiHost> UiTree<H> {
             }
             return;
         }
-
-        // Framework-level timer routing for global services that are not tied to focus.
-        if let Event::Timer { token } = event
-            && let Some(window) = self.window
-        {
-            let handled = app.with_global_mut(crate::ToastService::default, |svc, app| {
-                svc.handle_timer(app, window, *token)
-            });
-            if handled {
-                return;
+        if matches!(event, Event::Timer { .. }) {
+            let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+            for layer_id in layers.into_iter().rev() {
+                let Some(layer) = self.layers.get(layer_id) else {
+                    continue;
+                };
+                if !layer.wants_timer_events || !layer.visible {
+                    continue;
+                }
+                let stopped =
+                    self.dispatch_event_to_node_chain(app, text, &input_ctx, layer.root, event);
+                if stopped {
+                    return;
+                }
             }
         }
 
@@ -1094,14 +1195,18 @@ impl<H: UiHost> UiTree<H> {
         if needs_redraw && let Some(window) = self.window {
             app.request_redraw(window);
         }
-
-        if let Some((window, before)) = tooltip_move_guard
-            && let Some(svc) = app.global::<crate::TooltipService>()
-            && svc.touch_counter() == before
-        {
-            app.with_global_mut(crate::TooltipService::default, |svc, app| {
-                svc.clear_request(app, window);
-            });
+        if let Event::Pointer(PointerEvent::Move { .. }) = event {
+            let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+            for layer_id in layers.into_iter().rev() {
+                let Some(layer) = self.layers.get(layer_id) else {
+                    continue;
+                };
+                if !layer.wants_pointer_move_events || !layer.visible {
+                    continue;
+                }
+                let _ =
+                    self.dispatch_event_to_node_chain(app, text, &input_ctx, layer.root, event);
+            }
         }
     }
 
@@ -2189,7 +2294,8 @@ mod tests {
 
         // Install the toast overlay layer (as WindowOverlays would).
         let toast_node = ui.create_node(crate::ToastOverlay::new());
-        let _ = ui.push_overlay_root_ex(toast_node, false, true);
+        let toast_layer = ui.push_overlay_root_ex(toast_node, false, true);
+        ui.set_layer_wants_timer_events(toast_layer, true);
 
         // Push a toast and capture its timer token.
         let token = app.with_global_mut(crate::ToastService::default, |svc, app| {

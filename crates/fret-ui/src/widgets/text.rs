@@ -1116,8 +1116,11 @@ impl<H: UiHost> Widget<H> for TextInput {
         let metrics = cx.text.measure(&self.text, self.style, base_constraints);
         self.text_metrics = Some(metrics);
 
-        let base_h = self.text_metrics.map(|m| m.size.height.0).unwrap_or(16.0);
-        let h = Px(34.0_f32.max(base_h + 12.0));
+        let base_h = self.text_metrics.map(|m| m.size.height.0).unwrap_or(0.0);
+        let chrome = &self.chrome_style;
+        let border_h = chrome.border.top.0.max(0.0) + chrome.border.bottom.0.max(0.0);
+        let pad_h = chrome.padding_y.0.max(0.0) * 2.0;
+        let h = Px((base_h + pad_h + border_h).max(0.0));
         Size::new(cx.available.width, h)
     }
 

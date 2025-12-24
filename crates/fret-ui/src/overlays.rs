@@ -38,12 +38,14 @@ pub struct WindowOverlays {
 impl WindowOverlays {
     pub fn install<H: UiHost>(ui: &mut UiTree<H>) -> Self {
         let tooltip_node = ui.create_node(TooltipOverlay::new());
-        let _ = ui.push_overlay_root_ex(tooltip_node, false, false);
+        let tooltip_layer = ui.push_overlay_root_ex(tooltip_node, false, false);
+        ui.set_layer_wants_pointer_move_events(tooltip_layer, true);
 
         // Toasts should be visually on top but pointer-transparent outside toast bounds.
         // The overlay is hit-testable and relies on per-widget hit testing (`Widget::hit_test`).
         let toast_node = ui.create_node(ToastOverlay::new());
-        let _ = ui.push_overlay_root_ex(toast_node, false, true);
+        let toast_layer = ui.push_overlay_root_ex(toast_node, false, true);
+        ui.set_layer_wants_timer_events(toast_layer, true);
 
         let command_palette_node = ui.create_node(CommandPaletteOverlay::new());
         let command_palette_layer = ui.push_overlay_root(command_palette_node, true);

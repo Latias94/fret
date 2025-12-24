@@ -1,10 +1,10 @@
 use crate::{
     Theme, UiHost,
-    widget::{Invalidation, LayoutCx, PaintCx, Widget},
+    widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget},
 };
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, NodeId, Point, Px, Rect, SceneOp, Size, TextConstraints,
-    TextMetrics, TextStyle, TextWrap,
+    Color, Corners, DrawOrder, Edges, Event, NodeId, Point, Px, Rect, SceneOp, Size,
+    TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use std::{collections::HashMap, sync::Arc};
@@ -261,6 +261,30 @@ impl<H: UiHost> Widget<H> for TooltipOverlay {
         self.cleanup(text);
         self.last_serial = None;
         self.last_theme_revision = None;
+    }
+
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        let Some(window) = cx.window else {
+            return;
+        };
+
+        let Event::Pointer(fret_core::PointerEvent::Move { position, .. }) = event else {
+            return;
+        };
+
+        let Some(service) = cx.app.global::<TooltipService>() else {
+            return;
+        };
+        let Some((_, request)) = service.request(window) else {
+            return;
+        };
+
+        if !request.anchor.contains(*position) {
+            cx.app.with_global_mut(TooltipService::default, |svc, app| {
+                svc.clear_request(app, window);
+            });
+            cx.stop_propagation();
+        }
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
