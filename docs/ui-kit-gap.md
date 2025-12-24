@@ -78,11 +78,14 @@ Notes:
   box. In a canvas/scene renderer, we must implement row-local clipping explicitly.
 - Fret now clips *each row* when painting `VirtualList` to prevent any text/background bleeding.
 - Remaining work is primarily UX tuning (row padding, highlight inset, density presets), not correctness.
+- Default mitigation: when `metric.list.row_highlight_inset_y` is not provided by the theme,
+  Fret now falls back to `Space::N0p5` (derived from baseline `metric.padding.sm`) so the highlight
+  doesn’t visually “hug” adjacent rows as tightly.
 
 Workarounds:
 
 - Use `VirtualListRowHeight::Measured { min: ... }` for multi-line items.
-- Prefer list-specific tokens (`metric.list.*`) to avoid forcing global padding changes.
+- Prefer list-specific tokens (`metric.list.*`) for fine-tuning without forcing global padding changes.
 
 Tracking:
 
