@@ -360,9 +360,14 @@ fn build_ui_kit_contents(
     let rich_list_panel = ui.create_node(FixedPanel::new(Px(260.0), Color::TRANSPARENT));
     ui.add_child(col, rich_list_panel);
 
+    let rich_list_size = ComponentSize::Large;
+    let rich_list_min_h = rich_list_size.list_row_h(Theme::global(app));
     let rich_list = ui.create_node(
-        VirtualList::new(UiKitRichListDataSource { len: 2000 })
-            .with_row_height(VirtualListRowHeight::Measured { min: Px(44.0) }),
+        VirtualList::new(UiKitRichListDataSource { len: 2000 }).with_row_height(
+            VirtualListRowHeight::Measured {
+                min: rich_list_min_h,
+            },
+        ),
     );
     ui.add_child(rich_list_panel, rich_list);
 
