@@ -15,7 +15,7 @@ use std::{
 };
 
 use crate::{
-    UiHost,
+    ResizeHandle, UiHost,
     widget::{EventCx, LayoutCx, PaintCx, SemanticsCx, Widget},
     widgets::{ContextMenuRequest, ContextMenuService},
 };
@@ -453,8 +453,7 @@ const DOCK_TAB_W: Px = Px(120.0);
 const DOCK_TAB_CLOSE_SIZE: Px = Px(16.0);
 const DOCK_TAB_CLOSE_GAP: Px = Px(6.0);
 const DOCK_SPLIT_HANDLE_HIT_THICKNESS: Px = Px(6.0);
-const DOCK_SPLIT_HANDLE_PAINT_THICKNESS: Px = Px(4.0);
-const DOCK_SPLIT_HANDLE_GAP: Px = DOCK_SPLIT_HANDLE_HIT_THICKNESS;
+const DOCK_SPLIT_HANDLE_GAP: Px = Px(0.0);
 
 #[derive(Debug, Clone, Copy)]
 struct PreparedTabTitle {
@@ -2110,7 +2109,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
         }
 
         if let Some(dock) = cx.app.global::<DockManager>() {
-            paint_split_handles(&dock.graph, &layout, cx.scene);
+            paint_split_handles(
+                cx.theme().snapshot(),
+                &dock.graph,
+                &layout,
+                self.divider_drag.map(|d| d.split),
+                cx.scale_factor,
+                cx.scene,
+            );
         }
         let is_dock_dragging = cx
             .app
@@ -3359,8 +3365,11 @@ fn compute_split_fraction(
 }
 
 fn paint_split_handles(
+    theme: crate::ThemeSnapshot,
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
+    active: Option<DockNodeId>,
+    scale_factor: f32,
     scene: &mut Scene,
 ) {
     for (&node, &bounds) in layout.iter() {
@@ -3377,56 +3386,27 @@ fn paint_split_handles(
             continue;
         };
 
-        let handle = split_handle_rect(
-            *axis,
-            bounds,
-            first,
-            second,
-            DOCK_SPLIT_HANDLE_HIT_THICKNESS,
-        );
-        let gap = split_gap(*axis, first, second);
-        let rect = if gap > 0.0 {
-            match axis {
-                fret_core::Axis::Horizontal => {
-                    let paint_w = DOCK_SPLIT_HANDLE_PAINT_THICKNESS.0.min(handle.size.width.0);
-                    Rect {
-                        origin: Point::new(
-                            Px(handle.origin.x.0 + (handle.size.width.0 - paint_w) * 0.5),
-                            handle.origin.y,
-                        ),
-                        size: Size::new(Px(paint_w), handle.size.height),
-                    }
-                }
-                fret_core::Axis::Vertical => {
-                    let paint_h = DOCK_SPLIT_HANDLE_PAINT_THICKNESS
-                        .0
-                        .min(handle.size.height.0);
-                    Rect {
-                        origin: Point::new(
-                            handle.origin.x,
-                            Px(handle.origin.y.0 + (handle.size.height.0 - paint_h) * 0.5),
-                        ),
-                        size: Size::new(handle.size.width, Px(paint_h)),
-                    }
-                }
-            }
+        let center = split_handle_center(*axis, first, second);
+
+        let background = if active == Some(node) {
+            theme.colors.focus_ring
         } else {
-            handle
+            theme.colors.panel_border
         };
 
-        scene.push(SceneOp::Quad {
-            order: fret_core::DrawOrder(9_000),
-            rect,
-            background: Color {
-                r: 0.06,
-                g: 0.06,
-                b: 0.07,
-                a: 1.0,
-            },
-            border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
-            corner_radii: fret_core::Corners::all(Px(0.0)),
-        });
+        ResizeHandle {
+            axis: *axis,
+            hit_thickness: DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+            paint_device_px: 1.0,
+        }
+        .paint(
+            scene,
+            fret_core::DrawOrder(9_000),
+            bounds,
+            center,
+            scale_factor,
+            background,
+        );
     }
 }
 
@@ -3869,9 +3849,7 @@ mod tests {
         let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
 
         let (_chrome, dock_bounds) = dock_space_regions(bounds);
-        let gap = DOCK_SPLIT_HANDLE_GAP.0;
-        let avail = dock_bounds.size.width.0 - gap;
-        let x = dock_bounds.origin.x.0 + avail * 0.5 + gap * 0.5;
+        let x = dock_bounds.origin.x.0 + dock_bounds.size.width.0 * 0.5;
         let y = dock_bounds.origin.y.0 + 10.0;
 
         ui.dispatch_event(

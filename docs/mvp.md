@@ -1090,7 +1090,7 @@ does not reflect the affordance (e.g. column/row resize) because there is no por
 
 Status:
 
-- Prototype implemented (desktop runner + dock split handles; `TextInput`/`TextArea` and common component widgets set hover cursors).
+- Prototype implemented (desktop runner + dock split handles; `TextInput`/`TextArea` and common component widgets set hover cursors; `fret_ui::ResizeHandle` draws a hairline divider with a thick hit target, without reserving layout gap).
 
 References:
 
