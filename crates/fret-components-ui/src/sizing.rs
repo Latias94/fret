@@ -220,10 +220,13 @@ impl Size {
             theme,
             "list.px",
             match self {
+                // Align with the Tailwind-like scales used by gpui-component:
+                // - `px-2` for dense lists,
+                // - `px-3` for default/comfortable lists.
                 Self::XSmall => Px(8.0),
-                Self::Small => Px(10.0),
+                Self::Small => Px(8.0),
                 Self::Medium => Px(12.0),
-                Self::Large => Px(14.0),
+                Self::Large => Px(12.0),
             },
         )
     }
@@ -233,10 +236,11 @@ impl Size {
             theme,
             "list.py",
             match self {
-                Self::XSmall => Px(4.0),
-                Self::Small => Px(6.0),
-                Self::Medium => Px(8.0),
-                Self::Large => Px(10.0),
+                // Align with gpui-component list defaults (py-0.5/py-1/py-2).
+                Self::XSmall => Px(2.0),
+                Self::Small => Px(2.0),
+                Self::Medium => Px(4.0),
+                Self::Large => Px(8.0),
             },
         )
     }

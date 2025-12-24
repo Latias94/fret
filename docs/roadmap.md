@@ -203,6 +203,8 @@ validate that the framework contracts are sufficient.
 Notes:
 
 - Prefer “Tailwind-like primitives” as an internal authoring model: small typed tokens + recipe/variant composition (not CSS strings).
+- Keep the primitive vocabulary explicit and typed (e.g. `Space`, `Radius`) backed by theme extension tokens
+  (`component.space.*`, `component.radius.*`), so component APIs stay stable and theme authors can tune scales.
 - `repo-ref/fret-ui-precision` is the design reference for token taxonomy and component recipes; `repo-ref/gpui-component` is the Rust ecosystem reference for themes + component ergonomics.
 - `repo-ref/ui` (shadcn/ui) and `repo-ref/tailwindcss` provide upstream vocabulary for component variants and token scales.
 

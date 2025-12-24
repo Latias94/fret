@@ -53,6 +53,25 @@
     "metric.list.trailing_gap_x": 8,
     "metric.list.separator_inset_x": 10,
     "metric.list.row_highlight_inset_y": 2,
-    "metric.scrollbar.width": 10
+    "metric.scrollbar.width": 10,
+
+    "component.space.0": 0,
+    "component.space.0p5": 2,
+    "component.space.1": 4,
+    "component.space.1p5": 6,
+    "component.space.2": 8,
+    "component.space.2p5": 10,
+    "component.space.3": 12,
+    "component.space.3p5": 14,
+    "component.space.4": 16,
+    "component.space.5": 20,
+    "component.space.6": 24,
+    "component.space.8": 32,
+    "component.space.10": 40,
+    "component.space.11": 44,
+
+    "component.radius.sm": 6,
+    "component.radius.md": 8,
+    "component.radius.lg": 10
   }
 }

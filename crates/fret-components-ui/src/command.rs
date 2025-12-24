@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
-use fret_core::{Event, Px, Size as UiSize};
+use fret_core::{Event, Size as UiSize};
 use fret_runtime::Model;
 use fret_ui::{
     Invalidation, LayoutCx, PaintCx, Theme, UiHost, VirtualList, VirtualListDataSource,
-    VirtualListRow, VirtualListRowHeight, VirtualListStyle, Widget,
+    VirtualListRow, VirtualListRowHeight, Widget,
 };
 
+use crate::list_style::list_style;
 use crate::{Sizable, Size};
 
 #[derive(Debug, Clone)]
@@ -213,41 +214,10 @@ impl CommandList {
         }
         self.last_theme_revision = Some(theme.revision());
 
-        let text_px = self.size.control_text_px(theme);
-        let mut style = VirtualListStyle::default();
-
-        style.background = theme.colors.list_background;
-        style.border_color = theme.colors.list_border;
-        style.corner_radii = fret_core::geometry::Corners::all(theme.metrics.radius_md);
-        style.row_hover = theme.colors.list_row_hover;
-        style.row_selected = theme.colors.list_row_selected;
-        style.row_highlight_inset_y = theme
-            .metric_by_key("metric.list.row_highlight_inset_y")
-            .unwrap_or(Px(0.0));
-        style.text_color = theme.colors.text_primary;
-        style.secondary_text_color = theme.colors.text_muted;
-        style.trailing_text_color = theme.colors.text_muted;
-        style.header_text_color = theme.colors.text_muted;
-        style.separator_color = theme.colors.panel_border;
-
-        style.padding_x = self.size.list_px(theme);
-        style.padding_y = self.size.list_py(theme);
-        style.row_gap_y = Px(0.0);
-        style.trailing_gap_x = theme
-            .metric_by_key("metric.list.trailing_gap_x")
-            .unwrap_or(theme.metrics.padding_sm);
-        style.separator_inset_x = theme
-            .metric_by_key("metric.list.separator_inset_x")
-            .unwrap_or(theme.metrics.padding_md);
-
-        style.text_style.size = text_px;
-        style.secondary_text_style.size = Px((text_px.0 - 1.0).max(0.0));
-        style.trailing_text_style.size = Px((text_px.0 - 1.0).max(0.0));
-        style.header_text_style.size = Px((text_px.0 - 1.0).max(0.0));
-
-        self.list.set_style(style);
-        self.list
-            .set_row_height(VirtualListRowHeight::Fixed(self.size.list_row_h(theme)));
+        self.list.set_style(list_style(theme, self.size));
+        self.list.set_row_height(VirtualListRowHeight::Measured {
+            min: self.size.list_row_h(theme),
+        });
     }
 
     fn rebuild_rows(&mut self, items: Vec<CommandItem>, query: String) {

@@ -41,6 +41,13 @@ Scope: this is a pragmatic “what’s missing / what’s broken / what’s next
 - Overlays: `TooltipArea`, `DropdownMenuButton`, `Dialog`
 - Data: `ListView` (virtualized), `ScrollArea`, `ProgressBar`, `Tabs`, `Separator`, `Frame`
 
+### Tailwind-like primitives (typed)
+
+- `Space` + `Radius` enums (component-layer vocabulary; no runtime class parser).
+- Default themes ship a minimal Tailwind-like metric scale via extension keys:
+  - `component.space.*` (`0`, `0p5`, `1`, `1p5`, `2`, `2p5`, `3`, `3p5`, `4`, `5`, `6`, `8`, `10`, `11`)
+  - `component.radius.*` (`sm`, `md`, `lg`)
+
 Demo: `cargo run -p fret-demo --bin ui_kit`
 
 ## Known issues (current)
@@ -70,6 +77,8 @@ Tracking:
 - This should be solved by promoting sizing/density to a single component-level contract (MVP 47):
   `Size` (xs/sm/md/lg) + derived control metrics (list padding/row gaps/input heights), inspired by
   gpui-component’s `Size` + `StyleSized` helpers (`repo-ref/gpui-component/crates/ui/src/styled.rs`).
+  - Fret now uses a shared `fret-components-ui` list style helper to keep multi-line spacing consistent
+    across list-like components (`ListView`, `CommandList`).
 
 ### VirtualList hover not showing on first pointer move (fixed)
 

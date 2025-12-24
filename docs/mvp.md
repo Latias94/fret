@@ -1035,6 +1035,7 @@ Status:
 
 - Prototype implemented (incubated in this repo):
   - `crates/fret-components-ui`: token-driven components + Tailwind-like typed style refinements (`Button`, `IconButton`, `TextField`, `Select`, `Checkbox`, `Switch`, `Separator`, `Tabs`, `Toolbar`).
+    - Tailwind-like primitive vocabulary is now explicit and reusable: `Space` + `Radius` (typed) backed by theme extension tokens (`component.space.*`, `component.radius.*`).
   - `crates/fret-components-icons`: renderer-agnostic icon registry + small builtin glyph fallback set.
   - `fret-ui`: `Popover` + `PopoverService` (anchored overlay primitive used by `Select`).
   - `fret-demo`: adds a `UI Kit` panel (`PanelKey` `core.ui_kit`) to validate composition and theme-driven styling.
@@ -1142,6 +1143,7 @@ Status:
   - `crates/fret-components-ui/src/sizing.rs` defines `Size` + `Sizable`.
   - Core UI kit components adopt `.with_size(...)` and derive control metrics from `Size`.
   - `fret-ui::VirtualList` exposes `set_style` / `set_row_height` for size-aware list wrappers.
+  - List-like components share a single list style mapping to avoid “per-widget spacing patching”.
   - `fret-demo --bin ui_kit` includes a small size matrix surface.
 
 References:
