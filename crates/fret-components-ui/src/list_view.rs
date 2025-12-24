@@ -1,7 +1,13 @@
-use fret_core::{Event, Rect, Size};
+use fret_core::{Corners, Event, Px, Rect, Size};
 use fret_runtime::Model;
+use fret_ui::EventCx;
 use fret_ui::Widget as UiWidget;
-use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, VecStringDataSource, VirtualList};
+use fret_ui::{
+    Invalidation, LayoutCx, PaintCx, Theme, UiHost, VecStringDataSource, VirtualList,
+    VirtualListRowHeight, VirtualListStyle,
+};
+
+use crate::{Sizable, Size as ComponentSize};
 
 /// A simple, virtualized list view for `Vec<String>` items.
 ///
@@ -10,11 +16,13 @@ use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, VecStringDataSou
 pub struct ListView {
     items: Model<Vec<String>>,
     selection: Option<Model<Option<usize>>>,
+    size: ComponentSize,
 
     list: VirtualList<VecStringDataSource>,
     last_bounds: Rect,
     last_items_revision: Option<u64>,
     last_selection_revision: Option<u64>,
+    last_theme_revision: Option<u64>,
 }
 
 impl ListView {
@@ -22,16 +30,65 @@ impl ListView {
         Self {
             items,
             selection: None,
+            size: ComponentSize::Medium,
             list: VirtualList::from_items(Vec::new()),
             last_bounds: Rect::default(),
             last_items_revision: None,
             last_selection_revision: None,
+            last_theme_revision: None,
         }
+    }
+
+    pub fn with_size(mut self, size: ComponentSize) -> Self {
+        self.size = size;
+        self.last_theme_revision = None;
+        self
     }
 
     pub fn with_selection_model(mut self, selection: Model<Option<usize>>) -> Self {
         self.selection = Some(selection);
         self
+    }
+
+    fn sync_style(&mut self, theme: &Theme) {
+        if self.last_theme_revision == Some(theme.revision()) {
+            return;
+        }
+        self.last_theme_revision = Some(theme.revision());
+
+        let text_px = self.size.control_text_px(theme);
+        let mut style = VirtualListStyle::default();
+        style.background = theme.colors.list_background;
+        style.border_color = theme.colors.list_border;
+        style.corner_radii = Corners::all(theme.metrics.radius_md);
+        style.row_hover = theme.colors.list_row_hover;
+        style.row_selected = theme.colors.list_row_selected;
+        style.row_highlight_inset_y = theme
+            .metric_by_key("metric.list.row_highlight_inset_y")
+            .unwrap_or(Px(0.0));
+        style.text_color = theme.colors.text_primary;
+        style.secondary_text_color = theme.colors.text_muted;
+        style.trailing_text_color = theme.colors.text_muted;
+        style.header_text_color = theme.colors.text_muted;
+        style.separator_color = theme.colors.panel_border;
+        style.padding_x = self.size.list_px(theme);
+        style.padding_y = self.size.list_py(theme);
+        style.row_gap_y = Px(0.0);
+        style.trailing_gap_x = theme
+            .metric_by_key("metric.list.trailing_gap_x")
+            .unwrap_or(theme.metrics.padding_sm);
+        style.separator_inset_x = theme
+            .metric_by_key("metric.list.separator_inset_x")
+            .unwrap_or(theme.metrics.padding_md);
+
+        style.text_style.size = text_px;
+        style.secondary_text_style.size = Px((text_px.0 - 1.0).max(0.0));
+        style.trailing_text_style.size = Px((text_px.0 - 1.0).max(0.0));
+        style.header_text_style.size = Px((text_px.0 - 1.0).max(0.0));
+
+        self.list.set_style(style);
+        self.list
+            .set_row_height(VirtualListRowHeight::Fixed(self.size.list_row_h(theme)));
     }
 
     fn sync_models<H: UiHost>(&mut self, cx: &mut LayoutCx<'_, H>) {
@@ -57,6 +114,12 @@ impl ListView {
     }
 }
 
+impl Sizable for ListView {
+    fn with_size(self, size: ComponentSize) -> Self {
+        ListView::with_size(self, size)
+    }
+}
+
 impl<H: UiHost> UiWidget<H> for ListView {
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.last_bounds = cx.bounds;
@@ -74,6 +137,7 @@ impl<H: UiHost> UiWidget<H> for ListView {
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.last_bounds = cx.bounds;
+        self.sync_style(cx.theme());
         self.sync_models(cx);
         <VirtualList<VecStringDataSource> as UiWidget<H>>::layout(&mut self.list, cx)
     }

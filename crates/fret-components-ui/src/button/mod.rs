@@ -1,3 +1,3 @@
 mod button;
 
-pub use button::{Button, ButtonIntent, ButtonSize, ButtonVariant};
+pub use button::{Button, ButtonIntent, ButtonVariant};

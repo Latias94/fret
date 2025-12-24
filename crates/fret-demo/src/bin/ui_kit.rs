@@ -1,8 +1,8 @@
 use fret_app::{App, Effect, Menu, MenuItem, WindowRequest};
 use fret_components_icons::IconId;
 use fret_components_ui::{
-    StyleRefinement,
-    button::{Button, ButtonIntent, ButtonSize, ButtonVariant},
+    Size as ComponentSize, StyleRefinement,
+    button::{Button, ButtonIntent, ButtonVariant},
     checkbox::Checkbox,
     dropdown_menu::DropdownMenuButton,
     frame::Frame,
@@ -126,6 +126,33 @@ fn build_ui_kit_contents(
     ));
     ui.add_child(col, subtitle);
 
+    let size_title = ui.create_node(Text::new("Size matrix (xs/sm/md/lg)"));
+    ui.add_child(col, size_title);
+
+    let size_buttons = ui.create_node(Row::new().with_spacing(Px(10.0)));
+    let btn_xs = ui.create_node(Button::new("XS").with_size(ComponentSize::XSmall));
+    let btn_sm = ui.create_node(Button::new("SM").with_size(ComponentSize::Small));
+    let btn_md = ui.create_node(Button::new("MD").with_size(ComponentSize::Medium));
+    let btn_lg = ui.create_node(Button::new("LG").with_size(ComponentSize::Large));
+    ui.add_child(size_buttons, btn_xs);
+    ui.add_child(size_buttons, btn_sm);
+    ui.add_child(size_buttons, btn_md);
+    ui.add_child(size_buttons, btn_lg);
+    ui.add_child(col, size_buttons);
+
+    let text_xs = app.models_mut().insert("TextField xs".to_string());
+    let text_sm = app.models_mut().insert("TextField sm".to_string());
+    let text_md = app.models_mut().insert("TextField md".to_string());
+    let text_lg = app.models_mut().insert("TextField lg".to_string());
+    let field_xs = ui.create_node(TextField::new(text_xs).with_size(ComponentSize::XSmall));
+    let field_sm = ui.create_node(TextField::new(text_sm).with_size(ComponentSize::Small));
+    let field_md = ui.create_node(TextField::new(text_md).with_size(ComponentSize::Medium));
+    let field_lg = ui.create_node(TextField::new(text_lg).with_size(ComponentSize::Large));
+    ui.add_child(col, field_xs);
+    ui.add_child(col, field_sm);
+    ui.add_child(col, field_md);
+    ui.add_child(col, field_lg);
+
     let buttons_frame = ui.create_node(Frame::new(
         StyleRefinement::default()
             .rounded_md()
@@ -137,17 +164,17 @@ fn build_ui_kit_contents(
     let primary = ui.create_node(
         Button::new("Primary")
             .intent(ButtonIntent::Primary)
-            .size(ButtonSize::Md),
+            .with_size(ComponentSize::Medium),
     );
     let default_btn = ui.create_node(
         Button::new("Default")
             .variant(ButtonVariant::Default)
-            .size(ButtonSize::Md),
+            .with_size(ComponentSize::Medium),
     );
     let ghost = ui.create_node(
         Button::new("Ghost")
             .variant(ButtonVariant::Ghost)
-            .size(ButtonSize::Md),
+            .with_size(ComponentSize::Medium),
     );
     let disabled = ui.create_node(
         Button::new("Disabled")

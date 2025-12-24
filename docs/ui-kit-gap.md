@@ -67,8 +67,9 @@ Workarounds:
 
 Tracking:
 
-- If this persists, consider adding “density presets” (`compact/default/comfortable`) at the component
-  layer (e.g. `ListViewStyle`), mapping to `metric.list.*` values.
+- This should be solved by promoting sizing/density to a single component-level contract (MVP 47):
+  `Size` (xs/sm/md/lg) + derived control metrics (list padding/row gaps/input heights), inspired by
+  gpui-component’s `Size` + `StyleSized` helpers (`repo-ref/gpui-component/crates/ui/src/styled.rs`).
 
 ### VirtualList hover not showing on first pointer move (fixed)
 
@@ -132,8 +133,7 @@ Practical gaps to prioritize for parity:
 
 ## Next steps (recommended)
 
-1. Add a component-level “Command palette” built on top of:
+1. Land the component size/density contract (MVP 47 / ADR 0056), then migrate existing UI kit controls.
+2. Add a component-level “Command palette” built on top of:
    - `Dialog` + `TextField` + `VirtualList` (groups, separators, shortcut trailing)
-2. Add density presets for list-like components (ListView/Select/Command) so UX tuning is centralized.
 3. Expand `ListView` API beyond `Vec<String>` (leading/secondary/trailing + group headers/separators).
-

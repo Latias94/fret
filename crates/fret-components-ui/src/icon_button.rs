@@ -7,13 +7,7 @@ use fret_runtime::CommandId;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 use crate::style::{ColorFallback, MetricFallback, component_color, component_metric};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IconButtonSize {
-    Sm,
-    Md,
-    Lg,
-}
+use crate::{Sizable, Size as ComponentSize};
 
 #[derive(Debug, Clone)]
 struct PreparedText {
@@ -64,7 +58,7 @@ pub struct IconButton {
     icon: IconId,
     command: Option<CommandId>,
     disabled: bool,
-    size: IconButtonSize,
+    size: ComponentSize,
 
     hovered: bool,
     pressed: bool,
@@ -72,6 +66,7 @@ pub struct IconButton {
     last_theme_revision: Option<u64>,
     prepared: Option<PreparedText>,
     prepared_scale_bits: Option<u32>,
+    prepared_theme_revision: Option<u64>,
     prepared_icon_key: Option<String>,
     resolved: ResolvedIconButtonStyle,
 }
@@ -82,13 +77,14 @@ impl IconButton {
             icon,
             command: None,
             disabled: false,
-            size: IconButtonSize::Md,
+            size: ComponentSize::Medium,
             hovered: false,
             pressed: false,
             last_bounds: Rect::default(),
             last_theme_revision: None,
             prepared: None,
             prepared_scale_bits: None,
+            prepared_theme_revision: None,
             prepared_icon_key: None,
             resolved: ResolvedIconButtonStyle::default(),
         }
@@ -104,7 +100,7 @@ impl IconButton {
         self
     }
 
-    pub fn size(mut self, size: IconButtonSize) -> Self {
+    pub fn with_size(mut self, size: ComponentSize) -> Self {
         self.size = size;
         self
     }
@@ -115,11 +111,7 @@ impl IconButton {
         }
         self.last_theme_revision = Some(theme.revision());
 
-        let size_default = match self.size {
-            IconButtonSize::Sm => Px(28.0),
-            IconButtonSize::Md => Px(32.0),
-            IconButtonSize::Lg => Px(36.0),
-        };
+        let size_default = self.size.icon_button_size(theme);
 
         let size = component_metric(
             "component.icon_button.size",
@@ -189,12 +181,19 @@ impl IconButton {
     }
 }
 
+impl Sizable for IconButton {
+    fn with_size(self, size: ComponentSize) -> Self {
+        IconButton::with_size(self, size)
+    }
+}
+
 impl<H: UiHost> Widget<H> for IconButton {
     fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
         if let Some(p) = self.prepared.take() {
             text.release(p.blob);
         }
         self.prepared_scale_bits = None;
+        self.prepared_theme_revision = None;
         self.prepared_icon_key = None;
     }
 
@@ -305,6 +304,7 @@ impl<H: UiHost> Widget<H> for IconButton {
         });
 
         let scale_bits = cx.scale_factor.to_bits();
+        let theme_rev = cx.theme().revision();
         let icon_glyph = self.icon_glyph(cx.app);
         let icon_key = format!(
             "{}|{}|{}|{:?}",
@@ -316,6 +316,7 @@ impl<H: UiHost> Widget<H> for IconButton {
 
         let needs_prepare = self.prepared.is_none()
             || self.prepared_scale_bits != Some(scale_bits)
+            || self.prepared_theme_revision != Some(theme_rev)
             || self.prepared_icon_key.as_deref() != Some(icon_key.as_str());
 
         if needs_prepare {
@@ -336,6 +337,7 @@ impl<H: UiHost> Widget<H> for IconButton {
                 .prepare(icon_glyph.text.as_ref(), style, constraints);
             self.prepared = Some(PreparedText { blob, metrics });
             self.prepared_scale_bits = Some(scale_bits);
+            self.prepared_theme_revision = Some(theme_rev);
             self.prepared_icon_key = Some(icon_key);
         }
 

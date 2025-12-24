@@ -1,11 +1,13 @@
-use fret_core::Px;
+use fret_core::{FontId, Px, TextStyle};
 use fret_runtime::Model;
 use fret_ui::{BoundTextInput, TextInputStyle, Theme, UiHost, Widget};
 
 use crate::style::StyleRefinement;
+use crate::{Sizable, Size};
 
 pub struct TextField {
     inner: BoundTextInput,
+    size: Size,
     style: StyleRefinement,
     last_theme_revision: Option<u64>,
 }
@@ -14,9 +16,16 @@ impl TextField {
     pub fn new(model: Model<String>) -> Self {
         Self {
             inner: BoundTextInput::new(model),
+            size: Size::Medium,
             style: StyleRefinement::default(),
             last_theme_revision: None,
         }
+    }
+
+    pub fn with_size(mut self, size: Size) -> Self {
+        self.size = size;
+        self.last_theme_revision = None;
+        self
     }
 
     pub fn refine_style(mut self, style: StyleRefinement) -> Self {
@@ -33,6 +42,10 @@ impl TextField {
 
         let snap = theme.snapshot();
         let mut chrome = TextInputStyle::from_theme(snap);
+
+        chrome.padding_x = self.size.input_px(theme);
+        chrome.padding_y = self.size.input_py(theme);
+        chrome.corner_radii = fret_core::geometry::Corners::all(self.size.control_radius(theme));
 
         // Component namespace defaults (best-effort).
         if let Some(px) = theme.metric_by_key("component.text_field.padding_x") {
@@ -86,11 +99,25 @@ impl TextField {
             chrome.caret_color = c;
         }
 
+        let text_px = theme
+            .metric_by_key("component.text_field.text_px")
+            .unwrap_or_else(|| self.size.control_text_px(theme));
+        self.inner.set_text_style(TextStyle {
+            font: FontId::default(),
+            size: text_px,
+        });
+
         // Keep a small minimum height so the field is usable even with empty text.
         chrome.padding_x = Px(chrome.padding_x.0.max(0.0));
         chrome.padding_y = Px(chrome.padding_y.0.max(0.0));
 
         self.inner.set_chrome_style(chrome);
+    }
+}
+
+impl Sizable for TextField {
+    fn with_size(self, size: Size) -> Self {
+        TextField::with_size(self, size)
     }
 }
 
@@ -110,7 +137,10 @@ impl<H: UiHost> Widget<H> for TextField {
 
     fn layout(&mut self, cx: &mut fret_ui::LayoutCx<'_, H>) -> fret_core::Size {
         self.sync_chrome(cx.theme());
-        self.inner.layout(cx)
+        let inner = self.inner.layout(cx);
+        let min_h = self.size.input_h(cx.theme()).0.max(0.0);
+        let h = inner.height.0.max(min_h).min(cx.available.height.0);
+        fret_core::Size::new(inner.width, Px(h))
     }
 
     fn paint(&mut self, cx: &mut fret_ui::PaintCx<'_, H>) {

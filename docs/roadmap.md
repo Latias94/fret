@@ -30,6 +30,7 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Adopt the primary UI authoring/runtime model (declarative elements + externalized state) (ADR 0028).
 - P0: Adopt the app-owned model store + borrow-friendly update API (ADR 0031).
 - P0: Adopt typed style tokens + theme resolution rules (ADR 0032).
+- P0: Adopt a component-level size/density system so Tailwind-like primitives converge on one contract (ADR 0056). (prototype implemented; MVP 47)
 - P0: Adopt semantics tree + accessibility bridge boundary (A11y-ready infrastructure) (ADR 0033).
 - P0: Adopt timers/animation/redraw scheduling (event-driven + continuous mode) (ADR 0034).
 - P0: Adopt layout constraints + optional Flex/Grid integration boundary (ADR 0035).
@@ -192,6 +193,7 @@ validate that the framework contracts are sufficient.
 - P1: Optional `Flex`/`Grid` widget backed by `taffy` (defer until needed; no `UiTree` refactor).
 - P0: Virtualization contract for editor-scale lists/tables/editors (no unbounded children in layout engines). (ADR 0042) (prototype implemented: `fret-ui` `VirtualList`)
 - P1: Theme/tokens (typed core tokens + extensible namespaced keys for component ecosystems) (ADR 0032 / ADR 0050). (prototype implemented)
+- P0: Component size/density system (Tailwind-like scales) so control heights/paddings converge before scaling the UI kit (ADR 0056). (prototype implemented; see `docs/mvp.md` MVP 47)
 - P1: Anchored overlays (popover-style) for component primitives (prototype implemented: `fret-ui` `Popover` + `PopoverService`).
 - P1: Spin up `fret-components` repo workspace and establish a **general-purpose** component library baseline (ADR 0037):
   - `fret-components-ui` (token-driven primitives/composites; shadcn-inspired; not editor-specific) (prototype implemented in-tree),

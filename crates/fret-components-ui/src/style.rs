@@ -114,7 +114,7 @@ impl StyleRefinement {
     pub fn px_2(mut self) -> Self {
         self.padding_x = Some(MetricRef::Token {
             key: "component.space.2",
-            fallback: MetricFallback::ThemePaddingSm,
+            fallback: MetricFallback::Px(Px(8.0)),
         });
         self
     }
@@ -122,7 +122,7 @@ impl StyleRefinement {
     pub fn px_3(mut self) -> Self {
         self.padding_x = Some(MetricRef::Token {
             key: "component.space.3",
-            fallback: MetricFallback::ThemePaddingMd,
+            fallback: MetricFallback::Px(Px(12.0)),
         });
         self
     }
@@ -130,7 +130,7 @@ impl StyleRefinement {
     pub fn py_1(mut self) -> Self {
         self.padding_y = Some(MetricRef::Token {
             key: "component.space.1",
-            fallback: MetricFallback::ThemePaddingSm,
+            fallback: MetricFallback::Px(Px(4.0)),
         });
         self
     }

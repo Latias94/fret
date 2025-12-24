@@ -269,6 +269,15 @@ impl TextInput {
         self.last_theme_revision = None;
     }
 
+    pub fn set_text_style(&mut self, style: TextStyle) {
+        if self.style == style {
+            return;
+        }
+        self.queue_release_all_text_blobs();
+        self.style = style;
+        self.last_sent_cursor = None;
+    }
+
     fn sync_chrome_from_theme(&mut self, theme: crate::ThemeSnapshot) {
         if self.chrome_override {
             return;
@@ -373,8 +382,17 @@ impl BoundTextInput {
         self
     }
 
+    pub fn with_text_style(mut self, style: TextStyle) -> Self {
+        self.input.set_text_style(style);
+        self
+    }
+
     pub fn set_chrome_style(&mut self, style: TextInputStyle) {
         self.input.set_chrome_style(style);
+    }
+
+    pub fn set_text_style(&mut self, style: TextStyle) {
+        self.input.set_text_style(style);
     }
 
     fn sync_from_model<H: UiHost>(&mut self, app: &H, force: bool) {

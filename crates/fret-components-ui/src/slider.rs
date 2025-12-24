@@ -6,6 +6,7 @@ use fret_runtime::Model;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 use crate::style::{ColorFallback, MetricFallback, component_color, component_metric};
+use crate::{Sizable, Size as ComponentSize};
 
 #[derive(Debug, Clone)]
 struct ResolvedSliderStyle {
@@ -48,6 +49,7 @@ pub struct Slider {
     max: f32,
     step: Option<f32>,
     disabled: bool,
+    size: ComponentSize,
 
     hovered: bool,
     pressed: bool,
@@ -64,12 +66,19 @@ impl Slider {
             max: 1.0,
             step: None,
             disabled: false,
+            size: ComponentSize::Medium,
             hovered: false,
             pressed: false,
             last_bounds: Rect::default(),
             last_theme_revision: None,
             resolved: ResolvedSliderStyle::default(),
         }
+    }
+
+    pub fn with_size(mut self, size: ComponentSize) -> Self {
+        self.size = size;
+        self.last_theme_revision = None;
+        self
     }
 
     pub fn range(mut self, min: f32, max: f32) -> Self {
@@ -94,11 +103,22 @@ impl Slider {
         }
         self.last_theme_revision = Some(theme.revision());
 
-        let height = component_metric("component.slider.height", MetricFallback::Px(Px(28.0)))
-            .resolve(theme);
-        let track_height =
-            component_metric("component.slider.track_height", MetricFallback::Px(Px(6.0)))
-                .resolve(theme);
+        let (height_default, track_h_default, thumb_r_default) = match self.size {
+            ComponentSize::XSmall => (Px(24.0), Px(5.0), Px(7.0)),
+            ComponentSize::Small => (Px(26.0), Px(6.0), Px(7.0)),
+            ComponentSize::Medium => (Px(28.0), Px(6.0), Px(8.0)),
+            ComponentSize::Large => (Px(32.0), Px(7.0), Px(9.0)),
+        };
+        let height = component_metric(
+            "component.slider.height",
+            MetricFallback::Px(height_default),
+        )
+        .resolve(theme);
+        let track_height = component_metric(
+            "component.slider.track_height",
+            MetricFallback::Px(track_h_default),
+        )
+        .resolve(theme);
         let track_radius = component_metric(
             "component.slider.track_radius",
             MetricFallback::Px(Px(999.0)),
@@ -107,12 +127,16 @@ impl Slider {
         let border_width =
             component_metric("component.slider.border_width", MetricFallback::Px(Px(1.0)))
                 .resolve(theme);
-        let padding_x =
-            component_metric("component.slider.padding_x", MetricFallback::ThemePaddingMd)
-                .resolve(theme);
-        let thumb_radius =
-            component_metric("component.slider.thumb_radius", MetricFallback::Px(Px(8.0)))
-                .resolve(theme);
+        let padding_x = component_metric(
+            "component.slider.padding_x",
+            MetricFallback::Px(self.size.input_px(theme)),
+        )
+        .resolve(theme);
+        let thumb_radius = component_metric(
+            "component.slider.thumb_radius",
+            MetricFallback::Px(thumb_r_default),
+        )
+        .resolve(theme);
 
         let track_bg = component_color(
             "component.slider.track_bg",
@@ -219,6 +243,12 @@ impl Slider {
         let local = (x.0 - track.origin.x.0).clamp(0.0, track.size.width.0);
         let t = local / track.size.width.0;
         self.min + (self.max - self.min) * t
+    }
+}
+
+impl Sizable for Slider {
+    fn with_size(self, size: ComponentSize) -> Self {
+        Slider::with_size(self, size)
     }
 }
 

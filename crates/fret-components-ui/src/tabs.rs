@@ -8,6 +8,7 @@ use fret_runtime::Model;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 use crate::style::{ColorFallback, MetricFallback, component_color, component_metric};
+use crate::{Sizable, Size as ComponentSize};
 
 #[derive(Debug, Clone)]
 struct PreparedTab {
@@ -24,6 +25,7 @@ struct ResolvedTabsStyle {
     gap: Px,
     radius: Px,
     border_width: Px,
+    text_size: Px,
     bg: Color,
     border: Color,
     tab_bg_hover: Color,
@@ -40,6 +42,7 @@ impl Default for ResolvedTabsStyle {
             gap: Px(6.0),
             radius: Px(8.0),
             border_width: Px(1.0),
+            text_size: Px(13.0),
             bg: Color::TRANSPARENT,
             border: Color::TRANSPARENT,
             tab_bg_hover: Color::TRANSPARENT,
@@ -64,6 +67,7 @@ pub struct Tabs {
     model: Model<usize>,
     tabs: Vec<Arc<str>>,
     disabled: bool,
+    size: ComponentSize,
 
     hovered: Option<usize>,
     pressed: Option<usize>,
@@ -71,6 +75,7 @@ pub struct Tabs {
     last_theme_revision: Option<u64>,
     prepared: Vec<PreparedTab>,
     prepared_scale_factor_bits: Option<u32>,
+    prepared_theme_revision: Option<u64>,
     resolved: ResolvedTabsStyle,
 }
 
@@ -83,14 +88,22 @@ impl Tabs {
             model,
             tabs: tabs.into_iter().map(Into::into).collect(),
             disabled: false,
+            size: ComponentSize::Medium,
             hovered: None,
             pressed: None,
             last_bounds: Rect::default(),
             last_theme_revision: None,
             prepared: Vec::new(),
             prepared_scale_factor_bits: None,
+            prepared_theme_revision: None,
             resolved: ResolvedTabsStyle::default(),
         }
+    }
+
+    pub fn with_size(mut self, size: ComponentSize) -> Self {
+        self.size = size;
+        self.last_theme_revision = None;
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -138,17 +151,29 @@ impl Tabs {
         }
         self.last_theme_revision = Some(theme.revision());
 
-        let height =
-            component_metric("component.tabs.height", MetricFallback::Px(Px(32.0))).resolve(theme);
-        let padding_x = component_metric("component.tabs.padding_x", MetricFallback::Px(Px(10.0)))
-            .resolve(theme);
-        let gap =
-            component_metric("component.tabs.gap", MetricFallback::Px(Px(6.0))).resolve(theme);
+        let height = component_metric(
+            "component.tabs.height",
+            MetricFallback::Px(self.size.button_h(theme)),
+        )
+        .resolve(theme);
+        let padding_x = component_metric(
+            "component.tabs.padding_x",
+            MetricFallback::Px(self.size.button_px(theme)),
+        )
+        .resolve(theme);
+        let gap = component_metric(
+            "component.tabs.gap",
+            MetricFallback::Px(Px((self.size.button_px(theme).0 * 0.5).round().max(0.0))),
+        )
+        .resolve(theme);
         let radius =
             component_metric("component.tabs.radius", MetricFallback::ThemeRadiusMd).resolve(theme);
         let border_width =
             component_metric("component.tabs.border_width", MetricFallback::Px(Px(1.0)))
                 .resolve(theme);
+        let text_size = theme
+            .metric_by_key("component.tabs.text_px")
+            .unwrap_or_else(|| self.size.control_text_px(theme));
 
         let bg = component_color("component.tabs.bg", ColorFallback::ThemePanelBackground)
             .resolve(theme);
@@ -175,6 +200,7 @@ impl Tabs {
             gap,
             radius,
             border_width,
+            text_size,
             bg,
             border,
             tab_bg_hover,
@@ -193,7 +219,7 @@ impl Tabs {
 
         let text_style = TextStyle {
             font: fret_core::FontId::default(),
-            size: Px(13.0),
+            size: self.resolved.text_size,
         };
         let text_constraints = TextConstraints {
             max_width: None,
@@ -230,6 +256,12 @@ impl Tabs {
     }
 }
 
+impl Sizable for Tabs {
+    fn with_size(self, size: ComponentSize) -> Self {
+        Tabs::with_size(self, size)
+    }
+}
+
 impl<H: UiHost> Widget<H> for Tabs {
     fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
         for tab in self.prepared.drain(..) {
@@ -238,6 +270,7 @@ impl<H: UiHost> Widget<H> for Tabs {
             }
         }
         self.prepared_scale_factor_bits = None;
+        self.prepared_theme_revision = None;
     }
 
     fn is_focusable(&self) -> bool {
@@ -355,13 +388,17 @@ impl<H: UiHost> Widget<H> for Tabs {
         self.sync_bounds(cx.bounds);
 
         let scale_bits = cx.scale_factor.to_bits();
-        if self.prepared_scale_factor_bits != Some(scale_bits) {
+        let theme_rev = cx.theme().revision();
+        if self.prepared_scale_factor_bits != Some(scale_bits)
+            || self.prepared_theme_revision != Some(theme_rev)
+        {
             for tab in &mut self.prepared {
                 if let Some(blob) = tab.blob.take() {
                     cx.text.release(blob);
                 }
             }
             self.prepared_scale_factor_bits = Some(scale_bits);
+            self.prepared_theme_revision = Some(theme_rev);
         }
 
         let border_w = Px(self.resolved.border_width.0.max(0.0));
@@ -383,7 +420,7 @@ impl<H: UiHost> Widget<H> for Tabs {
             if tab.blob.is_none() {
                 let text_style = TextStyle {
                     font: fret_core::FontId::default(),
-                    size: Px(13.0),
+                    size: self.resolved.text_size,
                 };
                 let text_constraints = TextConstraints {
                     max_width: None,

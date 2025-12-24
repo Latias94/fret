@@ -10,6 +10,7 @@ use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
 use crate::style::{
     ColorFallback, MetricFallback, MetricRef, StyleRefinement, component_color, component_metric,
 };
+use crate::{Sizable, Size as ComponentSize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ButtonVariant {
@@ -24,13 +25,6 @@ pub enum ButtonIntent {
     Danger,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ButtonSize {
-    Sm,
-    Md,
-    Lg,
-}
-
 #[derive(Debug, Clone)]
 struct PreparedText {
     blob: fret_core::TextBlobId,
@@ -43,13 +37,14 @@ pub struct Button {
     disabled: bool,
     variant: ButtonVariant,
     intent: ButtonIntent,
-    size: ButtonSize,
+    size: ComponentSize,
     style: StyleRefinement,
     hovered: bool,
     pressed: bool,
     last_bounds: Rect,
     prepared: Option<PreparedText>,
     prepared_scale_factor_bits: Option<u32>,
+    prepared_theme_revision: Option<u64>,
     last_theme_revision: Option<u64>,
     resolved: ResolvedButtonStyle,
 }
@@ -61,6 +56,7 @@ struct ResolvedButtonStyle {
     min_height: Px,
     radius: Px,
     border_width: Px,
+    text_size: Px,
     bg: Color,
     bg_hover: Color,
     bg_active: Color,
@@ -77,6 +73,7 @@ impl Default for ResolvedButtonStyle {
             min_height: Px(28.0),
             radius: Px(8.0),
             border_width: Px(1.0),
+            text_size: Px(13.0),
             bg: Color::TRANSPARENT,
             bg_hover: Color::TRANSPARENT,
             bg_active: Color::TRANSPARENT,
@@ -105,13 +102,14 @@ impl Button {
             disabled: false,
             variant: ButtonVariant::Default,
             intent: ButtonIntent::Default,
-            size: ButtonSize::Md,
+            size: ComponentSize::Medium,
             style: StyleRefinement::default(),
             hovered: false,
             pressed: false,
             last_bounds: Rect::default(),
             prepared: None,
             prepared_scale_factor_bits: None,
+            prepared_theme_revision: None,
             last_theme_revision: None,
             resolved: ResolvedButtonStyle::default(),
         }
@@ -137,7 +135,7 @@ impl Button {
         self
     }
 
-    pub fn size(mut self, size: ButtonSize) -> Self {
+    pub fn with_size(mut self, size: ComponentSize) -> Self {
         self.size = size;
         self
     }
@@ -153,11 +151,9 @@ impl Button {
         }
         self.last_theme_revision = Some(theme.revision());
 
-        let (default_px, default_py, min_h) = match self.size {
-            ButtonSize::Sm => (Px(8.0), Px(5.0), Px(24.0)),
-            ButtonSize::Md => (Px(10.0), Px(6.0), Px(28.0)),
-            ButtonSize::Lg => (Px(12.0), Px(7.0), Px(32.0)),
-        };
+        let default_px = self.size.button_px(theme);
+        let default_py = self.size.button_py(theme);
+        let min_h = self.size.button_h(theme);
 
         let padding_x = self
             .style
@@ -198,6 +194,10 @@ impl Button {
             .unwrap_or(MetricRef::Px(Px(1.0)))
             .resolve(theme);
 
+        let text_size = theme
+            .metric_by_key("component.button.text_px")
+            .unwrap_or_else(|| self.size.control_text_px(theme));
+
         let border = self
             .style
             .border_color
@@ -221,6 +221,7 @@ impl Button {
             min_height,
             radius,
             border_width,
+            text_size,
             bg,
             bg_hover,
             bg_active,
@@ -228,6 +229,12 @@ impl Button {
             fg,
             fg_disabled,
         };
+    }
+}
+
+impl Sizable for Button {
+    fn with_size(self, size: ComponentSize) -> Self {
+        Button::with_size(self, size)
     }
 }
 
@@ -329,6 +336,7 @@ impl<H: UiHost> Widget<H> for Button {
             text.release(prepared.blob);
         }
         self.prepared_scale_factor_bits = None;
+        self.prepared_theme_revision = None;
     }
 
     fn is_focusable(&self) -> bool {
@@ -409,7 +417,7 @@ impl<H: UiHost> Widget<H> for Button {
 
         let text_style = TextStyle {
             font: FontId::default(),
-            size: Px(13.0),
+            size: self.resolved.text_size,
         };
         let text_constraints = TextConstraints {
             max_width: None,
@@ -434,17 +442,20 @@ impl<H: UiHost> Widget<H> for Button {
         self.last_bounds = cx.bounds;
 
         let scale_bits = cx.scale_factor.to_bits();
-        if self.prepared_scale_factor_bits != Some(scale_bits) {
+        if self.prepared_scale_factor_bits != Some(scale_bits)
+            || self.prepared_theme_revision != Some(cx.theme().revision())
+        {
             if let Some(prepared) = self.prepared.take() {
                 cx.text.release(prepared.blob);
             }
             self.prepared_scale_factor_bits = None;
+            self.prepared_theme_revision = None;
         }
 
         if self.prepared.is_none() {
             let text_style = TextStyle {
                 font: FontId::default(),
-                size: Px(13.0),
+                size: self.resolved.text_size,
             };
             let text_constraints = TextConstraints {
                 max_width: None,
@@ -454,6 +465,7 @@ impl<H: UiHost> Widget<H> for Button {
             let (blob, metrics) = cx.text.prepare(&self.label, text_style, text_constraints);
             self.prepared = Some(PreparedText { blob, metrics });
             self.prepared_scale_factor_bits = Some(scale_bits);
+            self.prepared_theme_revision = Some(cx.theme().revision());
         }
 
         let Some(prepared) = self.prepared.as_ref() else {

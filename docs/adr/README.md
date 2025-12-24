@@ -31,6 +31,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Viewport tools and overlays (example editor layer)**: `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
 - **Inspector / property editing (example editor layer)**: `docs/adr/0048-inspector-property-protocol-and-editor-registry.md`
 - **Theme tokens and theme config (P0 styling)**: `docs/adr/0032-style-tokens-and-theme-resolution.md`, `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
+- **Component sizing/density (Tailwind-like scales)**: `docs/adr/0056-component-size-and-density-system.md`
 - **Editor-scale performance**: `docs/adr/0042-virtualization-and-large-lists.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`, `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
 - **Model observation / reactive invalidation (GPUI-style)**: `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`, `docs/adr/0031-app-owned-models-and-leasing-updates.md`, `docs/adr/0005-retained-ui-tree.md`
 - **Editor-scale lists contract (keys + data source)**: `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
@@ -115,6 +116,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
 - `docs/adr/0032-style-tokens-and-theme-resolution.md`
 - `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
+- `docs/adr/0056-component-size-and-density-system.md`
 - `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
 - `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`
@@ -166,6 +168,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0037-workspace-boundaries-and-components-repository.md`
 - `docs/adr/0040-color-management-and-compositing-contracts.md`
 - `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
+- `docs/adr/0056-component-size-and-density-system.md`
 - `docs/adr/0052-ui-host-runtime-boundary.md`
 - `docs/adr/0053-external-drag-payload-portability.md`
 - `docs/adr/0054-platform-capabilities-and-portability-matrix.md`

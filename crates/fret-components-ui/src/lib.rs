@@ -3,6 +3,7 @@
 //! This crate is intentionally domain-agnostic (no engine/editor-specific concepts).
 //! Styling is token-driven and supports namespaced extension tokens (see ADR 0050).
 
+mod sizing;
 mod style;
 
 pub mod button;
@@ -23,4 +24,5 @@ pub mod text_field;
 pub mod toolbar;
 pub mod tooltip;
 
+pub use sizing::{Sizable, Size};
 pub use style::{ColorRef, MetricRef, StyleRefinement};

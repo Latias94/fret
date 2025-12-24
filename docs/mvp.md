@@ -1100,6 +1100,55 @@ References:
 - `docs/adr/0011-overlays-and-multi-root.md`
 - `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
 
+## MVP 47 — Component Size/Density System P0 (Tailwind-like Scales, GPUI-Inspired)
+
+Goal: stop doing per-widget spacing/height fixes by locking a **component-level sizing contract** that
+matches the ergonomics of **gpui-component** and the vocabulary of **Tailwind/shadcn**.
+
+This MVP is specifically about producing a *clean, reusable* component ecosystem foundation (for third-party
+apps), not about editor-only UI.
+
+**Scope**
+
+- Introduce a component-level `Size` (xs/sm/md/lg) and a small set of derived “control metrics”:
+  - `input_h`, `input_px/py`, `list_px/py`, `row_gap_y`, `icon_size`, etc.
+- Provide a unified sizing API for components (GPUI-style):
+  - a `Sizable` trait (or equivalent) so `Button/TextField/ListView/Select/...` share the same `.with_size(...)`.
+  - a `StyleSized` helper surface (or equivalent) so “tailwind-like primitives” can be applied consistently
+    (e.g. `.list_px(size)`, `.input_h(size)`), similar to `repo-ref/gpui-component/crates/ui/src/styled.rs`.
+- Tie the sizing system to theme tokens:
+  - baseline metrics come from typed tokens (ADR 0050),
+  - component ecosystems can override via namespaced dotted keys (ADR 0050 §5.1),
+  - list-specific tokens (e.g. `metric.list.*`) remain valid, but are consumed through the sizing layer.
+- Migrate existing `crates/fret-components-ui` components to the new sizing system and remove ad-hoc per-component
+  “magic numbers” where possible.
+
+**Non-goals**
+
+- A CSS utility-class parser or runtime Tailwind interpreter.
+- Committing to advanced renderer-visible effects (shadow/blur/glow) unless a shape semantics ADR update lands first
+  (ADR 0030).
+
+**Definition of Done**
+
+- `Button`, `TextField`, `Select`, and list-like components (`ListView`/`ScrollArea` wrappers) support `Size` and
+  render with consistent paddings/heights across the UI kit.
+- Size/density tuning happens in one place (the sizing layer), not by patching individual widgets.
+- The UI Kit demo includes a small “size matrix” surface to validate the contract visually.
+
+Status:
+
+- Prototype implemented:
+  - `crates/fret-components-ui/src/sizing.rs` defines `Size` + `Sizable`.
+  - Core UI kit components adopt `.with_size(...)` and derive control metrics from `Size`.
+  - `fret-ui::VirtualList` exposes `set_style` / `set_row_height` for size-aware list wrappers.
+  - `fret-demo --bin ui_kit` includes a small size matrix surface.
+
+References:
+
+- `docs/adr/0056-component-size-and-density-system.md`
+- `repo-ref/gpui-component/crates/ui/src/styled.rs` (search `Size`, `StyleSized`, `list_px/list_py`, `input_h`)
+
 ## Parking Lot (Explicitly Deferred)
 
 - External OS drag & drop hover semantics on macOS/winit (see `docs/known-issues.md`).

@@ -11,6 +11,7 @@ use fret_ui::{
 };
 
 use crate::style::StyleRefinement;
+use crate::{Sizable, Size as ComponentSize};
 
 #[derive(Debug, Clone)]
 pub struct SelectOption {
@@ -37,16 +38,48 @@ pub struct Select {
     options: Vec<SelectOption>,
     placeholder: Arc<str>,
     style: StyleRefinement,
+    size: ComponentSize,
 
     hovered: bool,
     pressed: bool,
     last_bounds: Rect,
     last_theme_revision: Option<u64>,
+    resolved: ResolvedSelectStyle,
 
     label_blob: Option<fret_core::TextBlobId>,
     label_metrics: Option<TextMetrics>,
     label_scale_factor_bits: Option<u32>,
+    label_theme_revision: Option<u64>,
     last_label: Option<Arc<str>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ResolvedSelectStyle {
+    padding_x: Px,
+    padding_y: Px,
+    min_height: Px,
+    radius: Px,
+    border_width: Px,
+    background: Color,
+    border_color: Color,
+    text_color: Color,
+    text_size: Px,
+}
+
+impl Default for ResolvedSelectStyle {
+    fn default() -> Self {
+        Self {
+            padding_x: Px(12.0),
+            padding_y: Px(6.0),
+            min_height: Px(32.0),
+            radius: Px(8.0),
+            border_width: Px(1.0),
+            background: Color::TRANSPARENT,
+            border_color: Color::TRANSPARENT,
+            text_color: Color::TRANSPARENT,
+            text_size: Px(13.0),
+        }
+    }
 }
 
 impl Select {
@@ -56,15 +89,24 @@ impl Select {
             options,
             placeholder: "Select...".into(),
             style: StyleRefinement::default(),
+            size: ComponentSize::Medium,
             hovered: false,
             pressed: false,
             last_bounds: Rect::default(),
             last_theme_revision: None,
+            resolved: ResolvedSelectStyle::default(),
             label_blob: None,
             label_metrics: None,
             label_scale_factor_bits: None,
+            label_theme_revision: None,
             last_label: None,
         }
+    }
+
+    pub fn with_size(mut self, size: ComponentSize) -> Self {
+        self.size = size;
+        self.last_theme_revision = None;
+        self
     }
 
     pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
@@ -76,6 +118,90 @@ impl Select {
         self.style = style;
         self.last_theme_revision = None;
         self
+    }
+
+    fn sync_style_from_theme(&mut self, theme: &Theme) {
+        if self.last_theme_revision == Some(theme.revision()) {
+            return;
+        }
+        self.last_theme_revision = Some(theme.revision());
+
+        let padding_x = self
+            .style
+            .padding_x
+            .as_ref()
+            .map(|m| m.resolve(theme))
+            .or_else(|| theme.metric_by_key("component.select.padding_x"))
+            .unwrap_or_else(|| self.size.input_px(theme));
+        let padding_y = self
+            .style
+            .padding_y
+            .as_ref()
+            .map(|m| m.resolve(theme))
+            .or_else(|| theme.metric_by_key("component.select.padding_y"))
+            .unwrap_or_else(|| self.size.input_py(theme));
+        let min_height = self
+            .style
+            .min_height
+            .as_ref()
+            .map(|m| m.resolve(theme))
+            .or_else(|| theme.metric_by_key("component.select.min_height"))
+            .unwrap_or_else(|| self.size.input_h(theme));
+        let radius = self
+            .style
+            .radius
+            .as_ref()
+            .map(|m| m.resolve(theme))
+            .or_else(|| theme.metric_by_key("component.select.radius"))
+            .unwrap_or_else(|| self.size.control_radius(theme));
+        let border_width = self
+            .style
+            .border_width
+            .as_ref()
+            .map(|m| m.resolve(theme))
+            .or_else(|| theme.metric_by_key("component.select.border_width"))
+            .unwrap_or(Px(1.0));
+
+        let background = self
+            .style
+            .background
+            .as_ref()
+            .map(|c| c.resolve(theme))
+            .or_else(|| theme.color_by_key("component.select.bg"))
+            .unwrap_or(theme.colors.panel_background);
+        let border_color = self
+            .style
+            .border_color
+            .as_ref()
+            .map(|c| c.resolve(theme))
+            .or_else(|| theme.color_by_key("component.select.border"))
+            .unwrap_or(theme.colors.panel_border);
+        let text_color = self
+            .style
+            .text_color
+            .as_ref()
+            .map(|c| c.resolve(theme))
+            .or_else(|| theme.color_by_key("component.select.fg"))
+            .unwrap_or(theme.colors.text_primary);
+        let text_size = theme
+            .metric_by_key("component.select.text_px")
+            .unwrap_or_else(|| self.size.control_text_px(theme));
+
+        self.resolved = ResolvedSelectStyle {
+            padding_x,
+            padding_y,
+            min_height,
+            radius,
+            border_width,
+            background,
+            border_color,
+            text_color,
+            text_size,
+        };
+
+        // Any style change can affect text layout. Keep the old blob until the next paint can
+        // release/prepare a new one.
+        self.label_metrics = None;
     }
 
     fn current_index<H: UiHost>(&self, app: &H) -> usize {
@@ -165,6 +291,7 @@ impl<H: UiHost> Widget<H> for Select {
         }
         self.label_metrics = None;
         self.label_scale_factor_bits = None;
+        self.label_theme_revision = None;
         self.last_label = None;
     }
 
@@ -177,6 +304,7 @@ impl<H: UiHost> Widget<H> for Select {
     }
 
     fn event(&mut self, cx: &mut fret_ui::EventCx<'_, H>, event: &Event) {
+        self.sync_style_from_theme(cx.theme());
         let Some(window) = cx.window else {
             return;
         };
@@ -245,6 +373,7 @@ impl<H: UiHost> Widget<H> for Select {
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        self.sync_style_from_theme(cx.theme());
         if let Some(window) = cx.window {
             if self.sync_result(cx.app, window, cx.node) {
                 // The selected label can change without a direct pointer event on the select
@@ -262,28 +391,13 @@ impl<H: UiHost> Widget<H> for Select {
         self.last_bounds = cx.bounds;
         cx.observe_model(self.model, Invalidation::Layout);
 
-        let theme = Theme::global(&*cx.app);
-        if self.last_theme_revision != Some(theme.revision()) {
-            self.last_theme_revision = Some(theme.revision());
-        }
-
         let label = self.current_label(cx.app);
         let style = TextStyle {
             font: fret_core::FontId::default(),
-            size: Px(13.0),
+            size: self.resolved.text_size,
         };
-        let pad_x = self
-            .style
-            .padding_x
-            .clone()
-            .map(|m| m.resolve(theme))
-            .unwrap_or(theme.metrics.padding_md);
-        let pad_y = self
-            .style
-            .padding_y
-            .clone()
-            .map(|m| m.resolve(theme))
-            .unwrap_or(theme.metrics.padding_sm);
+        let pad_x = self.resolved.padding_x;
+        let pad_y = self.resolved.padding_y;
 
         let constraints = TextConstraints {
             max_width: Some(Px((cx.available.width.0 - pad_x.0 * 2.0).max(0.0))),
@@ -292,53 +406,26 @@ impl<H: UiHost> Widget<H> for Select {
         };
         let metrics = cx.text.measure(label.as_ref(), style, constraints);
 
-        let h = Px((metrics.size.height.0 + pad_y.0 * 2.0).max(28.0));
+        let content_h = (metrics.size.height.0 + pad_y.0 * 2.0).max(0.0);
+        let h = Px(content_h.max(self.resolved.min_height.0.max(0.0)));
         Size::new(cx.available.width, Px(h.0.min(cx.available.height.0)))
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
         cx.observe_model(self.model, Invalidation::Paint);
-        let theme = cx.theme().snapshot();
+        let snap = cx.theme().snapshot();
 
         let focused = cx.focus == Some(cx.node);
-        let base_border = self
-            .style
-            .border_color
-            .clone()
-            .map(|c| c.resolve(cx.theme()))
-            .unwrap_or(theme.colors.panel_border);
-        let border_color = base_border;
+        let border_color = self.resolved.border_color;
+        let pad_x = self.resolved.padding_x;
+        let radius = self.resolved.radius;
+        let border_w = self.resolved.border_width;
 
-        let background = self
-            .style
-            .background
-            .clone()
-            .map(|c| c.resolve(cx.theme()))
-            .unwrap_or(theme.colors.panel_background);
-
-        let pad_x = self
-            .style
-            .padding_x
-            .clone()
-            .map(|m| m.resolve(cx.theme()))
-            .unwrap_or(theme.metrics.padding_md);
-        let radius = self
-            .style
-            .radius
-            .clone()
-            .map(|m| m.resolve(cx.theme()))
-            .unwrap_or(theme.metrics.radius_sm);
-        let border_w = self
-            .style
-            .border_width
-            .clone()
-            .map(|m| m.resolve(cx.theme()))
-            .unwrap_or(Px(1.0));
-
-        let mut bg = background;
+        let mut bg = self.resolved.background;
         if self.pressed || self.hovered {
-            bg = theme.colors.hover_background;
+            bg = snap.colors.hover_background;
         }
 
         cx.scene.push(SceneOp::Quad {
@@ -379,7 +466,9 @@ impl<H: UiHost> Widget<H> for Select {
         let label = self.current_label(cx.app);
 
         let needs_prepare = self.label_blob.is_none()
+            || self.label_metrics.is_none()
             || self.label_scale_factor_bits != Some(scale_bits)
+            || self.label_theme_revision != Some(cx.theme().revision())
             || self.last_label.as_ref().is_none_or(|l| **l != *label);
 
         if needs_prepare {
@@ -389,14 +478,8 @@ impl<H: UiHost> Widget<H> for Select {
 
             let style = TextStyle {
                 font: fret_core::FontId::default(),
-                size: Px(13.0),
+                size: self.resolved.text_size,
             };
-            let pad_x = self
-                .style
-                .padding_x
-                .clone()
-                .map(|m| m.resolve(cx.theme()))
-                .unwrap_or(theme.metrics.padding_md);
             let constraints = TextConstraints {
                 max_width: Some(Px((cx.bounds.size.width.0 - pad_x.0 * 2.0).max(0.0))),
                 wrap: TextWrap::None,
@@ -406,6 +489,7 @@ impl<H: UiHost> Widget<H> for Select {
             self.label_blob = Some(blob);
             self.label_metrics = Some(metrics);
             self.label_scale_factor_bits = Some(scale_bits);
+            self.label_theme_revision = Some(cx.theme().revision());
             self.last_label = Some(label);
         }
 
@@ -424,7 +508,13 @@ impl<H: UiHost> Widget<H> for Select {
             order: DrawOrder(2),
             origin: Point::new(text_x, text_y),
             text: blob,
-            color: theme.colors.text_primary,
+            color: self.resolved.text_color,
         });
+    }
+}
+
+impl Sizable for Select {
+    fn with_size(self, size: ComponentSize) -> Self {
+        Select::with_size(self, size)
     }
 }

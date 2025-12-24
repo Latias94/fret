@@ -6,6 +6,7 @@ use fret_runtime::Model;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 use crate::style::{ColorFallback, MetricFallback, component_color, component_metric};
+use crate::{Sizable, Size as ComponentSize};
 
 #[derive(Debug, Clone)]
 struct ResolvedSwitchStyle {
@@ -43,6 +44,7 @@ impl Default for ResolvedSwitchStyle {
 pub struct Switch {
     model: Model<bool>,
     disabled: bool,
+    size: ComponentSize,
     hovered: bool,
     pressed: bool,
     last_bounds: Rect,
@@ -55,12 +57,19 @@ impl Switch {
         Self {
             model,
             disabled: false,
+            size: ComponentSize::Medium,
             hovered: false,
             pressed: false,
             last_bounds: Rect::default(),
             last_theme_revision: None,
             resolved: ResolvedSwitchStyle::default(),
         }
+    }
+
+    pub fn with_size(mut self, size: ComponentSize) -> Self {
+        self.size = size;
+        self.last_theme_revision = None;
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -82,10 +91,19 @@ impl Switch {
         }
         self.last_theme_revision = Some(theme.revision());
 
-        let width =
-            component_metric("component.switch.width", MetricFallback::Px(Px(40.0))).resolve(theme);
-        let height = component_metric("component.switch.height", MetricFallback::Px(Px(22.0)))
+        let (width_default, height_default) = match self.size {
+            ComponentSize::XSmall => (Px(34.0), Px(18.0)),
+            ComponentSize::Small => (Px(38.0), Px(20.0)),
+            ComponentSize::Medium => (Px(40.0), Px(22.0)),
+            ComponentSize::Large => (Px(46.0), Px(24.0)),
+        };
+        let width = component_metric("component.switch.width", MetricFallback::Px(width_default))
             .resolve(theme);
+        let height = component_metric(
+            "component.switch.height",
+            MetricFallback::Px(height_default),
+        )
+        .resolve(theme);
         let border_width =
             component_metric("component.switch.border_width", MetricFallback::Px(Px(1.0)))
                 .resolve(theme);
@@ -131,6 +149,12 @@ impl Switch {
             knob_disabled,
             focus_ring: theme.colors.focus_ring,
         };
+    }
+}
+
+impl Sizable for Switch {
+    fn with_size(self, size: ComponentSize) -> Self {
+        Switch::with_size(self, size)
     }
 }
 

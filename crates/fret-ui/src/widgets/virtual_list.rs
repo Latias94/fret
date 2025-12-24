@@ -455,6 +455,19 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         self
     }
 
+    pub fn set_row_height(&mut self, height: VirtualListRowHeight) {
+        if self.row_height == height {
+            return;
+        }
+        self.row_height = height;
+        self.prepared_dirty = true;
+        self.heights_dirty = true;
+        if !matches!(self.row_height, VirtualListRowHeight::Measured { .. }) {
+            self.measured_heights_by_key.clear();
+        }
+        self.clamp_offset();
+    }
+
     pub fn with_wrap(mut self, wrap: TextWrap) -> Self {
         self.style.wrap = wrap;
         self.heights_dirty = true;
@@ -486,6 +499,17 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         self.style = style;
         self.style_override = true;
         self
+    }
+
+    pub fn set_style(&mut self, style: VirtualListStyle) {
+        self.style = style;
+        self.style_override = true;
+        self.prepared_dirty = true;
+        self.heights_dirty = true;
+        if matches!(self.row_height, VirtualListRowHeight::Measured { .. }) {
+            self.measured_heights_by_key.clear();
+        }
+        self.clamp_offset();
     }
 
     pub fn style(&self) -> &VirtualListStyle {

@@ -8,6 +8,7 @@ use fret_runtime::Model;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 use crate::style::{ColorFallback, MetricFallback, component_color, component_metric};
+use crate::{Sizable, Size as ComponentSize};
 
 #[derive(Debug, Clone)]
 struct PreparedText {
@@ -22,6 +23,7 @@ struct ResolvedCheckboxStyle {
     radius: Px,
     border_width: Px,
     min_height: Px,
+    text_size: Px,
     bg: Color,
     bg_hover: Color,
     border: Color,
@@ -39,6 +41,7 @@ impl Default for ResolvedCheckboxStyle {
             radius: Px(4.0),
             border_width: Px(1.0),
             min_height: Px(28.0),
+            text_size: Px(13.0),
             bg: Color::TRANSPARENT,
             bg_hover: Color::TRANSPARENT,
             border: Color::TRANSPARENT,
@@ -74,6 +77,7 @@ pub struct Checkbox {
     model: Model<bool>,
     label: Arc<str>,
     disabled: bool,
+    size: ComponentSize,
 
     hovered: bool,
     pressed: bool,
@@ -81,6 +85,7 @@ pub struct Checkbox {
     last_theme_revision: Option<u64>,
     prepared: Option<PreparedText>,
     prepared_scale_factor_bits: Option<u32>,
+    prepared_theme_revision: Option<u64>,
     resolved: ResolvedCheckboxStyle,
 }
 
@@ -90,14 +95,22 @@ impl Checkbox {
             model,
             label: label.into(),
             disabled: false,
+            size: ComponentSize::Medium,
             hovered: false,
             pressed: false,
             last_bounds: Rect::default(),
             last_theme_revision: None,
             prepared: None,
             prepared_scale_factor_bits: None,
+            prepared_theme_revision: None,
             resolved: ResolvedCheckboxStyle::default(),
         }
+    }
+
+    pub fn with_size(mut self, size: ComponentSize) -> Self {
+        self.size = size;
+        self.last_theme_revision = None;
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -119,11 +132,26 @@ impl Checkbox {
         }
         self.last_theme_revision = Some(theme.revision());
 
-        let box_size =
-            component_metric("component.checkbox.box_size", MetricFallback::Px(Px(16.0)))
-                .resolve(theme);
-        let gap =
-            component_metric("component.checkbox.gap", MetricFallback::Px(Px(8.0))).resolve(theme);
+        let box_size_default = match self.size {
+            ComponentSize::XSmall => Px(12.0),
+            ComponentSize::Small => Px(14.0),
+            ComponentSize::Medium => Px(16.0),
+            ComponentSize::Large => Px(18.0),
+        };
+        let gap_default = match self.size {
+            ComponentSize::XSmall => Px(6.0),
+            ComponentSize::Small => Px(8.0),
+            ComponentSize::Medium => Px(10.0),
+            ComponentSize::Large => Px(12.0),
+        };
+
+        let box_size = component_metric(
+            "component.checkbox.box_size",
+            MetricFallback::Px(box_size_default),
+        )
+        .resolve(theme);
+        let gap = component_metric("component.checkbox.gap", MetricFallback::Px(gap_default))
+            .resolve(theme);
         let radius = component_metric("component.checkbox.radius", MetricFallback::Px(Px(4.0)))
             .resolve(theme);
         let border_width = component_metric(
@@ -133,9 +161,12 @@ impl Checkbox {
         .resolve(theme);
         let min_height = component_metric(
             "component.checkbox.min_height",
-            MetricFallback::Px(Px(28.0)),
+            MetricFallback::Px(self.size.button_h(theme)),
         )
         .resolve(theme);
+        let text_size = theme
+            .metric_by_key("component.checkbox.text_px")
+            .unwrap_or_else(|| self.size.control_text_px(theme));
 
         let bg = component_color("component.checkbox.bg", ColorFallback::ThemePanelBackground)
             .resolve(theme);
@@ -167,6 +198,7 @@ impl Checkbox {
             radius,
             border_width,
             min_height,
+            text_size,
             bg,
             bg_hover,
             border,
@@ -178,12 +210,19 @@ impl Checkbox {
     }
 }
 
+impl Sizable for Checkbox {
+    fn with_size(self, size: ComponentSize) -> Self {
+        Checkbox::with_size(self, size)
+    }
+}
+
 impl<H: UiHost> Widget<H> for Checkbox {
     fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
         if let Some(p) = self.prepared.take() {
             text.release(p.blob);
         }
         self.prepared_scale_factor_bits = None;
+        self.prepared_theme_revision = None;
     }
 
     fn is_focusable(&self) -> bool {
@@ -279,7 +318,7 @@ impl<H: UiHost> Widget<H> for Checkbox {
 
         let text_style = TextStyle {
             font: fret_core::FontId::default(),
-            size: Px(13.0),
+            size: self.resolved.text_size,
         };
         let text_constraints = TextConstraints {
             max_width: None,
@@ -305,17 +344,21 @@ impl<H: UiHost> Widget<H> for Checkbox {
         self.last_bounds = cx.bounds;
 
         let scale_bits = cx.scale_factor.to_bits();
-        if self.prepared_scale_factor_bits != Some(scale_bits) {
+        let theme_rev = cx.theme().revision();
+        if self.prepared_scale_factor_bits != Some(scale_bits)
+            || self.prepared_theme_revision != Some(theme_rev)
+        {
             if let Some(p) = self.prepared.take() {
                 cx.text.release(p.blob);
             }
             self.prepared_scale_factor_bits = None;
+            self.prepared_theme_revision = None;
         }
 
         if self.prepared.is_none() {
             let text_style = TextStyle {
                 font: fret_core::FontId::default(),
-                size: Px(13.0),
+                size: self.resolved.text_size,
             };
             let text_constraints = TextConstraints {
                 max_width: None,
@@ -325,6 +368,7 @@ impl<H: UiHost> Widget<H> for Checkbox {
             let (blob, metrics) = cx.text.prepare(&self.label, text_style, text_constraints);
             self.prepared = Some(PreparedText { blob, metrics });
             self.prepared_scale_factor_bits = Some(scale_bits);
+            self.prepared_theme_revision = Some(theme_rev);
         }
 
         let checked = self.checked(cx.app);

@@ -2,6 +2,7 @@ use fret_core::{Color, Corners, DrawOrder, Edges, Px, Rect, SceneOp, Size};
 use fret_ui::{LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 use crate::style::{ColorFallback, ColorRef, MetricFallback, MetricRef, StyleRefinement};
+use crate::{Sizable, Size as ComponentSize};
 
 #[derive(Debug, Clone)]
 struct ResolvedToolbarStyle {
@@ -31,6 +32,7 @@ impl Default for ResolvedToolbarStyle {
 }
 
 pub struct Toolbar {
+    size: ComponentSize,
     style: StyleRefinement,
     last_theme_revision: Option<u64>,
     resolved: ResolvedToolbarStyle,
@@ -39,10 +41,17 @@ pub struct Toolbar {
 impl Toolbar {
     pub fn new() -> Self {
         Self {
+            size: ComponentSize::Medium,
             style: StyleRefinement::default(),
             last_theme_revision: None,
             resolved: ResolvedToolbarStyle::default(),
         }
+    }
+
+    pub fn with_size(mut self, size: ComponentSize) -> Self {
+        self.size = size;
+        self.last_theme_revision = None;
+        self
     }
 
     pub fn refine_style(mut self, style: StyleRefinement) -> Self {
@@ -63,7 +72,7 @@ impl Toolbar {
             .clone()
             .unwrap_or(MetricRef::Token {
                 key: "component.toolbar.padding_x",
-                fallback: MetricFallback::ThemePaddingSm,
+                fallback: MetricFallback::Px(self.size.button_px(theme)),
             })
             .resolve(theme);
         let py = self
@@ -72,7 +81,7 @@ impl Toolbar {
             .clone()
             .unwrap_or(MetricRef::Token {
                 key: "component.toolbar.padding_y",
-                fallback: MetricFallback::ThemePaddingSm,
+                fallback: MetricFallback::Px(self.size.button_py(theme)),
             })
             .resolve(theme);
         let radius = self
@@ -112,10 +121,10 @@ impl Toolbar {
 
         let gap = theme
             .metric_by_key("component.toolbar.gap")
-            .unwrap_or(theme.metrics.padding_sm);
+            .unwrap_or(Px((self.size.button_px(theme).0 * 0.5).round().max(0.0)));
         let height = theme
             .metric_by_key("component.toolbar.height")
-            .unwrap_or(Px(32.0));
+            .unwrap_or(self.size.button_h(theme));
 
         self.resolved = ResolvedToolbarStyle {
             padding_x: px,
@@ -133,6 +142,12 @@ impl Toolbar {
 impl Default for Toolbar {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Sizable for Toolbar {
+    fn with_size(self, size: ComponentSize) -> Self {
+        Toolbar::with_size(self, size)
     }
 }
 

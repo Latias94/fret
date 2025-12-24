@@ -51,8 +51,8 @@ use fret_app::{
 };
 use fret_components_icons::IconId;
 use fret_components_ui::{
-    StyleRefinement,
-    button::{Button, ButtonIntent, ButtonSize, ButtonVariant},
+    Size as ComponentSize, StyleRefinement,
+    button::{Button, ButtonIntent, ButtonVariant},
     checkbox::Checkbox,
     frame::Frame,
     icon_button::IconButton,
@@ -3789,17 +3789,17 @@ impl WinitDriver for DemoDriver {
         let ui_kit_primary = ui.create_node(
             Button::new("Primary")
                 .intent(ButtonIntent::Primary)
-                .size(ButtonSize::Md),
+                .with_size(ComponentSize::Medium),
         );
         let ui_kit_default = ui.create_node(
             Button::new("Default")
                 .variant(ButtonVariant::Default)
-                .size(ButtonSize::Md),
+                .with_size(ComponentSize::Medium),
         );
         let ui_kit_ghost = ui.create_node(
             Button::new("Ghost")
                 .variant(ButtonVariant::Ghost)
-                .size(ButtonSize::Md),
+                .with_size(ComponentSize::Medium),
         );
         let ui_kit_disabled = ui.create_node(
             Button::new("Disabled")
