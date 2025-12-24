@@ -1,4 +1,5 @@
 use fret_core::{FontId, Px, TextStyle};
+use fret_runtime::CommandId;
 use fret_runtime::Model;
 use fret_ui::{BoundTextInput, TextInputStyle, Theme, UiHost, Widget};
 
@@ -31,6 +32,16 @@ impl TextField {
     pub fn refine_style(mut self, style: StyleRefinement) -> Self {
         self.style = style;
         self.last_theme_revision = None;
+        self
+    }
+
+    pub fn with_submit_command(mut self, command: CommandId) -> Self {
+        self.inner.set_submit_command(Some(command));
+        self
+    }
+
+    pub fn with_cancel_command(mut self, command: CommandId) -> Self {
+        self.inner.set_cancel_command(Some(command));
         self
     }
 

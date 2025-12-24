@@ -620,6 +620,34 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub fn children(&self, parent: NodeId) -> Vec<NodeId> {
+        self.nodes
+            .get(parent)
+            .map(|n| n.children.clone())
+            .unwrap_or_default()
+    }
+
+    pub fn first_focusable_descendant(&self, root: NodeId) -> Option<NodeId> {
+        let mut stack = vec![root];
+        while let Some(id) = stack.pop() {
+            let focusable = self
+                .nodes
+                .get(id)
+                .and_then(|n| n.widget.as_ref())
+                .is_some_and(|w| w.is_focusable());
+            if focusable {
+                return Some(id);
+            }
+
+            if let Some(node) = self.nodes.get(id) {
+                for &child in node.children.iter().rev() {
+                    stack.push(child);
+                }
+            }
+        }
+        None
+    }
+
     pub fn layout_all(
         &mut self,
         app: &mut H,

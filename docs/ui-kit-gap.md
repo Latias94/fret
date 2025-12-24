@@ -145,3 +145,8 @@ Practical gaps to prioritize for parity:
 1. Expand `Command` beyond the list: add a palette-style shell (overlay/backdrop + open/close + focus policy) and
    keyboard navigation parity with shadcn/cmdk (Down/Up/Enter) while keeping the list virtualized.
 2. Expand `ListView` API beyond `Vec<String>` (leading/secondary/trailing + group headers/separators).
+
+Update:
+
+- The palette-style shell is now prototype implemented via `fret-ui` `CommandPaletteOverlay` +
+  `WindowOverlays` commands (`command_palette.open/close/toggle`) and wired in `fret-demo --bin ui_kit`.

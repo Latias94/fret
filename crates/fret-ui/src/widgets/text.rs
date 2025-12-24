@@ -377,6 +377,14 @@ impl BoundTextInput {
         self
     }
 
+    pub fn set_submit_command(&mut self, command: Option<CommandId>) {
+        self.submit_command = command;
+    }
+
+    pub fn set_cancel_command(&mut self, command: Option<CommandId>) {
+        self.cancel_command = command;
+    }
+
     pub fn with_chrome_style(mut self, style: TextInputStyle) -> Self {
         self.input.set_chrome_style(style);
         self

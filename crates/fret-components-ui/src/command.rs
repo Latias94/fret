@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{Event, Size as UiSize};
-use fret_runtime::Model;
+use fret_runtime::{CommandId, Model};
 use fret_ui::{
     Invalidation, LayoutCx, PaintCx, Theme, UiHost, VirtualList, VirtualListDataSource,
     VirtualListRow, VirtualListRowHeight, Widget,
@@ -173,6 +173,8 @@ pub struct CommandList {
     items: Model<Vec<CommandItem>>,
     query: Model<String>,
     selection: Option<Model<Option<Arc<str>>>>,
+    close_command: Option<CommandId>,
+    activate_on_enter: bool,
     size: Size,
 
     list: VirtualList<CommandDataSource>,
@@ -188,6 +190,8 @@ impl CommandList {
             items,
             query,
             selection: None,
+            close_command: None,
+            activate_on_enter: false,
             size: Size::Medium,
             list: VirtualList::new(CommandDataSource::default()),
             last_items_revision: None,
@@ -205,6 +209,16 @@ impl CommandList {
 
     pub fn with_selection_model(mut self, selection: Model<Option<Arc<str>>>) -> Self {
         self.selection = Some(selection);
+        self
+    }
+
+    pub fn with_close_command(mut self, command: CommandId) -> Self {
+        self.close_command = Some(command);
+        self
+    }
+
+    pub fn activate_on_enter(mut self, enable: bool) -> Self {
+        self.activate_on_enter = enable;
         self
     }
 
@@ -341,6 +355,10 @@ impl Sizable for CommandList {
 }
 
 impl<H: UiHost> Widget<H> for CommandList {
+    fn is_focusable(&self) -> bool {
+        true
+    }
+
     fn event(&mut self, cx: &mut fret_ui::EventCx<'_, H>, event: &Event) {
         let prev = self.selected_id();
         <VirtualList<CommandDataSource> as Widget<H>>::event(&mut self.list, cx, event);
@@ -349,6 +367,23 @@ impl<H: UiHost> Widget<H> for CommandList {
             && let Some(selection) = self.selection
         {
             let _ = cx.app.models_mut().update(selection, |v| *v = next.clone());
+        }
+
+        if self.activate_on_enter
+            && cx.focus == Some(cx.node)
+            && let Event::KeyDown { key, modifiers, .. } = event
+            && *key == fret_core::KeyCode::Enter
+            && !modifiers.shift
+            && !modifiers.ctrl
+            && !modifiers.alt
+            && !modifiers.meta
+            && let Some(id) = next
+        {
+            if let Some(cmd) = self.close_command.clone() {
+                cx.dispatch_command(cmd);
+            }
+            cx.dispatch_command(CommandId::new(id));
+            cx.stop_propagation();
         }
     }
 

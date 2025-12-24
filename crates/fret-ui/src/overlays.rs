@@ -2,8 +2,8 @@ use crate::{
     UiHost,
     tree::{UiLayerId, UiTree},
     widgets::{
-        ContextMenu, ContextMenuService, DialogOverlay, DialogService, Popover, PopoverService,
-        TooltipOverlay,
+        CommandPaletteOverlay, ContextMenu, ContextMenuService, DialogOverlay, DialogService,
+        Popover, PopoverService, TooltipOverlay,
     },
 };
 use fret_core::{AppWindowId, NodeId, TextService};
@@ -16,6 +16,10 @@ use fret_runtime::{CommandId, Effect};
 #[derive(Debug)]
 pub struct WindowOverlays {
     _tooltip_node: NodeId,
+
+    command_palette_layer: UiLayerId,
+    command_palette_node: NodeId,
+    command_palette_previous_focus: Option<NodeId>,
 
     dialog_layer: UiLayerId,
     dialog_node: NodeId,
@@ -35,6 +39,10 @@ impl WindowOverlays {
         let tooltip_node = ui.create_node(TooltipOverlay::new());
         let _ = ui.push_overlay_root_ex(tooltip_node, false, false);
 
+        let command_palette_node = ui.create_node(CommandPaletteOverlay::new());
+        let command_palette_layer = ui.push_overlay_root(command_palette_node, true);
+        ui.set_layer_visible(command_palette_layer, false);
+
         let dialog_node = ui.create_node(DialogOverlay::new());
         let dialog_layer = ui.push_overlay_root(dialog_node, true);
         ui.set_layer_visible(dialog_layer, false);
@@ -49,6 +57,9 @@ impl WindowOverlays {
 
         Self {
             _tooltip_node: tooltip_node,
+            command_palette_layer,
+            command_palette_node,
+            command_palette_previous_focus: None,
             dialog_layer,
             dialog_node,
             dialog_previous_focus: None,
@@ -61,6 +72,10 @@ impl WindowOverlays {
         }
     }
 
+    pub fn command_palette_node(&self) -> NodeId {
+        self.command_palette_node
+    }
+
     pub fn handle_command<H: UiHost>(
         &mut self,
         app: &mut H,
@@ -70,6 +85,54 @@ impl WindowOverlays {
         command: &CommandId,
     ) -> bool {
         match command.as_str() {
+            "command_palette.open" => {
+                let visible = ui.is_layer_visible(self.command_palette_layer);
+                if !visible {
+                    self.command_palette_previous_focus = ui.focus();
+                    ui.set_layer_visible(self.command_palette_layer, true);
+                }
+
+                let focus = ui
+                    .children(self.command_palette_node)
+                    .first()
+                    .copied()
+                    .and_then(|root| ui.first_focusable_descendant(root))
+                    .unwrap_or(self.command_palette_node);
+                ui.set_focus(Some(focus));
+                app.request_redraw(window);
+                true
+            }
+            "command_palette.close" => {
+                if ui.is_layer_visible(self.command_palette_layer) {
+                    ui.cleanup_subtree(text, self.command_palette_node);
+                    ui.set_layer_visible(self.command_palette_layer, false);
+                }
+
+                if let Some(prev) = self.command_palette_previous_focus.take() {
+                    ui.set_focus(Some(prev));
+                }
+
+                app.request_redraw(window);
+                true
+            }
+            "command_palette.toggle" => {
+                if ui.is_layer_visible(self.command_palette_layer) {
+                    return self.handle_command(
+                        app,
+                        ui,
+                        text,
+                        window,
+                        &CommandId::from("command_palette.close"),
+                    );
+                }
+                self.handle_command(
+                    app,
+                    ui,
+                    text,
+                    window,
+                    &CommandId::from("command_palette.open"),
+                )
+            }
             "dialog.open" => {
                 let has_request = app
                     .global::<DialogService>()
@@ -191,5 +254,102 @@ impl WindowOverlays {
             }
             _ => false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_host::TestHost;
+    use crate::widget::{LayoutCx, PaintCx, Widget};
+    use fret_core::{Px, Rect, Scene, Size, TextConstraints, TextMetrics, TextService, TextStyle};
+
+    #[derive(Default)]
+    struct FakeTextService;
+
+    impl TextService for FakeTextService {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: TextStyle,
+            _constraints: TextConstraints,
+        ) -> (fret_core::TextBlobId, TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    struct Focusable;
+
+    impl<H: UiHost> Widget<H> for Focusable {
+        fn is_focusable(&self) -> bool {
+            true
+        }
+
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            Size::new(Px(10.0), Px(10.0))
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    #[test]
+    fn command_palette_open_focuses_first_focusable_descendant() {
+        let mut host = TestHost::new();
+        let mut text = FakeTextService::default();
+
+        let window = AppWindowId::default();
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(crate::widgets::Stack::new());
+        ui.set_root(root);
+
+        let mut overlays = WindowOverlays::install(&mut ui);
+
+        let palette_root = overlays.command_palette_node();
+        let content_root = ui.create_node(crate::widgets::Column::new());
+        ui.add_child(palette_root, content_root);
+
+        let focus_target = ui.create_node(Focusable);
+        ui.add_child(content_root, focus_target);
+
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut text,
+            window,
+            &CommandId::from("command_palette.open"),
+        );
+        assert!(handled);
+        assert_eq!(ui.focus(), Some(focus_target));
+
+        let mut scene = Scene::default();
+        ui.layout_all(
+            &mut host,
+            &mut text,
+            Rect::new(
+                fret_core::Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(800.0), Px(600.0)),
+            ),
+            1.0,
+        );
+        ui.paint_all(
+            &mut host,
+            &mut text,
+            Rect::new(
+                fret_core::Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(800.0), Px(600.0)),
+            ),
+            &mut scene,
+            1.0,
+        );
     }
 }

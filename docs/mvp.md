@@ -1038,6 +1038,7 @@ Status:
     - Tailwind-like primitive vocabulary is now explicit and reusable: `Space` + `Radius` (typed) backed by theme extension tokens (`component.space.*`, `component.radius.*`).
   - `crates/fret-components-icons`: renderer-agnostic icon registry + small builtin glyph fallback set.
   - `fret-ui`: `Popover` + `PopoverService` (anchored overlay primitive used by `Select`).
+  - `fret-ui`: `CommandPaletteOverlay` + `WindowOverlays` open/close policy for a cmdk/shadcn-style command palette shell.
   - `fret-demo`: adds a `UI Kit` panel (`PanelKey` `core.ui_kit`) to validate composition and theme-driven styling.
   - `fret-demo --bin ui_kit`: standalone UI Kit window (no docking/editor shell) to validate component ergonomics and overlays in isolation.
 

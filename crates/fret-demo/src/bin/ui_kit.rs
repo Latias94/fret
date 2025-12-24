@@ -115,6 +115,7 @@ fn build_ui_kit_contents(
     ui: &mut UiTree,
     parent: NodeId,
     image: Option<fret_core::ImageId>,
+    command_palette_root: NodeId,
 ) {
     let col = ui.create_node(Column::new().with_padding(Px(16.0)).with_spacing(Px(12.0)));
     ui.add_child(parent, col);
@@ -244,27 +245,30 @@ fn build_ui_kit_contents(
     let command_query = app.models_mut().insert(String::new());
     let command_selection = app.models_mut().insert(None::<Arc<str>>);
     let command_items = app.models_mut().insert(vec![
-        CommandItem::new("file.open", "Open File")
-            .group("File")
-            .shortcut("⌘O")
-            .keyword("open")
-            .keyword("file"),
-        CommandItem::new("file.save", "Save")
-            .group("File")
-            .shortcut("⌘S")
-            .keyword("save"),
-        CommandItem::new("edit.undo", "Undo")
-            .group("Edit")
-            .shortcut("⌘Z")
-            .keyword("undo"),
-        CommandItem::new("edit.redo", "Redo")
-            .group("Edit")
-            .shortcut("⇧⌘Z")
-            .keyword("redo"),
-        CommandItem::new("view.reset_layout", "Reset Layout")
-            .group("View")
-            .keyword("layout")
-            .detail("Restore default docking layout"),
+        CommandItem::new("ui_kit.action.one", "Run Action One")
+            .group("Actions")
+            .shortcut("⌘1")
+            .keyword("action")
+            .keyword("one")
+            .detail("Example command handler integration"),
+        CommandItem::new("ui_kit.action.two", "Run Action Two")
+            .group("Actions")
+            .shortcut("⌘2")
+            .keyword("action")
+            .keyword("two"),
+        CommandItem::new("ui_kit.action.three", "Run Action Three")
+            .group("Actions")
+            .shortcut("⌘3")
+            .keyword("action")
+            .keyword("three"),
+        CommandItem::new("ui_kit.dialog.open", "Open Dialog")
+            .group("Overlays")
+            .keyword("dialog")
+            .detail("Show a modal dialog overlay"),
+        CommandItem::new("command_palette.open", "Open Command Palette")
+            .group("Overlays")
+            .keyword("palette")
+            .keyword("command"),
         CommandItem::new("disabled.example", "Disabled item").disabled(),
     ]);
 
@@ -293,6 +297,40 @@ fn build_ui_kit_contents(
             .with_selection_model(command_selection),
     );
     ui.add_child(command_list_panel, command_list);
+
+    let palette_open_row = ui.create_node(Row::new().with_spacing(Px(10.0)));
+    ui.add_child(col, palette_open_row);
+    let open_palette = ui.create_node(
+        Button::new("Open Command Palette")
+            .on_click(fret_app::CommandId::from("command_palette.open")),
+    );
+    ui.add_child(palette_open_row, open_palette);
+
+    // Command palette overlay content (shadcn/cmdk style shell).
+    let palette_query = app.models_mut().insert(String::new());
+    let palette_selection = app.models_mut().insert(None::<Arc<str>>);
+
+    let palette_content = ui.create_node(Column::new().with_spacing(Px(10.0)));
+    ui.add_child(command_palette_root, palette_content);
+
+    let palette_query_field = ui.create_node(
+        TextField::new(palette_query)
+            .with_size(ComponentSize::Medium)
+            .with_cancel_command(fret_app::CommandId::from("command_palette.close")),
+    );
+    ui.add_child(palette_content, palette_query_field);
+
+    let palette_list_panel = ui.create_node(FixedPanel::new(Px(300.0), Color::TRANSPARENT));
+    ui.add_child(palette_content, palette_list_panel);
+
+    let palette_list = ui.create_node(
+        CommandList::new(command_items, palette_query)
+            .with_size(ComponentSize::Medium)
+            .with_selection_model(palette_selection)
+            .with_close_command(fret_app::CommandId::from("command_palette.close"))
+            .activate_on_enter(true),
+    );
+    ui.add_child(palette_list_panel, palette_list);
 
     let scroll_area_label = ui.create_node(Text::new("ScrollArea"));
     ui.add_child(col, scroll_area_label);
@@ -592,14 +630,15 @@ impl WinitDriver for UiKitDriver {
         let scroll = ui.create_node(Scroll::new());
         ui.add_child(root, scroll);
 
+        let overlays = WindowOverlays::install(&mut ui);
+
         build_ui_kit_contents(
             app,
             &mut ui,
             scroll,
             self.ui_kit_image.as_ref().map(|i| i.id),
+            overlays.command_palette_node(),
         );
-
-        let overlays = WindowOverlays::install(&mut ui);
 
         UiKitWindowState { ui, root, overlays }
     }
@@ -629,6 +668,15 @@ impl WinitDriver for UiKitDriver {
         command: fret_app::CommandId,
     ) {
         match command.as_str() {
+            "ui_kit.action.one" => {
+                tracing::info!("action one");
+            }
+            "ui_kit.action.two" => {
+                tracing::info!("action two");
+            }
+            "ui_kit.action.three" => {
+                tracing::info!("action three");
+            }
             "ui_kit.dialog.open" => {
                 let request = DialogRequest {
                     owner: state.root,
