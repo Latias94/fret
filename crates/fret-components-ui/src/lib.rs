@@ -7,6 +7,7 @@ mod style;
 
 pub mod button;
 pub mod checkbox;
+pub mod dialog;
 pub mod dropdown_menu;
 pub mod frame;
 pub mod icon_button;

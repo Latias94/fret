@@ -7,21 +7,23 @@ pub use fret_app::App;
 
 pub use fret_ui::dock;
 pub use fret_ui::elements;
+pub use fret_ui::overlays;
 pub use fret_ui::theme;
 pub use fret_ui::tree;
 pub use fret_ui::widgets;
 
 pub use fret_ui::{
     AppMenuBar, Bar, BoundTextInput, Clip, ColoredPanel, Column, ContextMenu, ContextMenuRequest,
-    ContextMenuService, ContextMenuStyle, DockManager, DockPanel, DockPanelContentService,
-    DockSpace, FixedPanel, GlobalElementId, HeaderBody, Image, Invalidation, PaintCachePolicy,
+    ContextMenuService, ContextMenuStyle, DialogAction, DialogOverlay, DialogRequest,
+    DialogService, DialogStyle, DockManager, DockPanel, DockPanelContentService, DockSpace,
+    FixedPanel, GlobalElementId, HeaderBody, Image, Invalidation, PaintCachePolicy,
     PanelThemeBackground, Popover, PopoverItem, PopoverRequest, PopoverService, PopoverStyle,
     ResizableSplit, Row, Scroll, Split, Stack, Text, TextArea, TextAreaStyle, TextInput,
     TextInputStyle, Theme, ThemeConfig, ThemeSnapshot, Toolbar, ToolbarItem, TooltipOverlay,
     TooltipRequest, TooltipService, TooltipStyle, TreeNode, TreeView, TreeViewStyle,
     UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiHost, UiLayerId, VecStringDataSource,
     ViewportPanel, VirtualList, VirtualListDataSource, VirtualListRow, VirtualListRowHeight,
-    VirtualListStyle,
+    VirtualListStyle, WindowOverlays,
 };
 
 pub use fret_ui::{

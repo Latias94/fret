@@ -21,9 +21,9 @@ use fret_core::{AppWindowId, NodeId, PlatformCapabilities, Px, Rect, Scene, Size
 use fret_render::{ImageColorSpace, ImageDescriptor, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui_app::{
-    ColoredPanel, Column, ContextMenu, ContextMenuService, FixedPanel, Invalidation,
-    PanelThemeBackground, Popover, PopoverService, ResizableSplit, Row, Scroll, Stack, Text, Theme,
-    ThemeConfig, TooltipOverlay, TooltipService, UiLayerId, UiTree,
+    ColoredPanel, Column, ContextMenuService, DialogAction, DialogRequest, DialogService,
+    FixedPanel, Invalidation, PanelThemeBackground, PopoverService, ResizableSplit, Row, Scroll,
+    Stack, Text, Theme, ThemeConfig, TooltipService, UiTree, WindowOverlays,
 };
 use std::sync::Arc;
 use winit::event_loop::EventLoop;
@@ -45,12 +45,7 @@ struct UiKitDriver {
 struct UiKitWindowState {
     ui: UiTree,
     root: NodeId,
-    popover_layer: UiLayerId,
-    popover_node: NodeId,
-    popover_previous_focus: Option<NodeId>,
-    context_menu_layer: UiLayerId,
-    context_menu_node: NodeId,
-    context_menu_previous_focus: Option<NodeId>,
+    overlays: WindowOverlays,
 }
 
 fn load_theme(app: &mut App) {
@@ -128,6 +123,11 @@ fn build_ui_kit_contents(
     ui.add_child(buttons, disabled);
     ui.add_child(buttons_frame, buttons);
     ui.add_child(col, buttons_frame);
+
+    let dialogs_row = ui.create_node(Row::new().with_spacing(Px(10.0)));
+    let open_dialog = ui.create_node(Button::new("Open Dialog").on_click("ui_kit.dialog.open"));
+    ui.add_child(dialogs_row, open_dialog);
+    ui.add_child(col, dialogs_row);
 
     let text_model = app.models_mut().insert("Hello, components.".to_string());
     let text_field = ui.create_node(
@@ -329,6 +329,7 @@ impl WinitDriver for UiKitDriver {
     type WindowState = UiKitWindowState;
 
     fn init(&mut self, app: &mut App, _main_window: AppWindowId) {
+        app.with_global_mut(DialogService::default, |_svc, _app| {});
         app.with_global_mut(PopoverService::default, |_svc, _app| {});
         app.with_global_mut(ContextMenuService::default, |_svc, _app| {});
         app.with_global_mut(TooltipService::default, |_svc, _app| {});
@@ -432,27 +433,9 @@ impl WinitDriver for UiKitDriver {
             self.ui_kit_image.as_ref().map(|i| i.id),
         );
 
-        let tooltip_node = ui.create_node(TooltipOverlay::new());
-        let _tooltip_layer = ui.push_overlay_root_ex(tooltip_node, false, false);
+        let overlays = WindowOverlays::install(&mut ui);
 
-        let popover_node = ui.create_node(Popover::new());
-        let popover_layer = ui.push_overlay_root(popover_node, true);
-        ui.set_layer_visible(popover_layer, false);
-
-        let context_menu_node = ui.create_node(ContextMenu::new());
-        let context_menu_layer = ui.push_overlay_root(context_menu_node, true);
-        ui.set_layer_visible(context_menu_layer, false);
-
-        UiKitWindowState {
-            ui,
-            root,
-            popover_layer,
-            popover_node,
-            popover_previous_focus: None,
-            context_menu_layer,
-            context_menu_node,
-            context_menu_previous_focus: None,
-        }
+        UiKitWindowState { ui, root, overlays }
     }
 
     fn handle_event(
@@ -480,69 +463,52 @@ impl WinitDriver for UiKitDriver {
         command: fret_app::CommandId,
     ) {
         match command.as_str() {
-            "popover.open" => {
-                let has_request = app
-                    .global::<PopoverService>()
-                    .and_then(|s| s.request(window))
-                    .is_some();
-                if !has_request {
-                    return;
-                }
-                state.popover_previous_focus = state.ui.focus();
-                state.ui.set_layer_visible(state.popover_layer, true);
-                state.ui.set_focus(Some(state.popover_node));
-                app.request_redraw(window);
-            }
-            "popover.close" => {
-                if state.ui.is_layer_visible(state.popover_layer) {
-                    state.ui.cleanup_subtree(text, state.popover_node);
-                    state.ui.set_layer_visible(state.popover_layer, false);
-                }
-                app.with_global_mut(PopoverService::default, |service, _app| {
-                    service.clear_request(window);
+            "ui_kit.dialog.open" => {
+                let request = DialogRequest {
+                    owner: state.root,
+                    title: Arc::from("Delete 12 files?"),
+                    message: Arc::from(
+                        "This action cannot be undone.\n\nAre you sure you want to continue?",
+                    ),
+                    actions: vec![
+                        DialogAction::new(
+                            "Cancel",
+                            fret_app::CommandId::from("ui_kit.dialog.cancelled"),
+                        ),
+                        DialogAction::new(
+                            "Delete",
+                            fret_app::CommandId::from("ui_kit.dialog.delete_confirmed"),
+                        ),
+                    ],
+                    default_action: Some(1),
+                    cancel_command: Some(fret_app::CommandId::from("ui_kit.dialog.cancelled")),
+                };
+
+                app.with_global_mut(DialogService::default, |service, _app| {
+                    service.set_request(window, request);
                 });
-                if let Some(prev) = state.popover_previous_focus.take() {
-                    state.ui.set_focus(Some(prev));
-                }
-                app.request_redraw(window);
-            }
-            "context_menu.open" => {
-                let has_request = app
-                    .global::<ContextMenuService>()
-                    .and_then(|s| s.request(window))
-                    .is_some();
-                if !has_request {
-                    return;
-                }
-                state.context_menu_previous_focus = state.ui.focus();
-                state.ui.set_layer_visible(state.context_menu_layer, true);
-                state.ui.set_focus(Some(state.context_menu_node));
-                app.request_redraw(window);
-            }
-            "context_menu.close" => {
-                if state.ui.is_layer_visible(state.context_menu_layer) {
-                    state.ui.cleanup_subtree(text, state.context_menu_node);
-                    state.ui.set_layer_visible(state.context_menu_layer, false);
-                }
-                app.with_global_mut(ContextMenuService::default, |service, app| {
-                    let action = service.take_pending_action(window);
-                    service.clear(window);
-                    if let Some(command) = action {
-                        app.push_effect(Effect::Command {
-                            window: Some(window),
-                            command,
-                        });
-                    }
+                app.push_effect(Effect::Command {
+                    window: Some(window),
+                    command: fret_app::CommandId::from("dialog.open"),
                 });
-                if let Some(prev) = state.context_menu_previous_focus.take() {
-                    state.ui.set_focus(Some(prev));
-                }
-                app.request_redraw(window);
             }
-            other => {
-                tracing::info!(window = ?window, command = %other, "unhandled command");
+            "ui_kit.dialog.delete_confirmed" => {
+                tracing::info!("dialog confirmed");
             }
+            "ui_kit.dialog.cancelled" => {
+                tracing::info!("dialog cancelled");
+            }
+            _ => {}
         }
+
+        if state
+            .overlays
+            .handle_command(app, &mut state.ui, text, window, &command)
+        {
+            return;
+        }
+
+        tracing::info!(window = ?window, command = ?command, "unhandled command");
     }
 
     fn invalidate_ui_layout(
