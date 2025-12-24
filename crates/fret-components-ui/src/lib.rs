@@ -9,6 +9,8 @@ pub mod button;
 pub mod checkbox;
 pub mod frame;
 pub mod select;
+pub mod separator;
+pub mod switch;
 pub mod tabs;
 pub mod text_field;
 pub mod toolbar;

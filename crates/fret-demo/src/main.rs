@@ -48,6 +48,8 @@ use fret_components_ui::{
     checkbox::Checkbox,
     frame::Frame,
     select::{Select, SelectOption},
+    separator::Separator,
+    switch::Switch,
     tabs::Tabs,
     text_field::TextField,
     toolbar::Toolbar,
@@ -3668,6 +3670,7 @@ impl WinitDriver for DemoDriver {
         let ui_kit_text = app.models_mut().insert("Hello, components.".to_string());
         let ui_kit_select = app.models_mut().insert(0usize);
         let ui_kit_checkbox = app.models_mut().insert(false);
+        let ui_kit_switch = app.models_mut().insert(false);
         let ui_kit_tabs = app.models_mut().insert(0usize);
         let ui_kit_root = ui.create_node(fret_ui_app::Column::new().with_spacing(Px(10.0)));
 
@@ -3720,6 +3723,13 @@ impl WinitDriver for DemoDriver {
         let ui_kit_checkbox_node = ui.create_node(Checkbox::new(ui_kit_checkbox, "Enable option"));
         ui.add_child(ui_kit_root, ui_kit_checkbox_node);
 
+        let ui_kit_switch_row = ui.create_node(fret_ui_app::Row::new().with_spacing(Px(10.0)));
+        let ui_kit_switch_node = ui.create_node(Switch::new(ui_kit_switch));
+        let ui_kit_switch_label = ui.create_node(fret_ui_app::Text::new("Switch"));
+        ui.add_child(ui_kit_switch_row, ui_kit_switch_node);
+        ui.add_child(ui_kit_switch_row, ui_kit_switch_label);
+        ui.add_child(ui_kit_root, ui_kit_switch_row);
+
         let ui_kit_select_node = ui.create_node(
             Select::new(
                 ui_kit_select,
@@ -3738,6 +3748,9 @@ impl WinitDriver for DemoDriver {
             ),
         );
         ui.add_child(ui_kit_root, ui_kit_select_node);
+
+        let ui_kit_separator = ui.create_node(Separator::horizontal());
+        ui.add_child(ui_kit_root, ui_kit_separator);
 
         let ui_kit_tabs_node = ui.create_node(Tabs::new(
             ui_kit_tabs,
