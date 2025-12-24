@@ -58,7 +58,7 @@ MVP work is allowed to prototype quickly, but changes that affect “hard-to-cha
 - MVP 42: prototype implemented in demo (scene workflow P0: New Scene + Save As; File menu and Cmd/Ctrl shortcuts)
 - MVP 43: prototype implemented (portability gates): runtime platform capability matrix (ADR 0054) + begin removing desktop-only payload assumptions (ADR 0053).
 - MVP 44: implemented (host boundary): `UiHost` in `fret-runtime`, `fret-ui` is host-generic (no `fret-app` dependency), and `fret-ui-app` preserves demo/editor ergonomics (ADR 0052).
-- MVP 46: planned (framework capability): system cursor + pointer feedback boundary (resize handles, hover cursors, per-window cursor routing).
+- MVP 46: prototype implemented (framework capability): system cursor + pointer feedback boundary (resize handles, hover cursors, per-window cursor routing).
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
@@ -1090,7 +1090,7 @@ does not reflect the affordance (e.g. column/row resize) because there is no por
 
 Status:
 
-- Planned (no stable contract shipped yet).
+- Prototype implemented (desktop runner + dock split handles).
 
 References:
 

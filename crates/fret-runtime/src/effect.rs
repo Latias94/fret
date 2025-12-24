@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use fret_core::{AppWindowId, Rect, TimerToken, WindowAnchor};
+use fret_core::{AppWindowId, CursorIcon, Rect, TimerToken, WindowAnchor};
 
 use crate::CommandId;
 
@@ -41,6 +41,10 @@ pub enum Effect {
     ImeSetCursorArea {
         window: AppWindowId,
         rect: Rect,
+    },
+    CursorSetIcon {
+        window: AppWindowId,
+        icon: CursorIcon,
     },
     RequestAnimationFrame(AppWindowId),
     SetTimer {

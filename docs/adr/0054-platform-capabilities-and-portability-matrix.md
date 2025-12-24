@@ -68,6 +68,7 @@ We define a minimal set of booleans/enums that cover the “hard portability” 
 - **Windows**
   - `ui.multi_window`: `bool` (wasm/mobile: false; desktop: true)
   - `ui.window_tear_off`: `bool` (may equal `multi_window`)
+  - `ui.cursor_icons`: `bool` (desktop: true; wasm/mobile: false or limited)
 - **Clipboard**
   - `clipboard.text`: `bool`
   - `clipboard.files`: `bool` (future; often false on web)

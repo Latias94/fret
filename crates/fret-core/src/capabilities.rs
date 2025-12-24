@@ -26,6 +26,7 @@ impl ExternalDragPayloadKind {
 pub struct UiCapabilities {
     pub multi_window: bool,
     pub window_tear_off: bool,
+    pub cursor_icons: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -80,6 +81,7 @@ impl Default for PlatformCapabilities {
             ui: UiCapabilities {
                 multi_window: true,
                 window_tear_off: true,
+                cursor_icons: true,
             },
             clipboard: ClipboardCapabilities {
                 text: true,
@@ -110,6 +112,7 @@ impl PlatformCapabilities {
         match key {
             "ui.multi_window" => Some(self.ui.multi_window),
             "ui.window_tear_off" => Some(self.ui.window_tear_off),
+            "ui.cursor_icons" => Some(self.ui.cursor_icons),
             "clipboard.text" => Some(self.clipboard.text),
             "clipboard.files" => Some(self.clipboard.files),
             "dnd.external" => Some(self.dnd.external),

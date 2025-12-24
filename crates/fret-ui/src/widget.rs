@@ -23,6 +23,7 @@ pub struct EventCx<'a, H: UiHost> {
     pub invalidations: Vec<(NodeId, Invalidation)>,
     pub requested_focus: Option<NodeId>,
     pub requested_capture: Option<Option<NodeId>>,
+    pub requested_cursor: Option<fret_core::CursorIcon>,
     pub stop_propagation: bool,
 }
 
@@ -67,6 +68,13 @@ impl<'a, H: UiHost> EventCx<'a, H> {
             return;
         };
         self.app.request_redraw(window);
+    }
+
+    pub fn set_cursor_icon(&mut self, icon: fret_core::CursorIcon) {
+        if !self.input_ctx.caps.ui.cursor_icons {
+            return;
+        }
+        self.requested_cursor = Some(icon);
     }
 }
 

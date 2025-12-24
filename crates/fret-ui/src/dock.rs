@@ -840,6 +840,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let mut request_focus: Option<NodeId> = None;
         let mut request_focus_panel: Option<PanelKey> = None;
         let mut request_pointer_capture: Option<Option<NodeId>> = None;
+        let mut request_cursor: Option<fret_core::CursorIcon> = None;
 
         #[derive(Clone)]
         struct DockDragSnapshot {
@@ -917,16 +918,24 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 hit_test_split_handle(&dock.graph, &layout, *position)
                             {
                                 self.divider_drag = Some(handle);
-                                cx.invalidate(cx.node, crate::widget::Invalidation::Paint);
-                                return;
+                                request_pointer_capture = Some(Some(cx.node));
+                                request_cursor = Some(match handle.axis {
+                                    fret_core::Axis::Horizontal => fret_core::CursorIcon::ColResize,
+                                    fret_core::Axis::Vertical => fret_core::CursorIcon::RowResize,
+                                });
+                                invalidate_paint = true;
+                                pending_redraws.push(self.window);
+                                handled = true;
                             }
-                            if let Some((tabs_node, tab_index, panel_key, close)) = hit_test_tab(
-                                &dock.graph,
-                                &layout,
-                                &self.tab_scroll,
-                                theme,
-                                *position,
-                            ) {
+                            if !handled
+                                && let Some((tabs_node, tab_index, panel_key, close)) = hit_test_tab(
+                                    &dock.graph,
+                                    &layout,
+                                    &self.tab_scroll,
+                                    theme,
+                                    *position,
+                                )
+                            {
                                 if close {
                                     self.pressed_tab_close =
                                         Some((tabs_node, tab_index, panel_key.clone()));
@@ -1062,6 +1071,22 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         buttons,
                         modifiers,
                     } => {
+                        if self.viewport_capture.is_none()
+                            && self.divider_drag.is_none()
+                            && dock_drag.is_none()
+                        {
+                            let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
+                            let layout = compute_layout_map(&dock.graph, root, dock_bounds);
+                            if let Some(handle) =
+                                hit_test_split_handle(&dock.graph, &layout, *position)
+                            {
+                                request_cursor = Some(match handle.axis {
+                                    fret_core::Axis::Horizontal => fret_core::CursorIcon::ColResize,
+                                    fret_core::Axis::Vertical => fret_core::CursorIcon::RowResize,
+                                });
+                            }
+                        }
+
                         let hovered = if self.viewport_capture.is_none()
                             && self.divider_drag.is_none()
                             && dock_drag.is_none()
@@ -1083,6 +1108,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         }
 
                         if let Some(mut divider) = self.divider_drag {
+                            cx.requested_cursor = Some(match divider.axis {
+                                fret_core::Axis::Horizontal => fret_core::CursorIcon::ColResize,
+                                fret_core::Axis::Vertical => fret_core::CursorIcon::RowResize,
+                            });
                             let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
                             let layout = compute_layout_map(&dock.graph, root, dock_bounds);
                             if let Some((left, right)) =
@@ -1259,6 +1288,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         modifiers,
                     } => {
                         let mut handled = false;
+                        if *button == fret_core::MouseButton::Left && self.divider_drag.is_some() {
+                            self.divider_drag = None;
+                            request_pointer_capture = Some(None);
+                            invalidate_layout = true;
+                            invalidate_paint = true;
+                            pending_redraws.push(self.window);
+                            handled = true;
+                        }
                         if *button == fret_core::MouseButton::Left
                             && let Some((tabs_node, tab_index, panel_key)) =
                                 self.pressed_tab_close.take()
@@ -1778,6 +1815,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
         if let Some(node) = request_focus {
             cx.request_focus(node);
+        }
+        if let Some(icon) = request_cursor {
+            cx.set_cursor_icon(icon);
         }
         if invalidate_layout {
             cx.invalidate(cx.node, crate::widget::Invalidation::Layout);
@@ -3792,6 +3832,67 @@ mod tests {
 
         let hover = app.global::<DockManager>().and_then(|d| d.hover.clone());
         assert!(hover.is_none(), "dock hover should be cleared on drop");
+    }
+
+    #[test]
+    fn dock_split_handle_hover_sets_resize_cursor_effect() {
+        let window = AppWindowId::default();
+
+        let mut ui = crate::UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(DockSpace::new(window));
+        ui.set_root(root);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            let left = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![PanelKey::new("core.left")],
+                active: 0,
+            });
+            let right = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![PanelKey::new("core.right")],
+                active: 0,
+            });
+            let split = dock.graph.insert_node(DockNode::Split {
+                axis: fret_core::Axis::Horizontal,
+                children: vec![left, right],
+                fractions: vec![0.5, 0.5],
+            });
+            dock.graph.set_window_root(window, split);
+        });
+
+        let mut text = FakeTextService;
+        let size = Size::new(Px(800.0), Px(600.0));
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+        let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+
+        let (_chrome, dock_bounds) = dock_space_regions(bounds);
+        let gap = DOCK_SPLIT_HANDLE_GAP.0;
+        let avail = dock_bounds.size.width.0 - gap;
+        let x = dock_bounds.origin.x.0 + avail * 0.5 + gap * 0.5;
+        let y = dock_bounds.origin.y.0 + 10.0;
+
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                position: Point::new(Px(x), Px(y)),
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        let effects = app.take_effects();
+        assert!(
+            effects.iter().any(|e| matches!(
+                e,
+                Effect::CursorSetIcon { window: w, icon }
+                    if *w == window && *icon == fret_core::CursorIcon::ColResize
+            )),
+            "expected a col-resize cursor effect when hovering the split handle gap"
+        );
     }
 
     #[test]

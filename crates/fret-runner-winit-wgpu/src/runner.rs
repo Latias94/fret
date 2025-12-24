@@ -562,6 +562,7 @@ struct WindowRuntime<S> {
     pressed_buttons: fret_core::MouseButtons,
     is_focused: bool,
     ime_allowed: bool,
+    cursor_icon: fret_core::CursorIcon,
     external_drag_files: Vec<std::path::PathBuf>,
     external_drag_token: Option<ExternalDropToken>,
     user: S,
@@ -630,6 +631,16 @@ struct DockTearoffFollow {
 }
 
 impl<D: WinitDriver> WinitRunner<D> {
+    fn map_cursor_icon(icon: fret_core::CursorIcon) -> winit::window::CursorIcon {
+        match icon {
+            fret_core::CursorIcon::Default => winit::window::CursorIcon::Default,
+            fret_core::CursorIcon::Pointer => winit::window::CursorIcon::Pointer,
+            fret_core::CursorIcon::Text => winit::window::CursorIcon::Text,
+            fret_core::CursorIcon::ColResize => winit::window::CursorIcon::ColResize,
+            fret_core::CursorIcon::RowResize => winit::window::CursorIcon::RowResize,
+        }
+    }
+
     pub fn new(config: WinitRunnerConfig, app: App, driver: D) -> Self {
         let mut app = app;
         let caps = match app.global::<PlatformCapabilities>().cloned() {
@@ -754,6 +765,7 @@ impl<D: WinitDriver> WinitRunner<D> {
                 pressed_buttons: fret_core::MouseButtons::default(),
                 is_focused: false,
                 ime_allowed: false,
+                cursor_icon: fret_core::CursorIcon::Default,
                 external_drag_files: Vec::new(),
                 external_drag_token: None,
                 user,
@@ -1091,6 +1103,16 @@ impl<D: WinitDriver> WinitRunner<D> {
                                 winit::dpi::LogicalSize::new(rect.size.width.0, rect.size.height.0),
                             );
                         }
+                    }
+                    Effect::CursorSetIcon { window, icon } => {
+                        let Some(state) = self.windows.get_mut(window) else {
+                            continue;
+                        };
+                        if state.cursor_icon == icon {
+                            continue;
+                        }
+                        state.cursor_icon = icon;
+                        state.window.set_cursor(Self::map_cursor_icon(icon));
                     }
                     Effect::RequestAnimationFrame(window) => {
                         self.raf_windows.insert(window);

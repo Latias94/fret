@@ -778,6 +778,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut needs_redraw = false;
+        let mut cursor_choice: Option<fret_core::CursorIcon> = None;
         let text_ptr: *mut dyn TextService = text;
 
         if let Event::KeyDown {
@@ -950,37 +951,45 @@ impl<H: UiHost> UiTree<H> {
         };
 
         loop {
-            let (invalidations, requested_focus, requested_capture, stop_propagation, parent) =
-                self.with_widget_mut(node_id, |widget, tree| {
-                    let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                    let children: Vec<NodeId> = tree
-                        .nodes
-                        .get(node_id)
-                        .map(|n| n.children.clone())
-                        .unwrap_or_default();
-                    let mut cx = EventCx {
-                        app,
-                        text: unsafe { &mut *text_ptr },
-                        node: node_id,
-                        window: tree.window,
-                        input_ctx: input_ctx.clone(),
-                        children: &children,
-                        focus: tree.focus,
-                        captured: tree.captured,
-                        invalidations: Vec::new(),
-                        requested_focus: None,
-                        requested_capture: None,
-                        stop_propagation: false,
-                    };
-                    widget.event(&mut cx, event);
-                    (
-                        cx.invalidations,
-                        cx.requested_focus,
-                        cx.requested_capture,
-                        cx.stop_propagation,
-                        parent,
-                    )
-                });
+            let (
+                invalidations,
+                requested_focus,
+                requested_capture,
+                requested_cursor,
+                stop_propagation,
+                parent,
+            ) = self.with_widget_mut(node_id, |widget, tree| {
+                let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                let children: Vec<NodeId> = tree
+                    .nodes
+                    .get(node_id)
+                    .map(|n| n.children.clone())
+                    .unwrap_or_default();
+                let mut cx = EventCx {
+                    app,
+                    text: unsafe { &mut *text_ptr },
+                    node: node_id,
+                    window: tree.window,
+                    input_ctx: input_ctx.clone(),
+                    children: &children,
+                    focus: tree.focus,
+                    captured: tree.captured,
+                    invalidations: Vec::new(),
+                    requested_focus: None,
+                    requested_capture: None,
+                    requested_cursor: None,
+                    stop_propagation: false,
+                };
+                widget.event(&mut cx, event);
+                (
+                    cx.invalidations,
+                    cx.requested_focus,
+                    cx.requested_capture,
+                    cx.requested_cursor,
+                    cx.stop_propagation,
+                    parent,
+                )
+            });
 
             if !invalidations.is_empty() || requested_focus.is_some() || requested_capture.is_some()
             {
@@ -1005,6 +1014,10 @@ impl<H: UiHost> UiTree<H> {
                 self.captured = capture;
             };
 
+            if requested_cursor.is_some() && cursor_choice.is_none() {
+                cursor_choice = requested_cursor;
+            }
+
             if self.captured.is_some() || stop_propagation {
                 break;
             }
@@ -1013,6 +1026,14 @@ impl<H: UiHost> UiTree<H> {
                 Some(parent) => parent,
                 None => break,
             };
+        }
+
+        if input_ctx.caps.ui.cursor_icons
+            && let Some(window) = self.window
+            && matches!(event, Event::Pointer(_))
+        {
+            let icon = cursor_choice.unwrap_or(fret_core::CursorIcon::Default);
+            app.push_effect(Effect::CursorSetIcon { window, icon });
         }
 
         if needs_redraw && let Some(window) = self.window {

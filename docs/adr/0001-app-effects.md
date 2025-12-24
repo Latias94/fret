@@ -42,6 +42,7 @@ Examples of “non-minimal” effects already in use:
 - `Effect::ViewportInput(ViewportInputEvent)` (engine viewport input forwarding)
 - `Effect::RequestAnimationFrame(AppWindowId)` / `Effect::SetTimer { .. }` / `Effect::CancelTimer { .. }` (scheduling)
 - `Effect::ImeAllow { .. }` / `Effect::ImeSetCursorArea { .. }` (IME enablement and candidate window positioning)
+- `Effect::CursorSetIcon { .. }` (system cursor feedback, e.g. resize handles)
 
 ## Consequences
 
