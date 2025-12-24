@@ -8,6 +8,7 @@ mod style;
 pub mod button;
 pub mod checkbox;
 pub mod frame;
+pub mod icon_button;
 pub mod select;
 pub mod separator;
 pub mod switch;

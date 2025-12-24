@@ -42,11 +42,13 @@ use fret_app::{
     Keymap, KeymapFileV1, KeymapService, Model, WhenExpr, WindowRequest,
     keymap::{BindingV1, KeySpecV1},
 };
+use fret_components_icons::IconId;
 use fret_components_ui::{
     StyleRefinement,
     button::{Button, ButtonIntent, ButtonSize, ButtonVariant},
     checkbox::Checkbox,
     frame::Frame,
+    icon_button::IconButton,
     select::{Select, SelectOption},
     separator::Separator,
     switch::Switch,
@@ -3751,6 +3753,23 @@ impl WinitDriver for DemoDriver {
 
         let ui_kit_separator = ui.create_node(Separator::horizontal());
         ui.add_child(ui_kit_root, ui_kit_separator);
+
+        let ui_kit_icons_frame = ui.create_node(Frame::new(
+            StyleRefinement::default()
+                .rounded_md()
+                .border_1()
+                .px_3()
+                .py_1(),
+        ));
+        let ui_kit_icons_row = ui.create_node(fret_ui_app::Row::new().with_spacing(Px(10.0)));
+        let ui_kit_icon_play = ui.create_node(IconButton::new(IconId::new("play")));
+        let ui_kit_icon_settings = ui.create_node(IconButton::new(IconId::new("settings")));
+        let ui_kit_icon_close = ui.create_node(IconButton::new(IconId::new("close")));
+        ui.add_child(ui_kit_icons_row, ui_kit_icon_play);
+        ui.add_child(ui_kit_icons_row, ui_kit_icon_settings);
+        ui.add_child(ui_kit_icons_row, ui_kit_icon_close);
+        ui.add_child(ui_kit_icons_frame, ui_kit_icons_row);
+        ui.add_child(ui_kit_root, ui_kit_icons_frame);
 
         let ui_kit_tabs_node = ui.create_node(Tabs::new(
             ui_kit_tabs,

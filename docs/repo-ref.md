@@ -31,6 +31,8 @@ As a baseline, this workspace currently has:
 - `repo-ref/dear-imgui-rs`: `a3261f5ed219`
 - `repo-ref/ui` (shadcn/ui): `ccafdaf7c6f6`
 - `repo-ref/tailwindcss`: `1628713453e6`
+- `repo-ref/lucide`: `d391bda36930`
+- `repo-ref/radix-icons`: `112af91ad275`
 
 ## GPUI / Zed (Rendering, Elements, Text, Scene)
 

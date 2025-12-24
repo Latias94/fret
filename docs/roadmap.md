@@ -162,7 +162,7 @@ validate that the framework contracts are sufficient.
 - P1: Anchored overlays (popover-style) for component primitives (prototype implemented: `fret-ui` `Popover` + `PopoverService`).
 - P1: Spin up `fret-components` repo workspace and establish a **general-purpose** component library baseline (ADR 0037):
   - `fret-components-ui` (token-driven primitives/composites; shadcn-inspired; not editor-specific) (prototype implemented in-tree),
-  - `fret-components-icons` (icon registry + sets; atlas-friendly; renderer-agnostic),
+  - `fret-components-icons` (icon registry + sets; atlas-friendly; renderer-agnostic) (prototype implemented in-tree),
   - optional later: `fret-components-editor` (editor-only patterns: inspector/table/tree wrappers).
 
 Notes:
