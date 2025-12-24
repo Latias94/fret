@@ -43,22 +43,24 @@ impl Space {
         }
     }
 
-    pub fn fallback_px(self) -> Px {
+    fn fallback_metric(self) -> MetricFallback {
         match self {
-            Self::N0 => Px(0.0),
-            Self::N0p5 => Px(2.0),
-            Self::N1 => Px(4.0),
-            Self::N1p5 => Px(6.0),
-            Self::N2 => Px(8.0),
-            Self::N2p5 => Px(10.0),
-            Self::N3 => Px(12.0),
-            Self::N3p5 => Px(14.0),
-            Self::N4 => Px(16.0),
-            Self::N5 => Px(20.0),
-            Self::N6 => Px(24.0),
-            Self::N8 => Px(32.0),
-            Self::N10 => Px(40.0),
-            Self::N11 => Px(44.0),
+            Self::N0 => MetricFallback::Px(Px(0.0)),
+            Self::N0p5 => MetricFallback::ThemePaddingSmMulDiv { mul: 1, div: 4 },
+            Self::N1 => MetricFallback::ThemePaddingSmMulDiv { mul: 1, div: 2 },
+            Self::N1p5 => MetricFallback::ThemePaddingSmMulDiv { mul: 3, div: 4 },
+            Self::N2 => MetricFallback::ThemePaddingSm,
+            // This is intentionally tied to the baseline `metric.padding.md` token to avoid value
+            // duplication drift when themes omit `component.space.*` (ADR 0032 / ADR 0050).
+            Self::N2p5 => MetricFallback::ThemePaddingMd,
+            Self::N3 => MetricFallback::ThemePaddingSmMulDiv { mul: 3, div: 2 },
+            Self::N3p5 => MetricFallback::ThemePaddingSmMulDiv { mul: 7, div: 4 },
+            Self::N4 => MetricFallback::ThemePaddingSmMulDiv { mul: 2, div: 1 },
+            Self::N5 => MetricFallback::ThemePaddingSmMulDiv { mul: 5, div: 2 },
+            Self::N6 => MetricFallback::ThemePaddingSmMulDiv { mul: 3, div: 1 },
+            Self::N8 => MetricFallback::ThemePaddingSmMulDiv { mul: 4, div: 1 },
+            Self::N10 => MetricFallback::ThemePaddingSmMulDiv { mul: 5, div: 1 },
+            Self::N11 => MetricFallback::ThemePaddingSmMulDiv { mul: 11, div: 2 },
         }
     }
 }
@@ -80,6 +82,7 @@ pub enum MetricFallback {
     ThemeRadiusLg,
     ThemePaddingSm,
     ThemePaddingMd,
+    ThemePaddingSmMulDiv { mul: u32, div: u32 },
 }
 
 impl MetricFallback {
@@ -91,6 +94,12 @@ impl MetricFallback {
             Self::ThemeRadiusLg => theme.metrics.radius_lg,
             Self::ThemePaddingSm => theme.metrics.padding_sm,
             Self::ThemePaddingMd => theme.metrics.padding_md,
+            Self::ThemePaddingSmMulDiv { mul, div } => {
+                if div == 0 {
+                    return Px(0.0);
+                }
+                Px(theme.metrics.padding_sm.0 * (mul as f32) / (div as f32))
+            }
         }
     }
 }
@@ -141,7 +150,7 @@ impl MetricRef {
     pub fn space(space: Space) -> Self {
         MetricRef::Token {
             key: space.token_key(),
-            fallback: MetricFallback::Px(space.fallback_px()),
+            fallback: space.fallback_metric(),
         }
     }
 
@@ -274,4 +283,72 @@ pub fn component_color(key: &'static str, fallback: ColorFallback) -> ColorRef {
 
 pub fn component_metric(key: &'static str, fallback: MetricFallback) -> MetricRef {
     MetricRef::Token { key, fallback }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_ui::ThemeConfig;
+
+    #[test]
+    fn space_falls_back_to_theme_padding_scale() {
+        let mut app = fret_app::App::default();
+
+        let cfg = ThemeConfig {
+            name: "Test".to_string(),
+            metrics: std::collections::HashMap::from([
+                ("metric.padding.sm".to_string(), 12.0),
+                ("metric.padding.md".to_string(), 14.0),
+            ]),
+            ..ThemeConfig::default()
+        };
+        Theme::global_mut(&mut app).apply_config(&cfg);
+
+        let theme = Theme::global(&app);
+        assert_eq!(MetricRef::space(Space::N2).resolve(theme), Px(12.0));
+        assert_eq!(MetricRef::space(Space::N2p5).resolve(theme), Px(14.0));
+        assert_eq!(MetricRef::space(Space::N1).resolve(theme), Px(6.0));
+        assert_eq!(MetricRef::space(Space::N0p5).resolve(theme), Px(3.0));
+        assert_eq!(MetricRef::space(Space::N11).resolve(theme), Px(66.0));
+    }
+
+    #[test]
+    fn space_token_overrides_theme_fallback() {
+        let mut app = fret_app::App::default();
+
+        let cfg = ThemeConfig {
+            name: "Test".to_string(),
+            metrics: std::collections::HashMap::from([
+                ("metric.padding.sm".to_string(), 12.0),
+                ("component.space.2".to_string(), 20.0),
+            ]),
+            ..ThemeConfig::default()
+        };
+        Theme::global_mut(&mut app).apply_config(&cfg);
+
+        let theme = Theme::global(&app);
+        assert_eq!(MetricRef::space(Space::N2).resolve(theme), Px(20.0));
+    }
+
+    #[test]
+    fn radius_falls_back_to_theme_metrics() {
+        let mut app = fret_app::App::default();
+
+        let cfg = ThemeConfig {
+            name: "Test".to_string(),
+            metrics: std::collections::HashMap::from([
+                ("metric.radius.md".to_string(), 9.0),
+                ("component.radius.md".to_string(), 12.0),
+            ]),
+            ..ThemeConfig::default()
+        };
+        Theme::global_mut(&mut app).apply_config(&cfg);
+
+        let theme = Theme::global(&app);
+        assert_eq!(MetricRef::radius(Radius::Md).resolve(theme), Px(12.0));
+        assert_eq!(
+            MetricRef::radius(Radius::Sm).resolve(theme),
+            theme.metrics.radius_sm
+        );
+    }
 }
