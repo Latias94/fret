@@ -7,7 +7,6 @@ edition.workspace = true
 fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }
 slotmap.workspace = true
-taffy.workspace = true
 tracing.workspace = true
 serde.workspace = true
 serde_json.workspace = true

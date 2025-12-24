@@ -62,6 +62,7 @@ MVP work is allowed to prototype quickly, but changes that affect “hard-to-cha
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
+- Next major refactor (planned): tighten `fret-ui` vs `fret-components-ui` boundaries so Tailwind/shadcn sizing/variants stay component-owned (see MVP 48).
 
 ## MVP 7 — Command UI Surfaces (Palette + Menu Skeleton)
 
@@ -1040,10 +1041,9 @@ Status:
     - `ResizablePanelGroup` provides a component-level naming surface for the resizable split primitive (shadcn-style vocabulary).
     - `Combobox` provides a minimal typeahead + anchored list interaction (focus stays in input; list is `Popover`-backed).
     - `sonner::toast(...)` provides a shadcn-style facade for transient notifications.
-  - `fret-ui`: `ToastOverlay` + `ToastService` for Sonner-style transient notifications (stacking + timers + pointer pass-through).
+  - Runtime overlay surfaces are currently prototyped in `fret-ui` (`Popover`, `DialogOverlay`, `ToastOverlay`, command palette shell).
+    - These will be migrated to `crates/fret-components-ui` in MVP 48 to keep sizing/variants/token recipes consistent with shadcn/tailwind and ADR 0037.
   - `crates/fret-components-icons`: renderer-agnostic icon registry + small builtin glyph fallback set.
-  - `fret-ui`: `Popover` + `PopoverService` (anchored overlay primitive used by `Select`).
-  - `fret-ui`: `CommandPaletteOverlay` + `WindowOverlays` open/close policy for a cmdk/shadcn-style command palette shell.
   - `fret-demo`: adds a `UI Kit` panel (`PanelKey` `core.ui_kit`) to validate composition and theme-driven styling.
   - `fret-demo --bin ui_kit`: standalone UI Kit window (no docking/editor shell) to validate component ergonomics and overlays in isolation.
 
@@ -1156,6 +1156,51 @@ References:
 
 - `docs/adr/0056-component-size-and-density-system.md`
 - `repo-ref/gpui-component/crates/ui/src/styled.rs` (search `Size`, `StyleSized`, `list_px/list_py`, `input_h`)
+
+## MVP 48 — Runtime/Components Boundary Tightening (shadcn-ready)
+
+Goal: make the **Tailwind/shadcn sizing + variants system** (ADR 0056) the single source of truth by
+removing “UI kit opinions” from the runtime crate (`fret-ui`) and concentrating shadcn-like surfaces
+in the component crate (`crates/fret-components-ui`), closer to the GPUI vs gpui-component split.
+
+This is a deliberate, “no fear” refactor MVP to prevent slow drift and perpetual per-widget patches.
+
+**Scope**
+
+- Clarify and enforce the boundary (ADR 0037):
+  - `fret-ui`: runtime substrate (tree, routing, focus/capture, layers, docking, perf primitives like `VirtualList`/`Scroll`).
+  - `crates/fret-components-ui`: shadcn-like surfaces and policies (popover/dialog/menu/tooltip/toast/command palette/menubar),
+    and all sizing/variants/token recipes.
+- Remove hard-coded control heights/spacing from runtime primitives:
+  - `TextInput`/`TextArea` stop deciding “control height”; component wrappers (`TextField`, etc.) own the chrome sizing via `Size`.
+- Migrate “standard overlays kit” out of `fret-ui`:
+  - move `WindowOverlays` and overlay widgets/services out of runtime, or re-export them only from the component crate,
+    while keeping the **overlay layer mechanism** in `fret-ui`.
+- Token drift mitigation:
+  - document and implement a single fallback rule so `Space`/`Radius` can safely fall back to baseline `metric.*`
+    tokens when `component.*` is not provided (avoid theme value duplication drift).
+
+**Non-goals**
+
+- A runtime Tailwind class parser.
+- Major visual redesign or new effects (shadow/blur/glow); those require renderer semantics decisions.
+
+**Definition of Done**
+
+- `fret-demo` and `fret-demo --bin ui_kit` no longer depend on `fret_ui::WindowOverlays` or runtime overlay widgets directly;
+  they use `crates/fret-components-ui` surfaces instead.
+- Runtime primitives have no “opinionated” shadcn sizing baked in (notably `TextInput` height).
+- `cargo test --workspace` passes and the UI kit still works.
+
+Status:
+
+- Planned.
+
+References:
+
+- `docs/adr/0037-workspace-boundaries-and-components-repository.md`
+- `docs/adr/0056-component-size-and-density-system.md`
+- `repo-ref/gpui-component/crates/ui` (styled + component split)
 
 ## Parking Lot (Explicitly Deferred)
 

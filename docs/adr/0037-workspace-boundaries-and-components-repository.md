@@ -40,7 +40,9 @@ Contains the framework core and backends:
 
 - `fret-core`: backend-agnostic contracts (IDs, geometry, events, scene/display list, resource handles).
 - `fret-app`: app runtime (models, effects, commands, scheduling hooks).
-- `fret-ui`: UI runtime (execution model, layout/invalidation, hit-testing, focus/capture, overlays, docking UX infrastructure).
+- `fret-ui`: UI runtime substrate (execution model, layout/invalidation, hit-testing, focus/capture, **overlay layer mechanism**, docking UX infrastructure).
+  - Note: “shadcn-like” overlay *surfaces* (popover/dialog/menu/tooltip/toast/command palette/menubar) should live in
+    `fret-components-*` so sizing/variants/tokens can converge without fighting runtime widgets.
 - `fret-render-*`: rendering backends (wgpu today; future WebGPU/wasm reuse).
 - `fret-platform-*`: platform backends (winit today; future web/mobile).
 - `fret`: facade crate (re-exports the stable public surface).

@@ -206,7 +206,7 @@ impl<H: UiHost> Widget<H> for Scroll {
                             cx.request_redraw();
                         }
                         if self.dragging_thumb || hovered_track || hovered_thumb {
-                            cx.set_cursor_icon(CursorIcon::RowResize);
+                            cx.set_cursor_icon(CursorIcon::Pointer);
                         }
                     } else if self.hovered_track || self.hovered_thumb {
                         self.hovered_track = false;
