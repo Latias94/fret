@@ -1,6 +1,7 @@
 pub mod dock;
 pub mod elements;
 pub mod host;
+pub mod menu_overlay;
 pub mod resize_handle;
 #[cfg(test)]
 mod test_host;
@@ -12,6 +13,9 @@ pub mod widgets;
 pub use dock::{DockManager, DockPanel, DockPanelContentService, DockSpace, ViewportPanel};
 pub use elements::{ElementCx, ElementRuntime, GlobalElementId};
 pub use host::UiHost;
+pub use menu_overlay::{
+    ContextMenuRequest, ContextMenuService, MenuBarContextMenu, MenuBarContextMenuEntry,
+};
 pub use resize_handle::ResizeHandle;
 pub use theme::{Theme, ThemeConfig, ThemeSnapshot};
 pub use tree::{
@@ -19,11 +23,8 @@ pub use tree::{
 };
 pub use widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 pub use widgets::{
-    AppMenuBar, Bar, BoundTextInput, Clip, ColoredPanel, Column, CommandPaletteOverlay,
-    CommandPaletteStyle, ContextMenu, ContextMenuRequest, ContextMenuService, ContextMenuStyle,
-    DialogAction, DialogOverlay, DialogRequest, DialogService, DialogStyle, FixedPanel, HeaderBody,
-    Image, PanelThemeBackground, Popover, PopoverItem, PopoverRequest, PopoverService,
-    PopoverStyle, ResizableSplit, Row, Scroll, Split, Stack, Text, TextArea, TextAreaStyle,
+    Bar, BoundTextInput, Clip, ColoredPanel, Column, FixedPanel, HeaderBody, Image,
+    PanelThemeBackground, ResizableSplit, Row, Scroll, Split, Stack, Text, TextArea, TextAreaStyle,
     TextInput, TextInputStyle, Toolbar, ToolbarItem, TreeNode, TreeView, TreeViewStyle,
     VecStringDataSource, VirtualList, VirtualListDataSource, VirtualListRow, VirtualListRowHeight,
     VirtualListStyle,

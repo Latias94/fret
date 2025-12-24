@@ -31,14 +31,15 @@ Scope: this is a pragmatic “what’s missing / what’s broken / what’s next
 
 - `VirtualList` (virtualization + selection + keyboard nav)
 - `Scroll` (scroll container) and scrollbar rendering
-- `DialogOverlay` / `ContextMenu` / `Popover` overlay primitives (tooltip/toast surfaces live in the component kit)
+- Overlay mechanism: multi-root layers, hit-testing, focus/capture routing (`UiTree` layers; see ADR 0011)
+- Menu request store: `ContextMenuService` + `ContextMenuRequest` (surface moved to component kit)
 - `TreeView`, `TextArea`, `ResizableSplit`, `Dock` (docking + multi-window)
 
 ### Component kit (`crates/fret-components-ui`)
 
 - Buttons: `Button`, `IconButton`, `Toolbar`
 - Inputs: `TextField`, `Checkbox`, `Switch`, `Select`, `Slider`
-- Overlays: `TooltipArea`, `DropdownMenuButton`, `Dialog`
+- Overlays: `ContextMenu`, `Popover`, `DialogOverlay`, `CommandPaletteOverlay`, `AppMenuBar`, `TooltipArea`, `ToastOverlay`, `DropdownMenuButton`
 - Data: `ListView` (virtualized), `ScrollArea`, `ProgressBar`, `Tabs`, `Separator`, `Frame`
 - Command palette: `CommandList` + `command_palette::install_command_palette` (cmdk-style shell wiring)
 - Combobox: `Combobox` (typeahead input + anchored popover list)

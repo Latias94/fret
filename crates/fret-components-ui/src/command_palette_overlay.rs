@@ -1,11 +1,11 @@
-use crate::{
-    Theme, UiHost,
-    widget::{EventCx, LayoutCx, PaintCx, Widget},
-};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Px, Rect, SceneOp, Size,
 };
 use fret_runtime::CommandId;
+use fret_ui::{
+    Theme, UiHost,
+    widget::{CommandCx, EventCx, LayoutCx, PaintCx, SemanticsCx, Widget},
+};
 
 #[derive(Debug, Clone)]
 pub struct CommandPaletteStyle {
@@ -194,7 +194,7 @@ impl<H: UiHost> Widget<H> for CommandPaletteOverlay {
         }
     }
 
-    fn command(&mut self, cx: &mut crate::widget::CommandCx<'_, H>, command: &CommandId) -> bool {
+    fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
         match command.as_str() {
             "command_palette.close" => {
                 cx.stop_propagation();
@@ -209,7 +209,7 @@ impl<H: UiHost> Widget<H> for CommandPaletteOverlay {
         self.panel_bounds = Rect::default();
     }
 
-    fn semantics(&mut self, _cx: &mut crate::widget::SemanticsCx<'_, H>) {
+    fn semantics(&mut self, _cx: &mut SemanticsCx<'_, H>) {
         // Modal overlay semantics are app-specific; defer for now.
     }
 }

@@ -1,11 +1,13 @@
-//! Dialog helpers built on top of `fret-ui`'s dialog overlay.
+//! Dialog helpers built on top of the component kit's dialog overlay.
 //!
 //! This module intentionally provides small, composable building blocks. Higher-level shadcn-style
 //! `DialogTrigger`/`DialogContent` composition will likely require a general-purpose portal API.
 
 use fret_core::AppWindowId;
 use fret_runtime::CommandId;
-use fret_ui::{DialogRequest, DialogService, EventCx, UiHost};
+use fret_ui::{EventCx, UiHost};
+
+use crate::{DialogRequest, DialogService};
 
 /// Opens a window-scoped dialog by setting a `DialogRequest` and dispatching `dialog.open`.
 ///

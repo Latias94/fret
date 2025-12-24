@@ -7,14 +7,14 @@ use crate::ime_probe::ImeProbe;
 use crate::overlay_layouts::{CenteredOverlayLayout, CornerOverlayLayout};
 use crate::scene_document::SceneDocumentService;
 use fret_app::Model;
+use fret_components_ui::{AppMenuBar, ContextMenu, Popover};
 use fret_core::{AppWindowId, Axis, Color, ExternalDragPayloadKind, PlatformCapabilities, Px};
 use fret_editor::{InspectorEditHint, InspectorEditLayout};
 use fret_editor::{ViewportToolManager, ViewportToolMode};
 use fret_ui_app::{
-    App, AppMenuBar, Bar, BoundTextInput, ColoredPanel, Column, ContextMenu, DockSpace, FixedPanel,
-    GenericWidget, HeaderBody, PanelThemeBackground, Row, Scroll, Split, Stack, Text, TextArea,
-    TextInput, Toolbar, ToolbarItem, UiLayerId, UiTree, VirtualList, VirtualListDataSource,
-    VirtualListRow,
+    App, Bar, BoundTextInput, ColoredPanel, Column, DockSpace, FixedPanel, GenericWidget,
+    HeaderBody, PanelThemeBackground, Row, Scroll, Split, Stack, Text, TextArea, TextInput,
+    Toolbar, ToolbarItem, UiLayerId, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
 };
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -985,7 +985,7 @@ Goal: foundation for Console/Inspector/code editor.",
     let context_menu = ui.push_overlay_root(context_menu_node, true);
     ui.set_layer_visible(context_menu, false);
 
-    let popover_node = ui.create_node(fret_ui_app::Popover::new());
+    let popover_node = ui.create_node(Popover::new());
     let popover = ui.push_overlay_root(popover_node, true);
     ui.set_layer_visible(popover, false);
 

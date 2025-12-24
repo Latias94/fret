@@ -2,12 +2,10 @@ use std::sync::Arc;
 
 use fret_core::{Event, KeyCode, Modifiers, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
-use fret_ui::{
-    BoundTextInput, EventCx, Invalidation, LayoutCx, PaintCx, PopoverRequest, UiHost, Widget,
-};
+use fret_ui::{BoundTextInput, EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
 
-use crate::Size;
 use crate::style::StyleRefinement;
+use crate::{PopoverItem, PopoverRequest, PopoverService, Size};
 
 fn matches_query(label: &str, q: &str) -> bool {
     let q = q.trim();
@@ -94,7 +92,7 @@ impl Combobox {
             return false;
         };
         cx.app
-            .global::<fret_ui::PopoverService>()
+            .global::<PopoverService>()
             .and_then(|s| s.request(window))
             .is_some_and(|(_, req)| req.owner == cx.node)
     }
@@ -129,9 +127,9 @@ impl Combobox {
             self.active_filtered = visible.first().copied();
         }
 
-        let popover_items: Vec<fret_ui::PopoverItem> = visible
+        let popover_items: Vec<PopoverItem> = visible
             .iter()
-            .map(|&i| fret_ui::PopoverItem::new(Arc::<str>::from(items[i].as_str())))
+            .map(|&i| PopoverItem::new(Arc::<str>::from(items[i].as_str())))
             .collect();
 
         let selected = self
@@ -139,7 +137,7 @@ impl Combobox {
             .and_then(|key| visible.iter().position(|&i| i == key));
 
         cx.app
-            .with_global_mut(fret_ui::PopoverService::default, |service, _app| {
+            .with_global_mut(PopoverService::default, |service, _app| {
                 service.set_request(
                     window,
                     PopoverRequest {
@@ -159,7 +157,7 @@ impl Combobox {
         };
         let Some(selected_row) = cx
             .app
-            .global_mut::<fret_ui::PopoverService>()
+            .global_mut::<PopoverService>()
             .and_then(|s| s.take_result(window, cx.node))
         else {
             return false;
@@ -420,7 +418,7 @@ impl<H: UiHost> Widget<H> for Combobox {
         // Detect open/close transitions to initialize popover selection.
         let open_now = cx
             .app
-            .global::<fret_ui::PopoverService>()
+            .global::<PopoverService>()
             .and_then(|s| cx.window.and_then(|w| s.request(w)))
             .is_some_and(|(_, req)| req.owner == cx.node);
         if open_now && !self.last_opened {

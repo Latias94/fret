@@ -1,12 +1,14 @@
 use fret_core::{AppWindowId, NodeId, TextService};
 use fret_runtime::{CommandId, Effect};
 use fret_ui::{
-    ContextMenu, ContextMenuService, DialogOverlay, DialogService, Popover, PopoverService, UiHost,
+    UiHost,
     tree::{UiLayerId, UiTree},
-    widgets::CommandPaletteOverlay,
 };
 
-use crate::{ToastOverlay, TooltipOverlay};
+use crate::{
+    CommandPaletteOverlay, ContextMenu, ContextMenuService, DialogOverlay, DialogService, Popover,
+    PopoverService, ToastOverlay, TooltipOverlay,
+};
 
 /// Standard window-level UI overlays (tooltips, popovers, context menus).
 ///

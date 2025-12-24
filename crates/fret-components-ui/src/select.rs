@@ -5,13 +5,10 @@ use fret_core::{
     SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
-use fret_ui::{
-    Invalidation, LayoutCx, PaintCx, PopoverItem, PopoverRequest, PopoverService, Theme, UiHost,
-    Widget,
-};
+use fret_ui::{Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 use crate::style::StyleRefinement;
-use crate::{Sizable, Size as ComponentSize};
+use crate::{PopoverItem, PopoverRequest, PopoverService, Sizable, Size as ComponentSize};
 
 #[derive(Debug, Clone)]
 pub struct SelectOption {

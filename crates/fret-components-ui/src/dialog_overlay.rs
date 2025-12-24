@@ -1,12 +1,12 @@
-use crate::{
-    Theme, UiHost,
-    widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
-};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, NodeId, Point, Px, Rect,
     SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 use fret_runtime::CommandId;
+use fret_ui::{
+    Theme, UiHost,
+    widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
+};
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Debug, Clone)]

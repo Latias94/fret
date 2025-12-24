@@ -9,7 +9,7 @@ use fret_core::{
 use fret_runtime::{CommandId, Effect, InputContext, Menu, MenuItem};
 use std::{borrow::Cow, collections::HashSet, hash::Hash, sync::Arc};
 
-use super::context_menu::{ContextMenuRequest, ContextMenuService};
+use crate::ContextMenuRequest;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum VirtualListRowHeight {
@@ -1537,7 +1537,7 @@ impl<H: UiHost, D: VirtualListDataSource> Widget<H> for VirtualList<D> {
                             self.context_menu_target = Some(key);
                             self.ensure_visible(idx);
 
-                            if let Some(window) = cx.window {
+                            if cx.window.is_some() {
                                 let inv_ctx = InputContext {
                                     platform: cx.input_ctx.platform,
                                     caps: cx.input_ctx.caps.clone(),
@@ -1566,22 +1566,12 @@ impl<H: UiHost, D: VirtualListDataSource> Widget<H> for VirtualList<D> {
                                     ],
                                 };
 
-                                cx.app.with_global_mut(
-                                    ContextMenuService::default,
-                                    |service, _app| {
-                                        service.set_request(
-                                            window,
-                                            ContextMenuRequest {
-                                                position: *position,
-                                                menu,
-                                                input_ctx: inv_ctx,
-                                                menu_bar: None,
-                                            },
-                                        );
-                                    },
-                                );
-                                cx.dispatch_command(CommandId::from("context_menu.open"));
-                                cx.request_redraw();
+                                cx.open_context_menu_request(ContextMenuRequest {
+                                    position: *position,
+                                    menu,
+                                    input_ctx: inv_ctx,
+                                    menu_bar: None,
+                                });
                             }
                             cx.invalidate_self(Invalidation::Paint);
                         }

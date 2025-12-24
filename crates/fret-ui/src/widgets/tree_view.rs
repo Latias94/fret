@@ -11,8 +11,8 @@ use std::{
     sync::Arc,
 };
 
-use super::context_menu::{ContextMenuRequest, ContextMenuService};
 use super::virtual_list::{VirtualList, VirtualListDataSource, VirtualListRow};
+use crate::ContextMenuRequest;
 
 #[derive(Debug, Clone)]
 pub struct TreeNode {
@@ -381,7 +381,7 @@ impl TreeView {
         position: fret_core::Point,
         row_id: u64,
     ) {
-        let Some(window) = cx.window else {
+        if cx.window.is_none() {
             return;
         };
 
@@ -417,20 +417,12 @@ impl TreeView {
             ],
         };
 
-        cx.app
-            .with_global_mut(ContextMenuService::default, |service, _app| {
-                service.set_request(
-                    window,
-                    ContextMenuRequest {
-                        position,
-                        menu,
-                        input_ctx: inv_ctx,
-                        menu_bar: None,
-                    },
-                );
-            });
-        cx.dispatch_command(CommandId::from("context_menu.open"));
-        cx.request_redraw();
+        cx.open_context_menu_request(ContextMenuRequest {
+            position,
+            menu,
+            input_ctx: inv_ctx,
+            menu_bar: None,
+        });
     }
 
     fn expand_target(&mut self, id: u64) -> bool {

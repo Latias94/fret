@@ -234,27 +234,11 @@ impl DropdownMenuButton {
     }
 
     fn open_menu<H: UiHost>(&self, cx: &mut EventCx<'_, H>) {
-        let Some(window) = cx.window else {
-            return;
-        };
-
         let position = Point::new(
             self.last_bounds.origin.x,
             Px(self.last_bounds.origin.y.0 + self.last_bounds.size.height.0 + 2.0),
         );
-
-        let request = fret_ui::ContextMenuRequest {
-            position,
-            menu: self.menu.clone(),
-            input_ctx: cx.input_ctx.clone(),
-            menu_bar: None,
-        };
-
-        cx.app
-            .with_global_mut(fret_ui::ContextMenuService::default, |service, _app| {
-                service.set_request(window, request);
-            });
-        cx.dispatch_command(fret_runtime::CommandId::from("context_menu.open"));
+        cx.open_context_menu(position, self.menu.clone());
     }
 
     fn ensure_prepared<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {

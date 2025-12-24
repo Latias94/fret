@@ -5,9 +5,7 @@ use fret_core::{
     ViewportMapping, WindowAnchor, WindowMetricsService,
     geometry::{Point, Px, Rect, Size},
 };
-use fret_runtime::{
-    CommandId, DragKind, Effect, InputContext, Menu, MenuItem, WhenExpr, WindowRequest,
-};
+use fret_runtime::{CommandId, DragKind, Effect, Menu, MenuItem, WhenExpr, WindowRequest};
 use std::{
     collections::{HashMap, HashSet},
     hash::{Hash, Hasher},
@@ -17,7 +15,6 @@ use std::{
 use crate::{
     ResizeHandle, UiHost,
     widget::{EventCx, LayoutCx, PaintCx, SemanticsCx, Widget},
-    widgets::{ContextMenuRequest, ContextMenuService},
 };
 
 pub struct DockPanel {
@@ -1709,20 +1706,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
         }
 
         if let Some(position) = open_dock_tab_menu {
-            let Some(window) = cx.window else {
+            if cx.window.is_none() {
                 return;
             };
 
             cx.request_focus(cx.node);
 
             let float_when = WhenExpr::parse("ui.window_tear_off").expect("valid when expr");
-
-            let inv_ctx = InputContext {
-                platform: cx.input_ctx.platform,
-                caps: cx.input_ctx.caps.clone(),
-                ui_has_modal: cx.input_ctx.ui_has_modal,
-                focus_is_text_input: cx.input_ctx.focus_is_text_input,
-            };
 
             let menu = Menu {
                 title: Arc::from("Dock"),
@@ -1748,37 +1738,17 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 ],
             };
 
-            cx.app
-                .with_global_mut(ContextMenuService::default, |service, _app| {
-                    service.set_request(
-                        window,
-                        ContextMenuRequest {
-                            position,
-                            menu,
-                            input_ctx: inv_ctx,
-                            menu_bar: None,
-                        },
-                    );
-                });
-            cx.dispatch_command(CommandId::from("context_menu.open"));
-            cx.request_redraw();
+            cx.open_context_menu(position, menu);
             cx.stop_propagation();
             return;
         }
 
         if let Some((position, _viewport_event)) = open_viewport_menu {
-            let Some(window) = cx.window else {
+            if cx.window.is_none() {
                 return;
             };
 
             cx.request_focus(cx.node);
-
-            let inv_ctx = InputContext {
-                platform: cx.input_ctx.platform,
-                caps: cx.input_ctx.caps.clone(),
-                ui_has_modal: cx.input_ctx.ui_has_modal,
-                focus_is_text_input: cx.input_ctx.focus_is_text_input,
-            };
 
             let menu = Menu {
                 title: Arc::from("Viewport"),
@@ -1794,20 +1764,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 ],
             };
 
-            cx.app
-                .with_global_mut(ContextMenuService::default, |service, _app| {
-                    service.set_request(
-                        window,
-                        ContextMenuRequest {
-                            position,
-                            menu,
-                            input_ctx: inv_ctx,
-                            menu_bar: None,
-                        },
-                    );
-                });
-            cx.dispatch_command(CommandId::from("context_menu.open"));
-            cx.request_redraw();
+            cx.open_context_menu(position, menu);
             cx.stop_propagation();
             return;
         }

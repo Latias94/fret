@@ -1041,9 +1041,9 @@ Status:
     - `ResizablePanelGroup` provides a component-level naming surface for the resizable split primitive (shadcn-style vocabulary).
     - `Combobox` provides a minimal typeahead + anchored list interaction (focus stays in input; list is `Popover`-backed).
     - `sonner::toast(...)` provides a shadcn-style facade for transient notifications.
-  - Runtime overlay surfaces are currently prototyped in `fret-ui` (`Popover`, `DialogOverlay`, command palette shell).
-    - `ToastOverlay` / `TooltipOverlay` have moved to `crates/fret-components-ui` as part of MVP 48 boundary tightening.
-    - Remaining overlay surfaces will be migrated to `crates/fret-components-ui` in MVP 48 to keep sizing/variants/token recipes consistent with shadcn/tailwind and ADR 0037.
+  - Overlay “surfaces” have been migrated to `crates/fret-components-ui` as part of MVP 48 boundary tightening:
+    - `ContextMenu`, `Popover`, `DialogOverlay`, `CommandPaletteOverlay`, `AppMenuBar`, `ToastOverlay`, `TooltipOverlay`.
+    - The runtime still owns the overlay-layer mechanism (`UiTree` layers) and the menu request store (`ContextMenuService`).
   - `crates/fret-components-icons`: renderer-agnostic icon registry + small builtin glyph fallback set.
   - `fret-demo`: adds a `UI Kit` panel (`PanelKey` `core.ui_kit`) to validate composition and theme-driven styling.
   - `fret-demo --bin ui_kit`: standalone UI Kit window (no docking/editor shell) to validate component ergonomics and overlays in isolation.
@@ -1199,9 +1199,9 @@ Status:
   - Done:
     - `WindowOverlays` moved from `fret-ui` into `crates/fret-components-ui` to keep overlay policy/component ergonomics out of the runtime crate.
     - `TextInput` no longer hard-codes control height; `Size` (ADR 0056) stays component-owned.
-    - `ToastOverlay` / `TooltipOverlay` moved from `fret-ui` into `crates/fret-components-ui`.
+    - Overlay widgets moved from `fret-ui` into `crates/fret-components-ui` (context menu, popover, dialog, command palette shell, menubar, toast, tooltip).
+    - `EventCx::open_context_menu*` centralizes “open menu” wiring so runtime widgets (e.g. docking) don’t depend on component surfaces.
   - Next:
-    - Migrate remaining overlay surfaces (`Popover`, `DialogOverlay`, context menus, command palette shell) into `crates/fret-components-ui`.
     - Implement token drift mitigation fallback rules for `Space`/`Radius` vs baseline `metric.*` tokens.
 
 References:

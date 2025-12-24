@@ -1,90 +1,15 @@
-use crate::{
-    Theme, UiHost,
-    widget::{EventCx, Invalidation, PaintCx, SemanticsCx, Widget},
-};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp,
     SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 use fret_runtime::{
-    CommandId, CommandRegistry, InputContext, KeymapService, Menu, MenuItem, format_sequence,
+    CommandId, CommandRegistry, InputContext, KeymapService, MenuItem, format_sequence,
 };
-use std::{collections::HashMap, sync::Arc};
-
-#[derive(Debug, Clone)]
-pub struct MenuBarContextMenuEntry {
-    pub index: usize,
-    pub bounds: Rect,
-    pub menu: Menu,
-}
-
-#[derive(Debug, Clone)]
-pub struct MenuBarContextMenu {
-    pub open_index: usize,
-    pub entries: Vec<MenuBarContextMenuEntry>,
-}
-
-#[derive(Debug, Clone)]
-pub struct ContextMenuRequest {
-    pub position: Point,
-    pub menu: Menu,
-    pub input_ctx: InputContext,
-    pub menu_bar: Option<MenuBarContextMenu>,
-}
-
-#[derive(Debug, Default)]
-pub struct ContextMenuService {
-    next_serial: u64,
-    by_window: HashMap<fret_core::AppWindowId, ContextMenuEntry>,
-}
-
-#[derive(Debug)]
-struct ContextMenuEntry {
-    serial: u64,
-    request: ContextMenuRequest,
-    pending_action: Option<CommandId>,
-}
-
-impl ContextMenuService {
-    pub fn set_request(&mut self, window: fret_core::AppWindowId, request: ContextMenuRequest) {
-        self.next_serial = self.next_serial.saturating_add(1);
-        let serial = self.next_serial;
-        self.by_window.insert(
-            window,
-            ContextMenuEntry {
-                serial,
-                request,
-                pending_action: None,
-            },
-        );
-    }
-
-    pub fn request(&self, window: fret_core::AppWindowId) -> Option<(u64, &ContextMenuRequest)> {
-        let entry = self.by_window.get(&window)?;
-        Some((entry.serial, &entry.request))
-    }
-
-    pub fn set_pending_action(
-        &mut self,
-        window: fret_core::AppWindowId,
-        action: Option<CommandId>,
-    ) {
-        let Some(entry) = self.by_window.get_mut(&window) else {
-            return;
-        };
-        entry.pending_action = action;
-    }
-
-    pub fn take_pending_action(&mut self, window: fret_core::AppWindowId) -> Option<CommandId> {
-        self.by_window
-            .get_mut(&window)
-            .and_then(|e| e.pending_action.take())
-    }
-
-    pub fn clear(&mut self, window: fret_core::AppWindowId) {
-        self.by_window.remove(&window);
-    }
-}
+use fret_ui::{
+    ContextMenuRequest, ContextMenuService, MenuBarContextMenu, Theme, UiHost,
+    widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
+};
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct ContextMenuStyle {
@@ -660,7 +585,7 @@ impl<H: UiHost> Widget<H> for ContextMenu {
         true
     }
 
-    fn layout(&mut self, cx: &mut crate::widget::LayoutCx<'_, H>) -> Size {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
         cx.available

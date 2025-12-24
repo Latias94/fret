@@ -50,6 +50,7 @@ use fret_app::{
     keymap::{BindingV1, KeySpecV1},
 };
 use fret_components_icons::IconId;
+use fret_components_ui::PopoverService;
 use fret_components_ui::{
     Size as ComponentSize, StyleRefinement,
     button::{Button, ButtonIntent, ButtonVariant},
@@ -82,7 +83,6 @@ use fret_runner_winit_wgpu::{
     WinitRunnerConfig,
 };
 use fret_ui_app::Invalidation;
-use fret_ui_app::PopoverService;
 use fret_ui_app::dock::ViewportMarquee;
 use fret_ui_app::{
     ContextMenuService, DockManager, DockPanel, DockPanelContentService, Image, Theme, ThemeConfig,

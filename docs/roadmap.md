@@ -34,7 +34,7 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Tighten the **framework vs components** boundary so Tailwind/shadcn sizing/variants can converge without fighting runtime widgets:
   - keep `fret-ui` as the runtime substrate (tree, routing, layers, docking, performance primitives),
   - move the “standard UI kit surfaces” (popover/dialog/menu/tooltip/toast/command palette/menubar) to `fret-components-ui`,
-  - remove hard-coded control heights/spacing from runtime primitives (notably `TextInput`) so `Size` (ADR 0056) stays component-owned. (MVP 48; in progress, `TextInput` done and tooltip/toast moved)
+  - remove hard-coded control heights/spacing from runtime primitives (notably `TextInput`) so `Size` (ADR 0056) stays component-owned. (MVP 48; in progress: `TextInput` done; overlay surfaces moved)
 - P0: Adopt semantics tree + accessibility bridge boundary (A11y-ready infrastructure) (ADR 0033).
 - P0: Adopt timers/animation/redraw scheduling (event-driven + continuous mode) (ADR 0034).
 - P0: Adopt layout constraints + optional Flex/Grid integration boundary (ADR 0035).
@@ -201,7 +201,7 @@ validate that the framework contracts are sufficient.
 - P1: Theme/tokens (typed core tokens + extensible namespaced keys for component ecosystems) (ADR 0032 / ADR 0050). (prototype implemented)
 - P0: Component size/density system (Tailwind-like scales) so control heights/paddings converge before scaling the UI kit (ADR 0056). (prototype implemented; see `docs/mvp.md` MVP 47)
 - P1: Anchored overlays (popover-style) for component primitives.
-  - Note: a prototype exists in `fret-ui` (notably popover/dialog/menu shells), but the long-term plan is to ship these surfaces from `fret-components-ui` (MVP 48) so sizing/variants stay component-owned.
+  - Note: overlay surfaces now live in `fret-components-ui` (MVP 48), while `fret-ui` retains the overlay-layer mechanism.
 - P1: Spin up `fret-components` repo workspace and establish a **general-purpose** component library baseline (ADR 0037):
   - `fret-components-ui` (token-driven primitives/composites; shadcn-inspired; not editor-specific) (prototype implemented in-tree),
   - `fret-components-icons` (icon registry + sets; atlas-friendly; renderer-agnostic) (prototype implemented in-tree),

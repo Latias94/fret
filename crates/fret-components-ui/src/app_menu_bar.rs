@@ -1,16 +1,12 @@
-use crate::ThemeSnapshot;
-use crate::{
-    UiHost,
-    widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
-};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp, SemanticsRole,
     Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
 };
 use fret_runtime::{CommandId, InputContext, Menu, MenuBar};
-
-use super::context_menu::{
+use fret_ui::{
     ContextMenuRequest, ContextMenuService, MenuBarContextMenu, MenuBarContextMenuEntry,
+    ThemeSnapshot, UiHost,
+    widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
 
 #[derive(Debug)]
