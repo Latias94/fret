@@ -35,6 +35,13 @@ pub struct PopoverRequest {
     pub anchor: Rect,
     pub items: Vec<PopoverItem>,
     pub selected: Option<usize>,
+    /// Whether `WindowOverlays` should move focus to the popover node when opening.
+    ///
+    /// Default: `true` (menu-like behavior).
+    ///
+    /// Some interactions (e.g. typeahead comboboxes) may want to keep focus in the text input
+    /// while showing an anchored list.
+    pub request_focus: bool,
 }
 
 #[derive(Debug, Default)]

@@ -41,6 +41,7 @@ Scope: this is a pragmatic “what’s missing / what’s broken / what’s next
 - Overlays: `TooltipArea`, `DropdownMenuButton`, `Dialog`
 - Data: `ListView` (virtualized), `ScrollArea`, `ProgressBar`, `Tabs`, `Separator`, `Frame`
 - Command palette: `CommandList` + `command_palette::install_command_palette` (cmdk-style shell wiring)
+- Combobox: `Combobox` (typeahead input + anchored popover list)
 
 ### Tailwind-like primitives (typed)
 

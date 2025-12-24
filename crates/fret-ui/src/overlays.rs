@@ -189,7 +189,15 @@ impl WindowOverlays {
                     self.popover_previous_focus = ui.focus();
                     ui.set_layer_visible(self.popover_layer, true);
                 }
-                ui.set_focus(Some(self.popover_node));
+
+                let request_focus = app
+                    .global::<PopoverService>()
+                    .and_then(|s| s.request(window))
+                    .map(|(_, req)| req.request_focus)
+                    .unwrap_or(true);
+                if request_focus {
+                    ui.set_focus(Some(self.popover_node));
+                }
                 app.request_redraw(window);
                 true
             }

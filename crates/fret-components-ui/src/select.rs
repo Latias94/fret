@@ -276,6 +276,7 @@ impl Select {
                         anchor: self.last_bounds,
                         items,
                         selected: Some(selected),
+                        request_focus: true,
                     },
                 );
             });

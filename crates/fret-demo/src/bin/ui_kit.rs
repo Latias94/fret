@@ -7,6 +7,7 @@ use fret_components_ui::{
     Size as ComponentSize, StyleRefinement,
     button::{Button, ButtonIntent, ButtonVariant},
     checkbox::Checkbox,
+    combobox::Combobox,
     command::{CommandItem, CommandList},
     command_palette::install_command_palette,
     dropdown_menu::DropdownMenuButton,
@@ -451,6 +452,24 @@ fn build_ui_kit_contents(
         vec!["Scene", "Game", "Inspector", "Console"],
     ));
     ui.add_child(col, tabs);
+
+    // Combobox (typeahead) demo: input + anchored list with cmdk-style keyboard navigation.
+    let combobox_items = app.models_mut().insert(vec![
+        "Albedo".to_string(),
+        "Ambient Occlusion".to_string(),
+        "Metallic".to_string(),
+        "Normal".to_string(),
+        "Roughness".to_string(),
+        "Emissive".to_string(),
+    ]);
+    let combobox_selection = app.models_mut().insert(None::<usize>);
+    let combobox_query = app.models_mut().insert(String::new());
+    let combobox_title = ui.create_node(Text::new("Combobox (typeahead)"));
+    ui.add_child(col, combobox_title);
+    let combobox = ui.create_node(
+        Combobox::new(combobox_items, combobox_selection, combobox_query).with_size(ComponentSize::Medium),
+    );
+    ui.add_child(col, combobox);
 
     let toolbar = ui.create_node(
         Toolbar::new().refine_style(

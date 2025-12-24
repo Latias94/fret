@@ -7,6 +7,7 @@ mod list_style;
 mod sizing;
 mod style;
 
+pub mod combobox;
 pub mod button;
 pub mod checkbox;
 pub mod command;
@@ -28,6 +29,7 @@ pub mod text_field;
 pub mod toolbar;
 pub mod tooltip;
 
+pub use combobox::Combobox;
 pub use sizing::{Sizable, Size};
 pub use style::{ColorRef, MetricRef, Radius, Space, StyleRefinement};
 
