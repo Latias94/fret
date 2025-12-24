@@ -539,7 +539,7 @@ impl DockSpace {
             },
             dock_hint_style: TextStyle {
                 font: fret_core::FontId::default(),
-                size: Px(15.0),
+                size: Px(18.0),
             },
             empty_state_style: TextStyle {
                 font: fret_core::FontId::default(),
@@ -777,14 +777,14 @@ impl DockSpace {
             PreparedGlyph { blob, metrics }
         };
 
-        // Use simple Unicode arrows instead of SVG so we can render with our existing SceneOps.
+        // Use simple Unicode shapes instead of SVG so we can render with our existing SceneOps.
         // This keeps the framework lightweight while still providing ImGui-like affordances.
         self.dock_hint_glyphs = Some(DockHintGlyphs {
             center: prepare("▣"),
-            left: prepare("←"),
-            right: prepare("→"),
-            top: prepare("↑"),
-            bottom: prepare("↓"),
+            left: prepare("◀"),
+            right: prepare("▶"),
+            top: prepare("▲"),
+            bottom: prepare("▼"),
         });
     }
 
@@ -3026,8 +3026,8 @@ fn dock_drop_edge_thickness(rect: Rect) -> Px {
     // Also keep the thickness sane on small panels.
     // ImGui-style: edge splits should be easy to hit even on big panels; we still cap it so the
     // center/tab drop remains a first-class target.
-    let base = (min_dim * 0.24).clamp(16.0, 96.0);
-    let cap = (min_dim * 0.40).clamp(12.0, 96.0);
+    let base = (min_dim * 0.30).clamp(20.0, 120.0);
+    let cap = (min_dim * 0.44).clamp(20.0, 120.0);
     Px(base.min(cap))
 }
 
@@ -3155,9 +3155,7 @@ fn hit_test_drop_target(
 
         // ImGui-style direction-pad hit targets near the center of the hovered dock node.
         // This makes split docking discoverable and avoids requiring the cursor to be near edges.
-        let cx = rect.origin.x.0 + rect.size.width.0 * 0.5;
-        let cy = rect.origin.y.0 + rect.size.height.0 * 0.5;
-        for (zone, hint_rect) in dock_hint_rects(cx, cy) {
+        for (zone, hint_rect) in dock_hint_rects(rect) {
             if hint_rect.contains(position) {
                 return Some(HoverTarget {
                     tabs: node,
@@ -3556,8 +3554,7 @@ fn paint_drop_hints(
         return;
     };
 
-    let cx = rect.origin.x.0 + rect.size.width.0 * 0.5;
-    let cy = rect.origin.y.0 + rect.size.height.0 * 0.5;
+    let hint_rects = dock_hint_rects(rect);
 
     let inactive_bg = Color {
         a: 0.64,
@@ -3580,7 +3577,40 @@ fn paint_drop_hints(
     let border = Edges::all(Px(2.0));
     let corner_radii = fret_core::Corners::all(Px(theme.metrics.radius_sm.0.max(4.0)));
 
-    for (zone, hint_rect) in dock_hint_rects(cx, cy) {
+    // Draw a plate behind the 5-way pad, closer to ImGui/Godot affordances.
+    let pad = Px(theme.metrics.padding_sm.0.max(6.0));
+    let mut min_x: f32 = f32::INFINITY;
+    let mut min_y: f32 = f32::INFINITY;
+    let mut max_x: f32 = f32::NEG_INFINITY;
+    let mut max_y: f32 = f32::NEG_INFINITY;
+    for &(_zone, r) in hint_rects.iter() {
+        min_x = min_x.min(r.origin.x.0);
+        min_y = min_y.min(r.origin.y.0);
+        max_x = max_x.max(r.origin.x.0 + r.size.width.0);
+        max_y = max_y.max(r.origin.y.0 + r.size.height.0);
+    }
+    if min_x.is_finite() && min_y.is_finite() && max_x.is_finite() && max_y.is_finite() {
+        let plate = Rect::new(
+            Point::new(Px(min_x - pad.0), Px(min_y - pad.0)),
+            Size::new(Px((max_x - min_x + pad.0 * 2.0).max(0.0)), Px((max_y - min_y + pad.0 * 2.0).max(0.0))),
+        );
+        scene.push(SceneOp::Quad {
+            order: fret_core::DrawOrder(order.0 - 2),
+            rect: plate,
+            background: Color {
+                a: 0.70,
+                ..theme.colors.surface_background
+            },
+            border: Edges::all(Px(1.0)),
+            border_color: Color {
+                a: 0.70,
+                ..theme.colors.panel_border
+            },
+            corner_radii: fret_core::Corners::all(Px(theme.metrics.radius_md.0.max(6.0))),
+        });
+    }
+
+    for &(zone, hint_rect) in hint_rects.iter() {
         let is_active = zone == target.zone;
         let bg = if is_active { active_bg } else { inactive_bg };
         let stroke = if is_active {
@@ -3629,11 +3659,17 @@ fn paint_drop_hints(
     }
 }
 
-fn dock_hint_rects(cx: f32, cy: f32) -> [(DropZone, Rect); 5] {
+fn dock_hint_rects(rect: Rect) -> [(DropZone, Rect); 5] {
     // Match the mental model of ImGui docking: an explicit 5-way “direction pad” near the
     // center of the hovered dock node. Hit-testing uses the same rects.
-    let size = Px(34.0);
-    let gap = Px(10.0);
+    let cx = rect.origin.x.0 + rect.size.width.0 * 0.5;
+    let cy = rect.origin.y.0 + rect.size.height.0 * 0.5;
+
+    let min_dim = rect.size.width.0.min(rect.size.height.0);
+    // Scale targets up on larger panels to make split docking feel effortless (Unity/ImGui-like),
+    // while keeping it usable on small panels.
+    let size = Px((min_dim * 0.095).clamp(34.0, 56.0));
+    let gap = Px((size.0 * 0.35).clamp(10.0, 16.0));
     let step = Px(size.0 + gap.0);
 
     let mk = |dx: f32, dy: f32| -> Rect {
@@ -4025,9 +4061,7 @@ mod tests {
         layout.insert(tabs, rect);
         let tab_scroll = std::collections::HashMap::new();
 
-        let cx = rect.origin.x.0 + rect.size.width.0 * 0.5;
-        let cy = rect.origin.y.0 + rect.size.height.0 * 0.5;
-        for (expected, hint_rect) in dock_hint_rects(cx, cy) {
+        for (expected, hint_rect) in dock_hint_rects(rect) {
             if expected == DropZone::Center {
                 continue;
             }
