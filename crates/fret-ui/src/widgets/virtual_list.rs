@@ -111,8 +111,19 @@ pub struct VirtualListStyle {
     pub corner_radii: Corners,
     pub row_hover: Color,
     pub row_selected: Color,
+    pub row_highlight_inset_y: Px,
     pub text_color: Color,
     pub text_style: TextStyle,
+    pub secondary_text_color: Color,
+    pub secondary_text_style: TextStyle,
+    pub trailing_text_color: Color,
+    pub trailing_text_style: TextStyle,
+    pub row_gap_y: Px,
+    pub trailing_gap_x: Px,
+    pub separator_color: Color,
+    pub separator_inset_x: Px,
+    pub header_text_color: Color,
+    pub header_text_style: TextStyle,
     pub wrap: TextWrap,
 }
 
@@ -147,6 +158,7 @@ impl Default for VirtualListStyle {
                 b: 0.52,
                 a: 0.65,
             },
+            row_highlight_inset_y: Px(0.0),
             text_color: Color {
                 r: 0.92,
                 g: 0.92,
@@ -157,28 +169,130 @@ impl Default for VirtualListStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
             },
+            secondary_text_color: Color {
+                r: 0.92,
+                g: 0.92,
+                b: 0.92,
+                a: 0.70,
+            },
+            secondary_text_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(12.0),
+            },
+            trailing_text_color: Color {
+                r: 0.92,
+                g: 0.92,
+                b: 0.92,
+                a: 0.70,
+            },
+            trailing_text_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(12.0),
+            },
+            row_gap_y: Px(2.0),
+            trailing_gap_x: Px(8.0),
+            separator_color: Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 0.12,
+            },
+            separator_inset_x: Px(8.0),
+            header_text_color: Color {
+                r: 0.92,
+                g: 0.92,
+                b: 0.92,
+                a: 0.85,
+            },
+            header_text_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(12.0),
+            },
             wrap: TextWrap::None,
         }
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VirtualListRowKind {
+    Item,
+    Header,
+    Separator,
+}
+
 #[derive(Debug, Clone)]
 pub struct VirtualListRow<'a> {
     pub text: Cow<'a, str>,
+    pub secondary_text: Option<Cow<'a, str>>,
+    pub trailing_text: Option<Cow<'a, str>>,
+    pub leading_text: Option<Cow<'a, str>>,
     pub indent_x: Px,
+    pub enabled: bool,
+    pub selectable: bool,
+    pub kind: VirtualListRowKind,
 }
 
 impl<'a> VirtualListRow<'a> {
     pub fn new(text: impl Into<Cow<'a, str>>) -> Self {
         Self {
             text: text.into(),
+            secondary_text: None,
+            trailing_text: None,
+            leading_text: None,
             indent_x: Px(0.0),
+            enabled: true,
+            selectable: true,
+            kind: VirtualListRowKind::Item,
         }
     }
 
     pub fn with_indent_x(mut self, indent_x: Px) -> Self {
         self.indent_x = indent_x;
         self
+    }
+
+    pub fn with_secondary_text(mut self, text: impl Into<Cow<'a, str>>) -> Self {
+        self.secondary_text = Some(text.into());
+        self
+    }
+
+    pub fn with_trailing_text(mut self, text: impl Into<Cow<'a, str>>) -> Self {
+        self.trailing_text = Some(text.into());
+        self
+    }
+
+    pub fn with_leading_text(mut self, text: impl Into<Cow<'a, str>>) -> Self {
+        self.leading_text = Some(text.into());
+        self
+    }
+
+    pub fn disabled(mut self) -> Self {
+        self.enabled = false;
+        self
+    }
+
+    pub fn not_selectable(mut self) -> Self {
+        self.selectable = false;
+        self
+    }
+
+    pub fn header(mut self) -> Self {
+        self.kind = VirtualListRowKind::Header;
+        self.selectable = false;
+        self
+    }
+
+    pub fn separator() -> Self {
+        Self {
+            text: Cow::Borrowed(""),
+            secondary_text: None,
+            trailing_text: None,
+            leading_text: None,
+            indent_x: Px(0.0),
+            enabled: false,
+            selectable: false,
+            kind: VirtualListRowKind::Separator,
+        }
     }
 }
 
@@ -236,8 +350,17 @@ struct PreparedRow<K> {
     index: usize,
     key: K,
     indent_x: Px,
-    blob: fret_core::TextBlobId,
-    metrics: fret_core::TextMetrics,
+    kind: VirtualListRowKind,
+    enabled: bool,
+    selectable: bool,
+    leading_blob: Option<fret_core::TextBlobId>,
+    leading_metrics: Option<fret_core::TextMetrics>,
+    primary_blob: fret_core::TextBlobId,
+    primary_metrics: fret_core::TextMetrics,
+    secondary_blob: Option<fret_core::TextBlobId>,
+    secondary_metrics: Option<fret_core::TextMetrics>,
+    trailing_blob: Option<fret_core::TextBlobId>,
+    trailing_metrics: Option<fret_core::TextMetrics>,
     height: Px,
 }
 
@@ -380,13 +503,34 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         }
         self.last_theme_revision = Some(theme.revision());
 
-        self.style.padding_x = theme.metrics.padding_md;
+        self.style.padding_x = theme
+            .metric_by_key("metric.list.padding_x")
+            .unwrap_or(theme.metrics.padding_md);
         self.style.background = theme.colors.list_background;
         self.style.border_color = theme.colors.list_border;
         self.style.corner_radii = Corners::all(theme.metrics.radius_md);
         self.style.row_hover = theme.colors.list_row_hover;
         self.style.row_selected = theme.colors.list_row_selected;
+        self.style.row_highlight_inset_y = theme
+            .metric_by_key("metric.list.row_highlight_inset_y")
+            .unwrap_or(Px(0.0));
         self.style.text_color = theme.colors.text_primary;
+        self.style.secondary_text_color = theme.colors.text_muted;
+        self.style.trailing_text_color = theme.colors.text_muted;
+        self.style.header_text_color = theme.colors.text_muted;
+        self.style.separator_color = theme.colors.panel_border;
+        self.style.padding_y = theme
+            .metric_by_key("metric.list.padding_y")
+            .unwrap_or(theme.metrics.padding_sm);
+        self.style.row_gap_y = theme
+            .metric_by_key("metric.list.row_gap_y")
+            .unwrap_or(theme.metrics.padding_sm);
+        self.style.trailing_gap_x = theme
+            .metric_by_key("metric.list.trailing_gap_x")
+            .unwrap_or(theme.metrics.padding_sm);
+        self.style.separator_inset_x = theme
+            .metric_by_key("metric.list.separator_inset_x")
+            .unwrap_or(theme.metrics.padding_md);
 
         // Font and row height participate in measurement; force height cache refresh.
         self.heights_dirty = true;
@@ -425,6 +569,12 @@ impl<D: VirtualListDataSource> VirtualList<D> {
     pub fn set_selected_key(&mut self, key: Option<D::Key>) {
         self.selected_keys.clear();
         if let Some(key) = key {
+            if !self.is_key_selectable(key) {
+                self.selection_anchor = None;
+                self.selection_lead = None;
+                self.selection_lead_index = None;
+                return;
+            }
             self.selected_keys.insert(key);
             self.selection_anchor = Some(key);
             self.selection_lead = Some(key);
@@ -443,7 +593,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
     ) {
         self.selected_keys.clear();
         for k in keys {
-            if self.data.index_of_key(k).is_some() {
+            if self.is_key_selectable(k) {
                 self.selected_keys.insert(k);
             }
         }
@@ -465,17 +615,32 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         self.hovered = None;
         self.prepared_dirty = true;
         self.heights_dirty = true;
-        self.selected_keys
-            .retain(|key| self.data.index_of_key(*key).is_some());
-        if let Some(anchor) = self.selection_anchor
-            && self.data.index_of_key(anchor).is_none()
-        {
-            self.selection_anchor = None;
+        let prev_selected = std::mem::take(&mut self.selected_keys);
+        for key in prev_selected {
+            let Some(index) = self.data.index_of_key(key) else {
+                continue;
+            };
+            let row = self.data.row_at(index);
+            if row.enabled && row.selectable && row.kind == VirtualListRowKind::Item {
+                self.selected_keys.insert(key);
+            }
+        }
+        if let Some(anchor) = self.selection_anchor {
+            let ok = self
+                .data
+                .index_of_key(anchor)
+                .is_some_and(|index| self.is_index_selectable(index));
+            if !ok {
+                self.selection_anchor = None;
+            }
         }
         if let Some(lead) = self.selection_lead {
-            self.selection_lead_index = self.data.index_of_key(lead);
-            if self.selection_lead_index.is_none() {
+            let index = self.data.index_of_key(lead);
+            if index.is_some_and(|i| self.is_index_selectable(i)) {
+                self.selection_lead_index = index;
+            } else {
                 self.selection_lead = None;
+                self.selection_lead_index = None;
             }
         } else {
             self.selection_lead_index = None;
@@ -486,6 +651,21 @@ impl<D: VirtualListDataSource> VirtualList<D> {
     fn lead_index(&self) -> Option<usize> {
         self.selection_lead_index
             .or_else(|| self.selection_lead.and_then(|k| self.data.index_of_key(k)))
+    }
+
+    fn is_index_selectable(&self, index: usize) -> bool {
+        if index >= self.data.len() {
+            return false;
+        }
+        let row = self.data.row_at(index);
+        row.enabled && row.selectable && row.kind == VirtualListRowKind::Item
+    }
+
+    fn is_key_selectable(&self, key: D::Key) -> bool {
+        let Some(index) = self.data.index_of_key(key) else {
+            return false;
+        };
+        self.is_index_selectable(index)
     }
 
     fn set_lead_index(&mut self, index: usize) {
@@ -501,11 +681,16 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             self.selected_keys.clear();
         }
         for i in start..=end {
-            self.selected_keys.insert(self.data.key_at(i));
+            if self.is_index_selectable(i) {
+                self.selected_keys.insert(self.data.key_at(i));
+            }
         }
     }
 
     fn apply_click_selection(&mut self, index: usize, modifiers: Modifiers) {
+        if !self.is_index_selectable(index) {
+            return;
+        }
         let clicked = self.data.key_at(index);
 
         if modifiers.shift {
@@ -776,6 +961,31 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         self.offset_y = Px(max * t);
     }
 
+    fn release_prepared_row(text: &mut dyn fret_core::TextService, row: PreparedRow<D::Key>) {
+        if let Some(blob) = row.leading_blob {
+            text.release(blob);
+        }
+        text.release(row.primary_blob);
+        if let Some(blob) = row.secondary_blob {
+            text.release(blob);
+        }
+        if let Some(blob) = row.trailing_blob {
+            text.release(blob);
+        }
+    }
+
+    fn update_measured_height(&mut self, index: usize, key: D::Key, height: Px) {
+        self.measured_heights_by_key.insert(key, height);
+        if index < self.heights_by_index.len() {
+            let prev = self.heights_by_index[index];
+            if prev != height {
+                self.heights_by_index[index] = height;
+                self.heights_tree.add(index, height.0 - prev.0);
+                self.last_content_height = self.heights_tree.total();
+            }
+        }
+    }
+
     fn prepare_row(
         &mut self,
         text: &mut dyn fret_core::TextService,
@@ -784,35 +994,157 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         index: usize,
     ) {
         let key = self.data.key_at(index);
-        let row = self.data.row_at(index);
-        let indent_x = row.indent_x;
-        let row_text = row.text;
+        let VirtualListRow {
+            text: row_text,
+            secondary_text,
+            trailing_text,
+            leading_text,
+            indent_x,
+            enabled,
+            selectable,
+            kind,
+        } = self.data.row_at(index);
 
         let indent_x_f = indent_x.0;
-        let max_width = Px((width.0 - self.style.padding_x.0 * 2.0 - indent_x_f).max(0.0));
-        let constraints = TextConstraints {
-            max_width: Some(max_width),
-            wrap: self.style.wrap,
-            scale_factor,
-        };
-        let (blob, metrics) = text.prepare(row_text.as_ref(), self.style.text_style, constraints);
-        drop(row_text);
+        let row_inner_w = Px((width.0 - self.style.padding_x.0 * 2.0 - indent_x_f).max(0.0));
 
-        let height = match self.row_height {
-            VirtualListRowHeight::Fixed(h) => h,
-            VirtualListRowHeight::Measured { min } => {
-                let measured = Px(metrics.size.height.0 + self.style.padding_y.0 * 2.0);
-                let h = Px(measured.0.max(min.0));
-                self.measured_heights_by_key.insert(key, h);
-                if index < self.heights_by_index.len() {
-                    let prev = self.heights_by_index[index];
-                    if prev != h {
-                        self.heights_by_index[index] = h;
-                        self.heights_tree.add(index, h.0 - prev.0);
-                        self.last_content_height = self.heights_tree.total();
+        let mut leading_blob = None;
+        let mut leading_metrics = None;
+        let mut secondary_blob = None;
+        let mut secondary_metrics = None;
+        let mut trailing_blob = None;
+        let mut trailing_metrics = None;
+
+        let (primary_blob, primary_metrics, kind, enabled, selectable, height) = match kind {
+            VirtualListRowKind::Separator => {
+                let constraints = TextConstraints {
+                    max_width: Some(Px(0.0)),
+                    wrap: TextWrap::None,
+                    scale_factor,
+                };
+                let (primary_blob, primary_metrics) =
+                    text.prepare("", self.style.text_style, constraints);
+                let height = match self.row_height {
+                    VirtualListRowHeight::Fixed(h) => h,
+                    VirtualListRowHeight::Measured { min } => {
+                        let h = Px((self.style.padding_y.0 * 2.0 + 1.0).max(min.0));
+                        self.update_measured_height(index, key, h);
+                        h
                     }
+                };
+                (primary_blob, primary_metrics, kind, false, false, height)
+            }
+            VirtualListRowKind::Header => {
+                let constraints = TextConstraints {
+                    max_width: Some(row_inner_w),
+                    wrap: TextWrap::None,
+                    scale_factor,
+                };
+                let (primary_blob, primary_metrics) =
+                    text.prepare(row_text.as_ref(), self.style.header_text_style, constraints);
+                drop(row_text);
+
+                let height = match self.row_height {
+                    VirtualListRowHeight::Fixed(h) => h,
+                    VirtualListRowHeight::Measured { min } => {
+                        let measured =
+                            Px(primary_metrics.size.height.0 + self.style.padding_y.0 * 2.0);
+                        let h = Px(measured.0.max(min.0));
+                        self.update_measured_height(index, key, h);
+                        h
+                    }
+                };
+                (primary_blob, primary_metrics, kind, false, false, height)
+            }
+            VirtualListRowKind::Item => {
+                if let Some(s) = trailing_text.as_ref() {
+                    let constraints = TextConstraints {
+                        max_width: None,
+                        wrap: TextWrap::None,
+                        scale_factor,
+                    };
+                    let (blob, metrics) =
+                        text.prepare(s.as_ref(), self.style.trailing_text_style, constraints);
+                    trailing_blob = Some(blob);
+                    trailing_metrics = Some(metrics);
                 }
-                h
+
+                if let Some(s) = leading_text.as_ref() {
+                    let constraints = TextConstraints {
+                        max_width: None,
+                        wrap: TextWrap::None,
+                        scale_factor,
+                    };
+                    let (blob, metrics) =
+                        text.prepare(s.as_ref(), self.style.text_style, constraints);
+                    leading_blob = Some(blob);
+                    leading_metrics = Some(metrics);
+                }
+
+                let mut max_width_f = row_inner_w.0;
+                if let Some(metrics) = leading_metrics.as_ref() {
+                    max_width_f -= metrics.size.width.0 + self.style.trailing_gap_x.0;
+                }
+                if let Some(metrics) = trailing_metrics.as_ref() {
+                    max_width_f -= metrics.size.width.0 + self.style.trailing_gap_x.0;
+                }
+                let max_width = Px(max_width_f.max(0.0));
+
+                let constraints = TextConstraints {
+                    max_width: Some(max_width),
+                    wrap: self.style.wrap,
+                    scale_factor,
+                };
+                let (primary_blob, primary_metrics) =
+                    text.prepare(row_text.as_ref(), self.style.text_style, constraints);
+                drop(row_text);
+
+                if let Some(s) = secondary_text.as_ref() {
+                    let constraints = TextConstraints {
+                        max_width: Some(max_width),
+                        wrap: self.style.wrap,
+                        scale_factor,
+                    };
+                    let (blob, metrics) =
+                        text.prepare(s.as_ref(), self.style.secondary_text_style, constraints);
+                    secondary_blob = Some(blob);
+                    secondary_metrics = Some(metrics);
+                }
+
+                let first_line_h = {
+                    let mut h = primary_metrics.size.height;
+                    if let Some(metrics) = leading_metrics.as_ref() {
+                        h = Px(h.0.max(metrics.size.height.0));
+                    }
+                    if let Some(metrics) = trailing_metrics.as_ref() {
+                        h = Px(h.0.max(metrics.size.height.0));
+                    }
+                    h
+                };
+                let text_block_h = if let Some(metrics) = secondary_metrics.as_ref() {
+                    Px(first_line_h.0 + self.style.row_gap_y.0 + metrics.size.height.0)
+                } else {
+                    first_line_h
+                };
+
+                let height = match self.row_height {
+                    VirtualListRowHeight::Fixed(h) => h,
+                    VirtualListRowHeight::Measured { min } => {
+                        let measured = Px(text_block_h.0 + self.style.padding_y.0 * 2.0);
+                        let h = Px(measured.0.max(min.0));
+                        self.update_measured_height(index, key, h);
+                        h
+                    }
+                };
+
+                (
+                    primary_blob,
+                    primary_metrics,
+                    kind,
+                    enabled,
+                    selectable,
+                    height,
+                )
             }
         };
 
@@ -820,8 +1152,17 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             index,
             key,
             indent_x,
-            blob,
-            metrics,
+            kind,
+            enabled,
+            selectable,
+            leading_blob,
+            leading_metrics,
+            primary_blob,
+            primary_metrics,
+            secondary_blob,
+            secondary_metrics,
+            trailing_blob,
+            trailing_metrics,
             height,
         });
     }
@@ -865,7 +1206,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         let anchor_top = anchor.map(|(index, _)| self.row_top_offset(index));
 
         for row in self.prepared.drain(..) {
-            text.release(row.blob);
+            Self::release_prepared_row(text, row);
         }
 
         let visible = self.compute_visible_range();
@@ -920,14 +1261,15 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             return;
         }
 
-        self.prepared.retain_mut(|row| {
+        let mut kept = Vec::with_capacity(self.prepared.len());
+        for row in self.prepared.drain(..) {
             if row.index >= visible.start && row.index < visible.end {
-                true
+                kept.push(row);
             } else {
-                text.release(row.blob);
-                false
+                Self::release_prepared_row(text, row);
             }
-        });
+        }
+        self.prepared = kept;
 
         for i in visible.start..visible.end {
             if self.prepared.iter().any(|r| r.index == i) {
@@ -1030,15 +1372,35 @@ impl<D: VirtualListDataSource> VirtualList<D> {
                 .max(1.0) as usize
         };
 
-        let next = match key {
-            KeyCode::ArrowUp => current.saturating_sub(1),
-            KeyCode::ArrowDown => (current + 1).min(self.data.len().saturating_sub(1)),
-            KeyCode::Home => 0,
-            KeyCode::End => self.data.len().saturating_sub(1),
-            KeyCode::PageUp => current.saturating_sub(viewport_rows),
-            KeyCode::PageDown => (current + viewport_rows).min(self.data.len().saturating_sub(1)),
+        let len = self.data.len();
+        let (mut next, direction) = match key {
+            KeyCode::ArrowUp => (current.saturating_sub(1), -1),
+            KeyCode::ArrowDown => ((current + 1).min(len.saturating_sub(1)), 1),
+            KeyCode::Home => (0, 1),
+            KeyCode::End => (len.saturating_sub(1), -1),
+            KeyCode::PageUp => (current.saturating_sub(viewport_rows), -1),
+            KeyCode::PageDown => ((current + viewport_rows).min(len.saturating_sub(1)), 1),
             _ => return false,
         };
+
+        if !self.is_index_selectable(next) {
+            loop {
+                if direction < 0 {
+                    if next == 0 {
+                        return false;
+                    }
+                    next = next.saturating_sub(1);
+                } else {
+                    next = next.saturating_add(1);
+                    if next >= len {
+                        return false;
+                    }
+                }
+                if self.is_index_selectable(next) {
+                    break;
+                }
+            }
+        }
 
         if modifiers.shift {
             if self.selection_anchor.is_none() {
@@ -1074,10 +1436,14 @@ impl<H: UiHost, D: VirtualListDataSource> Widget<H> for VirtualList<D> {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme());
+        // Events can arrive before the first layout/paint pass; always keep bounds up-to-date so
+        // hover hit-testing works from the very first pointer move.
+        self.last_bounds = cx.bounds;
+        self.last_viewport_height = cx.bounds.size.height;
         if self.heights_dirty {
             let theme_rev = cx.theme().revision();
             let scale_factor = self.last_height_scale_factor.unwrap_or(1.0);
-            let mut content_width = self.last_bounds.size.width;
+            let mut content_width = cx.bounds.size.width;
             if self.last_content_height.0 > self.last_viewport_height.0 {
                 content_width = Px((content_width.0 - self.scrollbar_width.0).max(0.0));
             }
@@ -1129,6 +1495,9 @@ impl<H: UiHost, D: VirtualListDataSource> Widget<H> for VirtualList<D> {
                     cx.request_focus(cx.node);
                     let local_y = Px(position.y.0 - content.origin.y.0);
                     if let Some(idx) = self.row_index_from_y(local_y) {
+                        if *button == MouseButton::Right && !self.is_index_selectable(idx) {
+                            return;
+                        }
                         let key = self.data.key_at(idx);
                         if *button == MouseButton::Left {
                             self.apply_click_selection(idx, *modifiers);
@@ -1329,31 +1698,180 @@ impl<H: UiHost, D: VirtualListDataSource> Widget<H> for VirtualList<D> {
             let is_selected = self.selected_keys.contains(&row.key);
             let is_hovered = self.hovered == Some(row.index);
 
-            if is_selected || is_hovered {
-                let bg = if is_selected {
-                    self.style.row_selected
-                } else {
-                    self.style.row_hover
-                };
-                cx.scene.push(SceneOp::Quad {
-                    order: DrawOrder(0),
-                    rect: row_rect,
-                    background: bg,
-                    border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
-                    corner_radii: Corners::all(Px(0.0)),
-                });
+            if row_rect.size.width.0 <= 0.0 || row_rect.size.height.0 <= 0.0 {
+                continue;
             }
 
-            let text_x = Px(row_rect.origin.x.0 + self.style.padding_x.0 + row.indent_x.0);
-            let inner_y = row_rect.origin.y.0 + ((row.height.0 - row.metrics.size.height.0) * 0.5);
-            let text_y = Px(inner_y + row.metrics.baseline.0);
-            cx.scene.push(SceneOp::Text {
-                order: DrawOrder(0),
-                origin: fret_core::Point::new(text_x, text_y),
-                text: row.blob,
-                color: self.style.text_color,
-            });
+            // Clip each row to avoid any text/background bleeding into adjacent rows.
+            cx.scene.push(SceneOp::PushClipRect { rect: row_rect });
+            match row.kind {
+                VirtualListRowKind::Separator => {
+                    let inset = self.style.separator_inset_x;
+                    let left = Px(row_rect.origin.x.0 + inset.0 + row.indent_x.0);
+                    let right = Px(row_rect.origin.x.0 + row_rect.size.width.0 - inset.0);
+                    let w = Px((right.0 - left.0).max(0.0));
+                    if w.0 > 0.0 {
+                        let line_y = Px(row_rect.origin.y.0 + row.height.0 * 0.5);
+                        let rect =
+                            Rect::new(fret_core::Point::new(left, line_y), Size::new(w, Px(1.0)));
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(0),
+                            rect,
+                            background: self.style.separator_color,
+                            border: Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: Corners::all(Px(0.0)),
+                        });
+                    }
+                }
+                VirtualListRowKind::Header => {
+                    let text_h = row.primary_metrics.size.height;
+                    let max_pad_y = self.style.padding_y.0.max(0.0);
+                    let available_pad_y = Px(((row.height.0 - text_h.0) * 0.5).max(0.0));
+                    let pad_y = Px(max_pad_y.min(available_pad_y.0));
+                    let block_h = Px(text_h.0 + pad_y.0 * 2.0);
+                    let block_top =
+                        Px(row_rect.origin.y.0 + ((row.height.0 - block_h.0) * 0.5).max(0.0));
+                    let baseline_y = Px(block_top.0 + pad_y.0 + row.primary_metrics.baseline.0);
+                    let x = Px(row_rect.origin.x.0 + self.style.padding_x.0 + row.indent_x.0);
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(0),
+                        origin: fret_core::Point::new(x, baseline_y),
+                        text: row.primary_blob,
+                        color: self.style.header_text_color,
+                    });
+                }
+                VirtualListRowKind::Item => {
+                    let can_highlight = row.enabled && row.selectable;
+                    if can_highlight && (is_selected || is_hovered) {
+                        let bg = if is_selected {
+                            self.style.row_selected
+                        } else {
+                            self.style.row_hover
+                        };
+                        let inset_y = self.style.row_highlight_inset_y.0.max(0.0);
+                        let rect = if inset_y > 0.0 {
+                            Rect::new(
+                                fret_core::Point::new(
+                                    row_rect.origin.x,
+                                    Px(row_rect.origin.y.0 + inset_y),
+                                ),
+                                Size::new(
+                                    row_rect.size.width,
+                                    Px((row_rect.size.height.0 - inset_y * 2.0).max(0.0)),
+                                ),
+                            )
+                        } else {
+                            row_rect
+                        };
+                        if rect.size.height.0 > 0.0 && rect.size.width.0 > 0.0 {
+                            cx.scene.push(SceneOp::Quad {
+                                order: DrawOrder(0),
+                                rect,
+                                background: bg,
+                                border: Edges::all(Px(0.0)),
+                                border_color: Color::TRANSPARENT,
+                                corner_radii: Corners::all(Px(0.0)),
+                            });
+                        }
+                    }
+
+                    let mut left_x =
+                        Px(row_rect.origin.x.0 + self.style.padding_x.0 + row.indent_x.0);
+                    let right_x =
+                        Px(row_rect.origin.x.0 + row_rect.size.width.0 - self.style.padding_x.0);
+
+                    let first_line_h = {
+                        let mut h = row.primary_metrics.size.height;
+                        if let Some(m) = row.leading_metrics.as_ref() {
+                            h = Px(h.0.max(m.size.height.0));
+                        }
+                        if let Some(m) = row.trailing_metrics.as_ref() {
+                            h = Px(h.0.max(m.size.height.0));
+                        }
+                        h
+                    };
+                    let content_h = if let Some(m) = row.secondary_metrics.as_ref() {
+                        Px(first_line_h.0 + self.style.row_gap_y.0 + m.size.height.0)
+                    } else {
+                        first_line_h
+                    };
+                    let max_pad_y = self.style.padding_y.0.max(0.0);
+                    let available_pad_y = Px(((row.height.0 - content_h.0) * 0.5).max(0.0));
+                    let pad_y = Px(max_pad_y.min(available_pad_y.0));
+                    let block_h = Px(content_h.0 + pad_y.0 * 2.0);
+                    let block_top =
+                        Px(row_rect.origin.y.0 + ((row.height.0 - block_h.0) * 0.5).max(0.0));
+
+                    let baseline_y = Px(block_top.0 + pad_y.0 + row.primary_metrics.baseline.0);
+
+                    let trailing_x = row
+                        .trailing_metrics
+                        .as_ref()
+                        .map(|m| Px(right_x.0 - m.size.width.0));
+
+                    if let Some(metrics) = row.leading_metrics.as_ref()
+                        && row.leading_blob.is_some()
+                    {
+                        cx.scene.push(SceneOp::Text {
+                            order: DrawOrder(0),
+                            origin: fret_core::Point::new(left_x, baseline_y),
+                            text: row.leading_blob.expect("leading_blob checked"),
+                            color: if row.enabled {
+                                self.style.text_color
+                            } else {
+                                self.style.secondary_text_color
+                            },
+                        });
+                        left_x = Px(left_x.0 + metrics.size.width.0 + self.style.trailing_gap_x.0);
+                    }
+
+                    if let Some(((blob, _metrics), x)) = row
+                        .trailing_blob
+                        .zip(row.trailing_metrics.as_ref())
+                        .zip(trailing_x)
+                    {
+                        cx.scene.push(SceneOp::Text {
+                            order: DrawOrder(0),
+                            origin: fret_core::Point::new(x, baseline_y),
+                            text: blob,
+                            color: if row.enabled {
+                                self.style.trailing_text_color
+                            } else {
+                                self.style.secondary_text_color
+                            },
+                        });
+                    }
+
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(0),
+                        origin: fret_core::Point::new(left_x, baseline_y),
+                        text: row.primary_blob,
+                        color: if row.enabled {
+                            self.style.text_color
+                        } else {
+                            self.style.secondary_text_color
+                        },
+                    });
+
+                    if let Some((blob, metrics)) =
+                        row.secondary_blob.zip(row.secondary_metrics.as_ref())
+                    {
+                        let second_baseline_y = Px(block_top.0
+                            + pad_y.0
+                            + first_line_h.0
+                            + self.style.row_gap_y.0
+                            + metrics.baseline.0);
+                        cx.scene.push(SceneOp::Text {
+                            order: DrawOrder(0),
+                            origin: fret_core::Point::new(left_x, second_baseline_y),
+                            text: blob,
+                            color: self.style.secondary_text_color,
+                        });
+                    }
+                }
+            }
+            cx.scene.push(SceneOp::PopClip);
         }
 
         cx.scene.push(SceneOp::PopClip);
@@ -1400,6 +1918,7 @@ mod tests {
     use super::*;
     use crate::test_host::TestHost;
     use fret_core::{AppWindowId, NodeId, Point, Rect, Scene, Size, TextBlobId, TextMetrics};
+    use fret_runtime::InputContext;
 
     #[derive(Default)]
     struct FakeTextService;
@@ -1593,5 +2112,107 @@ mod tests {
 
         // The top of row 2 becomes 10 + 10 = 20 after measurement; we should stay anchored.
         assert_eq!(list.offset_y, Px(20.0));
+    }
+
+    #[test]
+    fn hover_updates_before_first_layout_pass() {
+        let mut app = TestHost::new();
+        let mut text = FakeTextService::default();
+
+        let data = TestDataSource {
+            rows: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+        };
+        let mut list =
+            VirtualList::new(data).with_row_height(VirtualListRowHeight::Fixed(Px(20.0)));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(100.0)),
+        );
+        let mut cx = EventCx {
+            app: &mut app,
+            text: &mut text,
+            node: NodeId::default(),
+            window: Some(AppWindowId::default()),
+            input_ctx: InputContext::default(),
+            children: &[],
+            focus: None,
+            captured: None,
+            bounds,
+            invalidations: Vec::new(),
+            requested_focus: None,
+            requested_capture: None,
+            requested_cursor: None,
+            stop_propagation: false,
+        };
+
+        let event = Event::Pointer(fret_core::PointerEvent::Move {
+            position: Point::new(Px(10.0), Px(10.0)),
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+        });
+        list.event(&mut cx, &event);
+
+        assert_eq!(list.hovered, Some(0));
+    }
+
+    #[test]
+    fn paint_clips_each_row() {
+        let mut app = TestHost::new();
+        let mut text = FakeTextService::default();
+
+        let data = TestDataSource {
+            rows: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+        };
+        let mut list =
+            VirtualList::new(data).with_row_height(VirtualListRowHeight::Fixed(Px(20.0)));
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(60.0)));
+
+        let mut observe_model = |_model, _inv| {};
+        let mut layout_child =
+            |_child: NodeId, _bounds: Rect| -> Size { panic!("virtual list has no children") };
+
+        let mut layout_cx = LayoutCx {
+            app: &mut app,
+            node: NodeId::default(),
+            window: Some(AppWindowId::default()),
+            focus: None,
+            children: &[],
+            bounds,
+            available: bounds.size,
+            scale_factor: 1.0,
+            text: &mut text,
+            observe_model: &mut observe_model,
+            layout_child: &mut layout_child,
+        };
+        let _ = list.layout(&mut layout_cx);
+
+        let mut scene = Scene::default();
+        let mut paint_child = |_child: NodeId, _bounds: Rect| {};
+        let child_bounds = |_child: NodeId| None;
+        let mut paint_cx = PaintCx {
+            app: &mut app,
+            node: NodeId::default(),
+            window: Some(AppWindowId::default()),
+            focus: None,
+            children: &[],
+            bounds,
+            scale_factor: 1.0,
+            text: &mut text,
+            observe_model: &mut observe_model,
+            scene: &mut scene,
+            paint_child: &mut paint_child,
+            child_bounds: &child_bounds,
+        };
+        list.paint(&mut paint_cx);
+
+        let row_pushes = scene
+            .ops()
+            .iter()
+            .filter(|op| matches!(op, SceneOp::PushClipRect { .. }))
+            .count();
+        // One content clip + one clip per visible row.
+        assert_eq!(row_pushes, 4);
     }
 }

@@ -218,10 +218,7 @@ impl VirtualListDataSource for SemanticsListDataSource {
 
         let idx = index.min(self.lines.len().saturating_sub(1));
         let line = &self.lines[idx];
-        VirtualListRow {
-            text: line.text.as_str().into(),
-            indent_x: line.indent_x,
-        }
+        VirtualListRow::new(line.text.as_str()).with_indent_x(line.indent_x)
     }
 
     fn index_of_key(&self, key: Self::Key) -> Option<usize> {

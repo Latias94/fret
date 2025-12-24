@@ -27,7 +27,8 @@ use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRu
 use fret_ui_app::{
     ColoredPanel, Column, ContextMenuService, DialogAction, DialogRequest, DialogService,
     FixedPanel, Invalidation, PanelThemeBackground, PopoverService, ResizableSplit, Row, Scroll,
-    Stack, Text, Theme, ThemeConfig, TooltipService, UiTree, WindowOverlays,
+    Stack, Text, Theme, ThemeConfig, TooltipService, UiTree, VirtualList, VirtualListDataSource,
+    VirtualListRow, VirtualListRowHeight, WindowOverlays,
 };
 use std::sync::Arc;
 use winit::event_loop::EventLoop;
@@ -50,6 +51,38 @@ struct UiKitWindowState {
     ui: UiTree,
     root: NodeId,
     overlays: WindowOverlays,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct UiKitRichListDataSource {
+    len: usize,
+}
+
+impl VirtualListDataSource for UiKitRichListDataSource {
+    type Key = usize;
+
+    fn len(&self) -> usize {
+        self.len
+    }
+
+    fn key_at(&self, index: usize) -> Self::Key {
+        index
+    }
+
+    fn row_at(&self, index: usize) -> VirtualListRow<'_> {
+        match index {
+            0 => VirtualListRow::new("Recents").header(),
+            1 => VirtualListRow::separator(),
+            _ => {
+                let i = index - 2;
+                let leading = if i % 3 == 0 { "●" } else { "○" };
+                VirtualListRow::new(format!("Project {i}"))
+                    .with_leading_text(leading)
+                    .with_secondary_text("Modified 2 hours ago")
+                    .with_trailing_text("⌘O")
+            }
+        }
+    }
 }
 
 fn load_theme(app: &mut App) {
@@ -209,6 +242,18 @@ fn build_ui_kit_contents(
     let list_view =
         ui.create_node(ListView::new(items_model).with_selection_model(selection_model));
     ui.add_child(list_panel, list_view);
+
+    let rich_list_label = ui.create_node(Text::new("VirtualList (rich rows)"));
+    ui.add_child(col, rich_list_label);
+
+    let rich_list_panel = ui.create_node(FixedPanel::new(Px(260.0), Color::TRANSPARENT));
+    ui.add_child(col, rich_list_panel);
+
+    let rich_list = ui.create_node(
+        VirtualList::new(UiKitRichListDataSource { len: 2000 })
+            .with_row_height(VirtualListRowHeight::Measured { min: Px(44.0) }),
+    );
+    ui.add_child(rich_list_panel, rich_list);
 
     let separator = ui.create_node(Separator::horizontal());
     ui.add_child(col, separator);

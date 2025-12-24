@@ -5,6 +5,10 @@ ADRs or the main docs entrypoints.
 
 If you are new to the project, still start from `docs/README.md`.
 
+## UI Kit Notes
+
+- `docs/ui-kit-gap.md`
+
 ## Common Diagnostics
 
 ### `WARN fret_ui::elements: unkeyed element list order changed`

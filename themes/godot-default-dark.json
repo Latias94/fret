@@ -47,6 +47,12 @@
     "metric.radius.lg": 10,
     "metric.padding.sm": 8,
     "metric.padding.md": 10,
+    "metric.list.padding_x": 10,
+    "metric.list.padding_y": 10,
+    "metric.list.row_gap_y": 6,
+    "metric.list.trailing_gap_x": 8,
+    "metric.list.separator_inset_x": 10,
+    "metric.list.row_highlight_inset_y": 2,
     "metric.scrollbar.width": 10
   }
 }
