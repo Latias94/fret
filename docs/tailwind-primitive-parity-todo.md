@@ -94,7 +94,7 @@ Fret does **not** need to replicate every numeric preset from gpui-component, bu
 - [x] Add the missing “zero” presets and close scale gaps in the component spacing vocabulary.
   - Add `p_0/px_0/py_0` and consider parity for `3p5` and `6` presets where used upstream.
   - Acceptance: can express gpui-component-style dense rows (`py-0.5`) and “no padding” containers.
-- [ ] Introduce component-layer `gap-*` (for declarative flex/grid containers).
+- [x] Introduce component-layer `gap-*` (for declarative flex/grid containers).
   - Design note: `gap` is a container layout property (`FlexProps.gap`, `GridProps.gap`), not a
     `ContainerProps` chrome value.
   - Acceptance: `hstack/vstack`-style composition can set `gap_*` via typed `Space` without reaching

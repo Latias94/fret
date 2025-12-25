@@ -4,11 +4,12 @@ use fret_core::{Color, Corners, Edges, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle,
-    MainAlign, PressableProps, TextProps,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, LayoutStyle, MainAlign, PressableProps,
+    TextProps,
 };
 use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
 
+use super::stack;
 use super::style;
 use crate::command::CommandItem;
 use crate::{LayoutRefinement, Size, Space};
@@ -245,8 +246,8 @@ pub fn command_palette_list<H: UiHost>(
 
     let row_px = size.list_px(&theme);
     let row_py = size.list_py(&theme);
-    let row_gap = style::space(&theme, Space::N2);
-    let col_gap = style::space(&theme, Space::N0p5);
+    let row_gap = Space::N2;
+    let col_gap = Space::N0p5;
 
     let row_left_layout =
         style::layout_style(&theme, LayoutRefinement::default().flex_1().min_w_0());
@@ -335,25 +336,22 @@ pub fn command_palette_list<H: UiHost>(
                                             ..Default::default()
                                         },
                                         |cx| {
-                                            vec![cx.flex(
-                                                FlexProps {
-                                                    direction: fret_core::Axis::Horizontal,
-                                                    gap: row_gap,
-                                                    justify: MainAlign::Start,
-                                                    align: CrossAlign::Center,
-                                                    ..Default::default()
-                                                },
+                                            vec![stack::hstack(
+                                                cx,
+                                                stack::HStackProps::default()
+                                                    .gap(row_gap)
+                                                    .justify(MainAlign::Start)
+                                                    .align(CrossAlign::Center),
                                                 |cx| {
                                                     let mut out = Vec::new();
 
-                                                    out.push(cx.column(
-                                                        ColumnProps {
-                                                            layout: row_left_layout.clone(),
-                                                            gap: col_gap,
-                                                            justify: MainAlign::Start,
-                                                            align: CrossAlign::Start,
-                                                            ..Default::default()
-                                                        },
+                                                    out.push(stack::vstack(
+                                                        cx,
+                                                        stack::VStackProps::default()
+                                                            .layout(row_left_layout.clone())
+                                                            .gap(col_gap)
+                                                            .justify(MainAlign::Start)
+                                                            .align(CrossAlign::Start),
                                                         |cx| {
                                                             let mut col = Vec::new();
                                                             let label_color = if *enabled {
