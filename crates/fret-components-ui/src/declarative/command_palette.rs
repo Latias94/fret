@@ -249,8 +249,7 @@ pub fn command_palette_list<H: UiHost>(
     let row_gap = Space::N2;
     let col_gap = Space::N0p5;
 
-    let row_left_layout =
-        style::layout_style(&theme, LayoutRefinement::default().flex_1().min_w_0());
+    let row_left_layout = LayoutRefinement::default().flex_1().min_w_0();
     let row_shortcut_layout = style::layout_style(
         &theme,
         LayoutRefinement::default().flex_none().flex_shrink_0(),

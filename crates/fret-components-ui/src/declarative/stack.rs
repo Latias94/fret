@@ -1,12 +1,12 @@
-use fret_ui::element::{AnyElement, ColumnProps, CrossAlign, LayoutStyle, MainAlign, RowProps};
+use fret_ui::element::{AnyElement, ColumnProps, CrossAlign, MainAlign, RowProps};
 use fret_ui::{ElementCx, Theme, UiHost};
 
-use crate::Space;
 use crate::declarative::style;
+use crate::{LayoutRefinement, Space};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct HStackProps {
-    pub layout: LayoutStyle,
+    pub layout: LayoutRefinement,
     pub gap: Space,
     pub justify: MainAlign,
     pub align: CrossAlign,
@@ -15,7 +15,7 @@ pub struct HStackProps {
 impl Default for HStackProps {
     fn default() -> Self {
         Self {
-            layout: LayoutStyle::default(),
+            layout: LayoutRefinement::default(),
             gap: Space::N0,
             justify: MainAlign::Start,
             align: CrossAlign::Center,
@@ -29,7 +29,7 @@ impl HStackProps {
         self
     }
 
-    pub fn layout(mut self, layout: LayoutStyle) -> Self {
+    pub fn layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = layout;
         self
     }
@@ -55,9 +55,10 @@ pub fn hstack<H: UiHost>(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app);
     let gap = style::space(theme, props.gap);
+    let layout = style::layout_style(theme, props.layout);
     cx.row(
         RowProps {
-            layout: props.layout,
+            layout,
             gap,
             justify: props.justify,
             align: props.align,
@@ -67,9 +68,9 @@ pub fn hstack<H: UiHost>(
     )
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct VStackProps {
-    pub layout: LayoutStyle,
+    pub layout: LayoutRefinement,
     pub gap: Space,
     pub justify: MainAlign,
     pub align: CrossAlign,
@@ -78,7 +79,7 @@ pub struct VStackProps {
 impl Default for VStackProps {
     fn default() -> Self {
         Self {
-            layout: LayoutStyle::default(),
+            layout: LayoutRefinement::default(),
             gap: Space::N0,
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
@@ -92,7 +93,7 @@ impl VStackProps {
         self
     }
 
-    pub fn layout(mut self, layout: LayoutStyle) -> Self {
+    pub fn layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = layout;
         self
     }
@@ -118,9 +119,10 @@ pub fn vstack<H: UiHost>(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app);
     let gap = style::space(theme, props.gap);
+    let layout = style::layout_style(theme, props.layout);
     cx.column(
         ColumnProps {
-            layout: props.layout,
+            layout,
             gap,
             justify: props.justify,
             align: props.align,

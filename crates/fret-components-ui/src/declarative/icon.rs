@@ -1,9 +1,10 @@
 use fret_components_icons::{IconGlyph, IconId, IconRegistry};
 use fret_core::{Color, FontId, Px, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{LayoutStyle, Length, SizeStyle, TextProps};
+use fret_ui::element::TextProps;
 use fret_ui::{ElementCx, Theme, UiHost};
 
-use crate::ColorRef;
+use super::style;
+use crate::{ColorRef, LayoutRefinement, MetricRef};
 
 #[track_caller]
 pub fn icon<H: UiHost>(cx: &mut ElementCx<'_, H>, icon: IconId) -> fret_ui::element::AnyElement {
@@ -34,12 +35,12 @@ pub fn icon_with<H: UiHost>(
             .or_else(|| theme.color_by_key("muted-foreground"))
             .unwrap_or(theme.colors.text_muted);
 
-        let mut layout = LayoutStyle::default();
-        layout.size = SizeStyle {
-            width: Length::Px(size),
-            height: Length::Px(size),
-            ..Default::default()
-        };
+        let layout = style::layout_style(
+            theme,
+            LayoutRefinement::default()
+                .w_px(MetricRef::Px(size))
+                .h_px(MetricRef::Px(size)),
+        );
 
         let props = TextProps {
             layout,
@@ -74,12 +75,12 @@ pub fn icon_fixed_font<H: UiHost>(
             .or_else(|| theme.color_by_key("muted-foreground"))
             .unwrap_or(theme.colors.text_muted);
 
-        let mut layout = LayoutStyle::default();
-        layout.size = SizeStyle {
-            width: Length::Px(size),
-            height: Length::Px(size),
-            ..Default::default()
-        };
+        let layout = style::layout_style(
+            theme,
+            LayoutRefinement::default()
+                .w_px(MetricRef::Px(size))
+                .h_px(MetricRef::Px(size)),
+        );
 
         cx.text_props(TextProps {
             layout,

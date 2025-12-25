@@ -540,11 +540,50 @@ pub struct SizeRefinement {
     pub max_height: Option<MetricRef>,
 }
 
+impl SizeRefinement {
+    pub fn merge(mut self, other: SizeRefinement) -> Self {
+        if other.width.is_some() {
+            self.width = other.width;
+        }
+        if other.height.is_some() {
+            self.height = other.height;
+        }
+        if other.min_width.is_some() {
+            self.min_width = other.min_width;
+        }
+        if other.min_height.is_some() {
+            self.min_height = other.min_height;
+        }
+        if other.max_width.is_some() {
+            self.max_width = other.max_width;
+        }
+        if other.max_height.is_some() {
+            self.max_height = other.max_height;
+        }
+        self
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct FlexItemRefinement {
     pub grow: Option<f32>,
     pub shrink: Option<f32>,
     pub basis: Option<LengthRefinement>,
+}
+
+impl FlexItemRefinement {
+    pub fn merge(mut self, other: FlexItemRefinement) -> Self {
+        if other.grow.is_some() {
+            self.grow = other.grow;
+        }
+        if other.shrink.is_some() {
+            self.shrink = other.shrink;
+        }
+        if other.basis.is_some() {
+            self.basis = other.basis;
+        }
+        self
+    }
 }
 
 /// Layout-affecting style patches (margin, positioning, size constraints, flex/grid).
@@ -577,10 +616,10 @@ impl LayoutRefinement {
             self.inset = Some(self.inset.unwrap_or_default().merge(i));
         }
         if let Some(s) = other.size {
-            self.size = Some(s);
+            self.size = Some(self.size.unwrap_or_default().merge(s));
         }
         if let Some(f) = other.flex_item {
-            self.flex_item = Some(f);
+            self.flex_item = Some(self.flex_item.unwrap_or_default().merge(f));
         }
         self
     }
@@ -722,6 +761,46 @@ impl LayoutRefinement {
 
     pub fn min_w_0(self) -> Self {
         self.min_w(MetricRef::Px(Px(0.0)))
+    }
+
+    pub fn w(mut self, width: LengthRefinement) -> Self {
+        self.ensure_size_mut().width = Some(width);
+        self
+    }
+
+    pub fn h(mut self, height: LengthRefinement) -> Self {
+        self.ensure_size_mut().height = Some(height);
+        self
+    }
+
+    pub fn w_px(self, width: MetricRef) -> Self {
+        self.w(LengthRefinement::Px(width))
+    }
+
+    pub fn h_px(self, height: MetricRef) -> Self {
+        self.h(LengthRefinement::Px(height))
+    }
+
+    pub fn w_full(self) -> Self {
+        self.w(LengthRefinement::Fill)
+    }
+
+    pub fn h_full(self) -> Self {
+        self.h(LengthRefinement::Fill)
+    }
+
+    pub fn size_full(self) -> Self {
+        self.w_full().h_full()
+    }
+
+    pub fn max_w(mut self, width: MetricRef) -> Self {
+        self.ensure_size_mut().max_width = Some(width);
+        self
+    }
+
+    pub fn max_h(mut self, height: MetricRef) -> Self {
+        self.ensure_size_mut().max_height = Some(height);
+        self
     }
 
     pub fn basis(mut self, basis: LengthRefinement) -> Self {

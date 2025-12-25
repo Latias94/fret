@@ -2,16 +2,16 @@ use fret_components_icons::IconId;
 use fret_core::{Axis, Edges, FontId, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
-    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PositionStyle,
-    SizeStyle, TextInputProps,
+    ContainerProps, CrossAlign, FlexProps, Length, MainAlign, SizeStyle, TextInputProps,
 };
 use fret_ui::widget::Invalidation;
 use fret_ui::{ElementCx, Theme, UiHost};
 
-use crate::Size;
 use crate::declarative::icon;
+use crate::declarative::style as decl_style;
 use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use crate::style::ChromeRefinement;
+use crate::{LayoutRefinement, MetricRef, Size, Space};
 
 #[track_caller]
 pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
@@ -25,9 +25,9 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
         cx.observe_model(model, Invalidation::Layout);
         let has_value = cx.app.models().get(model).is_some_and(|s| !s.is_empty());
 
-        let theme = Theme::global(&*cx.app);
+        let theme = Theme::global(&*cx.app).clone();
         let resolved = resolve_input_chrome(
-            theme,
+            &theme,
             size,
             &ChromeRefinement::default(),
             InputTokenKeys {
@@ -45,7 +45,7 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
             },
         );
 
-        let slot_w = Px(size.input_h(theme).0.max(0.0));
+        let slot_w = Px(size.input_h(&theme).0.max(0.0));
         let base_px = resolved.padding.left;
         let base_py = resolved.padding.top;
         let left_pad = Px((base_px.0 + slot_w.0).max(0.0));
@@ -86,9 +86,8 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
             ..Default::default()
         };
 
-        let mut root_layout = LayoutStyle::default();
-        root_layout.size.width = Length::Fill;
-        root_layout.position = PositionStyle::Relative;
+        let root_layout =
+            decl_style::layout_style(&theme, LayoutRefinement::default().relative().w_full());
 
         cx.container(
             ContainerProps {
@@ -99,16 +98,16 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
                 let mut out = Vec::new();
                 out.push(cx.text_input(input));
 
-                let mut left_layout = LayoutStyle::default();
-                left_layout.position = PositionStyle::Absolute;
-                left_layout.inset.left = Some(Px(0.0));
-                left_layout.inset.top = Some(Px(0.0));
-                left_layout.inset.bottom = Some(Px(0.0));
-                left_layout.size = SizeStyle {
-                    width: Length::Px(slot_w),
-                    height: Length::Fill,
-                    ..Default::default()
-                };
+                let left_layout = decl_style::layout_style(
+                    &theme,
+                    LayoutRefinement::default()
+                        .absolute()
+                        .left(Space::N0)
+                        .top(Space::N0)
+                        .bottom(Space::N0)
+                        .w_px(MetricRef::Px(slot_w))
+                        .h_full(),
+                );
                 out.push(cx.flex(
                     FlexProps {
                         layout: left_layout,
@@ -124,16 +123,16 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
                 ));
 
                 if has_value {
-                    let mut right_layout = LayoutStyle::default();
-                    right_layout.position = PositionStyle::Absolute;
-                    right_layout.inset.right = Some(Px(0.0));
-                    right_layout.inset.top = Some(Px(0.0));
-                    right_layout.inset.bottom = Some(Px(0.0));
-                    right_layout.size = SizeStyle {
-                        width: Length::Px(slot_w),
-                        height: Length::Fill,
-                        ..Default::default()
-                    };
+                    let right_layout = decl_style::layout_style(
+                        &theme,
+                        LayoutRefinement::default()
+                            .absolute()
+                            .right(Space::N0)
+                            .top(Space::N0)
+                            .bottom(Space::N0)
+                            .w_px(MetricRef::Px(slot_w))
+                            .h_full(),
+                    );
 
                     out.push(cx.pressable(
                         fret_ui::element::PressableProps {
@@ -144,14 +143,10 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
                         |cx, _st| {
                             vec![cx.flex(
                                 FlexProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Fill,
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
+                                    layout: decl_style::layout_style(
+                                        &theme,
+                                        LayoutRefinement::default().size_full(),
+                                    ),
                                     direction: Axis::Horizontal,
                                     gap: Px(0.0),
                                     padding_x: base_px,

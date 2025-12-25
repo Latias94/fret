@@ -103,8 +103,9 @@ Fret does **not** need to replicate every numeric preset from gpui-component, bu
   - Must cover shadcn/gpui needs: `flex_1`, `flex_none`, `flex_shrink_0`, `basis_0`, `min_w_0`.
   - Acceptance: no component (e.g. command palette rows) needs to hand-write flex basis/grow/shrink
     or `min_width = 0` to avoid overflow.
-- [ ] Expand “style patch → declarative layout” bridging (MVP 55).
-  - Today only a minimal subset is bridged (e.g. `min_height`, `margin`, `position`, `inset`).
+- [x] Expand “style patch → declarative layout” bridging (MVP 55).
+  - Bridged: `aspect_ratio`, `margin`, `position`, `inset`, `size` (`w/h/min/max`), and flex-item
+    (`grow/shrink/basis`).
   - Acceptance: the primitives above map into `LayoutStyle` / `FlexProps` / `GridProps` with no
     widget-local magic numbers.
 
@@ -115,6 +116,8 @@ Fret does **not** need to replicate every numeric preset from gpui-component, bu
 - [ ] Add typed alignment wrappers (`items_*`, `justify_*`) to avoid leaking runtime enums into recipes.
 - [ ] Add typed sizing wrappers (`w_*`, `h_*`, `min_w_*`, `max_w_*`, `size_full`, `w_full`, `h_full`).
   - Decide which are “scale-based” (Space) vs “absolute” (Px) vs “semantic” (`full`).
+  - Note: we currently provide `LayoutRefinement::{w/h/min/max,w_full,h_full,size_full}`; the
+    remaining work is scale-based sugar and narrowing the surface so recipes rarely touch `MetricRef`.
 - [ ] Add typed overflow wrappers (`overflow_hidden`, `overflow_scroll`, `overflow_x_*`, `overflow_y_*`)
   and ensure paint/hit-test semantics stay consistent (ADR 0057).
 - [ ] Add typed text helpers needed by shadcn recipes: `truncate`, `whitespace_nowrap`, and a minimal
