@@ -5,6 +5,7 @@ use fret_app::{
 use fret_components_icons::IconId;
 use fret_components_shadcn::{
     Button as ShadcnButton, ButtonSize as ShadcnButtonSize, ButtonVariant as ShadcnButtonVariant,
+    RadioGroup as ShadcnRadioGroup, RadioGroupItem as ShadcnRadioGroupItem,
     ToggleGroup as ShadcnToggleGroup, ToggleGroupItem as ShadcnToggleGroupItem,
     ToggleSize as ShadcnToggleSize, ToggleVariant as ShadcnToggleVariant,
 };
@@ -352,6 +353,17 @@ fn build_ui_kit_contents(
     );
     ui.add_child(toggle_group_row, toggle_group_single);
     ui.add_child(col, toggle_group_row);
+
+    let radio_group_label = ui.create_node(Text::new("shadcn/ui v4 RadioGroup (prototype)"));
+    ui.add_child(col, radio_group_label);
+    let radio_model = app.models_mut().insert(Some(Arc::<str>::from("default")));
+    let radio_group = ui.create_node(
+        ShadcnRadioGroup::new(radio_model)
+            .item(ShadcnRadioGroupItem::new("default", "Default"))
+            .item(ShadcnRadioGroupItem::new("comfortable", "Comfortable"))
+            .item(ShadcnRadioGroupItem::new("compact", "Compact")),
+    );
+    ui.add_child(col, radio_group);
 
     let slider_model = app.models_mut().insert(0.35f32);
     let slider_label = ui.create_node(Text::new("Slider / Progress"));

@@ -116,7 +116,7 @@ Status legend:
 | Pagination | `ui/pagination.tsx` |  | ❌ | Not critical for editor UIs; can be added later. |
 | Popover | `ui/popover.tsx` | `fret_components_ui::popover::*` | ✅ | Ensure placement + dismissal parity. |
 | Progress | `ui/progress.tsx` | `fret_components_shadcn::progress::*` | ✅ | Currently `Progress` is a thin alias of `ProgressBar`. |
-| Radio Group | `ui/radio-group.tsx` |  | ❌ | Needs single-choice selection model + keyboard arrows. |
+| Radio Group | `ui/radio-group.tsx` | `fret_components_shadcn::RadioGroup` | ✅ | First pass: single-choice selection model + keyboard arrows + focus-visible ring. |
 | Resizable | `ui/resizable.tsx` | `fret_components_shadcn::resizable::*` | ✅ | Currently a thin re-export. |
 | Scroll Area | `ui/scroll-area.tsx` | `fret_components_shadcn::scroll_area::*` | ✅ | Currently a thin re-export. |
 | Select | `ui/select.tsx` | `fret_components_shadcn::select::*` | ✅ | Ensure focus + typeahead parity. |
@@ -213,7 +213,7 @@ These checklists are the acceptance criteria for “interaction parity”.
     `alert.rs`, `badge.rs`, `card.rs`, `empty.rs`, `kbd.rs`, `label.rs`.
 - [ ] `Accordion` / `Collapsible` (expansion model + keyboard)
 - [ ] `InputGroup` (icon slots + per-edge padding primitives; depends on Tailwind primitive parity)
-- [ ] `RadioGroup` (selection model + keyboard arrows)
+- [x] `RadioGroup` (selection model + keyboard arrows)
 - [x] `ToggleGroup` (selection policy, spacing/border merging, keyboard)
 
 ### P2 — larger surfaces (likely require dedicated contracts)
