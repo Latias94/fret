@@ -87,11 +87,11 @@ Fret does **not** need to replicate every numeric preset from gpui-component, bu
 - [x] Split style patches into `ChromeRefinement` vs `LayoutRefinement` (MVP 59).
   - Acceptance: layout-like APIs are impossible to apply “silently” to retained widgets; either they
     apply in declarative composition, or they must be wrapped in an explicit layout container.
-- [ ] Add per-edge padding primitives to `fret-components-ui` (Tailwind parity).
+- [x] Add per-edge padding primitives to `fret-components-ui` (Tailwind parity).
   - Add `pt/pr/pb/pl` (and `p*` convenience) at the typed layer.
   - Acceptance: common shadcn input/icon overlays (padding only on one side) can be expressed without
     bespoke widget props.
-- [ ] Add the missing “zero” presets and close scale gaps in the component spacing vocabulary.
+- [x] Add the missing “zero” presets and close scale gaps in the component spacing vocabulary.
   - Add `p_0/px_0/py_0` and consider parity for `3p5` and `6` presets where used upstream.
   - Acceptance: can express gpui-component-style dense rows (`py-0.5`) and “no padding” containers.
 - [ ] Introduce component-layer `gap-*` (for declarative flex/grid containers).

@@ -1,4 +1,4 @@
-use crate::ChromeRefinement;
+use crate::{ChromeRefinement, Space};
 
 pub trait RefineStyle: Sized {
     fn refine_style(self, style: ChromeRefinement) -> Self;
@@ -42,6 +42,11 @@ impl<T> Styled<T> {
         self
     }
 
+    pub fn px_0(mut self) -> Self {
+        self.style = self.style.px_0();
+        self
+    }
+
     pub fn px_1p5(mut self) -> Self {
         self.style = self.style.px_1p5();
         self
@@ -77,6 +82,11 @@ impl<T> Styled<T> {
         self
     }
 
+    pub fn py_0(mut self) -> Self {
+        self.style = self.style.py_0();
+        self
+    }
+
     pub fn py_1p5(mut self) -> Self {
         self.style = self.style.py_1p5();
         self
@@ -102,8 +112,33 @@ impl<T> Styled<T> {
         self
     }
 
+    pub fn pt(mut self, space: Space) -> Self {
+        self.style = self.style.pt(space);
+        self
+    }
+
+    pub fn pr(mut self, space: Space) -> Self {
+        self.style = self.style.pr(space);
+        self
+    }
+
+    pub fn pb(mut self, space: Space) -> Self {
+        self.style = self.style.pb(space);
+        self
+    }
+
+    pub fn pl(mut self, space: Space) -> Self {
+        self.style = self.style.pl(space);
+        self
+    }
+
     pub fn p_1(mut self) -> Self {
         self.style = self.style.p_1();
+        self
+    }
+
+    pub fn p_0(mut self) -> Self {
+        self.style = self.style.p_0();
         self
     }
 

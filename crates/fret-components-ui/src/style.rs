@@ -401,6 +401,10 @@ impl ChromeRefinement {
     }
 
     // Tailwind-like spacing scale, backed by namespaced tokens.
+    pub fn px_0(self) -> Self {
+        self.px(Space::N0)
+    }
+
     pub fn px_1(self) -> Self {
         self.px(Space::N1)
     }
@@ -429,6 +433,10 @@ impl ChromeRefinement {
         self.px(Space::N4)
     }
 
+    pub fn py_0(self) -> Self {
+        self.py(Space::N0)
+    }
+
     pub fn py_1(self) -> Self {
         self.py(Space::N1)
     }
@@ -455,6 +463,10 @@ impl ChromeRefinement {
 
     pub fn py_4(self) -> Self {
         self.py(Space::N4)
+    }
+
+    pub fn p_0(self) -> Self {
+        self.p(Space::N0)
     }
 
     pub fn p_1(self) -> Self {
