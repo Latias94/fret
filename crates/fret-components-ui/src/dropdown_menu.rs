@@ -204,6 +204,7 @@ impl DropdownMenuButton {
         let style = TextStyle {
             font: fret_core::FontId::default(),
             size: self.resolved.text_size,
+            ..Default::default()
         };
 
         let (label_blob, label_metrics) = cx.text.prepare(self.label.as_ref(), style, constraints);
@@ -320,6 +321,7 @@ impl<H: UiHost> Widget<H> for DropdownMenuButton {
         let style = TextStyle {
             font: fret_core::FontId::default(),
             size: self.resolved.text_size,
+            ..Default::default()
         };
         let label_metrics = cx.text.measure(self.label.as_ref(), style, constraints);
         let chevron_metrics = cx.text.measure("▾", style, constraints);

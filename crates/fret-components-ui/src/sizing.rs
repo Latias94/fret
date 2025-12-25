@@ -110,6 +110,7 @@ impl Size {
         TextStyle {
             font: FontId::default(),
             size: self.control_text_px(theme),
+            ..Default::default()
         }
     }
 

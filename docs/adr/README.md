@@ -23,6 +23,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Declarative layout semantics (Flex + sizing)**: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`, `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`, `docs/adr/0042-virtualization-and-large-lists.md`
 - **Docking + multi-window tear-off**: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0017-multi-window-display-and-dpi.md`, `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
 - **Text input / IME**: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0020-focus-and-command-routing.md`
+- **Typography (weight/line-height/tracking)**: `docs/adr/0058-typography-v1-textstyle-weight-lineheight-tracking.md`
 - **Text editing commands + selection model**: `docs/adr/0044-text-editing-state-and-commands.md`
 - **Text geometry queries (caret/hit-test, multiline affinity)**: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
 - **Shortcut arbitration / AltGr / multi-stroke bindings**: `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0020-focus-and-command-routing.md`
@@ -58,6 +59,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 
 - `docs/adr/0028-declarative-elements-and-element-state.md` (authoring/runtime model)
 - `docs/adr/0029-text-pipeline-and-atlas-strategy.md` (text implementation strategy)
+- `docs/adr/0058-typography-v1-textstyle-weight-lineheight-tracking.md` (typography expressiveness)
 - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md` (text geometry query boundary)
 - `docs/adr/0046-multiline-text-layout-and-geometry-queries.md` (multiline geometry semantics)
 - `docs/adr/0030-shape-rendering-and-sdf-semantics.md` (shape semantics over SDF)
@@ -101,6 +103,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0002-display-list.md`
 - `docs/adr/0004-resource-handles.md`
 - `docs/adr/0006-text-system.md`
+- `docs/adr/0058-typography-v1-textstyle-weight-lineheight-tracking.md`
 - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
 - `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
 - `docs/adr/0012-keyboard-ime-and-text-input.md`
@@ -166,6 +169,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0008-threading-logging-errors.md`
 - `docs/adr/0027-framework-scope-and-responsibilities.md`
 - `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
+- `docs/adr/0058-typography-v1-textstyle-weight-lineheight-tracking.md`
 - `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
 - `docs/adr/0037-workspace-boundaries-and-components-repository.md`
 - `docs/adr/0040-color-management-and-compositing-contracts.md`

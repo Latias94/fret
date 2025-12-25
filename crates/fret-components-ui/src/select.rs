@@ -352,6 +352,7 @@ impl<H: UiHost> Widget<H> for Select {
         let style = TextStyle {
             font: fret_core::FontId::default(),
             size: self.resolved.text_size,
+            ..Default::default()
         };
         let pad_x = self.resolved.padding_x;
         let pad_y = self.resolved.padding_y;
@@ -436,6 +437,7 @@ impl<H: UiHost> Widget<H> for Select {
             let style = TextStyle {
                 font: fret_core::FontId::default(),
                 size: self.resolved.text_size,
+                ..Default::default()
             };
             let constraints = TextConstraints {
                 max_width: Some(Px((cx.bounds.size.width.0 - pad_x.0 * 2.0).max(0.0))),

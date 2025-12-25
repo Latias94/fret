@@ -1,6 +1,6 @@
 use cosmic_text::{
-    Attrs, AttrsList, CacheKey, CacheKeyFlags, Family, FontSystem, ShapeBuffer, ShapeLine, Shaping,
-    SwashCache,
+    Attrs, AttrsList, CacheKey, CacheKeyFlags, Family, FontSystem, Metrics, ShapeBuffer, ShapeLine,
+    Shaping, SwashCache, Weight,
 };
 use fret_core::{
     CaretAffinity, HitTestResult, Point, Rect, Size, TextBlobId, TextConstraints, TextMetrics,
@@ -41,6 +41,9 @@ struct TextBlobKey {
     text: Arc<str>,
     font: fret_core::FontId,
     size_bits: u32,
+    weight: u16,
+    line_height_bits: Option<u32>,
+    letter_spacing_bits: Option<u32>,
     max_width_bits: Option<u32>,
     wrap: TextWrap,
     scale_bits: u32,
@@ -53,6 +56,9 @@ impl TextBlobKey {
             text: Arc::<str>::from(text),
             font: style.font,
             size_bits: style.size.0.to_bits(),
+            weight: style.weight.0,
+            line_height_bits: style.line_height.map(|px| px.0.to_bits()),
+            letter_spacing_bits: style.letter_spacing_em.map(|v| v.to_bits()),
             max_width_bits,
             wrap: constraints.wrap,
             scale_bits: constraints.scale_factor.to_bits(),
@@ -335,7 +341,19 @@ impl TextSystem {
         let scale = constraints.scale_factor.max(1.0);
         let font_size_px = (style.size.0 * scale).max(1.0);
 
-        let attrs = Attrs::new().family(Family::SansSerif);
+        let mut attrs = Attrs::new().family(Family::SansSerif);
+        attrs = attrs.weight(Weight(style.weight.0));
+        if let Some(letter_spacing_em) = style.letter_spacing_em {
+            if letter_spacing_em != 0.0 && letter_spacing_em.is_finite() {
+                attrs = attrs.letter_spacing(letter_spacing_em);
+            }
+        }
+        if let Some(line_height) = style.line_height {
+            let line_height_px = (line_height.0 * scale).max(0.0);
+            if line_height_px.is_finite() {
+                attrs = attrs.metrics(Metrics::new(font_size_px, line_height_px));
+            }
+        }
         let (layout, line_starts) = layout_text(
             &mut self.font_system,
             &mut self.scratch,
@@ -475,7 +493,19 @@ impl TextSystem {
         let scale = constraints.scale_factor.max(1.0);
         let font_size_px = (style.size.0 * scale).max(1.0);
 
-        let attrs = Attrs::new().family(Family::SansSerif);
+        let mut attrs = Attrs::new().family(Family::SansSerif);
+        attrs = attrs.weight(Weight(style.weight.0));
+        if let Some(letter_spacing_em) = style.letter_spacing_em {
+            if letter_spacing_em != 0.0 && letter_spacing_em.is_finite() {
+                attrs = attrs.letter_spacing(letter_spacing_em);
+            }
+        }
+        if let Some(line_height) = style.line_height {
+            let line_height_px = (line_height.0 * scale).max(0.0);
+            if line_height_px.is_finite() {
+                attrs = attrs.metrics(Metrics::new(font_size_px, line_height_px));
+            }
+        }
         layout_text(
             &mut self.font_system,
             &mut self.scratch,
@@ -862,6 +892,39 @@ fn hit_test_point_from_lines(lines: &[TextLine], point: Point) -> Option<HitTest
     }
 
     Some(HitTestResult { index, affinity })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::TextBlobKey;
+    use fret_core::{FontWeight, Px, TextConstraints, TextStyle, TextWrap};
+
+    #[test]
+    fn text_blob_key_includes_typography_fields() {
+        let constraints = TextConstraints {
+            max_width: Some(Px(120.0)),
+            wrap: TextWrap::Word,
+            scale_factor: 2.0,
+        };
+
+        let base = TextStyle::default();
+        let k0 = TextBlobKey::new("hello", base, constraints);
+
+        let mut style = base;
+        style.weight = FontWeight::BOLD;
+        let k_weight = TextBlobKey::new("hello", style, constraints);
+        assert_ne!(k0, k_weight);
+
+        let mut style = base;
+        style.line_height = Some(Px(18.0));
+        let k_line_height = TextBlobKey::new("hello", style, constraints);
+        assert_ne!(k0, k_line_height);
+
+        let mut style = base;
+        style.letter_spacing_em = Some(0.05);
+        let k_tracking = TextBlobKey::new("hello", style, constraints);
+        assert_ne!(k0, k_tracking);
+    }
 }
 
 fn selection_rects_from_lines(lines: &[TextLine], range: (usize, usize), out: &mut Vec<Rect>) {

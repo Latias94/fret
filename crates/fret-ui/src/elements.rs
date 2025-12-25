@@ -8,8 +8,9 @@ use std::{
 
 use crate::UiHost;
 use crate::element::{
-    AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, PressableProps, PressableState,
-    RowProps, SpacerProps, StackProps, TextProps, VirtualListProps, VirtualListState,
+    AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, PressableProps,
+    PressableState, RowProps, SpacerProps, StackProps, TextProps, VirtualListProps,
+    VirtualListState,
 };
 use crate::widget::Invalidation;
 use fret_runtime::{Model, ModelId};

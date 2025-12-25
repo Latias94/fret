@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
+use fret_core::TextService;
 use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Px, Rect, Size};
 use fret_runtime::{CommandId, Model};
 use fret_ui::primitives::{Column, Stack};
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, UiTree, Widget};
-use fret_core::TextService;
 
 use crate::Size as ComponentSize;
 use crate::command::{CommandItem, visible_item_ids};
@@ -159,7 +159,10 @@ impl<H: UiHost> Widget<H> for CommandPalette {
     fn command(&mut self, cx: &mut fret_ui::widget::CommandCx<'_, H>, command: &CommandId) -> bool {
         if let Some(id) = command.as_str().strip_prefix("command_palette.select.") {
             let id: Arc<str> = Arc::from(id);
-            let _ = cx.app.models_mut().update(self.selection, |v| *v = Some(id));
+            let _ = cx
+                .app
+                .models_mut()
+                .update(self.selection, |v| *v = Some(id));
             cx.stop_propagation();
             return true;
         }

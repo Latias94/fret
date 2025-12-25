@@ -91,13 +91,8 @@ pub fn list_virtualized<H: UiHost, K: std::hash::Hash>(
             ..Default::default()
         },
         |cx| {
-            vec![cx.virtual_list_keyed(
-                len,
-                row_h,
-                overscan,
-                scroll_to_index,
-                key_at,
-                |cx, i| {
+            vec![
+                cx.virtual_list_keyed(len, row_h, overscan, scroll_to_index, key_at, |cx, i| {
                     let cmd = on_select(i);
                     let enabled = cmd.is_some();
 
@@ -140,8 +135,8 @@ pub fn list_virtualized<H: UiHost, K: std::hash::Hash>(
                             )]
                         },
                     )
-                },
-            )]
+                }),
+            ]
         },
     )
 }

@@ -15,7 +15,9 @@ use crate::{Size, Space};
 
 #[derive(Debug, Clone)]
 enum RowKind {
-    Header { label: Arc<str> },
+    Header {
+        label: Arc<str>,
+    },
     Item {
         id: Arc<str>,
         label: Arc<str>,
@@ -77,10 +79,8 @@ fn matches_query(item: &CommandItem, q: &str) -> bool {
 
 fn rebuild_rows(items: Vec<CommandItem>, query: String) -> Vec<Row> {
     let q = query.trim().to_ascii_lowercase();
-    let mut filtered: Vec<CommandItem> = items
-        .into_iter()
-        .filter(|i| matches_query(i, &q))
-        .collect();
+    let mut filtered: Vec<CommandItem> =
+        items.into_iter().filter(|i| matches_query(i, &q)).collect();
 
     filtered.sort_by(|a, b| {
         let ag = a.group.as_deref().unwrap_or("");
@@ -242,8 +242,15 @@ pub fn command_palette_list<H: UiHost>(
 
         // Fixed row height for now (measured rows are a follow-up); choose a slightly taller height
         // when any visible item has `detail`.
-        let any_detail =
-            rows.iter().any(|r| matches!(r.kind, RowKind::Item { detail: Some(_), .. }));
+        let any_detail = rows.iter().any(|r| {
+            matches!(
+                r.kind,
+                RowKind::Item {
+                    detail: Some(_),
+                    ..
+                }
+            )
+        });
         let base_row_h = size.list_row_h(theme);
         let detail_extra = style::space(theme, Space::N1p5);
         let row_h = if any_detail {
@@ -311,6 +318,7 @@ pub fn command_palette_list<H: UiHost>(
                                     TextStyle {
                                         font: fret_core::FontId::default(),
                                         size: small_px,
+                                        ..Default::default()
                                     },
                                     muted_fg,
                                     Default::default(),
@@ -403,6 +411,7 @@ pub fn command_palette_list<H: UiHost>(
                                                                     font:
                                                                         fret_core::FontId::default(),
                                                                     size: text_px,
+                                                                    ..Default::default()
                                                                 },
                                                                 label_color,
                                                                 Default::default(),
@@ -416,6 +425,7 @@ pub fn command_palette_list<H: UiHost>(
                                                                     TextStyle {
                                                                         font: fret_core::FontId::default(),
                                                                         size: small_px,
+                                                                        ..Default::default()
                                                                     },
                                                                     muted_fg,
                                                                     Default::default(),
@@ -443,6 +453,7 @@ pub fn command_palette_list<H: UiHost>(
                                                             TextStyle {
                                                                 font: fret_core::FontId::default(),
                                                                 size: small_px,
+                                                                ..Default::default()
                                                             },
                                                             muted_fg,
                                                             shortcut_layout,

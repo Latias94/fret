@@ -287,6 +287,7 @@ impl Combobox {
         self.input.set_text_style(TextStyle {
             font: fret_core::FontId::default(),
             size: text_px,
+            ..Default::default()
         });
         self.input.set_chrome_style(chrome);
 

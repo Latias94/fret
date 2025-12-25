@@ -1,7 +1,7 @@
 use crate::UiHost;
 use crate::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, FlexProps, Length,
-    LayoutStyle, MainAlign, PressableProps, RowProps, SpacerProps, StackProps, TextProps,
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle,
+    Length, MainAlign, PressableProps, RowProps, SpacerProps, StackProps, TextProps,
 };
 use crate::elements::{ElementCx, GlobalElementId, NodeEntry};
 use crate::tree::UiTree;
@@ -15,8 +15,9 @@ use taffy::{
     TaffyTree,
     geometry::Size as TaffySize,
     style::{
-        AlignItems as TaffyAlignItems, AlignSelf as TaffyAlignSelf, AvailableSpace as TaffyAvailableSpace,
-        Dimension, Display, FlexDirection, FlexWrap, JustifyContent, LengthPercentage, Style as TaffyStyle,
+        AlignItems as TaffyAlignItems, AlignSelf as TaffyAlignSelf,
+        AvailableSpace as TaffyAvailableSpace, Dimension, Display, FlexDirection, FlexWrap,
+        JustifyContent, LengthPercentage, Style as TaffyStyle,
     },
     tree::NodeId as TaffyNodeId,
 };
@@ -321,7 +322,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     Px((cx.available.height.0 - pad_y * 2.0).max(0.0)),
                 );
 
-                let probe_bounds = Rect::new(cx.bounds.origin, Size::new(inner_avail.width, Px(1.0e9)));
+                let probe_bounds =
+                    Rect::new(cx.bounds.origin, Size::new(inner_avail.width, Px(1.0e9)));
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let child_size = cx.layout_in(child, probe_bounds);
@@ -352,7 +354,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 desired
             }
             ElementInstance::Pressable(props) => {
-                let probe_bounds = Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(1.0e9)));
+                let probe_bounds =
+                    Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(1.0e9)));
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let child_size = cx.layout_in(child, probe_bounds);
@@ -367,7 +370,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 desired
             }
             ElementInstance::Stack(props) => {
-                let probe_bounds = Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(1.0e9)));
+                let probe_bounds =
+                    Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(1.0e9)));
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let child_size = cx.layout_in(child, probe_bounds);
@@ -636,6 +640,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 let style = props.style.unwrap_or(TextStyle {
                     font: FontId::default(),
                     size: font_size,
+                    ..Default::default()
                 });
                 let constraints = TextConstraints {
                     max_width: Some(cx.available.width),
@@ -754,7 +759,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         fret_core::Axis::Horizontal => FlexDirection::Row,
                         fret_core::Axis::Vertical => FlexDirection::Column,
                     },
-                    flex_wrap: if props.wrap { FlexWrap::Wrap } else { FlexWrap::NoWrap },
+                    flex_wrap: if props.wrap {
+                        FlexWrap::Wrap
+                    } else {
+                        FlexWrap::NoWrap
+                    },
                     justify_content: Some(taffy_justify(props.justify)),
                     align_items: Some(taffy_align_items(props.align)),
                     gap: TaffySize {
@@ -763,15 +772,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     },
                     size: TaffySize {
                         width: match props.layout.size.width {
-                            Length::Px(px) => {
-                                Dimension::length((px.0 - pad_x * 2.0).max(0.0))
-                            }
+                            Length::Px(px) => Dimension::length((px.0 - pad_x * 2.0).max(0.0)),
                             other => taffy_dimension(other),
                         },
                         height: match props.layout.size.height {
-                            Length::Px(px) => {
-                                Dimension::length((px.0 - pad_y * 2.0).max(0.0))
-                            }
+                            Length::Px(px) => Dimension::length((px.0 - pad_y * 2.0).max(0.0)),
                             other => taffy_dimension(other),
                         },
                     },
@@ -835,7 +840,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         ..Default::default()
                     };
 
-                    let id = taffy.new_leaf_with_context(child_style, Some(child)).expect("taffy leaf");
+                    let id = taffy
+                        .new_leaf_with_context(child_style, Some(child))
+                        .expect("taffy leaf");
                     child_nodes.push(id);
                 }
 
@@ -902,7 +909,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 }
 
                 let layout = taffy.layout(root).expect("taffy root layout");
-                let inner_size = Size::new(Px(layout.size.width.max(0.0)), Px(layout.size.height.max(0.0)));
+                let inner_size = Size::new(
+                    Px(layout.size.width.max(0.0)),
+                    Px(layout.size.height.max(0.0)),
+                );
 
                 let desired = Size::new(
                     Px((inner_size.width.0 + pad_x * 2.0).max(0.0)),
@@ -977,6 +987,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 let style = props.style.unwrap_or(TextStyle {
                     font: FontId::default(),
                     size: font_size,
+                    ..Default::default()
                 });
                 let color = props
                     .color
@@ -1543,9 +1554,11 @@ mod tests {
             window,
             bounds,
             "mvp50-vlist-scroll-to",
-            |cx| vec![cx.virtual_list(100, Px(10.0), 0, None, |cx, range| {
-                range.map(|i| cx.keyed(i, |cx| cx.text("row"))).collect()
-            })],
+            |cx| {
+                vec![cx.virtual_list(100, Px(10.0), 0, None, |cx, range| {
+                    range.map(|i| cx.keyed(i, |cx| cx.text("row"))).collect()
+                })]
+            },
         );
         ui.set_root(root);
         ui.layout_all(&mut app, &mut text, bounds, 1.0);
@@ -2076,18 +2089,26 @@ mod tests {
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
         let mut text = FakeTextService::default();
 
-        let root = render_root(&mut ui, &mut app, &mut text, window, bounds, "flex-fit", |cx| {
-            vec![cx.flex(
-                crate::element::FlexProps {
-                    direction: fret_core::Axis::Horizontal,
-                    gap: Px(5.0),
-                    padding_x: Px(4.0),
-                    padding_y: Px(6.0),
-                    ..Default::default()
-                },
-                |cx| vec![cx.text("a"), cx.text("b")],
-            )]
-        });
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "flex-fit",
+            |cx| {
+                vec![cx.flex(
+                    crate::element::FlexProps {
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(5.0),
+                        padding_x: Px(4.0),
+                        padding_y: Px(6.0),
+                        ..Default::default()
+                    },
+                    |cx| vec![cx.text("a"), cx.text("b")],
+                )]
+            },
+        );
         ui.set_root(root);
 
         ui.layout_all(&mut app, &mut text, bounds, 1.0);
@@ -2098,7 +2119,15 @@ mod tests {
         // FakeTextService measures each text to 10x10. With gap=5 and padding (4,6):
         // inner_w = 10 + 5 + 10 = 25, outer_w = 25 + 8 = 33
         // inner_h = 10, outer_h = 10 + 12 = 22
-        assert!((flex_bounds.size.width.0 - 33.0).abs() < 0.01, "w={:?}", flex_bounds.size.width);
-        assert!((flex_bounds.size.height.0 - 22.0).abs() < 0.01, "h={:?}", flex_bounds.size.height);
+        assert!(
+            (flex_bounds.size.width.0 - 33.0).abs() < 0.01,
+            "w={:?}",
+            flex_bounds.size.width
+        );
+        assert!(
+            (flex_bounds.size.height.0 - 22.0).abs() < 0.01,
+            "h={:?}",
+            flex_bounds.size.height
+        );
     }
 }

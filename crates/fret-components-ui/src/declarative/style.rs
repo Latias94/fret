@@ -1,6 +1,6 @@
 use fret_core::{Color, Corners, Edges, Px};
-use fret_ui::element::ContainerProps;
 use fret_ui::Theme;
+use fret_ui::element::ContainerProps;
 
 use crate::{ColorRef, MetricRef, Radius, Space, StyleRefinement};
 

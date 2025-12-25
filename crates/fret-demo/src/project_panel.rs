@@ -517,6 +517,7 @@ impl GenericWidget<App> for ProjectPanel {
         let style = TextStyle {
             font: fret_core::FontId::default(),
             size: Px(12.0),
+            ..Default::default()
         };
         let (blob, metrics) = cx.text.prepare(
             label.as_str(),

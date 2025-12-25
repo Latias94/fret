@@ -418,6 +418,8 @@ impl<H: UiHost> Widget<H> for Button {
         let text_style = TextStyle {
             font: FontId::default(),
             size: self.resolved.text_size,
+            weight: fret_core::FontWeight::MEDIUM,
+            ..Default::default()
         };
         let text_constraints = TextConstraints {
             max_width: None,
@@ -456,6 +458,8 @@ impl<H: UiHost> Widget<H> for Button {
             let text_style = TextStyle {
                 font: FontId::default(),
                 size: self.resolved.text_size,
+                weight: fret_core::FontWeight::MEDIUM,
+                ..Default::default()
             };
             let text_constraints = TextConstraints {
                 max_width: None,

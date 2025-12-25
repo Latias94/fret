@@ -166,6 +166,7 @@ impl<H: UiHost> Widget<H> for InspectorEditHint {
         let style = fret_core::TextStyle {
             font: fret_core::FontId::default(),
             size: Px(12.0),
+            ..Default::default()
         };
         let (blob, metrics) = cx.text.prepare(
             msg,

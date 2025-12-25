@@ -220,6 +220,7 @@ impl Tabs {
         let text_style = TextStyle {
             font: fret_core::FontId::default(),
             size: self.resolved.text_size,
+            ..Default::default()
         };
         let text_constraints = TextConstraints {
             max_width: None,
@@ -421,6 +422,7 @@ impl<H: UiHost> Widget<H> for Tabs {
                 let text_style = TextStyle {
                     font: fret_core::FontId::default(),
                     size: self.resolved.text_size,
+                    ..Default::default()
                 };
                 let text_constraints = TextConstraints {
                     max_width: None,

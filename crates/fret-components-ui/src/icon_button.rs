@@ -326,6 +326,7 @@ impl<H: UiHost> Widget<H> for IconButton {
             let style = TextStyle {
                 font: icon_glyph.font,
                 size: icon_glyph.size,
+                ..Default::default()
             };
             let constraints = TextConstraints {
                 max_width: None,

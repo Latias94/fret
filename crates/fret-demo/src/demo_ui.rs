@@ -240,6 +240,7 @@ impl DemoTopBarStatus {
             style: fret_core::TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
+                ..Default::default()
             },
         }
     }
@@ -359,6 +360,7 @@ impl DebugHudPanel {
             style: fret_core::TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(12.0),
+                ..Default::default()
             },
         }
     }
@@ -515,6 +517,7 @@ impl DebugInspectorOverlay {
             style: fret_core::TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(12.0),
+                ..Default::default()
             },
         }
     }

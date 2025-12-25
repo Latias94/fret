@@ -89,6 +89,7 @@ impl TextAreaField {
         self.inner.set_text_style(TextStyle {
             font: FontId::default(),
             size: text_px,
+            ..Default::default()
         });
 
         self.inner.set_min_height(self.min_height);

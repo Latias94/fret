@@ -92,6 +92,7 @@ impl TextField {
         self.inner.set_text_style(TextStyle {
             font: FontId::default(),
             size: text_px,
+            ..Default::default()
         });
 
         // Keep a small minimum height so the field is usable even with empty text.

@@ -280,19 +280,23 @@ impl Default for ToastStyle {
             title_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
+                ..Default::default()
             },
             description_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(12.0),
+                ..Default::default()
             },
             action_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(12.0),
+                ..Default::default()
             },
             action_color: Color::TRANSPARENT,
             close_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(14.0),
+                ..Default::default()
             },
             close_color: Color::TRANSPARENT,
             accent_success: Color::TRANSPARENT,

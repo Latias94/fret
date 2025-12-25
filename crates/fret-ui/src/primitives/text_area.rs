@@ -134,6 +134,7 @@ impl Default for TextArea {
             text_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
+                ..Default::default()
             },
             wrap: TextWrap::Word,
             min_height: Px(0.0),

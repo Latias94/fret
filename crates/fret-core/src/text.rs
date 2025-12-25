@@ -5,6 +5,21 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FontWeight(pub u16);
+
+impl FontWeight {
+    pub const THIN: Self = Self(100);
+    pub const EXTRA_LIGHT: Self = Self(200);
+    pub const LIGHT: Self = Self(300);
+    pub const NORMAL: Self = Self(400);
+    pub const MEDIUM: Self = Self(500);
+    pub const SEMIBOLD: Self = Self(600);
+    pub const BOLD: Self = Self(700);
+    pub const EXTRA_BOLD: Self = Self(800);
+    pub const BLACK: Self = Self(900);
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TextWrap {
     None,
     Word,
@@ -36,6 +51,23 @@ impl Default for TextConstraints {
 pub struct TextStyle {
     pub font: FontId,
     pub size: Px,
+    pub weight: FontWeight,
+    /// Optional line height override, in logical px.
+    pub line_height: Option<Px>,
+    /// Optional tracking (letter spacing) override, in EM.
+    pub letter_spacing_em: Option<f32>,
+}
+
+impl Default for TextStyle {
+    fn default() -> Self {
+        Self {
+            font: FontId::default(),
+            size: Px(13.0),
+            weight: FontWeight::NORMAL,
+            line_height: None,
+            letter_spacing_em: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

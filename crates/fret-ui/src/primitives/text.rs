@@ -26,6 +26,7 @@ impl Text {
             style: TextStyle {
                 font: FontId::default(),
                 size: Px(13.0),
+                ..Default::default()
             },
             color: Color {
                 r: 0.92,
@@ -267,6 +268,7 @@ impl TextInput {
             style: TextStyle {
                 font: FontId::default(),
                 size: Px(13.0),
+                ..Default::default()
             },
             text_blob: None,
             text_metrics: None,

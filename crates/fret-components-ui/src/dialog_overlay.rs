@@ -129,14 +129,17 @@ impl Default for DialogStyle {
             title_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(14.0),
+                ..Default::default()
             },
             body_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
+                ..Default::default()
             },
             button_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
+                ..Default::default()
             },
             button_padding_x: Px(12.0),
             button_padding_y: Px(8.0),

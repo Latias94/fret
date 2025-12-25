@@ -11,7 +11,9 @@ use fret_components_ui::{
     checkbox::Checkbox,
     combobox::Combobox,
     command::{CommandItem, CommandList},
-    command_palette::{CommandPaletteHandles, install_command_palette, render_command_palette_list},
+    command_palette::{
+        CommandPaletteHandles, install_command_palette, render_command_palette_list,
+    },
     dropdown_menu::DropdownMenuButton,
     frame::Frame,
     icon_button::IconButton,
@@ -1041,63 +1043,56 @@ impl WinitDriver for UiKitDriver {
                     fret_components_ui::Space::N0p5,
                 );
 
-                vec![
-                    cx.column(
-                        fret_ui_app::element::ColumnProps {
-                            gap: outer_gap,
-                            ..Default::default()
-                        },
-                        |cx| {
-                            vec![
-                                cx.text("Recents (declarative virtualized list)"),
-                                fret_components_ui::declarative::list::list_virtualized(
-                                    cx,
-                                    Some(state.declarative_selection),
-                                    size,
-                                    Some(Px(base_row_h.0 * 1.9)),
-                                    values.len(),
-                                    2,
-                                    None,
-                                    |i| values.get(i).map(String::as_str).unwrap_or(""),
-                                    |i| {
-                                        Some(fret_app::CommandId::new(format!(
-                                            "ui_kit.declarative_list.select.{i}"
-                                        )))
-                                    },
-                                    |cx, i| {
-                                        let label = values.get(i).map(String::as_str).unwrap_or("");
-                                        let leading = if i % 3 == 0 { "●" } else { "○" };
-                                        let trailing = if i % 5 == 0 { "⌘O" } else { "" };
+                vec![cx.column(
+                    fret_ui_app::element::ColumnProps {
+                        gap: outer_gap,
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![
+                            cx.text("Recents (declarative virtualized list)"),
+                            fret_components_ui::declarative::list::list_virtualized(
+                                cx,
+                                Some(state.declarative_selection),
+                                size,
+                                Some(Px(base_row_h.0 * 1.9)),
+                                values.len(),
+                                2,
+                                None,
+                                |i| values.get(i).map(String::as_str).unwrap_or(""),
+                                |i| {
+                                    Some(fret_app::CommandId::new(format!(
+                                        "ui_kit.declarative_list.select.{i}"
+                                    )))
+                                },
+                                |cx, i| {
+                                    let label = values.get(i).map(String::as_str).unwrap_or("");
+                                    let leading = if i % 3 == 0 { "●" } else { "○" };
+                                    let trailing = if i % 5 == 0 { "⌘O" } else { "" };
 
-                                        let mut out = Vec::new();
-                                        out.push(cx.text(leading));
-                                        out.push(cx.column(
-                                            fret_ui_app::element::ColumnProps {
-                                                gap: secondary_gap,
-                                                align: fret_ui_app::element::CrossAlign::Start,
-                                                ..Default::default()
-                                            },
-                                            |cx| {
-                                                vec![
-                                                    cx.text(label),
-                                                    cx.text("Modified 2 hours ago"),
-                                                ]
-                                            },
-                                        ));
-                                        out.push(cx.spacer(fret_ui_app::element::SpacerProps {
-                                            min: Px(0.0),
+                                    let mut out = Vec::new();
+                                    out.push(cx.text(leading));
+                                    out.push(cx.column(
+                                        fret_ui_app::element::ColumnProps {
+                                            gap: secondary_gap,
+                                            align: fret_ui_app::element::CrossAlign::Start,
                                             ..Default::default()
-                                        }));
-                                        if !trailing.is_empty() {
-                                            out.push(cx.text(trailing));
-                                        }
-                                        out
-                                    },
-                                ),
-                            ]
-                        },
-                    ),
-                ]
+                                        },
+                                        |cx| vec![cx.text(label), cx.text("Modified 2 hours ago")],
+                                    ));
+                                    out.push(cx.spacer(fret_ui_app::element::SpacerProps {
+                                        min: Px(0.0),
+                                        ..Default::default()
+                                    }));
+                                    if !trailing.is_empty() {
+                                        out.push(cx.text(trailing));
+                                    }
+                                    out
+                                },
+                            ),
+                        ]
+                    },
+                )]
             },
         );
 

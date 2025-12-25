@@ -187,6 +187,7 @@ impl CommandPalette {
         TextStyle {
             font: FontId::default(),
             size: Px(13.0),
+            ..Default::default()
         }
     }
 

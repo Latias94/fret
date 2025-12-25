@@ -21,16 +21,16 @@ definitions live in `docs/mvp/reference-plan.md`.
   - keyed row identity (`virtual_list_keyed`)
   - `scroll_to_index` support to keep selection visible
   - migrated a real surface (command palette list) to composable rows
+- MVP 52: declarative sizing semantics + `Flex` container (ADR 0057)
+  - “fit-content by default, fill only when requested” is the stable mental model
+  - flex item controls (grow/shrink/basis, min/max) are expressible in declarative props
 
 ## Next Queue (What We Should Build Next)
 
-- MVP 52: declarative sizing semantics + `Flex` container (ADR 0057)
-  - make “fit-content by default, fill only when requested” the stable mental model for shadcn-like composition
-  - add typed size constraints (min/max/fixed) and flex item controls (grow/shrink/basis)
-  - use Taffy as an internal algorithm for the `Flex` container (ADR 0035), while keeping virtualization separate (ADR 0042)
 - MVP 53: typography v1 (shadcn-friendly)
-  - expand text style expressiveness (weight + line-height + tracking/letter-spacing) and theme tokens/aliases
-  - ensure text measurement/caching keys incorporate new typography parameters (ADR 0029)
+  - landed: text style expressiveness (weight + line-height + tracking/letter-spacing)
+  - landed: text blob caching keys incorporate typography parameters (ADR 0029)
+  - pending: theme-level typography tokens/aliases (ADR 0050 follow-up)
 - MVP 54: shadcn semantic palette alias expansion (ADR 0050 follow-up)
   - add best-effort alias keys for `primary/secondary/destructive/input/card/...` to reduce component-only `component.*` drift
 - MVP 55: recipes → declarative props

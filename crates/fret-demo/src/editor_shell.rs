@@ -1031,6 +1031,7 @@ impl InspectorPanel {
             text_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
+                ..Default::default()
             },
             hover_row: None,
             scroll_y: Px(0.0),

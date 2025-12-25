@@ -530,18 +530,22 @@ impl DockSpace {
             tab_text_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
+                ..Default::default()
             },
             tab_close_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
+                ..Default::default()
             },
             dock_hint_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(18.0),
+                ..Default::default()
             },
             empty_state_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
+                ..Default::default()
             },
             last_empty_state_scale_factor: None,
             last_empty_state_theme_revision: None,

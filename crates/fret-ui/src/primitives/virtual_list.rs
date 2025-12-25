@@ -168,6 +168,7 @@ impl Default for VirtualListStyle {
             text_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
+                ..Default::default()
             },
             secondary_text_color: Color {
                 r: 0.92,
@@ -178,6 +179,7 @@ impl Default for VirtualListStyle {
             secondary_text_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(12.0),
+                ..Default::default()
             },
             trailing_text_color: Color {
                 r: 0.92,
@@ -188,6 +190,7 @@ impl Default for VirtualListStyle {
             trailing_text_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(12.0),
+                ..Default::default()
             },
             row_gap_y: Px(2.0),
             trailing_gap_x: Px(8.0),
@@ -207,6 +210,7 @@ impl Default for VirtualListStyle {
             header_text_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(12.0),
+                ..Default::default()
             },
             wrap: TextWrap::None,
         }

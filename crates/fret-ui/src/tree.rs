@@ -2221,6 +2221,7 @@ mod tests {
                 TextStyle {
                     font: fret_core::FontId::default(),
                     size: fret_core::Px(12.0),
+                    ..Default::default()
                 },
                 TextConstraints {
                     max_width: None,

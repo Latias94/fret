@@ -41,6 +41,7 @@ pub fn resolve_menu_list_row_chrome(theme: &Theme, size: Size) -> MenuListRowChr
         text_style: TextStyle {
             font: fret_core::FontId::default(),
             size: text_px,
+            ..Default::default()
         },
         text_color: theme
             .color_by_key("foreground")

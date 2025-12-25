@@ -147,6 +147,7 @@ impl Default for TooltipStyle {
             text_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(12.0),
+                ..Default::default()
             },
             padding_x: Px(10.0),
             padding_y: Px(8.0),
