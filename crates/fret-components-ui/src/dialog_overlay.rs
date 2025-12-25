@@ -9,6 +9,9 @@ use fret_ui::{
 };
 use std::{collections::HashMap, sync::Arc};
 
+use crate::StyleRefinement;
+use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
+
 #[derive(Debug, Clone)]
 pub struct DialogAction {
     pub label: Arc<str>,
@@ -201,9 +204,24 @@ impl DialogOverlay {
             return;
         }
         self.last_theme_revision = Some(theme.revision());
-        self.style.corner_radius = theme.metrics.radius_md;
-        self.style.button_radius = theme.metrics.radius_md;
-        self.style.padding = theme.metrics.padding_md;
+
+        let surface = resolve_surface_chrome(
+            theme,
+            &StyleRefinement::default(),
+            SurfaceTokenKeys {
+                padding_x: Some("metric.padding.md"),
+                padding_y: Some("metric.padding.md"),
+                radius: Some("metric.radius.md"),
+                border_width: None,
+                bg: Some("color.panel.background"),
+                border: Some("color.panel.border"),
+            },
+        );
+
+        self.style.corner_radius = surface.radius;
+        self.style.border = Edges::all(surface.border_width);
+        self.style.padding = surface.padding_x;
+        self.style.button_radius = surface.radius;
         self.style.gap = theme.metrics.padding_md;
         self.style.button_padding_x = theme.metrics.padding_md;
         self.style.button_padding_y = theme.metrics.padding_sm;
