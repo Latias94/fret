@@ -1,7 +1,8 @@
 use fret_core::{Color, Corners, DrawOrder, Edges, Px, Rect, SceneOp, Size};
 use fret_ui::{LayoutCx, PaintCx, UiHost, Widget};
 
-use crate::style::{ColorFallback, ColorRef, MetricFallback, MetricRef, StyleRefinement};
+use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
+use crate::style::StyleRefinement;
 
 pub struct Frame {
     pub style: StyleRefinement,
@@ -53,66 +54,26 @@ impl Frame {
         }
         self.last_theme_revision = Some(theme.revision());
 
-        let px = self
-            .style
-            .padding_x
-            .clone()
-            .unwrap_or(MetricRef::Token {
-                key: "component.frame.padding_x",
-                fallback: MetricFallback::ThemePaddingSm,
-            })
-            .resolve(theme);
-        let py = self
-            .style
-            .padding_y
-            .clone()
-            .unwrap_or(MetricRef::Token {
-                key: "component.frame.padding_y",
-                fallback: MetricFallback::ThemePaddingSm,
-            })
-            .resolve(theme);
-        let radius = self
-            .style
-            .radius
-            .clone()
-            .unwrap_or(MetricRef::Token {
-                key: "component.frame.radius",
-                fallback: MetricFallback::ThemeRadiusSm,
-            })
-            .resolve(theme);
-        let border_width = self
-            .style
-            .border_width
-            .clone()
-            .unwrap_or(MetricRef::Px(Px(1.0)))
-            .resolve(theme);
-
-        let bg = self
-            .style
-            .background
-            .clone()
-            .unwrap_or(ColorRef::Token {
-                key: "component.frame.bg",
-                fallback: ColorFallback::ThemePanelBackground,
-            })
-            .resolve(theme);
-        let border_color = self
-            .style
-            .border_color
-            .clone()
-            .unwrap_or(ColorRef::Token {
-                key: "component.frame.border",
-                fallback: ColorFallback::ThemePanelBorder,
-            })
-            .resolve(theme);
+        let resolved = resolve_surface_chrome(
+            theme,
+            &self.style,
+            SurfaceTokenKeys {
+                padding_x: Some("component.frame.padding_x"),
+                padding_y: Some("component.frame.padding_y"),
+                radius: Some("component.frame.radius"),
+                border_width: Some("component.frame.border_width"),
+                bg: Some("component.frame.bg"),
+                border: Some("component.frame.border"),
+            },
+        );
 
         self.resolved = ResolvedFrameStyle {
-            padding_x: px,
-            padding_y: py,
-            radius,
-            border_width,
-            background: bg,
-            border_color,
+            padding_x: resolved.padding_x,
+            padding_y: resolved.padding_y,
+            radius: resolved.radius,
+            border_width: resolved.border_width,
+            background: resolved.background,
+            border_color: resolved.border_color,
         };
     }
 }
