@@ -104,7 +104,7 @@ Status legend:
 | Field | `ui/field.tsx` |  | ❌ | Needs label/control/help-text composition patterns. |
 | Form | `ui/form.tsx` |  | ❌ | Likely a higher-level “form framework” decision in Fret. |
 | Hover Card | `ui/hover-card.tsx` |  | ❌ | Can likely map to tooltip/popover hybrid. |
-| Input | `ui/input.tsx` | `fret_components_shadcn::Input` | ✅ | Currently maps to `TextField`; missing “input-group” patterns. |
+| Input | `ui/input.tsx` | `fret_components_shadcn::Input` | ✅ | Currently maps to `TextField`; use `InputGroup` for icon-slot patterns. |
 | Input Group | `ui/input-group.tsx` |  | ❌ | Depends on per-edge padding + icon slots (Tailwind primitives). |
 | Input OTP | `ui/input-otp.tsx` |  | ❌ | Needs multi-cell input + paste semantics. |
 | Item | `ui/item.tsx` |  | ❌ | Upstream is a generic “item row” primitive; define Fret equivalent. |
@@ -212,7 +212,7 @@ These checklists are the acceptance criteria for “interaction parity”.
   - Status: first-pass declarative helpers exist in `crates/fret-components-shadcn/src`:
     `alert.rs`, `badge.rs`, `card.rs`, `empty.rs`, `kbd.rs`, `label.rs`.
 - [ ] `Accordion` / `Collapsible` (expansion model + keyboard)
-- [ ] `InputGroup` (icon slots + per-edge padding primitives; depends on Tailwind primitive parity)
+- [x] `InputGroup` (icon slots + per-edge padding primitives; depends on Tailwind primitive parity)
 - [x] `RadioGroup` (selection model + keyboard arrows)
 - [x] `ToggleGroup` (selection policy, spacing/border merging, keyboard)
 

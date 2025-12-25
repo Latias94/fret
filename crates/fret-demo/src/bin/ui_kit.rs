@@ -5,9 +5,10 @@ use fret_app::{
 use fret_components_icons::IconId;
 use fret_components_shadcn::{
     Button as ShadcnButton, ButtonSize as ShadcnButtonSize, ButtonVariant as ShadcnButtonVariant,
-    RadioGroup as ShadcnRadioGroup, RadioGroupItem as ShadcnRadioGroupItem,
-    ToggleGroup as ShadcnToggleGroup, ToggleGroupItem as ShadcnToggleGroupItem,
-    ToggleSize as ShadcnToggleSize, ToggleVariant as ShadcnToggleVariant,
+    InputGroup as ShadcnInputGroup, RadioGroup as ShadcnRadioGroup,
+    RadioGroupItem as ShadcnRadioGroupItem, ToggleGroup as ShadcnToggleGroup,
+    ToggleGroupItem as ShadcnToggleGroupItem, ToggleSize as ShadcnToggleSize,
+    ToggleVariant as ShadcnToggleVariant,
 };
 use fret_components_ui::{
     ChromeRefinement, ContextMenuService, DialogAction, DialogRequest, DialogService,
@@ -326,6 +327,16 @@ fn build_ui_kit_contents(
             .finish(),
     );
     ui.add_child(col, text_field);
+
+    let input_group_label = ui.create_node(Text::new("shadcn/ui v4 InputGroup (prototype)"));
+    ui.add_child(col, input_group_label);
+    let input_group_model = app.models_mut().insert("Search...".to_string());
+    let input_group = ui.create_node(
+        ShadcnInputGroup::new(input_group_model)
+            .leading_icon(IconId::new("search"))
+            .trailing_icon(IconId::new("close")),
+    );
+    ui.add_child(col, input_group);
 
     let checkbox_model = app.models_mut().insert(false);
     let checkbox = ui.create_node(Checkbox::new(checkbox_model, "Enable option"));

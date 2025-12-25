@@ -85,6 +85,7 @@ fn builtin_glyphs() -> Vec<(IconId, IconGlyph)> {
         (IconId::new("chevron_down"), IconGlyph::new("▾")),
         (IconId::new("close"), IconGlyph::new("×")),
         (IconId::new("play"), IconGlyph::new("▶")),
+        (IconId::new("search"), IconGlyph::new("⌕")),
         (IconId::new("settings"), IconGlyph::new("⚙")),
     ]
 }

@@ -697,6 +697,7 @@ dependencies = [
 name = "fret-components-shadcn"
 version = "0.1.0"
 dependencies = [
+ "fret-components-icons",
  "fret-components-ui",
  "fret-core",
  "fret-runtime",
