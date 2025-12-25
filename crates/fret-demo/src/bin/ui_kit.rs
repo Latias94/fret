@@ -5,7 +5,7 @@ use fret_app::{
 use fret_components_icons::IconId;
 use fret_components_ui::{
     ContextMenuService, DialogAction, DialogRequest, DialogService, PopoverService,
-    Size as ComponentSize, Space, StyleRefinement, StyledExt as _, ToastAction, TooltipService,
+    Size as ComponentSize, StyleRefinement, StyledExt as _, ToastAction, TooltipService,
     WindowOverlays,
     button::{Button, ButtonIntent, ButtonVariant},
     checkbox::Checkbox,
@@ -233,23 +233,24 @@ fn build_ui_kit_contents(
         TextAreaField::new(textarea_model)
             .with_size(ComponentSize::Medium)
             .with_min_height(Px(140.0))
-            .refine_style(
-                StyleRefinement::default()
-                    .rounded_md()
-                    .border_1()
-                    .px_3()
-                    .py(Space::N2),
-            ),
-    );
-    ui.add_child(col, textarea);
-
-    let buttons_frame = ui.create_node(Frame::new(
-        StyleRefinement::default()
+            .styled()
             .rounded_md()
             .border_1()
             .px_3()
-            .py_2(),
-    ));
+            .py_2()
+            .finish(),
+    );
+    ui.add_child(col, textarea);
+
+    let buttons_frame = ui.create_node(
+        Frame::default()
+            .styled()
+            .rounded_md()
+            .border_1()
+            .px_3()
+            .py_2()
+            .finish(),
+    );
     let buttons = ui.create_node(Row::new().with_spacing(Px(10.0)));
     let primary = ui.create_node(
         Button::new("Primary")
@@ -285,13 +286,13 @@ fn build_ui_kit_contents(
 
     let text_model = app.models_mut().insert("Hello, components.".to_string());
     let text_field = ui.create_node(
-        TextField::new(text_model).refine_style(
-            StyleRefinement::default()
-                .rounded_md()
-                .border_1()
-                .px_3()
-                .py_1(),
-        ),
+        TextField::new(text_model)
+            .styled()
+            .rounded_md()
+            .border_1()
+            .px_3()
+            .py_2()
+            .finish(),
     );
     ui.add_child(col, text_field);
 
@@ -360,13 +361,15 @@ fn build_ui_kit_contents(
         CommandItem::new("disabled.example", "Disabled item").disabled(),
     ]);
 
-    let command_frame = ui.create_node(Frame::new(
-        StyleRefinement::default()
+    let command_frame = ui.create_node(
+        Frame::default()
+            .styled()
             .rounded_md()
             .border_1()
             .px_3()
-            .py_1(),
-    ));
+            .py_2()
+            .finish(),
+    );
     ui.add_child(col, command_frame);
 
     let command_col = ui.create_node(Column::new().with_spacing(Px(8.0)));
@@ -408,9 +411,7 @@ fn build_ui_kit_contents(
     let scroll_area_panel = ui.create_node(FixedPanel::new(Px(160.0), Color::TRANSPARENT));
     ui.add_child(col, scroll_area_panel);
 
-    let scroll_area = ui.create_node(
-        ScrollArea::new().refine_style(StyleRefinement::default().rounded_md().border_1()),
-    );
+    let scroll_area = ui.create_node(ScrollArea::new().styled().rounded_md().border_1().finish());
     ui.add_child(scroll_area_panel, scroll_area);
 
     let scroll_area_content =
@@ -433,13 +434,15 @@ fn build_ui_kit_contents(
         ComponentSize::Medium,
         ComponentSize::Large,
     ] {
-        let group_frame = ui.create_node(Frame::new(
-            StyleRefinement::default()
+        let group_frame = ui.create_node(
+            Frame::default()
+                .styled()
                 .rounded_md()
                 .border_1()
                 .px_3()
-                .py(Space::N2),
-        ));
+                .py_2()
+                .finish(),
+        );
         ui.add_child(col, group_frame);
 
         let group = ui.create_node(Column::new().with_spacing(Px(8.0)));
@@ -623,13 +626,13 @@ fn build_ui_kit_contents(
     ui.add_child(col, toast_row);
 
     let toolbar = ui.create_node(
-        Toolbar::new().refine_style(
-            StyleRefinement::default()
-                .rounded_md()
-                .border_1()
-                .px_3()
-                .py_1(),
-        ),
+        Toolbar::new()
+            .styled()
+            .rounded_md()
+            .border_1()
+            .px_3()
+            .py_2()
+            .finish(),
     );
     let toolbar_play = ui.create_node(Button::new("Play").intent(ButtonIntent::Primary));
     let toolbar_settings = ui.create_node(Button::new("Settings").variant(ButtonVariant::Ghost));

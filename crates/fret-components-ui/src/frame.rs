@@ -41,6 +41,12 @@ impl Frame {
         }
     }
 
+    pub fn refine_style(mut self, style: StyleRefinement) -> Self {
+        self.style = self.style.merge(style);
+        self.last_theme_revision = None;
+        self
+    }
+
     fn sync_style_from_theme(&mut self, theme: &fret_ui::Theme) {
         if self.last_theme_revision == Some(theme.revision()) {
             return;
@@ -108,6 +114,12 @@ impl Frame {
             background: bg,
             border_color,
         };
+    }
+}
+
+impl Default for Frame {
+    fn default() -> Self {
+        Self::new(StyleRefinement::default())
     }
 }
 

@@ -27,8 +27,23 @@ impl<T> Styled<T> {
         self
     }
 
+    pub fn px_0p5(mut self) -> Self {
+        self.style = self.style.px_0p5();
+        self
+    }
+
+    pub fn px_1p5(mut self) -> Self {
+        self.style = self.style.px_1p5();
+        self
+    }
+
     pub fn px_2(mut self) -> Self {
         self.style = self.style.px_2();
+        self
+    }
+
+    pub fn px_2p5(mut self) -> Self {
+        self.style = self.style.px_2p5();
         self
     }
 
@@ -47,8 +62,23 @@ impl<T> Styled<T> {
         self
     }
 
+    pub fn py_0p5(mut self) -> Self {
+        self.style = self.style.py_0p5();
+        self
+    }
+
+    pub fn py_1p5(mut self) -> Self {
+        self.style = self.style.py_1p5();
+        self
+    }
+
     pub fn py_2(mut self) -> Self {
         self.style = self.style.py_2();
+        self
+    }
+
+    pub fn py_2p5(mut self) -> Self {
+        self.style = self.style.py_2p5();
         self
     }
 
@@ -67,8 +97,23 @@ impl<T> Styled<T> {
         self
     }
 
+    pub fn p_0p5(mut self) -> Self {
+        self.style = self.style.p_0p5();
+        self
+    }
+
+    pub fn p_1p5(mut self) -> Self {
+        self.style = self.style.p_1p5();
+        self
+    }
+
     pub fn p_2(mut self) -> Self {
         self.style = self.style.p_2();
+        self
+    }
+
+    pub fn p_2p5(mut self) -> Self {
+        self.style = self.style.p_2p5();
         self
     }
 
@@ -108,6 +153,12 @@ pub trait StyledExt: Stylable + Sized {
 impl<T: Stylable> StyledExt for T {}
 
 impl Stylable for crate::button::Button {
+    fn apply_style(self, style: StyleRefinement) -> Self {
+        self.refine_style(style)
+    }
+}
+
+impl Stylable for crate::frame::Frame {
     fn apply_style(self, style: StyleRefinement) -> Self {
         self.refine_style(style)
     }

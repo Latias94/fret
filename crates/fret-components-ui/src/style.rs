@@ -285,8 +285,20 @@ impl StyleRefinement {
         self.px(Space::N1)
     }
 
+    pub fn px_0p5(self) -> Self {
+        self.px(Space::N0p5)
+    }
+
+    pub fn px_1p5(self) -> Self {
+        self.px(Space::N1p5)
+    }
+
     pub fn px_2(self) -> Self {
         self.px(Space::N2)
+    }
+
+    pub fn px_2p5(self) -> Self {
+        self.px(Space::N2p5)
     }
 
     pub fn px_3(self) -> Self {
@@ -301,8 +313,20 @@ impl StyleRefinement {
         self.py(Space::N1)
     }
 
+    pub fn py_0p5(self) -> Self {
+        self.py(Space::N0p5)
+    }
+
+    pub fn py_1p5(self) -> Self {
+        self.py(Space::N1p5)
+    }
+
     pub fn py_2(self) -> Self {
         self.py(Space::N2)
+    }
+
+    pub fn py_2p5(self) -> Self {
+        self.py(Space::N2p5)
     }
 
     pub fn py_3(self) -> Self {
@@ -317,8 +341,20 @@ impl StyleRefinement {
         self.p(Space::N1)
     }
 
+    pub fn p_0p5(self) -> Self {
+        self.p(Space::N0p5)
+    }
+
+    pub fn p_1p5(self) -> Self {
+        self.p(Space::N1p5)
+    }
+
     pub fn p_2(self) -> Self {
         self.p(Space::N2)
+    }
+
+    pub fn p_2p5(self) -> Self {
+        self.p(Space::N2p5)
     }
 
     pub fn p_3(self) -> Self {
