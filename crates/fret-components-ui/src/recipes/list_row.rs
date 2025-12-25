@@ -39,15 +39,19 @@ pub fn list_style(theme: &Theme, size: Size) -> VirtualListStyle {
 
     style.row_gap_y = theme
         .metric_by_key("component.list.row_gap_y")
+        .or_else(|| theme.metric_by_key("metric.list.row_gap_y"))
         .unwrap_or_else(|| MetricRef::space(Space::N0p5).resolve(theme));
     style.trailing_gap_x = theme
         .metric_by_key("component.list.trailing_gap_x")
+        .or_else(|| theme.metric_by_key("metric.list.trailing_gap_x"))
         .unwrap_or_else(|| MetricRef::space(Space::N2).resolve(theme));
     style.separator_inset_x = theme
         .metric_by_key("component.list.separator_inset_x")
+        .or_else(|| theme.metric_by_key("metric.list.separator_inset_x"))
         .unwrap_or(style.padding_x);
     style.row_highlight_inset_y = theme
         .metric_by_key("component.list.row_highlight_inset_y")
+        .or_else(|| theme.metric_by_key("metric.list.row_highlight_inset_y"))
         .unwrap_or_else(|| MetricRef::space(Space::N0p5).resolve(theme));
 
     style.text_style.size = text_px;

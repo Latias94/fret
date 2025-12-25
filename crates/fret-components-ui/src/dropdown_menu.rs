@@ -7,9 +7,8 @@ use fret_core::{
 use fret_runtime::Menu;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
 
-use crate::style::{
-    ColorFallback, MetricFallback, StyleRefinement, component_color, component_metric,
-};
+use crate::recipes::control::{ControlFallbacks, ControlTokenKeys, resolve_control_chrome};
+use crate::style::{ColorFallback, StyleRefinement, component_color};
 use crate::{Sizable, Size as ComponentSize};
 
 #[derive(Debug, Clone)]
@@ -113,71 +112,33 @@ impl DropdownMenuButton {
         }
         self.last_theme_revision = Some(theme.revision());
 
-        let padding_x = self
-            .style
-            .padding_x
-            .clone()
-            .unwrap_or_else(|| {
-                component_metric(
-                    "component.dropdown_menu.padding_x",
-                    MetricFallback::Px(self.size.button_px(theme)),
-                )
-            })
-            .resolve(theme);
-        let padding_y = self
-            .style
-            .padding_y
-            .clone()
-            .unwrap_or_else(|| {
-                component_metric(
-                    "component.dropdown_menu.padding_y",
-                    MetricFallback::Px(self.size.button_py(theme)),
-                )
-            })
-            .resolve(theme);
-        let min_height = self
-            .style
-            .min_height
-            .clone()
-            .unwrap_or_else(|| {
-                component_metric(
-                    "component.dropdown_menu.min_height",
-                    MetricFallback::Px(self.size.button_h(theme)),
-                )
-            })
-            .resolve(theme);
-        let radius = self
-            .style
-            .radius
-            .clone()
-            .unwrap_or_else(|| {
-                component_metric(
-                    "component.dropdown_menu.radius",
-                    MetricFallback::ThemeRadiusMd,
-                )
-            })
-            .resolve(theme);
-        let border_width = self
-            .style
-            .border_width
-            .clone()
-            .unwrap_or_else(|| {
-                component_metric(
-                    "component.dropdown_menu.border_width",
-                    MetricFallback::Px(Px(1.0)),
-                )
-            })
-            .resolve(theme);
+        let chrome = resolve_control_chrome(
+            theme,
+            &self.style,
+            ControlTokenKeys {
+                padding_x: Some("component.dropdown_menu.padding_x"),
+                padding_y: Some("component.dropdown_menu.padding_y"),
+                min_height: Some("component.dropdown_menu.min_height"),
+                radius: Some("component.dropdown_menu.radius"),
+                border_width: Some("component.dropdown_menu.border_width"),
+                background: Some("component.dropdown_menu.bg"),
+                border_color: Some("component.dropdown_menu.border"),
+                text_color: Some("component.dropdown_menu.text"),
+                text_px: Some("component.dropdown_menu.text_px"),
+            },
+            ControlFallbacks {
+                padding_x: self.size.button_px(theme),
+                padding_y: self.size.button_py(theme),
+                min_height: self.size.button_h(theme),
+                radius: theme.metrics.radius_md,
+                border_width: Px(1.0),
+                background: theme.colors.panel_background,
+                border_color: theme.colors.panel_border,
+                text_color: theme.colors.text_primary,
+                text_px: self.size.control_text_px(theme),
+            },
+        );
 
-        let bg = self
-            .style
-            .background
-            .clone()
-            .unwrap_or(component_color(
-                "component.dropdown_menu.bg",
-                ColorFallback::ThemePanelBackground,
-            ))
-            .resolve(theme);
         let bg_hover = component_color(
             "component.dropdown_menu.bg_hover",
             ColorFallback::ThemeHoverBackground,
@@ -189,40 +150,18 @@ impl DropdownMenuButton {
         )
         .resolve(theme);
 
-        let border = self
-            .style
-            .border_color
-            .clone()
-            .unwrap_or(component_color(
-                "component.dropdown_menu.border",
-                ColorFallback::ThemePanelBorder,
-            ))
-            .resolve(theme);
-        let text = self
-            .style
-            .text_color
-            .clone()
-            .unwrap_or(component_color(
-                "component.dropdown_menu.text",
-                ColorFallback::ThemeTextPrimary,
-            ))
-            .resolve(theme);
-
-        let text_size = theme
-            .metric_by_key("component.dropdown_menu.text_px")
-            .unwrap_or_else(|| self.size.control_text_px(theme));
         self.resolved = ResolvedStyle {
-            padding_x,
-            padding_y,
-            min_height,
-            radius,
-            border_width,
-            bg,
+            padding_x: chrome.padding_x,
+            padding_y: chrome.padding_y,
+            min_height: chrome.min_height,
+            radius: chrome.radius,
+            border_width: chrome.border_width,
+            bg: chrome.background,
             bg_hover,
             bg_active,
-            border,
-            text,
-            text_size,
+            border: chrome.border_color,
+            text: chrome.text_color,
+            text_size: chrome.text_px,
         };
 
         self.prepared_scale_factor_bits = None;
