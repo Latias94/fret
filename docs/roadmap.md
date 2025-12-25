@@ -43,6 +43,7 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Adopt observability strategy (tracing + inspector hooks + renderer metrics) (ADR 0036).
 - P0: Adopt workspace/repo boundaries and external `fret-components` strategy (ADR 0037).
 - P0: Adopt component authoring model (Render/RenderOnce + IntoElement) (ADR 0039).
+- P0: Make the declarative authoring model an end-to-end, usable implementation path (not only a cross-frame state store), so virtualization and complex components can be expressed as composition rather than runtime widgets. (MVP 49/50)
 - P0: Introduce a `UiHost` boundary so `fret-ui` can be embedded by third-party hosts (ADR 0052). (done; `fret-runtime` + `fret-ui-app`)
 - P0: Make external file drag payload portable (no `PathBuf` in core events) (ADR 0053). (done)
 - P0: Introduce runtime platform capability matrix for portability (ADR 0054). (done)

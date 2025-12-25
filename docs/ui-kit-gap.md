@@ -157,11 +157,18 @@ Practical gaps to prioritize for parity:
 
 ## Next steps (recommended)
 
-1. Expand `Command` beyond the list: add a palette-style shell (overlay/backdrop + open/close + focus policy) and
-   keyboard navigation parity with shadcn/cmdk (Down/Up/Enter) while keeping the list virtualized.
-2. Expand `ListView` API beyond `Vec<String>` (leading/secondary/trailing + group headers/separators).
+1. Land the declarative authoring model (ADR 0028 + ADR 0039) as a real component composition path.
+   - Rationale: shadcn/ui-style component parity is primarily about composition and consistent recipes; retained widgets
+     alone will keep pushing “component needs” into runtime types.
+2. Evolve virtualization toward GPUI-style composability:
+   - keep a framework-level virtualized list primitive for performance and correctness,
+   - but make row content composable (no fixed `VirtualListRow { text/secondary/trailing... }` schema),
+   - migrate `Command` and at least one “tree-like” surface to prove the model.
+3. Complete the runtime/components boundary tightening:
+   - keep `fret-ui` as the runtime substrate + perf primitives,
+   - ensure shadcn-like surfaces and policies stay in `crates/fret-components-ui`,
+   - remove remaining UI-kit-shaped runtime widgets once composition exists.
 
 Update:
 
-- The palette-style shell is now prototype implemented via `fret-ui` `CommandPaletteOverlay` +
-  `crates/fret-components-ui` `WindowOverlays` commands (`command_palette.open/close/toggle`) and wired in `fret-demo --bin ui_kit`.
+- The palette-style shell is prototype implemented and wired in `fret-demo --bin ui_kit`.

@@ -10,9 +10,9 @@ This file is intentionally kept **short and actionable**.
 
 Maintain the next MVP items here as a small, high-signal queue. If a task changes a “hard-to-change” contract, update or add an ADR before broadening usage.
 
-- MVP 45 follow-up: Unify list/menu row sizing + highlight chrome via shared recipes (`recipes::list_row`) and migrate remaining overlay lists (ContextMenu/Popover/DropdownMenu/CommandPalette) to remove ad-hoc spacing/row height constants.
-- MVP 45 follow-up: Align the framework baseline theme semantics with gpui-component/shadcn (semantic palette aliases + future typography tokens) so component tokens converge on one vocabulary before adding more widgets.
-- MVP 45 follow-up: Add baseline typography tokens (font size/mono size) + migrate remaining runtime widgets off hard-coded `TextStyle { size: ... }` defaults.
+- MVP 49: Land the declarative component authoring model (ADR 0028 + ADR 0039) as an end-to-end, usable path (not just a state store): `IntoElement` + `Render`/`RenderOnce` + composition ergonomics for building component trees.
+- MVP 50: Introduce a composable, component-friendly virtualized list contract (GPUI-style) so list rows are not constrained to `VirtualListRow { text/secondary/trailing... }`; migrate at least one real component (Command palette or Tree) to prove the model.
+- MVP 51: Consolidate the “standard surfaces” fully into `fret-components-ui` (remove remaining UI-kit-shaped runtime widgets like `TreeView`/runtime `Toolbar` where feasible) once MVP 49/50 exist.
 
 ## Current Status (Snapshot)
 

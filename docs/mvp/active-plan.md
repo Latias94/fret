@@ -23,6 +23,7 @@ MVP work is allowed to prototype quickly, but changes that affect “hard-to-cha
   - `VirtualList` (virtualization + stable keys + multi-selection) (ADR 0042 / ADR 0047)
   - `TreeView` (hierarchy-style tree over `VirtualList`)
 - Theme tokens: baseline typed tokens + extensible namespaced keys for component ecosystems (ADR 0032 / ADR 0050). (prototype implemented)
+- Baseline typography: `metric.font.size` + theme-driven text defaults are implemented end-to-end (framework widgets and component sizing now derive from the theme base font size).
 - MVP 12: MVP done in demo (context menu overlay + submenu + keyboard nav + focus restore)
 - MVP 13: MVP done in demo (Hierarchy selection model → Inspector panel; selection invalidation keeps Inspector in sync)
 - MVP 14: MVP done in demo (primitive inspector editing baseline)
@@ -1153,6 +1154,7 @@ Status:
 
 - Prototype implemented:
   - `crates/fret-components-ui/src/sizing.rs` defines `Size` + `Sizable`.
+    - `Size::control_text_px` now derives from the theme’s base typography (`metric.font.size`, alias `font.size`) by default, so a theme can scale the entire component ecosystem consistently.
   - Core UI kit components adopt `.with_size(...)` and derive control metrics from `Size`.
   - `fret-ui::VirtualList` exposes `set_style` / `set_row_height` for size-aware list wrappers.
   - List-like components share a single list style mapping to avoid “per-widget spacing patching”.
@@ -1200,14 +1202,13 @@ This is a deliberate, “no fear” refactor MVP to prevent slow drift and perpe
 
 Status:
 
-- In progress:
-  - Done:
-    - `WindowOverlays` moved from `fret-ui` into `crates/fret-components-ui` to keep overlay policy/component ergonomics out of the runtime crate.
-    - `TextInput` no longer hard-codes control height; `Size` (ADR 0056) stays component-owned.
-    - Overlay widgets moved from `fret-ui` into `crates/fret-components-ui` (context menu, popover, dialog, command palette shell, menubar, toast, tooltip).
-    - `EventCx::open_context_menu*` centralizes “open menu” wiring so runtime widgets (e.g. docking) don’t depend on component surfaces.
-  - Next:
-    - Implement token drift mitigation fallback rules for `Space`/`Radius` vs baseline `metric.*` tokens. (done: `Space` and `Radius` now fall back to baseline `metric.*` when `component.*` is missing)
+- MVP done (with a remaining follow-up tracked by MVP 51):
+  - `WindowOverlays` moved from `fret-ui` into `crates/fret-components-ui` to keep overlay policy/component ergonomics out of the runtime crate.
+  - `TextInput` no longer hard-codes control height; `Size` (ADR 0056) stays component-owned.
+  - Overlay widgets moved from `fret-ui` into `crates/fret-components-ui` (context menu, popover, dialog, command palette shell, menubar, toast, tooltip).
+  - `EventCx::open_context_menu*` centralizes “open menu” wiring so runtime widgets (e.g. docking) don’t depend on component surfaces.
+  - Token drift mitigation: `Space` and `Radius` fall back to baseline `metric.*` when `component.*` is missing.
+  - Follow-up: some UI-kit-shaped runtime widgets still exist (e.g. `TreeView`); migrating them cleanly depends on landing the declarative authoring model (MVP 49/50).
 
 References:
 
