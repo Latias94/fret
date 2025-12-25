@@ -154,6 +154,8 @@ Practical gaps to prioritize for parity:
 
 - `menu` + `popover` + `select` behavior parity (focus, dismissal, keyboard)
 - `tree` and `table` patterns (selection models, row actions, virtualized rendering)
+- Declarative layout semantics (fit-content vs fill, Flex sizing, min/max, wrap) so shadcn-style
+  component composition does not require bespoke per-component layout code.
 
 ## Next steps (recommended)
 

@@ -32,6 +32,7 @@ Current focus (hard-to-change ADRs that should be treated as “locked contracts
 - `docs/adr/0033-semantics-tree-and-accessibility-bridge.md` (semantics tree + A11y bridge boundary)
 - `docs/adr/0034-timers-animation-and-redraw-scheduling.md` (timers/animation/scheduling)
 - `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md` (layout constraints + optional Flex/Grid)
+- `docs/adr/0057-declarative-layout-style-and-flex-semantics.md` (Tailwind-friendly sizing + Flex semantics)
 - `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md` (tracing + inspector hooks)
 - `docs/adr/0037-workspace-boundaries-and-components-repository.md` (workspace boundaries + `fret-components` repo)
 - `docs/adr/0038-engine-render-hook-and-submission-coordinator.md` (engine integration without queue ownership)

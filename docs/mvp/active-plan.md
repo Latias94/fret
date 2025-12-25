@@ -24,17 +24,23 @@ definitions live in `docs/mvp/reference-plan.md`.
 
 ## Next Queue (What We Should Build Next)
 
-- MVP 52: recipes → declarative props
-  - let component-layer `StyleRefinement`/`Space`/`Radius` generate declarative `ContainerProps`/`RowProps`/`TextProps`,
-    so list/command/dialog surfaces can be built by composition without hard-coded sizes.
-- MVP 53: migrate remaining list surfaces away from fixed `VirtualListRow` schemas
-  - prefer declarative virtual lists whose rows are arbitrary element subtrees (GPUI-style),
-    keeping `VirtualListRow` as legacy/demo-only until removed.
-- MVP 54: expand declarative layout primitives toward Tailwind flex vocabulary
-  - align/justify/grow/shrink/min/max/wrap (as needed), keeping contracts small and composable.
+- MVP 52: declarative sizing semantics + `Flex` container (ADR 0057)
+  - make “fit-content by default, fill only when requested” the stable mental model for shadcn-like composition
+  - add typed size constraints (min/max/fixed) and flex item controls (grow/shrink/basis)
+  - use Taffy as an internal algorithm for the `Flex` container (ADR 0035), while keeping virtualization separate (ADR 0042)
+- MVP 53: typography v1 (shadcn-friendly)
+  - expand text style expressiveness (weight + line-height + tracking/letter-spacing) and theme tokens/aliases
+  - ensure text measurement/caching keys incorporate new typography parameters (ADR 0029)
+- MVP 54: shadcn semantic palette alias expansion (ADR 0050 follow-up)
+  - add best-effort alias keys for `primary/secondary/destructive/input/card/...` to reduce component-only `component.*` drift
+- MVP 55: recipes → declarative props
+  - let component-layer `StyleRefinement`/`Space`/`Radius` generate declarative `Container`/`Flex` props,
+    so surfaces can be built by composition without hard-coded sizes.
+- MVP 56: unify the VirtualList contract surface
+  - converge on “framework owns virtualization, components own selection/keyboard/menu policies”
+  - treat schema-based `VirtualListRow` as legacy during migration, then remove.
 
 ## ADR Notes
 
 - If an MVP changes a hard-to-change contract, update or add an ADR before broadening usage.
 - Prefer updating an existing ADR section over creating many micro-ADRs.
-
