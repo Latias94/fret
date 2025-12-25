@@ -1,10 +1,15 @@
+//! Legacy schema-based retained virtual list.
+//!
+//! Prefer the declarative virtualization primitives for new work so row content is fully
+//! composable (no fixed `VirtualListRow { text/secondary/trailing/... }` schema).
+
 use crate::{
     Theme, UiHost,
     widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp,
-    SemanticsRole, Size, TextConstraints, TextStyle, TextWrap,
+    SemanticsRole, Size, TextConstraints, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::{CommandId, Effect, InputContext, Menu, MenuItem};
 use std::{borrow::Cow, collections::HashSet, hash::Hash, sync::Arc};
@@ -1065,6 +1070,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
                 let constraints = TextConstraints {
                     max_width: Some(Px(0.0)),
                     wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
                     scale_factor,
                 };
                 let (primary_blob, primary_metrics) =
@@ -1083,6 +1089,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
                 let constraints = TextConstraints {
                     max_width: Some(row_inner_w),
                     wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
                     scale_factor,
                 };
                 let (primary_blob, primary_metrics) =
@@ -1106,6 +1113,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
                     let constraints = TextConstraints {
                         max_width: None,
                         wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
                         scale_factor,
                     };
                     let (blob, metrics) =
@@ -1118,6 +1126,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
                     let constraints = TextConstraints {
                         max_width: None,
                         wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
                         scale_factor,
                     };
                     let (blob, metrics) =
@@ -1138,6 +1147,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
                 let constraints = TextConstraints {
                     max_width: Some(max_width),
                     wrap: self.style.wrap,
+                    overflow: TextOverflow::Clip,
                     scale_factor,
                 };
                 let (primary_blob, primary_metrics) =
@@ -1148,6 +1158,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
                     let constraints = TextConstraints {
                         max_width: Some(max_width),
                         wrap: self.style.wrap,
+                        overflow: TextOverflow::Clip,
                         scale_factor,
                     };
                     let (blob, metrics) =

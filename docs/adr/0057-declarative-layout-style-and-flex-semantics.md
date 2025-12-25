@@ -102,8 +102,9 @@ In other words:
 `Row`/`Column` remain useful as light-weight composition helpers (gap + spacer) for small subtrees.
 But shadcn-grade layout semantics must converge on the `Flex` container contract to avoid drift.
 
-Over time, we may implement `Row`/`Column` as thin wrappers around `Flex` with defaults that match
-existing behavior.
+`Row`/`Column` are implemented as thin wrappers around `Flex`, so they share the same `LayoutStyle`
+vocabulary (margin/position/inset/min/max/flex item semantics). `Spacer` is modeled as a flex item
+that grows by default, so it composes naturally inside `Row`/`Column`/`Flex`.
 
 ## Consequences
 
@@ -151,4 +152,3 @@ Possible, but not preferred:
 - Hybrid layout + optional Taffy: `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - Virtualization constraints: `docs/adr/0042-virtualization-and-large-lists.md`
 - GPUI uses Taffy internally: `repo-ref/zed/crates/gpui/src/taffy.rs`
-

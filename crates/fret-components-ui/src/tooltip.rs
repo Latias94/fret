@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, NodeId, Point, Px, Rect, SceneOp, Size,
-    TextConstraints, TextMetrics, TextStyle, TextWrap,
+    TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
@@ -110,6 +110,7 @@ pub struct TooltipOverlay {
 #[derive(Debug, Clone)]
 pub struct TooltipStyle {
     pub background: Color,
+    pub shadow: Option<fret_ui::element::ShadowStyle>,
     pub border: Edges,
     pub border_color: Color,
     pub corner_radii: Corners,
@@ -130,6 +131,7 @@ impl Default for TooltipStyle {
                 b: 0.12,
                 a: 0.94,
             },
+            shadow: None,
             border: Edges::all(Px(1.0)),
             border_color: Color {
                 r: 0.0,
@@ -182,6 +184,7 @@ impl TooltipOverlay {
         };
         self.style.border_color = theme.colors.menu_border;
         self.style.corner_radii = Corners::all(radius);
+        self.style.shadow = Some(crate::declarative::style::shadow_sm(theme, radius));
         self.style.text_color = theme.colors.text_primary;
         self.style.padding_x = theme.metrics.padding_sm;
         self.style.padding_y = theme.metrics.padding_sm;
@@ -216,6 +219,7 @@ impl TooltipOverlay {
         let constraints = TextConstraints {
             max_width: Some(self.style.max_width),
             wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
         let (blob, metrics) =
@@ -329,6 +333,9 @@ impl<H: UiHost> Widget<H> for TooltipOverlay {
         };
 
         let bubble = self.compute_bounds(&request, cx.bounds.size, metrics.size);
+        if let Some(shadow) = self.style.shadow {
+            fret_ui::paint::paint_shadow(cx.scene, DrawOrder(12_000), bubble, shadow);
+        }
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(12_000),
             rect: bubble,

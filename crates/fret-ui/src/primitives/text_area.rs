@@ -1,6 +1,6 @@
 use fret_core::{
     CaretAffinity, Color, Corners, DrawOrder, Edges, Event, ImeEvent, MouseButton, Px, Rect,
-    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
+    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::{Effect, Model};
 
@@ -21,6 +21,7 @@ pub struct TextAreaStyle {
     pub background: Color,
     pub border: Edges,
     pub border_color: Color,
+    pub focus_ring: Option<crate::element::RingStyle>,
     pub corner_radii: Corners,
     pub text_color: Color,
     pub selection_color: Color,
@@ -47,6 +48,7 @@ impl Default for TextAreaStyle {
                 b: 0.0,
                 a: 0.35,
             },
+            focus_ring: None,
             corner_radii: Corners::all(Px(8.0)),
             text_color: Color {
                 r: 0.92,
@@ -234,6 +236,24 @@ impl TextArea {
             self.style.padding_y = theme.metrics.padding_md;
             self.style.background = theme.colors.panel_background;
             self.style.border_color = theme.colors.panel_border;
+            self.style.focus_ring = Some(crate::element::RingStyle {
+                placement: crate::element::RingPlacement::Outset,
+                width: theme
+                    .metric_by_key("component.ring.width")
+                    .unwrap_or(Px(2.0)),
+                offset: theme
+                    .metric_by_key("component.ring.offset")
+                    .unwrap_or(Px(2.0)),
+                color: theme
+                    .color_by_key("ring")
+                    .unwrap_or(theme.colors.focus_ring),
+                offset_color: Some(
+                    theme
+                        .color_by_key("ring-offset-background")
+                        .unwrap_or(theme.colors.surface_background),
+                ),
+                corner_radii: Corners::all(theme.metrics.radius_md),
+            });
             self.style.corner_radii = Corners::all(theme.metrics.radius_md);
             self.style.text_color = theme.colors.text_primary;
             self.style.selection_color = theme.colors.selection_background;
@@ -1148,6 +1168,7 @@ impl<H: UiHost> Widget<H> for TextArea {
         let mut constraints = TextConstraints {
             max_width: Some(inner.size.width),
             wrap: self.wrap,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
         let mut metrics = cx.text.measure(layout_text, self.text_style, constraints);
@@ -1189,6 +1210,7 @@ impl<H: UiHost> Widget<H> for TextArea {
         let constraints = TextConstraints {
             max_width: Some(max_width),
             wrap: self.wrap,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
         let key = PreparedKey {
@@ -1222,6 +1244,13 @@ impl<H: UiHost> Widget<H> for TextArea {
             border_color: self.style.border_color,
             corner_radii: self.style.corner_radii,
         });
+
+        if cx.focus == Some(cx.node) && crate::focus_visible::is_focus_visible(cx.app, cx.window) {
+            if let Some(mut ring) = self.style.focus_ring {
+                ring.corner_radii = self.style.corner_radii;
+                crate::paint::paint_focus_ring(cx.scene, DrawOrder(1), cx.bounds, ring);
+            }
+        }
 
         let Some(blob) = self.blob else {
             return;

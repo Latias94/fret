@@ -5,7 +5,7 @@ use crate::{
 };
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp, Size,
-    TextConstraints, TextMetrics, TextStyle, TextWrap,
+    TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::CommandId;
 use std::sync::Arc;
@@ -196,6 +196,7 @@ impl<H: UiHost> Widget<H> for Toolbar {
         let text_constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
 
@@ -274,6 +275,7 @@ impl<H: UiHost> Widget<H> for Toolbar {
         let text_constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
 

@@ -68,6 +68,7 @@ struct UiKitWindowState {
     declarative_mount: NodeId,
     declarative_root: Option<NodeId>,
     declarative_bounds: Rect,
+    declarative_text: Model<String>,
     declarative_selection: Model<Option<usize>>,
     declarative_items: Model<Vec<String>>,
 }
@@ -703,6 +704,7 @@ impl WinitDriver for UiKitDriver {
                 .map(|i| format!("Project {i}"))
                 .collect::<Vec<_>>(),
         );
+        let declarative_text = app.models_mut().insert("".to_string());
 
         UiKitWindowState {
             ui,
@@ -715,6 +717,7 @@ impl WinitDriver for UiKitDriver {
             declarative_mount,
             declarative_root: None,
             declarative_bounds: Rect::default(),
+            declarative_text,
             declarative_selection,
             declarative_items,
         }
@@ -768,6 +771,12 @@ impl WinitDriver for UiKitDriver {
         }
 
         match command.as_str() {
+            "ui_kit.declarative_text.clear" => {
+                let _ = app
+                    .models_mut()
+                    .update(state.declarative_text, |v| v.clear());
+                app.request_redraw(window);
+            }
             "ui_kit.action.one" => {
                 tracing::info!("action one");
             }
@@ -920,6 +929,8 @@ impl WinitDriver for UiKitDriver {
             )
         };
 
+        let declarative_image = self.ui_kit_image.as_ref().map(|i| i.id);
+
         let root = fret_ui_app::declarative::render_root(
             &mut state.ui,
             app,
@@ -936,17 +947,44 @@ impl WinitDriver for UiKitDriver {
                     .cloned()
                     .unwrap_or_default();
 
-                let theme = Theme::global(&*cx.app);
                 let size = fret_components_ui::Size::Medium;
-                let base_row_h = size.list_row_h(theme);
-                let outer_gap = fret_components_ui::declarative::style::space(
-                    theme,
-                    fret_components_ui::Space::N2,
-                );
-                let secondary_gap = fret_components_ui::declarative::style::space(
-                    theme,
-                    fret_components_ui::Space::N0p5,
-                );
+                let (
+                    theme_snapshot,
+                    base_row_h,
+                    outer_gap,
+                    secondary_gap,
+                    focus_ring,
+                    shadow,
+                    radius,
+                ) = {
+                    let theme = Theme::global(&*cx.app);
+                    let theme_snapshot = theme.snapshot();
+                    let base_row_h = size.list_row_h(theme);
+                    let outer_gap = fret_components_ui::declarative::style::space(
+                        theme,
+                        fret_components_ui::Space::N2,
+                    );
+                    let secondary_gap = fret_components_ui::declarative::style::space(
+                        theme,
+                        fret_components_ui::Space::N0p5,
+                    );
+                    let radius = fret_components_ui::declarative::style::radius(
+                        theme,
+                        fret_components_ui::Radius::Md,
+                    );
+                    let focus_ring =
+                        fret_components_ui::declarative::style::focus_ring(theme, radius);
+                    let shadow = fret_components_ui::declarative::style::shadow_md(theme, radius);
+                    (
+                        theme_snapshot,
+                        base_row_h,
+                        outer_gap,
+                        secondary_gap,
+                        focus_ring,
+                        shadow,
+                        radius,
+                    )
+                };
 
                 vec![cx.column(
                     fret_ui_app::element::ColumnProps {
@@ -956,6 +994,164 @@ impl WinitDriver for UiKitDriver {
                     |cx| {
                         vec![
                             cx.text("Recents (declarative virtualized list)"),
+                            cx.pressable(
+                                fret_ui_app::element::PressableProps {
+                                    focus_ring: Some(focus_ring),
+                                    ..Default::default()
+                                },
+                                |cx, st| {
+                                    let bg = if st.pressed {
+                                        Some(theme_snapshot.colors.selection_background)
+                                    } else if st.hovered {
+                                        Some(theme_snapshot.colors.hover_background)
+                                    } else {
+                                        Some(theme_snapshot.colors.panel_background)
+                                    };
+
+                                    vec![cx.container(
+                                        fret_ui_app::element::ContainerProps {
+                                            padding_x: outer_gap,
+                                            padding_y: outer_gap,
+                                            background: bg,
+                                            shadow: Some(shadow),
+                                            border: fret_core::Edges::all(fret_core::Px(1.0)),
+                                            border_color: Some(theme_snapshot.colors.panel_border),
+                                            corner_radii: fret_core::Corners::all(radius),
+                                            ..Default::default()
+                                        },
+                                        |cx| vec![cx.text("Focus ring demo (click to focus)")],
+                                    )]
+                                },
+                            ),
+                            cx.text("TextField (declarative, absolute icon+clear)"),
+                            fret_components_ui::declarative::text_field::text_field_with_leading_icon_and_clear(
+                                cx,
+                                state.declarative_text,
+                                size,
+                                IconId::new("search"),
+                                fret_app::CommandId::from("ui_kit.declarative_text.clear"),
+                            ),
+                            cx.text("Truncate (ellipsis)"),
+                            cx.container(
+                                fret_ui_app::element::ContainerProps {
+                                    layout: fret_ui_app::element::LayoutStyle {
+                                        size: fret_ui_app::element::SizeStyle {
+                                            width: fret_ui_app::element::Length::Px(Px(260.0)),
+                                            ..Default::default()
+                                        },
+		                                        ..Default::default()
+		                                    },
+		                                    padding_x: outer_gap,
+		                                    padding_y: outer_gap,
+		                                    background: Some(theme_snapshot.colors.panel_background),
+		                                    shadow: None,
+		                                    border: fret_core::Edges::all(fret_core::Px(1.0)),
+		                                    border_color: Some(theme_snapshot.colors.panel_border),
+		                                    corner_radii: fret_core::Corners::all(radius),
+		                                },
+		                                |cx| {
+		                                    let mut p = fret_ui_app::element::TextProps::new(
+		                                        "This is a very long line that should truncate with an ellipsis.",
+		                                    );
+		                                    p.layout.size.width = fret_ui_app::element::Length::Fill;
+		                                    p.wrap = fret_core::TextWrap::None;
+		                                    p.overflow = fret_core::TextOverflow::Ellipsis;
+		                                    vec![cx.text_props(p)]
+		                                },
+		                            ),
+	                            cx.text("Absolute badge (position/inset)"),
+	                            cx.container(
+	                                fret_ui_app::element::ContainerProps {
+	                                    layout: fret_ui_app::element::LayoutStyle {
+	                                        size: fret_ui_app::element::SizeStyle {
+	                                            width: fret_ui_app::element::Length::Px(Px(260.0)),
+	                                            ..Default::default()
+	                                        },
+	                                        ..Default::default()
+	                                    },
+	                                    padding_x: outer_gap,
+	                                    padding_y: outer_gap,
+	                                    background: Some(theme_snapshot.colors.panel_background),
+	                                    shadow: None,
+	                                    border: fret_core::Edges::all(fret_core::Px(1.0)),
+	                                    border_color: Some(theme_snapshot.colors.panel_border),
+	                                    corner_radii: fret_core::Corners::all(radius),
+	                                },
+	                                |cx| {
+	                                    let mut badge = fret_ui_app::element::ContainerProps::default();
+	                                    badge.background =
+	                                        Some(theme_snapshot.colors.accent);
+	                                    badge.corner_radii =
+	                                        fret_core::Corners::all(Px(999.0));
+	                                    badge.padding_x = secondary_gap;
+	                                    badge.padding_y = fret_core::Px(0.0);
+	                                    badge.layout.position =
+	                                        fret_ui_app::element::PositionStyle::Absolute;
+	                                    badge.layout.inset.top = Some(Px(0.0));
+	                                    badge.layout.inset.right = Some(Px(0.0));
+
+	                                    vec![
+	                                        cx.text(
+	                                            "A container can host absolute children (badge/icon overlays).",
+	                                        ),
+	                                        cx.container(badge, |cx| vec![cx.text("NEW")]),
+	                                    ]
+	                                },
+	                            ),
+	                            cx.text("Image"),
+	                            cx.row(
+	                                fret_ui_app::element::RowProps {
+	                                    gap: outer_gap,
+                                    align: fret_ui_app::element::CrossAlign::Center,
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    let mut out = Vec::new();
+
+                                    if let Some(img) = declarative_image {
+                                        let mut p = fret_ui_app::element::ImageProps::new(img);
+                                        p.layout.size.width =
+                                            fret_ui_app::element::Length::Px(Px(160.0));
+                                        p.layout.size.height =
+                                            fret_ui_app::element::Length::Px(Px(120.0));
+                                        out.push(cx.image_props(p));
+                                    } else {
+                                        out.push(cx.text("Image not ready yet"));
+                                    }
+
+                                    out.push(cx.text(
+                                        "Declarative Image (SceneOp::Image/ImageRegion) with explicit size.",
+                                    ));
+                                    out
+                                },
+                            ),
+                            cx.text("Scroll"),
+                            cx.scroll(
+                                fret_ui_app::element::ScrollProps {
+                                    layout: fret_ui_app::element::LayoutStyle {
+                                        size: fret_ui_app::element::SizeStyle {
+                                            height: fret_ui_app::element::Length::Px(Px(72.0)),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    vec![cx.column(
+                                        fret_ui_app::element::ColumnProps {
+                                            gap: secondary_gap,
+                                            align: fret_ui_app::element::CrossAlign::Start,
+                                            ..Default::default()
+                                        },
+                                        |cx| {
+                                            (0..12)
+                                                .map(|i| cx.text(format!("Scrollable line {i}")))
+                                                .collect()
+                                        },
+                                    )]
+                                },
+                            ),
                             fret_components_ui::declarative::list::list_virtualized(
                                 cx,
                                 Some(state.declarative_selection),
@@ -972,11 +1168,15 @@ impl WinitDriver for UiKitDriver {
                                 },
                                 |cx, i| {
                                     let label = values.get(i).map(String::as_str).unwrap_or("");
-                                    let leading = if i % 3 == 0 { "●" } else { "○" };
-                                    let trailing = if i % 5 == 0 { "⌘O" } else { "" };
+                                    let leading_icon = if i % 3 == 0 { "play" } else { "settings" };
+                                    let trailing_icon =
+                                        if i % 5 == 0 { Some("chevron_down") } else { None };
 
                                     let mut out = Vec::new();
-                                    out.push(cx.text(leading));
+                                    out.push(fret_components_ui::declarative::icon::icon(
+                                        cx,
+                                        IconId::new(leading_icon),
+                                    ));
                                     out.push(cx.column(
                                         fret_ui_app::element::ColumnProps {
                                             gap: secondary_gap,
@@ -989,8 +1189,11 @@ impl WinitDriver for UiKitDriver {
                                         min: Px(0.0),
                                         ..Default::default()
                                     }));
-                                    if !trailing.is_empty() {
-                                        out.push(cx.text(trailing));
+                                    if let Some(icon) = trailing_icon {
+                                        out.push(fret_components_ui::declarative::icon::icon(
+                                            cx,
+                                            IconId::new(icon),
+                                        ));
                                     }
                                     out
                                 },

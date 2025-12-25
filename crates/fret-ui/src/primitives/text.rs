@@ -1,6 +1,6 @@
 use fret_core::{
     Color, DrawOrder, Event, FontId, ImeEvent, MouseButton, Px, Rect, SceneOp, SemanticsRole, Size,
-    TextConstraints, TextMetrics, TextStyle, TextWrap,
+    TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 
 use crate::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
@@ -95,6 +95,7 @@ impl<H: UiHost> Widget<H> for Text {
         let constraints = TextConstraints {
             max_width: Some(cx.available.width),
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
         let metrics = cx.text.measure(&self.text, self.style, constraints);
@@ -107,6 +108,7 @@ impl<H: UiHost> Widget<H> for Text {
         let constraints = TextConstraints {
             max_width: Some(cx.bounds.size.width),
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
 
@@ -141,12 +143,12 @@ impl<H: UiHost> Widget<H> for Text {
 
 #[derive(Debug, Clone)]
 pub struct TextInputStyle {
-    pub padding_x: Px,
-    pub padding_y: Px,
+    pub padding: fret_core::geometry::Edges,
     pub background: Color,
     pub border: fret_core::geometry::Edges,
     pub border_color: Color,
     pub border_color_focused: Color,
+    pub focus_ring: Option<crate::element::RingStyle>,
     pub corner_radii: fret_core::geometry::Corners,
     pub text_color: Color,
     pub selection_color: Color,
@@ -157,8 +159,12 @@ pub struct TextInputStyle {
 impl Default for TextInputStyle {
     fn default() -> Self {
         Self {
-            padding_x: Px(8.0),
-            padding_y: Px(6.0),
+            padding: fret_core::geometry::Edges {
+                top: Px(6.0),
+                right: Px(8.0),
+                bottom: Px(6.0),
+                left: Px(8.0),
+            },
             background: Color {
                 r: 0.12,
                 g: 0.12,
@@ -178,6 +184,7 @@ impl Default for TextInputStyle {
                 b: 1.0,
                 a: 0.9,
             },
+            focus_ring: None,
             corner_radii: fret_core::geometry::Corners::all(Px(6.0)),
             text_color: Color {
                 r: 0.92,
@@ -210,12 +217,17 @@ impl Default for TextInputStyle {
 impl TextInputStyle {
     pub fn from_theme(theme: crate::ThemeSnapshot) -> Self {
         Self {
-            padding_x: theme.metrics.padding_sm,
-            padding_y: Px(6.0),
+            padding: fret_core::geometry::Edges {
+                top: Px(6.0),
+                right: theme.metrics.padding_sm,
+                bottom: Px(6.0),
+                left: theme.metrics.padding_sm,
+            },
             background: theme.colors.panel_background,
             border: fret_core::geometry::Edges::all(Px(1.0)),
             border_color: theme.colors.panel_border,
             border_color_focused: theme.colors.focus_ring,
+            focus_ring: None,
             corner_radii: fret_core::geometry::Corners::all(theme.metrics.radius_sm),
             text_color: theme.colors.text_primary,
             selection_color: Color {
@@ -426,6 +438,16 @@ impl BoundTextInput {
         }
     }
 
+    pub fn model_id(&self) -> fret_runtime::ModelId {
+        self.model.id()
+    }
+
+    pub fn set_model(&mut self, model: Model<String>) {
+        self.model = model;
+        self.last_revision = None;
+        self.dirty_since_sync = false;
+    }
+
     pub fn with_submit_command(mut self, command: CommandId) -> Self {
         self.submit_command = Some(command);
         self
@@ -460,6 +482,20 @@ impl BoundTextInput {
 
     pub fn set_text_style(&mut self, style: TextStyle) {
         self.input.set_text_style(style);
+    }
+
+    pub fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+        self.input.queue_release_all_text_blobs();
+        self.input.flush_pending_releases(text);
+        self.input.text_metrics = None;
+        self.input.prefix_metrics = None;
+        self.input.suffix_metrics = None;
+        self.input.preedit_metrics = None;
+        self.input.caret_stops.clear();
+    }
+
+    pub fn semantics<H: UiHost>(&mut self, cx: &mut crate::widget::SemanticsCx<'_, H>) {
+        self.input.semantics(cx);
     }
 
     fn sync_from_model<H: UiHost>(&mut self, app: &H, force: bool) {
@@ -673,14 +709,15 @@ impl TextInput {
         bounds: Rect,
         scale_factor: f32,
     ) -> Rect {
-        let padding = Px(8.0);
+        let padding_left = self.chrome_style.padding.left;
+        let padding_top = self.chrome_style.padding.top;
 
         let caret_x = self
             .text_blob
             .map(|blob| cx.text.caret_x(blob, self.caret))
             .unwrap_or(Px(0.0));
 
-        let mut x = bounds.origin.x + padding + caret_x;
+        let mut x = bounds.origin.x + padding_left + caret_x;
 
         if !self.preedit.is_empty() {
             let cursor = self
@@ -690,6 +727,7 @@ impl TextInput {
             let constraints = TextConstraints {
                 max_width: Some(bounds.size.width),
                 wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
                 scale_factor: cx.scale_factor,
             };
             let pre_metrics = cx
@@ -701,7 +739,7 @@ impl TextInput {
         let h = self.text_metrics.map(|m| m.size.height).unwrap_or(Px(16.0));
         let hairline = Px((1.0 / scale_factor.max(1.0)).max(1.0 / 8.0));
         Rect::new(
-            fret_core::geometry::Point::new(x, bounds.origin.y + Px(6.0)),
+            fret_core::geometry::Point::new(x, bounds.origin.y + padding_top),
             Size::new(Px(hairline.0.max(1.0)), Px(h.0.max(16.0))),
         )
     }
@@ -772,7 +810,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     enabled: true,
                 });
                 self.last_sent_cursor = None;
-                let padding = Px(8.0);
+                let padding = self.chrome_style.padding.left;
                 let local_x =
                     Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)).max(0.0));
                 self.caret = self
@@ -795,7 +833,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 if cx.captured != Some(cx.node) || !buttons.left {
                     return;
                 }
-                let padding = Px(8.0);
+                let padding = self.chrome_style.padding.left;
                 let local_x =
                     Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)).max(0.0));
                 self.caret = self
@@ -1181,6 +1219,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         let base_constraints = TextConstraints {
             max_width: Some(cx.available.width),
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
         let metrics = cx.text.measure(&self.text, self.style, base_constraints);
@@ -1189,7 +1228,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         let base_h = self.text_metrics.map(|m| m.size.height.0).unwrap_or(0.0);
         let chrome = &self.chrome_style;
         let border_h = chrome.border.top.0.max(0.0) + chrome.border.bottom.0.max(0.0);
-        let pad_h = chrome.padding_y.0.max(0.0) * 2.0;
+        let pad_h = chrome.padding.top.0.max(0.0) + chrome.padding.bottom.0.max(0.0);
         let h = Px((base_h + pad_h + border_h).max(0.0));
         Size::new(cx.available.width, h)
     }
@@ -1205,7 +1244,9 @@ impl<H: UiHost> Widget<H> for TextInput {
         self.sync_chrome_from_theme(theme);
         self.sync_text_style_from_theme(theme);
         let focused = cx.focus == Some(cx.node);
-        let border_color = if focused {
+        let border_color = if focused && self.chrome_style.focus_ring.is_some() {
+            self.chrome_style.border_color
+        } else if focused {
             self.chrome_style.border_color_focused
         } else {
             self.chrome_style.border_color
@@ -1214,6 +1255,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         let constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
 
@@ -1282,8 +1324,17 @@ impl<H: UiHost> Widget<H> for TextInput {
             corner_radii: self.chrome_style.corner_radii,
         });
 
-        let padding_x = self.chrome_style.padding_x;
-        let padding_y = self.chrome_style.padding_y;
+        if focused && crate::focus_visible::is_focus_visible(cx.app, cx.window) {
+            if let Some(mut ring) = self.chrome_style.focus_ring {
+                ring.corner_radii = self.chrome_style.corner_radii;
+                crate::paint::paint_focus_ring(cx.scene, DrawOrder(1), cx.bounds, ring);
+            }
+        }
+
+        let padding_left = self.chrome_style.padding.left;
+        let _padding_right = self.chrome_style.padding.right;
+        let padding_top = self.chrome_style.padding.top;
+        let padding_bottom = self.chrome_style.padding.bottom;
         if self.has_selection() && self.preedit.is_empty() {
             let (a, b) = self.selection_range();
             let start_x = self
@@ -1299,12 +1350,12 @@ impl<H: UiHost> Widget<H> for TextInput {
                 order: DrawOrder(0),
                 rect: Rect::new(
                     fret_core::geometry::Point::new(
-                        cx.bounds.origin.x + padding_x + start_x,
-                        cx.bounds.origin.y + padding_y,
+                        cx.bounds.origin.x + padding_left + start_x,
+                        cx.bounds.origin.y + padding_top,
                     ),
                     Size::new(
                         Px((end_x.0 - start_x.0).max(0.0)),
-                        Px((cx.bounds.size.height.0 - padding_y.0 * 2.0).max(0.0)),
+                        Px((cx.bounds.size.height.0 - padding_top.0 - padding_bottom.0).max(0.0)),
                     ),
                 ),
                 background: self.chrome_style.selection_color,
@@ -1315,13 +1366,13 @@ impl<H: UiHost> Widget<H> for TextInput {
         }
         let base_origin = if let Some(metrics) = self.text_metrics {
             fret_core::geometry::Point::new(
-                cx.bounds.origin.x + padding_x,
-                cx.bounds.origin.y + padding_y + metrics.baseline,
+                cx.bounds.origin.x + padding_left,
+                cx.bounds.origin.y + padding_top + metrics.baseline,
             )
         } else {
             fret_core::geometry::Point::new(
-                cx.bounds.origin.x + padding_x,
-                cx.bounds.origin.y + padding_y + Px(10.0),
+                cx.bounds.origin.x + padding_left,
+                cx.bounds.origin.y + padding_top + Px(10.0),
             )
         };
 
@@ -1394,8 +1445,8 @@ impl<H: UiHost> Widget<H> for TextInput {
             .unwrap_or_else(|| self.caret_rect(cx, cx.bounds, cx.scale_factor));
         let caret = Rect::new(
             fret_core::Point::new(
-                cx.bounds.origin.x + padding_x + caret_local.origin.x,
-                cx.bounds.origin.y + padding_y + caret_local.origin.y,
+                cx.bounds.origin.x + padding_left + caret_local.origin.x,
+                cx.bounds.origin.y + padding_top + caret_local.origin.y,
             ),
             caret_local.size,
         );

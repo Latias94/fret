@@ -1,6 +1,6 @@
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp, SemanticsRole,
-    Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
+    Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::{CommandId, InputContext, Menu, MenuBar};
 use fret_ui::{
@@ -268,6 +268,7 @@ impl<H: UiHost> Widget<H> for AppMenuBar {
         let constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
 
@@ -353,6 +354,7 @@ impl<H: UiHost> Widget<H> for AppMenuBar {
         let constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
 

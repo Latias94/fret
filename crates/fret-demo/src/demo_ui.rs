@@ -11,10 +11,11 @@ use fret_components_ui::{AppMenuBar, ContextMenu, Popover};
 use fret_core::{AppWindowId, Axis, Color, ExternalDragPayloadKind, PlatformCapabilities, Px};
 use fret_editor::{InspectorEditHint, InspectorEditLayout};
 use fret_editor::{ViewportToolManager, ViewportToolMode};
+use fret_ui_app::legacy_widgets::{VirtualList, VirtualListDataSource, VirtualListRow};
 use fret_ui_app::{
     App, Bar, BoundTextInput, ColoredPanel, Column, DockSpace, FixedPanel, GenericWidget,
     HeaderBody, PanelThemeBackground, Row, Scroll, Split, Stack, Text, TextArea, TextInput,
-    Toolbar, ToolbarItem, UiLayerId, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
+    Toolbar, ToolbarItem, UiLayerId, UiTree,
 };
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -296,6 +297,7 @@ impl DemoTopBarStatus {
         let constraints = fret_core::TextConstraints {
             max_width: Some(cx.available.width),
             wrap: fret_core::TextWrap::None,
+            overflow: fret_core::TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
         let (blob, metrics) = cx.text.prepare(&self.text, self.style, constraints);
@@ -435,6 +437,7 @@ impl DebugHudPanel {
         let constraints = fret_core::TextConstraints {
             max_width: Some(cx.available.width),
             wrap: fret_core::TextWrap::Word,
+            overflow: fret_core::TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
         let (blob, metrics) = cx.text.prepare(&self.text, self.style, constraints);
@@ -562,6 +565,7 @@ impl DebugInspectorOverlay {
         let constraints = fret_core::TextConstraints {
             max_width: Some(Px(320.0)),
             wrap: fret_core::TextWrap::Word,
+            overflow: fret_core::TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
         let (blob, metrics) = cx.text.prepare(&self.text, self.style, constraints);
@@ -892,7 +896,7 @@ Goal: foundation for Console/Inspector/code editor.",
             ui.add_child(column, editor_header);
 
             let list_header = ui.create_node(Text::new(
-                "VirtualList MVP (Hierarchy/Project-scale list: scroll + selection + virtualization)",
+                "Legacy VirtualList MVP (schema rows; retained widget)",
             ));
             ui.add_child(column, list_header);
 

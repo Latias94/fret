@@ -244,6 +244,9 @@ impl Theme {
             "foreground" => Some(self.colors.text_primary),
             "border" => Some(self.colors.panel_border),
             "ring" => Some(self.colors.focus_ring),
+            "ring-offset-background" | "ring_offset_background" => {
+                Some(self.colors.surface_background)
+            }
 
             // Surfaces.
             "card" | "card.background" => Some(self.colors.panel_background),
@@ -286,6 +289,15 @@ impl Theme {
             "scrollbar.background" => Some(self.colors.scrollbar_track),
             "scrollbar.thumb.background" => Some(self.colors.scrollbar_thumb),
             "scrollbar.thumb.hover.background" => Some(self.colors.scrollbar_thumb_hover),
+
+            // Shadows/elevation. These are intentionally best-effort fallbacks until the theme
+            // schema grows first-class shadow tokens.
+            "shadow" | "shadow.color" => Some(Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            }),
 
             _ => None,
         }
@@ -635,6 +647,7 @@ mod tests {
             "foreground",
             "border",
             "ring",
+            "ring-offset-background",
             "card",
             "card.background",
             "card-foreground",

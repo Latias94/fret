@@ -30,7 +30,7 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Adopt the primary UI authoring/runtime model (declarative elements + externalized state) (ADR 0028).
 - P0: Adopt the app-owned model store + borrow-friendly update API (ADR 0031).
 - P0: Adopt typed style tokens + theme resolution rules (ADR 0032).
-- P0: Align baseline theme semantics with gpui-component/shadcn vocabulary (semantic palette + typography), so the component ecosystem can reuse upstream conventions without inflating `fret-ui` into a UI kit. (ADR 0050 follow-up)
+- P0: Align baseline theme semantics with gpui-component/shadcn vocabulary (semantic palette + typography), so the component ecosystem can reuse upstream conventions without inflating `fret-ui` into a UI kit. (prototype implemented: semantic palette aliases + typography expansion; ADR 0050 follow-up)
 - P0: Adopt a component-level size/density system so Tailwind-like primitives converge on one contract (ADR 0056). (prototype implemented; MVP 47)
 - P0: Adopt component-level style composition ergonomics (`StyleRefinement` + `StyledExt`) so Tailwind/shadcn-like recipes and variants can be expressed as typed, composable “style patches” without leaking UI kit semantics into `fret-ui` runtime. (MVP 45)
 - P0: Tighten the **framework vs components** boundary so Tailwind/shadcn sizing/variants can converge without fighting runtime widgets:
@@ -40,7 +40,8 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Adopt semantics tree + accessibility bridge boundary (A11y-ready infrastructure) (ADR 0033).
 - P0: Adopt timers/animation/redraw scheduling (event-driven + continuous mode) (ADR 0034).
 - P0: Adopt layout constraints + optional Flex/Grid integration boundary (ADR 0035).
-- P0: Fix declarative composable sizing semantics (fit-content by default, typed size constraints, and a Taffy-backed `Flex` container) so Tailwind/shadcn component composition is viable without per-widget layout hacks. (ADR 0057)
+- P0: Fix declarative composable sizing semantics (fit-content by default, typed size constraints, and a Taffy-backed `Flex` container) so Tailwind/shadcn component composition is viable without per-widget layout hacks. (done; ADR 0057 / MVP 52)
+- P0: Adopt Tailwind layout vocabulary as framework-level `LayoutStyle` semantics (margin, position/inset, grid, aspect ratio) so shadcn-style composition can express common patterns (badge overlays, input icons, simple grids) without bespoke per-widget layout hacks. (ADR 0062)
 - P0: Adopt observability strategy (tracing + inspector hooks + renderer metrics) (ADR 0036).
 - P0: Adopt workspace/repo boundaries and external `fret-components` strategy (ADR 0037).
 - P0: Adopt component authoring model (Render/RenderOnce + IntoElement) (ADR 0039).

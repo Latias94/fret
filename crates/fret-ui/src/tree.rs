@@ -957,6 +957,18 @@ impl<H: UiHost> UiTree<H> {
             focus_is_text_input,
         };
 
+        if let Some(window) = self.window {
+            let changed = crate::focus_visible::update_for_event(app, window, event);
+            if changed {
+                if let Some(focus) = self.focus {
+                    self.invalidate(focus, Invalidation::Paint);
+                } else {
+                    self.invalidate(base_root, Invalidation::Paint);
+                }
+                app.request_redraw(window);
+            }
+        }
+
         if !self.replaying_pending_shortcut
             && !self.pending_shortcut.keystrokes.is_empty()
             && ((self.pending_shortcut.focus.is_some()
@@ -1907,21 +1919,33 @@ impl<H: UiHost> UiTree<H> {
 
     fn hit_test_node(&self, node: NodeId, position: Point) -> Option<NodeId> {
         let n = self.nodes.get(node)?;
-        if !n.bounds.contains(position) {
+        let clips_hit_test = n
+            .widget
+            .as_ref()
+            .map(|w| w.clips_hit_test(n.bounds))
+            .unwrap_or(true);
+        if clips_hit_test && !n.bounds.contains(position) {
             return None;
         }
 
-        for &child in n.children.iter().rev() {
-            if let Some(hit) = self.hit_test_node(child, position) {
-                return Some(hit);
+        let hit_test_children = n
+            .widget
+            .as_ref()
+            .map(|w| w.hit_test_children(n.bounds, position))
+            .unwrap_or(true);
+        if hit_test_children {
+            for &child in n.children.iter().rev() {
+                if let Some(hit) = self.hit_test_node(child, position) {
+                    return Some(hit);
+                }
             }
         }
 
-        let hit = n
-            .widget
-            .as_ref()
-            .map(|w| w.hit_test(n.bounds, position))
-            .unwrap_or(true);
+        let hit = n.bounds.contains(position)
+            && n.widget
+                .as_ref()
+                .map(|w| w.hit_test(n.bounds, position))
+                .unwrap_or(true);
         hit.then_some(node)
     }
 
@@ -2226,6 +2250,7 @@ mod tests {
                 TextConstraints {
                     max_width: None,
                     wrap: TextWrap::None,
+                    overflow: fret_core::TextOverflow::Clip,
                     scale_factor: cx.scale_factor,
                 },
             );

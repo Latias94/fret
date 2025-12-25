@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, Px, TextStyle, TextWrap};
+use fret_core::{Color, Corners, Edges, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -163,6 +163,7 @@ fn text_element<H: UiHost>(
                 style: Some(style),
                 color: Some(color),
                 wrap: TextWrap::None,
+                overflow: TextOverflow::Ellipsis,
             }),
             Vec::new(),
         )
@@ -374,6 +375,7 @@ pub fn command_palette_list<H: UiHost>(
                                                     min_width: Some(Px(0.0)),
                                                     ..Default::default()
                                                 },
+                                                ..Default::default()
                                             };
 
                                             vec![cx.flex(

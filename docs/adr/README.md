@@ -21,6 +21,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 
 - **Declarative/composable authoring (GPUI-style)**: `docs/adr/0028-declarative-elements-and-element-state.md`, `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`, `docs/adr/0031-app-owned-models-and-leasing-updates.md`
 - **Declarative layout semantics (Flex + sizing)**: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`, `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`, `docs/adr/0042-virtualization-and-large-lists.md`
+- **Tailwind layout vocabulary (margin/position/grid/aspect-ratio)**: `docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md`
 - **Docking + multi-window tear-off**: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0017-multi-window-display-and-dpi.md`, `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
 - **Text input / IME**: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0020-focus-and-command-routing.md`
 - **Typography (weight/line-height/tracking)**: `docs/adr/0058-typography-v1-textstyle-weight-lineheight-tracking.md`
@@ -33,6 +34,8 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Viewport tools and overlays (example editor layer)**: `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
 - **Inspector / property editing (example editor layer)**: `docs/adr/0048-inspector-property-protocol-and-editor-registry.md`
 - **Theme tokens and theme config (P0 styling)**: `docs/adr/0032-style-tokens-and-theme-resolution.md`, `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
+- **Elevation and shadows (no-blur baseline)**: `docs/adr/0060-shadows-and-elevation.md`
+- **Focus rings (outline) and focus-visible**: `docs/adr/0061-focus-rings-and-focus-visible.md`
 - **Component sizing/density (Tailwind-like scales)**: `docs/adr/0056-component-size-and-density-system.md`
 - **Editor-scale performance**: `docs/adr/0042-virtualization-and-large-lists.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`, `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
 - **Model observation / reactive invalidation (GPUI-style)**: `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`, `docs/adr/0031-app-owned-models-and-leasing-updates.md`, `docs/adr/0005-retained-ui-tree.md`
@@ -122,8 +125,12 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0032-style-tokens-and-theme-resolution.md`
 - `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
 - `docs/adr/0056-component-size-and-density-system.md`
+- `docs/adr/0060-shadows-and-elevation.md`
+- `docs/adr/0061-focus-rings-and-focus-visible.md`
 - `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
 - `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
+- `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
+- `docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md`
 - `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`
 - `docs/adr/0042-virtualization-and-large-lists.md`
 - `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
@@ -170,6 +177,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0027-framework-scope-and-responsibilities.md`
 - `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
 - `docs/adr/0058-typography-v1-textstyle-weight-lineheight-tracking.md`
+- `docs/adr/0059-text-overflow-ellipsis-and-truncation.md`
 - `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
 - `docs/adr/0037-workspace-boundaries-and-components-repository.md`
 - `docs/adr/0040-color-management-and-compositing-contracts.md`

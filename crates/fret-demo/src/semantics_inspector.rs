@@ -1,9 +1,8 @@
 use fret_core::{AppWindowId, FrameId, KeyCode, Px, SemanticsSnapshot, TextWrap};
-use fret_ui_app::VirtualListRowHeight;
-use fret_ui_app::{
-    App, EventCx, GenericWidget, LayoutCx, PaintCx, VirtualList, VirtualListDataSource,
-    VirtualListRow,
+use fret_ui_app::legacy_widgets::{
+    VirtualList, VirtualListDataSource, VirtualListRow, VirtualListRowHeight,
 };
+use fret_ui_app::{App, EventCx, GenericWidget, LayoutCx, PaintCx};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,

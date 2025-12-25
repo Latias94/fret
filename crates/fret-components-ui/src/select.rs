@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{
     Color, Corners, CursorIcon, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
-    SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
+    SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::{Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
@@ -360,6 +360,7 @@ impl<H: UiHost> Widget<H> for Select {
         let constraints = TextConstraints {
             max_width: Some(Px((cx.available.width.0 - pad_x.0 * 2.0).max(0.0))),
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
         let metrics = cx.text.measure(label.as_ref(), style, constraints);
@@ -395,7 +396,7 @@ impl<H: UiHost> Widget<H> for Select {
             corner_radii: Corners::all(radius),
         });
 
-        if focused {
+        if focused && fret_ui::focus_visible::is_focus_visible(cx.app, cx.window) {
             // Draw an inset focus ring so it doesn't get clipped by parent clip/scissor.
             let inset = Px(1.0);
             let w = (cx.bounds.size.width.0 - inset.0 * 2.0).max(0.0);
@@ -442,6 +443,7 @@ impl<H: UiHost> Widget<H> for Select {
             let constraints = TextConstraints {
                 max_width: Some(Px((cx.bounds.size.width.0 - pad_x.0 * 2.0).max(0.0))),
                 wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
                 scale_factor: cx.scale_factor,
             };
             let (blob, metrics) = cx.text.prepare(label.as_ref(), style, constraints);

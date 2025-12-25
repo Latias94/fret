@@ -24,6 +24,13 @@ definitions live in `docs/mvp/reference-plan.md`.
 - MVP 52: declarative sizing semantics + `Flex` container (ADR 0057)
   - “fit-content by default, fill only when requested” is the stable mental model
   - flex item controls (grow/shrink/basis, min/max) are expressible in declarative props
+  - `Row`/`Column` are thin authoring wrappers over `Flex` (no separate hand-written layout)
+- MVP 55 (partial): recipes → declarative props
+  - `StyleRefinement` maps into declarative `LayoutStyle` (min-height, margin, position/inset, aspect-ratio)
+  - first “real composition” validation: declarative `TextInput` + component-layer `TextField` with absolute icon/clear button
+- MVP 58: Tailwind layout primitives (runtime vocabulary) (ADR 0062)
+  - `LayoutStyle` supports margin, position/inset, grid, and aspect-ratio
+  - enables common shadcn patterns (badge overlays, input icons, simple grids) without bespoke per-widget layout logic
 
 ## Next Queue (What We Should Build Next)
 
@@ -41,6 +48,9 @@ definitions live in `docs/mvp/reference-plan.md`.
   - converge on “framework owns virtualization, components own selection/keyboard/menu policies”
   - treat schema-based `VirtualListRow` as legacy during migration, then remove.
   - keep `fret-components-ui` free of schema-based retained list widgets (prefer declarative composition)
+  - in progress: schema-based retained `VirtualList` moved under `fret-ui::legacy_widgets`
+  - in progress: `fret-ui-app` no longer re-exports legacy `VirtualList*` at the crate root (must use `fret_ui_app::legacy_widgets::VirtualList`)
+  - in progress: remove component-level helpers that produce legacy `VirtualListStyle` (components should prefer declarative composition)
 
 ## ADR Notes
 

@@ -1,6 +1,6 @@
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, NodeId, Point, Px, Rect,
-    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
+    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::{CommandId, Effect};
 use fret_ui::{
@@ -91,6 +91,7 @@ impl PopoverService {
 #[derive(Debug, Clone)]
 pub struct PopoverStyle {
     pub background: Color,
+    pub shadow: Option<fret_ui::element::ShadowStyle>,
     pub border: Edges,
     pub border_color: Color,
     pub corner_radii: Corners,
@@ -114,6 +115,7 @@ impl Default for PopoverStyle {
                 b: 0.12,
                 a: 1.0,
             },
+            shadow: None,
             border: Edges::all(Px(1.0)),
             border_color: Color {
                 r: 0.0,
@@ -232,6 +234,7 @@ impl Popover {
         self.style.background = surface.background;
         self.style.border_color = surface.border_color;
         self.style.corner_radii = Corners::all(surface.radius);
+        self.style.shadow = Some(crate::declarative::style::shadow_md(theme, surface.radius));
 
         let rows = resolve_menu_list_row_chrome(theme, self.size);
         self.style.padding_x = rows.padding_x;
@@ -297,6 +300,7 @@ impl Popover {
         let text_constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
 
@@ -498,6 +502,9 @@ impl<H: UiHost> Widget<H> for Popover {
             return;
         }
 
+        if let Some(shadow) = self.style.shadow {
+            fret_ui::paint::paint_shadow(cx.scene, DrawOrder(0), self.panel_bounds, shadow);
+        }
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: self.panel_bounds,

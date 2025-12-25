@@ -1,6 +1,6 @@
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
-    Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
+    Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
@@ -541,6 +541,7 @@ impl<H: UiHost> Widget<H> for ToastOverlay {
                 let title_constraints = TextConstraints {
                     max_width: Some(max_text_w),
                     wrap: TextWrap::Word,
+                    overflow: TextOverflow::Clip,
                     scale_factor: cx.scale_factor,
                 };
                 let (title_blob, title_metrics) = cx.text.prepare(
@@ -558,6 +559,7 @@ impl<H: UiHost> Widget<H> for ToastOverlay {
                     let constraints = TextConstraints {
                         max_width: Some(max_text_w),
                         wrap: TextWrap::Word,
+                        overflow: TextOverflow::Clip,
                         scale_factor: cx.scale_factor,
                     };
                     let (blob, metrics) =
@@ -573,6 +575,7 @@ impl<H: UiHost> Widget<H> for ToastOverlay {
                     let constraints = TextConstraints {
                         max_width: None,
                         wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
                         scale_factor: cx.scale_factor,
                     };
                     let (blob, metrics) = cx.text.prepare(
@@ -714,6 +717,7 @@ impl<H: UiHost> Widget<H> for ToastOverlay {
             let constraints = TextConstraints {
                 max_width: None,
                 wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
                 scale_factor: cx.scale_factor,
             };
             let (close_blob, close_metrics) =

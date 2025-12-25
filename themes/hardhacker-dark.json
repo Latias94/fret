@@ -76,6 +76,24 @@
 
     "component.radius.sm": 6,
     "component.radius.md": 8,
-    "component.radius.lg": 10
+    "component.radius.lg": 10,
+
+    "component.ring.width": 2,
+    "component.ring.offset": 2,
+
+    "component.shadow.sm.offset_x": 0,
+    "component.shadow.sm.offset_y": 1,
+    "component.shadow.sm.spread": 0,
+    "component.shadow.sm.softness": 2,
+
+    "component.shadow.md.offset_x": 0,
+    "component.shadow.md.offset_y": 3,
+    "component.shadow.md.spread": 0,
+    "component.shadow.md.softness": 3,
+
+    "component.shadow.lg.offset_x": 0,
+    "component.shadow.lg.offset_y": 6,
+    "component.shadow.lg.spread": 1,
+    "component.shadow.lg.softness": 4
   }
 }

@@ -174,6 +174,7 @@ impl<H: UiHost> Widget<H> for InspectorEditHint {
             fret_core::TextConstraints {
                 max_width: Some(cx.bounds.size.width),
                 wrap: fret_core::TextWrap::None,
+                overflow: fret_core::TextOverflow::Clip,
                 scale_factor: cx.scale_factor,
             },
         );

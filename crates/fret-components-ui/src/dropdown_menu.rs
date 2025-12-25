@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{
     Color, Corners, CursorIcon, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
-    SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
+    SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Menu;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
@@ -198,6 +198,7 @@ impl DropdownMenuButton {
         let constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
 
@@ -316,6 +317,7 @@ impl<H: UiHost> Widget<H> for DropdownMenuButton {
         let constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
         let style = TextStyle {

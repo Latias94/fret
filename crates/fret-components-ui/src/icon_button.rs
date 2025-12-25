@@ -1,7 +1,7 @@
 use fret_components_icons::{IconGlyph, IconId, IconRegistry};
 use fret_core::{
     Color, Corners, CursorIcon, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
-    SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
+    SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::CommandId;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
@@ -331,6 +331,7 @@ impl<H: UiHost> Widget<H> for IconButton {
             let constraints = TextConstraints {
                 max_width: None,
                 wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
                 scale_factor: cx.scale_factor,
             };
             let (blob, metrics) = cx
@@ -365,7 +366,8 @@ impl<H: UiHost> Widget<H> for IconButton {
             color,
         });
 
-        if cx.focus == Some(cx.node) {
+        if cx.focus == Some(cx.node) && fret_ui::focus_visible::is_focus_visible(cx.app, cx.window)
+        {
             let focus = cx.theme().colors.focus_ring;
             let inset = Px(1.0);
             let w = (cx.bounds.size.width.0 - inset.0 * 2.0).max(0.0);

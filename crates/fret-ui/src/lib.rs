@@ -2,10 +2,12 @@ pub mod declarative;
 pub mod dock;
 pub mod element;
 pub mod elements;
+pub mod focus_visible;
 pub mod host;
 #[cfg(feature = "legacy-widgets")]
 pub mod legacy_widgets;
 pub mod menu_overlay;
+pub mod paint;
 pub mod primitives;
 pub mod resize_handle;
 #[cfg(test)]

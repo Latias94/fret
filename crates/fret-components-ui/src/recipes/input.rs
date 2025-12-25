@@ -1,5 +1,6 @@
 use fret_core::{Color, Corners, Edges, Px};
 use fret_ui::Theme;
+use fret_ui::element::{RingPlacement, RingStyle};
 
 use crate::style::{ColorFallback, MetricFallback};
 use crate::{Size, StyleRefinement};
@@ -153,13 +154,33 @@ pub fn resolve_input_chrome(
 }
 
 pub fn default_text_input_style(theme: &Theme) -> fret_ui::primitives::TextInputStyle {
+    let ring_width = theme
+        .metric_by_key("component.ring.width")
+        .unwrap_or(Px(2.0));
+    let ring_offset = theme
+        .metric_by_key("component.ring.offset")
+        .unwrap_or(Px(2.0));
+    let ring_color = theme
+        .color_by_key("ring")
+        .unwrap_or(theme.colors.focus_ring);
+    let ring_offset_color = theme
+        .color_by_key("ring-offset-background")
+        .unwrap_or(theme.colors.surface_background);
+
     fret_ui::primitives::TextInputStyle {
-        padding_x: Px(0.0),
-        padding_y: Px(0.0),
+        padding: Edges::all(Px(0.0)),
         background: theme.colors.panel_background,
         border: Edges::all(Px(1.0)),
         border_color: theme.colors.panel_border,
-        border_color_focused: theme.colors.focus_ring,
+        border_color_focused: theme.colors.panel_border,
+        focus_ring: Some(RingStyle {
+            placement: RingPlacement::Outset,
+            width: ring_width,
+            offset: ring_offset,
+            color: ring_color,
+            offset_color: Some(ring_offset_color),
+            corner_radii: Corners::all(theme.metrics.radius_sm),
+        }),
         corner_radii: Corners::all(theme.metrics.radius_sm),
         text_color: theme.colors.text_primary,
         selection_color: Color {

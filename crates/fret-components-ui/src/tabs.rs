@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{
     Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect,
-    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
+    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
@@ -225,6 +225,7 @@ impl Tabs {
         let text_constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
 
@@ -427,6 +428,7 @@ impl<H: UiHost> Widget<H> for Tabs {
                 let text_constraints = TextConstraints {
                     max_width: None,
                     wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
                     scale_factor: cx.scale_factor,
                 };
                 let (blob, metrics) =
@@ -485,7 +487,8 @@ impl<H: UiHost> Widget<H> for Tabs {
             });
         }
 
-        if cx.focus == Some(cx.node) {
+        if cx.focus == Some(cx.node) && fret_ui::focus_visible::is_focus_visible(cx.app, cx.window)
+        {
             let focus_ring = cx.theme().colors.focus_ring;
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(3),

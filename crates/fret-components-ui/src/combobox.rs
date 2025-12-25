@@ -271,8 +271,12 @@ impl Combobox {
         let snap = theme.snapshot();
         let mut chrome = fret_ui::primitives::TextInputStyle::from_theme(snap);
 
-        chrome.padding_x = resolved.padding_x;
-        chrome.padding_y = resolved.padding_y;
+        chrome.padding = fret_core::geometry::Edges {
+            top: resolved.padding_y,
+            right: resolved.padding_x,
+            bottom: resolved.padding_y,
+            left: resolved.padding_x,
+        };
         chrome.corner_radii = fret_core::geometry::Corners::all(resolved.radius);
         chrome.border = fret_core::geometry::Edges::all(resolved.border_width);
         chrome.background = resolved.background;

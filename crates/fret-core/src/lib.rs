@@ -38,8 +38,8 @@ pub use semantics::{
     SemanticsFlags, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot,
 };
 pub use text::{
-    CaretAffinity, FontWeight, HitTestResult, TextConstraints, TextMetrics, TextService, TextStyle,
-    TextWrap,
+    CaretAffinity, FontWeight, HitTestResult, TextConstraints, TextMetrics, TextOverflow,
+    TextService, TextStyle, TextWrap,
 };
 pub use viewport::{ViewportFit, ViewportMapped, ViewportMapping};
 pub use window::{WindowAnchor, WindowMetricsService};

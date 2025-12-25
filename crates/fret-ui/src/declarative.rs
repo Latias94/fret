@@ -1,26 +1,155 @@
 use crate::UiHost;
 use crate::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle,
-    Length, MainAlign, PressableProps, RowProps, SpacerProps, StackProps, TextProps,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
+    Overflow, PressableProps, SpacerProps, StackProps, TextProps,
 };
 use crate::elements::{ElementCx, GlobalElementId, NodeEntry};
+use crate::primitives::BoundTextInput;
 use crate::tree::UiTree;
 use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget};
 use fret_core::{
     AppWindowId, Color, CursorIcon, DrawOrder, Edges, Event, FontId, MouseButton, NodeId, Point,
-    Px, Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle,
+    Px, Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle,
 };
 use std::collections::HashMap;
 use taffy::{
     TaffyTree,
-    geometry::Size as TaffySize,
+    geometry::{Line as TaffyLine, Rect as TaffyRect, Size as TaffySize},
     style::{
         AlignItems as TaffyAlignItems, AlignSelf as TaffyAlignSelf,
         AvailableSpace as TaffyAvailableSpace, Dimension, Display, FlexDirection, FlexWrap,
-        JustifyContent, LengthPercentage, Style as TaffyStyle,
+        GridPlacement, JustifyContent, LengthPercentage, LengthPercentageAuto,
+        Position as TaffyPosition, Style as TaffyStyle,
     },
     tree::NodeId as TaffyNodeId,
 };
+
+fn scrollbar_track_rect(bounds: Rect, scrollbar_w: Px) -> Option<Rect> {
+    let w = Px(scrollbar_w.0.max(0.0).min(bounds.size.width.0.max(0.0)));
+    if w.0 <= 0.0 || bounds.size.height.0 <= 0.0 {
+        return None;
+    }
+    Some(Rect::new(
+        fret_core::Point::new(
+            Px(bounds.origin.x.0 + bounds.size.width.0 - w.0),
+            bounds.origin.y,
+        ),
+        Size::new(w, bounds.size.height),
+    ))
+}
+
+fn scrollbar_thumb_rect(track: Rect, viewport_h: Px, content_h: Px, offset_y: Px) -> Option<Rect> {
+    let viewport_h = Px(viewport_h.0.max(0.0));
+    let content_h = Px(content_h.0.max(0.0));
+    let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
+    if max_offset.0 <= 0.0 || track.size.height.0 <= 0.0 {
+        return None;
+    }
+
+    let track_h = track.size.height.0;
+    let min_thumb_h = 16.0f32.min(track_h);
+    let ratio = (viewport_h.0 / content_h.0).clamp(0.0, 1.0);
+    let thumb_h = (track_h * ratio).max(min_thumb_h).min(track_h);
+    let max_thumb_y = (track_h - thumb_h).max(0.0);
+
+    let t = (offset_y.0.max(0.0).min(max_offset.0)) / max_offset.0;
+    let y = track.origin.y.0 + max_thumb_y * t;
+
+    Some(Rect::new(
+        fret_core::Point::new(track.origin.x, Px(y)),
+        Size::new(track.size.width, Px(thumb_h)),
+    ))
+}
+
+fn paint_children_clipped_if<H: UiHost>(cx: &mut PaintCx<'_, H>, clip: bool) {
+    if clip {
+        cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
+    }
+
+    for &child in cx.children {
+        if let Some(bounds) = cx.child_bounds(child) {
+            cx.paint(child, bounds);
+        } else {
+            cx.paint(child, cx.bounds);
+        }
+    }
+
+    if clip {
+        cx.scene.push(SceneOp::PopClip);
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum PositionedLayoutStyle {
+    Static,
+    Relative(crate::element::InsetStyle),
+    Absolute(crate::element::InsetStyle),
+}
+
+fn positioned_layout_style(layout: LayoutStyle) -> PositionedLayoutStyle {
+    match layout.position {
+        crate::element::PositionStyle::Static => PositionedLayoutStyle::Static,
+        crate::element::PositionStyle::Relative => PositionedLayoutStyle::Relative(layout.inset),
+        crate::element::PositionStyle::Absolute => PositionedLayoutStyle::Absolute(layout.inset),
+    }
+}
+
+fn layout_positioned_child<H: UiHost>(
+    cx: &mut LayoutCx<'_, H>,
+    child: NodeId,
+    base: Rect,
+    style: PositionedLayoutStyle,
+) {
+    match style {
+        PositionedLayoutStyle::Static => {
+            let _ = cx.layout_in(child, base);
+        }
+        PositionedLayoutStyle::Relative(inset) => {
+            let dx = inset.left.unwrap_or(Px(0.0)).0 - inset.right.unwrap_or(Px(0.0)).0;
+            let dy = inset.top.unwrap_or(Px(0.0)).0 - inset.bottom.unwrap_or(Px(0.0)).0;
+            let origin = fret_core::Point::new(Px(base.origin.x.0 + dx), Px(base.origin.y.0 + dy));
+            let _ = cx.layout_in(child, Rect::new(origin, base.size));
+        }
+        PositionedLayoutStyle::Absolute(inset) => {
+            let measured = cx.layout_in(child, base);
+
+            let left = inset.left.unwrap_or(Px(0.0));
+            let right = inset.right.unwrap_or(Px(0.0));
+            let top = inset.top.unwrap_or(Px(0.0));
+            let bottom = inset.bottom.unwrap_or(Px(0.0));
+
+            let w = if inset.left.is_some() && inset.right.is_some() {
+                Px((base.size.width.0 - left.0 - right.0).max(0.0))
+            } else {
+                Px(measured.width.0.min(base.size.width.0.max(0.0)).max(0.0))
+            };
+            let h = if inset.top.is_some() && inset.bottom.is_some() {
+                Px((base.size.height.0 - top.0 - bottom.0).max(0.0))
+            } else {
+                Px(measured.height.0.min(base.size.height.0.max(0.0)).max(0.0))
+            };
+
+            let x = if inset.left.is_some() {
+                left
+            } else if inset.right.is_some() {
+                Px((base.size.width.0 - right.0 - w.0).max(0.0))
+            } else {
+                Px(0.0)
+            };
+            let y = if inset.top.is_some() {
+                top
+            } else if inset.bottom.is_some() {
+                Px((base.size.height.0 - bottom.0 - h.0).max(0.0))
+            } else {
+                Px(0.0)
+            };
+
+            let origin =
+                fret_core::Point::new(Px(base.origin.x.0 + x.0), Px(base.origin.y.0 + y.0));
+            let _ = cx.layout_in(child, Rect::new(origin, Size::new(w, h)));
+        }
+    }
+}
 
 #[derive(Default)]
 pub(crate) struct ElementFrame {
@@ -37,12 +166,14 @@ pub(crate) enum ElementInstance {
     Container(ContainerProps),
     Pressable(PressableProps),
     Stack(StackProps),
-    Column(ColumnProps),
-    Row(RowProps),
     Spacer(SpacerProps),
     Text(TextProps),
+    TextInput(crate::element::TextInputProps),
     VirtualList(crate::element::VirtualListProps),
     Flex(FlexProps),
+    Grid(crate::element::GridProps),
+    Image(crate::element::ImageProps),
+    Scroll(crate::element::ScrollProps),
 }
 
 #[derive(Debug, Clone)]
@@ -65,19 +196,27 @@ pub(crate) fn element_record_for_node<H: UiHost>(
     })
 }
 
+fn layout_style_for_node<H: UiHost>(app: &mut H, window: AppWindowId, node: NodeId) -> LayoutStyle {
+    element_record_for_node(app, window, node)
+        .map(|r| match r.instance {
+            ElementInstance::Container(p) => p.layout,
+            ElementInstance::Pressable(p) => p.layout,
+            ElementInstance::Stack(p) => p.layout,
+            ElementInstance::Spacer(p) => p.layout,
+            ElementInstance::Text(p) => p.layout,
+            ElementInstance::TextInput(p) => p.layout,
+            ElementInstance::VirtualList(p) => p.layout,
+            ElementInstance::Flex(p) => p.layout,
+            ElementInstance::Grid(p) => p.layout,
+            ElementInstance::Image(p) => p.layout,
+            ElementInstance::Scroll(p) => p.layout,
+        })
+        .unwrap_or_default()
+}
+
 fn clamp_to_constraints(mut size: Size, style: LayoutStyle, available: Size) -> Size {
-    if let Some(min_w) = style.size.min_width {
-        size.width = Px(size.width.0.max(min_w.0));
-    }
-    if let Some(min_h) = style.size.min_height {
-        size.height = Px(size.height.0.max(min_h.0));
-    }
-    if let Some(max_w) = style.size.max_width {
-        size.width = Px(size.width.0.min(max_w.0));
-    }
-    if let Some(max_h) = style.size.max_height {
-        size.height = Px(size.height.0.min(max_h.0));
-    }
+    let width_auto = matches!(style.size.width, Length::Auto);
+    let height_auto = matches!(style.size.height, Length::Auto);
 
     match style.size.width {
         Length::Px(px) => size.width = Px(px.0.max(0.0)),
@@ -90,8 +229,48 @@ fn clamp_to_constraints(mut size: Size, style: LayoutStyle, available: Size) -> 
         Length::Auto => {}
     }
 
+    if let Some(min_w) = style.size.min_width {
+        size.width = Px(size.width.0.max(min_w.0.max(0.0)));
+    }
+    if let Some(min_h) = style.size.min_height {
+        size.height = Px(size.height.0.max(min_h.0.max(0.0)));
+    }
+    if let Some(max_w) = style.size.max_width {
+        size.width = Px(size.width.0.min(max_w.0.max(0.0)));
+    }
+    if let Some(max_h) = style.size.max_height {
+        size.height = Px(size.height.0.min(max_h.0.max(0.0)));
+    }
+
     size.width = Px(size.width.0.max(0.0).min(available.width.0.max(0.0)));
     size.height = Px(size.height.0.max(0.0).min(available.height.0.max(0.0)));
+
+    if let Some(ratio) = style.aspect_ratio
+        && ratio.is_finite()
+        && ratio > 0.0
+    {
+        if height_auto && !width_auto {
+            size.height = Px((size.width.0 / ratio).max(0.0));
+        } else if width_auto && !height_auto {
+            size.width = Px((size.height.0 * ratio).max(0.0));
+        }
+
+        if let Some(min_w) = style.size.min_width {
+            size.width = Px(size.width.0.max(min_w.0.max(0.0)));
+        }
+        if let Some(min_h) = style.size.min_height {
+            size.height = Px(size.height.0.max(min_h.0.max(0.0)));
+        }
+        if let Some(max_w) = style.size.max_width {
+            size.width = Px(size.width.0.min(max_w.0.max(0.0)));
+        }
+        if let Some(max_h) = style.size.max_height {
+            size.height = Px(size.height.0.min(max_h.0.max(0.0)));
+        }
+
+        size.width = Px(size.width.0.max(0.0).min(available.width.0.max(0.0)));
+        size.height = Px(size.height.0.max(0.0).min(available.height.0.max(0.0)));
+    }
     size
 }
 
@@ -101,6 +280,63 @@ fn taffy_dimension(length: Length) -> Dimension {
         Length::Fill => Dimension::percent(1.0),
         Length::Px(px) => Dimension::length(px.0),
     }
+}
+
+fn taffy_position(position: crate::element::PositionStyle) -> TaffyPosition {
+    match position {
+        crate::element::PositionStyle::Static | crate::element::PositionStyle::Relative => {
+            TaffyPosition::Relative
+        }
+        crate::element::PositionStyle::Absolute => TaffyPosition::Absolute,
+    }
+}
+
+fn taffy_lpa(px: Option<Px>) -> LengthPercentageAuto {
+    match px {
+        Some(px) => LengthPercentageAuto::length(px.0),
+        None => LengthPercentageAuto::auto(),
+    }
+}
+
+fn taffy_rect_lpa_from_inset(
+    position: crate::element::PositionStyle,
+    inset: crate::element::InsetStyle,
+) -> TaffyRect<LengthPercentageAuto> {
+    if position == crate::element::PositionStyle::Static {
+        return TaffyRect {
+            left: LengthPercentageAuto::auto(),
+            right: LengthPercentageAuto::auto(),
+            top: LengthPercentageAuto::auto(),
+            bottom: LengthPercentageAuto::auto(),
+        };
+    }
+    TaffyRect {
+        left: taffy_lpa(inset.left),
+        right: taffy_lpa(inset.right),
+        top: taffy_lpa(inset.top),
+        bottom: taffy_lpa(inset.bottom),
+    }
+}
+
+fn taffy_rect_lpa_from_edges(edges: Edges) -> TaffyRect<LengthPercentageAuto> {
+    TaffyRect {
+        left: LengthPercentageAuto::length(edges.left.0),
+        right: LengthPercentageAuto::length(edges.right.0),
+        top: LengthPercentageAuto::length(edges.top.0),
+        bottom: LengthPercentageAuto::length(edges.bottom.0),
+    }
+}
+
+fn taffy_grid_line(line: crate::element::GridLine) -> TaffyLine<GridPlacement> {
+    let start = line
+        .start
+        .map(|s| taffy::style_helpers::line::<GridPlacement>(s))
+        .unwrap_or(GridPlacement::Auto);
+    let end = line
+        .span
+        .map(GridPlacement::Span)
+        .unwrap_or(GridPlacement::Auto);
+    TaffyLine { start, end }
 }
 
 fn taffy_align_items(align: CrossAlign) -> TaffyAlignItems {
@@ -150,15 +386,21 @@ struct TextCache {
     last_text: Option<std::sync::Arc<str>>,
     last_style: Option<TextStyle>,
     last_wrap: Option<fret_core::TextWrap>,
+    last_overflow: Option<TextOverflow>,
     last_width: Option<Px>,
     last_theme_revision: Option<u64>,
 }
 
-#[derive(Debug, Clone)]
 struct ElementHostWidget {
     element: GlobalElementId,
     text_cache: TextCache,
     hit_testable: bool,
+    hit_test_children: bool,
+    is_focusable: bool,
+    is_text_input: bool,
+    clips_hit_test: bool,
+    scrollbar_hit_rect: Option<Rect>,
+    text_input: Option<BoundTextInput>,
 }
 
 impl ElementHostWidget {
@@ -173,8 +415,32 @@ impl ElementHostWidget {
 }
 
 impl<H: UiHost> Widget<H> for ElementHostWidget {
+    fn clips_hit_test(&self, _bounds: Rect) -> bool {
+        self.clips_hit_test
+    }
+
     fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
         self.hit_testable
+    }
+
+    fn hit_test_children(&self, _bounds: Rect, position: Point) -> bool {
+        if !self.hit_test_children {
+            return false;
+        }
+        if let Some(rect) = self.scrollbar_hit_rect
+            && rect.contains(position)
+        {
+            return false;
+        }
+        true
+    }
+
+    fn is_focusable(&self) -> bool {
+        self.is_focusable
+    }
+
+    fn is_text_input(&self) -> bool {
+        self.is_text_input
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
@@ -185,44 +451,280 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             return;
         };
 
-        let Event::Pointer(pe) = event else {
-            return;
-        };
-
         match instance {
-            ElementInstance::VirtualList(props) => match pe {
-                fret_core::PointerEvent::Wheel { delta, .. } => {
-                    crate::elements::with_element_state(
-                        &mut *cx.app,
-                        window,
-                        self.element,
-                        crate::element::VirtualListState::default,
-                        |state| {
-                            let viewport_h = Px(state.viewport_h.0.max(0.0));
-                            let row_h = Px(props.row_height.0.max(0.0));
-                            let content_h = Px(row_h.0 * props.len as f32);
-                            let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
-
-                            let next = Px((state.offset_y.0 - delta.y.0).max(0.0));
-                            state.offset_y = Px(next.0.min(max_offset.0));
-                        },
-                    );
-                    cx.invalidate_self(Invalidation::Layout);
-                    cx.invalidate_self(Invalidation::Paint);
-                    cx.request_redraw();
-                    cx.stop_propagation();
+            ElementInstance::TextInput(props) => {
+                if self.text_input.is_none() {
+                    self.text_input = Some(BoundTextInput::new(props.model));
                 }
-                fret_core::PointerEvent::Down { button, .. } => {
-                    if *button == MouseButton::Left {
+                let input = self.text_input.as_mut().expect("text input");
+                if input.model_id() != props.model.id() {
+                    input.set_model(props.model);
+                }
+                input.set_chrome_style(props.chrome);
+                input.set_text_style(props.text_style);
+                input.set_submit_command(props.submit_command);
+                input.set_cancel_command(props.cancel_command);
+                input.event(cx, event);
+            }
+            ElementInstance::VirtualList(props) => {
+                let Event::Pointer(pe) = event else {
+                    return;
+                };
+                match pe {
+                    fret_core::PointerEvent::Wheel { delta, .. } => {
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::element::VirtualListState::default,
+                            |state| {
+                                let viewport_h = Px(state.viewport_h.0.max(0.0));
+                                let row_h = Px(props.row_height.0.max(0.0));
+                                let content_h = Px(row_h.0 * props.len as f32);
+                                let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
+
+                                let next = Px((state.offset_y.0 - delta.y.0).max(0.0));
+                                state.offset_y = Px(next.0.min(max_offset.0));
+                            },
+                        );
+                        cx.invalidate_self(Invalidation::Layout);
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                    }
+                    fret_core::PointerEvent::Down { button, .. } => {
+                        if *button == MouseButton::Left {
+                            cx.request_focus(cx.node);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            ElementInstance::Scroll(props) => {
+                let Event::Pointer(pe) = event else {
+                    return;
+                };
+                match pe {
+                    fret_core::PointerEvent::Wheel { delta, .. } => {
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::element::ScrollState::default,
+                            |state| {
+                                let viewport_h = Px(state.viewport_h.0.max(0.0));
+                                let content_h = Px(state.content_h.0.max(0.0));
+                                let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
+
+                                let next = Px((state.offset_y.0 - delta.y.0).max(0.0));
+                                state.offset_y = Px(next.0.min(max_offset.0));
+                            },
+                        );
+                        cx.invalidate_self(Invalidation::Layout);
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                    }
+                    fret_core::PointerEvent::Move { position, .. } => {
+                        let mut needs_layout = false;
+                        let mut needs_paint = false;
+                        let mut should_stop = false;
+
+                        let scrollbar_w = props.show_scrollbar.then(|| {
+                            let theme = cx.theme();
+                            theme
+                                .metric_by_key("metric.scrollbar.width")
+                                .unwrap_or(theme.metrics.scrollbar_width)
+                        });
+                        let bounds = cx.bounds;
+                        let position = *position;
+
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::element::ScrollState::default,
+                            |state| {
+                                let viewport_h = Px(state.viewport_h.0.max(0.0));
+                                let content_h = Px(state.content_h.0.max(0.0));
+                                let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
+
+                                let track =
+                                    scrollbar_w.and_then(|w| scrollbar_track_rect(bounds, w));
+                                let hovered = track.is_some_and(|t| t.contains(position));
+
+                                if state.hovered_scrollbar != hovered && !state.dragging_thumb {
+                                    state.hovered_scrollbar = hovered;
+                                    needs_paint = true;
+                                }
+
+                                if state.dragging_thumb && max_offset.0 > 0.0 {
+                                    if let Some(track) = track
+                                        && let Some(thumb) = scrollbar_thumb_rect(
+                                            track,
+                                            viewport_h,
+                                            content_h,
+                                            state.drag_start_offset_y,
+                                        )
+                                    {
+                                        let max_thumb_y =
+                                            (track.size.height.0 - thumb.size.height.0).max(0.0);
+                                        if max_thumb_y > 0.0 {
+                                            let delta_y =
+                                                position.y.0 - state.drag_start_pointer_y.0;
+                                            let scale = max_offset.0 / max_thumb_y;
+                                            let next = Px((state.drag_start_offset_y.0
+                                                + delta_y * scale)
+                                                .max(0.0));
+                                            let next = Px(next.0.min(max_offset.0));
+                                            if state.offset_y != next {
+                                                state.offset_y = next;
+                                                needs_layout = true;
+                                                needs_paint = true;
+                                            }
+                                            state.hovered_scrollbar = true;
+                                            should_stop = true;
+                                        }
+                                    }
+                                } else if hovered {
+                                    should_stop = true;
+                                }
+                            },
+                        );
+
+                        if needs_layout {
+                            cx.invalidate_self(Invalidation::Layout);
+                        }
+                        if needs_paint {
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                        }
+                        if should_stop {
+                            cx.stop_propagation();
+                        }
+                    }
+                    fret_core::PointerEvent::Down {
+                        position, button, ..
+                    } => {
+                        if *button != MouseButton::Left {
+                            return;
+                        }
                         cx.request_focus(cx.node);
+
+                        if !props.show_scrollbar {
+                            return;
+                        }
+
+                        let mut did_handle = false;
+                        let mut did_start_drag = false;
+
+                        let scrollbar_w = {
+                            let theme = cx.theme();
+                            theme
+                                .metric_by_key("metric.scrollbar.width")
+                                .unwrap_or(theme.metrics.scrollbar_width)
+                        };
+                        let bounds = cx.bounds;
+                        let position = *position;
+
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::element::ScrollState::default,
+                            |state| {
+                                let viewport_h = Px(state.viewport_h.0.max(0.0));
+                                let content_h = Px(state.content_h.0.max(0.0));
+                                let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
+                                if max_offset.0 <= 0.0 {
+                                    return;
+                                }
+
+                                let Some(track) = scrollbar_track_rect(bounds, scrollbar_w) else {
+                                    return;
+                                };
+                                if !track.contains(position) {
+                                    return;
+                                }
+
+                                let Some(thumb) = scrollbar_thumb_rect(
+                                    track,
+                                    viewport_h,
+                                    content_h,
+                                    state.offset_y,
+                                ) else {
+                                    return;
+                                };
+
+                                did_handle = true;
+                                state.hovered_scrollbar = true;
+
+                                if thumb.contains(position) {
+                                    state.dragging_thumb = true;
+                                    state.drag_start_pointer_y = position.y;
+                                    state.drag_start_offset_y = state.offset_y;
+                                    did_start_drag = true;
+                                } else {
+                                    // Page to the click position (center the thumb on the pointer).
+                                    let max_thumb_y =
+                                        (track.size.height.0 - thumb.size.height.0).max(0.0);
+                                    if max_thumb_y > 0.0 {
+                                        let click_y = (position.y.0 - track.origin.y.0)
+                                            .clamp(0.0, track.size.height.0);
+                                        let thumb_top = (click_y - thumb.size.height.0 * 0.5)
+                                            .clamp(0.0, max_thumb_y);
+                                        let t = thumb_top / max_thumb_y;
+                                        state.offset_y =
+                                            Px((max_offset.0 * t).clamp(0.0, max_offset.0));
+                                    }
+                                }
+                            },
+                        );
+
+                        if did_handle {
+                            if did_start_drag {
+                                cx.capture_pointer(cx.node);
+                            }
+                            cx.invalidate_self(Invalidation::Layout);
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                            cx.stop_propagation();
+                        }
+                    }
+                    fret_core::PointerEvent::Up { button, .. } => {
+                        if *button != MouseButton::Left {
+                            return;
+                        }
+
+                        let mut did_handle = false;
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::element::ScrollState::default,
+                            |state| {
+                                if state.dragging_thumb {
+                                    did_handle = true;
+                                    state.dragging_thumb = false;
+                                }
+                            },
+                        );
+                        if did_handle {
+                            cx.release_pointer_capture();
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                            cx.stop_propagation();
+                        }
                     }
                 }
-                _ => {}
-            },
+            }
             ElementInstance::Pressable(props) => {
                 if !props.enabled {
                     return;
                 }
+                let Event::Pointer(pe) = event else {
+                    return;
+                };
                 match pe {
                     fret_core::PointerEvent::Move { .. } => {
                         cx.set_cursor_icon(CursorIcon::Pointer);
@@ -277,6 +779,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         }
         self.text_cache.prepared_scale_factor_bits = None;
         self.text_cache.metrics = None;
+        if let Some(input) = self.text_input.as_mut() {
+            input.cleanup_resources(text);
+        }
     }
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
@@ -287,21 +792,38 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         let Some(instance) = self.instance(cx.app, window, cx.node) else {
             return;
         };
-        if matches!(instance, ElementInstance::Text(_)) {
-            cx.set_role(SemanticsRole::Text);
-        }
-        if matches!(instance, ElementInstance::Pressable(_)) {
-            cx.set_role(SemanticsRole::Button);
-        }
-        if matches!(instance, ElementInstance::VirtualList(_)) {
-            cx.set_role(SemanticsRole::List);
-        }
-        if matches!(instance, ElementInstance::Flex(_)) {
-            // Flex is a layout container; it does not imply semantics beyond its children.
-        }
-
-        if let ElementInstance::Pressable(props) = instance {
-            cx.set_disabled(!props.enabled);
+        match instance {
+            ElementInstance::Text(_) => {
+                cx.set_role(SemanticsRole::Text);
+            }
+            ElementInstance::TextInput(props) => {
+                if self.text_input.is_none() {
+                    self.text_input = Some(BoundTextInput::new(props.model));
+                }
+                let input = self.text_input.as_mut().expect("text input");
+                if input.model_id() != props.model.id() {
+                    input.set_model(props.model);
+                }
+                input.set_chrome_style(props.chrome);
+                input.set_text_style(props.text_style);
+                input.set_submit_command(props.submit_command);
+                input.set_cancel_command(props.cancel_command);
+                input.semantics(cx);
+            }
+            ElementInstance::Pressable(props) => {
+                cx.set_role(SemanticsRole::Button);
+                cx.set_disabled(!props.enabled);
+            }
+            ElementInstance::VirtualList(_) => {
+                cx.set_role(SemanticsRole::List);
+            }
+            ElementInstance::Flex(_) | ElementInstance::Grid(_) => {
+                // Flex/Grid are layout containers; they do not imply semantics beyond their children.
+            }
+            ElementInstance::Image(_) | ElementInstance::Scroll(_) => {
+                cx.set_role(SemanticsRole::Generic);
+            }
+            _ => {}
         }
     }
 
@@ -325,6 +847,31 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::Pressable(p) => p.enabled,
             _ => true,
         };
+        self.hit_test_children = match &instance {
+            ElementInstance::Pressable(p) => p.enabled,
+            _ => true,
+        };
+        self.is_text_input = matches!(&instance, ElementInstance::TextInput(_));
+        self.is_focusable = matches!(
+            &instance,
+            ElementInstance::TextInput(_) | ElementInstance::Pressable(_)
+        );
+        self.clips_hit_test = match &instance {
+            ElementInstance::Container(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::Pressable(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::Stack(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::Flex(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::Grid(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::TextInput(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::Scroll(p) => matches!(p.layout.overflow, Overflow::Clip),
+            // These primitives are always hit-test clipped by their own bounds (they are not
+            // intended as overflow-visible containers).
+            ElementInstance::VirtualList(_)
+            | ElementInstance::Image(_)
+            | ElementInstance::Text(_) => true,
+            ElementInstance::Spacer(_) => true,
+        };
+        self.scrollbar_hit_rect = None;
 
         match instance {
             ElementInstance::Container(props) => {
@@ -340,6 +887,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     Rect::new(cx.bounds.origin, Size::new(inner_avail.width, Px(1.0e9)));
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    if layout_style.position == crate::element::PositionStyle::Absolute {
+                        continue;
+                    }
                     let child_size = cx.layout_in(child, probe_bounds);
                     max_child.width = Px(max_child.width.0.max(child_size.width.0));
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
@@ -362,7 +913,13 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 let inner_bounds = Rect::new(inner_origin, inner_size);
 
                 for &child in cx.children {
-                    let _ = cx.layout_in(child, inner_bounds);
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    layout_positioned_child(
+                        cx,
+                        child,
+                        inner_bounds,
+                        positioned_layout_style(layout_style),
+                    );
                 }
 
                 desired
@@ -372,14 +929,20 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(1.0e9)));
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    if layout_style.position == crate::element::PositionStyle::Absolute {
+                        continue;
+                    }
                     let child_size = cx.layout_in(child, probe_bounds);
                     max_child.width = Px(max_child.width.0.max(child_size.width.0));
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
 
                 let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let base = Rect::new(cx.bounds.origin, desired);
                 for &child in cx.children {
-                    let _ = cx.layout_in(child, Rect::new(cx.bounds.origin, desired));
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
                 }
                 desired
             }
@@ -388,263 +951,26 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(1.0e9)));
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    if layout_style.position == crate::element::PositionStyle::Absolute {
+                        continue;
+                    }
                     let child_size = cx.layout_in(child, probe_bounds);
                     max_child.width = Px(max_child.width.0.max(child_size.width.0));
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
 
                 let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let base = Rect::new(cx.bounds.origin, desired);
                 for &child in cx.children {
-                    let _ = cx.layout_in(child, Rect::new(cx.bounds.origin, desired));
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
                 }
                 desired
             }
-            ElementInstance::Column(props) => {
-                let pad_x = props.padding_x.0.max(0.0);
-                let pad_y = props.padding_y.0.max(0.0);
-                let gap = props.gap.0.max(0.0);
-                let inner_origin = fret_core::Point::new(
-                    Px(cx.bounds.origin.x.0 + pad_x),
-                    Px(cx.bounds.origin.y.0 + pad_y),
-                );
-                let inner_width = Px((cx.available.width.0 - pad_x * 2.0).max(0.0));
-                let inner_height = Px((cx.available.height.0 - pad_y * 2.0).max(0.0));
-
-                let mut rows: Vec<(NodeId, Size, bool)> = Vec::new();
-                let mut fixed_h = 0.0f32;
-                let mut spacer_count = 0usize;
-
-                for &child in cx.children {
-                    let is_spacer = matches!(
-                        element_record_for_node(cx.app, window, child).map(|r| r.instance),
-                        Some(ElementInstance::Spacer(_))
-                    );
-                    if is_spacer {
-                        spacer_count = spacer_count.saturating_add(1);
-                        rows.push((child, Size::new(Px(0.0), Px(0.0)), true));
-                        continue;
-                    }
-
-                    let probe_bounds = Rect::new(
-                        fret_core::Point::new(inner_origin.x, inner_origin.y),
-                        Size::new(inner_width, Px(1.0e9)),
-                    );
-                    let child_size = cx.layout_in(child, probe_bounds);
-                    let w = Px(child_size.width.0.max(0.0).min(inner_width.0));
-                    let h = Px(child_size.height.0.max(0.0));
-                    fixed_h += h.0;
-                    rows.push((child, Size::new(w, h), false));
-                }
-
-                let gaps = if cx.children.len() > 1 {
-                    gap * (cx.children.len() as f32 - 1.0)
-                } else {
-                    0.0
-                };
-                let fixed_total = fixed_h + gaps;
-                let remaining = (inner_height.0 - fixed_total).max(0.0);
-
-                let mut extra_gap = 0.0f32;
-                let mut start_offset = 0.0f32;
-
-                if spacer_count == 0 {
-                    match props.justify {
-                        MainAlign::Start => {}
-                        MainAlign::Center => start_offset = remaining * 0.5,
-                        MainAlign::End => start_offset = remaining,
-                        MainAlign::SpaceBetween => {
-                            if cx.children.len() > 1 {
-                                extra_gap = remaining / (cx.children.len() as f32 - 1.0);
-                            }
-                        }
-                        MainAlign::SpaceAround => {
-                            if !cx.children.is_empty() {
-                                extra_gap = remaining / (cx.children.len() as f32);
-                                start_offset = extra_gap * 0.5;
-                            }
-                        }
-                        MainAlign::SpaceEvenly => {
-                            if !cx.children.is_empty() {
-                                extra_gap = remaining / (cx.children.len() as f32 + 1.0);
-                                start_offset = extra_gap;
-                            }
-                        }
-                    }
-                }
-
-                let gap_used = gap + extra_gap;
-                let spacer_h = if spacer_count > 0 {
-                    remaining / spacer_count as f32
-                } else {
-                    0.0
-                };
-
-                let mut y = Px(inner_origin.y.0 + start_offset);
-                for (i, (child, measured, is_spacer)) in rows.into_iter().enumerate() {
-                    if i > 0 {
-                        y = Px(y.0 + gap_used);
-                    }
-
-                    let child_h = if is_spacer {
-                        let min = element_record_for_node(cx.app, window, child)
-                            .and_then(|r| match r.instance {
-                                ElementInstance::Spacer(p) => Some(p.min),
-                                _ => None,
-                            })
-                            .unwrap_or(Px(0.0));
-                        Px(spacer_h.max(min.0).max(0.0))
-                    } else {
-                        measured.height
-                    };
-
-                    let child_w = match props.align {
-                        CrossAlign::Stretch => inner_width,
-                        _ => Px(measured.width.0.max(0.0).min(inner_width.0)),
-                    };
-
-                    let x = match props.align {
-                        CrossAlign::Start | CrossAlign::Stretch => inner_origin.x,
-                        CrossAlign::Center => {
-                            Px(inner_origin.x.0 + (inner_width.0 - child_w.0).max(0.0) * 0.5)
-                        }
-                        CrossAlign::End => {
-                            Px(inner_origin.x.0 + (inner_width.0 - child_w.0).max(0.0))
-                        }
-                    };
-
-                    let bounds =
-                        Rect::new(fret_core::Point::new(x, y), Size::new(child_w, child_h));
-                    let _ = cx.layout_in(child, bounds);
-                    y = Px(y.0 + child_h.0);
-                }
-
-                let total_h = Px((fixed_total + pad_y * 2.0).max(0.0));
-                Size::new(cx.available.width, Px(total_h.0.min(cx.available.height.0)))
+            ElementInstance::Spacer(props) => {
+                clamp_to_constraints(Size::new(Px(0.0), Px(0.0)), props.layout, cx.available)
             }
-            ElementInstance::Row(props) => {
-                let pad_x = props.padding_x.0.max(0.0);
-                let pad_y = props.padding_y.0.max(0.0);
-                let gap = props.gap.0.max(0.0);
-
-                let inner_origin = fret_core::Point::new(
-                    Px(cx.bounds.origin.x.0 + pad_x),
-                    Px(cx.bounds.origin.y.0 + pad_y),
-                );
-                let inner_width = Px((cx.available.width.0 - pad_x * 2.0).max(0.0));
-
-                let mut cols: Vec<(NodeId, Size, bool)> = Vec::new();
-                let mut fixed_w = 0.0f32;
-                let mut max_h = 0.0f32;
-                let mut spacer_count = 0usize;
-
-                for &child in cx.children {
-                    let is_spacer = matches!(
-                        element_record_for_node(cx.app, window, child).map(|r| r.instance),
-                        Some(ElementInstance::Spacer(_))
-                    );
-                    if is_spacer {
-                        spacer_count = spacer_count.saturating_add(1);
-                        cols.push((child, Size::new(Px(0.0), Px(0.0)), true));
-                        continue;
-                    }
-
-                    let probe_bounds = Rect::new(
-                        fret_core::Point::new(inner_origin.x, inner_origin.y),
-                        Size::new(inner_width, Px(1.0e9)),
-                    );
-                    let child_size = cx.layout_in(child, probe_bounds);
-                    let w = Px(child_size.width.0.max(0.0).min(inner_width.0));
-                    let h = Px(child_size.height.0.max(0.0));
-                    fixed_w += w.0;
-                    max_h = max_h.max(h.0);
-                    cols.push((child, Size::new(w, h), false));
-                }
-
-                let gaps = if cx.children.len() > 1 {
-                    gap * (cx.children.len() as f32 - 1.0)
-                } else {
-                    0.0
-                };
-                let fixed_total = fixed_w + gaps;
-                let remaining = (inner_width.0 - fixed_total).max(0.0);
-
-                let mut extra_gap = 0.0f32;
-                let mut start_offset = 0.0f32;
-
-                if spacer_count == 0 {
-                    match props.justify {
-                        MainAlign::Start => {}
-                        MainAlign::Center => start_offset = remaining * 0.5,
-                        MainAlign::End => start_offset = remaining,
-                        MainAlign::SpaceBetween => {
-                            if cx.children.len() > 1 {
-                                extra_gap = remaining / (cx.children.len() as f32 - 1.0);
-                            }
-                        }
-                        MainAlign::SpaceAround => {
-                            if !cx.children.is_empty() {
-                                extra_gap = remaining / (cx.children.len() as f32);
-                                start_offset = extra_gap * 0.5;
-                            }
-                        }
-                        MainAlign::SpaceEvenly => {
-                            if !cx.children.is_empty() {
-                                extra_gap = remaining / (cx.children.len() as f32 + 1.0);
-                                start_offset = extra_gap;
-                            }
-                        }
-                    }
-                }
-
-                let gap_used = gap + extra_gap;
-                let spacer_w = if spacer_count > 0 {
-                    remaining / spacer_count as f32
-                } else {
-                    0.0
-                };
-
-                let mut x = Px(inner_origin.x.0 + start_offset);
-                for (i, (child, measured, is_spacer)) in cols.into_iter().enumerate() {
-                    if i > 0 {
-                        x = Px(x.0 + gap_used);
-                    }
-
-                    let child_w = if is_spacer {
-                        let min = element_record_for_node(cx.app, window, child)
-                            .and_then(|r| match r.instance {
-                                ElementInstance::Spacer(p) => Some(p.min),
-                                _ => None,
-                            })
-                            .unwrap_or(Px(0.0));
-                        Px(spacer_w.max(min.0).max(0.0))
-                    } else {
-                        measured.width
-                    };
-
-                    let (child_h, dy) = match props.align {
-                        CrossAlign::Stretch => (Px(max_h), 0.0),
-                        CrossAlign::Start => (Px(measured.height.0.max(0.0)), 0.0),
-                        CrossAlign::Center => (
-                            Px(measured.height.0.max(0.0)),
-                            (max_h - measured.height.0).max(0.0) * 0.5,
-                        ),
-                        CrossAlign::End => (
-                            Px(measured.height.0.max(0.0)),
-                            (max_h - measured.height.0).max(0.0),
-                        ),
-                    };
-
-                    let y = Px(inner_origin.y.0 + dy);
-                    let bounds =
-                        Rect::new(fret_core::Point::new(x, y), Size::new(child_w, child_h));
-                    let _ = cx.layout_in(child, bounds);
-                    x = Px(x.0 + child_w.0);
-                }
-
-                let total_h = Px((max_h + pad_y * 2.0).max(0.0));
-                Size::new(cx.available.width, Px(total_h.0.min(cx.available.height.0)))
-            }
-            ElementInstance::Spacer(_) => cx.available,
             ElementInstance::Text(props) => {
                 let theme_revision = cx.theme().revision();
                 let font_size = cx
@@ -661,13 +987,18 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     ),
                     ..Default::default()
                 });
-                let measure_width = match props.layout.size.width {
-                    Length::Px(px) => Px(px.0.min(cx.available.width.0.max(0.0))),
+                let mut measure_width = match props.layout.size.width {
+                    Length::Px(px) => Px(px.0.max(0.0)),
                     Length::Fill | Length::Auto => cx.available.width,
                 };
+                if let Some(max_w) = props.layout.size.max_width {
+                    measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
+                }
+                measure_width = Px(measure_width.0.max(0.0).min(cx.available.width.0.max(0.0)));
                 let constraints = TextConstraints {
                     max_width: Some(measure_width),
                     wrap: props.wrap,
+                    overflow: props.overflow,
                     scale_factor: cx.scale_factor,
                 };
                 let metrics = cx.text.measure(&props.text, style, constraints);
@@ -676,13 +1007,47 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 self.text_cache.last_text = Some(props.text.clone());
                 self.text_cache.last_style = Some(style);
                 self.text_cache.last_wrap = Some(props.wrap);
+                self.text_cache.last_overflow = Some(props.overflow);
                 self.text_cache.last_width = Some(measure_width);
                 self.text_cache.last_theme_revision = Some(theme_revision);
 
                 clamp_to_constraints(metrics.size, props.layout, cx.available)
             }
+            ElementInstance::TextInput(props) => {
+                if self.text_input.is_none() {
+                    self.text_input = Some(BoundTextInput::new(props.model));
+                }
+                let input = self.text_input.as_mut().expect("text input");
+                if input.model_id() != props.model.id() {
+                    input.set_model(props.model);
+                }
+                input.set_chrome_style(props.chrome);
+                input.set_text_style(props.text_style);
+                input.set_submit_command(props.submit_command);
+                input.set_cancel_command(props.cancel_command);
+
+                let desired = input.layout(cx);
+                clamp_to_constraints(desired, props.layout, cx.available)
+            }
             ElementInstance::VirtualList(props) => {
-                let size = clamp_to_constraints(cx.available, props.layout, cx.available);
+                let row_h = Px(props.row_height.0.max(0.0));
+                let content_h = Px(row_h.0 * props.len as f32);
+
+                let desired_w = match props.layout.size.width {
+                    Length::Px(px) => Px(px.0.max(0.0)),
+                    Length::Fill | Length::Auto => cx.available.width,
+                };
+                let desired_h = match props.layout.size.height {
+                    Length::Px(px) => Px(px.0.max(0.0)),
+                    Length::Fill => cx.available.height,
+                    Length::Auto => Px(content_h.0.min(cx.available.height.0.max(0.0))),
+                };
+
+                let size = clamp_to_constraints(
+                    Size::new(desired_w, desired_h),
+                    props.layout,
+                    cx.available,
+                );
                 let mut needs_redraw = false;
                 crate::elements::with_element_state(
                     &mut *cx.app,
@@ -698,8 +1063,6 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             state.viewport_h = viewport_h;
                         }
 
-                        let row_h = Px(props.row_height.0.max(0.0));
-                        let content_h = Px(row_h.0 * props.len as f32);
                         let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
                         state.offset_y = Px(state.offset_y.0.max(0.0).min(max_offset.0));
 
@@ -813,37 +1176,41 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
                 let mut child_nodes: Vec<TaffyNodeId> = Vec::new();
                 for &child in cx.children {
-                    let layout_style = element_record_for_node(cx.app, window, child)
-                        .map(|r| match r.instance {
-                            ElementInstance::Container(p) => p.layout,
-                            ElementInstance::Pressable(p) => p.layout,
-                            ElementInstance::Stack(p) => p.layout,
-                            ElementInstance::Column(p) => p.layout,
-                            ElementInstance::Row(p) => p.layout,
-                            ElementInstance::Spacer(p) => p.layout,
-                            ElementInstance::Text(p) => p.layout,
-                            ElementInstance::VirtualList(p) => p.layout,
-                            ElementInstance::Flex(p) => p.layout,
-                        })
-                        .unwrap_or_default();
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    let spacer_min = element_record_for_node(cx.app, window, child).and_then(|r| {
+                        if let ElementInstance::Spacer(p) = r.instance {
+                            Some(p.min)
+                        } else {
+                            None
+                        }
+                    });
+
+                    let mut min_w = layout_style.size.min_width.map(|p| p.0);
+                    let mut min_h = layout_style.size.min_height.map(|p| p.0);
+                    if let Some(min) = spacer_min {
+                        let min = min.0.max(0.0);
+                        match props.direction {
+                            fret_core::Axis::Horizontal => {
+                                min_w = Some(min_w.unwrap_or(0.0).max(min));
+                            }
+                            fret_core::Axis::Vertical => {
+                                min_h = Some(min_h.unwrap_or(0.0).max(min));
+                            }
+                        }
+                    }
 
                     let child_style = TaffyStyle {
                         display: Display::Block,
+                        position: taffy_position(layout_style.position),
+                        inset: taffy_rect_lpa_from_inset(layout_style.position, layout_style.inset),
                         size: TaffySize {
                             width: taffy_dimension(layout_style.size.width),
                             height: taffy_dimension(layout_style.size.height),
                         },
+                        aspect_ratio: layout_style.aspect_ratio,
                         min_size: TaffySize {
-                            width: layout_style
-                                .size
-                                .min_width
-                                .map(|p| Dimension::length(p.0))
-                                .unwrap_or_else(Dimension::auto),
-                            height: layout_style
-                                .size
-                                .min_height
-                                .map(|p| Dimension::length(p.0))
-                                .unwrap_or_else(Dimension::auto),
+                            width: min_w.map(Dimension::length).unwrap_or_else(Dimension::auto),
+                            height: min_h.map(Dimension::length).unwrap_or_else(Dimension::auto),
                         },
                         max_size: TaffySize {
                             width: layout_style
@@ -857,6 +1224,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                 .map(|p| Dimension::length(p.0))
                                 .unwrap_or_else(Dimension::auto),
                         },
+                        margin: taffy_rect_lpa_from_edges(layout_style.margin),
                         flex_grow: layout_style.flex.grow.max(0.0),
                         flex_shrink: layout_style.flex.shrink.max(0.0),
                         flex_basis: taffy_dimension(layout_style.flex.basis),
@@ -944,6 +1312,241 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 );
                 clamp_to_constraints(desired, props.layout, cx.available)
             }
+            ElementInstance::Grid(props) => {
+                let pad_x = props.padding_x.0.max(0.0);
+                let pad_y = props.padding_y.0.max(0.0);
+                let inner_origin = fret_core::Point::new(
+                    Px(cx.bounds.origin.x.0 + pad_x),
+                    Px(cx.bounds.origin.y.0 + pad_y),
+                );
+
+                let outer_avail_w = match props.layout.size.width {
+                    Length::Px(px) => Px(px.0.min(cx.available.width.0.max(0.0))),
+                    Length::Fill | Length::Auto => cx.available.width,
+                };
+                let outer_avail_h = match props.layout.size.height {
+                    Length::Px(px) => Px(px.0.min(cx.available.height.0.max(0.0))),
+                    Length::Fill | Length::Auto => cx.available.height,
+                };
+
+                let inner_avail = Size::new(
+                    Px((outer_avail_w.0 - pad_x * 2.0).max(0.0)),
+                    Px((outer_avail_h.0 - pad_y * 2.0).max(0.0)),
+                );
+
+                let mut taffy: TaffyTree<Option<NodeId>> = TaffyTree::new();
+
+                let root_style = TaffyStyle {
+                    display: Display::Grid,
+                    justify_content: Some(taffy_justify(props.justify)),
+                    align_items: Some(taffy_align_items(props.align)),
+                    gap: TaffySize {
+                        width: LengthPercentage::length(props.gap.0.max(0.0)),
+                        height: LengthPercentage::length(props.gap.0.max(0.0)),
+                    },
+                    size: TaffySize {
+                        width: taffy_dimension(props.layout.size.width),
+                        height: taffy_dimension(props.layout.size.height),
+                    },
+                    max_size: TaffySize {
+                        width: Dimension::length(inner_avail.width.0.max(0.0)),
+                        height: Dimension::length(inner_avail.height.0.max(0.0)),
+                    },
+                    grid_template_columns: taffy::style_helpers::evenly_sized_tracks(props.cols),
+                    grid_template_rows: props
+                        .rows
+                        .map(taffy::style_helpers::evenly_sized_tracks)
+                        .unwrap_or_default(),
+                    ..Default::default()
+                };
+
+                let mut child_nodes: Vec<TaffyNodeId> = Vec::new();
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+
+                    let child_style = TaffyStyle {
+                        display: Display::Block,
+                        position: taffy_position(layout_style.position),
+                        inset: taffy_rect_lpa_from_inset(layout_style.position, layout_style.inset),
+                        size: TaffySize {
+                            width: taffy_dimension(layout_style.size.width),
+                            height: taffy_dimension(layout_style.size.height),
+                        },
+                        aspect_ratio: layout_style.aspect_ratio,
+                        min_size: TaffySize {
+                            width: layout_style
+                                .size
+                                .min_width
+                                .map(|p| Dimension::length(p.0))
+                                .unwrap_or_else(Dimension::auto),
+                            height: layout_style
+                                .size
+                                .min_height
+                                .map(|p| Dimension::length(p.0))
+                                .unwrap_or_else(Dimension::auto),
+                        },
+                        max_size: TaffySize {
+                            width: layout_style
+                                .size
+                                .max_width
+                                .map(|p| Dimension::length(p.0))
+                                .unwrap_or_else(Dimension::auto),
+                            height: layout_style
+                                .size
+                                .max_height
+                                .map(|p| Dimension::length(p.0))
+                                .unwrap_or_else(Dimension::auto),
+                        },
+                        margin: taffy_rect_lpa_from_edges(layout_style.margin),
+                        grid_column: taffy_grid_line(layout_style.grid.column),
+                        grid_row: taffy_grid_line(layout_style.grid.row),
+                        ..Default::default()
+                    };
+
+                    let id = taffy
+                        .new_leaf_with_context(child_style, Some(child))
+                        .expect("taffy leaf");
+                    child_nodes.push(id);
+                }
+
+                let root = if child_nodes.is_empty() {
+                    taffy.new_leaf(root_style).expect("taffy root")
+                } else {
+                    taffy
+                        .new_with_children(root_style, &child_nodes)
+                        .expect("taffy root")
+                };
+
+                let available = taffy::geometry::Size {
+                    width: TaffyAvailableSpace::Definite(inner_avail.width.0),
+                    height: TaffyAvailableSpace::Definite(inner_avail.height.0),
+                };
+
+                taffy
+                    .compute_layout_with_measure(
+                        root,
+                        available,
+                        |known, avail, _id, ctx, _style| {
+                            let Some(child) = ctx.and_then(|c| *c) else {
+                                return taffy::geometry::Size::default();
+                            };
+
+                            let max_w = match avail.width {
+                                TaffyAvailableSpace::Definite(w) => Px(w),
+                                _ => Px(1.0e9),
+                            };
+                            let max_h = match avail.height {
+                                TaffyAvailableSpace::Definite(h) => Px(h),
+                                _ => Px(1.0e9),
+                            };
+
+                            let known_w = known.width.map(Px);
+                            let known_h = known.height.map(Px);
+
+                            let w = known_w.unwrap_or(max_w);
+                            let h = known_h.unwrap_or(max_h);
+
+                            let probe = Rect::new(inner_origin, Size::new(w, h));
+                            let s = cx.layout_in(child, probe);
+                            taffy::geometry::Size {
+                                width: s.width.0,
+                                height: s.height.0,
+                            }
+                        },
+                    )
+                    .expect("taffy compute");
+
+                for child_node in child_nodes {
+                    let layout = taffy.layout(child_node).expect("taffy layout");
+                    let Some(child) = taffy.get_node_context(child_node).and_then(|c| *c) else {
+                        continue;
+                    };
+                    let rect = Rect::new(
+                        fret_core::Point::new(
+                            Px(inner_origin.x.0 + layout.location.x),
+                            Px(inner_origin.y.0 + layout.location.y),
+                        ),
+                        Size::new(Px(layout.size.width), Px(layout.size.height)),
+                    );
+                    let _ = cx.layout_in(child, rect);
+                }
+
+                let layout = taffy.layout(root).expect("taffy root layout");
+                let inner_size = Size::new(
+                    Px(layout.size.width.max(0.0)),
+                    Px(layout.size.height.max(0.0)),
+                );
+
+                let desired = Size::new(
+                    Px((inner_size.width.0 + pad_x * 2.0).max(0.0)),
+                    Px((inner_size.height.0 + pad_y * 2.0).max(0.0)),
+                );
+                clamp_to_constraints(desired, props.layout, cx.available)
+            }
+            ElementInstance::Image(props) => {
+                let desired = clamp_to_constraints(cx.available, props.layout, cx.available);
+                desired
+            }
+            ElementInstance::Scroll(props) => {
+                let probe_bounds =
+                    Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(1.0e9)));
+
+                let mut max_child = Size::new(Px(0.0), Px(0.0));
+                for &child in cx.children {
+                    let child_size = cx.layout_in(child, probe_bounds);
+                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
+                }
+
+                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let viewport_h = Px(desired.height.0.max(0.0));
+                let content_h = Px(max_child.height.0.max(0.0));
+                let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
+
+                let offset_y = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::ScrollState::default,
+                    |state| {
+                        state.viewport_h = viewport_h;
+                        state.content_h = content_h;
+                        state.offset_y = Px(state.offset_y.0.max(0.0).min(max_offset.0));
+                        state.offset_y
+                    },
+                );
+
+                if props.show_scrollbar && max_offset.0 > 0.0 {
+                    let theme = cx.theme();
+                    let scrollbar_w = theme
+                        .metric_by_key("metric.scrollbar.width")
+                        .unwrap_or(theme.metrics.scrollbar_width);
+                    let w = Px(scrollbar_w.0.max(0.0).min(desired.width.0.max(0.0)));
+                    if w.0 > 0.0 {
+                        let track = Rect::new(
+                            fret_core::Point::new(
+                                Px(cx.bounds.origin.x.0 + desired.width.0.max(0.0) - w.0),
+                                cx.bounds.origin.y,
+                            ),
+                            Size::new(w, desired.height),
+                        );
+                        self.scrollbar_hit_rect = Some(track);
+                    }
+                }
+
+                let shifted = Rect::new(
+                    fret_core::Point::new(
+                        cx.bounds.origin.x,
+                        Px(cx.bounds.origin.y.0 - offset_y.0),
+                    ),
+                    Size::new(desired.width, content_h),
+                );
+                for &child in cx.children {
+                    let _ = cx.layout_in(child, shifted);
+                }
+
+                desired
+            }
         }
     }
 
@@ -965,11 +1568,15 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
         match instance {
             ElementInstance::Container(props) => {
-                let should_draw = props.background.is_some()
+                let should_draw = props.shadow.is_some()
+                    || props.background.is_some()
                     || props.border_color.is_some()
                     || props.border != Edges::all(Px(0.0));
 
                 if should_draw {
+                    if let Some(shadow) = props.shadow {
+                        crate::paint::paint_shadow(cx.scene, DrawOrder(0), cx.bounds, shadow);
+                    }
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(0),
                         rect: cx.bounds,
@@ -980,26 +1587,27 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     });
                 }
 
-                for &child in cx.children {
-                    if let Some(bounds) = cx.child_bounds(child) {
-                        cx.paint(child, bounds);
-                    } else {
-                        cx.paint(child, cx.bounds);
-                    }
-                }
+                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip));
             }
-            ElementInstance::Pressable(_)
-            | ElementInstance::Stack(_)
-            | ElementInstance::Column(_)
-            | ElementInstance::Row(_)
-            | ElementInstance::Flex(_)
-            | ElementInstance::Spacer(_) => {
-                for &child in cx.children {
-                    if let Some(bounds) = cx.child_bounds(child) {
-                        cx.paint(child, bounds);
-                    } else {
-                        cx.paint(child, cx.bounds);
-                    }
+            ElementInstance::Stack(props) => {
+                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip));
+            }
+            ElementInstance::Flex(props) => {
+                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip));
+            }
+            ElementInstance::Grid(props) => {
+                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip));
+            }
+            ElementInstance::Spacer(_props) => {}
+            ElementInstance::Pressable(props) => {
+                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip));
+
+                if props.enabled
+                    && cx.focus == Some(cx.node)
+                    && crate::focus_visible::is_focus_visible(cx.app, cx.window)
+                    && let Some(ring) = props.focus_ring
+                {
+                    crate::paint::paint_focus_ring(cx.scene, DrawOrder(0), cx.bounds, ring);
                 }
             }
             ElementInstance::Text(props) => {
@@ -1025,6 +1633,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 let constraints = TextConstraints {
                     max_width: Some(cx.bounds.size.width),
                     wrap: props.wrap,
+                    overflow: props.overflow,
                     scale_factor: cx.scale_factor,
                 };
 
@@ -1034,6 +1643,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     || self.text_cache.last_text.as_ref() != Some(&props.text)
                     || self.text_cache.last_style.as_ref() != Some(&style)
                     || self.text_cache.last_wrap != Some(props.wrap)
+                    || self.text_cache.last_overflow != Some(props.overflow)
                     || self.text_cache.last_width != Some(cx.bounds.size.width)
                     || self.text_cache.last_theme_revision != Some(theme_revision);
 
@@ -1048,6 +1658,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     self.text_cache.last_text = Some(props.text.clone());
                     self.text_cache.last_style = Some(style);
                     self.text_cache.last_wrap = Some(props.wrap);
+                    self.text_cache.last_overflow = Some(props.overflow);
                     self.text_cache.last_width = Some(cx.bounds.size.width);
                     self.text_cache.last_theme_revision = Some(theme_revision);
                 }
@@ -1069,6 +1680,20 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     text: blob,
                     color,
                 });
+            }
+            ElementInstance::TextInput(props) => {
+                if self.text_input.is_none() {
+                    self.text_input = Some(BoundTextInput::new(props.model));
+                }
+                let input = self.text_input.as_mut().expect("text input");
+                if input.model_id() != props.model.id() {
+                    input.set_model(props.model);
+                }
+                input.set_chrome_style(props.chrome);
+                input.set_text_style(props.text_style);
+                input.set_submit_command(props.submit_command);
+                input.set_cancel_command(props.cancel_command);
+                input.paint(cx);
             }
             ElementInstance::VirtualList(props) => {
                 cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
@@ -1098,6 +1723,106 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 }
 
                 cx.scene.push(SceneOp::PopClip);
+            }
+            ElementInstance::Image(props) => {
+                let opacity = props.opacity.clamp(0.0, 1.0);
+                if let Some(uv) = props.uv {
+                    cx.scene.push(SceneOp::ImageRegion {
+                        order: DrawOrder(0),
+                        rect: cx.bounds,
+                        image: props.image,
+                        uv,
+                        opacity,
+                    });
+                } else {
+                    cx.scene.push(SceneOp::Image {
+                        order: DrawOrder(0),
+                        rect: cx.bounds,
+                        image: props.image,
+                        opacity,
+                    });
+                }
+            }
+            ElementInstance::Scroll(props) => {
+                let clip = matches!(props.layout.overflow, Overflow::Clip);
+                if clip {
+                    cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
+                }
+
+                for &child in cx.children {
+                    let bounds = cx.child_bounds(child).unwrap_or(cx.bounds);
+                    cx.paint(child, bounds);
+                }
+
+                if clip {
+                    cx.scene.push(SceneOp::PopClip);
+                }
+
+                if props.show_scrollbar {
+                    let (offset_y, viewport_h, content_h, hovered, dragging) =
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::element::ScrollState::default,
+                            |state| {
+                                (
+                                    state.offset_y,
+                                    state.viewport_h,
+                                    state.content_h,
+                                    state.hovered_scrollbar,
+                                    state.dragging_thumb,
+                                )
+                            },
+                        );
+                    let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
+                    if max_offset.0 > 0.0 {
+                        let theme = cx.theme();
+                        let scrollbar_w = theme
+                            .metric_by_key("metric.scrollbar.width")
+                            .unwrap_or(theme.metrics.scrollbar_width);
+                        if let Some(track) = scrollbar_track_rect(cx.bounds, scrollbar_w)
+                            && let Some(thumb) =
+                                scrollbar_thumb_rect(track, viewport_h, content_h, offset_y)
+                        {
+                            let thumb_color = if hovered || dragging {
+                                theme
+                                    .color_by_key("scrollbar.thumb.hover.background")
+                                    .unwrap_or(
+                                        theme
+                                            .color_by_key("scrollbar.thumb.background")
+                                            .unwrap_or(theme.colors.scrollbar_thumb_hover),
+                                    )
+                            } else {
+                                theme
+                                    .color_by_key("scrollbar.thumb.background")
+                                    .unwrap_or(theme.colors.scrollbar_thumb)
+                            };
+                            let mut bg = thumb_color;
+                            if !(hovered || dragging) {
+                                bg.a *= 0.65;
+                            }
+
+                            let inset = 1.0f32.min(thumb.size.width.0 * 0.25);
+                            let rect = Rect::new(
+                                fret_core::Point::new(Px(thumb.origin.x.0 + inset), thumb.origin.y),
+                                Size::new(
+                                    Px((thumb.size.width.0 - inset * 2.0).max(0.0)),
+                                    thumb.size.height,
+                                ),
+                            );
+
+                            cx.scene.push(SceneOp::Quad {
+                                order: DrawOrder(20_000),
+                                rect,
+                                background: bg,
+                                border: Edges::all(Px(0.0)),
+                                border_color: Color::TRANSPARENT,
+                                corner_radii: fret_core::Corners::all(Px(999.0)),
+                            });
+                        }
+                    }
+                }
             }
         }
     }
@@ -1135,6 +1860,12 @@ pub fn render_root<H: UiHost>(
                     element: root_id,
                     text_cache: TextCache::default(),
                     hit_testable: true,
+                    hit_test_children: true,
+                    is_focusable: false,
+                    is_text_input: false,
+                    clips_hit_test: true,
+                    scrollbar_hit_rect: None,
+                    text_input: None,
                 });
                 window_state.set_node_entry(
                     root_id,
@@ -1224,6 +1955,12 @@ fn mount_element<H: UiHost>(
                 element: id,
                 text_cache: TextCache::default(),
                 hit_testable: true,
+                hit_test_children: true,
+                is_focusable: false,
+                is_text_input: false,
+                clips_hit_test: true,
+                scrollbar_hit_rect: None,
+                text_input: None,
             });
             window_state.set_node_entry(
                 id,
@@ -1249,12 +1986,34 @@ fn mount_element<H: UiHost>(
         ElementKind::Container(p) => ElementInstance::Container(p),
         ElementKind::Pressable(p) => ElementInstance::Pressable(p),
         ElementKind::Stack(p) => ElementInstance::Stack(p),
-        ElementKind::Column(p) => ElementInstance::Column(p),
-        ElementKind::Row(p) => ElementInstance::Row(p),
+        ElementKind::Column(p) => ElementInstance::Flex(FlexProps {
+            layout: p.layout,
+            direction: fret_core::Axis::Vertical,
+            gap: p.gap,
+            padding_x: p.padding_x,
+            padding_y: p.padding_y,
+            justify: p.justify,
+            align: p.align,
+            wrap: false,
+        }),
+        ElementKind::Row(p) => ElementInstance::Flex(FlexProps {
+            layout: p.layout,
+            direction: fret_core::Axis::Horizontal,
+            gap: p.gap,
+            padding_x: p.padding_x,
+            padding_y: p.padding_y,
+            justify: p.justify,
+            align: p.align,
+            wrap: false,
+        }),
         ElementKind::Spacer(p) => ElementInstance::Spacer(p),
         ElementKind::Text(p) => ElementInstance::Text(p),
+        ElementKind::TextInput(p) => ElementInstance::TextInput(p),
         ElementKind::VirtualList(p) => ElementInstance::VirtualList(p),
         ElementKind::Flex(p) => ElementInstance::Flex(p),
+        ElementKind::Grid(p) => ElementInstance::Grid(p),
+        ElementKind::Image(p) => ElementInstance::Image(p),
+        ElementKind::Scroll(p) => ElementInstance::Scroll(p),
     };
 
     app.with_global_mut(ElementFrame::default, |frame, _app| {
@@ -1803,15 +2562,15 @@ mod tests {
             bounds,
             "row-align",
             |cx| {
-                vec![cx.row(
-                    crate::element::RowProps {
-                        gap: Px(5.0),
-                        justify: MainAlign::Center,
-                        align: CrossAlign::End,
-                        ..Default::default()
-                    },
-                    |cx| vec![cx.text("a"), cx.text("b"), cx.text("c")],
-                )]
+                let mut props = crate::element::RowProps {
+                    gap: Px(5.0),
+                    justify: MainAlign::Center,
+                    align: CrossAlign::End,
+                    ..Default::default()
+                };
+                props.layout.size.width = crate::element::Length::Fill;
+                props.layout.size.height = crate::element::Length::Fill;
+                vec![cx.row(props, |cx| vec![cx.text("a"), cx.text("b"), cx.text("c")])]
             },
         );
         ui.set_root(root);
@@ -1831,10 +2590,634 @@ mod tests {
         assert!((b1.origin.x.0 - 45.0).abs() < 0.01, "x1={:?}", b1.origin.x);
         assert!((b2.origin.x.0 - 60.0).abs() < 0.01, "x2={:?}", b2.origin.x);
 
-        // align-end with row height 10 => y = 0 + (10-10)=0, so still 0.
-        assert!((b0.origin.y.0 - 0.0).abs() < 0.01, "y0={:?}", b0.origin.y);
-        assert!((b1.origin.y.0 - 0.0).abs() < 0.01, "y1={:?}", b1.origin.y);
-        assert!((b2.origin.y.0 - 0.0).abs() < 0.01, "y2={:?}", b2.origin.y);
+        // align-end with row height 20 => y = 0 + (20-10)=10.
+        assert!((b0.origin.y.0 - 10.0).abs() < 0.01, "y0={:?}", b0.origin.y);
+        assert!((b1.origin.y.0 - 10.0).abs() < 0.01, "y1={:?}", b1.origin.y);
+        assert!((b2.origin.y.0 - 10.0).abs() < 0.01, "y2={:?}", b2.origin.y);
+    }
+
+    #[test]
+    fn image_paints_image_op() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let img = fret_core::ImageId::default();
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp-image",
+            |cx| {
+                let mut p = crate::element::ImageProps::new(img);
+                p.layout.size.width = crate::element::Length::Px(Px(160.0));
+                p.layout.size.height = crate::element::Length::Px(Px(80.0));
+                vec![cx.image_props(p)]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+        assert!(
+            scene
+                .ops()
+                .iter()
+                .any(|op| matches!(op, SceneOp::Image { image, .. } if *image == img)),
+            "expected an Image op for the declarative image element"
+        );
+    }
+
+    #[test]
+    fn overflow_clip_pushes_clip_rect_for_children() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(60.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp-overflow-clip",
+            |cx| {
+                let mut props = crate::element::ContainerProps::default();
+                props.layout.overflow = crate::element::Overflow::Clip;
+                vec![cx.container(props, |cx| vec![cx.text("child")])]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+        let pushes = scene
+            .ops()
+            .iter()
+            .filter(|op| matches!(op, SceneOp::PushClipRect { .. }))
+            .count();
+        let pops = scene
+            .ops()
+            .iter()
+            .filter(|op| matches!(op, SceneOp::PopClip))
+            .count();
+
+        assert!(
+            pushes >= 1,
+            "expected container overflow clip to push a clip rect"
+        );
+        assert!(
+            pops >= 1,
+            "expected container overflow clip to pop a clip rect"
+        );
+    }
+
+    #[test]
+    fn overflow_visible_does_not_push_clip_rect() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(60.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp-overflow-visible",
+            |cx| vec![cx.container(Default::default(), |cx| vec![cx.text("child")])],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+        assert!(
+            !scene
+                .ops()
+                .iter()
+                .any(|op| matches!(op, SceneOp::PushClipRect { .. })),
+            "expected no clip ops by default"
+        );
+    }
+
+    #[test]
+    fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(40.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp-scroll-wheel",
+            |cx| {
+                let mut p = crate::element::ScrollProps::default();
+                p.layout.size.width = crate::element::Length::Fill;
+                p.layout.size.height = crate::element::Length::Px(Px(20.0));
+                vec![cx.scroll(p, |cx| {
+                    vec![cx.column(
+                        crate::element::ColumnProps {
+                            gap: Px(0.0),
+                            ..Default::default()
+                        },
+                        |cx| vec![cx.text("a"), cx.text("b"), cx.text("c")],
+                    )]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let scroll_node = ui.children(root)[0];
+        let column_node = ui.children(scroll_node)[0];
+        let before = ui.debug_node_bounds(column_node).expect("column bounds");
+
+        let wheel_pos = fret_core::Point::new(Px(5.0), Px(5.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+                position: wheel_pos,
+                delta: fret_core::Point::new(Px(0.0), Px(-10.0)),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        let after = ui
+            .debug_node_bounds(column_node)
+            .expect("column bounds after scroll");
+
+        assert!(
+            after.origin.y.0 < before.origin.y.0,
+            "expected content to move up after wheel scroll: before={:?} after={:?}",
+            before.origin.y,
+            after.origin.y
+        );
+    }
+
+    #[test]
+    fn scroll_thumb_drag_updates_offset() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(40.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp-scrollbar-drag",
+            |cx| {
+                let mut p = crate::element::ScrollProps::default();
+                p.layout.size.height = crate::element::Length::Px(Px(20.0));
+                vec![cx.scroll(p, |cx| {
+                    vec![cx.column(
+                        crate::element::ColumnProps {
+                            gap: Px(0.0),
+                            ..Default::default()
+                        },
+                        |cx| vec![cx.text("a"), cx.text("b"), cx.text("c")],
+                    )]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let scroll_node = ui.children(root)[0];
+        let column_node = ui.children(scroll_node)[0];
+        let before = ui.debug_node_bounds(column_node).expect("column bounds");
+
+        // Click/drag the scrollbar thumb down (thumb starts at the top at offset=0).
+        let scroll_bounds = ui.debug_node_bounds(scroll_node).expect("scroll bounds");
+        let down_pos = fret_core::Point::new(
+            Px(scroll_bounds.origin.x.0 + scroll_bounds.size.width.0 - 1.0),
+            Px(scroll_bounds.origin.y.0 + 2.0),
+        );
+        let move_pos = fret_core::Point::new(down_pos.x, Px(down_pos.y.0 + 8.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: down_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: move_pos,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: move_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        let after = ui
+            .debug_node_bounds(column_node)
+            .expect("column bounds after drag");
+
+        assert!(
+            after.origin.y.0 < before.origin.y.0,
+            "expected content to move up after thumb drag: before={:?} after={:?}",
+            before.origin.y,
+            after.origin.y
+        );
+    }
+
+    #[test]
+    fn fill_respects_max_width_constraint() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(500.0), Px(100.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp-scroll-max-width",
+            |cx| {
+                vec![cx.container(
+                    crate::element::ContainerProps {
+                        layout: crate::element::LayoutStyle {
+                            size: crate::element::SizeStyle {
+                                width: crate::element::Length::Fill,
+                                max_width: Some(Px(100.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    |_cx| vec![],
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let container_node = ui.children(root)[0];
+        let rect = ui
+            .debug_node_bounds(container_node)
+            .expect("container bounds");
+        assert_eq!(rect.size.width, Px(100.0));
+    }
+
+    #[test]
+    fn flex_child_margin_affects_layout() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(40.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp58-flex-margin",
+            |cx| {
+                vec![cx.flex(
+                    crate::element::FlexProps {
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(0.0),
+                        ..Default::default()
+                    },
+                    |cx| {
+                        let mut a = crate::element::ContainerProps::default();
+                        a.layout.size.width = crate::element::Length::Px(Px(10.0));
+                        a.layout.size.height = crate::element::Length::Px(Px(10.0));
+
+                        let mut b = crate::element::ContainerProps::default();
+                        b.layout.size.width = crate::element::Length::Px(Px(10.0));
+                        b.layout.size.height = crate::element::Length::Px(Px(10.0));
+                        b.layout.margin.left = Px(5.0);
+
+                        vec![cx.container(a, |_cx| vec![]), cx.container(b, |_cx| vec![])]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let flex_node = ui.children(root)[0];
+        let children = ui.children(flex_node);
+        assert_eq!(children.len(), 2);
+        let a_bounds = ui.debug_node_bounds(children[0]).expect("a bounds");
+        let b_bounds = ui.debug_node_bounds(children[1]).expect("b bounds");
+
+        assert_eq!(a_bounds.origin.x, Px(0.0));
+        assert_eq!(b_bounds.origin.x, Px(15.0));
+    }
+
+    #[test]
+    fn container_absolute_inset_positions_child() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(200.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp58-stack-absolute",
+            |cx| {
+                vec![
+                    cx.container(crate::element::ContainerProps::default(), |cx| {
+                        let mut base = crate::element::ContainerProps::default();
+                        base.layout.size.width = crate::element::Length::Px(Px(100.0));
+                        base.layout.size.height = crate::element::Length::Px(Px(80.0));
+
+                        let mut badge = crate::element::ContainerProps::default();
+                        badge.layout.size.width = crate::element::Length::Px(Px(10.0));
+                        badge.layout.size.height = crate::element::Length::Px(Px(10.0));
+                        badge.layout.position = crate::element::PositionStyle::Absolute;
+                        badge.layout.inset.top = Some(Px(0.0));
+                        badge.layout.inset.right = Some(Px(0.0));
+
+                        vec![
+                            cx.container(base, |_cx| vec![]),
+                            cx.container(badge, |_cx| vec![]),
+                        ]
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let container_node = ui.children(root)[0];
+        let container_bounds = ui
+            .debug_node_bounds(container_node)
+            .expect("container bounds");
+        assert_eq!(container_bounds.size.width, Px(100.0));
+        assert_eq!(container_bounds.size.height, Px(80.0));
+
+        let children = ui.children(container_node);
+        assert_eq!(children.len(), 2);
+        let badge_bounds = ui.debug_node_bounds(children[1]).expect("badge bounds");
+        assert_eq!(badge_bounds.origin.x, Px(90.0));
+        assert_eq!(badge_bounds.origin.y, Px(0.0));
+    }
+
+    #[test]
+    fn grid_places_children_in_columns() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(100.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp58-grid",
+            |cx| {
+                vec![cx.grid(
+                    crate::element::GridProps {
+                        layout: {
+                            let mut l = crate::element::LayoutStyle::default();
+                            l.size.width = crate::element::Length::Fill;
+                            l.size.height = crate::element::Length::Fill;
+                            l
+                        },
+                        cols: 2,
+                        ..Default::default()
+                    },
+                    |cx| {
+                        let mut a = crate::element::ContainerProps::default();
+                        a.layout.size.width = crate::element::Length::Fill;
+                        a.layout.size.height = crate::element::Length::Fill;
+
+                        let mut b = crate::element::ContainerProps::default();
+                        b.layout.size.width = crate::element::Length::Fill;
+                        b.layout.size.height = crate::element::Length::Fill;
+
+                        vec![cx.container(a, |_cx| vec![]), cx.container(b, |_cx| vec![])]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let grid_node = ui.children(root)[0];
+        let children = ui.children(grid_node);
+        assert_eq!(children.len(), 2);
+        let a_bounds = ui.debug_node_bounds(children[0]).expect("a bounds");
+        let b_bounds = ui.debug_node_bounds(children[1]).expect("b bounds");
+
+        assert_eq!(a_bounds.origin.x, Px(0.0));
+        assert_eq!(b_bounds.origin.x, Px(100.0));
+        assert_eq!(a_bounds.size.width, Px(100.0));
+        assert_eq!(b_bounds.size.width, Px(100.0));
+    }
+
+    #[test]
+    fn focus_ring_is_focus_visible_only() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(64.0), Px(32.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let ring = crate::element::RingStyle {
+            placement: crate::element::RingPlacement::Outset,
+            width: Px(2.0),
+            offset: Px(2.0),
+            color: Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            },
+            offset_color: None,
+            corner_radii: fret_core::Corners::all(Px(0.0)),
+        };
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp-focus-visible",
+            |cx| {
+                vec![cx.pressable(
+                    crate::element::PressableProps {
+                        layout: crate::element::LayoutStyle {
+                            size: crate::element::SizeStyle {
+                                width: crate::element::Length::Fill,
+                                height: crate::element::Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        focus_ring: Some(ring),
+                        ..Default::default()
+                    },
+                    |_cx, _st| vec![],
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        let pressable_node = ui.children(root)[0];
+
+        // Focus the pressable via pointer: should *not* show focus-visible ring.
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: fret_core::Point::new(Px(4.0), Px(4.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(pressable_node),
+            "expected pressable to be focused after pointer down"
+        );
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+        assert_eq!(
+            scene.ops().len(),
+            0,
+            "expected no ring ops for mouse-focused control"
+        );
+
+        // Enable focus-visible via keyboard navigation: ring should appear for focused control.
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Tab,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(pressable_node),
+            "expected focus to remain on pressable after keydown"
+        );
+        assert!(
+            crate::focus_visible::is_focus_visible(&mut app, Some(window)),
+            "expected focus-visible to be enabled after Tab keydown"
+        );
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+        assert!(
+            !scene.ops().is_empty(),
+            "expected ring ops for keyboard navigation focus-visible"
+        );
     }
 
     #[test]
@@ -2018,6 +3401,85 @@ mod tests {
             }
             _ => panic!("expected quad op"),
         }
+    }
+
+    #[test]
+    fn container_paints_shadow_before_background() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp60-shadow",
+            |cx| {
+                vec![cx.container(
+                    crate::element::ContainerProps {
+                        background: Some(Color {
+                            r: 1.0,
+                            g: 1.0,
+                            b: 1.0,
+                            a: 1.0,
+                        }),
+                        shadow: Some(crate::element::ShadowStyle {
+                            color: Color {
+                                r: 0.0,
+                                g: 0.0,
+                                b: 0.0,
+                                a: 0.5,
+                            },
+                            offset_x: Px(2.0),
+                            offset_y: Px(3.0),
+                            spread: Px(1.0),
+                            softness: 0,
+                            corner_radii: fret_core::Corners::all(Px(4.0)),
+                        }),
+                        corner_radii: fret_core::Corners::all(Px(4.0)),
+                        ..Default::default()
+                    },
+                    |cx| vec![cx.text("hi")],
+                )]
+            },
+        );
+        ui.set_root(root);
+
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        let container_node = ui.children(root)[0];
+        let container_bounds = ui
+            .debug_node_bounds(container_node)
+            .expect("container bounds");
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+        assert_eq!(scene.ops_len(), 3);
+
+        let shadow_bounds = match scene.ops()[0] {
+            SceneOp::Quad { rect, .. } => rect,
+            _ => panic!("expected shadow quad first"),
+        };
+        match scene.ops()[1] {
+            SceneOp::Quad {
+                rect, background, ..
+            } => {
+                assert_eq!(rect, container_bounds);
+                assert_eq!(background.a, 1.0);
+            }
+            _ => panic!("expected background quad second"),
+        }
+
+        assert!(shadow_bounds.origin.x.0 > container_bounds.origin.x.0);
+        assert!(shadow_bounds.origin.y.0 > container_bounds.origin.y.0);
+        assert!(shadow_bounds.size.width.0 > container_bounds.size.width.0);
+        assert!(shadow_bounds.size.height.0 > container_bounds.size.height.0);
     }
 
     #[test]

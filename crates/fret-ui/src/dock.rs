@@ -1,8 +1,8 @@
 use fret_core::{
     Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, Edges, NodeId, PanelKey,
     RenderTargetId, Scene, SceneOp, SemanticsRole, TextBlobId, TextConstraints, TextMetrics,
-    TextService, TextStyle, TextWrap, ViewportFit, ViewportInputEvent, ViewportInputKind,
-    ViewportMapping, WindowAnchor, WindowMetricsService,
+    TextOverflow, TextService, TextStyle, TextWrap, ViewportFit, ViewportInputEvent,
+    ViewportInputKind, ViewportMapping, WindowAnchor, WindowMetricsService,
     geometry::{Point, Px, Rect, Size},
 };
 use fret_runtime::{CommandId, DragKind, Effect, Menu, MenuItem, WhenExpr, WindowRequest};
@@ -637,6 +637,7 @@ impl DockSpace {
         let constraints = TextConstraints {
             max_width: Some(inner_max_w),
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor,
         };
 
@@ -646,6 +647,7 @@ impl DockSpace {
             TextConstraints {
                 max_width: None,
                 wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
                 scale_factor,
             },
         );
@@ -747,6 +749,7 @@ impl DockSpace {
         let constraints = TextConstraints {
             max_width: Some(max_width),
             wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
             scale_factor,
         };
         let (blob, metrics) = text.prepare(
@@ -786,6 +789,7 @@ impl DockSpace {
         let constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor,
         };
 
@@ -2696,31 +2700,6 @@ fn paint_viewport_marker(content: Rect, marker: ViewportMarker, scene: &mut Scen
     let t = Px(2.0);
     let len = Px(10.0);
     let color = marker.color;
-    let shadow = Color {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
-        a: 0.35,
-    };
-
-    let h_shadow = Rect::new(
-        Point::new(Px(x - len.0), Px(y - t.0 * 0.5 + 1.0)),
-        Size::new(Px(len.0 * 2.0), t),
-    );
-    let v_shadow = Rect::new(
-        Point::new(Px(x - t.0 * 0.5 + 1.0), Px(y - len.0)),
-        Size::new(t, Px(len.0 * 2.0)),
-    );
-    for rect in [h_shadow, v_shadow] {
-        scene.push(SceneOp::Quad {
-            order: fret_core::DrawOrder(10),
-            rect,
-            background: shadow,
-            border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
-            corner_radii: fret_core::Corners::all(Px(0.0)),
-        });
-    }
 
     let h = Rect::new(
         Point::new(Px(x - len.0), Px(y - t.0 * 0.5)),
@@ -2730,6 +2709,23 @@ fn paint_viewport_marker(content: Rect, marker: ViewportMarker, scene: &mut Scen
         Point::new(Px(x - t.0 * 0.5), Px(y - len.0)),
         Size::new(t, Px(len.0 * 2.0)),
     );
+
+    let shadow = crate::element::ShadowStyle {
+        color: Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.35,
+        },
+        offset_x: Px(1.0),
+        offset_y: Px(1.0),
+        spread: Px(0.0),
+        softness: 0,
+        corner_radii: fret_core::Corners::all(Px(0.0)),
+    };
+    crate::paint::paint_shadow(scene, fret_core::DrawOrder(10), h, shadow);
+    crate::paint::paint_shadow(scene, fret_core::DrawOrder(10), v, shadow);
+
     for rect in [h, v] {
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(11),

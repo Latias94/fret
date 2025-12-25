@@ -2,7 +2,7 @@ use fret_app::{App, CommandId, InputContext, KeymapService, Platform, format_seq
 use fret_core::PlatformCapabilities;
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp, Size,
-    TextConstraints, TextMetrics, TextStyle, TextWrap, ids::FontId,
+    TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap, ids::FontId,
 };
 use fret_ui_app::{EventCx, GenericWidget, Invalidation, LayoutCx, PaintCx, PanelThemeBackground};
 
@@ -229,6 +229,7 @@ impl CommandPalette {
         let constraints = TextConstraints {
             max_width: Some(max_width),
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
 
@@ -320,6 +321,7 @@ impl GenericWidget<App> for CommandPalette {
         let constraints = TextConstraints {
             max_width: Some(Px((cx.bounds.size.width.0 - 24.0).max(0.0))),
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
 

@@ -525,6 +525,7 @@ impl GenericWidget<App> for ProjectPanel {
             fret_core::TextConstraints {
                 max_width: Some(Px(rect.size.width.0 - 12.0)),
                 wrap: fret_core::TextWrap::None,
+                overflow: fret_core::TextOverflow::Clip,
                 scale_factor: cx.scale_factor,
             },
         );

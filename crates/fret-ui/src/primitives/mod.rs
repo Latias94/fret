@@ -8,7 +8,6 @@ mod split;
 mod stack;
 mod text;
 mod text_area;
-mod virtual_list;
 
 pub use clip::Clip;
 pub use column::Column;
@@ -21,7 +20,3 @@ pub use stack::Stack;
 pub use text::TextInputStyle;
 pub use text::{BoundTextInput, Text, TextInput};
 pub use text_area::{BoundTextArea, TextArea, TextAreaStyle};
-pub use virtual_list::{
-    VecStringDataSource, VirtualList, VirtualListDataSource, VirtualListRow, VirtualListRowHeight,
-    VirtualListStyle,
-};

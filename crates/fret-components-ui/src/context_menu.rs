@@ -1,6 +1,6 @@
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp,
-    SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
+    SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::{
     CommandId, CommandRegistry, InputContext, KeymapService, MenuItem, format_sequence,
@@ -19,6 +19,7 @@ use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
 #[derive(Debug, Clone)]
 pub struct ContextMenuStyle {
     pub background: Color,
+    pub shadow: Option<fret_ui::element::ShadowStyle>,
     pub border: Edges,
     pub border_color: Color,
     pub corner_radii: Corners,
@@ -42,6 +43,7 @@ impl Default for ContextMenuStyle {
                 b: 0.12,
                 a: 1.0,
             },
+            shadow: None,
             border: Edges::all(Px(1.0)),
             border_color: Color {
                 r: 0.0,
@@ -185,6 +187,7 @@ impl ContextMenu {
         self.style.background = surface.background;
         self.style.border_color = surface.border_color;
         self.style.corner_radii = Corners::all(surface.radius);
+        self.style.shadow = Some(crate::declarative::style::shadow_md(theme, surface.radius));
         self.style.row_hover = rows.row_hover;
         self.style.row_selected = rows.row_selected;
         self.style.text_color = rows.text_color;
@@ -261,6 +264,7 @@ impl ContextMenu {
         let constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
 
@@ -842,6 +846,9 @@ impl<H: UiHost> Widget<H> for ContextMenu {
         }
 
         for (panel_index, panel) in self.panels.iter().enumerate() {
+            if let Some(shadow) = self.style.shadow {
+                fret_ui::paint::paint_shadow(cx.scene, DrawOrder(0), panel.bounds, shadow);
+            }
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(0),
                 rect: panel.bounds,

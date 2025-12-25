@@ -372,7 +372,8 @@ impl<H: UiHost> Widget<H> for Slider {
             corner_radii: Corners::all(Px(thumb.size.width.0 * 0.5)),
         });
 
-        if cx.focus == Some(cx.node) {
+        if cx.focus == Some(cx.node) && fret_ui::focus_visible::is_focus_visible(cx.app, cx.window)
+        {
             let focus = self.resolved.focus_ring;
             let inset = Px(1.0);
             let w = (cx.bounds.size.width.0 - inset.0 * 2.0).max(0.0);

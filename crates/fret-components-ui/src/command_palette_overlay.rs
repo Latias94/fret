@@ -15,6 +15,7 @@ pub struct CommandPaletteStyle {
     pub top: Px,
     pub padding: Px,
     pub corner_radius: Px,
+    pub shadow: Option<fret_ui::element::ShadowStyle>,
     pub border: Edges,
     pub background: Color,
     pub border_color: Color,
@@ -29,6 +30,7 @@ impl Default for CommandPaletteStyle {
             top: Px(72.0),
             padding: Px(10.0),
             corner_radius: Px(10.0),
+            shadow: None,
             border: Edges::all(Px(1.0)),
             background: Color::TRANSPARENT,
             border_color: Color::TRANSPARENT,
@@ -78,6 +80,10 @@ impl CommandPaletteOverlay {
         self.style.corner_radius = theme.metrics.radius_lg;
         self.style.background = theme.colors.menu_background;
         self.style.border_color = theme.colors.menu_border;
+        self.style.shadow = Some(crate::declarative::style::shadow_lg(
+            theme,
+            self.style.corner_radius,
+        ));
     }
 
     fn compute_panel_bounds(&self, outer: Rect, available: Size) -> Rect {
@@ -176,6 +182,9 @@ impl<H: UiHost> Widget<H> for CommandPaletteOverlay {
             corner_radii: Corners::all(Px(0.0)),
         });
 
+        if let Some(shadow) = self.style.shadow {
+            fret_ui::paint::paint_shadow(cx.scene, DrawOrder(1), self.panel_bounds, shadow);
+        }
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(1),
             rect: self.panel_bounds,

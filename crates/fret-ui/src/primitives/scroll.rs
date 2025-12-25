@@ -70,7 +70,8 @@ impl Scroll {
 
     // NOTE: This widget scrolls by changing the child subtree bounds during layout so that
     // hit-testing remains correct. This is inherently O(N) for large subtrees.
-    // For large lists, prefer `VirtualList`, which virtualizes rows and keeps scrolling smooth.
+    // For large lists, prefer declarative virtualization (or the legacy `VirtualList`) to keep
+    // scrolling smooth.
     fn has_overflow(&self) -> bool {
         self.last_viewport_height.0 > 0.0
             && self.last_content_height.0 > self.last_viewport_height.0

@@ -25,10 +25,18 @@ pub enum TextWrap {
     Word,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum TextOverflow {
+    #[default]
+    Clip,
+    Ellipsis,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TextConstraints {
     pub max_width: Option<Px>,
     pub wrap: TextWrap,
+    pub overflow: TextOverflow,
     /// Window/device scale factor used for rasterization and caching.
     ///
     /// UI/layout coordinates remain in logical pixels. Implementations should rasterize at
@@ -42,6 +50,7 @@ impl Default for TextConstraints {
         Self {
             max_width: None,
             wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
             scale_factor: 1.0,
         }
     }

@@ -8,9 +8,9 @@ use std::{
 
 use crate::UiHost;
 use crate::element::{
-    AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, PressableProps,
-    PressableState, RowProps, SpacerProps, StackProps, TextProps, VirtualListProps,
-    VirtualListState,
+    AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, ImageProps,
+    LayoutStyle, PressableProps, PressableState, RowProps, ScrollProps, SpacerProps, StackProps,
+    TextInputProps, TextProps, VirtualListProps, VirtualListState,
 };
 use crate::widget::Invalidation;
 use fret_runtime::{Model, ModelId};
@@ -306,10 +306,19 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
 
     #[track_caller]
     pub fn stack(&mut self, f: impl FnOnce(&mut Self) -> Vec<AnyElement>) -> AnyElement {
+        self.stack_props(StackProps::default(), f)
+    }
+
+    #[track_caller]
+    pub fn stack_props(
+        &mut self,
+        props: StackProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::Stack(StackProps::default()), children)
+            AnyElement::new(id, ElementKind::Stack(props), children)
         })
     }
 
@@ -356,8 +365,73 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
     }
 
     #[track_caller]
+    pub fn text_props(&mut self, props: TextProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::Text(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn text_input(&mut self, props: TextInputProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::TextInput(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn image(&mut self, image: fret_core::ImageId) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::Image(ImageProps::new(image)), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn image_props(&mut self, props: ImageProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::Image(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn scroll(
+        &mut self,
+        props: ScrollProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Scroll(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn virtual_list(
         &mut self,
+        len: usize,
+        row_height: Px,
+        overscan: usize,
+        scroll_to_index: Option<usize>,
+        f: impl FnOnce(&mut Self, std::ops::Range<usize>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.virtual_list_with_layout(
+            LayoutStyle::default(),
+            len,
+            row_height,
+            overscan,
+            scroll_to_index,
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn virtual_list_with_layout(
+        &mut self,
+        layout: LayoutStyle,
         len: usize,
         row_height: Px,
         overscan: usize,
@@ -422,7 +496,7 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             AnyElement::new(
                 id,
                 ElementKind::VirtualList(VirtualListProps {
-                    layout: Default::default(),
+                    layout,
                     len,
                     row_height,
                     overscan,
@@ -445,6 +519,19 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             let id = cx.root_id();
             let children = f(cx);
             AnyElement::new(id, ElementKind::Flex(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn grid(
+        &mut self,
+        props: GridProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Grid(props), children)
         })
     }
 

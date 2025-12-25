@@ -1,4 +1,4 @@
-use crate::StyleRefinement;
+use crate::{Space, StyleRefinement};
 
 pub trait RefineStyle: Sized {
     fn refine_style(self, style: StyleRefinement) -> Self;
@@ -146,6 +146,81 @@ impl<T> Styled<T> {
         self.style = self.style.border_1();
         self
     }
+
+    pub fn aspect_ratio(mut self, ratio: f32) -> Self {
+        self.style = self.style.aspect_ratio(ratio);
+        self
+    }
+
+    pub fn relative(mut self) -> Self {
+        self.style = self.style.relative();
+        self
+    }
+
+    pub fn absolute(mut self) -> Self {
+        self.style = self.style.absolute();
+        self
+    }
+
+    pub fn inset(mut self, space: Space) -> Self {
+        self.style = self.style.inset(space);
+        self
+    }
+
+    pub fn top(mut self, space: Space) -> Self {
+        self.style = self.style.top(space);
+        self
+    }
+
+    pub fn right(mut self, space: Space) -> Self {
+        self.style = self.style.right(space);
+        self
+    }
+
+    pub fn bottom(mut self, space: Space) -> Self {
+        self.style = self.style.bottom(space);
+        self
+    }
+
+    pub fn left(mut self, space: Space) -> Self {
+        self.style = self.style.left(space);
+        self
+    }
+
+    pub fn m(mut self, space: Space) -> Self {
+        self.style = self.style.m(space);
+        self
+    }
+
+    pub fn mx(mut self, space: Space) -> Self {
+        self.style = self.style.mx(space);
+        self
+    }
+
+    pub fn my(mut self, space: Space) -> Self {
+        self.style = self.style.my(space);
+        self
+    }
+
+    pub fn mt(mut self, space: Space) -> Self {
+        self.style = self.style.mt(space);
+        self
+    }
+
+    pub fn mr(mut self, space: Space) -> Self {
+        self.style = self.style.mr(space);
+        self
+    }
+
+    pub fn mb(mut self, space: Space) -> Self {
+        self.style = self.style.mb(space);
+        self
+    }
+
+    pub fn ml(mut self, space: Space) -> Self {
+        self.style = self.style.ml(space);
+        self
+    }
 }
 
 impl<T: Stylable> Styled<T> {
@@ -186,6 +261,7 @@ impl_refine_style!(crate::toolbar::Toolbar);
 mod tests {
     use super::*;
     use crate::{MetricRef, Space};
+    use fret_ui::element::PositionStyle;
 
     #[derive(Debug, Default, Clone)]
     struct Dummy {
@@ -207,6 +283,8 @@ mod tests {
             .py_2()
             .border_1()
             .rounded_md()
+            .mt(Space::N2)
+            .absolute()
             .finish();
 
         match dummy.style.padding_x {
@@ -219,5 +297,7 @@ mod tests {
         }
         assert!(dummy.style.border_width.is_some());
         assert!(dummy.style.radius.is_some());
+        assert!(dummy.style.margin.is_some());
+        assert_eq!(dummy.style.position, Some(PositionStyle::Absolute));
     }
 }

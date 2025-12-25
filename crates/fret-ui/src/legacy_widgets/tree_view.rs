@@ -11,8 +11,8 @@ use std::{
     sync::Arc,
 };
 
+use super::virtual_list::{VirtualList, VirtualListDataSource, VirtualListRow};
 use crate::ContextMenuRequest;
-use crate::primitives::{VirtualList, VirtualListDataSource, VirtualListRow};
 
 #[derive(Debug, Clone)]
 pub struct TreeNode {

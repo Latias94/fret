@@ -1,6 +1,6 @@
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, NodeId, Point, Px, Rect,
-    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
+    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::CommandId;
 use fret_ui::{
@@ -105,6 +105,7 @@ pub struct DialogStyle {
     pub padding: Px,
     pub gap: Px,
     pub corner_radius: Px,
+    pub shadow: Option<fret_ui::element::ShadowStyle>,
     pub border: Edges,
     pub title_style: TextStyle,
     pub body_style: TextStyle,
@@ -125,6 +126,7 @@ impl Default for DialogStyle {
             padding: Px(14.0),
             gap: Px(10.0),
             corner_radius: Px(10.0),
+            shadow: None,
             border: Edges::all(Px(1.0)),
             title_style: TextStyle {
                 font: fret_core::FontId::default(),
@@ -228,6 +230,7 @@ impl DialogOverlay {
         self.style.button_style = crate::Size::Small.control_text_style(theme);
 
         self.style.corner_radius = surface.radius;
+        self.style.shadow = Some(crate::declarative::style::shadow_lg(theme, surface.radius));
         self.style.border = Edges::all(surface.border_width);
         self.style.padding = surface.padding_x;
         self.style.button_radius = surface.radius;
@@ -293,6 +296,7 @@ impl DialogOverlay {
             TextConstraints {
                 max_width: Some(inner_w),
                 wrap: TextWrap::Word,
+                overflow: TextOverflow::Clip,
                 scale_factor: cx.scale_factor,
             },
         );
@@ -302,6 +306,7 @@ impl DialogOverlay {
             TextConstraints {
                 max_width: Some(inner_w),
                 wrap: TextWrap::Word,
+                overflow: TextOverflow::Clip,
                 scale_factor: cx.scale_factor,
             },
         );
@@ -309,6 +314,7 @@ impl DialogOverlay {
         let button_constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
         let mut button_sizes: Vec<Size> = Vec::new();
@@ -539,6 +545,9 @@ impl<H: UiHost> Widget<H> for DialogOverlay {
             corner_radii: Corners::all(Px(0.0)),
         });
 
+        if let Some(shadow) = self.style.shadow {
+            fret_ui::paint::paint_shadow(cx.scene, DrawOrder(1), self.panel_bounds, shadow);
+        }
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(1),
             rect: self.panel_bounds,
@@ -559,6 +568,7 @@ impl<H: UiHost> Widget<H> for DialogOverlay {
                 - self.style.padding.0 * 2.0)
                 .max(0.0))),
             wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
         let title_metrics = cx.text.measure(
@@ -607,6 +617,7 @@ impl<H: UiHost> Widget<H> for DialogOverlay {
                 - self.style.padding.0 * 2.0)
                 .max(0.0))),
             wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
         let body_metrics = cx.text.measure(
@@ -652,6 +663,7 @@ impl<H: UiHost> Widget<H> for DialogOverlay {
         let button_constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
         if self.prepared_actions.len() != request.actions.len() {

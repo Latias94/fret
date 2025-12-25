@@ -8,7 +8,7 @@ use crate::world::DemoWorld;
 use fret_app::{App, Model};
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect,
-    SceneOp, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
+    SceneOp, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_editor::{
     InspectorEditKind, InspectorEditRequest, InspectorEditService, InspectorEditorKind,
@@ -1146,11 +1146,13 @@ impl InspectorPanel {
             let label_constraints = TextConstraints {
                 max_width: Some(Px(360.0)),
                 wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
                 scale_factor,
             };
             let value_constraints = TextConstraints {
                 max_width: Some(Px(640.0)),
                 wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
                 scale_factor,
             };
 
@@ -1280,11 +1282,13 @@ impl InspectorPanel {
         let label_constraints = TextConstraints {
             max_width: Some(Px(360.0)),
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor,
         };
         let value_constraints = TextConstraints {
             max_width: Some(Px(640.0)),
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor,
         };
 
@@ -1382,6 +1386,7 @@ impl InspectorPanel {
         let constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor,
         };
         let (blob, metrics) = text.prepare("✓", self.text_style, constraints);

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{
     Color, Corners, CursorIcon, DrawOrder, Edges, Event, FontId, MouseButton, Point, Px, Rect,
-    SceneOp, Size, TextConstraints, TextMetrics, TextStyle, TextWrap,
+    SceneOp, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::CommandId;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
@@ -424,6 +424,7 @@ impl<H: UiHost> Widget<H> for Button {
         let text_constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
         let metrics = cx.text.measure(&self.label, text_style, text_constraints);
@@ -464,6 +465,7 @@ impl<H: UiHost> Widget<H> for Button {
             let text_constraints = TextConstraints {
                 max_width: None,
                 wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
                 scale_factor: cx.scale_factor,
             };
             let (blob, metrics) = cx.text.prepare(&self.label, text_style, text_constraints);
@@ -498,7 +500,8 @@ impl<H: UiHost> Widget<H> for Button {
             corner_radii: Corners::all(self.resolved.radius),
         });
 
-        if cx.focus == Some(cx.node) {
+        if cx.focus == Some(cx.node) && fret_ui::focus_visible::is_focus_visible(cx.app, cx.window)
+        {
             let focus_ring = cx.theme().colors.focus_ring;
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(1),

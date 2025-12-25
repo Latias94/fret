@@ -253,6 +253,15 @@ pub trait Widget<H: UiHost> {
         false
     }
     fn cleanup_resources(&mut self, _text: &mut dyn TextService) {}
+    /// Whether hit-testing should be clipped to `bounds`.
+    ///
+    /// When `false`, children can receive pointer input even if they are positioned outside the
+    /// parent's bounds (useful for `overflow: visible` + absolute-positioned badges/icons).
+    ///
+    /// Default: `true`.
+    fn clips_hit_test(&self, _bounds: Rect) -> bool {
+        true
+    }
     /// Hit-test predicate for pointer input targeting.
     ///
     /// Returning `false` makes the node "transparent" to hit-testing (events fall through to
@@ -260,6 +269,15 @@ pub trait Widget<H: UiHost> {
     ///
     /// Default: `true` (bounds-based hit testing).
     fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        true
+    }
+    /// Whether the node's children participate in hit-testing.
+    ///
+    /// When `false`, the entire subtree behaves like CSS `pointer-events: none` (useful for
+    /// disabled controls that must not intercept events).
+    ///
+    /// Default: `true`.
+    fn hit_test_children(&self, _bounds: Rect, _position: Point) -> bool {
         true
     }
     fn is_focusable(&self) -> bool {

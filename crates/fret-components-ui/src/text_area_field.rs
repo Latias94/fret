@@ -74,6 +74,22 @@ impl TextAreaField {
             background: resolved.background,
             border: Edges::all(resolved.border_width),
             border_color: resolved.border_color,
+            focus_ring: Some(fret_ui::element::RingStyle {
+                placement: fret_ui::element::RingPlacement::Outset,
+                width: theme
+                    .metric_by_key("component.ring.width")
+                    .unwrap_or(Px(2.0)),
+                offset: theme
+                    .metric_by_key("component.ring.offset")
+                    .unwrap_or(Px(2.0)),
+                color: resolved.border_color_focused,
+                offset_color: Some(
+                    theme
+                        .color_by_key("ring-offset-background")
+                        .unwrap_or(theme.colors.surface_background),
+                ),
+                corner_radii: Corners::all(resolved.radius),
+            }),
             corner_radii: Corners::all(resolved.radius),
             text_color: resolved.text_color,
             selection_color: resolved.selection_color,

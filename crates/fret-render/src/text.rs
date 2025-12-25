@@ -4,7 +4,7 @@ use cosmic_text::{
 };
 use fret_core::{
     CaretAffinity, HitTestResult, Point, Rect, Size, TextBlobId, TextConstraints, TextMetrics,
-    TextStyle, TextWrap, geometry::Px,
+    TextOverflow, TextStyle, TextWrap, geometry::Px,
 };
 use slotmap::SlotMap;
 use std::{collections::HashMap, hash::Hash, sync::Arc};
@@ -46,6 +46,7 @@ struct TextBlobKey {
     letter_spacing_bits: Option<u32>,
     max_width_bits: Option<u32>,
     wrap: TextWrap,
+    overflow: TextOverflow,
     scale_bits: u32,
 }
 
@@ -61,6 +62,7 @@ impl TextBlobKey {
             letter_spacing_bits: style.letter_spacing_em.map(|v| v.to_bits()),
             max_width_bits,
             wrap: constraints.wrap,
+            overflow: constraints.overflow,
             scale_bits: constraints.scale_factor.to_bits(),
         }
     }
@@ -647,6 +649,10 @@ fn layout_text(
         TextWrap::Word => cosmic_text::Wrap::Word,
     };
 
+    let want_ellipsis = matches!(constraints.overflow, TextOverflow::Ellipsis)
+        && matches!(constraints.wrap, TextWrap::None)
+        && max_width_px.is_some();
+
     let mut all_lines: Vec<cosmic_text::LayoutLine> = Vec::new();
     let mut line_tops_px: Vec<f32> = Vec::new();
     let mut local_starts: Vec<usize> = Vec::new();
@@ -674,6 +680,81 @@ fn layout_text(
             None,
         );
 
+        let mut ellipsis_local_end: Option<usize> = None;
+        if want_ellipsis
+            && layout_lines.len() == 1
+            && let Some(max_w) = max_width_px
+            && let Some(line) = layout_lines.get_mut(0)
+            && line.w > max_w
+        {
+            let ellipsis_text = "…";
+            let (ellipsis_w, ellipsis_glyphs) = {
+                let mut ellipsis_attrs_list = AttrsList::new(attrs);
+                ellipsis_attrs_list.add_span(0..ellipsis_text.len(), attrs);
+                let ellipsis_shape = ShapeLine::new(
+                    font_system,
+                    ellipsis_text,
+                    &ellipsis_attrs_list,
+                    Shaping::Advanced,
+                    4,
+                );
+                let mut ellipsis_lines: Vec<cosmic_text::LayoutLine> = Vec::new();
+                ellipsis_shape.layout_to_buffer(
+                    scratch,
+                    font_size_px,
+                    None,
+                    cosmic_text::Wrap::None,
+                    None,
+                    &mut ellipsis_lines,
+                    None,
+                );
+                let w = ellipsis_lines.first().map(|l| l.w).unwrap_or(0.0);
+                let glyphs = ellipsis_lines
+                    .first()
+                    .map(|l| l.glyphs.clone())
+                    .unwrap_or_default();
+                (w, glyphs)
+            };
+
+            let available_w = (max_w - ellipsis_w).max(0.0);
+            let mut cut_end = 0usize;
+            for g in &line.glyphs {
+                if g.glyph_id == 0 {
+                    continue;
+                }
+                let right = (g.x + g.w).max(0.0);
+                if right <= available_w {
+                    cut_end = cut_end.max(g.end.min(slice.len()));
+                }
+            }
+            while cut_end > 0
+                && slice
+                    .as_bytes()
+                    .get(cut_end.saturating_sub(1))
+                    .is_some_and(|b| b.is_ascii_whitespace())
+            {
+                cut_end = cut_end.saturating_sub(1);
+            }
+
+            let mut kept: Vec<cosmic_text::LayoutGlyph> = line
+                .glyphs
+                .iter()
+                .cloned()
+                .filter(|g| g.end <= cut_end)
+                .collect();
+
+            let ellipsis_start_x = (max_w - ellipsis_w).max(0.0);
+            for mut g in ellipsis_glyphs {
+                g.start = cut_end;
+                g.end = cut_end;
+                g.x = (g.x + ellipsis_start_x).max(0.0);
+                kept.push(g);
+            }
+            line.glyphs = kept;
+            line.w = max_w;
+            ellipsis_local_end = Some(cut_end);
+        }
+
         if layout_lines.is_empty() {
             layout_lines.push(cosmic_text::LayoutLine {
                 w: 0.0,
@@ -696,6 +777,11 @@ fn layout_text(
                 .unwrap_or(expected_start_local);
             if idx + 1 == layout_count {
                 local_end = slice.len();
+            }
+            if idx + 1 == layout_count
+                && let Some(end) = ellipsis_local_end
+            {
+                local_end = end.min(slice.len());
             }
 
             let local_start = expected_start_local;
@@ -896,14 +982,16 @@ fn hit_test_point_from_lines(lines: &[TextLine], point: Point) -> Option<HitTest
 
 #[cfg(test)]
 mod tests {
-    use super::TextBlobKey;
-    use fret_core::{FontWeight, Px, TextConstraints, TextStyle, TextWrap};
+    use super::{TextBlobKey, layout_text};
+    use cosmic_text::{Attrs, Family};
+    use fret_core::{FontWeight, Px, TextConstraints, TextOverflow, TextStyle, TextWrap};
 
     #[test]
     fn text_blob_key_includes_typography_fields() {
         let constraints = TextConstraints {
             max_width: Some(Px(120.0)),
             wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
             scale_factor: 2.0,
         };
 
@@ -924,6 +1012,37 @@ mod tests {
         style.letter_spacing_em = Some(0.05);
         let k_tracking = TextBlobKey::new("hello", style, constraints);
         assert_ne!(k0, k_tracking);
+    }
+
+    #[test]
+    fn ellipsis_overflow_truncates_single_line_layout() {
+        let mut font_system = cosmic_text::FontSystem::new();
+        let mut scratch = cosmic_text::ShapeBuffer::default();
+
+        let mut attrs = Attrs::new().family(Family::SansSerif);
+        attrs = attrs.weight(cosmic_text::Weight(FontWeight::NORMAL.0));
+
+        let text = "This is a long line that should truncate";
+        let constraints = TextConstraints {
+            max_width: Some(Px(80.0)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            scale_factor: 1.0,
+        };
+
+        let (layout, _) = layout_text(
+            &mut font_system,
+            &mut scratch,
+            text,
+            &attrs,
+            13.0,
+            constraints,
+            1.0,
+        );
+
+        assert_eq!(layout.lines.len(), 1);
+        assert!(layout.local_ends[0] < text.len());
+        assert!(layout.lines[0].w <= 80.0 + 0.01);
     }
 }
 

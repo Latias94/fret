@@ -1,5 +1,6 @@
 use fret_core::{Color, Px};
 use fret_ui::Theme;
+use fret_ui::element::PositionStyle;
 
 /// Tailwind-like spacing scale for component libraries.
 ///
@@ -223,11 +224,31 @@ pub struct StyleRefinement {
     pub padding_x: Option<MetricRef>,
     pub padding_y: Option<MetricRef>,
     pub min_height: Option<MetricRef>,
+    pub aspect_ratio: Option<f32>,
+    pub margin: Option<MarginRefinement>,
+    pub position: Option<PositionStyle>,
+    pub inset: Option<InsetRefinement>,
     pub radius: Option<MetricRef>,
     pub border_width: Option<MetricRef>,
     pub background: Option<ColorRef>,
     pub border_color: Option<ColorRef>,
     pub text_color: Option<ColorRef>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct MarginRefinement {
+    pub top: Option<MetricRef>,
+    pub right: Option<MetricRef>,
+    pub bottom: Option<MetricRef>,
+    pub left: Option<MetricRef>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct InsetRefinement {
+    pub top: Option<MetricRef>,
+    pub right: Option<MetricRef>,
+    pub bottom: Option<MetricRef>,
+    pub left: Option<MetricRef>,
 }
 
 impl StyleRefinement {
@@ -240,6 +261,18 @@ impl StyleRefinement {
         }
         if other.min_height.is_some() {
             self.min_height = other.min_height;
+        }
+        if other.aspect_ratio.is_some() {
+            self.aspect_ratio = other.aspect_ratio;
+        }
+        if other.margin.is_some() {
+            self.margin = other.margin;
+        }
+        if other.position.is_some() {
+            self.position = other.position;
+        }
+        if other.inset.is_some() {
+            self.inset = other.inset;
         }
         if other.radius.is_some() {
             self.radius = other.radius;
@@ -277,6 +310,117 @@ impl StyleRefinement {
 
     pub fn rounded(mut self, radius: Radius) -> Self {
         self.radius = Some(MetricRef::radius(radius));
+        self
+    }
+
+    pub fn aspect_ratio(mut self, ratio: f32) -> Self {
+        self.aspect_ratio = Some(ratio);
+        self
+    }
+
+    pub fn relative(mut self) -> Self {
+        self.position = Some(PositionStyle::Relative);
+        self
+    }
+
+    pub fn absolute(mut self) -> Self {
+        self.position = Some(PositionStyle::Absolute);
+        self
+    }
+
+    pub fn inset(mut self, space: Space) -> Self {
+        let m = MetricRef::space(space);
+        self.inset = Some(InsetRefinement {
+            top: Some(m.clone()),
+            right: Some(m.clone()),
+            bottom: Some(m.clone()),
+            left: Some(m),
+        });
+        self
+    }
+
+    pub fn top(mut self, space: Space) -> Self {
+        let mut inset = self.inset.unwrap_or_default();
+        inset.top = Some(MetricRef::space(space));
+        self.inset = Some(inset);
+        self
+    }
+
+    pub fn right(mut self, space: Space) -> Self {
+        let mut inset = self.inset.unwrap_or_default();
+        inset.right = Some(MetricRef::space(space));
+        self.inset = Some(inset);
+        self
+    }
+
+    pub fn bottom(mut self, space: Space) -> Self {
+        let mut inset = self.inset.unwrap_or_default();
+        inset.bottom = Some(MetricRef::space(space));
+        self.inset = Some(inset);
+        self
+    }
+
+    pub fn left(mut self, space: Space) -> Self {
+        let mut inset = self.inset.unwrap_or_default();
+        inset.left = Some(MetricRef::space(space));
+        self.inset = Some(inset);
+        self
+    }
+
+    pub fn m(mut self, space: Space) -> Self {
+        let m = MetricRef::space(space);
+        self.margin = Some(MarginRefinement {
+            top: Some(m.clone()),
+            right: Some(m.clone()),
+            bottom: Some(m.clone()),
+            left: Some(m),
+        });
+        self
+    }
+
+    pub fn mx(mut self, space: Space) -> Self {
+        let mut margin = self.margin.unwrap_or_default();
+        let m = MetricRef::space(space);
+        margin.left = Some(m.clone());
+        margin.right = Some(m);
+        self.margin = Some(margin);
+        self
+    }
+
+    pub fn my(mut self, space: Space) -> Self {
+        let mut margin = self.margin.unwrap_or_default();
+        let m = MetricRef::space(space);
+        margin.top = Some(m.clone());
+        margin.bottom = Some(m);
+        self.margin = Some(margin);
+        self
+    }
+
+    pub fn mt(mut self, space: Space) -> Self {
+        let mut margin = self.margin.unwrap_or_default();
+        margin.top = Some(MetricRef::space(space));
+        self.margin = Some(margin);
+        self
+    }
+
+    pub fn mr(mut self, space: Space) -> Self {
+        let mut margin = self.margin.unwrap_or_default();
+        margin.right = Some(MetricRef::space(space));
+        self.margin = Some(margin);
+        self
+    }
+
+    pub fn mb(mut self, space: Space) -> Self {
+        let mut margin = self.margin.unwrap_or_default();
+        margin.bottom = Some(MetricRef::space(space));
+        self.margin = Some(margin);
+        self
+    }
+
+    pub fn ml(mut self, space: Space) -> Self {
+        let mut margin = self.margin.unwrap_or_default();
+        margin.left = Some(MetricRef::space(space));
+        self.margin = Some(margin);
         self
     }
 
