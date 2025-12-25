@@ -35,7 +35,7 @@ Scope: this is a pragmatic “what’s missing / what’s broken / what’s next
 - Menu request store: `ContextMenuService` + `ContextMenuRequest` (surface moved to component kit)
 - `TreeView` (legacy, gated), `TextArea`, `ResizableSplit`, `Dock` (docking + multi-window)
 
-### Component kit (`crates/fret-components-ui`)
+### Component kit (`crates/fret-components-shadcn` on top of `crates/fret-components-ui`)
 
 - Buttons: `Button`, `IconButton`, `Toolbar`
 - Inputs: `TextField`, `Checkbox`, `Switch`, `Select`, `Slider`
@@ -123,7 +123,7 @@ optional integration with `@tanstack/react-virtual` / `react-window`. For Fret, 
 
 - `Command` (command UI): searchable list + groups + shortcuts + keyboard navigation
 - `Popover` + `HoverCard` equivalents: anchored overlays and hover previews
-- `Toast`/`Sonner`: transient notifications + stacking + timers (prototype implemented: `crates/fret-components-ui` `ToastOverlay` + `ToastService`, plus `fret-components-ui::sonner::toast(...)` facade)
+- `Toast`/`Sonner`: transient notifications + stacking + timers (prototype implemented in `crates/fret-components-ui` today; intended shadcn surface lives in `crates/fret-components-shadcn`)
 - `Menubar`: application menus (native integration later; custom first is ok)
 - `Combobox`: typeahead + filtering + virtualization for large option sets
 
@@ -168,7 +168,7 @@ Practical gaps to prioritize for parity:
    - migrate `Command` and at least one “tree-like” surface to prove the model.
 3. Complete the runtime/components boundary tightening:
    - keep `fret-ui` as the runtime substrate + perf primitives,
-   - ensure shadcn-like surfaces and policies stay in `crates/fret-components-ui`,
+   - ensure shadcn-like surfaces and policies stay in `crates/fret-components-shadcn` (built on `crates/fret-components-ui`),
    - remove remaining UI-kit-shaped runtime widgets once composition exists.
 
 Update:

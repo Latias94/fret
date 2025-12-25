@@ -694,6 +694,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-components-shadcn"
+version = "0.1.0"
+dependencies = [
+ "fret-components-ui",
+]
+
+[[package]]
 name = "fret-components-ui"
 version = "0.1.0"
 dependencies = [

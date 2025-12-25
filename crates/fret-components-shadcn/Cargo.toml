@@ -1,0 +1,8 @@
+[package]
+name = "fret-components-shadcn"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fret-components-ui = { path = "../fret-components-ui" }
+
