@@ -1,7 +1,7 @@
 use crate::UiHost;
 use crate::element::{
-    AnyElement, ColumnProps, ContainerProps, ElementKind, PressableProps, RowProps, StackProps,
-    TextProps,
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, MainAlign, PressableProps,
+    RowProps, SpacerProps, StackProps, TextProps,
 };
 use crate::elements::{ElementCx, GlobalElementId, NodeEntry};
 use crate::tree::UiTree;
@@ -29,6 +29,7 @@ pub(crate) enum ElementInstance {
     Stack(StackProps),
     Column(ColumnProps),
     Row(RowProps),
+    Spacer(SpacerProps),
     Text(TextProps),
     VirtualList(crate::element::VirtualListProps),
 }
@@ -250,99 +251,251 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 cx.available
             }
             ElementInstance::Column(props) => {
-                let pad = props.padding.0.max(0.0);
+                let pad_x = props.padding_x.0.max(0.0);
+                let pad_y = props.padding_y.0.max(0.0);
+                let gap = props.gap.0.max(0.0);
                 let inner_origin = fret_core::Point::new(
-                    Px(cx.bounds.origin.x.0 + pad),
-                    Px(cx.bounds.origin.y.0 + pad),
+                    Px(cx.bounds.origin.x.0 + pad_x),
+                    Px(cx.bounds.origin.y.0 + pad_y),
                 );
-                let inner_width = Px((cx.available.width.0 - pad * 2.0).max(0.0));
+                let inner_width = Px((cx.available.width.0 - pad_x * 2.0).max(0.0));
+                let inner_height = Px((cx.available.height.0 - pad_y * 2.0).max(0.0));
 
-                let mut y = inner_origin.y;
-                let mut content_height = Px(0.0);
+                let mut rows: Vec<(NodeId, Size, bool)> = Vec::new();
+                let mut fixed_h = 0.0f32;
+                let mut spacer_count = 0usize;
 
-                for (i, &child) in cx.children.iter().enumerate() {
-                    if i > 0 {
-                        y = Px(y.0 + props.spacing.0.max(0.0));
-                        content_height = Px(content_height.0 + props.spacing.0.max(0.0));
+                for &child in cx.children {
+                    let is_spacer = matches!(
+                        element_record_for_node(cx.app, window, child).map(|r| r.instance),
+                        Some(ElementInstance::Spacer(_))
+                    );
+                    if is_spacer {
+                        spacer_count = spacer_count.saturating_add(1);
+                        rows.push((child, Size::new(Px(0.0), Px(0.0)), true));
+                        continue;
                     }
 
-                    let child_origin = fret_core::Point::new(inner_origin.x, y);
-                    let child_bounds = Rect::new(child_origin, Size::new(inner_width, Px(1.0e9)));
-                    let child_size = cx.layout_in(child, child_bounds);
-                    let child_h = child_size.height;
-
-                    let final_bounds = Rect::new(child_origin, Size::new(inner_width, child_h));
-                    let _ = cx.layout_in(child, final_bounds);
-
-                    y = Px(y.0 + child_h.0);
-                    content_height = Px(content_height.0 + child_h.0);
-                }
-
-                let total_h = Px(content_height.0 + pad * 2.0);
-                Size::new(cx.available.width, total_h)
-            }
-            ElementInstance::Row(props) => {
-                let pad = props.padding.0.max(0.0);
-                let spacing = props.spacing.0.max(0.0);
-
-                let inner_origin = fret_core::Point::new(
-                    Px(cx.bounds.origin.x.0 + pad),
-                    Px(cx.bounds.origin.y.0 + pad),
-                );
-                let inner_width = Px((cx.available.width.0 - pad * 2.0).max(0.0));
-
-                let mut remaining_w = inner_width.0;
-                let mut max_h = 0.0f32;
-
-                let mut placements: Vec<(NodeId, fret_core::Point, Size)> = Vec::new();
-                let mut x = inner_origin.x.0;
-
-                for (i, &child) in cx.children.iter().enumerate() {
-                    if i > 0 {
-                        x += spacing;
-                        remaining_w = (remaining_w - spacing).max(0.0);
-                    }
-
-                    let is_last = i + 1 == cx.children.len();
                     let probe_bounds = Rect::new(
-                        fret_core::Point::new(Px(x), inner_origin.y),
-                        Size::new(Px(remaining_w), Px(1.0e9)),
+                        fret_core::Point::new(inner_origin.x, inner_origin.y),
+                        Size::new(inner_width, Px(1.0e9)),
                     );
                     let child_size = cx.layout_in(child, probe_bounds);
+                    let w = Px(child_size.width.0.max(0.0).min(inner_width.0));
+                    let h = Px(child_size.height.0.max(0.0));
+                    fixed_h += h.0;
+                    rows.push((child, Size::new(w, h), false));
+                }
 
-                    let w = if is_last {
-                        Px(remaining_w)
+                let gaps = if cx.children.len() > 1 {
+                    gap * (cx.children.len() as f32 - 1.0)
+                } else {
+                    0.0
+                };
+                let fixed_total = fixed_h + gaps;
+                let remaining = (inner_height.0 - fixed_total).max(0.0);
+
+                let mut extra_gap = 0.0f32;
+                let mut start_offset = 0.0f32;
+
+                if spacer_count == 0 {
+                    match props.justify {
+                        MainAlign::Start => {}
+                        MainAlign::Center => start_offset = remaining * 0.5,
+                        MainAlign::End => start_offset = remaining,
+                        MainAlign::SpaceBetween => {
+                            if cx.children.len() > 1 {
+                                extra_gap = remaining / (cx.children.len() as f32 - 1.0);
+                            }
+                        }
+                        MainAlign::SpaceAround => {
+                            if !cx.children.is_empty() {
+                                extra_gap = remaining / (cx.children.len() as f32);
+                                start_offset = extra_gap * 0.5;
+                            }
+                        }
+                        MainAlign::SpaceEvenly => {
+                            if !cx.children.is_empty() {
+                                extra_gap = remaining / (cx.children.len() as f32 + 1.0);
+                                start_offset = extra_gap;
+                            }
+                        }
+                    }
+                }
+
+                let gap_used = gap + extra_gap;
+                let spacer_h = if spacer_count > 0 {
+                    remaining / spacer_count as f32
+                } else {
+                    0.0
+                };
+
+                let mut y = Px(inner_origin.y.0 + start_offset);
+                for (i, (child, measured, is_spacer)) in rows.into_iter().enumerate() {
+                    if i > 0 {
+                        y = Px(y.0 + gap_used);
+                    }
+
+                    let child_h = if is_spacer {
+                        let min = element_record_for_node(cx.app, window, child)
+                            .and_then(|r| match r.instance {
+                                ElementInstance::Spacer(p) => Some(p.min),
+                                _ => None,
+                            })
+                            .unwrap_or(Px(0.0));
+                        Px(spacer_h.max(min.0).max(0.0))
                     } else {
-                        Px(child_size.width.0.min(remaining_w))
+                        measured.height
                     };
-                    let size = Size::new(w, child_size.height);
-                    placements.push((child, fret_core::Point::new(Px(x), inner_origin.y), size));
 
-                    x += w.0;
-                    remaining_w = (remaining_w - w.0).max(0.0);
-                    max_h = max_h.max(child_size.height.0);
-                }
+                    let child_w = match props.align {
+                        CrossAlign::Stretch => inner_width,
+                        _ => Px(measured.width.0.max(0.0).min(inner_width.0)),
+                    };
 
-                for (child, origin, size) in placements {
-                    let dy = (max_h - size.height.0).max(0.0) * 0.5;
-                    let child_origin = fret_core::Point::new(origin.x, Px(origin.y.0 + dy));
-                    let bounds = Rect::new(child_origin, Size::new(size.width, Px(max_h)));
+                    let x = match props.align {
+                        CrossAlign::Start | CrossAlign::Stretch => inner_origin.x,
+                        CrossAlign::Center => {
+                            Px(inner_origin.x.0 + (inner_width.0 - child_w.0).max(0.0) * 0.5)
+                        }
+                        CrossAlign::End => {
+                            Px(inner_origin.x.0 + (inner_width.0 - child_w.0).max(0.0))
+                        }
+                    };
+
+                    let bounds =
+                        Rect::new(fret_core::Point::new(x, y), Size::new(child_w, child_h));
                     let _ = cx.layout_in(child, bounds);
+                    y = Px(y.0 + child_h.0);
                 }
 
-                let total_h = if cx.children.is_empty() {
-                    Px(0.0)
+                let total_h = Px((fixed_total + pad_y * 2.0).max(0.0));
+                Size::new(cx.available.width, Px(total_h.0.min(cx.available.height.0)))
+            }
+            ElementInstance::Row(props) => {
+                let pad_x = props.padding_x.0.max(0.0);
+                let pad_y = props.padding_y.0.max(0.0);
+                let gap = props.gap.0.max(0.0);
+
+                let inner_origin = fret_core::Point::new(
+                    Px(cx.bounds.origin.x.0 + pad_x),
+                    Px(cx.bounds.origin.y.0 + pad_y),
+                );
+                let inner_width = Px((cx.available.width.0 - pad_x * 2.0).max(0.0));
+
+                let mut cols: Vec<(NodeId, Size, bool)> = Vec::new();
+                let mut fixed_w = 0.0f32;
+                let mut max_h = 0.0f32;
+                let mut spacer_count = 0usize;
+
+                for &child in cx.children {
+                    let is_spacer = matches!(
+                        element_record_for_node(cx.app, window, child).map(|r| r.instance),
+                        Some(ElementInstance::Spacer(_))
+                    );
+                    if is_spacer {
+                        spacer_count = spacer_count.saturating_add(1);
+                        cols.push((child, Size::new(Px(0.0), Px(0.0)), true));
+                        continue;
+                    }
+
+                    let probe_bounds = Rect::new(
+                        fret_core::Point::new(inner_origin.x, inner_origin.y),
+                        Size::new(inner_width, Px(1.0e9)),
+                    );
+                    let child_size = cx.layout_in(child, probe_bounds);
+                    let w = Px(child_size.width.0.max(0.0).min(inner_width.0));
+                    let h = Px(child_size.height.0.max(0.0));
+                    fixed_w += w.0;
+                    max_h = max_h.max(h.0);
+                    cols.push((child, Size::new(w, h), false));
+                }
+
+                let gaps = if cx.children.len() > 1 {
+                    gap * (cx.children.len() as f32 - 1.0)
                 } else {
-                    Px(max_h + pad * 2.0)
+                    0.0
                 };
-                let total_w = if cx.children.is_empty() {
-                    Px(0.0)
+                let fixed_total = fixed_w + gaps;
+                let remaining = (inner_width.0 - fixed_total).max(0.0);
+
+                let mut extra_gap = 0.0f32;
+                let mut start_offset = 0.0f32;
+
+                if spacer_count == 0 {
+                    match props.justify {
+                        MainAlign::Start => {}
+                        MainAlign::Center => start_offset = remaining * 0.5,
+                        MainAlign::End => start_offset = remaining,
+                        MainAlign::SpaceBetween => {
+                            if cx.children.len() > 1 {
+                                extra_gap = remaining / (cx.children.len() as f32 - 1.0);
+                            }
+                        }
+                        MainAlign::SpaceAround => {
+                            if !cx.children.is_empty() {
+                                extra_gap = remaining / (cx.children.len() as f32);
+                                start_offset = extra_gap * 0.5;
+                            }
+                        }
+                        MainAlign::SpaceEvenly => {
+                            if !cx.children.is_empty() {
+                                extra_gap = remaining / (cx.children.len() as f32 + 1.0);
+                                start_offset = extra_gap;
+                            }
+                        }
+                    }
+                }
+
+                let gap_used = gap + extra_gap;
+                let spacer_w = if spacer_count > 0 {
+                    remaining / spacer_count as f32
                 } else {
-                    Px(inner_width.0 + pad * 2.0)
+                    0.0
                 };
 
-                Size::new(Px(total_w.0.min(cx.available.width.0)), total_h)
+                let mut x = Px(inner_origin.x.0 + start_offset);
+                for (i, (child, measured, is_spacer)) in cols.into_iter().enumerate() {
+                    if i > 0 {
+                        x = Px(x.0 + gap_used);
+                    }
+
+                    let child_w = if is_spacer {
+                        let min = element_record_for_node(cx.app, window, child)
+                            .and_then(|r| match r.instance {
+                                ElementInstance::Spacer(p) => Some(p.min),
+                                _ => None,
+                            })
+                            .unwrap_or(Px(0.0));
+                        Px(spacer_w.max(min.0).max(0.0))
+                    } else {
+                        measured.width
+                    };
+
+                    let (child_h, dy) = match props.align {
+                        CrossAlign::Stretch => (Px(max_h), 0.0),
+                        CrossAlign::Start => (Px(measured.height.0.max(0.0)), 0.0),
+                        CrossAlign::Center => (
+                            Px(measured.height.0.max(0.0)),
+                            (max_h - measured.height.0).max(0.0) * 0.5,
+                        ),
+                        CrossAlign::End => (
+                            Px(measured.height.0.max(0.0)),
+                            (max_h - measured.height.0).max(0.0),
+                        ),
+                    };
+
+                    let y = Px(inner_origin.y.0 + dy);
+                    let bounds =
+                        Rect::new(fret_core::Point::new(x, y), Size::new(child_w, child_h));
+                    let _ = cx.layout_in(child, bounds);
+                    x = Px(x.0 + child_w.0);
+                }
+
+                let total_h = Px((max_h + pad_y * 2.0).max(0.0));
+                Size::new(cx.available.width, Px(total_h.0.min(cx.available.height.0)))
             }
+            ElementInstance::Spacer(_) => cx.available,
             ElementInstance::Text(props) => {
                 let theme_revision = cx.theme().revision();
                 let font_size = cx
@@ -462,7 +615,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::Pressable(_)
             | ElementInstance::Stack(_)
             | ElementInstance::Column(_)
-            | ElementInstance::Row(_) => {
+            | ElementInstance::Row(_)
+            | ElementInstance::Spacer(_) => {
                 for &child in cx.children {
                     if let Some(bounds) = cx.child_bounds(child) {
                         cx.paint(child, bounds);
@@ -692,6 +846,7 @@ fn mount_element<H: UiHost>(
         ElementKind::Stack(p) => ElementInstance::Stack(p),
         ElementKind::Column(p) => ElementInstance::Column(p),
         ElementKind::Row(p) => ElementInstance::Row(p),
+        ElementKind::Spacer(p) => ElementInstance::Spacer(p),
         ElementKind::Text(p) => ElementInstance::Text(p),
         ElementKind::VirtualList(p) => ElementInstance::VirtualList(p),
     };
@@ -727,6 +882,7 @@ fn mount_element<H: UiHost>(
 mod tests {
     use super::render_root;
     use crate::UiHost;
+    use crate::element::{CrossAlign, MainAlign};
     use crate::elements::ElementCx;
     use crate::test_host::TestHost;
     use crate::tree::UiTree;
@@ -998,6 +1154,61 @@ mod tests {
         };
         assert_eq!((props.visible_start, props.visible_end), (0, 5));
         assert_eq!(ui.children(list_node).len(), 5);
+    }
+
+    #[test]
+    fn row_justify_center_and_align_end_positions_children() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(20.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "row-align",
+            |cx| {
+                vec![cx.row(
+                    crate::element::RowProps {
+                        gap: Px(5.0),
+                        justify: MainAlign::Center,
+                        align: CrossAlign::End,
+                        ..Default::default()
+                    },
+                    |cx| vec![cx.text("a"), cx.text("b"), cx.text("c")],
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let row_node = ui.children(root)[0];
+        let children = ui.children(row_node);
+        assert_eq!(children.len(), 3);
+
+        let b0 = ui.debug_node_bounds(children[0]).expect("child0 bounds");
+        let b1 = ui.debug_node_bounds(children[1]).expect("child1 bounds");
+        let b2 = ui.debug_node_bounds(children[2]).expect("child2 bounds");
+
+        // Each text measures to 10x10. With gap=5 and width=100:
+        // content_w = 3*10 + 2*5 = 40; remaining=60; center => start_offset=30.
+        assert!((b0.origin.x.0 - 30.0).abs() < 0.01, "x0={:?}", b0.origin.x);
+        assert!((b1.origin.x.0 - 45.0).abs() < 0.01, "x1={:?}", b1.origin.x);
+        assert!((b2.origin.x.0 - 60.0).abs() < 0.01, "x2={:?}", b2.origin.x);
+
+        // align-end with row height 10 => y = 0 + (10-10)=0, so still 0.
+        assert!((b0.origin.y.0 - 0.0).abs() < 0.01, "y0={:?}", b0.origin.y);
+        assert!((b1.origin.y.0 - 0.0).abs() < 0.01, "y1={:?}", b1.origin.y);
+        assert!((b2.origin.y.0 - 0.0).abs() < 0.01, "y2={:?}", b2.origin.y);
     }
 
     #[test]

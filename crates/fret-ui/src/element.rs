@@ -26,6 +26,7 @@ pub enum ElementKind {
     Stack(StackProps),
     Column(ColumnProps),
     Row(RowProps),
+    Spacer(SpacerProps),
     Text(TextProps),
     VirtualList(VirtualListProps),
 }
@@ -90,31 +91,74 @@ impl Default for StackProps {
 
 #[derive(Debug, Clone, Copy)]
 pub struct ColumnProps {
-    pub spacing: Px,
-    pub padding: Px,
+    pub gap: Px,
+    pub padding_x: Px,
+    pub padding_y: Px,
+    pub justify: MainAlign,
+    pub align: CrossAlign,
 }
 
 impl Default for ColumnProps {
     fn default() -> Self {
         Self {
-            spacing: Px(0.0),
-            padding: Px(0.0),
+            gap: Px(0.0),
+            padding_x: Px(0.0),
+            padding_y: Px(0.0),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct RowProps {
-    pub spacing: Px,
-    pub padding: Px,
+    pub gap: Px,
+    pub padding_x: Px,
+    pub padding_y: Px,
+    pub justify: MainAlign,
+    pub align: CrossAlign,
 }
 
 impl Default for RowProps {
     fn default() -> Self {
         Self {
-            spacing: Px(0.0),
-            padding: Px(0.0),
+            gap: Px(0.0),
+            padding_x: Px(0.0),
+            padding_y: Px(0.0),
+            justify: MainAlign::Start,
+            align: CrossAlign::Center,
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum MainAlign {
+    #[default]
+    Start,
+    Center,
+    End,
+    SpaceBetween,
+    SpaceAround,
+    SpaceEvenly,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum CrossAlign {
+    Start,
+    #[default]
+    Center,
+    End,
+    Stretch,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct SpacerProps {
+    pub min: Px,
+}
+
+impl Default for SpacerProps {
+    fn default() -> Self {
+        Self { min: Px(0.0) }
     }
 }
 

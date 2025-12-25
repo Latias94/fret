@@ -9,7 +9,7 @@ use std::{
 use crate::UiHost;
 use crate::element::{
     AnyElement, ColumnProps, ContainerProps, ElementKind, PressableProps, PressableState, RowProps,
-    StackProps, TextProps, VirtualListProps, VirtualListState,
+    SpacerProps, StackProps, TextProps, VirtualListProps, VirtualListState,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -315,6 +315,14 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             let id = cx.root_id();
             let children = f(cx);
             AnyElement::new(id, ElementKind::Row(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn spacer(&mut self, props: SpacerProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::Spacer(props), Vec::new())
         })
     }
 

@@ -1124,8 +1124,8 @@ impl WinitDriver for UiKitDriver {
                                                     |cx| {
                                                         vec![cx.row(
                                                             fret_ui_app::element::RowProps {
-                                                                spacing: Px(8.0),
-                                                                padding: Px(0.0),
+                                                                gap: Px(8.0),
+                                                                ..Default::default()
                                                             },
                                                             |cx| {
                                                                 vec![
