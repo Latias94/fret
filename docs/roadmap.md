@@ -30,6 +30,7 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Adopt the primary UI authoring/runtime model (declarative elements + externalized state) (ADR 0028).
 - P0: Adopt the app-owned model store + borrow-friendly update API (ADR 0031).
 - P0: Adopt typed style tokens + theme resolution rules (ADR 0032).
+- P0: Align baseline theme semantics with gpui-component/shadcn vocabulary (semantic palette + typography), so the component ecosystem can reuse upstream conventions without inflating `fret-ui` into a UI kit. (ADR 0050 follow-up)
 - P0: Adopt a component-level size/density system so Tailwind-like primitives converge on one contract (ADR 0056). (prototype implemented; MVP 47)
 - P0: Adopt component-level style composition ergonomics (`StyleRefinement` + `StyledExt`) so Tailwind/shadcn-like recipes and variants can be expressed as typed, composable “style patches” without leaking UI kit semantics into `fret-ui` runtime. (MVP 45)
 - P0: Tighten the **framework vs components** boundary so Tailwind/shadcn sizing/variants can converge without fighting runtime widgets:

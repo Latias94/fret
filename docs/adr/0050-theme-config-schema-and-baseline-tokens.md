@@ -86,6 +86,53 @@ Fret defines a small set of typed tokens, grouped by function:
 These tokens are intentionally minimal. Additional tokens may be added as new widgets/components
 appear, but existing token names should remain stable.
 
+### 1.1) gpui-component / shadcn semantic palette compatibility (P0 bridge)
+
+Fret’s component ecosystem is intentionally inspired by gpui-component and shadcn-style semantics.
+To avoid a large “rename-everything” migration, the framework provides a small set of **semantic
+compatibility keys** (queried by string) that map to the baseline tokens above when not explicitly
+set by a theme file.
+
+These keys are **not** new typed baseline fields. They are best-effort aliases resolved by the theme
+service so component libraries can gradually move toward a shadcn-like vocabulary without breaking
+existing themes.
+
+Supported alias keys (fallback mapping):
+
+- `background` → `color.surface.background`
+- `foreground` → `color.text.primary`
+- `border` → `color.panel.border`
+- `ring` → `color.focus.ring`
+- `selection.background` → `color.selection.background`
+- `muted.background` → `color.panel.background`
+- `muted.foreground` → `color.text.muted`
+- `accent.background` → `color.hover.background`
+- `accent.foreground` → `color.text.primary`
+- `popover.background` → `color.menu.background`
+- `popover.foreground` → `color.text.primary`
+- `list.background` → `color.list.background`
+- `list.hover.background` → `color.list.row.hover`
+- `list.active.background` → `color.list.row.selected`
+- `list.active.border` → `color.accent`
+- `input.border` → `color.panel.border`
+- `caret` → `color.text.primary`
+- `scrollbar.background` → `color.scrollbar.track`
+- `scrollbar.thumb.background` → `color.scrollbar.thumb`
+- `scrollbar.thumb.hover.background` → `color.scrollbar.thumb.hover`
+
+Metric alias keys:
+
+- `radius` → `metric.radius.sm`
+- `radius.lg` → `metric.radius.md`
+
+Notes:
+
+- If a theme file provides any of these alias keys directly in `colors`/`metrics`, that explicit value
+  wins (normal “theme file overrides default” behavior).
+- The alias set is intentionally small. If component development proves additional shadcn keys are
+  consistently needed, we should expand the alias list (and document it here) rather than letting
+  every component invent bespoke `component.<name>.*` keys.
+
 ### 2) Theme config schema (JSON, dotted keys)
 
 Theme files are authored in sRGB hex and map into the token set using stable dotted keys.

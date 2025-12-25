@@ -206,11 +206,68 @@ impl Theme {
     }
 
     pub fn color_by_key(&self, key: &str) -> Option<Color> {
-        self.extra_colors.get(key).copied()
+        self.extra_colors
+            .get(key)
+            .copied()
+            .or_else(|| self.fallback_color_alias(key))
     }
 
     pub fn metric_by_key(&self, key: &str) -> Option<Px> {
-        self.extra_metrics.get(key).copied()
+        self.extra_metrics
+            .get(key)
+            .copied()
+            .or_else(|| self.fallback_metric_alias(key))
+    }
+
+    /// Fallback aliases for gpui-component / shadcn-style semantic keys.
+    ///
+    /// This provides a compatibility bridge without forcing theme files or widgets to adopt a new
+    /// schema in one refactor pass.
+    fn fallback_color_alias(&self, key: &str) -> Option<Color> {
+        match key {
+            // Core shadcn-like semantic palette.
+            "background" => Some(self.colors.surface_background),
+            "foreground" => Some(self.colors.text_primary),
+            "border" => Some(self.colors.panel_border),
+            "ring" => Some(self.colors.focus_ring),
+
+            // Common state semantics.
+            "selection.background" => Some(self.colors.selection_background),
+            "muted.background" => Some(self.colors.panel_background),
+            "muted.foreground" => Some(self.colors.text_muted),
+            "accent.background" => Some(self.colors.hover_background),
+            "accent.foreground" => Some(self.colors.text_primary),
+
+            // Popovers/menus map well onto the existing menu surface tokens.
+            "popover.background" => Some(self.colors.menu_background),
+            "popover.foreground" => Some(self.colors.text_primary),
+
+            // List semantics used heavily by gpui-component.
+            "list.background" => Some(self.colors.list_background),
+            "list.hover.background" => Some(self.colors.list_row_hover),
+            "list.active.background" => Some(self.colors.list_row_selected),
+            "list.active.border" => Some(self.colors.accent),
+
+            // Inputs.
+            "input.border" => Some(self.colors.panel_border),
+            "caret" => Some(self.colors.text_primary),
+
+            // Scrollbars.
+            "scrollbar.background" => Some(self.colors.scrollbar_track),
+            "scrollbar.thumb.background" => Some(self.colors.scrollbar_thumb),
+            "scrollbar.thumb.hover.background" => Some(self.colors.scrollbar_thumb_hover),
+
+            _ => None,
+        }
+    }
+
+    fn fallback_metric_alias(&self, key: &str) -> Option<Px> {
+        match key {
+            // gpui-component uses `radius` / `radius.lg` as generic theme knobs.
+            "radius" => Some(self.metrics.radius_sm),
+            "radius.lg" => Some(self.metrics.radius_md),
+            _ => None,
+        }
     }
 
     pub fn snapshot(&self) -> ThemeSnapshot {
