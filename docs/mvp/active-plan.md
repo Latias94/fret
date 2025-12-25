@@ -41,6 +41,7 @@ definitions live in `docs/mvp/reference-plan.md`.
   - pending: richer theme-level typography vocab (weight/tracking presets, size-specific line heights)
 - MVP 54: shadcn semantic palette alias expansion (ADR 0050 follow-up)
   - add best-effort alias keys for `primary/secondary/destructive/input/card/...` to reduce component-only `component.*` drift
+  - ensure semantic-only theme configs backfill typed baseline tokens used by runtime/legacy widgets
 - MVP 55: recipes → declarative props
   - let component-layer `StyleRefinement`/`Space`/`Radius` generate declarative `Container`/`Flex` props,
     so surfaces can be built by composition without hard-coded sizes.

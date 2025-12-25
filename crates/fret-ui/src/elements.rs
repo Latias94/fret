@@ -659,6 +659,14 @@ pub(crate) fn is_hovered_pressable<H: UiHost>(
     with_window_state(app, window, |st| st.hovered_pressable == Some(element))
 }
 
+pub(crate) fn is_pressed_pressable<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> bool {
+    with_window_state(app, window, |st| st.pressed_pressable == Some(element))
+}
+
 pub fn take_element_state<H: UiHost, S: Any>(
     app: &mut H,
     window: AppWindowId,

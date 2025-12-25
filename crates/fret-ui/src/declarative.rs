@@ -722,19 +722,65 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 if !props.enabled {
                     return;
                 }
-                let Event::Pointer(pe) = event else {
-                    return;
-                };
-                match pe {
-                    fret_core::PointerEvent::Move { .. } => {
-                        cx.set_cursor_icon(CursorIcon::Pointer);
-                    }
-                    fret_core::PointerEvent::Down { button, .. } => {
-                        if *button != MouseButton::Left {
+                match event {
+                    Event::Pointer(pe) => match pe {
+                        fret_core::PointerEvent::Move { .. } => {
+                            cx.set_cursor_icon(CursorIcon::Pointer);
+                        }
+                        fret_core::PointerEvent::Down { button, .. } => {
+                            if *button != MouseButton::Left {
+                                return;
+                            }
+                            cx.request_focus(cx.node);
+                            cx.capture_pointer(cx.node);
+                            crate::elements::set_pressed_pressable(
+                                &mut *cx.app,
+                                window,
+                                Some(self.element),
+                            );
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                            cx.stop_propagation();
+                        }
+                        fret_core::PointerEvent::Up { button, .. } => {
+                            if *button != MouseButton::Left {
+                                return;
+                            }
+                            cx.release_pointer_capture();
+                            crate::elements::set_pressed_pressable(&mut *cx.app, window, None);
+
+                            let hovered = crate::elements::is_hovered_pressable(
+                                &mut *cx.app,
+                                window,
+                                self.element,
+                            );
+
+                            if hovered {
+                                if let Some(command) = props.on_click.clone() {
+                                    cx.dispatch_command(command);
+                                }
+                            }
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                            cx.stop_propagation();
+                        }
+                        _ => {}
+                    },
+                    Event::KeyDown { key, repeat, .. } => {
+                        if *repeat {
                             return;
                         }
-                        cx.request_focus(cx.node);
-                        cx.capture_pointer(cx.node);
+                        if cx.focus != Some(cx.node) {
+                            return;
+                        }
+                        if !matches!(
+                            key,
+                            fret_core::KeyCode::Enter
+                                | fret_core::KeyCode::NumpadEnter
+                                | fret_core::KeyCode::Space
+                        ) {
+                            return;
+                        }
                         crate::elements::set_pressed_pressable(
                             &mut *cx.app,
                             window,
@@ -744,30 +790,36 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         cx.request_redraw();
                         cx.stop_propagation();
                     }
-                    fret_core::PointerEvent::Up { button, .. } => {
-                        if *button != MouseButton::Left {
+                    Event::KeyUp { key, .. } => {
+                        if cx.focus != Some(cx.node) {
                             return;
                         }
-                        cx.release_pointer_capture();
-                        crate::elements::set_pressed_pressable(&mut *cx.app, window, None);
-
-                        let hovered = crate::elements::is_hovered_pressable(
+                        if !matches!(
+                            key,
+                            fret_core::KeyCode::Enter
+                                | fret_core::KeyCode::NumpadEnter
+                                | fret_core::KeyCode::Space
+                        ) {
+                            return;
+                        }
+                        let pressed = crate::elements::is_pressed_pressable(
                             &mut *cx.app,
                             window,
                             self.element,
                         );
-
-                        if hovered {
-                            if let Some(command) = props.on_click.clone() {
-                                cx.dispatch_command(command);
-                            }
+                        if !pressed {
+                            return;
+                        }
+                        crate::elements::set_pressed_pressable(&mut *cx.app, window, None);
+                        if let Some(command) = props.on_click.clone() {
+                            cx.dispatch_command(command);
                         }
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();
                     }
                     _ => {}
-                }
+                };
             }
             _ => {}
         }
@@ -2594,6 +2646,73 @@ mod tests {
         assert!((b0.origin.y.0 - 10.0).abs() < 0.01, "y0={:?}", b0.origin.y);
         assert!((b1.origin.y.0 - 10.0).abs() < 0.01, "y1={:?}", b1.origin.y);
         assert!((b2.origin.y.0 - 10.0).abs() < 0.01, "y2={:?}", b2.origin.y);
+    }
+
+    #[test]
+    fn pressable_keyboard_activation_dispatches_click_command() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let cmd = CommandId::new("test.pressable.click");
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(30.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "pressable-keyboard",
+            |cx| {
+                vec![cx.pressable(
+                    crate::element::PressableProps {
+                        on_click: Some(cmd.clone()),
+                        ..Default::default()
+                    },
+                    |cx, _state| vec![cx.text("ok")],
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let pressable_node = ui.children(root)[0];
+        ui.set_focus(Some(pressable_node));
+        assert_eq!(ui.focus(), Some(pressable_node));
+
+        let _ = app.take_effects();
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Enter,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &fret_core::Event::KeyUp {
+                key: fret_core::KeyCode::Enter,
+                modifiers: Modifiers::default(),
+            },
+        );
+        let effects = app.take_effects();
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::Command { command, .. } if *command == cmd)),
+            "expected click command effect"
+        );
     }
 
     #[test]

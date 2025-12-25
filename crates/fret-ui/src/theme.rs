@@ -441,6 +441,67 @@ impl Theme {
             self.colors.viewport_rotate_gizmo
         );
 
+        // shadcn/gpui-component compatibility: if a theme only provides semantic keys (e.g.
+        // `background`, `foreground`, `border`, `ring`, ...), backfill the typed baseline tokens.
+        // This avoids subtle drift where legacy/runtime widgets read `theme.colors.*` while
+        // component-layer code reads `theme.color_by_key(...)`.
+        macro_rules! backfill_color_from_alias {
+            ($canonical:literal, $field:expr, [$($alias:literal),+ $(,)?]) => {
+                if !cfg.colors.contains_key($canonical) {
+                    for alias in [$($alias),+] {
+                        if let Some(v) = cfg.colors.get(alias)
+                            && let Some(c) = parse_hex_srgb_to_linear(v)
+                        {
+                            next_colors.insert($canonical.to_string(), c);
+                            if $field != c {
+                                $field = c;
+                                changed = true;
+                            }
+                            break;
+                        }
+                    }
+                }
+            };
+        }
+
+        backfill_color_from_alias!(
+            "color.surface.background",
+            self.colors.surface_background,
+            ["background"]
+        );
+        backfill_color_from_alias!(
+            "color.text.primary",
+            self.colors.text_primary,
+            ["foreground"]
+        );
+        backfill_color_from_alias!("color.panel.border", self.colors.panel_border, ["border"]);
+        backfill_color_from_alias!("color.focus.ring", self.colors.focus_ring, ["ring"]);
+        backfill_color_from_alias!(
+            "color.panel.background",
+            self.colors.panel_background,
+            ["card", "card.background", "popover", "popover.background"]
+        );
+        backfill_color_from_alias!(
+            "color.menu.background",
+            self.colors.menu_background,
+            ["popover", "popover.background"]
+        );
+        backfill_color_from_alias!(
+            "color.menu.border",
+            self.colors.menu_border,
+            ["popover.border"]
+        );
+        backfill_color_from_alias!(
+            "color.accent",
+            self.colors.accent,
+            [
+                "primary",
+                "primary.background",
+                "accent",
+                "accent.background"
+            ]
+        );
+
         apply_metric!("metric.radius.sm", self.metrics.radius_sm);
         apply_metric!("metric.radius.md", self.metrics.radius_md);
         apply_metric!("metric.radius.lg", self.metrics.radius_lg);
@@ -636,6 +697,7 @@ fn parse_hex_srgb_to_linear(s: &str) -> Option<Color> {
 #[cfg(test)]
 mod tests {
     use super::Theme;
+    use super::ThemeConfig;
 
     #[test]
     fn shadcn_semantic_palette_aliases_exist_on_default_theme() {
@@ -674,5 +736,37 @@ mod tests {
         ] {
             assert!(theme.color_by_key(key).is_some(), "missing alias {key}");
         }
+    }
+
+    #[test]
+    fn semantic_keys_backfill_typed_baseline_colors_when_missing() {
+        let mut theme = Theme::global(&crate::test_host::TestHost::default()).clone();
+
+        let mut cfg = ThemeConfig::default();
+        cfg.name = "Semantic Only".to_string();
+        cfg.colors
+            .insert("background".to_string(), "#000000".to_string());
+        cfg.colors
+            .insert("foreground".to_string(), "#ffffff".to_string());
+        cfg.colors
+            .insert("border".to_string(), "#ff0000".to_string());
+        cfg.colors.insert("ring".to_string(), "#00ff00".to_string());
+        cfg.colors
+            .insert("primary".to_string(), "#0000ff".to_string());
+
+        // No `color.*` keys are provided; typed fields should still change.
+        theme.apply_config(&cfg);
+
+        let bg = theme.color_by_key("background").expect("background");
+        let fg = theme.color_by_key("foreground").expect("foreground");
+        let border = theme.color_by_key("border").expect("border");
+        let ring = theme.color_by_key("ring").expect("ring");
+        let primary = theme.color_by_key("primary").expect("primary");
+
+        assert_eq!(theme.colors.surface_background, bg);
+        assert_eq!(theme.colors.text_primary, fg);
+        assert_eq!(theme.colors.panel_border, border);
+        assert_eq!(theme.colors.focus_ring, ring);
+        assert_eq!(theme.colors.accent, primary);
     }
 }
