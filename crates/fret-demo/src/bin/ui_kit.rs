@@ -1086,6 +1086,7 @@ impl WinitDriver for UiKitDriver {
                                         ));
                                         out.push(cx.spacer(fret_ui_app::element::SpacerProps {
                                             min: Px(0.0),
+                                            ..Default::default()
                                         }));
                                         if !trailing.is_empty() {
                                             out.push(cx.text(trailing));

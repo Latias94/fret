@@ -157,6 +157,7 @@ fn text_element<H: UiHost>(
         AnyElement::new(
             id,
             ElementKind::Text(TextProps {
+                layout: Default::default(),
                 text,
                 style: Some(style),
                 color: Some(color),
@@ -331,6 +332,7 @@ pub fn command_palette_list<H: UiHost>(
                                     on_click: enabled.then(|| {
                                         CommandId::new(format!("command_palette.select.{}", id))
                                     }),
+                                    ..Default::default()
                                 },
                                 |cx, st| {
                                     let bg = if is_selected {
@@ -405,7 +407,10 @@ pub fn command_palette_list<H: UiHost>(
                                                         },
                                                     ));
 
-                                                    out.push(cx.spacer(SpacerProps { min: Px(0.0) }));
+                                                    out.push(cx.spacer(SpacerProps {
+                                                        min: Px(0.0),
+                                                        ..Default::default()
+                                                    }));
 
                                                     if let Some(sc) = shortcut.clone()
                                                         && !sc.is_empty()

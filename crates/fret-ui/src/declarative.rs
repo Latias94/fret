@@ -1,7 +1,7 @@
 use crate::UiHost;
 use crate::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, MainAlign, PressableProps,
-    RowProps, SpacerProps, StackProps, TextProps,
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, FlexProps, Length,
+    LayoutStyle, MainAlign, PressableProps, RowProps, SpacerProps, StackProps, TextProps,
 };
 use crate::elements::{ElementCx, GlobalElementId, NodeEntry};
 use crate::tree::UiTree;
@@ -11,6 +11,15 @@ use fret_core::{
     SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle,
 };
 use std::collections::HashMap;
+use taffy::{
+    TaffyTree,
+    geometry::Size as TaffySize,
+    style::{
+        AlignItems as TaffyAlignItems, AlignSelf as TaffyAlignSelf, AvailableSpace as TaffyAvailableSpace,
+        Dimension, Display, FlexDirection, FlexWrap, JustifyContent, LengthPercentage, Style as TaffyStyle,
+    },
+    tree::NodeId as TaffyNodeId,
+};
 
 #[derive(Default)]
 pub(crate) struct ElementFrame {
@@ -32,6 +41,7 @@ pub(crate) enum ElementInstance {
     Spacer(SpacerProps),
     Text(TextProps),
     VirtualList(crate::element::VirtualListProps),
+    Flex(FlexProps),
 }
 
 #[derive(Debug, Clone)]
@@ -52,6 +62,73 @@ pub(crate) fn element_record_for_node<H: UiHost>(
             .and_then(|w| w.instances.get(&node))
             .cloned()
     })
+}
+
+fn clamp_to_constraints(mut size: Size, style: LayoutStyle, available: Size) -> Size {
+    if let Some(min_w) = style.size.min_width {
+        size.width = Px(size.width.0.max(min_w.0));
+    }
+    if let Some(min_h) = style.size.min_height {
+        size.height = Px(size.height.0.max(min_h.0));
+    }
+    if let Some(max_w) = style.size.max_width {
+        size.width = Px(size.width.0.min(max_w.0));
+    }
+    if let Some(max_h) = style.size.max_height {
+        size.height = Px(size.height.0.min(max_h.0));
+    }
+
+    match style.size.width {
+        Length::Px(px) => size.width = Px(px.0.max(0.0)),
+        Length::Fill => size.width = available.width,
+        Length::Auto => {}
+    }
+    match style.size.height {
+        Length::Px(px) => size.height = Px(px.0.max(0.0)),
+        Length::Fill => size.height = available.height,
+        Length::Auto => {}
+    }
+
+    size.width = Px(size.width.0.max(0.0).min(available.width.0.max(0.0)));
+    size.height = Px(size.height.0.max(0.0).min(available.height.0.max(0.0)));
+    size
+}
+
+fn taffy_dimension(length: Length) -> Dimension {
+    match length {
+        Length::Auto => Dimension::auto(),
+        Length::Fill => Dimension::percent(1.0),
+        Length::Px(px) => Dimension::length(px.0),
+    }
+}
+
+fn taffy_align_items(align: CrossAlign) -> TaffyAlignItems {
+    match align {
+        CrossAlign::Start => TaffyAlignItems::FlexStart,
+        CrossAlign::Center => TaffyAlignItems::Center,
+        CrossAlign::End => TaffyAlignItems::FlexEnd,
+        CrossAlign::Stretch => TaffyAlignItems::Stretch,
+    }
+}
+
+fn taffy_align_self(align: CrossAlign) -> TaffyAlignSelf {
+    match align {
+        CrossAlign::Start => TaffyAlignSelf::FlexStart,
+        CrossAlign::Center => TaffyAlignSelf::Center,
+        CrossAlign::End => TaffyAlignSelf::FlexEnd,
+        CrossAlign::Stretch => TaffyAlignSelf::Stretch,
+    }
+}
+
+fn taffy_justify(justify: MainAlign) -> JustifyContent {
+    match justify {
+        MainAlign::Start => JustifyContent::FlexStart,
+        MainAlign::Center => JustifyContent::Center,
+        MainAlign::End => JustifyContent::FlexEnd,
+        MainAlign::SpaceBetween => JustifyContent::SpaceBetween,
+        MainAlign::SpaceAround => JustifyContent::SpaceAround,
+        MainAlign::SpaceEvenly => JustifyContent::SpaceEvenly,
+    }
 }
 
 pub(crate) fn with_window_frame<H: UiHost, R>(
@@ -213,6 +290,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         if matches!(instance, ElementInstance::VirtualList(_)) {
             cx.set_role(SemanticsRole::List);
         }
+        if matches!(instance, ElementInstance::Flex(_)) {
+            // Flex is a layout container; it does not imply semantics beyond its children.
+        }
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
@@ -235,26 +315,71 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::Container(props) => {
                 let pad_x = props.padding_x.0.max(0.0);
                 let pad_y = props.padding_y.0.max(0.0);
+
+                let inner_avail = Size::new(
+                    Px((cx.available.width.0 - pad_x * 2.0).max(0.0)),
+                    Px((cx.available.height.0 - pad_y * 2.0).max(0.0)),
+                );
+
+                let probe_bounds = Rect::new(cx.bounds.origin, Size::new(inner_avail.width, Px(1.0e9)));
+                let mut max_child = Size::new(Px(0.0), Px(0.0));
+                for &child in cx.children {
+                    let child_size = cx.layout_in(child, probe_bounds);
+                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
+                }
+
+                let desired = Size::new(
+                    Px((max_child.width.0 + pad_x * 2.0).max(0.0)),
+                    Px((max_child.height.0 + pad_y * 2.0).max(0.0)),
+                );
+                let desired = clamp_to_constraints(desired, props.layout, cx.available);
+
                 let inner_origin = fret_core::Point::new(
                     Px(cx.bounds.origin.x.0 + pad_x),
                     Px(cx.bounds.origin.y.0 + pad_y),
                 );
                 let inner_size = Size::new(
-                    Px((cx.bounds.size.width.0 - pad_x * 2.0).max(0.0)),
-                    Px((cx.bounds.size.height.0 - pad_y * 2.0).max(0.0)),
+                    Px((desired.width.0 - pad_x * 2.0).max(0.0)),
+                    Px((desired.height.0 - pad_y * 2.0).max(0.0)),
                 );
                 let inner_bounds = Rect::new(inner_origin, inner_size);
 
                 for &child in cx.children {
                     let _ = cx.layout_in(child, inner_bounds);
                 }
-                cx.available
+
+                desired
             }
-            ElementInstance::Pressable(_) | ElementInstance::Stack(_) => {
+            ElementInstance::Pressable(props) => {
+                let probe_bounds = Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(1.0e9)));
+                let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
-                    let _ = cx.layout_in(child, cx.bounds);
+                    let child_size = cx.layout_in(child, probe_bounds);
+                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
-                cx.available
+
+                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                for &child in cx.children {
+                    let _ = cx.layout_in(child, Rect::new(cx.bounds.origin, desired));
+                }
+                desired
+            }
+            ElementInstance::Stack(props) => {
+                let probe_bounds = Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(1.0e9)));
+                let mut max_child = Size::new(Px(0.0), Px(0.0));
+                for &child in cx.children {
+                    let child_size = cx.layout_in(child, probe_bounds);
+                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
+                }
+
+                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                for &child in cx.children {
+                    let _ = cx.layout_in(child, Rect::new(cx.bounds.origin, desired));
+                }
+                desired
             }
             ElementInstance::Column(props) => {
                 let pad_x = props.padding_x.0.max(0.0);
@@ -600,6 +725,191 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
                 cx.available
             }
+            ElementInstance::Flex(props) => {
+                let pad_x = props.padding_x.0.max(0.0);
+                let pad_y = props.padding_y.0.max(0.0);
+                let inner_origin = fret_core::Point::new(
+                    Px(cx.bounds.origin.x.0 + pad_x),
+                    Px(cx.bounds.origin.y.0 + pad_y),
+                );
+                let outer_avail_w = match props.layout.size.width {
+                    Length::Px(px) => Px(px.0.min(cx.available.width.0.max(0.0))),
+                    Length::Fill | Length::Auto => cx.available.width,
+                };
+                let outer_avail_h = match props.layout.size.height {
+                    Length::Px(px) => Px(px.0.min(cx.available.height.0.max(0.0))),
+                    Length::Fill | Length::Auto => cx.available.height,
+                };
+
+                let inner_avail = Size::new(
+                    Px((outer_avail_w.0 - pad_x * 2.0).max(0.0)),
+                    Px((outer_avail_h.0 - pad_y * 2.0).max(0.0)),
+                );
+
+                let mut taffy: TaffyTree<Option<NodeId>> = TaffyTree::new();
+
+                let root_style = TaffyStyle {
+                    display: Display::Flex,
+                    flex_direction: match props.direction {
+                        fret_core::Axis::Horizontal => FlexDirection::Row,
+                        fret_core::Axis::Vertical => FlexDirection::Column,
+                    },
+                    flex_wrap: if props.wrap { FlexWrap::Wrap } else { FlexWrap::NoWrap },
+                    justify_content: Some(taffy_justify(props.justify)),
+                    align_items: Some(taffy_align_items(props.align)),
+                    gap: TaffySize {
+                        width: LengthPercentage::length(props.gap.0.max(0.0)),
+                        height: LengthPercentage::length(props.gap.0.max(0.0)),
+                    },
+                    size: TaffySize {
+                        width: match props.layout.size.width {
+                            Length::Px(px) => {
+                                Dimension::length((px.0 - pad_x * 2.0).max(0.0))
+                            }
+                            other => taffy_dimension(other),
+                        },
+                        height: match props.layout.size.height {
+                            Length::Px(px) => {
+                                Dimension::length((px.0 - pad_y * 2.0).max(0.0))
+                            }
+                            other => taffy_dimension(other),
+                        },
+                    },
+                    max_size: TaffySize {
+                        width: Dimension::length(inner_avail.width.0.max(0.0)),
+                        height: Dimension::length(inner_avail.height.0.max(0.0)),
+                    },
+                    ..Default::default()
+                };
+
+                let mut child_nodes: Vec<TaffyNodeId> = Vec::new();
+                for &child in cx.children {
+                    let layout_style = element_record_for_node(cx.app, window, child)
+                        .map(|r| match r.instance {
+                            ElementInstance::Container(p) => p.layout,
+                            ElementInstance::Pressable(p) => p.layout,
+                            ElementInstance::Stack(p) => p.layout,
+                            ElementInstance::Column(p) => p.layout,
+                            ElementInstance::Row(p) => p.layout,
+                            ElementInstance::Spacer(p) => p.layout,
+                            ElementInstance::Text(p) => p.layout,
+                            ElementInstance::VirtualList(p) => p.layout,
+                            ElementInstance::Flex(p) => p.layout,
+                        })
+                        .unwrap_or_default();
+
+                    let child_style = TaffyStyle {
+                        display: Display::Block,
+                        size: TaffySize {
+                            width: taffy_dimension(layout_style.size.width),
+                            height: taffy_dimension(layout_style.size.height),
+                        },
+                        min_size: TaffySize {
+                            width: layout_style
+                                .size
+                                .min_width
+                                .map(|p| Dimension::length(p.0))
+                                .unwrap_or_else(Dimension::auto),
+                            height: layout_style
+                                .size
+                                .min_height
+                                .map(|p| Dimension::length(p.0))
+                                .unwrap_or_else(Dimension::auto),
+                        },
+                        max_size: TaffySize {
+                            width: layout_style
+                                .size
+                                .max_width
+                                .map(|p| Dimension::length(p.0))
+                                .unwrap_or_else(Dimension::auto),
+                            height: layout_style
+                                .size
+                                .max_height
+                                .map(|p| Dimension::length(p.0))
+                                .unwrap_or_else(Dimension::auto),
+                        },
+                        flex_grow: layout_style.flex.grow.max(0.0),
+                        flex_shrink: layout_style.flex.shrink.max(0.0),
+                        flex_basis: taffy_dimension(layout_style.flex.basis),
+                        align_self: layout_style.flex.align_self.map(taffy_align_self),
+                        ..Default::default()
+                    };
+
+                    let id = taffy.new_leaf_with_context(child_style, Some(child)).expect("taffy leaf");
+                    child_nodes.push(id);
+                }
+
+                let root = if child_nodes.is_empty() {
+                    taffy.new_leaf(root_style).expect("taffy root")
+                } else {
+                    taffy
+                        .new_with_children(root_style, &child_nodes)
+                        .expect("taffy root")
+                };
+
+                let available = taffy::geometry::Size {
+                    width: TaffyAvailableSpace::Definite(inner_avail.width.0),
+                    height: TaffyAvailableSpace::Definite(inner_avail.height.0),
+                };
+
+                taffy
+                    .compute_layout_with_measure(
+                        root,
+                        available,
+                        |known, avail, _id, ctx, _style| {
+                            let Some(child) = ctx.and_then(|c| *c) else {
+                                return taffy::geometry::Size::default();
+                            };
+
+                            let max_w = match avail.width {
+                                TaffyAvailableSpace::Definite(w) => Px(w),
+                                _ => Px(1.0e9),
+                            };
+                            let max_h = match avail.height {
+                                TaffyAvailableSpace::Definite(h) => Px(h),
+                                _ => Px(1.0e9),
+                            };
+
+                            let known_w = known.width.map(Px);
+                            let known_h = known.height.map(Px);
+
+                            let w = known_w.unwrap_or(max_w);
+                            let h = known_h.unwrap_or(max_h);
+
+                            let probe = Rect::new(inner_origin, Size::new(w, h));
+                            let s = cx.layout_in(child, probe);
+                            taffy::geometry::Size {
+                                width: s.width.0,
+                                height: s.height.0,
+                            }
+                        },
+                    )
+                    .expect("taffy compute");
+
+                for child_node in child_nodes {
+                    let layout = taffy.layout(child_node).expect("taffy layout");
+                    let Some(child) = taffy.get_node_context(child_node).and_then(|c| *c) else {
+                        continue;
+                    };
+                    let rect = Rect::new(
+                        fret_core::Point::new(
+                            Px(inner_origin.x.0 + layout.location.x),
+                            Px(inner_origin.y.0 + layout.location.y),
+                        ),
+                        Size::new(Px(layout.size.width), Px(layout.size.height)),
+                    );
+                    let _ = cx.layout_in(child, rect);
+                }
+
+                let layout = taffy.layout(root).expect("taffy root layout");
+                let inner_size = Size::new(Px(layout.size.width.max(0.0)), Px(layout.size.height.max(0.0)));
+
+                let desired = Size::new(
+                    Px((inner_size.width.0 + pad_x * 2.0).max(0.0)),
+                    Px((inner_size.height.0 + pad_y * 2.0).max(0.0)),
+                );
+                clamp_to_constraints(desired, props.layout, cx.available)
+            }
         }
     }
 
@@ -648,6 +958,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             | ElementInstance::Stack(_)
             | ElementInstance::Column(_)
             | ElementInstance::Row(_)
+            | ElementInstance::Flex(_)
             | ElementInstance::Spacer(_) => {
                 for &child in cx.children {
                     if let Some(bounds) = cx.child_bounds(child) {
@@ -901,6 +1212,7 @@ fn mount_element<H: UiHost>(
         ElementKind::Spacer(p) => ElementInstance::Spacer(p),
         ElementKind::Text(p) => ElementInstance::Text(p),
         ElementKind::VirtualList(p) => ElementInstance::VirtualList(p),
+        ElementKind::Flex(p) => ElementInstance::Flex(p),
     };
 
     app.with_global_mut(ElementFrame::default, |frame, _app| {
@@ -1640,11 +1952,14 @@ mod tests {
         ui.layout_all(&mut app, &mut text, bounds, 1.0);
         let container_node = ui.children(root)[0];
         let text_node = ui.children(container_node)[0];
+        let container_bounds = ui
+            .debug_node_bounds(container_node)
+            .expect("container bounds");
         let text_bounds = ui.debug_node_bounds(text_node).expect("text bounds");
         assert_eq!(text_bounds.origin.x, Px(4.0));
         assert_eq!(text_bounds.origin.y, Px(6.0));
-        assert_eq!(text_bounds.size.width, Px(92.0));
-        assert_eq!(text_bounds.size.height, Px(28.0));
+        assert_eq!(text_bounds.size.width, Px(10.0));
+        assert_eq!(text_bounds.size.height, Px(10.0));
 
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
@@ -1654,7 +1969,7 @@ mod tests {
             SceneOp::Quad {
                 rect, background, ..
             } => {
-                assert_eq!(rect, bounds);
+                assert_eq!(rect, container_bounds);
                 assert_eq!(background.a, 1.0);
             }
             _ => panic!("expected quad op"),
@@ -1685,6 +2000,7 @@ mod tests {
                     crate::element::PressableProps {
                         enabled: true,
                         on_click: Some(command.clone()),
+                        ..Default::default()
                     },
                     |cx, _state| {
                         vec![cx.container(
@@ -1748,5 +2064,41 @@ mod tests {
                 modifiers: Modifiers::default(),
             }),
         );
+    }
+
+    #[test]
+    fn flex_defaults_to_fit_content_under_constraints() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+        let mut text = FakeTextService::default();
+
+        let root = render_root(&mut ui, &mut app, &mut text, window, bounds, "flex-fit", |cx| {
+            vec![cx.flex(
+                crate::element::FlexProps {
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(5.0),
+                    padding_x: Px(4.0),
+                    padding_y: Px(6.0),
+                    ..Default::default()
+                },
+                |cx| vec![cx.text("a"), cx.text("b")],
+            )]
+        });
+        ui.set_root(root);
+
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let flex_node = ui.children(root)[0];
+        let flex_bounds = ui.debug_node_bounds(flex_node).expect("flex bounds");
+
+        // FakeTextService measures each text to 10x10. With gap=5 and padding (4,6):
+        // inner_w = 10 + 5 + 10 = 25, outer_w = 25 + 8 = 33
+        // inner_h = 10, outer_h = 10 + 12 = 22
+        assert!((flex_bounds.size.width.0 - 33.0).abs() < 0.01, "w={:?}", flex_bounds.size.width);
+        assert!((flex_bounds.size.height.0 - 22.0).abs() < 0.01, "h={:?}", flex_bounds.size.height);
     }
 }

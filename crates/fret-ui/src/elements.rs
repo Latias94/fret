@@ -8,8 +8,8 @@ use std::{
 
 use crate::UiHost;
 use crate::element::{
-    AnyElement, ColumnProps, ContainerProps, ElementKind, PressableProps, PressableState, RowProps,
-    SpacerProps, StackProps, TextProps, VirtualListProps, VirtualListState,
+    AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, PressableProps, PressableState,
+    RowProps, SpacerProps, StackProps, TextProps, VirtualListProps, VirtualListState,
 };
 use crate::widget::Invalidation;
 use fret_runtime::{Model, ModelId};
@@ -421,6 +421,7 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             AnyElement::new(
                 id,
                 ElementKind::VirtualList(VirtualListProps {
+                    layout: Default::default(),
                     len,
                     row_height,
                     overscan,
@@ -430,6 +431,19 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
                 }),
                 children,
             )
+        })
+    }
+
+    #[track_caller]
+    pub fn flex(
+        &mut self,
+        props: FlexProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Flex(props), children)
         })
     }
 

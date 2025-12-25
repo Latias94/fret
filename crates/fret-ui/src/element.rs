@@ -29,6 +29,52 @@ pub enum ElementKind {
     Spacer(SpacerProps),
     Text(TextProps),
     VirtualList(VirtualListProps),
+    Flex(FlexProps),
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct LayoutStyle {
+    pub size: SizeStyle,
+    pub flex: FlexItemStyle,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct SizeStyle {
+    pub width: Length,
+    pub height: Length,
+    pub min_width: Option<Px>,
+    pub min_height: Option<Px>,
+    pub max_width: Option<Px>,
+    pub max_height: Option<Px>,
+}
+
+impl Default for SizeStyle {
+    fn default() -> Self {
+        Self {
+            width: Length::Auto,
+            height: Length::Auto,
+            min_width: None,
+            min_height: None,
+            max_width: None,
+            max_height: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct FlexItemStyle {
+    pub grow: f32,
+    pub shrink: f32,
+    pub basis: Length,
+    pub align_self: Option<CrossAlign>,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub enum Length {
+    #[default]
+    Auto,
+    Px(Px),
+    Fill,
 }
 
 /// A low-opinionated container primitive for declarative authoring.
@@ -38,6 +84,7 @@ pub enum ElementKind {
 /// via composition.
 #[derive(Debug, Clone, Copy)]
 pub struct ContainerProps {
+    pub layout: LayoutStyle,
     pub padding_x: Px,
     pub padding_y: Px,
     pub background: Option<Color>,
@@ -49,6 +96,7 @@ pub struct ContainerProps {
 impl Default for ContainerProps {
     fn default() -> Self {
         Self {
+            layout: LayoutStyle::default(),
             padding_x: Px(0.0),
             padding_y: Px(0.0),
             background: None,
@@ -61,6 +109,7 @@ impl Default for ContainerProps {
 
 #[derive(Debug, Clone)]
 pub struct PressableProps {
+    pub layout: LayoutStyle,
     pub enabled: bool,
     pub on_click: Option<CommandId>,
 }
@@ -68,6 +117,7 @@ pub struct PressableProps {
 impl Default for PressableProps {
     fn default() -> Self {
         Self {
+            layout: LayoutStyle::default(),
             enabled: true,
             on_click: None,
         }
@@ -81,16 +131,21 @@ pub struct PressableState {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct StackProps;
+pub struct StackProps {
+    pub layout: LayoutStyle,
+}
 
 impl Default for StackProps {
     fn default() -> Self {
-        Self
+        Self {
+            layout: LayoutStyle::default(),
+        }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct ColumnProps {
+    pub layout: LayoutStyle,
     pub gap: Px,
     pub padding_x: Px,
     pub padding_y: Px,
@@ -101,6 +156,7 @@ pub struct ColumnProps {
 impl Default for ColumnProps {
     fn default() -> Self {
         Self {
+            layout: LayoutStyle::default(),
             gap: Px(0.0),
             padding_x: Px(0.0),
             padding_y: Px(0.0),
@@ -112,6 +168,7 @@ impl Default for ColumnProps {
 
 #[derive(Debug, Clone, Copy)]
 pub struct RowProps {
+    pub layout: LayoutStyle,
     pub gap: Px,
     pub padding_x: Px,
     pub padding_y: Px,
@@ -122,6 +179,7 @@ pub struct RowProps {
 impl Default for RowProps {
     fn default() -> Self {
         Self {
+            layout: LayoutStyle::default(),
             gap: Px(0.0),
             padding_x: Px(0.0),
             padding_y: Px(0.0),
@@ -153,17 +211,22 @@ pub enum CrossAlign {
 
 #[derive(Debug, Clone, Copy)]
 pub struct SpacerProps {
+    pub layout: LayoutStyle,
     pub min: Px,
 }
 
 impl Default for SpacerProps {
     fn default() -> Self {
-        Self { min: Px(0.0) }
+        Self {
+            layout: LayoutStyle::default(),
+            min: Px(0.0),
+        }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct TextProps {
+    pub layout: LayoutStyle,
     pub text: std::sync::Arc<str>,
     pub style: Option<TextStyle>,
     pub color: Option<Color>,
@@ -173,6 +236,7 @@ pub struct TextProps {
 impl TextProps {
     pub fn new(text: impl Into<std::sync::Arc<str>>) -> Self {
         Self {
+            layout: LayoutStyle::default(),
             text: text.into(),
             style: None,
             color: None,
@@ -182,7 +246,35 @@ impl TextProps {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct FlexProps {
+    pub layout: LayoutStyle,
+    pub direction: fret_core::Axis,
+    pub gap: Px,
+    pub padding_x: Px,
+    pub padding_y: Px,
+    pub justify: MainAlign,
+    pub align: CrossAlign,
+    pub wrap: bool,
+}
+
+impl Default for FlexProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(0.0),
+            padding_x: Px(0.0),
+            padding_y: Px(0.0),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+            wrap: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct VirtualListProps {
+    pub layout: LayoutStyle,
     pub len: usize,
     pub row_height: Px,
     pub overscan: usize,

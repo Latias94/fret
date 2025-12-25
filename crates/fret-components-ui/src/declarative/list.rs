@@ -105,6 +105,7 @@ pub fn list_virtualized<H: UiHost, K: std::hash::Hash>(
                         PressableProps {
                             enabled,
                             on_click: cmd,
+                            ..Default::default()
                         },
                         |cx, st| {
                             let is_selected = selected == Some(i);
@@ -174,7 +175,10 @@ pub fn list_from_strings<H: UiHost>(
             let mut out = Vec::new();
             out.push(cx.text(leading));
             out.push(cx.text(label));
-            out.push(cx.spacer(SpacerProps { min: Px(0.0) }));
+            out.push(cx.spacer(SpacerProps {
+                min: Px(0.0),
+                ..Default::default()
+            }));
             if !trailing.is_empty() {
                 out.push(cx.text(trailing));
             }

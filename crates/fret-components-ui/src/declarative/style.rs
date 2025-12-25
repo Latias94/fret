@@ -44,6 +44,7 @@ pub fn container_props(theme: &Theme, refinement: StyleRefinement) -> ContainerP
         .unwrap_or(Px(0.0));
 
     ContainerProps {
+        layout: Default::default(),
         padding_x,
         padding_y,
         background,
@@ -52,4 +53,3 @@ pub fn container_props(theme: &Theme, refinement: StyleRefinement) -> ContainerP
         corner_radii: Corners::all(radius),
     }
 }
-
