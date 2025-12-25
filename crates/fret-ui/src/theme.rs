@@ -246,28 +246,28 @@ impl Theme {
             "ring" => Some(self.colors.focus_ring),
 
             // Surfaces.
-            "card.background" => Some(self.colors.panel_background),
-            "card.foreground" => Some(self.colors.text_primary),
+            "card" | "card.background" => Some(self.colors.panel_background),
+            "card.foreground" | "card-foreground" => Some(self.colors.text_primary),
             "card.border" => Some(self.colors.panel_border),
 
             // Common state semantics.
             "selection.background" => Some(self.colors.selection_background),
-            "muted.background" => Some(self.colors.panel_background),
-            "muted.foreground" => Some(self.colors.text_muted),
-            "accent.background" => Some(self.colors.hover_background),
-            "accent.foreground" => Some(self.colors.text_primary),
+            "muted" | "muted.background" => Some(self.colors.panel_background),
+            "muted.foreground" | "muted-foreground" => Some(self.colors.text_muted),
+            "accent" | "accent.background" => Some(self.colors.hover_background),
+            "accent.foreground" | "accent-foreground" => Some(self.colors.text_primary),
 
             // Primary/secondary/destructive semantic palette (best-effort fallbacks).
-            "primary.background" => Some(self.colors.accent),
-            "primary.foreground" => Some(self.colors.text_primary),
-            "secondary.background" => Some(self.colors.panel_background),
-            "secondary.foreground" => Some(self.colors.text_primary),
-            "destructive.background" => Some(self.colors.viewport_gizmo_x),
-            "destructive.foreground" => Some(self.colors.text_primary),
+            "primary" | "primary.background" => Some(self.colors.accent),
+            "primary.foreground" | "primary-foreground" => Some(self.colors.text_primary),
+            "secondary" | "secondary.background" => Some(self.colors.panel_background),
+            "secondary.foreground" | "secondary-foreground" => Some(self.colors.text_primary),
+            "destructive" | "destructive.background" => Some(self.colors.viewport_gizmo_x),
+            "destructive.foreground" | "destructive-foreground" => Some(self.colors.text_primary),
 
             // Popovers/menus map well onto the existing menu surface tokens.
-            "popover.background" => Some(self.colors.menu_background),
-            "popover.foreground" => Some(self.colors.text_primary),
+            "popover" | "popover.background" => Some(self.colors.menu_background),
+            "popover.foreground" | "popover-foreground" => Some(self.colors.text_primary),
             "popover.border" => Some(self.colors.menu_border),
 
             // List semantics used heavily by gpui-component.
@@ -277,7 +277,7 @@ impl Theme {
             "list.active.border" => Some(self.colors.accent),
 
             // Inputs.
-            "input.border" => Some(self.colors.panel_border),
+            "input" | "input.border" => Some(self.colors.panel_border),
             "input.background" => Some(self.colors.panel_background),
             "input.foreground" => Some(self.colors.text_primary),
             "caret" => Some(self.colors.text_primary),
@@ -635,17 +635,27 @@ mod tests {
             "foreground",
             "border",
             "ring",
+            "card",
             "card.background",
+            "card-foreground",
             "card.foreground",
+            "primary",
             "primary.background",
+            "primary-foreground",
             "primary.foreground",
+            "secondary",
             "secondary.background",
+            "secondary-foreground",
             "secondary.foreground",
+            "destructive",
             "destructive.background",
+            "destructive-foreground",
             "destructive.foreground",
+            "muted",
             "input.background",
-            "input.border",
+            "input",
             "input.foreground",
+            "accent",
             "popover.background",
             "popover.foreground",
         ] {
