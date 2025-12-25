@@ -42,9 +42,17 @@ pub fn resolve_menu_list_row_chrome(theme: &Theme, size: Size) -> MenuListRowChr
             font: fret_core::FontId::default(),
             size: text_px,
         },
-        text_color: theme.colors.text_primary,
-        disabled_text_color: theme.colors.text_disabled,
-        row_hover: theme.colors.menu_item_hover,
-        row_selected: theme.colors.menu_item_selected,
+        text_color: theme
+            .color_by_key("foreground")
+            .unwrap_or(theme.colors.text_primary),
+        disabled_text_color: theme
+            .color_by_key("muted.foreground")
+            .unwrap_or(theme.colors.text_disabled),
+        row_hover: theme
+            .color_by_key("list.hover.background")
+            .unwrap_or(theme.colors.menu_item_hover),
+        row_selected: theme
+            .color_by_key("list.active.background")
+            .unwrap_or(theme.colors.menu_item_selected),
     }
 }

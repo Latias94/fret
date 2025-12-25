@@ -172,8 +172,8 @@ impl ContextMenu {
                 padding_y: None,
                 radius: Some("metric.radius.md"),
                 border_width: None,
-                bg: Some("color.menu.background"),
-                border: Some("color.menu.border"),
+                bg: Some("popover.background"),
+                border: Some("border"),
             },
         );
         let rows = resolve_menu_list_row_chrome(theme, self.size);

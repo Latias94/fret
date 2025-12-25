@@ -1041,6 +1041,7 @@ Status:
     - Recipes (P0): component-level “recipes” provide shared, token-driven chrome contracts. Input-family controls (TextField/Select/Combobox/TextAreaField) share a single `resolve_input_chrome(...)` resolver that enforces a stable override priority (callsite refinement → component tokens → shared input tokens → size/baseline fallbacks).
     - List rows (P0): `recipes::list_row` provides a single, Tailwind-aligned `VirtualListStyle` + row height contract shared by `ListView`, `CommandList`, and the UI Kit rich `VirtualList` demo (multi-line rows).
     - Menu lists (P0): `recipes::menu_list` provides a shared row chrome contract for overlay menus (`ContextMenu`/`Popover`) to eliminate per-widget padding/row height magic numbers and keep menu sizing consistent.
+    - Themes (P0 bridge): component recipes preferentially query gpui/shadcn semantic keys (e.g. `background`, `foreground`, `list.*`, `popover.*`) via `Theme::color_by_key`, relying on the framework alias layer (ADR 0050 §1.1) to keep existing Fret themes working.
     - `command_palette::install_command_palette` provides a one-call subtree install pattern (input + list + keyboard nav) for app ergonomics.
     - `ResizablePanelGroup` provides a component-level naming surface for the resizable split primitive (shadcn-style vocabulary).
     - `Combobox` provides a minimal typeahead + anchored list interaction (focus stays in input; list is `Popover`-backed).

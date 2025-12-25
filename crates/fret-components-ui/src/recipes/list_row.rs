@@ -22,17 +22,35 @@ pub fn list_style(theme: &Theme, size: Size) -> VirtualListStyle {
     let text_px = size.control_text_px(theme);
 
     let mut style = VirtualListStyle::default();
-    style.background = theme.colors.list_background;
-    style.border_color = theme.colors.list_border;
+    style.background = theme
+        .color_by_key("list.background")
+        .unwrap_or(theme.colors.list_background);
+    style.border_color = theme
+        .color_by_key("border")
+        .unwrap_or(theme.colors.list_border);
     style.corner_radii = Corners::all(theme.metrics.radius_md);
-    style.row_hover = theme.colors.list_row_hover;
-    style.row_selected = theme.colors.list_row_selected;
+    style.row_hover = theme
+        .color_by_key("list.hover.background")
+        .unwrap_or(theme.colors.list_row_hover);
+    style.row_selected = theme
+        .color_by_key("list.active.background")
+        .unwrap_or(theme.colors.list_row_selected);
 
-    style.text_color = theme.colors.text_primary;
-    style.secondary_text_color = theme.colors.text_muted;
-    style.trailing_text_color = theme.colors.text_muted;
-    style.header_text_color = theme.colors.text_muted;
-    style.separator_color = theme.colors.panel_border;
+    style.text_color = theme
+        .color_by_key("foreground")
+        .unwrap_or(theme.colors.text_primary);
+    style.secondary_text_color = theme
+        .color_by_key("muted.foreground")
+        .unwrap_or(theme.colors.text_muted);
+    style.trailing_text_color = theme
+        .color_by_key("muted.foreground")
+        .unwrap_or(theme.colors.text_muted);
+    style.header_text_color = theme
+        .color_by_key("muted.foreground")
+        .unwrap_or(theme.colors.text_muted);
+    style.separator_color = theme
+        .color_by_key("border")
+        .unwrap_or(theme.colors.panel_border);
 
     style.padding_x = size.list_px(theme);
     style.padding_y = size.list_py(theme);
