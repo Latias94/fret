@@ -82,6 +82,7 @@ pub fn list_from_strings<H: UiHost>(
                 values.len(),
                 row_h,
                 2,
+                None,
                 |i| values.get(i).map(String::as_str).unwrap_or(""),
                 |cx, i| {
                     let label = values.get(i).map(String::as_str).unwrap_or("");

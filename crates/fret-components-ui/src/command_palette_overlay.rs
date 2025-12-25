@@ -4,7 +4,7 @@ use fret_core::{
 use fret_runtime::CommandId;
 use fret_ui::{
     Theme, UiHost,
-    widget::{CommandCx, EventCx, LayoutCx, PaintCx, SemanticsCx, Widget},
+    widget::{EventCx, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
 
 #[derive(Debug, Clone)]
@@ -191,16 +191,6 @@ impl<H: UiHost> Widget<H> for CommandPaletteOverlay {
             } else {
                 cx.paint(content, cx.bounds);
             }
-        }
-    }
-
-    fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
-        match command.as_str() {
-            "command_palette.close" => {
-                cx.stop_propagation();
-                true
-            }
-            _ => false,
         }
     }
 

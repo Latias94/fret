@@ -360,6 +360,7 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
         len: usize,
         row_height: Px,
         overscan: usize,
+        scroll_to_index: Option<usize>,
         f: impl FnOnce(&mut Self, std::ops::Range<usize>) -> Vec<AnyElement>,
     ) -> AnyElement {
         self.scope(|cx| {
@@ -374,7 +375,33 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
 
             let content_h = Px(row_height.0.max(0.0) * len as f32);
             let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
-            let offset_y = Px(offset_y.0.min(max_offset.0));
+            let mut offset_y = Px(offset_y.0.min(max_offset.0));
+
+            if let Some(target) = scroll_to_index {
+                if viewport_h.0 > 0.0 && row_height.0 > 0.0 && len > 0 {
+                    let target = target.min(len.saturating_sub(1));
+                    let row_top = row_height.0 * target as f32;
+                    let row_bottom = row_top + row_height.0;
+                    let view_top = offset_y.0;
+                    let view_bottom = offset_y.0 + viewport_h.0;
+
+                    if row_top < view_top {
+                        offset_y = Px(row_top);
+                    } else if row_bottom > view_bottom {
+                        offset_y = Px(row_bottom - viewport_h.0);
+                    }
+
+                    offset_y = Px(offset_y.0.max(0.0).min(max_offset.0));
+                }
+            }
+
+            // Persist the computed offset so the mounted list scrolls immediately when the
+            // authoring layer requests `scroll_to_index`.
+            cx.with_state(VirtualListState::default, |state| {
+                if state.offset_y != offset_y {
+                    state.offset_y = offset_y;
+                }
+            });
 
             let (mut start, mut end) = if viewport_h.0 <= 0.0 || row_height.0 <= 0.0 || len == 0 {
                 (0usize, 0usize)
@@ -397,6 +424,7 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
                     len,
                     row_height,
                     overscan,
+                    scroll_to_index,
                     visible_start: start,
                     visible_end: end,
                 }),
@@ -416,10 +444,11 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
         len: usize,
         row_height: Px,
         overscan: usize,
+        scroll_to_index: Option<usize>,
         mut key_at: impl FnMut(usize) -> K,
         mut row: impl FnMut(&mut Self, usize) -> AnyElement,
     ) -> AnyElement {
-        self.virtual_list(len, row_height, overscan, |cx, range| {
+        self.virtual_list(len, row_height, overscan, scroll_to_index, |cx, range| {
             range
                 .map(|i| {
                     let key = key_at(i);

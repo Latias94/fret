@@ -1,17 +1,20 @@
 use std::sync::Arc;
 
-use fret_core::{Event, KeyCode, Modifiers, Px, Size};
+use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Px, Rect, Size};
 use fret_runtime::{CommandId, Model};
-use fret_ui::primitives::Column;
+use fret_ui::primitives::{Column, Stack};
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, UiTree, Widget};
+use fret_core::TextService;
 
 use crate::Size as ComponentSize;
-use crate::command::{CommandItem, CommandList, visible_item_ids};
+use crate::command::{CommandItem, visible_item_ids};
 use crate::text_field::TextField;
 
 pub struct CommandPaletteHandles {
+    pub items: Model<Vec<CommandItem>>,
     pub query: Model<String>,
     pub selection: Model<Option<Arc<str>>>,
+    pub list_mount: fret_core::NodeId,
 }
 
 pub struct CommandPalette {
@@ -153,6 +156,16 @@ impl<H: UiHost> Widget<H> for CommandPalette {
         }
     }
 
+    fn command(&mut self, cx: &mut fret_ui::widget::CommandCx<'_, H>, command: &CommandId) -> bool {
+        if let Some(id) = command.as_str().strip_prefix("command_palette.select.") {
+            let id: Arc<str> = Arc::from(id);
+            let _ = cx.app.models_mut().update(self.selection, |v| *v = Some(id));
+            cx.stop_propagation();
+            return true;
+        }
+        false
+    }
+
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.ensure_selection(cx);
 
@@ -241,14 +254,50 @@ pub fn install_command_palette<H: UiHost>(
     let list_panel = ui.create_node(FixedHeight::new(list_h));
     ui.add_child(content, list_panel);
 
-    let list = ui.create_node(
-        CommandList::new(items, query)
-            .with_size(size)
-            .with_selection_model(selection)
-            .with_close_command(CommandId::from("command_palette.close"))
-            .activate_on_enter(true),
-    );
-    ui.add_child(list_panel, list);
+    let list_mount = ui.create_node(Stack::new());
+    ui.add_child(list_panel, list_mount);
 
-    CommandPaletteHandles { query, selection }
+    CommandPaletteHandles {
+        items,
+        query,
+        selection,
+        list_mount,
+    }
+}
+
+/// Renders the command palette virtualized list subtree (declarative element composition) into the
+/// provided mount node.
+///
+/// Call this once per frame before `UiTree::layout_all` / `paint_all` for the relevant window.
+pub fn render_command_palette_list<H: UiHost>(
+    ui: &mut UiTree<H>,
+    app: &mut H,
+    text: &mut dyn TextService,
+    window: AppWindowId,
+    handles: &CommandPaletteHandles,
+    size: ComponentSize,
+) {
+    let bounds = ui
+        .debug_node_bounds(handles.list_mount)
+        .unwrap_or(Rect::default());
+
+    let root = fret_ui::declarative::render_root(
+        ui,
+        app,
+        text,
+        window,
+        bounds,
+        "command-palette-list",
+        |cx| {
+            vec![crate::declarative::command_palette::command_palette_list(
+                cx,
+                handles.items,
+                handles.query,
+                handles.selection,
+                size,
+            )]
+        },
+    );
+
+    ui.set_children(handles.list_mount, vec![root]);
 }

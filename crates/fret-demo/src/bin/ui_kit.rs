@@ -11,7 +11,7 @@ use fret_components_ui::{
     checkbox::Checkbox,
     combobox::Combobox,
     command::{CommandItem, CommandList},
-    command_palette::install_command_palette,
+    command_palette::{CommandPaletteHandles, install_command_palette, render_command_palette_list},
     dropdown_menu::DropdownMenuButton,
     frame::Frame,
     icon_button::IconButton,
@@ -61,6 +61,7 @@ struct UiKitWindowState {
     ui: UiTree,
     root: NodeId,
     overlays: WindowOverlays,
+    command_palette: CommandPaletteHandles,
     theme_candidates: Vec<ThemeCandidate>,
     theme_selected: Model<usize>,
     theme_last_selected: usize,
@@ -175,10 +176,9 @@ fn build_ui_kit_contents(
     ui: &mut UiTree,
     parent: NodeId,
     image: Option<fret_core::ImageId>,
-    command_palette_root: NodeId,
     theme_selected: Model<usize>,
     theme_options: Vec<SelectOption>,
-) -> NodeId {
+) -> (NodeId, Model<Vec<CommandItem>>) {
     let col = ui.create_node(Column::new().with_padding(Px(16.0)).with_spacing(Px(12.0)));
     ui.add_child(parent, col);
 
@@ -401,14 +401,6 @@ fn build_ui_kit_contents(
             .on_click(fret_app::CommandId::from("command_palette.open")),
     );
     ui.add_child(palette_open_row, open_palette);
-
-    let _palette = install_command_palette(
-        ui,
-        app,
-        command_palette_root,
-        command_items,
-        ComponentSize::Medium,
-    );
 
     let scroll_area_label = ui.create_node(Text::new("ScrollArea"));
     ui.add_child(col, scroll_area_label);
@@ -703,7 +695,7 @@ fn build_ui_kit_contents(
     let decl_mount = ui.create_node(Stack::new());
     ui.add_child(decl_panel, decl_mount);
 
-    decl_mount
+    (decl_mount, command_items)
 }
 
 impl WinitDriver for UiKitDriver {
@@ -826,14 +818,21 @@ impl WinitDriver for UiKitDriver {
                 .collect()
         };
 
-        let declarative_mount = build_ui_kit_contents(
+        let (declarative_mount, command_items) = build_ui_kit_contents(
             app,
             &mut ui,
             scroll,
             self.ui_kit_image.as_ref().map(|i| i.id),
-            overlays.command_palette_node(),
             theme_selected,
             theme_options,
+        );
+
+        let command_palette = install_command_palette(
+            &mut ui,
+            app,
+            overlays.command_palette_node(),
+            command_items,
+            ComponentSize::Medium,
         );
 
         let declarative_selection = app.models_mut().insert(None::<usize>);
@@ -847,6 +846,7 @@ impl WinitDriver for UiKitDriver {
             ui,
             root,
             overlays,
+            command_palette,
             theme_candidates,
             theme_selected,
             theme_last_selected,
@@ -882,6 +882,17 @@ impl WinitDriver for UiKitDriver {
         state: &mut Self::WindowState,
         command: fret_app::CommandId,
     ) {
+        if state
+            .overlays
+            .handle_command(app, &mut state.ui, text, window, &command)
+        {
+            return;
+        }
+
+        if state.ui.dispatch_command(app, text, &command) {
+            return;
+        }
+
         if let Some(index) = command
             .as_str()
             .strip_prefix("ui_kit.declarative_list.select.")
@@ -958,13 +969,6 @@ impl WinitDriver for UiKitDriver {
                 tracing::info!("toast action: restart");
             }
             _ => {}
-        }
-
-        if state
-            .overlays
-            .handle_command(app, &mut state.ui, text, window, &command)
-        {
-            return;
         }
 
         tracing::info!(window = ?window, command = ?command, "unhandled command");
@@ -1078,6 +1082,17 @@ impl WinitDriver for UiKitDriver {
 
         state.ui.set_children(state.declarative_mount, vec![root]);
         state.declarative_root = Some(root);
+
+        // Render the command palette list via declarative composition (composable rows).
+        render_command_palette_list(
+            &mut state.ui,
+            app,
+            text,
+            window,
+            &state.command_palette,
+            ComponentSize::Medium,
+        );
+
         state.ui.layout_all(app, text, bounds, scale_factor);
         if let Some(root) = state.declarative_root
             && let Some(b) = state.ui.debug_node_bounds(root)

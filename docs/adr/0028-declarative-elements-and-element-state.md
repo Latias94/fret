@@ -51,6 +51,22 @@ Adopt a **GPUI-style declarative element model** as the long-term authoring and 
 This provides ImGui-like “write the UI every frame” ergonomics, but the runtime remains retained in behavior
 (focus/IME, command routing, docking, overlays).
 
+#### Execution Contract (Important)
+
+For the declarative authoring path, **a window/root must call `render_root(...)` once per frame** *before*
+`UiTree::layout_all(...)` / `UiTree::paint_all(...)`.
+
+Rationale:
+
+- Model observation (`observe_model(...)`) and invalidation wiring are derived from the latest render pass.
+- The runtime intentionally treats model observation as **per-frame data**; if a frame advances but you do not
+  call `render_root(...)`, the next `layout`/`paint` pass may run with missing observation relationships and
+  will not automatically “remember” which models should invalidate which elements.
+
+This is consistent with the GPUI-style “build every frame” mental model and keeps the runtime simple and
+predictable. If we later want to support “skip render passes” as an optimization, it must come with a
+separately specified observation/cache lifecycle.
+
 ### 2) Cross-frame element state is externalized and keyed by IDs
 
 Introduce a cross-frame element state store:

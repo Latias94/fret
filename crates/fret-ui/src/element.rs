@@ -186,6 +186,12 @@ pub struct VirtualListProps {
     pub len: usize,
     pub row_height: Px,
     pub overscan: usize,
+    /// If set, adjust the list scroll offset to keep the given row index visible.
+    ///
+    /// This is a low-level virtualization primitive (not a selection model): component-layer code
+    /// can compute the desired row index (e.g. from a selection model) and request that the list
+    /// stays scrolled to it.
+    pub scroll_to_index: Option<usize>,
     pub visible_start: usize,
     pub visible_end: usize,
 }

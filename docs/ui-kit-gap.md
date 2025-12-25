@@ -172,3 +172,6 @@ Practical gaps to prioritize for parity:
 Update:
 
 - The palette-style shell is prototype implemented and wired in `fret-demo --bin ui_kit`.
+- The command palette list body is now rendered via **declarative composition** (rows are arbitrary
+  element subtrees, not `VirtualListRow { text/secondary/trailing... }`), as an MVP 50 step toward a
+  fully composable virtualization contract.

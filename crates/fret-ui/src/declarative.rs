@@ -549,6 +549,26 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
                         state.offset_y = Px(state.offset_y.0.max(0.0).min(max_offset.0));
 
+                        if let Some(target) = props.scroll_to_index
+                            && viewport_h.0 > 0.0
+                            && row_h.0 > 0.0
+                            && props.len > 0
+                        {
+                            let target = target.min(props.len.saturating_sub(1));
+                            let row_top = row_h.0 * target as f32;
+                            let row_bottom = row_top + row_h.0;
+                            let view_top = state.offset_y.0;
+                            let view_bottom = state.offset_y.0 + viewport_h.0;
+
+                            if row_top < view_top {
+                                state.offset_y = Px(row_top);
+                            } else if row_bottom > view_bottom {
+                                state.offset_y = Px(row_bottom - viewport_h.0);
+                            }
+
+                            state.offset_y = Px(state.offset_y.0.max(0.0).min(max_offset.0));
+                        }
+
                         needs_redraw =
                             state.viewport_h != prev_viewport_h || state.offset_y != prev_offset_y;
                     },
@@ -954,7 +974,6 @@ mod tests {
         let window = AppWindowId::default();
         ui.set_window(window);
         ui.set_debug_enabled(true);
-        ui.set_debug_enabled(true);
 
         let bounds = Rect::new(
             fret_core::Point::new(Px(0.0), Px(0.0)),
@@ -1122,7 +1141,7 @@ mod tests {
             cx: &mut ElementCx<'_, TestHost>,
             list_element_id: &mut Option<crate::elements::GlobalElementId>,
         ) -> crate::element::AnyElement {
-            let list = cx.virtual_list(100, Px(10.0), 0, |cx, range| {
+            let list = cx.virtual_list(100, Px(10.0), 0, None, |cx, range| {
                 range.map(|i| cx.keyed(i, |cx| cx.text("row"))).collect()
             });
             *list_element_id = Some(list.id);
@@ -1192,6 +1211,71 @@ mod tests {
     }
 
     #[test]
+    fn virtual_list_scroll_to_index_keeps_target_visible() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(30.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        // Frame 0: establish viewport height.
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp50-vlist-scroll-to",
+            |cx| vec![cx.virtual_list(100, Px(10.0), 0, None, |cx, range| {
+                range.map(|i| cx.keyed(i, |cx| cx.text("row"))).collect()
+            })],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        app.advance_frame();
+
+        // Frame 1: request scroll-to on a row below the viewport.
+        let target = 6usize; // row_top=60, viewport=30 => needs offset ~= 40..60
+        let mut list_element_id: Option<crate::elements::GlobalElementId> = None;
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp50-vlist-scroll-to",
+            |cx| {
+                let list = cx.virtual_list(100, Px(10.0), 0, Some(target), |cx, range| {
+                    range.map(|i| cx.keyed(i, |cx| cx.text("row"))).collect()
+                });
+                list_element_id = Some(list.id);
+                vec![list]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let state = crate::elements::with_element_state(
+            &mut app,
+            window,
+            list_element_id.expect("list element id"),
+            crate::element::VirtualListState::default,
+            |s| *s,
+        );
+
+        assert!(
+            (state.offset_y.0 - 40.0).abs() < 0.01,
+            "offset_y={:?}",
+            state.offset_y
+        );
+    }
+
+    #[test]
     fn virtual_list_paint_clips_each_visible_row() {
         let mut app = TestHost::new();
         let mut ui: UiTree<TestHost> = UiTree::new();
@@ -1205,7 +1289,7 @@ mod tests {
         let mut text = FakeTextService::default();
 
         fn build_list<H: UiHost>(cx: &mut ElementCx<'_, H>) -> AnyElement {
-            cx.virtual_list(100, Px(10.0), 0, |cx, range| {
+            cx.virtual_list(100, Px(10.0), 0, None, |cx, range| {
                 range.map(|i| cx.keyed(i, |cx| cx.text("row"))).collect()
             })
         }
@@ -1275,6 +1359,7 @@ mod tests {
                 items.len(),
                 Px(10.0),
                 0,
+                None,
                 |i| items[i],
                 |cx, i| {
                     let row = cx.text("row");
@@ -1454,6 +1539,66 @@ mod tests {
         ui.layout_all(&mut app, &mut text, bounds, 1.0);
         let performed2 = ui.debug_stats().layout_nodes_performed;
         assert!(performed2 > 0, "expected model change to trigger relayout");
+    }
+
+    #[test]
+    fn model_observation_requires_rerender_after_frame_advance() {
+        let mut app = TestHost::new();
+        let model = app.models_mut().insert(0u32);
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(40.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp50-observe-contract-frame-advance",
+            |cx| {
+                vec![cx.container(Default::default(), |cx| {
+                    cx.observe_model(model, Invalidation::Layout);
+                    let v = cx.app.models().get(model).copied().unwrap_or_default();
+                    vec![cx.text(format!("Value {v}"))]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        // Advance the frame but intentionally skip the render pass.
+        app.advance_frame();
+
+        // The first model change still invalidates because UiTree retains the previous observation
+        // index until the next layout/paint pass records observations again.
+        let _ = model.update(&mut app, |v, _cx| *v += 1);
+        let changed = app.take_changed_models();
+        assert!(
+            ui.propagate_model_changes(&mut app, &changed),
+            "expected invalidation from the last recorded observation index"
+        );
+
+        // Layout now runs on the advanced frame. Without a new render pass, the declarative layer
+        // has no per-frame observation data to re-register, so the observation index is cleared.
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        // A second model change no longer invalidates: this encodes the ADR 0028 execution contract
+        // that `render_root(...)` must be called each frame before layout/paint.
+        let _ = model.update(&mut app, |v, _cx| *v += 1);
+        let changed = app.take_changed_models();
+        assert!(
+            !ui.propagate_model_changes(&mut app, &changed),
+            "expected no invalidation without re-rendering after a frame advance"
+        );
     }
 
     #[test]
