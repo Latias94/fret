@@ -9,8 +9,9 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
 
+use super::style;
 use crate::command::CommandItem;
-use crate::Size;
+use crate::{Size, Space};
 
 #[derive(Debug, Clone)]
 enum RowKind {
@@ -220,6 +221,8 @@ pub fn command_palette_list<H: UiHost>(
         row_h,
         row_px,
         row_py,
+        row_gap,
+        col_gap,
     ) = {
         let theme = Theme::global(&*cx.app);
         let (list_bg, border, row_hover, row_active) = resolve_list_colors(theme);
@@ -240,14 +243,17 @@ pub fn command_palette_list<H: UiHost>(
         let any_detail =
             rows.iter().any(|r| matches!(r.kind, RowKind::Item { detail: Some(_), .. }));
         let base_row_h = size.list_row_h(theme);
+        let detail_extra = style::space(theme, Space::N1p5);
         let row_h = if any_detail {
-            Px((base_row_h.0 + (small_px.0 + 6.0)).max(base_row_h.0))
+            Px((base_row_h.0 + (small_px.0 + detail_extra.0)).max(base_row_h.0))
         } else {
             base_row_h
         };
 
         let row_px = size.list_px(theme);
         let row_py = size.list_py(theme);
+        let row_gap = style::space(theme, Space::N2);
+        let col_gap = style::space(theme, Space::N0p5);
 
         (
             list_bg,
@@ -263,6 +269,8 @@ pub fn command_palette_list<H: UiHost>(
             row_h,
             row_px,
             row_py,
+            row_gap,
+            col_gap,
         )
     };
 
@@ -345,7 +353,7 @@ pub fn command_palette_list<H: UiHost>(
                                         |cx| {
                                             vec![cx.row(
                                                 RowProps {
-                                                    gap: Px(8.0),
+                                                    gap: row_gap,
                                                     justify: MainAlign::Start,
                                                     align: CrossAlign::Center,
                                                     ..Default::default()
@@ -355,7 +363,7 @@ pub fn command_palette_list<H: UiHost>(
 
                                                     out.push(cx.column(
                                                         ColumnProps {
-                                                            gap: Px(2.0),
+                                                            gap: col_gap,
                                                             justify: MainAlign::Start,
                                                             align: CrossAlign::Start,
                                                             ..Default::default()

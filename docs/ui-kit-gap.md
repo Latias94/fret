@@ -175,3 +175,6 @@ Update:
 - The command palette list body is now rendered via **declarative composition** (rows are arbitrary
   element subtrees, not `VirtualListRow { text/secondary/trailing... }`), as an MVP 50 step toward a
   fully composable virtualization contract.
+- The UI kit declarative panel now also demonstrates a composable, “rich row” virtualized list
+  (leading + two-line label + trailing) built purely from declarative primitives, without relying on
+  fixed row schemas.

@@ -122,6 +122,9 @@ P0 / near-term (schedule as MVPs/refactors):
   reusable resize-handle primitives (planned as MVP 46 in `docs/mvp/active-plan.md`).
 - **Resizable layout primitive**: a reusable split/resize container (panel group) so “dock splits”, “inspector
   sidebars”, and “data table column resize” share hit-testing and cursor behavior (pairs naturally with MVP 46).
+  - Prefer modeling the divider/handle as a real child element that participates in layout (no overlap with content),
+    rather than a pure overlay that can clip focus rings; see gpui-component’s `resize_handle` usage in
+    `repo-ref/gpui-component/crates/ui/src/resizable/panel.rs`.
 - **Pointer lock / relative motion** (viewport navigation): a portable effect boundary for “orbit/pan camera”
   interactions where OS cursor constraints differ (desktop vs web); capability-gated and opt-in.
 - **Overlay hit-testing policies**: pointer-transparent overlays (click-through “empty” overlay regions) and

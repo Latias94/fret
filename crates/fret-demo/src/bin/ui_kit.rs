@@ -17,7 +17,6 @@ use fret_components_ui::{
     icon_button::IconButton,
     list_view::ListView,
     progress::ProgressBar,
-    recipes::list_row::{ListRowHeightMode, list_row_height, list_style},
     resizable_panel_group::ResizablePanelGroup,
     scroll_area::ScrollArea,
     select::{Select, SelectOption},
@@ -38,7 +37,7 @@ use fret_render::{ImageColorSpace, ImageDescriptor, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui_app::{
     ColoredPanel, Column, FixedPanel, Invalidation, PanelThemeBackground, Row, Scroll, Stack, Text,
-    Theme, ThemeConfig, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
+    Theme, ThemeConfig, UiTree,
 };
 use std::sync::Arc;
 use winit::event_loop::EventLoop;
@@ -70,38 +69,6 @@ struct UiKitWindowState {
     declarative_bounds: Rect,
     declarative_selection: Model<Option<usize>>,
     declarative_items: Model<Vec<String>>,
-}
-
-#[derive(Debug, Default, Clone, Copy)]
-struct UiKitRichListDataSource {
-    len: usize,
-}
-
-impl VirtualListDataSource for UiKitRichListDataSource {
-    type Key = usize;
-
-    fn len(&self) -> usize {
-        self.len
-    }
-
-    fn key_at(&self, index: usize) -> Self::Key {
-        index
-    }
-
-    fn row_at(&self, index: usize) -> VirtualListRow<'_> {
-        match index {
-            0 => VirtualListRow::new("Recents").header(),
-            1 => VirtualListRow::separator(),
-            _ => {
-                let i = index - 2;
-                let leading = if i % 3 == 0 { "●" } else { "○" };
-                VirtualListRow::new(format!("Project {i}"))
-                    .with_leading_text(leading)
-                    .with_secondary_text("Modified 2 hours ago")
-                    .with_trailing_text("⌘O")
-            }
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -477,22 +444,10 @@ fn build_ui_kit_contents(
         );
         ui.add_child(command_list_panel, command_list);
 
-        let rich_list_label = ui.create_node(Text::new("VirtualList (rich rows)"));
-        ui.add_child(group, rich_list_label);
-
-        let rich_list_panel = ui.create_node(FixedPanel::new(Px(180.0), Color::TRANSPARENT));
-        ui.add_child(group, rich_list_panel);
-
-        let rich_list = ui.create_node(
-            VirtualList::new(UiKitRichListDataSource { len: 2000 })
-                .with_style(list_style(Theme::global(app), size))
-                .with_row_height(list_row_height(
-                    Theme::global(app),
-                    size,
-                    ListRowHeightMode::Measured,
-                )),
-        );
-        ui.add_child(rich_list_panel, rich_list);
+        // Note: the old `VirtualListRow` schema-based list is intentionally not showcased here.
+        // The preferred direction is the composable declarative `VirtualList` (see the
+        // "Declarative (experimental)" section below), which allows rows to be arbitrary element
+        // subtrees (MVP 50).
     }
 
     let separator = ui.create_node(Separator::horizontal());
@@ -1066,17 +1021,82 @@ impl WinitDriver for UiKitDriver {
             desired_bounds,
             "ui-kit-declarative-list",
             |cx| {
-                vec![fret_components_ui::declarative::list::list_from_strings(
-                    cx,
-                    state.declarative_items,
-                    Some(state.declarative_selection),
-                    fret_components_ui::Size::Medium,
-                    |i| {
-                        Some(fret_app::CommandId::new(format!(
-                            "ui_kit.declarative_list.select.{i}"
-                        )))
-                    },
-                )]
+                cx.observe_model(state.declarative_items, Invalidation::Layout);
+                let values = cx
+                    .app
+                    .models()
+                    .get(state.declarative_items)
+                    .cloned()
+                    .unwrap_or_default();
+
+                let theme = Theme::global(&*cx.app);
+                let size = fret_components_ui::Size::Medium;
+                let base_row_h = size.list_row_h(theme);
+                let outer_gap = fret_components_ui::declarative::style::space(
+                    theme,
+                    fret_components_ui::Space::N2,
+                );
+                let secondary_gap = fret_components_ui::declarative::style::space(
+                    theme,
+                    fret_components_ui::Space::N0p5,
+                );
+
+                vec![
+                    cx.column(
+                        fret_ui_app::element::ColumnProps {
+                            gap: outer_gap,
+                            ..Default::default()
+                        },
+                        |cx| {
+                            vec![
+                                cx.text("Recents (declarative virtualized list)"),
+                                fret_components_ui::declarative::list::list_virtualized(
+                                    cx,
+                                    Some(state.declarative_selection),
+                                    size,
+                                    Some(Px(base_row_h.0 * 1.9)),
+                                    values.len(),
+                                    2,
+                                    None,
+                                    |i| values.get(i).map(String::as_str).unwrap_or(""),
+                                    |i| {
+                                        Some(fret_app::CommandId::new(format!(
+                                            "ui_kit.declarative_list.select.{i}"
+                                        )))
+                                    },
+                                    |cx, i| {
+                                        let label = values.get(i).map(String::as_str).unwrap_or("");
+                                        let leading = if i % 3 == 0 { "●" } else { "○" };
+                                        let trailing = if i % 5 == 0 { "⌘O" } else { "" };
+
+                                        let mut out = Vec::new();
+                                        out.push(cx.text(leading));
+                                        out.push(cx.column(
+                                            fret_ui_app::element::ColumnProps {
+                                                gap: secondary_gap,
+                                                align: fret_ui_app::element::CrossAlign::Start,
+                                                ..Default::default()
+                                            },
+                                            |cx| {
+                                                vec![
+                                                    cx.text(label),
+                                                    cx.text("Modified 2 hours ago"),
+                                                ]
+                                            },
+                                        ));
+                                        out.push(cx.spacer(fret_ui_app::element::SpacerProps {
+                                            min: Px(0.0),
+                                        }));
+                                        if !trailing.is_empty() {
+                                            out.push(cx.text(trailing));
+                                        }
+                                        out
+                                    },
+                                ),
+                            ]
+                        },
+                    ),
+                ]
             },
         );
 
