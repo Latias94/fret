@@ -5,6 +5,8 @@ use fret_app::{
 use fret_components_icons::IconId;
 use fret_components_shadcn::{
     Button as ShadcnButton, ButtonSize as ShadcnButtonSize, ButtonVariant as ShadcnButtonVariant,
+    ToggleGroup as ShadcnToggleGroup, ToggleGroupItem as ShadcnToggleGroupItem,
+    ToggleSize as ShadcnToggleSize, ToggleVariant as ShadcnToggleVariant,
 };
 use fret_components_ui::{
     ChromeRefinement, ContextMenuService, DialogAction, DialogRequest, DialogService,
@@ -335,6 +337,21 @@ fn build_ui_kit_contents(
     ui.add_child(switch_row, switch_node);
     ui.add_child(switch_row, switch_label);
     ui.add_child(col, switch_row);
+
+    let toggle_group_label = ui.create_node(Text::new("shadcn/ui v4 ToggleGroup (prototype)"));
+    ui.add_child(col, toggle_group_label);
+    let toggle_group_row = ui.create_node(Row::new().with_spacing(Px(10.0)));
+    let toggle_single = app.models_mut().insert(None::<Arc<str>>);
+    let toggle_group_single = ui.create_node(
+        ShadcnToggleGroup::single(toggle_single)
+            .variant(ShadcnToggleVariant::Outline)
+            .size(ShadcnToggleSize::Default)
+            .item(ShadcnToggleGroupItem::new("bold", "Bold"))
+            .item(ShadcnToggleGroupItem::new("italic", "Italic"))
+            .item(ShadcnToggleGroupItem::new("underline", "Underline")),
+    );
+    ui.add_child(toggle_group_row, toggle_group_single);
+    ui.add_child(col, toggle_group_row);
 
     let slider_model = app.models_mut().insert(0.35f32);
     let slider_label = ui.create_node(Text::new("Slider / Progress"));

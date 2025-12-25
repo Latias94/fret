@@ -16,6 +16,7 @@ pub mod empty;
 pub mod kbd;
 pub mod label;
 pub mod toggle;
+pub mod toggle_group;
 
 pub use alert::{Alert, AlertDescription, AlertTitle, AlertVariant};
 pub use badge::{Badge, BadgeVariant};
@@ -25,6 +26,7 @@ pub use empty::Empty;
 pub use kbd::Kbd;
 pub use label::Label;
 pub use toggle::{Toggle, ToggleSize, ToggleVariant};
+pub use toggle_group::{ToggleGroup, ToggleGroupItem, ToggleGroupType};
 
 pub mod input {
     pub use fret_components_ui::text_field::TextField as Input;

@@ -132,7 +132,7 @@ Status legend:
 | Tabs | `ui/tabs.tsx` | `fret_components_shadcn::tabs::*` | ✅ | Ensure keyboard navigation parity. |
 | Textarea | `ui/textarea.tsx` | `fret_components_shadcn::Textarea` | ✅ | Needs multiline editing parity over time. |
 | Toggle | `ui/toggle.tsx` | `fret_components_shadcn::Toggle` | ✅ | Two-state button; variants/sizes should be validated. |
-| Toggle Group | `ui/toggle-group.tsx` |  | ❌ | Multi-toggle with single/multiple selection modes. |
+| Toggle Group | `ui/toggle-group.tsx` | `fret_components_shadcn::ToggleGroup` | ✅ | First pass: single/multiple selection models, spacing=0 border/radius merging, arrows + Enter/Space activation. |
 | Tooltip | `ui/tooltip.tsx` | `fret_components_ui::tooltip::*` | ✅ | Ensure hover delays + focus behavior parity. |
 
 ## TODOs (prioritized)
@@ -214,7 +214,7 @@ These checklists are the acceptance criteria for “interaction parity”.
 - [ ] `Accordion` / `Collapsible` (expansion model + keyboard)
 - [ ] `InputGroup` (icon slots + per-edge padding primitives; depends on Tailwind primitive parity)
 - [ ] `RadioGroup` (selection model + keyboard arrows)
-- [ ] `ToggleGroup` (selection policy, spacing/border merging, keyboard)
+- [x] `ToggleGroup` (selection policy, spacing/border merging, keyboard)
 
 ### P2 — larger surfaces (likely require dedicated contracts)
 
