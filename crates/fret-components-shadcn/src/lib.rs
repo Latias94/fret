@@ -8,15 +8,19 @@
 //! while `fret-components-ui` remains the reusable component infrastructure (StyledExt, tokens,
 //! recipes glue, etc.).
 
+pub mod alert;
 pub mod badge;
 pub mod button;
 pub mod card;
+pub mod empty;
 pub mod kbd;
 pub mod label;
 
+pub use alert::{Alert, AlertDescription, AlertTitle, AlertVariant};
 pub use badge::{Badge, BadgeVariant};
 pub use button::{Button, ButtonSize, ButtonVariant};
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
+pub use empty::Empty;
 pub use kbd::Kbd;
 pub use label::Label;
 

@@ -66,6 +66,16 @@
     "component.card.description_px": 14.0,
     "component.card.description_line_height": 20.0,
 
+    "component.alert.title_px": 14.0,
+    "component.alert.title_line_height": 20.0,
+    "component.alert.description_px": 14.0,
+    "component.alert.description_line_height": 20.0,
+
+    "component.empty.title_px": 16.0,
+    "component.empty.title_line_height": 22.0,
+    "component.empty.description_px": 14.0,
+    "component.empty.description_line_height": 20.0,
+
     "component.space.0": 0.0,
     "component.space.0p5": 2.0,
     "component.space.1": 4.0,

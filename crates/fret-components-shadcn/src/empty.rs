@@ -1,0 +1,133 @@
+use std::sync::Arc;
+
+use fret_components_ui::declarative::style as decl_style;
+use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
+use fret_ui::element::{AnyElement, CrossAlign, MainAlign, TextProps};
+use fret_ui::{ElementCx, Theme, UiHost};
+
+use fret_components_ui::declarative::stack;
+
+#[derive(Debug, Clone)]
+pub struct Empty {
+    title: Arc<str>,
+    description: Option<Arc<str>>,
+}
+
+impl Empty {
+    pub fn new(title: impl Into<Arc<str>>) -> Self {
+        Self {
+            title: title.into(),
+            description: None,
+        }
+    }
+
+    pub fn description(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.description = Some(text.into());
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        empty(cx, self.title, self.description)
+    }
+}
+
+pub fn empty<H: UiHost>(
+    cx: &mut ElementCx<'_, H>,
+    title: impl Into<Arc<str>>,
+    description: Option<Arc<str>>,
+) -> AnyElement {
+    let title = title.into();
+    let theme = Theme::global(&*cx.app).clone();
+
+    let bg = theme
+        .color_by_key("card")
+        .or_else(|| theme.color_by_key("background"))
+        .unwrap_or(theme.colors.panel_background);
+    let border = theme
+        .color_by_key("border")
+        .unwrap_or(theme.colors.panel_border);
+
+    let fg = theme
+        .color_by_key("foreground")
+        .unwrap_or(theme.colors.text_primary);
+    let muted_fg = theme
+        .color_by_key("muted.foreground")
+        .or_else(|| theme.color_by_key("muted-foreground"))
+        .unwrap_or(theme.colors.text_muted);
+
+    let props = decl_style::container_props(
+        &theme,
+        ChromeRefinement::default()
+            .p(Space::N6)
+            .rounded(Radius::Lg)
+            .border_1()
+            .bg(ColorRef::Color(bg))
+            .border_color(ColorRef::Color(border)),
+        LayoutRefinement::default(),
+    );
+
+    cx.container(props, |cx| {
+        let title_px = theme
+            .metric_by_key("component.empty.title_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or(theme.metrics.font_size);
+        let title_lh = theme
+            .metric_by_key("component.empty.title_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or(theme.metrics.font_line_height);
+
+        let desc_px = theme
+            .metric_by_key("component.empty.description_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or(theme.metrics.font_size);
+        let desc_lh = theme
+            .metric_by_key("component.empty.description_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or(theme.metrics.font_line_height);
+
+        vec![stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N1p5)
+                .justify(MainAlign::Start)
+                .align(CrossAlign::Start),
+            |cx| {
+                let mut out = Vec::new();
+                out.push(cx.text_props(TextProps {
+                    layout: Default::default(),
+                    text: title,
+                    style: Some(TextStyle {
+                        font: FontId::default(),
+                        size: title_px,
+                        weight: FontWeight::SEMIBOLD,
+                        line_height: Some(title_lh),
+                        letter_spacing_em: None,
+                    }),
+                    color: Some(fg),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                }));
+
+                if let Some(desc) = description {
+                    out.push(cx.text_props(TextProps {
+                        layout: Default::default(),
+                        text: desc,
+                        style: Some(TextStyle {
+                            font: FontId::default(),
+                            size: desc_px,
+                            weight: FontWeight::NORMAL,
+                            line_height: Some(desc_lh),
+                            letter_spacing_em: None,
+                        }),
+                        color: Some(muted_fg),
+                        wrap: TextWrap::Word,
+                        overflow: TextOverflow::Clip,
+                    }));
+                }
+
+                out
+            },
+        )]
+    })
+}
