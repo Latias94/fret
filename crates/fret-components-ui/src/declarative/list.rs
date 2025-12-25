@@ -78,67 +78,65 @@ pub fn list_from_strings<H: UiHost>(
             ..Default::default()
         },
         |cx| {
-            vec![cx.virtual_list(values.len(), row_h, 2, |cx, range| {
-                range
-                    .map(|i| {
-                        cx.keyed(i, |cx| {
-                            let label = values.get(i).map(String::as_str).unwrap_or("");
-                            let leading = if i % 3 == 0 { "●" } else { "○" };
-                            let trailing = if i % 5 == 0 { "⌘O" } else { "" };
+            vec![cx.virtual_list_keyed(
+                values.len(),
+                row_h,
+                2,
+                |i| values.get(i).map(String::as_str).unwrap_or(""),
+                |cx, i| {
+                    let label = values.get(i).map(String::as_str).unwrap_or("");
+                    let leading = if i % 3 == 0 { "●" } else { "○" };
+                    let trailing = if i % 5 == 0 { "⌘O" } else { "" };
 
-                            cx.pressable(
-                                PressableProps {
-                                    enabled: true,
-                                    on_click: on_select(i),
+                    cx.pressable(
+                        PressableProps {
+                            enabled: true,
+                            on_click: on_select(i),
+                        },
+                        |cx, st| {
+                            let is_selected = selected == Some(i);
+                            let bg = if is_selected {
+                                Some(row_active)
+                            } else if st.pressed {
+                                Some(row_active)
+                            } else if st.hovered {
+                                Some(row_hover)
+                            } else {
+                                None
+                            };
+
+                            vec![cx.container(
+                                ContainerProps {
+                                    padding_x: row_px,
+                                    padding_y: row_py,
+                                    background: bg,
+                                    ..Default::default()
                                 },
-                                |cx, st| {
-                                    let is_selected = selected == Some(i);
-                                    let bg = if is_selected {
-                                        Some(row_active)
-                                    } else if st.pressed {
-                                        Some(row_active)
-                                    } else if st.hovered {
-                                        Some(row_hover)
-                                    } else {
-                                        None
-                                    };
-
-                                    vec![cx.container(
-                                        ContainerProps {
-                                            padding_x: row_px,
-                                            padding_y: row_py,
-                                            background: bg,
+                                |cx| {
+                                    vec![cx.row(
+                                        RowProps {
+                                            gap: Px(8.0),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Center,
                                             ..Default::default()
                                         },
                                         |cx| {
-                                            vec![cx.row(
-                                                RowProps {
-                                                    gap: Px(8.0),
-                                                    justify: MainAlign::Start,
-                                                    align: CrossAlign::Center,
-                                                    ..Default::default()
-                                                },
-                                                |cx| {
-                                                    let mut out = Vec::new();
-                                                    out.push(cx.text(leading));
-                                                    out.push(cx.text(label));
-                                                    out.push(
-                                                        cx.spacer(SpacerProps { min: Px(0.0) }),
-                                                    );
-                                                    if !trailing.is_empty() {
-                                                        out.push(cx.text(trailing));
-                                                    }
-                                                    out
-                                                },
-                                            )]
+                                            let mut out = Vec::new();
+                                            out.push(cx.text(leading));
+                                            out.push(cx.text(label));
+                                            out.push(cx.spacer(SpacerProps { min: Px(0.0) }));
+                                            if !trailing.is_empty() {
+                                                out.push(cx.text(trailing));
+                                            }
+                                            out
                                         },
                                     )]
                                 },
-                            )
-                        })
-                    })
-                    .collect()
-            })]
+                            )]
+                        },
+                    )
+                },
+            )]
         },
     )
 }

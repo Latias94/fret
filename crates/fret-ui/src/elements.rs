@@ -404,6 +404,30 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             )
         })
     }
+
+    /// Virtualized list helper that enforces stable element identity by entering a keyed scope
+    /// for each visible row.
+    ///
+    /// Prefer this over index-identity list rendering for any dynamic collection that can reorder,
+    /// so element-local state (caret/selection/scroll) does not “stick to positions”.
+    #[track_caller]
+    pub fn virtual_list_keyed<K: Hash>(
+        &mut self,
+        len: usize,
+        row_height: Px,
+        overscan: usize,
+        mut key_at: impl FnMut(usize) -> K,
+        mut row: impl FnMut(&mut Self, usize) -> AnyElement,
+    ) -> AnyElement {
+        self.virtual_list(len, row_height, overscan, |cx, range| {
+            range
+                .map(|i| {
+                    let key = key_at(i);
+                    cx.keyed(key, |cx| row(cx, i))
+                })
+                .collect()
+        })
+    }
 }
 
 pub fn with_element_state<H: UiHost, S: Any, R>(

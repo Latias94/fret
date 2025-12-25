@@ -699,13 +699,33 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     color,
                 });
             }
-            ElementInstance::VirtualList(_) => {
+            ElementInstance::VirtualList(props) => {
                 cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
-                for &child in cx.children {
-                    if let Some(bounds) = cx.child_bounds(child) {
-                        cx.paint(child, bounds);
-                    }
+
+                let offset_y = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::VirtualListState::default,
+                    |state| Px(state.offset_y.0.max(0.0)),
+                );
+
+                let start = props.visible_start;
+                let row_h = Px(props.row_height.0.max(0.0));
+
+                for (i, &child) in cx.children.iter().enumerate() {
+                    let idx = start + i;
+                    let y = cx.bounds.origin.y.0 + row_h.0 * idx as f32 - offset_y.0;
+                    let child_bounds = Rect::new(
+                        fret_core::Point::new(cx.bounds.origin.x, Px(y)),
+                        Size::new(cx.bounds.size.width, row_h),
+                    );
+
+                    cx.scene.push(SceneOp::PushClipRect { rect: child_bounds });
+                    cx.paint(child, child_bounds);
+                    cx.scene.push(SceneOp::PopClip);
                 }
+
                 cx.scene.push(SceneOp::PopClip);
             }
         }
@@ -894,14 +914,14 @@ fn mount_element<H: UiHost>(
 mod tests {
     use super::render_root;
     use crate::UiHost;
-    use crate::element::{CrossAlign, MainAlign};
+    use crate::element::{AnyElement, CrossAlign, MainAlign};
     use crate::elements::ElementCx;
     use crate::test_host::TestHost;
     use crate::tree::UiTree;
     use crate::widget::Invalidation;
     use fret_core::{
-        AppWindowId, Color, Modifiers, MouseButton, MouseButtons, Point, Px, Rect, Scene, SceneOp,
-        Size, TextConstraints, TextMetrics, TextService, TextStyle,
+        AppWindowId, Color, Modifiers, MouseButton, MouseButtons, NodeId, Point, Px, Rect, Scene,
+        SceneOp, Size, TextConstraints, TextMetrics, TextService, TextStyle,
     };
     use fret_runtime::{CommandId, Effect};
 
@@ -1169,6 +1189,156 @@ mod tests {
         };
         assert_eq!((props.visible_start, props.visible_end), (0, 5));
         assert_eq!(ui.children(list_node).len(), 5);
+    }
+
+    #[test]
+    fn virtual_list_paint_clips_each_visible_row() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(50.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        fn build_list<H: UiHost>(cx: &mut ElementCx<'_, H>) -> AnyElement {
+            cx.virtual_list(100, Px(10.0), 0, |cx, range| {
+                range.map(|i| cx.keyed(i, |cx| cx.text("row"))).collect()
+            })
+        }
+
+        // Frame 0: record viewport height (no visible children yet).
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp50-vlist-clip",
+            |cx| vec![build_list(cx)],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        app.advance_frame();
+
+        // Frame 1: mount visible children based on the recorded viewport height.
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp50-vlist-clip",
+            |cx| vec![build_list(cx)],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+        // One clip for the list viewport + one clip per visible row child.
+        let pushes = scene
+            .ops()
+            .iter()
+            .filter(|op| matches!(op, SceneOp::PushClipRect { .. }))
+            .count();
+        assert_eq!(pushes, 1 + 5);
+    }
+
+    #[test]
+    fn virtual_list_keyed_reuses_node_ids_across_reorder() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(30.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let mut items: Vec<u64> = vec![10, 20, 30];
+        let mut ids: Vec<(u64, crate::elements::GlobalElementId)> = Vec::new();
+
+        fn build_list<H: UiHost>(
+            cx: &mut ElementCx<'_, H>,
+            items: &[u64],
+            mut ids: Option<&mut Vec<(u64, crate::elements::GlobalElementId)>>,
+        ) -> AnyElement {
+            cx.virtual_list_keyed(
+                items.len(),
+                Px(10.0),
+                0,
+                |i| items[i],
+                |cx, i| {
+                    let row = cx.text("row");
+                    if let Some(ids) = ids.as_deref_mut() {
+                        ids.push((items[i], row.id));
+                    }
+                    row
+                },
+            )
+        }
+
+        // Frame 0: record viewport height (no visible children yet).
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp50-vlist-keyed",
+            |cx| vec![build_list(cx, &items, None)],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        app.advance_frame();
+
+        let mut prev: std::collections::HashMap<u64, (crate::elements::GlobalElementId, NodeId)> =
+            std::collections::HashMap::new();
+
+        for pass in 0..2 {
+            ids.clear();
+            let root = render_root(
+                &mut ui,
+                &mut app,
+                &mut text,
+                window,
+                bounds,
+                "mvp50-vlist-keyed",
+                |cx| vec![build_list(cx, &items, Some(&mut ids))],
+            );
+            ui.set_root(root);
+            ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+            let cur: std::collections::HashMap<u64, (crate::elements::GlobalElementId, NodeId)> =
+                app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, app| {
+                    runtime.prepare_window_for_frame(window, app.frame_id());
+                    let st = runtime.for_window_mut(window);
+                    ids.iter()
+                        .map(|(item, id)| (*item, (*id, st.node_entry(*id).unwrap().node)))
+                        .collect()
+                });
+
+            if pass == 1 {
+                for item in [10u64, 20u64, 30u64] {
+                    let (prev_id, prev_node) = prev.get(&item).copied().unwrap();
+                    let (cur_id, cur_node) = cur.get(&item).copied().unwrap();
+                    assert_eq!(prev_id, cur_id, "element id should be stable");
+                    assert_eq!(prev_node, cur_node, "node id should be stable");
+                }
+            }
+
+            prev = cur;
+            items.reverse();
+            app.advance_frame();
+        }
     }
 
     #[test]

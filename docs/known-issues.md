@@ -23,6 +23,8 @@ What to do:
 - Treat this as a correctness warning for anything dynamic:
   - **Any list/tree/table whose order can change must be keyed.**
   - Use `ElementCx::keyed(...)` / `ElementCx::for_each_keyed(...)` for dynamic collections.
+  - For virtualized lists, prefer `ElementCx::virtual_list_keyed(...)` so each visible row is
+    automatically scoped under a stable key.
   - Avoid `ElementCx::for_each_unkeyed(...)` unless the collection is static and never reorders.
 
 Practical key sources (pick a stable one per domain):
