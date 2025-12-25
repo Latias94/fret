@@ -10,7 +10,7 @@ This file is intentionally kept **short and actionable**.
 
 Maintain the next MVP items here as a small, high-signal queue. If a task changes a “hard-to-change” contract, update or add an ADR before broadening usage.
 
-- MVP 45: Introduce component “recipes” (typed, composable `StyleRefinement` patches) and migrate input-family controls to share a single token-driven chrome contract (TextField/Select/Combobox/TextArea).
+- MVP 45 follow-up: Unify list/menu row sizing + highlight chrome via shared recipes (`recipes::list_row`) and migrate remaining overlay lists (ContextMenu/Popover/DropdownMenu/CommandPalette) to remove ad-hoc spacing/row height constants.
 
 ## Current Status (Snapshot)
 

@@ -17,6 +17,7 @@ use fret_components_ui::{
     icon_button::IconButton,
     list_view::ListView,
     progress::ProgressBar,
+    recipes::list_row::{ListRowHeightMode, list_row_height, list_style},
     resizable_panel_group::ResizablePanelGroup,
     scroll_area::ScrollArea,
     select::{Select, SelectOption},
@@ -38,7 +39,6 @@ use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRu
 use fret_ui_app::{
     ColoredPanel, Column, FixedPanel, Invalidation, PanelThemeBackground, Row, Scroll, Stack, Text,
     Theme, ThemeConfig, UiTree, VirtualList, VirtualListDataSource, VirtualListRow,
-    VirtualListRowHeight,
 };
 use std::sync::Arc;
 use winit::event_loop::EventLoop;
@@ -486,13 +486,14 @@ fn build_ui_kit_contents(
         let rich_list_panel = ui.create_node(FixedPanel::new(Px(180.0), Color::TRANSPARENT));
         ui.add_child(group, rich_list_panel);
 
-        let rich_list_min_h = size.list_row_h(Theme::global(app));
         let rich_list = ui.create_node(
-            VirtualList::new(UiKitRichListDataSource { len: 2000 }).with_row_height(
-                VirtualListRowHeight::Measured {
-                    min: rich_list_min_h,
-                },
-            ),
+            VirtualList::new(UiKitRichListDataSource { len: 2000 })
+                .with_style(list_style(Theme::global(app), size))
+                .with_row_height(list_row_height(
+                    Theme::global(app),
+                    size,
+                    ListRowHeightMode::Measured,
+                )),
         );
         ui.add_child(rich_list_panel, rich_list);
     }

@@ -4,10 +4,10 @@ use fret_core::{Event, Size as UiSize};
 use fret_runtime::{CommandId, Model};
 use fret_ui::{
     Invalidation, LayoutCx, PaintCx, Theme, UiHost, VirtualList, VirtualListDataSource,
-    VirtualListRow, VirtualListRowHeight, Widget,
+    VirtualListRow, Widget,
 };
 
-use crate::list_style::list_style;
+use crate::recipes::list_row::{ListRowHeightMode, list_row_height, list_style};
 use crate::{Sizable, Size};
 
 #[derive(Debug, Clone)]
@@ -251,9 +251,11 @@ impl CommandList {
         self.last_theme_revision = Some(theme.revision());
 
         self.list.set_style(list_style(theme, self.size));
-        self.list.set_row_height(VirtualListRowHeight::Measured {
-            min: self.size.list_row_h(theme),
-        });
+        self.list.set_row_height(list_row_height(
+            theme,
+            self.size,
+            ListRowHeightMode::Measured,
+        ));
     }
 
     fn rebuild_rows(&mut self, items: Vec<CommandItem>, query: String) {

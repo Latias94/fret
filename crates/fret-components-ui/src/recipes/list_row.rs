@@ -1,8 +1,22 @@
 use fret_core::{Corners, Px};
-use fret_ui::{Theme, VirtualListStyle};
+use fret_ui::{Theme, VirtualListRowHeight, VirtualListStyle};
 
 use crate::style::MetricRef;
 use crate::{Size, Space};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ListRowHeightMode {
+    Fixed,
+    Measured,
+}
+
+pub fn list_row_height(theme: &Theme, size: Size, mode: ListRowHeightMode) -> VirtualListRowHeight {
+    let min = size.list_row_h(theme);
+    match mode {
+        ListRowHeightMode::Fixed => VirtualListRowHeight::Fixed(min),
+        ListRowHeightMode::Measured => VirtualListRowHeight::Measured { min },
+    }
+}
 
 pub fn list_style(theme: &Theme, size: Size) -> VirtualListStyle {
     let text_px = size.control_text_px(theme);
@@ -13,9 +27,6 @@ pub fn list_style(theme: &Theme, size: Size) -> VirtualListStyle {
     style.corner_radii = Corners::all(theme.metrics.radius_md);
     style.row_hover = theme.colors.list_row_hover;
     style.row_selected = theme.colors.list_row_selected;
-    style.row_highlight_inset_y = theme
-        .metric_by_key("metric.list.row_highlight_inset_y")
-        .unwrap_or(Px(0.0));
 
     style.text_color = theme.colors.text_primary;
     style.secondary_text_color = theme.colors.text_muted;
@@ -25,19 +36,19 @@ pub fn list_style(theme: &Theme, size: Size) -> VirtualListStyle {
 
     style.padding_x = size.list_px(theme);
     style.padding_y = size.list_py(theme);
-    style.trailing_gap_x = theme
-        .metric_by_key("metric.list.trailing_gap_x")
-        .unwrap_or(theme.metrics.padding_sm);
-    style.separator_inset_x = theme
-        .metric_by_key("metric.list.separator_inset_x")
-        .unwrap_or(theme.metrics.padding_md);
 
-    style.row_highlight_inset_y = theme
-        .metric_by_key("metric.list.row_highlight_inset_y")
+    style.row_gap_y = theme
+        .metric_by_key("component.list.row_gap_y")
         .unwrap_or_else(|| MetricRef::space(Space::N0p5).resolve(theme));
-    if let Some(gap) = theme.metric_by_key("metric.list.row_gap_y") {
-        style.row_gap_y = gap;
-    }
+    style.trailing_gap_x = theme
+        .metric_by_key("component.list.trailing_gap_x")
+        .unwrap_or_else(|| MetricRef::space(Space::N2).resolve(theme));
+    style.separator_inset_x = theme
+        .metric_by_key("component.list.separator_inset_x")
+        .unwrap_or(style.padding_x);
+    style.row_highlight_inset_y = theme
+        .metric_by_key("component.list.row_highlight_inset_y")
+        .unwrap_or_else(|| MetricRef::space(Space::N0p5).resolve(theme));
 
     style.text_style.size = text_px;
     style.secondary_text_style.size = Px((text_px.0 - 1.0).max(0.0));
@@ -50,7 +61,6 @@ pub fn list_style(theme: &Theme, size: Size) -> VirtualListStyle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fret_ui::ThemeConfig;
 
     #[test]
     fn list_row_highlight_inset_defaults_to_space_fallback() {
@@ -65,15 +75,15 @@ mod tests {
     }
 
     #[test]
-    fn list_row_highlight_inset_can_be_overridden_by_metric_token() {
+    fn list_row_highlight_inset_can_be_overridden_by_component_token() {
         let mut app = fret_app::App::default();
-        let cfg = ThemeConfig {
+        let cfg = fret_ui::ThemeConfig {
             name: "Test".to_string(),
             metrics: std::collections::HashMap::from([(
-                "metric.list.row_highlight_inset_y".to_string(),
+                "component.list.row_highlight_inset_y".to_string(),
                 7.0,
             )]),
-            ..ThemeConfig::default()
+            ..fret_ui::ThemeConfig::default()
         };
         Theme::global_mut(&mut app).apply_config(&cfg);
 

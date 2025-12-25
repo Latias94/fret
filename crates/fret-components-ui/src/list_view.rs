@@ -2,12 +2,9 @@ use fret_core::{Event, Rect, Size};
 use fret_runtime::Model;
 use fret_ui::EventCx;
 use fret_ui::Widget as UiWidget;
-use fret_ui::{
-    Invalidation, LayoutCx, PaintCx, Theme, UiHost, VecStringDataSource, VirtualList,
-    VirtualListRowHeight,
-};
+use fret_ui::{Invalidation, LayoutCx, PaintCx, Theme, UiHost, VecStringDataSource, VirtualList};
 
-use crate::list_style::list_style;
+use crate::recipes::list_row::{ListRowHeightMode, list_row_height, list_style};
 use crate::{Sizable, Size as ComponentSize};
 
 /// A simple, virtualized list view for `Vec<String>` items.
@@ -59,7 +56,7 @@ impl ListView {
 
         self.list.set_style(list_style(theme, self.size));
         self.list
-            .set_row_height(VirtualListRowHeight::Fixed(self.size.list_row_h(theme)));
+            .set_row_height(list_row_height(theme, self.size, ListRowHeightMode::Fixed));
     }
 
     fn sync_models<H: UiHost>(&mut self, cx: &mut LayoutCx<'_, H>) {
