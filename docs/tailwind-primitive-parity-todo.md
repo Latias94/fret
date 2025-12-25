@@ -99,7 +99,7 @@ Fret does **not** need to replicate every numeric preset from gpui-component, bu
     `ContainerProps` chrome value.
   - Acceptance: `hstack/vstack`-style composition can set `gap_*` via typed `Space` without reaching
     into `fret-ui` props directly.
-- [ ] Provide a minimal, typed flex-item vocabulary at the component layer.
+- [x] Provide a minimal, typed flex-item vocabulary at the component layer.
   - Must cover shadcn/gpui needs: `flex_1`, `flex_none`, `flex_shrink_0`, `basis_0`, `min_w_0`.
   - Acceptance: no component (e.g. command palette rows) needs to hand-write flex basis/grow/shrink
     or `min_width = 0` to avoid overflow.

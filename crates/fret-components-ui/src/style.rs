@@ -695,6 +695,79 @@ impl LayoutRefinement {
         self.margin = Some(margin);
         self
     }
+
+    fn ensure_size_mut(&mut self) -> &mut SizeRefinement {
+        if self.size.is_none() {
+            self.size = Some(SizeRefinement::default());
+        }
+        self.size.as_mut().expect("size exists")
+    }
+
+    fn ensure_flex_item_mut(&mut self) -> &mut FlexItemRefinement {
+        if self.flex_item.is_none() {
+            self.flex_item = Some(FlexItemRefinement::default());
+        }
+        self.flex_item.as_mut().expect("flex_item exists")
+    }
+
+    pub fn min_w(mut self, width: MetricRef) -> Self {
+        self.ensure_size_mut().min_width = Some(width);
+        self
+    }
+
+    pub fn min_h(mut self, height: MetricRef) -> Self {
+        self.ensure_size_mut().min_height = Some(height);
+        self
+    }
+
+    pub fn min_w_0(self) -> Self {
+        self.min_w(MetricRef::Px(Px(0.0)))
+    }
+
+    pub fn basis(mut self, basis: LengthRefinement) -> Self {
+        self.ensure_flex_item_mut().basis = Some(basis);
+        self
+    }
+
+    pub fn basis_0(self) -> Self {
+        self.basis(LengthRefinement::Px(MetricRef::Px(Px(0.0))))
+    }
+
+    pub fn flex_grow(mut self, grow: f32) -> Self {
+        self.ensure_flex_item_mut().grow = Some(grow);
+        self
+    }
+
+    pub fn flex_shrink(mut self, shrink: f32) -> Self {
+        self.ensure_flex_item_mut().shrink = Some(shrink);
+        self
+    }
+
+    pub fn flex_shrink_0(self) -> Self {
+        self.flex_shrink(0.0)
+    }
+
+    /// Tailwind-like `flex-1` shorthand: `grow=1`, `shrink=1`, `basis=0`.
+    pub fn flex_1(mut self) -> Self {
+        {
+            let f = self.ensure_flex_item_mut();
+            f.grow = Some(1.0);
+            f.shrink = Some(1.0);
+            f.basis = Some(LengthRefinement::Px(MetricRef::Px(Px(0.0))));
+        }
+        self
+    }
+
+    /// Tailwind-like `flex-none` shorthand: `grow=0`, `shrink=0`, `basis=auto`.
+    pub fn flex_none(mut self) -> Self {
+        {
+            let f = self.ensure_flex_item_mut();
+            f.grow = Some(0.0);
+            f.shrink = Some(0.0);
+            f.basis = Some(LengthRefinement::Auto);
+        }
+        self
+    }
 }
 
 pub fn component_color(key: &'static str, fallback: ColorFallback) -> ColorRef {

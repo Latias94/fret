@@ -1,6 +1,8 @@
 use fret_core::{Color, Corners, Edges, Px};
 use fret_ui::Theme;
-use fret_ui::element::{ContainerProps, Length, RingPlacement, RingStyle, ShadowStyle};
+use fret_ui::element::{
+    ContainerProps, LayoutStyle, Length, RingPlacement, RingStyle, ShadowStyle,
+};
 
 use crate::style::{
     ChromeRefinement, InsetRefinement, LayoutRefinement, LengthRefinement, MarginRefinement,
@@ -47,6 +49,89 @@ fn resolve_padding(theme: &Theme, padding: Option<&PaddingRefinement>) -> (Px, P
     (px, py)
 }
 
+pub fn layout_style(theme: &Theme, refinement: LayoutRefinement) -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    apply_layout_refinement(theme, refinement, &mut layout);
+    layout
+}
+
+pub fn apply_layout_refinement(
+    theme: &Theme,
+    refinement: LayoutRefinement,
+    layout: &mut LayoutStyle,
+) {
+    if let Some(ratio) = refinement.aspect_ratio {
+        layout.aspect_ratio = Some(ratio);
+    }
+    if let Some(position) = refinement.position {
+        layout.position = position;
+    }
+    if let Some(MarginRefinement {
+        top,
+        right,
+        bottom,
+        left,
+    }) = refinement.margin
+    {
+        layout.margin.top = top.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
+        layout.margin.right = right.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
+        layout.margin.bottom = bottom.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
+        layout.margin.left = left.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
+    }
+    if let Some(InsetRefinement {
+        top,
+        right,
+        bottom,
+        left,
+    }) = refinement.inset
+    {
+        layout.inset.top = top.map(|m| m.resolve(theme));
+        layout.inset.right = right.map(|m| m.resolve(theme));
+        layout.inset.bottom = bottom.map(|m| m.resolve(theme));
+        layout.inset.left = left.map(|m| m.resolve(theme));
+    }
+    if let Some(SizeRefinement {
+        width,
+        height,
+        min_width,
+        min_height,
+        max_width,
+        max_height,
+    }) = refinement.size
+    {
+        if let Some(w) = width.as_ref() {
+            layout.size.width = resolve_length(theme, w);
+        }
+        if let Some(h) = height.as_ref() {
+            layout.size.height = resolve_length(theme, h);
+        }
+        if let Some(m) = min_width.as_ref() {
+            layout.size.min_width = Some(m.resolve(theme));
+        }
+        if let Some(m) = min_height.as_ref() {
+            layout.size.min_height = Some(m.resolve(theme));
+        }
+        if let Some(m) = max_width.as_ref() {
+            layout.size.max_width = Some(m.resolve(theme));
+        }
+        if let Some(m) = max_height.as_ref() {
+            layout.size.max_height = Some(m.resolve(theme));
+        }
+    }
+
+    if let Some(flex) = refinement.flex_item {
+        if let Some(grow) = flex.grow {
+            layout.flex.grow = grow;
+        }
+        if let Some(shrink) = flex.shrink {
+            layout.flex.shrink = shrink;
+        }
+        if let Some(basis) = flex.basis.as_ref() {
+            layout.flex.basis = resolve_length(theme, basis);
+        }
+    }
+}
+
 pub fn container_props(
     theme: &Theme,
     chrome: ChromeRefinement,
@@ -69,65 +154,7 @@ pub fn container_props(
         .map(|m| m.resolve(theme))
         .unwrap_or(Px(0.0));
 
-    let mut layout = fret_ui::element::LayoutStyle::default();
-    if let Some(ratio) = layout_refinement.aspect_ratio {
-        layout.aspect_ratio = Some(ratio);
-    }
-    if let Some(position) = layout_refinement.position {
-        layout.position = position;
-    }
-    if let Some(MarginRefinement {
-        top,
-        right,
-        bottom,
-        left,
-    }) = layout_refinement.margin
-    {
-        layout.margin.top = top.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
-        layout.margin.right = right.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
-        layout.margin.bottom = bottom.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
-        layout.margin.left = left.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
-    }
-    if let Some(InsetRefinement {
-        top,
-        right,
-        bottom,
-        left,
-    }) = layout_refinement.inset
-    {
-        layout.inset.top = top.map(|m| m.resolve(theme));
-        layout.inset.right = right.map(|m| m.resolve(theme));
-        layout.inset.bottom = bottom.map(|m| m.resolve(theme));
-        layout.inset.left = left.map(|m| m.resolve(theme));
-    }
-    if let Some(SizeRefinement {
-        width,
-        height,
-        min_width,
-        min_height,
-        max_width,
-        max_height,
-    }) = layout_refinement.size
-    {
-        if let Some(w) = width.as_ref() {
-            layout.size.width = resolve_length(theme, w);
-        }
-        if let Some(h) = height.as_ref() {
-            layout.size.height = resolve_length(theme, h);
-        }
-        if let Some(m) = min_width.as_ref() {
-            layout.size.min_width = Some(m.resolve(theme));
-        }
-        if let Some(m) = min_height.as_ref() {
-            layout.size.min_height = Some(m.resolve(theme));
-        }
-        if let Some(m) = max_width.as_ref() {
-            layout.size.max_width = Some(m.resolve(theme));
-        }
-        if let Some(m) = max_height.as_ref() {
-            layout.size.max_height = Some(m.resolve(theme));
-        }
-    }
+    let layout = layout_style(theme, layout_refinement);
 
     ContainerProps {
         layout,

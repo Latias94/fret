@@ -4,14 +4,14 @@ use fret_core::{Color, Corners, Edges, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, FlexItemStyle, FlexProps,
-    LayoutStyle, Length, MainAlign, PressableProps, SizeStyle, TextProps,
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle,
+    MainAlign, PressableProps, TextProps,
 };
 use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
 
 use super::style;
 use crate::command::CommandItem;
-use crate::{Size, Space};
+use crate::{LayoutRefinement, Size, Space};
 
 #[derive(Debug, Clone)]
 enum RowKind {
@@ -210,79 +210,50 @@ pub fn command_palette_list<H: UiHost>(
         })
     });
 
-    let (
-        list_bg,
-        border,
-        row_hover,
-        row_active,
-        radius,
-        fg,
-        muted_fg,
-        disabled_fg,
-        text_px,
-        small_px,
-        row_h,
-        row_px,
-        row_py,
-        row_gap,
-        col_gap,
-    ) = {
-        let theme = Theme::global(&*cx.app);
-        let (list_bg, border, row_hover, row_active) = resolve_list_colors(theme);
-        let radius = theme.metrics.radius_md;
-        let fg = theme
-            .color_by_key("foreground")
-            .unwrap_or(theme.colors.text_primary);
-        let muted_fg = theme
-            .color_by_key("muted.foreground")
-            .unwrap_or(theme.colors.text_muted);
-        let disabled_fg = theme.colors.text_disabled;
+    let theme = Theme::global(&*cx.app).clone();
+    let (list_bg, border, row_hover, row_active) = resolve_list_colors(&theme);
+    let radius = theme.metrics.radius_md;
+    let fg = theme
+        .color_by_key("foreground")
+        .unwrap_or(theme.colors.text_primary);
+    let muted_fg = theme
+        .color_by_key("muted.foreground")
+        .unwrap_or(theme.colors.text_muted);
+    let disabled_fg = theme.colors.text_disabled;
 
-        let text_px = size.control_text_px(theme);
-        let small_px = Px((text_px.0 - 1.0).max(0.0));
+    let text_px = size.control_text_px(&theme);
+    let small_px = Px((text_px.0 - 1.0).max(0.0));
 
-        // Fixed row height for now (measured rows are a follow-up); choose a slightly taller height
-        // when any visible item has `detail`.
-        let any_detail = rows.iter().any(|r| {
-            matches!(
-                r.kind,
-                RowKind::Item {
-                    detail: Some(_),
-                    ..
-                }
-            )
-        });
-        let base_row_h = size.list_row_h(theme);
-        let detail_extra = style::space(theme, Space::N1p5);
-        let row_h = if any_detail {
-            Px((base_row_h.0 + (small_px.0 + detail_extra.0)).max(base_row_h.0))
-        } else {
-            base_row_h
-        };
-
-        let row_px = size.list_px(theme);
-        let row_py = size.list_py(theme);
-        let row_gap = style::space(theme, Space::N2);
-        let col_gap = style::space(theme, Space::N0p5);
-
-        (
-            list_bg,
-            border,
-            row_hover,
-            row_active,
-            radius,
-            fg,
-            muted_fg,
-            disabled_fg,
-            text_px,
-            small_px,
-            row_h,
-            row_px,
-            row_py,
-            row_gap,
-            col_gap,
+    // Fixed row height for now (measured rows are a follow-up); choose a slightly taller height
+    // when any visible item has `detail`.
+    let any_detail = rows.iter().any(|r| {
+        matches!(
+            r.kind,
+            RowKind::Item {
+                detail: Some(_),
+                ..
+            }
         )
+    });
+    let base_row_h = size.list_row_h(&theme);
+    let detail_extra = style::space(&theme, Space::N1p5);
+    let row_h = if any_detail {
+        Px((base_row_h.0 + (small_px.0 + detail_extra.0)).max(base_row_h.0))
+    } else {
+        base_row_h
     };
+
+    let row_px = size.list_px(&theme);
+    let row_py = size.list_py(&theme);
+    let row_gap = style::space(&theme, Space::N2);
+    let col_gap = style::space(&theme, Space::N0p5);
+
+    let row_left_layout =
+        style::layout_style(&theme, LayoutRefinement::default().flex_1().min_w_0());
+    let row_shortcut_layout = style::layout_style(
+        &theme,
+        LayoutRefinement::default().flex_none().flex_shrink_0(),
+    );
 
     cx.container(
         ContainerProps {
@@ -364,20 +335,6 @@ pub fn command_palette_list<H: UiHost>(
                                             ..Default::default()
                                         },
                                         |cx| {
-                                            let left_layout = LayoutStyle {
-                                                flex: FlexItemStyle {
-                                                    grow: 1.0,
-                                                    shrink: 1.0,
-                                                    basis: Length::Px(Px(0.0)),
-                                                    ..Default::default()
-                                                },
-                                                size: SizeStyle {
-                                                    min_width: Some(Px(0.0)),
-                                                    ..Default::default()
-                                                },
-                                                ..Default::default()
-                                            };
-
                                             vec![cx.flex(
                                                 FlexProps {
                                                     direction: fret_core::Axis::Horizontal,
@@ -391,7 +348,7 @@ pub fn command_palette_list<H: UiHost>(
 
                                                     out.push(cx.column(
                                                         ColumnProps {
-                                                            layout: left_layout,
+                                                            layout: row_left_layout.clone(),
                                                             gap: col_gap,
                                                             justify: MainAlign::Start,
                                                             align: CrossAlign::Start,
@@ -441,13 +398,6 @@ pub fn command_palette_list<H: UiHost>(
                                                     if let Some(sc) = shortcut.clone()
                                                         && !sc.is_empty()
                                                     {
-                                                        let shortcut_layout = LayoutStyle {
-                                                            flex: FlexItemStyle {
-                                                                shrink: 0.0,
-                                                                ..Default::default()
-                                                            },
-                                                            ..Default::default()
-                                                        };
                                                         out.push(text_element(
                                                             cx,
                                                             "shortcut",
@@ -458,7 +408,7 @@ pub fn command_palette_list<H: UiHost>(
                                                                 ..Default::default()
                                                             },
                                                             muted_fg,
-                                                            shortcut_layout,
+                                                            row_shortcut_layout.clone(),
                                                         ));
                                                     }
 
