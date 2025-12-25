@@ -79,8 +79,8 @@ Notes:
 - Fret now clips *each row* when painting `VirtualList` to prevent any text/background bleeding.
 - Remaining work is primarily UX tuning (row padding, highlight inset, density presets), not correctness.
 - Default mitigation: when `metric.list.row_highlight_inset_y` is not provided by the theme,
-  Fret now falls back to `Space::N0p5` (derived from baseline `metric.padding.sm`) so the highlight
-  doesn’t visually “hug” adjacent rows as tightly.
+  `fret-ui::VirtualList` now falls back to `metric.padding.sm / 4` (equivalent to the component-layer
+  `Space::N0p5` fallback), so the highlight doesn’t visually “hug” adjacent rows as tightly.
 
 Workarounds:
 

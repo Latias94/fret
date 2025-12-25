@@ -20,7 +20,17 @@ Meaning:
 
 What to do:
 
-- Provide explicit keys for dynamic collections so identity stays stable.
+- Treat this as a correctness warning for anything dynamic:
+  - **Any list/tree/table whose order can change must be keyed.**
+  - Use `ElementCx::keyed(...)` / `ElementCx::for_each_keyed(...)` for dynamic collections.
+  - Avoid `ElementCx::for_each_unkeyed(...)` unless the collection is static and never reorders.
+
+Practical key sources (pick a stable one per domain):
+
+- Engine/editor entities: stable `EntityId`/`Guid`.
+- Assets: stable GUID (ADR 0026) or a stable asset handle (not a path).
+- UI models: stable model IDs / node IDs (not indices).
+- Files: path is acceptable only if you don’t need stable identity across renames/moves.
 
 Reference:
 

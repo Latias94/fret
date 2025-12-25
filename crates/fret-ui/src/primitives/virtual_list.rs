@@ -535,9 +535,17 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         self.style.corner_radii = Corners::all(theme.metrics.radius_md);
         self.style.row_hover = theme.colors.list_row_hover;
         self.style.row_selected = theme.colors.list_row_selected;
+        let highlight_inset_fallback = {
+            // Match the component-layer `Space::N0p5` fallback semantics without introducing a
+            // dependency on `fret-components-ui`: default to 1/4 of `metric.padding.sm`.
+            let pad_sm = theme
+                .metric_by_key("metric.padding.sm")
+                .unwrap_or(theme.metrics.padding_sm);
+            Px(pad_sm.0 * 0.25)
+        };
         self.style.row_highlight_inset_y = theme
             .metric_by_key("metric.list.row_highlight_inset_y")
-            .unwrap_or(Px(0.0));
+            .unwrap_or(highlight_inset_fallback);
         self.style.text_color = theme.colors.text_primary;
         self.style.secondary_text_color = theme.colors.text_muted;
         self.style.trailing_text_color = theme.colors.text_muted;
@@ -2287,5 +2295,49 @@ mod tests {
             .count();
         // One content clip + one clip per visible row.
         assert_eq!(row_pushes, 4);
+    }
+
+    #[test]
+    fn highlight_inset_defaults_to_padding_sm_quarter() {
+        let mut app = TestHost::new();
+        let mut text = FakeTextService::default();
+
+        // Use a theme that does not define `metric.list.row_highlight_inset_y` to ensure we hit
+        // the fallback path.
+        let cfg = crate::ThemeConfig {
+            name: "Test".to_string(),
+            metrics: std::collections::HashMap::from([("metric.padding.sm".to_string(), 12.0)]),
+            ..crate::ThemeConfig::default()
+        };
+        crate::Theme::global_mut(&mut app).apply_config(&cfg);
+
+        let data = TestDataSource {
+            rows: vec!["a".to_string(), "b".to_string()],
+        };
+        let mut list =
+            VirtualList::new(data).with_row_height(VirtualListRowHeight::Fixed(Px(20.0)));
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+
+        let mut observe_model = |_model, _inv| {};
+        let mut layout_child =
+            |_child: NodeId, _bounds: Rect| -> Size { panic!("virtual list has no children") };
+
+        let mut layout_cx = LayoutCx {
+            app: &mut app,
+            node: NodeId::default(),
+            window: Some(AppWindowId::default()),
+            focus: None,
+            children: &[],
+            bounds,
+            available: bounds.size,
+            scale_factor: 1.0,
+            text: &mut text,
+            observe_model: &mut observe_model,
+            layout_child: &mut layout_child,
+        };
+
+        let _ = list.layout(&mut layout_cx);
+        assert_eq!(list.style.row_highlight_inset_y, Px(3.0));
     }
 }
