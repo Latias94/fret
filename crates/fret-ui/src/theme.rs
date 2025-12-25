@@ -99,6 +99,8 @@ fn default_metric_tokens(metrics: ThemeMetrics) -> HashMap<String, Px> {
             "metric.scrollbar.width".to_string(),
             metrics.scrollbar_width,
         ),
+        ("metric.font.size".to_string(), metrics.font_size),
+        ("metric.font.mono_size".to_string(), metrics.mono_font_size),
     ])
 }
 
@@ -138,6 +140,8 @@ pub struct ThemeMetrics {
     pub padding_sm: Px,
     pub padding_md: Px,
     pub scrollbar_width: Px,
+    pub font_size: Px,
+    pub mono_font_size: Px,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -266,6 +270,8 @@ impl Theme {
             // gpui-component uses `radius` / `radius.lg` as generic theme knobs.
             "radius" => Some(self.metrics.radius_sm),
             "radius.lg" => Some(self.metrics.radius_md),
+            "font.size" => Some(self.metrics.font_size),
+            "mono_font.size" => Some(self.metrics.mono_font_size),
             _ => None,
         }
     }
@@ -401,6 +407,33 @@ impl Theme {
         apply_metric!("metric.padding.sm", self.metrics.padding_sm);
         apply_metric!("metric.padding.md", self.metrics.padding_md);
         apply_metric!("metric.scrollbar.width", self.metrics.scrollbar_width);
+        apply_metric!("metric.font.size", self.metrics.font_size);
+        apply_metric!("metric.font.mono_size", self.metrics.mono_font_size);
+
+        // gpui-component compatibility: accept `font.size` / `mono_font.size` when the canonical
+        // `metric.font.*` keys are not present.
+        if !cfg.metrics.contains_key("metric.font.size") {
+            if let Some(v) = cfg.metrics.get("font.size").copied() {
+                let px = Px(v);
+                next_metrics.insert("metric.font.size".to_string(), px);
+                next_metrics.insert("font.size".to_string(), px);
+                if self.metrics.font_size != px {
+                    self.metrics.font_size = px;
+                    changed = true;
+                }
+            }
+        }
+        if !cfg.metrics.contains_key("metric.font.mono_size") {
+            if let Some(v) = cfg.metrics.get("mono_font.size").copied() {
+                let px = Px(v);
+                next_metrics.insert("metric.font.mono_size".to_string(), px);
+                next_metrics.insert("mono_font.size".to_string(), px);
+                if self.metrics.mono_font_size != px {
+                    self.metrics.mono_font_size = px;
+                    changed = true;
+                }
+            }
+        }
 
         for (k, v) in &cfg.colors {
             if next_colors.contains_key(k) {
@@ -443,6 +476,8 @@ fn default_theme() -> &'static Theme {
             padding_sm: Px(8.0),
             padding_md: Px(10.0),
             scrollbar_width: Px(10.0),
+            font_size: Px(13.0),
+            mono_font_size: Px(13.0),
         };
         let colors = ThemeColors {
             surface_background: parse_hex_srgb_to_linear("#24272E").unwrap(),

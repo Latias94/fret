@@ -556,6 +556,15 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             .metric_by_key("metric.list.separator_inset_x")
             .unwrap_or(theme.metrics.padding_md);
 
+        let text_px = theme
+            .metric_by_key("font.size")
+            .unwrap_or(theme.metrics.font_size);
+        self.style.text_style.size = text_px;
+        let small_px = Px((text_px.0 - 1.0).max(0.0));
+        self.style.secondary_text_style.size = small_px;
+        self.style.trailing_text_style.size = small_px;
+        self.style.header_text_style.size = small_px;
+
         // Font and row height participate in measurement; force height cache refresh.
         self.heights_dirty = true;
         if matches!(self.row_height, VirtualListRowHeight::Measured { .. }) {

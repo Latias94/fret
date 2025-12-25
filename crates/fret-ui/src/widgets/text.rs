@@ -12,6 +12,8 @@ pub struct Text {
     text: String,
     style: TextStyle,
     color: Color,
+    use_theme_defaults: bool,
+    last_theme_revision: Option<u64>,
     blob: Option<fret_core::TextBlobId>,
     metrics: Option<TextMetrics>,
     prepared_scale_factor_bits: Option<u32>,
@@ -31,6 +33,8 @@ impl Text {
                 b: 0.92,
                 a: 1.0,
             },
+            use_theme_defaults: true,
+            last_theme_revision: None,
             blob: None,
             metrics: None,
             prepared_scale_factor_bits: None,
@@ -39,12 +43,32 @@ impl Text {
 
     pub fn with_style(mut self, style: TextStyle) -> Self {
         self.style = style;
+        self.use_theme_defaults = false;
         self
     }
 
     pub fn with_color(mut self, color: Color) -> Self {
         self.color = color;
+        self.use_theme_defaults = false;
         self
+    }
+
+    fn sync_from_theme(&mut self, theme: &crate::Theme) {
+        if !self.use_theme_defaults {
+            return;
+        }
+        if self.last_theme_revision == Some(theme.revision()) {
+            return;
+        }
+        self.last_theme_revision = Some(theme.revision());
+
+        self.style.size = theme
+            .metric_by_key("font.size")
+            .unwrap_or(theme.metrics.font_size);
+        self.color = theme
+            .color_by_key("foreground")
+            .unwrap_or(theme.colors.text_primary);
+        self.prepared_scale_factor_bits = None;
     }
 }
 
@@ -61,6 +85,7 @@ impl<H: UiHost> Widget<H> for Text {
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        self.sync_from_theme(cx.theme());
         let constraints = TextConstraints {
             max_width: Some(cx.available.width),
             wrap: TextWrap::None,
@@ -72,6 +97,7 @@ impl<H: UiHost> Widget<H> for Text {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        self.sync_from_theme(cx.theme());
         let constraints = TextConstraints {
             max_width: Some(cx.bounds.size.width),
             wrap: TextWrap::None,
@@ -225,6 +251,9 @@ pub struct TextInput {
     chrome_style: TextInputStyle,
     chrome_override: bool,
     last_theme_revision: Option<u64>,
+
+    text_style_override: bool,
+    last_text_style_theme_revision: Option<u64>,
 }
 
 impl TextInput {
@@ -260,6 +289,9 @@ impl TextInput {
             chrome_style: TextInputStyle::default(),
             chrome_override: false,
             last_theme_revision: None,
+
+            text_style_override: false,
+            last_text_style_theme_revision: None,
         }
     }
 
@@ -275,6 +307,8 @@ impl TextInput {
         }
         self.queue_release_all_text_blobs();
         self.style = style;
+        self.text_style_override = true;
+        self.last_text_style_theme_revision = None;
         self.last_sent_cursor = None;
     }
 
@@ -287,6 +321,24 @@ impl TextInput {
         }
         self.last_theme_revision = Some(theme.revision);
         self.chrome_style = TextInputStyle::from_theme(theme);
+    }
+
+    fn sync_text_style_from_theme(&mut self, theme: crate::ThemeSnapshot) {
+        if self.text_style_override {
+            return;
+        }
+        if self.last_text_style_theme_revision == Some(theme.revision) {
+            return;
+        }
+        self.last_text_style_theme_revision = Some(theme.revision);
+
+        let next_size = theme.metrics.font_size;
+        if self.style.size != next_size {
+            self.queue_release_all_text_blobs();
+            self.style.size = next_size;
+            self.prepared_scale_factor_bits = None;
+            self.last_sent_cursor = None;
+        }
     }
 
     pub fn with_text(mut self, text: impl Into<String>) -> Self {
@@ -1115,6 +1167,10 @@ impl<H: UiHost> Widget<H> for TextInput {
         self.caret = Self::clamp_to_boundary(&self.text, self.caret);
         self.selection_anchor = Self::clamp_to_boundary(&self.text, self.selection_anchor);
 
+        let theme = cx.theme().snapshot();
+        self.sync_chrome_from_theme(theme);
+        self.sync_text_style_from_theme(theme);
+
         let base_constraints = TextConstraints {
             max_width: Some(cx.available.width),
             wrap: TextWrap::None,
@@ -1140,6 +1196,7 @@ impl<H: UiHost> Widget<H> for TextInput {
 
         let theme = cx.theme().snapshot();
         self.sync_chrome_from_theme(theme);
+        self.sync_text_style_from_theme(theme);
         let focused = cx.focus == Some(cx.node);
         let border_color = if focused {
             self.chrome_style.border_color_focused

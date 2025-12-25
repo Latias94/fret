@@ -97,6 +97,8 @@ impl Toolbar {
         self.padding_y = theme.metrics.padding_sm;
         self.gap = theme.metrics.padding_sm;
         self.corner_radius = theme.metrics.radius_md;
+        self.style.size = theme.metrics.font_size;
+        self.prepared_scale_factor_bits = None;
     }
 
     fn item_index_at(&self, pos: Point) -> Option<usize> {

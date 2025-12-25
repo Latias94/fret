@@ -499,6 +499,7 @@ pub struct DockSpace {
     last_tab_text_scale_factor: Option<f32>,
     last_theme_revision: Option<u64>,
     last_dock_hint_scale_factor: Option<f32>,
+    last_dock_hint_theme_revision: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -547,6 +548,7 @@ impl DockSpace {
             last_tab_text_scale_factor: None,
             last_theme_revision: None,
             last_dock_hint_scale_factor: None,
+            last_dock_hint_theme_revision: None,
         }
     }
 
@@ -574,6 +576,10 @@ impl DockSpace {
         dock: &DockManager,
         layout: &std::collections::HashMap<DockNodeId, Rect>,
     ) {
+        self.tab_text_style.size = theme.metrics.font_size;
+        self.tab_close_style.size = theme.metrics.font_size;
+        self.empty_state_style.size = theme.metrics.font_size;
+
         let mut visible_set: HashSet<PanelKey> = HashSet::new();
         for &node_id in layout.keys() {
             let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id) else {
@@ -721,6 +727,7 @@ impl DockSpace {
         scale_factor: f32,
         max_width: Px,
     ) {
+        self.empty_state_style.size = theme.metrics.font_size;
         if self.last_empty_state_theme_revision == Some(theme.revision)
             && self.last_empty_state_scale_factor == Some(scale_factor)
         {
@@ -750,12 +757,21 @@ impl DockSpace {
         });
     }
 
-    fn rebuild_dock_hint_glyphs(&mut self, text: &mut dyn TextService, scale_factor: f32) {
-        if self.last_dock_hint_scale_factor == Some(scale_factor) && self.dock_hint_glyphs.is_some()
+    fn rebuild_dock_hint_glyphs(
+        &mut self,
+        text: &mut dyn TextService,
+        theme: crate::ThemeSnapshot,
+        scale_factor: f32,
+    ) {
+        self.dock_hint_style.size = Px((theme.metrics.font_size.0 + 5.0).max(0.0));
+        if self.last_dock_hint_scale_factor == Some(scale_factor)
+            && self.last_dock_hint_theme_revision == Some(theme.revision)
+            && self.dock_hint_glyphs.is_some()
         {
             return;
         }
         self.last_dock_hint_scale_factor = Some(scale_factor);
+        self.last_dock_hint_theme_revision = Some(theme.revision);
 
         if let Some(prev) = self.dock_hint_glyphs.take() {
             for glyph in [prev.center, prev.left, prev.right, prev.top, prev.bottom] {
@@ -2015,7 +2031,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let theme = cx.theme().snapshot();
         if let Some(dock) = cx.app.global::<DockManager>() {
             self.rebuild_tab_titles(cx.text, theme, cx.scale_factor, dock, &layout);
-            self.rebuild_dock_hint_glyphs(cx.text, cx.scale_factor);
+            self.rebuild_dock_hint_glyphs(cx.text, theme, cx.scale_factor);
         }
 
         if let Some(dock) = cx.app.global_mut::<DockManager>() {

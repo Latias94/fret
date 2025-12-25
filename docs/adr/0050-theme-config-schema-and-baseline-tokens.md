@@ -82,6 +82,8 @@ Fret defines a small set of typed tokens, grouped by function:
 - `metric.radius.sm`, `metric.radius.md`, `metric.radius.lg`
 - `metric.padding.sm`, `metric.padding.md`
 - `metric.scrollbar.width`
+- `metric.font.size` (UI/body text default)
+- `metric.font.mono_size` (monospace default)
 
 These tokens are intentionally minimal. Additional tokens may be added as new widgets/components
 appear, but existing token names should remain stable.
@@ -124,6 +126,8 @@ Metric alias keys:
 
 - `radius` → `metric.radius.sm`
 - `radius.lg` → `metric.radius.md`
+- `font.size` → `metric.font.size`
+- `mono_font.size` → `metric.font.mono_size`
 
 Notes:
 

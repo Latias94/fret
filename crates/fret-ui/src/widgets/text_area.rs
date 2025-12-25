@@ -91,6 +91,8 @@ pub struct TextArea {
     style: TextAreaStyle,
     style_override: bool,
     last_theme_revision: Option<u64>,
+    text_style_override: bool,
+    last_text_style_theme_revision: Option<u64>,
 
     blob: Option<fret_core::TextBlobId>,
     metrics: Option<TextMetrics>,
@@ -138,6 +140,8 @@ impl Default for TextArea {
             style: TextAreaStyle::default(),
             style_override: false,
             last_theme_revision: None,
+            text_style_override: false,
+            last_text_style_theme_revision: None,
             blob: None,
             metrics: None,
             pending_release: Vec::new(),
@@ -197,6 +201,8 @@ impl TextArea {
 
     pub fn with_text_style(mut self, style: TextStyle) -> Self {
         self.text_style = style;
+        self.text_style_override = true;
+        self.last_text_style_theme_revision = None;
         self
     }
 
@@ -219,27 +225,40 @@ impl TextArea {
     fn sync_style_from_theme(&mut self, theme: &Theme) {
         self.scrollbar_width = theme.metrics.scrollbar_width;
 
-        if self.style_override {
-            return;
-        }
-        if self.last_theme_revision == Some(theme.revision()) {
-            return;
-        }
-        self.last_theme_revision = Some(theme.revision());
+        let rev = theme.revision();
 
-        self.style.padding_x = theme.metrics.padding_md;
-        self.style.padding_y = theme.metrics.padding_md;
-        self.style.background = theme.colors.panel_background;
-        self.style.border_color = theme.colors.panel_border;
-        self.style.corner_radii = Corners::all(theme.metrics.radius_md);
-        self.style.text_color = theme.colors.text_primary;
-        self.style.selection_color = theme.colors.selection_background;
-        self.style.caret_color = theme.colors.text_primary;
-        self.style.preedit_bg_color = Color {
-            a: 0.22,
-            ..theme.colors.selection_background
-        };
-        self.style.preedit_underline_color = theme.colors.accent;
+        if !self.style_override && self.last_theme_revision != Some(rev) {
+            self.last_theme_revision = Some(rev);
+            self.style.padding_x = theme.metrics.padding_md;
+            self.style.padding_y = theme.metrics.padding_md;
+            self.style.background = theme.colors.panel_background;
+            self.style.border_color = theme.colors.panel_border;
+            self.style.corner_radii = Corners::all(theme.metrics.radius_md);
+            self.style.text_color = theme.colors.text_primary;
+            self.style.selection_color = theme.colors.selection_background;
+            self.style.caret_color = theme.colors.text_primary;
+            self.style.preedit_bg_color = Color {
+                a: 0.22,
+                ..theme.colors.selection_background
+            };
+            self.style.preedit_underline_color = theme.colors.accent;
+        }
+
+        if !self.text_style_override && self.last_text_style_theme_revision != Some(rev) {
+            self.last_text_style_theme_revision = Some(rev);
+            let next_size = theme
+                .metric_by_key("font.size")
+                .unwrap_or(theme.metrics.font_size);
+            if self.text_style.size != next_size {
+                self.text_style.size = next_size;
+                self.text_dirty = true;
+                self.prepared_key = None;
+                if let Some(blob) = self.blob.take() {
+                    self.pending_release.push(blob);
+                }
+                self.metrics = None;
+            }
+        }
     }
 
     pub fn offset_y(&self) -> Px {
@@ -1437,12 +1456,16 @@ impl BoundTextArea {
 
     pub fn with_text_style(mut self, style: TextStyle) -> Self {
         self.area.text_style = style;
+        self.area.text_style_override = true;
+        self.area.last_text_style_theme_revision = None;
         self.area.text_dirty = true;
         self
     }
 
     pub fn set_text_style(&mut self, style: TextStyle) {
         self.area.text_style = style;
+        self.area.text_style_override = true;
+        self.area.last_text_style_theme_revision = None;
         self.area.text_dirty = true;
     }
 

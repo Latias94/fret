@@ -12,6 +12,7 @@ Maintain the next MVP items here as a small, high-signal queue. If a task change
 
 - MVP 45 follow-up: Unify list/menu row sizing + highlight chrome via shared recipes (`recipes::list_row`) and migrate remaining overlay lists (ContextMenu/Popover/DropdownMenu/CommandPalette) to remove ad-hoc spacing/row height constants.
 - MVP 45 follow-up: Align the framework baseline theme semantics with gpui-component/shadcn (semantic palette aliases + future typography tokens) so component tokens converge on one vocabulary before adding more widgets.
+- MVP 45 follow-up: Add baseline typography tokens (font size/mono size) + migrate remaining runtime widgets off hard-coded `TextStyle { size: ... }` defaults.
 
 ## Current Status (Snapshot)
 
