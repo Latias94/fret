@@ -11,7 +11,9 @@ use fret_ui::{
 };
 use std::sync::Arc;
 
+use crate::Size as ComponentSize;
 use crate::StyleRefinement;
+use crate::recipes::menu_list::resolve_menu_list_row_chrome;
 use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
 
 #[derive(Debug, Clone)]
@@ -88,6 +90,7 @@ impl Default for ContextMenuStyle {
 pub struct ContextMenu {
     style: ContextMenuStyle,
     style_override: bool,
+    size: ComponentSize,
     last_bounds: Rect,
     last_serial: Option<u64>,
     last_theme_revision: Option<u64>,
@@ -128,6 +131,7 @@ impl ContextMenu {
         Self {
             style: ContextMenuStyle::default(),
             style_override: false,
+            size: ComponentSize::Small,
             last_bounds: Rect::default(),
             last_serial: None,
             last_theme_revision: None,
@@ -145,6 +149,12 @@ impl ContextMenu {
         self
     }
 
+    pub fn with_size(mut self, size: ComponentSize) -> Self {
+        self.size = size;
+        self.last_theme_revision = None;
+        self
+    }
+
     fn sync_style_from_theme(&mut self, theme: &Theme) {
         if self.style_override {
             return;
@@ -158,24 +168,29 @@ impl ContextMenu {
             theme,
             &StyleRefinement::default(),
             SurfaceTokenKeys {
-                padding_x: Some("metric.padding.md"),
-                padding_y: Some("metric.padding.sm"),
+                padding_x: None,
+                padding_y: None,
                 radius: Some("metric.radius.md"),
                 border_width: None,
                 bg: Some("color.menu.background"),
                 border: Some("color.menu.border"),
             },
         );
-        self.style.padding_x = surface.padding_x;
-        self.style.padding_y = surface.padding_y;
+        let rows = resolve_menu_list_row_chrome(theme, self.size);
+
+        self.style.padding_x = rows.padding_x;
+        self.style.padding_y = rows.padding_y;
         self.style.border = Edges::all(surface.border_width);
         self.style.background = surface.background;
         self.style.border_color = surface.border_color;
         self.style.corner_radii = Corners::all(surface.radius);
-        self.style.row_hover = theme.colors.menu_item_hover;
-        self.style.row_selected = theme.colors.menu_item_selected;
-        self.style.text_color = theme.colors.text_primary;
-        self.style.disabled_text_color = theme.colors.text_disabled;
+        self.style.row_hover = rows.row_hover;
+        self.style.row_selected = rows.row_selected;
+        self.style.text_color = rows.text_color;
+        self.style.disabled_text_color = rows.disabled_text_color;
+        self.style.text_style = rows.text_style;
+        self.style.row_height = rows.row_height;
+        self.style.separator_height = rows.separator_height;
     }
 
     fn cleanup(&mut self, text: &mut dyn fret_core::TextService) {

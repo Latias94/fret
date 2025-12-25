@@ -9,7 +9,9 @@ use fret_ui::{
 };
 use std::{collections::HashMap, sync::Arc};
 
+use crate::Size as ComponentSize;
 use crate::StyleRefinement;
+use crate::recipes::menu_list::resolve_menu_list_row_chrome;
 use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
 
 #[derive(Debug, Clone)]
@@ -168,6 +170,7 @@ struct PreparedRow {
 pub struct Popover {
     style: PopoverStyle,
     style_override: bool,
+    size: ComponentSize,
     last_bounds: Rect,
     last_serial: Option<u64>,
     last_theme_revision: Option<u64>,
@@ -181,6 +184,7 @@ impl Popover {
         Self {
             style: PopoverStyle::default(),
             style_override: false,
+            size: ComponentSize::Small,
             last_bounds: Rect::default(),
             last_serial: None,
             last_theme_revision: None,
@@ -193,6 +197,12 @@ impl Popover {
     pub fn with_style(mut self, style: PopoverStyle) -> Self {
         self.style = style;
         self.style_override = true;
+        self
+    }
+
+    pub fn with_size(mut self, size: ComponentSize) -> Self {
+        self.size = size;
+        self.last_theme_revision = None;
         self
     }
 
@@ -209,25 +219,28 @@ impl Popover {
             theme,
             &StyleRefinement::default(),
             SurfaceTokenKeys {
-                padding_x: Some("metric.padding.md"),
-                padding_y: Some("metric.padding.sm"),
+                padding_x: None,
+                padding_y: None,
                 radius: Some("metric.radius.md"),
                 border_width: None,
                 bg: Some("color.menu.background"),
                 border: Some("color.menu.border"),
             },
         );
-
-        self.style.padding_x = surface.padding_x;
-        self.style.padding_y = surface.padding_y;
         self.style.border = Edges::all(surface.border_width);
         self.style.background = surface.background;
         self.style.border_color = surface.border_color;
         self.style.corner_radii = Corners::all(surface.radius);
-        self.style.row_hover = theme.colors.menu_item_hover;
-        self.style.row_selected = theme.colors.menu_item_selected;
-        self.style.text_color = theme.colors.text_primary;
-        self.style.disabled_text_color = theme.colors.text_disabled;
+
+        let rows = resolve_menu_list_row_chrome(theme, self.size);
+        self.style.padding_x = rows.padding_x;
+        self.style.padding_y = rows.padding_y;
+        self.style.row_hover = rows.row_hover;
+        self.style.row_selected = rows.row_selected;
+        self.style.text_color = rows.text_color;
+        self.style.disabled_text_color = rows.disabled_text_color;
+        self.style.text_style = rows.text_style;
+        self.style.row_height = rows.row_height;
     }
 
     fn cleanup(&mut self, text: &mut dyn fret_core::TextService) {
