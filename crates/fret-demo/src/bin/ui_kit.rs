@@ -32,8 +32,7 @@ use fret_components_ui::{
     tooltip::TooltipArea,
 };
 use fret_core::{
-    AppWindowId, Color, Corners, Edges, NodeId, PlatformCapabilities, Point, Px, Rect, Scene, Size,
-    TextService,
+    AppWindowId, Color, NodeId, PlatformCapabilities, Point, Px, Rect, Scene, Size, TextService,
 };
 use fret_render::{ImageColorSpace, ImageDescriptor, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
@@ -69,6 +68,7 @@ struct UiKitWindowState {
     declarative_root: Option<NodeId>,
     declarative_bounds: Rect,
     declarative_selection: Model<Option<usize>>,
+    declarative_items: Model<Vec<String>>,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -837,6 +837,11 @@ impl WinitDriver for UiKitDriver {
         );
 
         let declarative_selection = app.models_mut().insert(None::<usize>);
+        let declarative_items = app.models_mut().insert(
+            (0..200usize)
+                .map(|i| format!("Project {i}"))
+                .collect::<Vec<_>>(),
+        );
 
         UiKitWindowState {
             ui,
@@ -849,6 +854,7 @@ impl WinitDriver for UiKitDriver {
             declarative_root: None,
             declarative_bounds: Rect::default(),
             declarative_selection,
+            declarative_items,
         }
     }
 
@@ -1037,25 +1043,6 @@ impl WinitDriver for UiKitDriver {
         state.ui.ingest_paint_cache_source(scene);
         scene.clear();
 
-        let (list_bg, row_hover, row_active, border, radius_md) = {
-            let theme = Theme::global(app);
-            (
-                theme
-                    .color_by_key("list.background")
-                    .unwrap_or(theme.colors.list_background),
-                theme
-                    .color_by_key("list.hover.background")
-                    .unwrap_or(theme.colors.list_row_hover),
-                theme
-                    .color_by_key("list.active.background")
-                    .unwrap_or(theme.colors.list_row_selected),
-                theme
-                    .color_by_key("border")
-                    .unwrap_or(theme.colors.panel_border),
-                theme.metrics.radius_md,
-            )
-        };
-
         let desired_bounds = if state.declarative_bounds.size.width.0 > 0.0
             && state.declarative_bounds.size.height.0 > 0.0
         {
@@ -1075,74 +1062,15 @@ impl WinitDriver for UiKitDriver {
             desired_bounds,
             "ui-kit-declarative-list",
             |cx| {
-                let selection = cx
-                    .app
-                    .models()
-                    .get(state.declarative_selection)
-                    .cloned()
-                    .unwrap_or(None);
-
-                vec![cx.container(
-                    fret_ui_app::element::ContainerProps {
-                        background: Some(list_bg),
-                        border: Edges::all(Px(1.0)),
-                        border_color: Some(border),
-                        corner_radii: Corners::all(radius_md),
-                        ..Default::default()
-                    },
-                    |cx| {
-                        vec![cx.virtual_list(200, Px(26.0), 2, |cx, range| {
-                            range
-                                .map(|i| {
-                                    cx.keyed(i, |cx| {
-                                        let on_click = fret_app::CommandId::new(format!(
-                                            "ui_kit.declarative_list.select.{i}"
-                                        ));
-                                        cx.pressable(
-                                            fret_ui_app::element::PressableProps {
-                                                enabled: true,
-                                                on_click: Some(on_click),
-                                            },
-                                            |cx, st| {
-                                                let selected = selection == Some(i);
-                                                let bg = if selected {
-                                                    Some(row_active)
-                                                } else if st.pressed {
-                                                    Some(row_active)
-                                                } else if st.hovered {
-                                                    Some(row_hover)
-                                                } else {
-                                                    None
-                                                };
-                                                vec![cx.container(
-                                                    fret_ui_app::element::ContainerProps {
-                                                        padding_x: Px(10.0),
-                                                        padding_y: Px(6.0),
-                                                        background: bg,
-                                                        ..Default::default()
-                                                    },
-                                                    |cx| {
-                                                        vec![cx.row(
-                                                            fret_ui_app::element::RowProps {
-                                                                gap: Px(8.0),
-                                                                ..Default::default()
-                                                            },
-                                                            |cx| {
-                                                                vec![
-                                                                    cx.text(format!("Project {i}")),
-                                                                    cx.text("—"),
-                                                                    cx.text("Modified 2 hours ago"),
-                                                                ]
-                                                            },
-                                                        )]
-                                                    },
-                                                )]
-                                            },
-                                        )
-                                    })
-                                })
-                                .collect()
-                        })]
+                vec![fret_components_ui::declarative::list::list_from_strings(
+                    cx,
+                    state.declarative_items,
+                    Some(state.declarative_selection),
+                    fret_components_ui::Size::Medium,
+                    |i| {
+                        Some(fret_app::CommandId::new(format!(
+                            "ui_kit.declarative_list.select.{i}"
+                        )))
                     },
                 )]
             },

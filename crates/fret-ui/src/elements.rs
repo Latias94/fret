@@ -11,6 +11,8 @@ use crate::element::{
     AnyElement, ColumnProps, ContainerProps, ElementKind, PressableProps, PressableState, RowProps,
     SpacerProps, StackProps, TextProps, VirtualListProps, VirtualListState,
 };
+use crate::widget::Invalidation;
+use fret_runtime::{Model, ModelId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct GlobalElementId(pub u64);
@@ -53,6 +55,7 @@ pub struct WindowElementState {
     prepared_frame: FrameId,
     prev_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
     cur_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
+    observed_models: HashMap<GlobalElementId, Vec<(ModelId, Invalidation)>>,
     nodes: HashMap<GlobalElementId, NodeEntry>,
     hovered_pressable: Option<GlobalElementId>,
     pressed_pressable: Option<GlobalElementId>,
@@ -86,6 +89,7 @@ impl WindowElementState {
             &mut self.cur_unkeyed_fingerprints,
         );
         self.cur_unkeyed_fingerprints.clear();
+        self.observed_models.clear();
     }
 
     pub(crate) fn node_entry(&self, id: GlobalElementId) -> Option<NodeEntry> {
@@ -185,6 +189,22 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             .downcast_mut::<S>()
             .expect("element state type mismatch");
         f(state)
+    }
+
+    pub fn observe_model<T>(&mut self, model: Model<T>, invalidation: Invalidation) {
+        self.observe_model_id(model.id(), invalidation);
+    }
+
+    pub fn observe_model_id(&mut self, model: ModelId, invalidation: Invalidation) {
+        let id = self.root_id();
+        let list = self.window_state.observed_models.entry(id).or_default();
+        if list
+            .iter()
+            .any(|(m, inv)| *m == model && *inv == invalidation)
+        {
+            return;
+        }
+        list.push((model, invalidation));
     }
 
     #[track_caller]
@@ -410,6 +430,23 @@ pub fn with_element_state<H: UiHost, S: Any, R>(
             .downcast_mut::<S>()
             .expect("element state type mismatch");
         f(state)
+    })
+}
+
+pub(crate) fn observed_models_for_element<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> Vec<(ModelId, Invalidation)> {
+    let frame_id = app.frame_id();
+    app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+        runtime.prepare_window_for_frame(window, frame_id);
+        runtime
+            .for_window_mut(window)
+            .observed_models
+            .get(&element)
+            .cloned()
+            .unwrap_or_default()
     })
 }
 

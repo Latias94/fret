@@ -3,6 +3,7 @@
 //! This crate is intentionally domain-agnostic (no engine/editor-specific concepts).
 //! Styling is token-driven and supports namespaced extension tokens (see ADR 0050).
 
+pub mod declarative;
 pub mod recipes;
 mod sizing;
 mod style;

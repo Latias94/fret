@@ -221,6 +221,12 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             return Size::new(Px(0.0), Px(0.0));
         };
 
+        for (model, invalidation) in
+            crate::elements::observed_models_for_element(cx.app, window, self.element)
+        {
+            (cx.observe_model)(model, invalidation);
+        }
+
         let Some(instance) = self.instance(cx.app, window, cx.node) else {
             return Size::new(Px(0.0), Px(0.0));
         };
@@ -583,6 +589,12 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             return;
         };
 
+        for (model, invalidation) in
+            crate::elements::observed_models_for_element(cx.app, window, self.element)
+        {
+            (cx.observe_model)(model, invalidation);
+        }
+
         let Some(instance) = self.instance(cx.app, window, cx.node) else {
             return;
         };
@@ -886,6 +898,7 @@ mod tests {
     use crate::elements::ElementCx;
     use crate::test_host::TestHost;
     use crate::tree::UiTree;
+    use crate::widget::Invalidation;
     use fret_core::{
         AppWindowId, Color, Modifiers, MouseButton, MouseButtons, Point, Px, Rect, Scene, SceneOp,
         Size, TextConstraints, TextMetrics, TextService, TextStyle,
@@ -920,6 +933,8 @@ mod tests {
         let mut ui: UiTree<TestHost> = UiTree::new();
         let window = AppWindowId::default();
         ui.set_window(window);
+        ui.set_debug_enabled(true);
+        ui.set_debug_enabled(true);
 
         let bounds = Rect::new(
             fret_core::Point::new(Px(0.0), Px(0.0)),
@@ -1209,6 +1224,66 @@ mod tests {
         assert!((b0.origin.y.0 - 0.0).abs() < 0.01, "y0={:?}", b0.origin.y);
         assert!((b1.origin.y.0 - 0.0).abs() < 0.01, "y1={:?}", b1.origin.y);
         assert!((b2.origin.y.0 - 0.0).abs() < 0.01, "y2={:?}", b2.origin.y);
+    }
+
+    #[test]
+    fn declarative_elements_can_observe_models_for_invalidation() {
+        let mut app = TestHost::new();
+        let model = app.models_mut().insert(0u32);
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(40.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root_name = "mvp50-observe-model";
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            root_name,
+            |cx| {
+                vec![cx.container(Default::default(), |cx| {
+                    cx.observe_model(model, Invalidation::Layout);
+                    let v = cx.app.models().get(model).copied().unwrap_or_default();
+                    vec![cx.text(format!("Value {v}"))]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        let stats0 = ui.debug_stats();
+        assert!(
+            stats0.layout_nodes_visited > 0,
+            "expected layout traversal: visited={} performed={}",
+            stats0.layout_nodes_visited,
+            stats0.layout_nodes_performed
+        );
+        let performed0 = stats0.layout_nodes_performed;
+        assert!(performed0 > 0, "expected initial layout work");
+
+        // A second layout pass with no changes and no re-render should perform no node layouts.
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        let performed1 = ui.debug_stats().layout_nodes_performed;
+        assert_eq!(performed1, 0, "expected no layout work when clean");
+
+        let _ = model.update(&mut app, |v, _cx| *v += 1);
+        let changed = app.take_changed_models();
+        ui.propagate_model_changes(&mut app, &changed);
+
+        // The observed model change should invalidate the declarative host, enabling layout work.
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        let performed2 = ui.debug_stats().layout_nodes_performed;
+        assert!(performed2 > 0, "expected model change to trigger relayout");
     }
 
     #[test]
