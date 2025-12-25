@@ -17,7 +17,7 @@ the same component concepts and compose similar UIs, even if the underlying runt
 
 ## Snapshot (for traceability)
 
-- Fret repo HEAD: `aed379e6ec8fbc9bc47bf7468ade892ea58f8355`
+- Fret repo HEAD: `886998358ad7875369aaaaf147e422446c436e54`
 - shadcn/ui HEAD: `ccafdaf7c6f6747a24f54e84436b42ec42f01779`
 
 ## Scope and non-goals
@@ -49,18 +49,16 @@ reference for toasts until the pin is updated.
 `crates/fret-components-shadcn/src/lib.rs` currently exposes:
 
 - `button::Button` (custom wrapper implementing shadcn variants/sizes)
+- First-pass styling helpers: `alert`, `badge`, `card`, `empty`, `kbd`, `label`
 - Re-exports (thin aliases) for: `input`, `textarea`, `separator`, `checkbox`, `switch`, `tabs`,
-  `select`, `tooltip`, `toast`, `popover`, `dialog`, `dropdown_menu`, `command`
+  `select`, `tooltip`, `toast`, `popover`, `dialog`, `dropdown_menu`, `command`, plus facade modules
+  for `menubar`, `context_menu`, `combobox`, `scroll_area`, `progress`, `slider`, `sonner`,
+  `resizable`
 - Infrastructure re-exports: `ChromeRefinement`, `LayoutRefinement`, `Space`, `Radius`, `Size`, `StyledExt`
 
-Missing from the shadcn facade (but implemented in `fret-components-ui` today):
-
-- `menubar` (likely maps to `AppMenuBar`)
-- `context-menu` (maps to `ContextMenu`)
-- `combobox` (maps to `Combobox`)
-- `scroll-area`, `progress`, `slider`, `sonner`, `resizable`
-- Several infra helpers (`WindowOverlays`, `DialogOverlay`, `CommandPaletteOverlay`) that may need
-  shadcn-facing names.
+Note: the overlay installation helper is exposed as `fret_components_shadcn::WindowOverlays` (thin
+alias of `fret_components_ui::WindowOverlays`) and is the canonical way to wire standard overlays
+into a `UiTree`.
 
 ## Parity levels (how we judge “done”)
 
@@ -82,27 +80,27 @@ Status legend:
 | shadcn v4 component | Upstream ref | Fret mapping (today) | Status | Notes |
 | --- | --- | --- | --- | --- |
 | Accordion | `ui/accordion.tsx` |  | ❌ | Needs disclosure/animation + keyboard rules. |
-| Alert | `ui/alert.tsx` |  | ❌ | Likely pure composition + tokens. |
+| Alert | `ui/alert.tsx` | `fret_components_shadcn::Alert` | ✅ | First-pass composition helper; verify token parity. |
 | Alert Dialog | `ui/alert-dialog.tsx` |  | ❌ | Map to dialog overlay with “destructive confirm” policy. |
 | Aspect Ratio | `ui/aspect-ratio.tsx` |  | ❌ | Depends on Tailwind layout primitives + image/media element. |
 | Avatar | `ui/avatar.tsx` |  | ❌ | Needs image + fallback initials/icon. |
-| Badge | `ui/badge.tsx` |  | ❌ | Pure styling + variants. |
+| Badge | `ui/badge.tsx` | `fret_components_shadcn::Badge` | ✅ | First-pass composition helper; verify variants. |
 | Breadcrumb | `ui/breadcrumb.tsx` |  | ❌ | Needs link-like text + separators. |
 | Button | `ui/button.tsx` | `fret_components_shadcn::Button` | ✅ | Wrapper exists; verify hover/active/disabled parity. |
 | Button Group | `ui/button-group.tsx` |  | ❌ | Requires consistent border/radius merging rules. |
 | Calendar | `ui/calendar.tsx` |  | ❌ | Likely needs date model + navigation + selection. |
-| Card | `ui/card.tsx` |  | ❌ | Surface + slots (header/content/footer). |
+| Card | `ui/card.tsx` | `fret_components_shadcn::Card*` | ✅ | First-pass slots exist; verify spacing + typography tokens. |
 | Carousel | `ui/carousel.tsx` |  | ❌ | Not a near-term priority for editor UIs. |
 | Chart | `ui/chart.tsx` |  | ❌ | Not a near-term priority; depends on a charting substrate. |
 | Checkbox | `ui/checkbox.tsx` | `fret_components_shadcn::checkbox::*` | ✅ | Validate focus-visible + keyboard toggle. |
 | Collapsible | `ui/collapsible.tsx` |  | ❌ | Similar to accordion but single section. |
-| Combobox | `ui/combobox.tsx` | `fret_components_ui::Combobox` | ◐ | Add shadcn facade module + naming parity. |
+| Combobox | `ui/combobox.tsx` | `fret_components_shadcn::combobox::*` | ✅ | Currently a thin re-export. |
 | Command | `ui/command.tsx` | `fret_components_ui::command_*` | ✅ | API shape differs; focus on behavior parity (cmdk-style). |
-| Context Menu | `ui/context-menu.tsx` | `fret_components_ui::ContextMenu` | ◐ | Add shadcn facade module + naming parity. |
+| Context Menu | `ui/context-menu.tsx` | `fret_components_shadcn::context_menu::*` | ✅ | Currently a thin re-export. |
 | Dialog | `ui/dialog.tsx` | `fret_components_ui::dialog_*` | ✅ | Overlay/service model differs; ensure dismissal + inert background. |
 | Drawer | `ui/drawer.tsx` |  | ❌ | Could map to “sheet”/panel overlay later. |
 | Dropdown Menu | `ui/dropdown-menu.tsx` | `fret_components_ui::dropdown_menu::*` | ✅ | Ensure keyboard navigation parity. |
-| Empty | `ui/empty.tsx` |  | ❌ | Pure composition helper (icon + title + description + actions). |
+| Empty | `ui/empty.tsx` | `fret_components_shadcn::Empty` | ✅ | First-pass composition helper; add icon/action slots later. |
 | Field | `ui/field.tsx` |  | ❌ | Needs label/control/help-text composition patterns. |
 | Form | `ui/form.tsx` |  | ❌ | Likely a higher-level “form framework” decision in Fret. |
 | Hover Card | `ui/hover-card.tsx` |  | ❌ | Can likely map to tooltip/popover hybrid. |
@@ -110,24 +108,24 @@ Status legend:
 | Input Group | `ui/input-group.tsx` |  | ❌ | Depends on per-edge padding + icon slots (Tailwind primitives). |
 | Input OTP | `ui/input-otp.tsx` |  | ❌ | Needs multi-cell input + paste semantics. |
 | Item | `ui/item.tsx` |  | ❌ | Upstream is a generic “item row” primitive; define Fret equivalent. |
-| Kbd | `ui/kbd.tsx` |  | ❌ | Likely simple surface + mono text + border/radius. |
-| Label | `ui/label.tsx` |  | ❌ | Needs semantics binding to controls (ADR 0033 follow-up). |
-| Menubar | `ui/menubar.tsx` | `fret_components_ui::AppMenuBar` | ◐ | Add shadcn facade + ensure desktop-menu UX. |
+| Kbd | `ui/kbd.tsx` | `fret_components_shadcn::Kbd` | ✅ | First-pass composition helper. |
+| Label | `ui/label.tsx` | `fret_components_shadcn::Label` | ✅ | First-pass helper; semantics binding is a follow-up. |
+| Menubar | `ui/menubar.tsx` | `fret_components_shadcn::menubar::*` | ✅ | Currently a thin re-export of `AppMenuBar`. |
 | Native Select | `ui/native-select.tsx` |  | ❌ | Probably non-goal (Fret is not HTML). |
 | Navigation Menu | `ui/navigation-menu.tsx` |  | ❌ | Likely later; depends on menu + focus routing. |
 | Pagination | `ui/pagination.tsx` |  | ❌ | Not critical for editor UIs; can be added later. |
 | Popover | `ui/popover.tsx` | `fret_components_ui::popover::*` | ✅ | Ensure placement + dismissal parity. |
-| Progress | `ui/progress.tsx` | `fret_components_ui::progress::*` | ◐ | Add shadcn facade module. |
+| Progress | `ui/progress.tsx` | `fret_components_shadcn::progress::*` | ✅ | Currently `Progress` is a thin alias of `ProgressBar`. |
 | Radio Group | `ui/radio-group.tsx` |  | ❌ | Needs single-choice selection model + keyboard arrows. |
-| Resizable | `ui/resizable.tsx` | `fret_components_ui::ResizablePanelGroup` | ◐ | Add shadcn facade module + API naming parity. |
-| Scroll Area | `ui/scroll-area.tsx` | `fret_components_ui::scroll_area::*` | ◐ | Add shadcn facade module + style parity. |
+| Resizable | `ui/resizable.tsx` | `fret_components_shadcn::resizable::*` | ✅ | Currently a thin re-export. |
+| Scroll Area | `ui/scroll-area.tsx` | `fret_components_shadcn::scroll_area::*` | ✅ | Currently a thin re-export. |
 | Select | `ui/select.tsx` | `fret_components_shadcn::select::*` | ✅ | Ensure focus + typeahead parity. |
 | Separator | `ui/separator.tsx` | `fret_components_shadcn::Separator` | ✅ | Mostly styling. |
 | Sheet | `ui/sheet.tsx` |  | ❌ | Candidate to implement via overlay + dock/panel semantics. |
 | Sidebar | `ui/sidebar.tsx` |  | ❌ | Big surface; likely later after nav/tree contracts stabilize. |
 | Skeleton | `ui/skeleton.tsx` |  | ❌ | Pure composition + animation; optional. |
-| Slider | `ui/slider.tsx` | `fret_components_ui::slider::*` | ◐ | Add shadcn facade module + keyboard/drag parity. |
-| Sonner | `ui/sonner.tsx` | `fret_components_ui::sonner::*` | ◐ | Add shadcn facade module; treat as primary toast ref. |
+| Slider | `ui/slider.tsx` | `fret_components_shadcn::slider::*` | ✅ | Currently a thin re-export. |
+| Sonner | `ui/sonner.tsx` | `fret_components_shadcn::sonner::*` | ✅ | Thin re-export; treat as primary toast ref. |
 | Spinner | `ui/spinner.tsx` |  | ❌ | Optional; pure drawing/animation. |
 | Switch | `ui/switch.tsx` | `fret_components_shadcn::switch::*` | ✅ | Validate keyboard toggle + focus ring. |
 | Table | `ui/table.tsx` |  | ❌ | Needs virtualized table contract (not DOM table). |
@@ -150,11 +148,63 @@ Status legend:
   - `slider` → `Slider`
   - `sonner` → `Sonner`/`Toaster` surface
   - `resizable` → `ResizablePanelGroup`
-- [ ] Decide and document shadcn-facing naming for overlay/service primitives:
+- [x] Decide and document shadcn-facing naming for overlay/service primitives:
   - what maps to `Dialog` vs `AlertDialog` vs `Sheet`
   - what maps to `Command` vs `CommandDialog`-like flows
-- [ ] Add a “parity test plan” section per P0 overlay component (manual checklist):
+- [x] Add a “parity test plan” section per P0 overlay component (manual checklist):
   - focus trapping / inert background, escape dismissal, click-outside, keyboard navigation.
+
+#### Overlay Naming Contract (v1)
+
+This is the shadcn-facing naming we converge on, even if the implementation is service/layer based
+instead of Radix-style subcomponents.
+
+- `Dialog`: `fret_components_shadcn::dialog::*` + `fret_components_shadcn::WindowOverlays`
+  - Open path: `fret_components_shadcn::dialog::open_dialog(...)` sets a `DialogRequest` and
+    dispatches `dialog.open`.
+- `AlertDialog`: not a separate implementation yet.
+  - Short-term mapping: reuse `Dialog` overlay but treat “destructive confirm” as policy on top of
+    `DialogRequest` (e.g. action labeling, default/cancel action choice).
+- `Popover`: `fret_components_shadcn::popover::*` (service-driven, anchored placement).
+- `DropdownMenu`: `fret_components_shadcn::dropdown_menu::*` (menu model + focus/keyboard policy).
+- `ContextMenu`: `fret_components_shadcn::context_menu::*` (right-click/open-at-point menu policy).
+- `Tooltip`: `fret_components_shadcn::tooltip::*` (hover/focus-driven overlay).
+- `Toaster` / `Sonner`: `fret_components_shadcn::sonner::*` + `fret_components_shadcn::toast::*`
+  - Note: prefer `Sonner` as the upstream reference (see pinned repo note above).
+- `CommandDialog`: modeled as a modal overlay + composable content.
+  - Implementation: `fret_components_shadcn::command::CommandPaletteOverlay` + composable list
+    content (`fret_components_shadcn::command::command_palette_list`).
+  - Open/close path: dispatch `command_palette.open` / `command_palette.close` (managed by
+    `WindowOverlays` focus restoration).
+- `Sheet` / `Drawer`: not implemented yet.
+
+#### Overlay Parity Test Plan (manual)
+
+These checklists are the acceptance criteria for “interaction parity”.
+
+- Dialog (`DialogOverlay` + `DialogService`)
+  - Escape closes.
+  - Click outside closes (if allowed by request/policy).
+  - Focus is trapped inside while open; focus restores on close.
+  - Default action activates on Enter; cancel on Escape.
+  - Background is visually dimmed and inert to pointer/keyboard.
+- CommandDialog (`CommandPaletteOverlay`)
+  - Escape closes; click outside closes; focus restores on close.
+  - Typing updates results; Up/Down navigates; Enter activates selection.
+  - Scroll keeps selection visible; list does not allocate O(N) widgets.
+- Popover (`PopoverService` + `Popover`)
+  - Anchor positioning is stable across relayout; placement respects screen bounds.
+  - Click outside dismisses; Escape dismisses; focus behavior matches shadcn expectation.
+- DropdownMenu / ContextMenu
+  - Keyboard navigation (Up/Down/Home/End) works; Enter activates; Escape closes.
+  - Submenu opens/closes via Right/Left (or platform-appropriate mapping).
+  - Pointer hover updates the active item without requiring extra clicks.
+- Tooltip
+  - Shows on hover (with delay); hides on move-out; also works via focus.
+  - Does not steal focus; does not block pointer to underlying widgets.
+- Sonner/Toasts
+  - Toaster stack layout is stable; pointer hits only inside toast bounds.
+  - Timers dismiss; action button commands dispatch; Escape behavior is consistent.
 
 ### P1 — implement missing “core app UI” components
 

@@ -111,10 +111,16 @@ pub mod command {
     pub use fret_components_ui::command::*;
     pub use fret_components_ui::command_palette::*;
     pub use fret_components_ui::command_palette_overlay::*;
+    pub use fret_components_ui::declarative::command_palette::command_palette_list;
+}
+
+pub mod overlays {
+    pub use fret_components_ui::WindowOverlays;
 }
 
 pub use input::Input;
 pub use menubar::Menubar;
+pub use overlays::WindowOverlays;
 pub use separator::Separator;
 pub use textarea::Textarea;
 
