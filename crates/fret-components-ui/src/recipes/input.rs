@@ -152,8 +152,8 @@ pub fn resolve_input_chrome(
     }
 }
 
-pub fn default_text_input_style(theme: &Theme) -> fret_ui::TextInputStyle {
-    fret_ui::TextInputStyle {
+pub fn default_text_input_style(theme: &Theme) -> fret_ui::primitives::TextInputStyle {
+    fret_ui::primitives::TextInputStyle {
         padding_x: Px(0.0),
         padding_y: Px(0.0),
         background: theme.colors.panel_background,

@@ -1,10 +1,12 @@
 use fret_core::{Axis, Event, Px, Rect, Size};
 use fret_runtime::Model;
-use fret_ui::{EventCx, LayoutCx, PaintCx, ResizableSplit, UiHost, Widget as UiWidget};
+use fret_ui::primitives::ResizableSplit;
+use fret_ui::{EventCx, LayoutCx, PaintCx, UiHost, Widget as UiWidget};
 
 /// A shadcn-inspired resizable panel group primitive.
 ///
-/// This is a thin component-level wrapper around `fret_ui::ResizableSplit` that provides a stable
+/// This is a thin component-level wrapper around `fret_ui::primitives::ResizableSplit` that
+/// provides a stable
 /// naming surface (`ResizablePanelGroup`) for application UI kits.
 ///
 /// Notes:

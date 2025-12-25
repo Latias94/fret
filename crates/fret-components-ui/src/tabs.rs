@@ -505,10 +505,11 @@ mod tests {
     use super::*;
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Color, Event, Modifiers, Point, PointerEvent, Px, Rect, Scene, SceneOp, Size,
+        AppWindowId, Event, Modifiers, Point, PointerEvent, Px, Rect, Scene, SceneOp, Size,
         TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle,
     };
-    use fret_ui::{Column, FixedPanel, Scroll, UiTree};
+    use fret_ui::primitives::{Column, Scroll};
+    use fret_ui::{EventCx, LayoutCx, PaintCx, UiHost, UiTree, Widget};
 
     #[derive(Default)]
     struct FakeText;
@@ -565,7 +566,28 @@ mod tests {
         ui.add_child(col, tabs);
 
         // Make the column tall enough to scroll.
-        let spacer = ui.create_node(FixedPanel::new(Px(800.0), Color::TRANSPARENT));
+        #[derive(Default)]
+        struct Spacer {
+            height: Px,
+        }
+
+        impl Spacer {
+            fn new(height: Px) -> Self {
+                Self { height }
+            }
+        }
+
+        impl<H: UiHost> Widget<H> for Spacer {
+            fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+                Size::new(Px(1.0), self.height)
+            }
+
+            fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+
+            fn event(&mut self, _cx: &mut EventCx<'_, H>, _event: &Event) {}
+        }
+
+        let spacer = ui.create_node(Spacer::new(Px(800.0)));
         ui.add_child(col, spacer);
 
         let bounds = Rect::new(

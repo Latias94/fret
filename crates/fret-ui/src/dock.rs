@@ -3688,7 +3688,7 @@ fn dock_space_regions(bounds: Rect) -> (Rect, Rect) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Stack;
+    use crate::primitives::Stack;
     use crate::test_host::TestHost;
     use fret_core::{
         AppWindowId, Event, InternalDragEvent, InternalDragKind, PlatformCapabilities, Point, Px,

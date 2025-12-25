@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use fret_core::{Event, KeyCode, Modifiers, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
-use fret_ui::{BoundTextInput, EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
+use fret_ui::primitives::BoundTextInput;
+use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
 
 use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use crate::style::StyleRefinement;
@@ -268,7 +269,7 @@ impl Combobox {
         );
 
         let snap = theme.snapshot();
-        let mut chrome = fret_ui::TextInputStyle::from_theme(snap);
+        let mut chrome = fret_ui::primitives::TextInputStyle::from_theme(snap);
 
         chrome.padding_x = resolved.padding_x;
         chrome.padding_y = resolved.padding_y;

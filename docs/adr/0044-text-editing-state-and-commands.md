@@ -98,7 +98,7 @@ IME candidate windows near the caret:
 ## Implementation Notes (Current Workspace)
 
 - TextInput baseline widget:
-  - `crates/fret-ui/src/widgets/text.rs`
+  - `crates/fret-ui/src/primitives/text.rs`
 - Repeatable dispatch on key-repeat:
   - `crates/fret-ui/src/tree.rs`
 - Demo command registration + bindings:

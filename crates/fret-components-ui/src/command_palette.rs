@@ -2,9 +2,8 @@ use std::sync::Arc;
 
 use fret_core::{Event, KeyCode, Modifiers, Px, Size};
 use fret_runtime::{CommandId, Model};
-use fret_ui::{
-    Column, EventCx, FixedPanel, Invalidation, LayoutCx, PaintCx, UiHost, UiTree, Widget,
-};
+use fret_ui::primitives::Column;
+use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, UiTree, Widget};
 
 use crate::Size as ComponentSize;
 use crate::command::{CommandItem, CommandList, visible_item_ids};
@@ -175,6 +174,38 @@ impl<H: UiHost> Widget<H> for CommandPalette {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+struct FixedHeight {
+    height: Px,
+}
+
+impl FixedHeight {
+    fn new(height: Px) -> Self {
+        Self { height }
+    }
+}
+
+impl<H: UiHost> Widget<H> for FixedHeight {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        let h = self.height.0.max(0.0).min(cx.available.height.0);
+        let bounds = fret_core::Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(h)));
+        for &child in cx.children {
+            let _ = cx.layout_in(child, bounds);
+        }
+        Size::new(cx.available.width, Px(h))
+    }
+
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        for &child in cx.children {
+            if let Some(bounds) = cx.child_bounds(child) {
+                cx.paint(child, bounds);
+            } else {
+                cx.paint(child, cx.bounds);
+            }
+        }
+    }
+}
+
 /// Builds a command palette subtree under the provided overlay root (`WindowOverlays::command_palette_node()`).
 ///
 /// This helper is intentionally UI-tree oriented: it provides “one-call install” ergonomics for apps.
@@ -207,7 +238,7 @@ pub fn install_command_palette<H: UiHost>(
         ComponentSize::Medium => Px(300.0),
         ComponentSize::Large => Px(320.0),
     };
-    let list_panel = ui.create_node(FixedPanel::new(list_h, fret_core::Color::TRANSPARENT));
+    let list_panel = ui.create_node(FixedHeight::new(list_h));
     ui.add_child(content, list_panel);
 
     let list = ui.create_node(

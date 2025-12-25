@@ -772,7 +772,7 @@ mod tests {
         let mut ui: fret_ui::UiTree<App> = fret_ui::UiTree::new();
         ui.set_window(window);
 
-        let base = ui.create_node(fret_ui::Stack::new());
+        let base = ui.create_node(fret_ui::primitives::Stack::new());
         ui.set_root(base);
 
         let toast_node = ui.create_node(ToastOverlay::new());

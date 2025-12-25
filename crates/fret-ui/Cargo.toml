@@ -3,6 +3,12 @@ name = "fret-ui"
 version.workspace = true
 edition.workspace = true
 
+[features]
+default = []
+# Legacy retained widgets that are being phased out in favor of `fret-components-ui` and
+# declarative authoring (ADR 0037).
+legacy-widgets = []
+
 [dependencies]
 fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }

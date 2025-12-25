@@ -33,7 +33,7 @@ Scope: this is a pragmatic “what’s missing / what’s broken / what’s next
 - `Scroll` (scroll container) and scrollbar rendering
 - Overlay mechanism: multi-root layers, hit-testing, focus/capture routing (`UiTree` layers; see ADR 0011)
 - Menu request store: `ContextMenuService` + `ContextMenuRequest` (surface moved to component kit)
-- `TreeView`, `TextArea`, `ResizableSplit`, `Dock` (docking + multi-window)
+- `TreeView` (legacy, gated), `TextArea`, `ResizableSplit`, `Dock` (docking + multi-window)
 
 ### Component kit (`crates/fret-components-ui`)
 

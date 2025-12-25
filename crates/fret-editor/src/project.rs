@@ -1,4 +1,4 @@
-use fret_ui::TreeNode;
+use fret_ui::legacy_widgets::TreeNode;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,

@@ -123,4 +123,4 @@ Text input ingestion note:
 Current MVP text widget note:
 
 - A minimal single-line `TextInput` widget renders inline preedit and updates the IME cursor area:
-  - `crates/fret-ui/src/widgets/text.rs`
+  - `crates/fret-ui/src/primitives/text.rs`

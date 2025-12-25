@@ -334,13 +334,13 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::Stack::new());
+        let root = ui.create_node(fret_ui::primitives::Stack::new());
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
 
         let palette_root = overlays.command_palette_node();
-        let content_root = ui.create_node(fret_ui::Column::new());
+        let content_root = ui.create_node(fret_ui::primitives::Column::new());
         ui.add_child(palette_root, content_root);
 
         let focus_target = ui.create_node(Focusable);

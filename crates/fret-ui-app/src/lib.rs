@@ -9,19 +9,26 @@ pub use fret_ui::declarative;
 pub use fret_ui::dock;
 pub use fret_ui::element;
 pub use fret_ui::elements;
+pub use fret_ui::legacy_widgets;
+pub use fret_ui::primitives;
 pub use fret_ui::theme;
 pub use fret_ui::tree;
-pub use fret_ui::widgets;
 
 pub use fret_ui::{
-    Bar, BoundTextArea, BoundTextInput, Clip, ColoredPanel, Column, ContextMenuRequest,
-    ContextMenuService, DockManager, DockPanel, DockPanelContentService, DockSpace, FixedPanel,
-    GlobalElementId, HeaderBody, Image, Invalidation, PaintCachePolicy, PanelThemeBackground,
-    ResizableSplit, Row, Scroll, Split, Stack, Text, TextArea, TextAreaStyle, TextInput,
-    TextInputStyle, Theme, ThemeConfig, ThemeSnapshot, Toolbar, ToolbarItem, TreeNode, TreeView,
-    TreeViewStyle, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiHost, UiLayerId,
-    VecStringDataSource, ViewportPanel, VirtualList, VirtualListDataSource, VirtualListRow,
-    VirtualListRowHeight, VirtualListStyle,
+    ContextMenuRequest, ContextMenuService, DockManager, DockPanel, DockPanelContentService,
+    DockSpace, GlobalElementId, Invalidation, PaintCachePolicy, Theme, ThemeConfig, ThemeSnapshot,
+    UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiHost, UiLayerId, ViewportPanel,
+};
+
+pub use fret_ui::legacy_widgets::{
+    Bar, ColoredPanel, FixedPanel, HeaderBody, PanelThemeBackground, Toolbar, ToolbarItem,
+    TreeNode, TreeView, TreeViewStyle,
+};
+
+pub use fret_ui::primitives::{
+    BoundTextArea, BoundTextInput, Clip, Column, Image, ResizableSplit, Row, Scroll, Split, Stack,
+    Text, TextArea, TextAreaStyle, TextInput, TextInputStyle, VecStringDataSource, VirtualList,
+    VirtualListDataSource, VirtualListRow, VirtualListRowHeight, VirtualListStyle,
 };
 
 pub use fret_ui::{

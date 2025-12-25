@@ -2460,12 +2460,12 @@ mod tests {
         let mut ui = UiTree::new();
         ui.set_window(AppWindowId::default());
 
-        let base = ui.create_node(crate::Stack::new());
+        let base = ui.create_node(crate::primitives::Stack::new());
         ui.set_root(base);
-        let base_child = ui.create_node(crate::Stack::new());
+        let base_child = ui.create_node(crate::primitives::Stack::new());
         ui.add_child(base, base_child);
 
-        let overlay_root = ui.create_node(crate::Stack::new());
+        let overlay_root = ui.create_node(crate::primitives::Stack::new());
         ui.push_overlay_root(overlay_root, true);
 
         let mut text = FakeTextService;
@@ -2529,7 +2529,7 @@ mod tests {
         let mut ui = UiTree::new();
         ui.set_window(AppWindowId::default());
 
-        let root = ui.create_node(crate::Stack::new());
+        let root = ui.create_node(crate::primitives::Stack::new());
         let probe = ui.create_node(BoundsProbe::new(out));
         ui.add_child(root, probe);
         ui.set_root(root);

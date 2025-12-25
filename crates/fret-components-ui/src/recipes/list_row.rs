@@ -1,5 +1,6 @@
 use fret_core::{Corners, Px};
-use fret_ui::{Theme, VirtualListRowHeight, VirtualListStyle};
+use fret_ui::Theme;
+use fret_ui::primitives::{VirtualListRowHeight, VirtualListStyle};
 
 use crate::style::MetricRef;
 use crate::{Size, Space};

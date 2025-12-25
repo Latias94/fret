@@ -2,10 +2,8 @@ use std::sync::Arc;
 
 use fret_core::{Event, Size as UiSize};
 use fret_runtime::{CommandId, Model};
-use fret_ui::{
-    Invalidation, LayoutCx, PaintCx, Theme, UiHost, VirtualList, VirtualListDataSource,
-    VirtualListRow, Widget,
-};
+use fret_ui::primitives::{VirtualList, VirtualListDataSource, VirtualListRow};
+use fret_ui::{Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 use crate::recipes::list_row::{ListRowHeightMode, list_row_height, list_style};
 use crate::{Sizable, Size};

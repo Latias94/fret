@@ -2,14 +2,16 @@ use fret_core::{Event, Rect, Size};
 use fret_runtime::Model;
 use fret_ui::EventCx;
 use fret_ui::Widget as UiWidget;
-use fret_ui::{Invalidation, LayoutCx, PaintCx, Theme, UiHost, VecStringDataSource, VirtualList};
+use fret_ui::primitives::{VecStringDataSource, VirtualList};
+use fret_ui::{Invalidation, LayoutCx, PaintCx, Theme, UiHost};
 
 use crate::recipes::list_row::{ListRowHeightMode, list_row_height, list_style};
 use crate::{Sizable, Size as ComponentSize};
 
 /// A simple, virtualized list view for `Vec<String>` items.
 ///
-/// This is a convenience wrapper around `fret_ui::VirtualList<VecStringDataSource>` that binds the
+/// This is a convenience wrapper around `fret_ui::primitives::VirtualList<VecStringDataSource>`
+/// that binds the
 /// list contents and selection to models.
 pub struct ListView {
     items: Model<Vec<String>>,

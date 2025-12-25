@@ -1,6 +1,7 @@
 use fret_core::{Corners, Edges, FontId, Px, TextStyle};
 use fret_runtime::Model;
-use fret_ui::{BoundTextArea, TextAreaStyle, Theme, UiHost, Widget};
+use fret_ui::primitives::{BoundTextArea, TextAreaStyle};
+use fret_ui::{Theme, UiHost, Widget};
 
 use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use crate::style::StyleRefinement;

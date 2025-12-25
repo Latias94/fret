@@ -3,14 +3,16 @@ pub mod dock;
 pub mod element;
 pub mod elements;
 pub mod host;
+#[cfg(feature = "legacy-widgets")]
+pub mod legacy_widgets;
 pub mod menu_overlay;
+pub mod primitives;
 pub mod resize_handle;
 #[cfg(test)]
 mod test_host;
 pub mod theme;
 pub mod tree;
 pub mod widget;
-pub mod widgets;
 
 pub use dock::{DockManager, DockPanel, DockPanelContentService, DockSpace, ViewportPanel};
 pub use elements::{ElementCx, ElementRuntime, GlobalElementId};
@@ -24,10 +26,3 @@ pub use tree::{
     PaintCachePolicy, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiLayerId, UiTree,
 };
 pub use widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Widget};
-pub use widgets::{
-    Bar, BoundTextArea, BoundTextInput, Clip, ColoredPanel, Column, FixedPanel, HeaderBody, Image,
-    PanelThemeBackground, ResizableSplit, Row, Scroll, Split, Stack, Text, TextArea, TextAreaStyle,
-    TextInput, TextInputStyle, Toolbar, ToolbarItem, TreeNode, TreeView, TreeViewStyle,
-    VecStringDataSource, VirtualList, VirtualListDataSource, VirtualListRow, VirtualListRowHeight,
-    VirtualListStyle,
-};
