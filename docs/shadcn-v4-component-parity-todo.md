@@ -141,7 +141,7 @@ Status legend:
 
 ### P0 — make the shadcn facade “complete for what we already ship”
 
-- [ ] Add facade modules for existing `fret-components-ui` surfaces:
+- [x] Add facade modules for existing `fret-components-ui` surfaces:
   - `menubar` → `AppMenuBar`
   - `context_menu` → `ContextMenu`
   - `combobox` → `Combobox`
@@ -159,6 +159,8 @@ Status legend:
 ### P1 — implement missing “core app UI” components
 
 - [ ] `Alert`, `Badge`, `Card`, `Empty`, `Kbd`, `Label` (mostly styling + semantics)
+  - Status: `Badge`/`Card`/`Kbd`/`Label` are available as declarative element helpers in
+    `crates/fret-components-shadcn/src/{badge.rs,card.rs,kbd.rs,label.rs}`; `Alert`/`Empty` remain.
 - [ ] `Accordion` / `Collapsible` (expansion model + keyboard)
 - [ ] `InputGroup` (icon slots + per-edge padding primitives; depends on Tailwind primitive parity)
 - [ ] `RadioGroup` (selection model + keyboard arrows)

@@ -52,6 +52,20 @@
     "metric.font.line_height": 16.0,
     "metric.font.mono_line_height": 16.0,
 
+    "component.badge.text_px": 12.0,
+    "component.badge.line_height": 16.0,
+
+    "component.label.text_px": 14.0,
+    "component.label.line_height": 20.0,
+
+    "component.kbd.text_px": 12.0,
+    "component.kbd.line_height": 16.0,
+
+    "component.card.title_px": 18.0,
+    "component.card.title_line_height": 22.0,
+    "component.card.description_px": 14.0,
+    "component.card.description_line_height": 20.0,
+
     "component.space.0": 0.0,
     "component.space.0p5": 2.0,
     "component.space.1": 4.0,

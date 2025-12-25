@@ -8,9 +8,17 @@
 //! while `fret-components-ui` remains the reusable component infrastructure (StyledExt, tokens,
 //! recipes glue, etc.).
 
+pub mod badge;
 pub mod button;
+pub mod card;
+pub mod kbd;
+pub mod label;
 
+pub use badge::{Badge, BadgeVariant};
 pub use button::{Button, ButtonSize, ButtonVariant};
+pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
+pub use kbd::Kbd;
+pub use label::Label;
 
 pub mod input {
     pub use fret_components_ui::text_field::TextField as Input;
@@ -22,6 +30,40 @@ pub mod textarea {
 
 pub mod separator {
     pub use fret_components_ui::separator::Separator;
+}
+
+pub mod menubar {
+    pub use fret_components_ui::AppMenuBar as Menubar;
+    pub use fret_runtime::{Menu, MenuBar, MenuItem};
+}
+
+pub mod context_menu {
+    pub use fret_components_ui::context_menu::*;
+}
+
+pub mod combobox {
+    pub use fret_components_ui::Combobox;
+}
+
+pub mod scroll_area {
+    pub use fret_components_ui::scroll_area::*;
+}
+
+pub mod progress {
+    pub use fret_components_ui::progress::ProgressBar as Progress;
+}
+
+pub mod slider {
+    pub use fret_components_ui::slider::Slider;
+}
+
+pub mod sonner {
+    pub use fret_components_ui::sonner::*;
+    pub use fret_components_ui::toast::{ToastOverlay, ToastRequest, ToastService};
+}
+
+pub mod resizable {
+    pub use fret_components_ui::ResizablePanelGroup;
 }
 
 pub mod checkbox {
@@ -68,6 +110,7 @@ pub mod command {
 }
 
 pub use input::Input;
+pub use menubar::Menubar;
 pub use separator::Separator;
 pub use textarea::Textarea;
 
