@@ -178,6 +178,7 @@ Component styling guidance:
 
 - Prefer a “Tailwind-like” internal authoring model: small typed tokens + recipe/variant composition, not CSS selector strings.
 - Namespaced theme keys (ADR 0050 §5.1) are the extensibility escape hatch for component libraries and plugins.
+- Prefer composable “style patches” (`StyleRefinement`) and ergonomic extension traits (`StyledExt`) in the component layer so recipes/variants can stack predictably without hard-coding magic numbers in the runtime.
 
 Reference posture:
 

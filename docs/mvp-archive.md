@@ -2,7 +2,7 @@
 
 This file keeps the historical, detailed MVP stage definitions that are already completed.
 
-The active short-horizon plan lives in `docs/mvp.md`.
+The active expanded plan lives in `docs/mvp/active-plan.md` (with a short overview in `docs/mvp.md`).
 
 ---
 

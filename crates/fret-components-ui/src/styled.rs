@@ -1,7 +1,17 @@
 use crate::StyleRefinement;
 
+pub trait RefineStyle: Sized {
+    fn refine_style(self, style: StyleRefinement) -> Self;
+}
+
 pub trait Stylable: Sized {
     fn apply_style(self, style: StyleRefinement) -> Self;
+}
+
+impl<T: RefineStyle> Stylable for T {
+    fn apply_style(self, style: StyleRefinement) -> Self {
+        RefineStyle::refine_style(self, style)
+    }
 }
 
 pub struct Styled<T> {
@@ -144,67 +154,33 @@ impl<T: Stylable> Styled<T> {
     }
 }
 
-pub trait StyledExt: Stylable + Sized {
+pub trait StyledExt: RefineStyle + Sized {
     fn styled(self) -> Styled<Self> {
         Styled::new(self)
     }
 }
 
-impl<T: Stylable> StyledExt for T {}
+impl<T: RefineStyle> StyledExt for T {}
 
-impl Stylable for crate::button::Button {
-    fn apply_style(self, style: StyleRefinement) -> Self {
-        self.refine_style(style)
-    }
+macro_rules! impl_refine_style {
+    ($ty:path) => {
+        impl RefineStyle for $ty {
+            fn refine_style(self, style: StyleRefinement) -> Self {
+                <$ty>::refine_style(self, style)
+            }
+        }
+    };
 }
 
-impl Stylable for crate::frame::Frame {
-    fn apply_style(self, style: StyleRefinement) -> Self {
-        self.refine_style(style)
-    }
-}
-
-impl Stylable for crate::combobox::Combobox {
-    fn apply_style(self, style: StyleRefinement) -> Self {
-        self.refine_style(style)
-    }
-}
-
-impl Stylable for crate::dropdown_menu::DropdownMenuButton {
-    fn apply_style(self, style: StyleRefinement) -> Self {
-        self.refine_style(style)
-    }
-}
-
-impl Stylable for crate::scroll_area::ScrollArea {
-    fn apply_style(self, style: StyleRefinement) -> Self {
-        self.refine_style(style)
-    }
-}
-
-impl Stylable for crate::select::Select {
-    fn apply_style(self, style: StyleRefinement) -> Self {
-        self.refine_style(style)
-    }
-}
-
-impl Stylable for crate::text_area_field::TextAreaField {
-    fn apply_style(self, style: StyleRefinement) -> Self {
-        self.refine_style(style)
-    }
-}
-
-impl Stylable for crate::text_field::TextField {
-    fn apply_style(self, style: StyleRefinement) -> Self {
-        self.refine_style(style)
-    }
-}
-
-impl Stylable for crate::toolbar::Toolbar {
-    fn apply_style(self, style: StyleRefinement) -> Self {
-        self.refine_style(style)
-    }
-}
+impl_refine_style!(crate::button::Button);
+impl_refine_style!(crate::combobox::Combobox);
+impl_refine_style!(crate::dropdown_menu::DropdownMenuButton);
+impl_refine_style!(crate::frame::Frame);
+impl_refine_style!(crate::scroll_area::ScrollArea);
+impl_refine_style!(crate::select::Select);
+impl_refine_style!(crate::text_area_field::TextAreaField);
+impl_refine_style!(crate::text_field::TextField);
+impl_refine_style!(crate::toolbar::Toolbar);
 
 #[cfg(test)]
 mod tests {
@@ -216,8 +192,8 @@ mod tests {
         style: StyleRefinement,
     }
 
-    impl Stylable for Dummy {
-        fn apply_style(mut self, style: StyleRefinement) -> Self {
+    impl RefineStyle for Dummy {
+        fn refine_style(mut self, style: StyleRefinement) -> Self {
             self.style = style;
             self
         }

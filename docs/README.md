@@ -11,7 +11,7 @@ contracts early to avoid large rewrites later.
    - Tip: ADRs marked `Status: Proposed` are “decision gates” and should be treated as changeable until accepted.
 4. `docs/repo-ref.md` — pinned local reference sources (where to read upstream code without version drift).
 5. `docs/dependency-policy.md` — dependency and MSRV policy (how we keep contracts portable).
-6. `docs/mvp.md` — active short-horizon MVP plan (what to implement next, with “definition of done”).
+6. `docs/mvp.md` — short-horizon MVP overview (what to implement next). Expanded plan lives in `docs/mvp/active-plan.md`.
    - Completed stages archive: `docs/mvp-archive.md`
 7. `docs/known-issues.md` — common diagnostics and current platform limitations.
 8. ADR deep dives (pick by subsystem):

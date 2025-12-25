@@ -4,7 +4,7 @@ This roadmap focuses on building an editor-grade UI framework with docking, tear
 
 Key contracts are captured in ADRs under `docs/adr/`.
 
-For a short-horizon execution plan with “definition of done”, see `docs/mvp.md`.
+For the short-horizon execution plan, see `docs/mvp.md` (overview) and `docs/mvp/active-plan.md` (expanded, per-MVP “definition of done”).
 
 ## Toolchain Baseline
 
@@ -31,6 +31,7 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Adopt the app-owned model store + borrow-friendly update API (ADR 0031).
 - P0: Adopt typed style tokens + theme resolution rules (ADR 0032).
 - P0: Adopt a component-level size/density system so Tailwind-like primitives converge on one contract (ADR 0056). (prototype implemented; MVP 47)
+- P0: Adopt component-level style composition ergonomics (`StyleRefinement` + `StyledExt`) so Tailwind/shadcn-like recipes and variants can be expressed as typed, composable “style patches” without leaking UI kit semantics into `fret-ui` runtime. (MVP 45)
 - P0: Tighten the **framework vs components** boundary so Tailwind/shadcn sizing/variants can converge without fighting runtime widgets:
   - keep `fret-ui` as the runtime substrate (tree, routing, layers, docking, performance primitives),
   - move the “standard UI kit surfaces” (popover/dialog/menu/tooltip/toast/command palette/menubar) to `fret-components-ui`,
@@ -47,7 +48,7 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Introduce a portable system cursor boundary (cursor icon + per-window cursor routing + overlay precedence).
   - Rationale: editor-grade resizing/docking needs OS cursor affordances; without a stable boundary, each widget
     invents its own heuristics and portability will suffer.
-  - Implemented as MVP 46 (prototype; see `docs/mvp.md`).
+  - Implemented as MVP 46 (prototype; see `docs/mvp/active-plan.md`).
 - P0: Renderer must preserve `Scene.ops` ordering across primitive kinds (ADR 0009).
 - P0: Multi-root overlays (menus, drag previews, popups, modals) must be first-class (ADR 0011).
 - P0: Keyboard/IME split: physical keys for shortcuts, text input for editing (ADR 0012).
@@ -103,7 +104,7 @@ When to write (or significantly update) an ADR:
 
 MVP guidance:
 
-- Each MVP item in `docs/mvp.md` should link to the ADRs that define its non-negotiable contracts.
+- Each MVP item in `docs/mvp/active-plan.md` should link to the ADRs that define its non-negotiable contracts.
 - If a prototype reveals an incorrect assumption, update the ADR first, then adjust the implementation.
 
 ## Framework Capability Promotions (From Demo/Widgets to Core)
@@ -116,7 +117,7 @@ The goal is a GPUI-like reuse story: third-party hosts and component ecosystems 
 P0 / near-term (schedule as MVPs/refactors):
 
 - **System cursor + pointer feedback**: portable cursor icons, per-window cursor routing, overlay precedence, and
-  reusable resize-handle primitives (planned as MVP 46 in `docs/mvp.md`).
+  reusable resize-handle primitives (planned as MVP 46 in `docs/mvp/active-plan.md`).
 - **Resizable layout primitive**: a reusable split/resize container (panel group) so “dock splits”, “inspector
   sidebars”, and “data table column resize” share hit-testing and cursor behavior (pairs naturally with MVP 46).
 - **Pointer lock / relative motion** (viewport navigation): a portable effect boundary for “orbit/pan camera”
@@ -152,16 +153,16 @@ should not be treated as Fret framework deliverables (see ADR 0027):
 These are not framework commitments (ADR 0027), but they are essential to reaching Unity/Godot-like “feel” early and to
 validate that the framework contracts are sufficient.
 
-- Inspector P0: engine-agnostic property protocol + custom editor registry + minimal built-in editors (ADR 0048). (prototype implemented in demo; see `docs/mvp.md` MVP 17; two-column inline rows + Alt+drag scrubbing)
-- Viewport tools P0: input capture + tool routing + overlay rendering over viewport surfaces (ADR 0049, built on ADR 0025). (prototype implemented in demo; see `docs/mvp.md` MVP 18)
-- Viewport picking P0: click-to-select + selection highlight overlays (demo-driven; see `docs/mvp.md` MVP 19).
-- Gizmo P0: translate tool with explicit drag phases, capture rules, and basic polish (axis constraints + snapping stub) (prototype implemented in demo; see `docs/mvp.md` MVP 20 + MVP 25).
-- Viewport navigation P0: pan/orbit stub + wheel zoom (prototype implemented in demo; see `docs/mvp.md` MVP 26).
-- Gizmo P0: rotate tool stub (prototype implemented in demo; see `docs/mvp.md` MVP 27).
-- Multi-viewport roles P0: Scene (editor) vs Game (preview) gating patterns (prototype implemented in demo; see `docs/mvp.md` MVP 30).
-- Play mode stub P0: preview loop with RAF scheduling while a Game viewport is visible (prototype implemented in demo; see `docs/mvp.md` MVP 31).
-- Undo/redo P0: command stack + transaction coalescing boundary (ADR 0024). (prototype implemented in demo; see `docs/mvp.md` MVP 22 + MVP 24).
-- Scene documents P0: `.scene` open/new/save/save-as + unsaved changes guard (demo-driven; see `docs/mvp.md` MVP 39–42).
+- Inspector P0: engine-agnostic property protocol + custom editor registry + minimal built-in editors (ADR 0048). (prototype implemented in demo; see `docs/mvp/active-plan.md` MVP 17; two-column inline rows + Alt+drag scrubbing)
+- Viewport tools P0: input capture + tool routing + overlay rendering over viewport surfaces (ADR 0049, built on ADR 0025). (prototype implemented in demo; see `docs/mvp/active-plan.md` MVP 18)
+- Viewport picking P0: click-to-select + selection highlight overlays (demo-driven; see `docs/mvp/active-plan.md` MVP 19).
+- Gizmo P0: translate tool with explicit drag phases, capture rules, and basic polish (axis constraints + snapping stub) (prototype implemented in demo; see `docs/mvp/active-plan.md` MVP 20 + MVP 25).
+- Viewport navigation P0: pan/orbit stub + wheel zoom (prototype implemented in demo; see `docs/mvp/active-plan.md` MVP 26).
+- Gizmo P0: rotate tool stub (prototype implemented in demo; see `docs/mvp/active-plan.md` MVP 27).
+- Multi-viewport roles P0: Scene (editor) vs Game (preview) gating patterns (prototype implemented in demo; see `docs/mvp/active-plan.md` MVP 30).
+- Play mode stub P0: preview loop with RAF scheduling while a Game viewport is visible (prototype implemented in demo; see `docs/mvp/active-plan.md` MVP 31).
+- Undo/redo P0: command stack + transaction coalescing boundary (ADR 0024). (prototype implemented in demo; see `docs/mvp/active-plan.md` MVP 22 + MVP 24).
+- Scene documents P0: `.scene` open/new/save/save-as + unsaved changes guard (demo-driven; see `docs/mvp/active-plan.md` MVP 39–42).
 
 ## Milestones
 
@@ -199,7 +200,7 @@ validate that the framework contracts are sufficient.
 - P1: Optional `Flex`/`Grid` widget backed by `taffy` (defer until needed; no `UiTree` refactor).
 - P0: Virtualization contract for editor-scale lists/tables/editors (no unbounded children in layout engines). (ADR 0042) (prototype implemented: `fret-ui` `VirtualList`)
 - P1: Theme/tokens (typed core tokens + extensible namespaced keys for component ecosystems) (ADR 0032 / ADR 0050). (prototype implemented)
-- P0: Component size/density system (Tailwind-like scales) so control heights/paddings converge before scaling the UI kit (ADR 0056). (prototype implemented; see `docs/mvp.md` MVP 47)
+- P0: Component size/density system (Tailwind-like scales) so control heights/paddings converge before scaling the UI kit (ADR 0056). (prototype implemented; see `docs/mvp/active-plan.md` MVP 47)
 - P1: Anchored overlays (popover-style) for component primitives.
   - Note: overlay surfaces now live in `fret-components-ui` (MVP 48), while `fret-ui` retains the overlay-layer mechanism.
 - P1: Spin up `fret-components` repo workspace and establish a **general-purpose** component library baseline (ADR 0037):
@@ -273,7 +274,7 @@ Notes:
 Immediate next step:
 
 - MVP10 is prototype implemented (text editing baseline).
-- MVP11 contract is locked (ADRs 0045/0046) and a multiline validation probe is prototype implemented in `fret-demo` (see `docs/mvp.md`).
+- MVP11 contract is locked (ADRs 0045/0046) and a multiline validation probe is prototype implemented in `fret-demo` (see `docs/mvp/active-plan.md`).
 
 ### M7 — Portability (wasm/WebGPU)
 
@@ -294,9 +295,9 @@ Immediate next step:
 These are the “you can actually drive the editor” foundations. They are intentionally scheduled early so that
 all later UI work inherits the same command/focus/clipboard semantics instead of bespoke widget logic.
 
-- P0: Command palette overlay + minimal menu data model (ADR 0023). (MVP done in demo; see `docs/mvp.md` MVP 7)
-- P0: Focus traversal and focus scopes (Tab navigation, modal focus trap) (ADR 0020). (see `docs/mvp.md` MVP 8)
-- P0: Clipboard boundary + text editing commands (text-only first) (ADR 0041). (see `docs/mvp.md` MVP 9)
+- P0: Command palette overlay + minimal menu data model (ADR 0023). (MVP done in demo; see `docs/mvp/active-plan.md` MVP 7)
+- P0: Focus traversal and focus scopes (Tab navigation, modal focus trap) (ADR 0020). (see `docs/mvp/active-plan.md` MVP 8)
+- P0: Clipboard boundary + text editing commands (text-only first) (ADR 0041). (see `docs/mvp/active-plan.md` MVP 9)
 
 ## Module Breakdown (Crates)
 

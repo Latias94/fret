@@ -24,6 +24,7 @@ gpui-component demonstrates an effective pattern:
 - a `Size` enum (`xs/sm/md/lg`) as the shared vocabulary,
 - helper methods like `list_px/list_py/input_h` to apply size consistently,
 - a `Sizable` trait so components share a uniform `.with_size(...)` API.
+- composable style refinements (`StyleRefinement`) and extension traits (`StyledExt`) so recipes/variants can be expressed as typed “style patches” (no utility string parser required).
 
 Reference: `repo-ref/gpui-component/crates/ui/src/styled.rs` (search `Size`, `StyleSized`, `Sizable`).
 
@@ -143,7 +144,7 @@ Cons:
 
 ## References
 
-- MVP tracking: `docs/mvp.md` (MVP 47)
+- MVP tracking: `docs/mvp/active-plan.md` (MVP 47)
 - Theme/tokens: `docs/adr/0032-style-tokens-and-theme-resolution.md`, `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
 - gpui-component sizing ergonomics:
   - `repo-ref/gpui-component/crates/ui/src/styled.rs`
