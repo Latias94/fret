@@ -18,11 +18,13 @@ fn resolve_list_colors(theme: &Theme) -> (Color, Color, Color, Color) {
         .or_else(|| theme.color_by_key("list.border"))
         .unwrap_or(theme.colors.panel_border);
     let row_hover = theme
-        .color_by_key("list.row.hover")
+        .color_by_key("list.hover.background")
+        .or_else(|| theme.color_by_key("list.row.hover"))
         .or_else(|| theme.color_by_key("accent"))
         .unwrap_or(theme.colors.list_row_hover);
     let row_active = theme
-        .color_by_key("list.row.active")
+        .color_by_key("list.active.background")
+        .or_else(|| theme.color_by_key("list.row.active"))
         .or_else(|| theme.color_by_key("accent"))
         .unwrap_or(theme.colors.list_row_selected);
     (list_bg, border, row_hover, row_active)

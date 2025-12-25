@@ -1,0 +1,148 @@
+---
+title: Tailwind Primitive Parity TODO (gpui-component alignment)
+---
+
+# Tailwind Primitive Parity TODO (gpui-component alignment)
+
+This is a pragmatic, execution-oriented TODO list for aligning Fret’s **typed, Tailwind-like** primitive
+vocabulary (component ecosystem) with the subset of Tailwind primitives actually used by:
+
+- `repo-ref/gpui-component` (`crates/ui`)
+- `repo-ref/ui` (shadcn/ui v4 recipes)
+
+This is **not** a “full Tailwind class system” plan. We only track primitives that materially affect
+composition and shadcn-style component parity.
+
+## Snapshot (for traceability)
+
+- Fret repo HEAD: `aed379e6ec8fbc9bc47bf7468ade892ea58f8355`
+- gpui-component HEAD: `fceaa5c907458c445e3be4909aa19136e8b12f32`
+- shadcn/ui HEAD: `ccafdaf7c6f6747a24f54e84436b42ec42f01779`
+- tailwindcss HEAD: `1628713453e622dfaba4880a0b63495b857a3cc5`
+
+## Scope and constraints
+
+- Scope: `crates/fret-components-ui` (typed primitives + composition helpers) and the minimal
+  bridging required in `crates/fret-ui` to make those primitives real in **declarative** layout.
+- Non-goals:
+  - A runtime Tailwind class parser.
+  - Global CSS-like `z-index` (see ADR 0062).
+  - Full Tailwind “auto margin” semantics (requires a dedicated layout contract; see TODO below).
+
+## Key references (design contracts)
+
+- Flex/sizing contract (typed, Taffy-backed): `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
+- Margin/position/grid/aspect contract: `docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md`
+- Tokens/theme resolution: `docs/adr/0032-style-tokens-and-theme-resolution.md`
+- Baseline tokens + gpui/shadcn semantic aliases: `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
+- “No layout no-ops” and style split: `docs/mvp.md` (MVP 59 / MVP 55 / MVP 58)
+
+## Code reference entry points (source of truth)
+
+- gpui-component:
+  - Styling vocabulary usage: `repo-ref/gpui-component/crates/ui/src/styled.rs`
+  - Theme keys (semantic palette): `repo-ref/gpui-component/crates/ui/src/theme/default-theme.json`
+- Fret:
+  - Typed primitive surface: `crates/fret-components-ui/src/style.rs`, `crates/fret-components-ui/src/styled.rs`
+  - Declarative bridging: `crates/fret-components-ui/src/declarative/style.rs`
+  - Runtime layout vocabulary: `crates/fret-ui/src/element.rs`, `crates/fret-ui/src/declarative.rs`
+
+## Current primitive baseline (what exists today)
+
+- Typed scales:
+  - `Space` + `Radius` in `crates/fret-components-ui/src/style.rs`
+  - Theme extension keys: `component.space.*`, `component.radius.*`
+  - Fallback behavior to baseline `metric.*` (see `docs/ui-kit-gap.md`)
+- Style patches (“Tailwind-like”), split by intent:
+  - `ChromeRefinement` (control chrome): `p/px/py` + per-edge `pt/pr/pb/pl`, `border_*`, `rounded_*`, colors
+  - `LayoutRefinement` (layout only): margin/position/inset/aspect/size/flex/grid; **applies only** in declarative authoring (or explicit layout wrappers), never silently on retained widgets
+- Fluent API surface:
+  - `Styled<T>` is intentionally **chrome-only** (to avoid “layout no-ops” on retained widgets).
+  - Layout-like APIs live on `LayoutRefinement` and are consumed by declarative helpers.
+- shadcn-ish polish primitives:
+  - Focus ring (ADR 0061): `component.ring.width`, `component.ring.offset` (see `crates/fret-components-ui/src/declarative/style.rs`)
+  - Shadows/elevation (ADR 0060): `component.shadow.{sm,md,lg}.*`
+
+## Parity target (gpui-component “Tailwind-like” surface, in practice)
+
+gpui-component uses GPUI’s styling vocabulary heavily. The “effective Tailwind subset” it relies on
+in real components includes:
+
+- Spacing: `p/px/py/pt/pr/pb/pl`, `m/mx/my/mt/mr/mb/ml` (including `mx-auto`, negative margins)
+- Layout: `flex_*`, `items_*`, `justify_*`, `gap/gap-x/gap-y`, `grid/grid_cols`
+- Sizing: `w/h/size`, `min-w/min-h`, `max-w/max-h`, `*_full`, `*_auto`
+- Position: `relative/absolute`, `top/right/bottom/left`, `z_index`
+- Chrome: `border_*`, `rounded_*`, `shadow_*`
+- Text/overflow: `truncate`, `whitespace_nowrap`, `text_*`, `overflow_*`
+
+Fret does **not** need to replicate every numeric preset from gpui-component, but it does need to:
+
+1) expose the same **semantic knobs**, and
+2) provide enough **scale points** to express shadcn recipes without ad-hoc per-component constants.
+
+## TODOs (prioritized)
+
+### P0 — unblock shadcn-style composition (high leverage)
+
+- [x] Split style patches into `ChromeRefinement` vs `LayoutRefinement` (MVP 59).
+  - Acceptance: layout-like APIs are impossible to apply “silently” to retained widgets; either they
+    apply in declarative composition, or they must be wrapped in an explicit layout container.
+- [ ] Add per-edge padding primitives to `fret-components-ui` (Tailwind parity).
+  - Add `pt/pr/pb/pl` (and `p*` convenience) at the typed layer.
+  - Acceptance: common shadcn input/icon overlays (padding only on one side) can be expressed without
+    bespoke widget props.
+- [ ] Add the missing “zero” presets and close scale gaps in the component spacing vocabulary.
+  - Add `p_0/px_0/py_0` and consider parity for `3p5` and `6` presets where used upstream.
+  - Acceptance: can express gpui-component-style dense rows (`py-0.5`) and “no padding” containers.
+- [ ] Introduce component-layer `gap-*` (for declarative flex/grid containers).
+  - Design note: `gap` is a container layout property (`FlexProps.gap`, `GridProps.gap`), not a
+    `ContainerProps` chrome value.
+  - Acceptance: `hstack/vstack`-style composition can set `gap_*` via typed `Space` without reaching
+    into `fret-ui` props directly.
+- [ ] Provide a minimal, typed flex-item vocabulary at the component layer.
+  - Must cover shadcn/gpui needs: `flex_1`, `flex_none`, `flex_shrink_0`, `basis_0`, `min_w_0`.
+  - Acceptance: no component (e.g. command palette rows) needs to hand-write flex basis/grow/shrink
+    or `min_width = 0` to avoid overflow.
+- [ ] Expand “style patch → declarative layout” bridging (MVP 55).
+  - Today only a minimal subset is bridged (e.g. `min_height`, `margin`, `position`, `inset`).
+  - Acceptance: the primitives above map into `LayoutStyle` / `FlexProps` / `GridProps` with no
+    widget-local magic numbers.
+
+### P1 — bring parity closer to gpui-component (quality-of-life + fewer one-offs)
+
+- [ ] Add `gap-x` / `gap-y` semantics (or decide to keep a single `gap` and document it).
+  - If we keep uniform `gap` only, require a clear component-layer workaround pattern.
+- [ ] Add typed alignment wrappers (`items_*`, `justify_*`) to avoid leaking runtime enums into recipes.
+- [ ] Add typed sizing wrappers (`w_*`, `h_*`, `min_w_*`, `max_w_*`, `size_full`, `w_full`, `h_full`).
+  - Decide which are “scale-based” (Space) vs “absolute” (Px) vs “semantic” (`full`).
+- [ ] Add typed overflow wrappers (`overflow_hidden`, `overflow_scroll`, `overflow_x_*`, `overflow_y_*`)
+  and ensure paint/hit-test semantics stay consistent (ADR 0057).
+- [ ] Add typed text helpers needed by shadcn recipes: `truncate`, `whitespace_nowrap`, and a minimal
+  `text_*` size vocabulary at the component surface (not necessarily at the runtime substrate).
+
+### P2 — explicitly decide on non-trivial Tailwind semantics (avoid accidental commitments)
+
+- [ ] Decide how to handle `mx-auto` / “auto margins”.
+  - Option A (recommended): declare as non-goal until a dedicated layout contract exists.
+  - Option B: introduce an explicit `CenterX`/`Center` layout helper container (not “CSS auto”).
+  - Option C: extend `LayoutStyle` with an “auto” edge enum (bigger commitment; requires ADR).
+- [ ] Decide how to represent negative spacing (`mx_neg_*`, `top_neg_*`) in a typed system.
+  - If supported: ensure it composes with `merge` semantics safely and doesn’t break hit-testing.
+
+## Implementation notes (where code will likely land)
+
+- Typed primitives and fluent API surface:
+  - `crates/fret-components-ui/src/style.rs`
+  - `crates/fret-components-ui/src/styled.rs`
+- Declarative bridging helpers (style patch → `fret-ui` props):
+  - `crates/fret-components-ui/src/declarative/style.rs`
+- Runtime layout vocabulary (should already exist per ADR 0057/0062; only extend if gaps remain):
+  - `crates/fret-ui/src/element.rs` and `crates/fret-ui/src/declarative.rs`
+
+## Quick validation loop (manual)
+
+- Run the UI kit demo: `cargo run -p fret-demo --bin ui_kit`
+- Spot-check shadcn-like composition patterns:
+  - icon-in-input overlay (`relative` + `absolute` + edge padding)
+  - dense list rows (`py-0.5`, `min-w-0`, truncation)
+  - popover/dialog surfaces (shadow + ring + border + radius)

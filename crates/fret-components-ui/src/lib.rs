@@ -45,7 +45,7 @@ pub use command_palette_overlay::{CommandPaletteOverlay, CommandPaletteStyle};
 pub use context_menu::{ContextMenu, ContextMenuStyle};
 pub use dialog_overlay::{DialogAction, DialogOverlay, DialogRequest, DialogService, DialogStyle};
 pub use sizing::{Sizable, Size};
-pub use style::{ColorRef, MetricRef, Radius, Space, StyleRefinement};
+pub use style::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
 pub use text_area_field::TextAreaField;
 pub use toast::{ToastAction, ToastKind, ToastOverlay, ToastRequest, ToastService, ToastStyle};

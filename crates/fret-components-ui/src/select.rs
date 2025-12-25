@@ -8,7 +8,7 @@ use fret_runtime::Model;
 use fret_ui::{Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use crate::style::StyleRefinement;
+use crate::style::ChromeRefinement;
 use crate::{PopoverItem, PopoverRequest, PopoverService, Sizable, Size as ComponentSize};
 
 #[derive(Debug, Clone)]
@@ -35,7 +35,7 @@ pub struct Select {
     model: Model<usize>,
     options: Vec<SelectOption>,
     placeholder: Arc<str>,
-    style: StyleRefinement,
+    style: ChromeRefinement,
     size: ComponentSize,
 
     hovered: bool,
@@ -86,7 +86,7 @@ impl Select {
             model,
             options,
             placeholder: "Select...".into(),
-            style: StyleRefinement::default(),
+            style: ChromeRefinement::default(),
             size: ComponentSize::Medium,
             hovered: false,
             pressed: false,
@@ -112,7 +112,7 @@ impl Select {
         self
     }
 
-    pub fn refine_style(mut self, style: StyleRefinement) -> Self {
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.style = style;
         self.last_theme_revision = None;
         self
@@ -144,8 +144,8 @@ impl Select {
         );
 
         self.resolved = ResolvedSelectStyle {
-            padding_x: resolved.padding_x,
-            padding_y: resolved.padding_y,
+            padding_x: resolved.padding.left,
+            padding_y: resolved.padding.top,
             min_height: resolved.min_height,
             radius: resolved.radius,
             border_width: resolved.border_width,

@@ -1,8 +1,9 @@
 use fret_core::{Color, Px};
 use fret_ui::Theme;
 
+use crate::style::PaddingRefinement;
 use crate::style::{ColorFallback, MetricFallback};
-use crate::{ColorRef, MetricRef, StyleRefinement};
+use crate::{ChromeRefinement, ColorRef, MetricRef};
 
 #[derive(Debug, Clone, Copy)]
 pub struct SurfaceTokenKeys {
@@ -26,7 +27,7 @@ pub struct ResolvedSurfaceChrome {
 
 pub fn resolve_surface_chrome(
     theme: &Theme,
-    style: &StyleRefinement,
+    style: &ChromeRefinement,
     keys: SurfaceTokenKeys,
 ) -> ResolvedSurfaceChrome {
     let default_padding_x = MetricRef::Token {
@@ -51,15 +52,17 @@ pub fn resolve_surface_chrome(
     };
 
     let padding_x = style
-        .padding_x
+        .padding
         .as_ref()
+        .and_then(|p| p.left.as_ref())
         .map(|m| m.resolve(theme))
         .or_else(|| keys.padding_x.and_then(|k| theme.metric_by_key(k)))
         .or_else(|| theme.metric_by_key("component.surface.padding_x"))
         .unwrap_or_else(|| default_padding_x.resolve(theme));
     let padding_y = style
-        .padding_y
+        .padding
         .as_ref()
+        .and_then(|p| p.top.as_ref())
         .map(|m| m.resolve(theme))
         .or_else(|| keys.padding_y.and_then(|k| theme.metric_by_key(k)))
         .or_else(|| theme.metric_by_key("component.surface.padding_y"))
@@ -104,15 +107,25 @@ pub fn resolve_surface_chrome(
     }
 }
 
-pub fn surface_base_refinement() -> StyleRefinement {
-    StyleRefinement {
-        padding_x: Some(MetricRef::Token {
-            key: "component.surface.padding_x",
-            fallback: MetricFallback::ThemePaddingSm,
-        }),
-        padding_y: Some(MetricRef::Token {
-            key: "component.surface.padding_y",
-            fallback: MetricFallback::ThemePaddingSm,
+pub fn surface_base_refinement() -> ChromeRefinement {
+    ChromeRefinement {
+        padding: Some(PaddingRefinement {
+            top: Some(MetricRef::Token {
+                key: "component.surface.padding_y",
+                fallback: MetricFallback::ThemePaddingSm,
+            }),
+            right: Some(MetricRef::Token {
+                key: "component.surface.padding_x",
+                fallback: MetricFallback::ThemePaddingSm,
+            }),
+            bottom: Some(MetricRef::Token {
+                key: "component.surface.padding_y",
+                fallback: MetricFallback::ThemePaddingSm,
+            }),
+            left: Some(MetricRef::Token {
+                key: "component.surface.padding_x",
+                fallback: MetricFallback::ThemePaddingSm,
+            }),
         }),
         radius: Some(MetricRef::Token {
             key: "component.surface.radius",
@@ -130,6 +143,6 @@ pub fn surface_base_refinement() -> StyleRefinement {
             key: "component.surface.border",
             fallback: ColorFallback::ThemePanelBorder,
         }),
-        ..StyleRefinement::default()
+        ..ChromeRefinement::default()
     }
 }

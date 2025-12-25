@@ -33,6 +33,10 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Align baseline theme semantics with gpui-component/shadcn vocabulary (semantic palette + typography), so the component ecosystem can reuse upstream conventions without inflating `fret-ui` into a UI kit. (prototype implemented: semantic palette aliases + typography expansion; ADR 0050 follow-up)
 - P0: Adopt a component-level size/density system so Tailwind-like primitives converge on one contract (ADR 0056). (prototype implemented; MVP 47)
 - P0: Adopt component-level style composition ergonomics (`StyleRefinement` + `StyledExt`) so Tailwind/shadcn-like recipes and variants can be expressed as typed, composable “style patches” without leaking UI kit semantics into `fret-ui` runtime. (MVP 45)
+- P0: Harden Tailwind-like authoring semantics so they remain trustworthy as the component ecosystem scales:
+  - split style patches into `ChromeRefinement` vs `LayoutRefinement` to avoid “layout no-ops” on retained widgets,
+  - standardize semantic token key vocabulary (e.g. list row hover/active) to avoid theme alignment drift,
+  - make `merge` semantics match Tailwind edge accumulation (e.g. `mt-*` + `ml-*` composes without dropping edges).
 - P0: Tighten the **framework vs components** boundary so Tailwind/shadcn sizing/variants can converge without fighting runtime widgets:
   - keep `fret-ui` as the runtime substrate (tree, routing, layers, docking, performance primitives),
   - move the “standard UI kit surfaces” (popover/dialog/menu/tooltip/toast/command palette/menubar) to the components layer (`fret-components-shadcn` surface built on `fret-components-ui`),

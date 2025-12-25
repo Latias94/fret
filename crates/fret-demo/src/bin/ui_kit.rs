@@ -3,9 +3,12 @@ use fret_app::{
     WindowRequest,
 };
 use fret_components_icons::IconId;
+use fret_components_shadcn::{
+    Button as ShadcnButton, ButtonSize as ShadcnButtonSize, ButtonVariant as ShadcnButtonVariant,
+};
 use fret_components_ui::{
-    ContextMenuService, DialogAction, DialogRequest, DialogService, PopoverService,
-    Size as ComponentSize, StyleRefinement, StyledExt as _, ToastAction, TooltipService,
+    ChromeRefinement, ContextMenuService, DialogAction, DialogRequest, DialogService,
+    PopoverService, Size as ComponentSize, StyledExt as _, ToastAction, TooltipService,
     WindowOverlays,
     button::{Button, ButtonIntent, ButtonVariant},
     checkbox::Checkbox,
@@ -253,6 +256,57 @@ fn build_ui_kit_contents(
     ui.add_child(buttons_frame, buttons);
     ui.add_child(col, buttons_frame);
 
+    let shadcn_buttons_title = ui.create_node(Text::new("shadcn/ui v4 Button (prototype)"));
+    ui.add_child(col, shadcn_buttons_title);
+    let shadcn_buttons_frame = ui.create_node(
+        Frame::default()
+            .styled()
+            .rounded_md()
+            .border_1()
+            .px_3()
+            .py_2()
+            .finish(),
+    );
+    let shadcn_buttons = ui.create_node(Row::new().with_spacing(Px(10.0)));
+    let shadcn_default = ui.create_node(
+        ShadcnButton::new("Default")
+            .variant(ShadcnButtonVariant::Default)
+            .size(ShadcnButtonSize::Default),
+    );
+    let shadcn_destructive = ui.create_node(
+        ShadcnButton::new("Destructive")
+            .variant(ShadcnButtonVariant::Destructive)
+            .size(ShadcnButtonSize::Default),
+    );
+    let shadcn_outline = ui.create_node(
+        ShadcnButton::new("Outline")
+            .variant(ShadcnButtonVariant::Outline)
+            .size(ShadcnButtonSize::Default),
+    );
+    let shadcn_secondary = ui.create_node(
+        ShadcnButton::new("Secondary")
+            .variant(ShadcnButtonVariant::Secondary)
+            .size(ShadcnButtonSize::Default),
+    );
+    let shadcn_ghost = ui.create_node(
+        ShadcnButton::new("Ghost")
+            .variant(ShadcnButtonVariant::Ghost)
+            .size(ShadcnButtonSize::Default),
+    );
+    let shadcn_link = ui.create_node(
+        ShadcnButton::new("Link")
+            .variant(ShadcnButtonVariant::Link)
+            .size(ShadcnButtonSize::Default),
+    );
+    ui.add_child(shadcn_buttons, shadcn_default);
+    ui.add_child(shadcn_buttons, shadcn_destructive);
+    ui.add_child(shadcn_buttons, shadcn_outline);
+    ui.add_child(shadcn_buttons, shadcn_secondary);
+    ui.add_child(shadcn_buttons, shadcn_ghost);
+    ui.add_child(shadcn_buttons, shadcn_link);
+    ui.add_child(shadcn_buttons_frame, shadcn_buttons);
+    ui.add_child(col, shadcn_buttons_frame);
+
     let dialogs_row = ui.create_node(Row::new().with_spacing(Px(10.0)));
     let open_dialog = ui.create_node(Button::new("Open Dialog").on_click("ui_kit.dialog.open"));
     ui.add_child(dialogs_row, open_dialog);
@@ -362,7 +416,7 @@ fn build_ui_kit_contents(
     ui.add_child(col, separator);
 
     let icons_frame = ui.create_node(Frame::new(
-        StyleRefinement::default()
+        ChromeRefinement::default()
             .rounded_md()
             .border_1()
             .px_3()
@@ -421,7 +475,7 @@ fn build_ui_kit_contents(
 
     if let Some(img) = image {
         let image_frame = ui.create_node(Frame::new(
-            StyleRefinement::default()
+            ChromeRefinement::default()
                 .rounded_md()
                 .border_1()
                 .px_3()

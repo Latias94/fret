@@ -5,13 +5,13 @@ use fret_ui::primitives::{BoundTextInput, TextInputStyle};
 use fret_ui::{Theme, UiHost, Widget};
 
 use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use crate::style::StyleRefinement;
+use crate::style::ChromeRefinement;
 use crate::{Sizable, Size};
 
 pub struct TextField {
     inner: BoundTextInput,
     size: Size,
-    style: StyleRefinement,
+    style: ChromeRefinement,
     min_height: Px,
     last_theme_revision: Option<u64>,
 }
@@ -21,7 +21,7 @@ impl TextField {
         Self {
             inner: BoundTextInput::new(model),
             size: Size::Medium,
-            style: StyleRefinement::default(),
+            style: ChromeRefinement::default(),
             min_height: Px(0.0),
             last_theme_revision: None,
         }
@@ -33,7 +33,7 @@ impl TextField {
         self
     }
 
-    pub fn refine_style(mut self, style: StyleRefinement) -> Self {
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.style = style;
         self.last_theme_revision = None;
         self
@@ -77,12 +77,7 @@ impl TextField {
         let snap = theme.snapshot();
         let mut chrome = TextInputStyle::from_theme(snap);
 
-        chrome.padding = fret_core::geometry::Edges {
-            top: resolved.padding_y,
-            right: resolved.padding_x,
-            bottom: resolved.padding_y,
-            left: resolved.padding_x,
-        };
+        chrome.padding = resolved.padding;
         chrome.corner_radii = fret_core::geometry::Corners::all(resolved.radius);
         chrome.border = fret_core::geometry::Edges::all(resolved.border_width);
         chrome.background = resolved.background;

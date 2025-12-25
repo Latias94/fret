@@ -1,7 +1,7 @@
 use fret_core::{Color, Px};
 use fret_ui::Theme;
 
-use crate::{ColorRef, MetricRef, StyleRefinement};
+use crate::{ChromeRefinement, ColorRef, MetricRef};
 
 #[derive(Debug, Clone, Copy)]
 pub struct ControlTokenKeys {
@@ -69,20 +69,20 @@ fn resolve_color(
 
 pub fn resolve_control_chrome(
     theme: &Theme,
-    style: &StyleRefinement,
+    style: &ChromeRefinement,
     keys: ControlTokenKeys,
     fallback: ControlFallbacks,
 ) -> ResolvedControlChrome {
     ResolvedControlChrome {
         padding_x: resolve_metric(
             theme,
-            style.padding_x.as_ref(),
+            style.padding.as_ref().and_then(|p| p.left.as_ref()),
             keys.padding_x,
             fallback.padding_x,
         ),
         padding_y: resolve_metric(
             theme,
-            style.padding_y.as_ref(),
+            style.padding.as_ref().and_then(|p| p.top.as_ref()),
             keys.padding_y,
             fallback.padding_y,
         ),

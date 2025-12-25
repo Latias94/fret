@@ -11,7 +11,7 @@ use fret_ui::{ElementCx, Theme, UiHost};
 use crate::Size;
 use crate::declarative::icon;
 use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use crate::style::StyleRefinement;
+use crate::style::ChromeRefinement;
 
 #[track_caller]
 pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
@@ -29,7 +29,7 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
         let resolved = resolve_input_chrome(
             theme,
             size,
-            &StyleRefinement::default(),
+            &ChromeRefinement::default(),
             InputTokenKeys {
                 padding_x: Some("component.text_field.padding_x"),
                 padding_y: Some("component.text_field.padding_y"),
@@ -46,14 +46,16 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
         );
 
         let slot_w = Px(size.input_h(theme).0.max(0.0));
-        let left_pad = Px((resolved.padding_x.0 + slot_w.0).max(0.0));
-        let right_pad = Px((resolved.padding_x.0 + slot_w.0).max(0.0));
+        let base_px = resolved.padding.left;
+        let base_py = resolved.padding.top;
+        let left_pad = Px((base_px.0 + slot_w.0).max(0.0));
+        let right_pad = Px((base_px.0 + slot_w.0).max(0.0));
 
         let mut chrome = fret_ui::primitives::TextInputStyle::from_theme(theme.snapshot());
         chrome.padding = Edges {
-            top: resolved.padding_y,
+            top: base_py,
             right: right_pad,
-            bottom: resolved.padding_y,
+            bottom: base_py,
             left: left_pad,
         };
         chrome.corner_radii = fret_core::Corners::all(resolved.radius);
@@ -112,7 +114,7 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
                         layout: left_layout,
                         direction: Axis::Horizontal,
                         gap: Px(0.0),
-                        padding_x: resolved.padding_x,
+                        padding_x: base_px,
                         padding_y: Px(0.0),
                         justify: MainAlign::Center,
                         align: CrossAlign::Center,
@@ -152,7 +154,7 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
                                     },
                                     direction: Axis::Horizontal,
                                     gap: Px(0.0),
-                                    padding_x: resolved.padding_x,
+                                    padding_x: base_px,
                                     padding_y: Px(0.0),
                                     justify: MainAlign::Center,
                                     align: CrossAlign::Center,

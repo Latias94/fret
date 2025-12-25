@@ -2,8 +2,9 @@ use fret_core::{Color, Corners, Edges, Px};
 use fret_ui::Theme;
 use fret_ui::element::{RingPlacement, RingStyle};
 
+use crate::style::PaddingRefinement;
 use crate::style::{ColorFallback, MetricFallback};
-use crate::{Size, StyleRefinement};
+use crate::{ChromeRefinement, Size};
 
 #[derive(Debug, Clone, Copy)]
 pub struct InputTokenKeys {
@@ -40,8 +41,7 @@ impl InputTokenKeys {
 
 #[derive(Debug, Clone, Copy)]
 pub struct ResolvedInputChrome {
-    pub padding_x: Px,
-    pub padding_y: Px,
+    pub padding: Edges,
     pub min_height: Px,
     pub radius: Px,
     pub border_width: Px,
@@ -56,7 +56,7 @@ pub struct ResolvedInputChrome {
 pub fn resolve_input_chrome(
     theme: &Theme,
     size: Size,
-    style: &StyleRefinement,
+    style: &ChromeRefinement,
     keys: InputTokenKeys,
 ) -> ResolvedInputChrome {
     // Priority:
@@ -66,15 +66,17 @@ pub fn resolve_input_chrome(
     // 4) size/baseline theme fallbacks
 
     let padding_x = style
-        .padding_x
+        .padding
         .as_ref()
+        .and_then(|p| p.left.as_ref())
         .map(|m| m.resolve(theme))
         .or_else(|| keys.padding_x.and_then(|k| theme.metric_by_key(k)))
         .or_else(|| theme.metric_by_key("component.input.padding_x"))
         .unwrap_or_else(|| size.input_px(theme));
     let padding_y = style
-        .padding_y
+        .padding
         .as_ref()
+        .and_then(|p| p.top.as_ref())
         .map(|m| m.resolve(theme))
         .or_else(|| keys.padding_y.and_then(|k| theme.metric_by_key(k)))
         .or_else(|| theme.metric_by_key("component.input.padding_y"))
@@ -139,8 +141,12 @@ pub fn resolve_input_chrome(
         .unwrap_or(theme.colors.selection_background);
 
     ResolvedInputChrome {
-        padding_x: Px(padding_x.0.max(0.0)),
-        padding_y: Px(padding_y.0.max(0.0)),
+        padding: Edges {
+            top: Px(padding_y.0.max(0.0)),
+            right: Px(padding_x.0.max(0.0)),
+            bottom: Px(padding_y.0.max(0.0)),
+            left: Px(padding_x.0.max(0.0)),
+        },
         min_height: Px(min_height.0.max(0.0)),
         radius: Px(radius.0.max(0.0)),
         border_width: Px(border_width.0.max(0.0)),
@@ -192,8 +198,26 @@ pub fn default_text_input_style(theme: &Theme) -> fret_ui::primitives::TextInput
     }
 }
 
-pub fn input_base_refinement() -> StyleRefinement {
-    StyleRefinement {
+pub fn input_base_refinement() -> ChromeRefinement {
+    ChromeRefinement {
+        padding: Some(PaddingRefinement {
+            top: Some(crate::MetricRef::Token {
+                key: "component.input.padding_y",
+                fallback: MetricFallback::ThemePaddingSm,
+            }),
+            right: Some(crate::MetricRef::Token {
+                key: "component.input.padding_x",
+                fallback: MetricFallback::ThemePaddingSm,
+            }),
+            bottom: Some(crate::MetricRef::Token {
+                key: "component.input.padding_y",
+                fallback: MetricFallback::ThemePaddingSm,
+            }),
+            left: Some(crate::MetricRef::Token {
+                key: "component.input.padding_x",
+                fallback: MetricFallback::ThemePaddingSm,
+            }),
+        }),
         border_width: Some(crate::MetricRef::Token {
             key: "component.input.border_width",
             fallback: MetricFallback::Px(Px(1.0)),
@@ -214,6 +238,6 @@ pub fn input_base_refinement() -> StyleRefinement {
             key: "component.input.fg",
             fallback: ColorFallback::ThemeTextPrimary,
         }),
-        ..StyleRefinement::default()
+        ..ChromeRefinement::default()
     }
 }

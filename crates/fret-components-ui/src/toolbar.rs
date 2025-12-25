@@ -1,7 +1,7 @@
 use fret_core::{Color, Corners, DrawOrder, Edges, Px, Rect, SceneOp, Size};
 use fret_ui::{LayoutCx, PaintCx, Theme, UiHost, Widget};
 
-use crate::style::{ColorFallback, ColorRef, MetricFallback, MetricRef, StyleRefinement};
+use crate::style::{ChromeRefinement, ColorFallback, ColorRef, MetricFallback, MetricRef};
 use crate::{Sizable, Size as ComponentSize};
 
 #[derive(Debug, Clone)]
@@ -33,7 +33,7 @@ impl Default for ResolvedToolbarStyle {
 
 pub struct Toolbar {
     size: ComponentSize,
-    style: StyleRefinement,
+    style: ChromeRefinement,
     last_theme_revision: Option<u64>,
     resolved: ResolvedToolbarStyle,
 }
@@ -42,7 +42,7 @@ impl Toolbar {
     pub fn new() -> Self {
         Self {
             size: ComponentSize::Medium,
-            style: StyleRefinement::default(),
+            style: ChromeRefinement::default(),
             last_theme_revision: None,
             resolved: ResolvedToolbarStyle::default(),
         }
@@ -54,7 +54,7 @@ impl Toolbar {
         self
     }
 
-    pub fn refine_style(mut self, style: StyleRefinement) -> Self {
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.style = style;
         self.last_theme_revision = None;
         self
@@ -68,8 +68,9 @@ impl Toolbar {
 
         let px = self
             .style
-            .padding_x
-            .clone()
+            .padding
+            .as_ref()
+            .and_then(|p| p.left.clone())
             .unwrap_or(MetricRef::Token {
                 key: "component.toolbar.padding_x",
                 fallback: MetricFallback::Px(self.size.button_px(theme)),
@@ -77,8 +78,9 @@ impl Toolbar {
             .resolve(theme);
         let py = self
             .style
-            .padding_y
-            .clone()
+            .padding
+            .as_ref()
+            .and_then(|p| p.top.clone())
             .unwrap_or(MetricRef::Token {
                 key: "component.toolbar.padding_y",
                 fallback: MetricFallback::Px(self.size.button_py(theme)),

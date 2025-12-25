@@ -8,9 +8,9 @@
 //! while `fret-components-ui` remains the reusable component infrastructure (StyledExt, tokens,
 //! recipes glue, etc.).
 
-pub mod button {
-    pub use fret_components_ui::button::*;
-}
+pub mod button;
+
+pub use button::{Button, ButtonSize, ButtonVariant};
 
 pub mod input {
     pub use fret_components_ui::text_field::TextField as Input;
@@ -18,6 +18,10 @@ pub mod input {
 
 pub mod textarea {
     pub use fret_components_ui::text_area_field::TextAreaField as Textarea;
+}
+
+pub mod separator {
+    pub use fret_components_ui::separator::Separator;
 }
 
 pub mod checkbox {
@@ -63,5 +67,9 @@ pub mod command {
     pub use fret_components_ui::command_palette_overlay::*;
 }
 
+pub use input::Input;
+pub use separator::Separator;
+pub use textarea::Textarea;
+
 // Common infra re-exports so typical shadcn usage only needs one dependency.
-pub use fret_components_ui::{Radius, Size, Space, StyleRefinement, StyledExt};
+pub use fret_components_ui::{ChromeRefinement, LayoutRefinement, Radius, Size, Space, StyledExt};

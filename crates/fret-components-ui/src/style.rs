@@ -220,19 +220,29 @@ impl ColorRef {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct StyleRefinement {
-    pub padding_x: Option<MetricRef>,
-    pub padding_y: Option<MetricRef>,
-    pub min_height: Option<MetricRef>,
-    pub aspect_ratio: Option<f32>,
-    pub margin: Option<MarginRefinement>,
-    pub position: Option<PositionStyle>,
-    pub inset: Option<InsetRefinement>,
-    pub radius: Option<MetricRef>,
-    pub border_width: Option<MetricRef>,
-    pub background: Option<ColorRef>,
-    pub border_color: Option<ColorRef>,
-    pub text_color: Option<ColorRef>,
+pub struct PaddingRefinement {
+    pub top: Option<MetricRef>,
+    pub right: Option<MetricRef>,
+    pub bottom: Option<MetricRef>,
+    pub left: Option<MetricRef>,
+}
+
+impl PaddingRefinement {
+    pub fn merge(mut self, other: PaddingRefinement) -> Self {
+        if other.top.is_some() {
+            self.top = other.top;
+        }
+        if other.right.is_some() {
+            self.right = other.right;
+        }
+        if other.bottom.is_some() {
+            self.bottom = other.bottom;
+        }
+        if other.left.is_some() {
+            self.left = other.left;
+        }
+        self
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -243,6 +253,24 @@ pub struct MarginRefinement {
     pub left: Option<MetricRef>,
 }
 
+impl MarginRefinement {
+    pub fn merge(mut self, other: MarginRefinement) -> Self {
+        if other.top.is_some() {
+            self.top = other.top;
+        }
+        if other.right.is_some() {
+            self.right = other.right;
+        }
+        if other.bottom.is_some() {
+            self.bottom = other.bottom;
+        }
+        if other.left.is_some() {
+            self.left = other.left;
+        }
+        self
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct InsetRefinement {
     pub top: Option<MetricRef>,
@@ -251,28 +279,46 @@ pub struct InsetRefinement {
     pub left: Option<MetricRef>,
 }
 
-impl StyleRefinement {
-    pub fn merge(mut self, other: StyleRefinement) -> Self {
-        if other.padding_x.is_some() {
-            self.padding_x = other.padding_x;
+impl InsetRefinement {
+    pub fn merge(mut self, other: InsetRefinement) -> Self {
+        if other.top.is_some() {
+            self.top = other.top;
         }
-        if other.padding_y.is_some() {
-            self.padding_y = other.padding_y;
+        if other.right.is_some() {
+            self.right = other.right;
+        }
+        if other.bottom.is_some() {
+            self.bottom = other.bottom;
+        }
+        if other.left.is_some() {
+            self.left = other.left;
+        }
+        self
+    }
+}
+
+/// Control chrome style patches (colors, padding, borders, radius, etc).
+///
+/// This intentionally does **not** include layout-affecting fields like margin or absolute
+/// positioning. Those live in `LayoutRefinement` and apply only in the declarative authoring path.
+#[derive(Debug, Clone, Default)]
+pub struct ChromeRefinement {
+    pub padding: Option<PaddingRefinement>,
+    pub min_height: Option<MetricRef>,
+    pub radius: Option<MetricRef>,
+    pub border_width: Option<MetricRef>,
+    pub background: Option<ColorRef>,
+    pub border_color: Option<ColorRef>,
+    pub text_color: Option<ColorRef>,
+}
+
+impl ChromeRefinement {
+    pub fn merge(mut self, other: ChromeRefinement) -> Self {
+        if let Some(p) = other.padding {
+            self.padding = Some(self.padding.unwrap_or_default().merge(p));
         }
         if other.min_height.is_some() {
             self.min_height = other.min_height;
-        }
-        if other.aspect_ratio.is_some() {
-            self.aspect_ratio = other.aspect_ratio;
-        }
-        if other.margin.is_some() {
-            self.margin = other.margin;
-        }
-        if other.position.is_some() {
-            self.position = other.position;
-        }
-        if other.inset.is_some() {
-            self.inset = other.inset;
         }
         if other.radius.is_some() {
             self.radius = other.radius;
@@ -293,23 +339,237 @@ impl StyleRefinement {
     }
 
     pub fn px(mut self, space: Space) -> Self {
-        self.padding_x = Some(MetricRef::space(space));
+        let m = MetricRef::space(space);
+        let mut padding = self.padding.unwrap_or_default();
+        padding.left = Some(m.clone());
+        padding.right = Some(m);
+        self.padding = Some(padding);
         self
     }
 
     pub fn py(mut self, space: Space) -> Self {
-        self.padding_y = Some(MetricRef::space(space));
+        let m = MetricRef::space(space);
+        let mut padding = self.padding.unwrap_or_default();
+        padding.top = Some(m.clone());
+        padding.bottom = Some(m);
+        self.padding = Some(padding);
         self
     }
 
     pub fn p(mut self, space: Space) -> Self {
-        self.padding_x = Some(MetricRef::space(space));
-        self.padding_y = Some(MetricRef::space(space));
+        let m = MetricRef::space(space);
+        self.padding = Some(PaddingRefinement {
+            top: Some(m.clone()),
+            right: Some(m.clone()),
+            bottom: Some(m.clone()),
+            left: Some(m),
+        });
+        self
+    }
+
+    pub fn pt(mut self, space: Space) -> Self {
+        let mut padding = self.padding.unwrap_or_default();
+        padding.top = Some(MetricRef::space(space));
+        self.padding = Some(padding);
+        self
+    }
+
+    pub fn pr(mut self, space: Space) -> Self {
+        let mut padding = self.padding.unwrap_or_default();
+        padding.right = Some(MetricRef::space(space));
+        self.padding = Some(padding);
+        self
+    }
+
+    pub fn pb(mut self, space: Space) -> Self {
+        let mut padding = self.padding.unwrap_or_default();
+        padding.bottom = Some(MetricRef::space(space));
+        self.padding = Some(padding);
+        self
+    }
+
+    pub fn pl(mut self, space: Space) -> Self {
+        let mut padding = self.padding.unwrap_or_default();
+        padding.left = Some(MetricRef::space(space));
+        self.padding = Some(padding);
         self
     }
 
     pub fn rounded(mut self, radius: Radius) -> Self {
         self.radius = Some(MetricRef::radius(radius));
+        self
+    }
+
+    // Tailwind-like spacing scale, backed by namespaced tokens.
+    pub fn px_1(self) -> Self {
+        self.px(Space::N1)
+    }
+
+    pub fn px_0p5(self) -> Self {
+        self.px(Space::N0p5)
+    }
+
+    pub fn px_1p5(self) -> Self {
+        self.px(Space::N1p5)
+    }
+
+    pub fn px_2(self) -> Self {
+        self.px(Space::N2)
+    }
+
+    pub fn px_2p5(self) -> Self {
+        self.px(Space::N2p5)
+    }
+
+    pub fn px_3(self) -> Self {
+        self.px(Space::N3)
+    }
+
+    pub fn px_4(self) -> Self {
+        self.px(Space::N4)
+    }
+
+    pub fn py_1(self) -> Self {
+        self.py(Space::N1)
+    }
+
+    pub fn py_0p5(self) -> Self {
+        self.py(Space::N0p5)
+    }
+
+    pub fn py_1p5(self) -> Self {
+        self.py(Space::N1p5)
+    }
+
+    pub fn py_2(self) -> Self {
+        self.py(Space::N2)
+    }
+
+    pub fn py_2p5(self) -> Self {
+        self.py(Space::N2p5)
+    }
+
+    pub fn py_3(self) -> Self {
+        self.py(Space::N3)
+    }
+
+    pub fn py_4(self) -> Self {
+        self.py(Space::N4)
+    }
+
+    pub fn p_1(self) -> Self {
+        self.p(Space::N1)
+    }
+
+    pub fn p_0p5(self) -> Self {
+        self.p(Space::N0p5)
+    }
+
+    pub fn p_1p5(self) -> Self {
+        self.p(Space::N1p5)
+    }
+
+    pub fn p_2(self) -> Self {
+        self.p(Space::N2)
+    }
+
+    pub fn p_2p5(self) -> Self {
+        self.p(Space::N2p5)
+    }
+
+    pub fn p_3(self) -> Self {
+        self.p(Space::N3)
+    }
+
+    pub fn p_4(self) -> Self {
+        self.p(Space::N4)
+    }
+
+    pub fn rounded_md(self) -> Self {
+        self.rounded(Radius::Md)
+    }
+
+    pub fn border_1(mut self) -> Self {
+        self.border_width = Some(MetricRef::Px(Px(1.0)));
+        self
+    }
+
+    pub fn bg(mut self, color: ColorRef) -> Self {
+        self.background = Some(color);
+        self
+    }
+
+    pub fn border_color(mut self, color: ColorRef) -> Self {
+        self.border_color = Some(color);
+        self
+    }
+
+    pub fn text_color(mut self, color: ColorRef) -> Self {
+        self.text_color = Some(color);
+        self
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub enum LengthRefinement {
+    #[default]
+    Auto,
+    Px(MetricRef),
+    Fill,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct SizeRefinement {
+    pub width: Option<LengthRefinement>,
+    pub height: Option<LengthRefinement>,
+    pub min_width: Option<MetricRef>,
+    pub min_height: Option<MetricRef>,
+    pub max_width: Option<MetricRef>,
+    pub max_height: Option<MetricRef>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct FlexItemRefinement {
+    pub grow: Option<f32>,
+    pub shrink: Option<f32>,
+    pub basis: Option<LengthRefinement>,
+}
+
+/// Layout-affecting style patches (margin, positioning, size constraints, flex/grid).
+///
+/// These apply only in the declarative authoring path (or via explicit wrappers). Retained widgets
+/// must not silently accept these fields, as that would create Tailwind-like APIs that appear to
+/// work but are actually no-ops.
+#[derive(Debug, Clone, Default)]
+pub struct LayoutRefinement {
+    pub aspect_ratio: Option<f32>,
+    pub margin: Option<MarginRefinement>,
+    pub position: Option<PositionStyle>,
+    pub inset: Option<InsetRefinement>,
+    pub size: Option<SizeRefinement>,
+    pub flex_item: Option<FlexItemRefinement>,
+}
+
+impl LayoutRefinement {
+    pub fn merge(mut self, other: LayoutRefinement) -> Self {
+        if other.aspect_ratio.is_some() {
+            self.aspect_ratio = other.aspect_ratio;
+        }
+        if let Some(m) = other.margin {
+            self.margin = Some(self.margin.unwrap_or_default().merge(m));
+        }
+        if other.position.is_some() {
+            self.position = other.position;
+        }
+        if let Some(i) = other.inset {
+            self.inset = Some(self.inset.unwrap_or_default().merge(i));
+        }
+        if let Some(s) = other.size {
+            self.size = Some(s);
+        }
+        if let Some(f) = other.flex_item {
+            self.flex_item = Some(f);
+        }
         self
     }
 
@@ -421,115 +681,6 @@ impl StyleRefinement {
         let mut margin = self.margin.unwrap_or_default();
         margin.left = Some(MetricRef::space(space));
         self.margin = Some(margin);
-        self
-    }
-
-    // Tailwind-like spacing scale, backed by namespaced tokens.
-    pub fn px_1(self) -> Self {
-        self.px(Space::N1)
-    }
-
-    pub fn px_0p5(self) -> Self {
-        self.px(Space::N0p5)
-    }
-
-    pub fn px_1p5(self) -> Self {
-        self.px(Space::N1p5)
-    }
-
-    pub fn px_2(self) -> Self {
-        self.px(Space::N2)
-    }
-
-    pub fn px_2p5(self) -> Self {
-        self.px(Space::N2p5)
-    }
-
-    pub fn px_3(self) -> Self {
-        self.px(Space::N3)
-    }
-
-    pub fn px_4(self) -> Self {
-        self.px(Space::N4)
-    }
-
-    pub fn py_1(self) -> Self {
-        self.py(Space::N1)
-    }
-
-    pub fn py_0p5(self) -> Self {
-        self.py(Space::N0p5)
-    }
-
-    pub fn py_1p5(self) -> Self {
-        self.py(Space::N1p5)
-    }
-
-    pub fn py_2(self) -> Self {
-        self.py(Space::N2)
-    }
-
-    pub fn py_2p5(self) -> Self {
-        self.py(Space::N2p5)
-    }
-
-    pub fn py_3(self) -> Self {
-        self.py(Space::N3)
-    }
-
-    pub fn py_4(self) -> Self {
-        self.py(Space::N4)
-    }
-
-    pub fn p_1(self) -> Self {
-        self.p(Space::N1)
-    }
-
-    pub fn p_0p5(self) -> Self {
-        self.p(Space::N0p5)
-    }
-
-    pub fn p_1p5(self) -> Self {
-        self.p(Space::N1p5)
-    }
-
-    pub fn p_2(self) -> Self {
-        self.p(Space::N2)
-    }
-
-    pub fn p_2p5(self) -> Self {
-        self.p(Space::N2p5)
-    }
-
-    pub fn p_3(self) -> Self {
-        self.p(Space::N3)
-    }
-
-    pub fn p_4(self) -> Self {
-        self.p(Space::N4)
-    }
-
-    pub fn rounded_md(self) -> Self {
-        self.rounded(Radius::Md)
-    }
-
-    pub fn border_1(mut self) -> Self {
-        self.border_width = Some(MetricRef::Px(Px(1.0)));
-        self
-    }
-
-    pub fn bg(mut self, color: ColorRef) -> Self {
-        self.background = Some(color);
-        self
-    }
-
-    pub fn border_color(mut self, color: ColorRef) -> Self {
-        self.border_color = Some(color);
-        self
-    }
-
-    pub fn text_color(mut self, color: ColorRef) -> Self {
-        self.text_color = Some(color);
         self
     }
 }

@@ -6,7 +6,7 @@ use fret_ui::primitives::BoundTextInput;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
 
 use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use crate::style::StyleRefinement;
+use crate::style::ChromeRefinement;
 use crate::{PopoverItem, PopoverRequest, PopoverService, Size};
 
 fn matches_query(label: &str, q: &str) -> bool {
@@ -39,7 +39,7 @@ pub struct Combobox {
     query: Model<String>,
 
     size: Size,
-    style: StyleRefinement,
+    style: ChromeRefinement,
     min_height: Px,
 
     input: BoundTextInput,
@@ -63,7 +63,7 @@ impl Combobox {
             selection,
             query,
             size: Size::Medium,
-            style: StyleRefinement::default(),
+            style: ChromeRefinement::default(),
             min_height: Px(0.0),
             input: BoundTextInput::new(query),
             last_bounds: fret_core::Rect::default(),
@@ -81,7 +81,7 @@ impl Combobox {
         self
     }
 
-    pub fn refine_style(mut self, style: StyleRefinement) -> Self {
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.style = style;
         self.last_theme_revision = None;
         self
@@ -271,12 +271,7 @@ impl Combobox {
         let snap = theme.snapshot();
         let mut chrome = fret_ui::primitives::TextInputStyle::from_theme(snap);
 
-        chrome.padding = fret_core::geometry::Edges {
-            top: resolved.padding_y,
-            right: resolved.padding_x,
-            bottom: resolved.padding_y,
-            left: resolved.padding_x,
-        };
+        chrome.padding = resolved.padding;
         chrome.corner_radii = fret_core::geometry::Corners::all(resolved.radius);
         chrome.border = fret_core::geometry::Edges::all(resolved.border_width);
         chrome.background = resolved.background;

@@ -1,5 +1,5 @@
 use crate::style::{
-    ColorFallback, MetricFallback, StyleRefinement, component_color, component_metric,
+    ChromeRefinement, ColorFallback, MetricFallback, component_color, component_metric,
 };
 use fret_core::{Color, Corners, DrawOrder, Edges, Event, Px, Rect, SceneOp, Size};
 use fret_ui::{EventCx, LayoutCx, PaintCx, Theme, UiHost, Widget};
@@ -35,7 +35,7 @@ impl Default for ResolvedScrollAreaStyle {
 ///   during scrolling.
 pub struct ScrollArea {
     inner: fret_ui::primitives::Scroll,
-    style: StyleRefinement,
+    style: ChromeRefinement,
     last_theme_revision: Option<u64>,
     resolved: ResolvedScrollAreaStyle,
     last_bounds: Rect,
@@ -45,14 +45,14 @@ impl ScrollArea {
     pub fn new() -> Self {
         Self {
             inner: fret_ui::primitives::Scroll::new().overlay_scrollbar(true),
-            style: StyleRefinement::default(),
+            style: ChromeRefinement::default(),
             last_theme_revision: None,
             resolved: ResolvedScrollAreaStyle::default(),
             last_bounds: Rect::default(),
         }
     }
 
-    pub fn refine_style(mut self, style: StyleRefinement) -> Self {
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.style = style;
         self
     }

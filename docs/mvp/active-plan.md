@@ -45,6 +45,11 @@ definitions live in `docs/mvp/reference-plan.md`.
 - MVP 55: recipes → declarative props
   - let component-layer `StyleRefinement`/`Space`/`Radius` generate declarative `Container`/`Flex` props,
     so surfaces can be built by composition without hard-coded sizes.
+- MVP 59: split style patches into chrome vs layout (Tailwind semantics hardening)
+  - introduce `ChromeRefinement` (control chrome: padding, border, radius, colors, typography) vs `LayoutRefinement` (margin, size constraints, flex/grid, position/inset, z-order, aspect ratio)
+  - prevent Tailwind-like layout APIs from silently becoming no-ops on retained widgets (layout refinements apply only in declarative elements or explicit layout wrappers)
+  - standardize semantic token key vocabulary for shared surfaces (notably list row hover/active)
+  - make `merge` semantics match Tailwind edge accumulation (`mt-*` + `ml-*` should compose, not replace)
 - MVP 56: unify the VirtualList contract surface
   - converge on “framework owns virtualization, components own selection/keyboard/menu policies”
   - treat schema-based `VirtualListRow` as legacy during migration, then remove.

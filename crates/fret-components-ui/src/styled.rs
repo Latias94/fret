@@ -1,33 +1,33 @@
-use crate::{Space, StyleRefinement};
+use crate::ChromeRefinement;
 
 pub trait RefineStyle: Sized {
-    fn refine_style(self, style: StyleRefinement) -> Self;
+    fn refine_style(self, style: ChromeRefinement) -> Self;
 }
 
 pub trait Stylable: Sized {
-    fn apply_style(self, style: StyleRefinement) -> Self;
+    fn apply_style(self, style: ChromeRefinement) -> Self;
 }
 
 impl<T: RefineStyle> Stylable for T {
-    fn apply_style(self, style: StyleRefinement) -> Self {
+    fn apply_style(self, style: ChromeRefinement) -> Self {
         RefineStyle::refine_style(self, style)
     }
 }
 
 pub struct Styled<T> {
     inner: T,
-    style: StyleRefinement,
+    style: ChromeRefinement,
 }
 
 impl<T> Styled<T> {
     pub fn new(inner: T) -> Self {
         Self {
             inner,
-            style: StyleRefinement::default(),
+            style: ChromeRefinement::default(),
         }
     }
 
-    pub fn refine_style(mut self, style: StyleRefinement) -> Self {
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.style = self.style.merge(style);
         self
     }
@@ -146,81 +146,6 @@ impl<T> Styled<T> {
         self.style = self.style.border_1();
         self
     }
-
-    pub fn aspect_ratio(mut self, ratio: f32) -> Self {
-        self.style = self.style.aspect_ratio(ratio);
-        self
-    }
-
-    pub fn relative(mut self) -> Self {
-        self.style = self.style.relative();
-        self
-    }
-
-    pub fn absolute(mut self) -> Self {
-        self.style = self.style.absolute();
-        self
-    }
-
-    pub fn inset(mut self, space: Space) -> Self {
-        self.style = self.style.inset(space);
-        self
-    }
-
-    pub fn top(mut self, space: Space) -> Self {
-        self.style = self.style.top(space);
-        self
-    }
-
-    pub fn right(mut self, space: Space) -> Self {
-        self.style = self.style.right(space);
-        self
-    }
-
-    pub fn bottom(mut self, space: Space) -> Self {
-        self.style = self.style.bottom(space);
-        self
-    }
-
-    pub fn left(mut self, space: Space) -> Self {
-        self.style = self.style.left(space);
-        self
-    }
-
-    pub fn m(mut self, space: Space) -> Self {
-        self.style = self.style.m(space);
-        self
-    }
-
-    pub fn mx(mut self, space: Space) -> Self {
-        self.style = self.style.mx(space);
-        self
-    }
-
-    pub fn my(mut self, space: Space) -> Self {
-        self.style = self.style.my(space);
-        self
-    }
-
-    pub fn mt(mut self, space: Space) -> Self {
-        self.style = self.style.mt(space);
-        self
-    }
-
-    pub fn mr(mut self, space: Space) -> Self {
-        self.style = self.style.mr(space);
-        self
-    }
-
-    pub fn mb(mut self, space: Space) -> Self {
-        self.style = self.style.mb(space);
-        self
-    }
-
-    pub fn ml(mut self, space: Space) -> Self {
-        self.style = self.style.ml(space);
-        self
-    }
 }
 
 impl<T: Stylable> Styled<T> {
@@ -240,7 +165,7 @@ impl<T: RefineStyle> StyledExt for T {}
 macro_rules! impl_refine_style {
     ($ty:path) => {
         impl RefineStyle for $ty {
-            fn refine_style(self, style: StyleRefinement) -> Self {
+            fn refine_style(self, style: ChromeRefinement) -> Self {
                 <$ty>::refine_style(self, style)
             }
         }
@@ -261,15 +186,14 @@ impl_refine_style!(crate::toolbar::Toolbar);
 mod tests {
     use super::*;
     use crate::{MetricRef, Space};
-    use fret_ui::element::PositionStyle;
 
     #[derive(Debug, Default, Clone)]
     struct Dummy {
-        style: StyleRefinement,
+        style: ChromeRefinement,
     }
 
     impl RefineStyle for Dummy {
-        fn refine_style(mut self, style: StyleRefinement) -> Self {
+        fn refine_style(mut self, style: ChromeRefinement) -> Self {
             self.style = style;
             self
         }
@@ -283,21 +207,26 @@ mod tests {
             .py_2()
             .border_1()
             .rounded_md()
-            .mt(Space::N2)
-            .absolute()
             .finish();
 
-        match dummy.style.padding_x {
+        let padding = dummy.style.padding.expect("expected padding refinement");
+        match padding.left {
             Some(MetricRef::Token { key, .. }) => assert_eq!(key, Space::N3.token_key()),
-            _ => panic!("expected padding_x token"),
+            _ => panic!("expected left padding token"),
         }
-        match dummy.style.padding_y {
+        match padding.right {
+            Some(MetricRef::Token { key, .. }) => assert_eq!(key, Space::N3.token_key()),
+            _ => panic!("expected right padding token"),
+        }
+        match padding.top {
             Some(MetricRef::Token { key, .. }) => assert_eq!(key, Space::N2.token_key()),
-            _ => panic!("expected padding_y token"),
+            _ => panic!("expected top padding token"),
+        }
+        match padding.bottom {
+            Some(MetricRef::Token { key, .. }) => assert_eq!(key, Space::N2.token_key()),
+            _ => panic!("expected bottom padding token"),
         }
         assert!(dummy.style.border_width.is_some());
         assert!(dummy.style.radius.is_some());
-        assert!(dummy.style.margin.is_some());
-        assert_eq!(dummy.style.position, Some(PositionStyle::Absolute));
     }
 }

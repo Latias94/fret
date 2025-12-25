@@ -8,7 +8,7 @@ use fret_runtime::CommandId;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
 
 use crate::style::{
-    ColorFallback, MetricFallback, MetricRef, StyleRefinement, component_color, component_metric,
+    ChromeRefinement, ColorFallback, MetricFallback, MetricRef, component_color, component_metric,
 };
 use crate::{Sizable, Size as ComponentSize};
 
@@ -38,7 +38,7 @@ pub struct Button {
     variant: ButtonVariant,
     intent: ButtonIntent,
     size: ComponentSize,
-    style: StyleRefinement,
+    style: ChromeRefinement,
     hovered: bool,
     pressed: bool,
     last_bounds: Rect,
@@ -103,7 +103,7 @@ impl Button {
             variant: ButtonVariant::Default,
             intent: ButtonIntent::Default,
             size: ComponentSize::Medium,
-            style: StyleRefinement::default(),
+            style: ChromeRefinement::default(),
             hovered: false,
             pressed: false,
             last_bounds: Rect::default(),
@@ -140,7 +140,7 @@ impl Button {
         self
     }
 
-    pub fn refine_style(mut self, style: StyleRefinement) -> Self {
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.style = style;
         self
     }
@@ -155,22 +155,27 @@ impl Button {
         let default_py = self.size.button_py(theme);
         let min_h = self.size.button_h(theme);
 
+        let base_padding_x =
+            component_metric("component.button.padding_x", MetricFallback::Px(default_px))
+                .resolve(theme);
+        let base_padding_y =
+            component_metric("component.button.padding_y", MetricFallback::Px(default_py))
+                .resolve(theme);
+
         let padding_x = self
             .style
-            .padding_x
-            .clone()
-            .unwrap_or_else(|| {
-                component_metric("component.button.padding_x", MetricFallback::Px(default_px))
-            })
-            .resolve(theme);
+            .padding
+            .as_ref()
+            .and_then(|p| p.left.as_ref())
+            .map(|m| m.resolve(theme))
+            .unwrap_or(base_padding_x);
         let padding_y = self
             .style
-            .padding_y
-            .clone()
-            .unwrap_or_else(|| {
-                component_metric("component.button.padding_y", MetricFallback::Px(default_py))
-            })
-            .resolve(theme);
+            .padding
+            .as_ref()
+            .and_then(|p| p.top.as_ref())
+            .map(|m| m.resolve(theme))
+            .unwrap_or(base_padding_y);
         let min_height = self
             .style
             .min_height

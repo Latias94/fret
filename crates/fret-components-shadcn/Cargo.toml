@@ -4,5 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+fret-core = { path = "../fret-core" }
+fret-runtime = { path = "../fret-runtime" }
+fret-ui = { path = "../fret-ui" }
 fret-components-ui = { path = "../fret-components-ui" }
-

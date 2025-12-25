@@ -698,6 +698,9 @@ name = "fret-components-shadcn"
 version = "0.1.0"
 dependencies = [
  "fret-components-ui",
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
 ]
 
 [[package]]
@@ -728,6 +731,7 @@ dependencies = [
  "bytemuck",
  "fret-app",
  "fret-components-icons",
+ "fret-components-shadcn",
  "fret-components-ui",
  "fret-core",
  "fret-editor",

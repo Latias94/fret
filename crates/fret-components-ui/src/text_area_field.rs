@@ -4,13 +4,13 @@ use fret_ui::primitives::{BoundTextArea, TextAreaStyle};
 use fret_ui::{Theme, UiHost, Widget};
 
 use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use crate::style::StyleRefinement;
+use crate::style::ChromeRefinement;
 use crate::{Sizable, Size};
 
 pub struct TextAreaField {
     inner: BoundTextArea,
     size: Size,
-    style: StyleRefinement,
+    style: ChromeRefinement,
     min_height: Px,
     last_theme_revision: Option<u64>,
 }
@@ -20,7 +20,7 @@ impl TextAreaField {
         Self {
             inner: BoundTextArea::new(model),
             size: Size::Medium,
-            style: StyleRefinement::default(),
+            style: ChromeRefinement::default(),
             min_height: Px(0.0),
             last_theme_revision: None,
         }
@@ -32,7 +32,7 @@ impl TextAreaField {
         self
     }
 
-    pub fn refine_style(mut self, style: StyleRefinement) -> Self {
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.style = style;
         self.last_theme_revision = None;
         self
@@ -69,8 +69,8 @@ impl TextAreaField {
         );
 
         let chrome = TextAreaStyle {
-            padding_x: resolved.padding_x,
-            padding_y: resolved.padding_y,
+            padding_x: resolved.padding.left,
+            padding_y: resolved.padding.top,
             background: resolved.background,
             border: Edges::all(resolved.border_width),
             border_color: resolved.border_color,

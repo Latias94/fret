@@ -2,10 +2,10 @@ use fret_core::{Color, Corners, DrawOrder, Edges, Px, Rect, SceneOp, Size};
 use fret_ui::{LayoutCx, PaintCx, UiHost, Widget};
 
 use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
-use crate::style::StyleRefinement;
+use crate::style::ChromeRefinement;
 
 pub struct Frame {
-    pub style: StyleRefinement,
+    pub style: ChromeRefinement,
     last_theme_revision: Option<u64>,
     resolved: ResolvedFrameStyle,
 }
@@ -34,7 +34,7 @@ impl Default for ResolvedFrameStyle {
 }
 
 impl Frame {
-    pub fn new(style: StyleRefinement) -> Self {
+    pub fn new(style: ChromeRefinement) -> Self {
         Self {
             style,
             last_theme_revision: None,
@@ -42,7 +42,7 @@ impl Frame {
         }
     }
 
-    pub fn refine_style(mut self, style: StyleRefinement) -> Self {
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.style = self.style.merge(style);
         self.last_theme_revision = None;
         self
@@ -80,7 +80,7 @@ impl Frame {
 
 impl Default for Frame {
     fn default() -> Self {
-        Self::new(StyleRefinement::default())
+        Self::new(ChromeRefinement::default())
     }
 }
 

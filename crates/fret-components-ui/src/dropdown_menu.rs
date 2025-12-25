@@ -8,7 +8,7 @@ use fret_runtime::Menu;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
 
 use crate::recipes::control::{ControlFallbacks, ControlTokenKeys, resolve_control_chrome};
-use crate::style::{ColorFallback, StyleRefinement, component_color};
+use crate::style::{ChromeRefinement, ColorFallback, component_color};
 use crate::{Sizable, Size as ComponentSize};
 
 #[derive(Debug, Clone)]
@@ -20,7 +20,7 @@ struct PreparedText {
 pub struct DropdownMenuButton {
     label: Arc<str>,
     menu: Menu,
-    style: StyleRefinement,
+    style: ChromeRefinement,
     size: ComponentSize,
     hovered: bool,
     pressed: bool,
@@ -76,7 +76,7 @@ impl DropdownMenuButton {
         Self {
             label: label.into(),
             menu,
-            style: StyleRefinement::default(),
+            style: ChromeRefinement::default(),
             size: ComponentSize::Medium,
             hovered: false,
             pressed: false,
@@ -98,7 +98,7 @@ impl DropdownMenuButton {
         self
     }
 
-    pub fn refine_style(mut self, style: StyleRefinement) -> Self {
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.style = style;
         self.last_theme_revision = None;
         self.prepared_scale_factor_bits = None;

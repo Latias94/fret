@@ -47,6 +47,7 @@ Scope: this is a pragmatic “what’s missing / what’s broken / what’s next
 ### Tailwind-like primitives (typed)
 
 - `Space` + `Radius` enums (component-layer vocabulary; no runtime class parser).
+- Tailwind primitive parity backlog (gpui-component alignment): `docs/tailwind-primitive-parity-todo.md`
 - Default themes ship a minimal Tailwind-like metric scale via extension keys:
   - `component.space.*` (`0`, `0p5`, `1`, `1p5`, `2`, `2p5`, `3`, `3p5`, `4`, `5`, `6`, `8`, `10`, `11`)
   - `component.radius.*` (`sm`, `md`, `lg`)
@@ -118,6 +119,7 @@ optional integration with `@tanstack/react-virtual` / `react-window`. For Fret, 
 
 - Provide a **framework-level virtual list primitive** (`VirtualList`) for performance.
 - Provide **component-level API parity** with shadcn/ui for common app UIs.
+- Track shadcn taxonomy parity separately: `docs/shadcn-v4-component-parity-todo.md`
 
 ### P0 (core app UI)
 

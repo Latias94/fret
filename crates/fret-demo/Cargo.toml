@@ -7,6 +7,7 @@ edition.workspace = true
 anyhow.workspace = true
 bytemuck.workspace = true
 fret-components-ui = { path = "../fret-components-ui" }
+fret-components-shadcn = { path = "../fret-components-shadcn" }
 fret-components-icons = { path = "../fret-components-icons" }
 fret-app = { path = "../fret-app" }
 fret-core = { path = "../fret-core" }

@@ -52,7 +52,7 @@ use fret_app::{
 use fret_components_icons::IconId;
 use fret_components_ui::PopoverService;
 use fret_components_ui::{
-    Size as ComponentSize, StyleRefinement,
+    ChromeRefinement, Size as ComponentSize,
     button::{Button, ButtonIntent, ButtonVariant},
     checkbox::Checkbox,
     frame::Frame,
@@ -3779,7 +3779,7 @@ impl WinitDriver for DemoDriver {
         let ui_kit_root = ui.create_node(fret_ui_app::Column::new().with_spacing(Px(10.0)));
 
         let ui_kit_buttons_frame = ui.create_node(Frame::new(
-            StyleRefinement::default()
+            ChromeRefinement::default()
                 .rounded_md()
                 .border_1()
                 .px_3()
@@ -3815,7 +3815,7 @@ impl WinitDriver for DemoDriver {
         ui.add_child(ui_kit_root, ui_kit_buttons_frame);
         let ui_kit_text_field = ui.create_node(
             TextField::new(ui_kit_text).refine_style(
-                StyleRefinement::default()
+                ChromeRefinement::default()
                     .rounded_md()
                     .border_1()
                     .px_3()
@@ -3851,7 +3851,7 @@ impl WinitDriver for DemoDriver {
                 ],
             )
             .refine_style(
-                StyleRefinement::default()
+                ChromeRefinement::default()
                     .rounded_md()
                     .border_1()
                     .px_3()
@@ -3864,7 +3864,7 @@ impl WinitDriver for DemoDriver {
         ui.add_child(ui_kit_root, ui_kit_separator);
 
         let ui_kit_icons_frame = ui.create_node(Frame::new(
-            StyleRefinement::default()
+            ChromeRefinement::default()
                 .rounded_md()
                 .border_1()
                 .px_3()
@@ -3882,7 +3882,7 @@ impl WinitDriver for DemoDriver {
 
         if let Some(img) = self.ui_kit_image.as_ref().map(|i| i.id) {
             let ui_kit_image_frame = ui.create_node(Frame::new(
-                StyleRefinement::default()
+                ChromeRefinement::default()
                     .rounded_md()
                     .border_1()
                     .px_3()
@@ -3954,7 +3954,7 @@ impl WinitDriver for DemoDriver {
 
         let ui_kit_toolbar = ui.create_node(
             Toolbar::new().refine_style(
-                StyleRefinement::default()
+                ChromeRefinement::default()
                     .rounded_md()
                     .border_1()
                     .px_3()

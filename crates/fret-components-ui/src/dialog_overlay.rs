@@ -9,7 +9,7 @@ use fret_ui::{
 };
 use std::{collections::HashMap, sync::Arc};
 
-use crate::StyleRefinement;
+use crate::ChromeRefinement;
 use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
 
 #[derive(Debug, Clone)]
@@ -212,7 +212,7 @@ impl DialogOverlay {
 
         let surface = resolve_surface_chrome(
             theme,
-            &StyleRefinement::default(),
+            &ChromeRefinement::default(),
             SurfaceTokenKeys {
                 padding_x: Some("metric.padding.md"),
                 padding_y: Some("metric.padding.md"),

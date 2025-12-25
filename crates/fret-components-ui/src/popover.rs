@@ -9,8 +9,8 @@ use fret_ui::{
 };
 use std::{collections::HashMap, sync::Arc};
 
+use crate::ChromeRefinement;
 use crate::Size as ComponentSize;
-use crate::StyleRefinement;
 use crate::recipes::menu_list::resolve_menu_list_row_chrome;
 use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
 
@@ -220,7 +220,7 @@ impl Popover {
 
         let surface = resolve_surface_chrome(
             theme,
-            &StyleRefinement::default(),
+            &ChromeRefinement::default(),
             SurfaceTokenKeys {
                 padding_x: None,
                 padding_y: None,
