@@ -101,6 +101,14 @@ fn default_metric_tokens(metrics: ThemeMetrics) -> HashMap<String, Px> {
         ),
         ("metric.font.size".to_string(), metrics.font_size),
         ("metric.font.mono_size".to_string(), metrics.mono_font_size),
+        (
+            "metric.font.line_height".to_string(),
+            metrics.font_line_height,
+        ),
+        (
+            "metric.font.mono_line_height".to_string(),
+            metrics.mono_font_line_height,
+        ),
     ])
 }
 
@@ -142,6 +150,8 @@ pub struct ThemeMetrics {
     pub scrollbar_width: Px,
     pub font_size: Px,
     pub mono_font_size: Px,
+    pub font_line_height: Px,
+    pub mono_font_line_height: Px,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -272,6 +282,8 @@ impl Theme {
             "radius.lg" => Some(self.metrics.radius_md),
             "font.size" => Some(self.metrics.font_size),
             "mono_font.size" => Some(self.metrics.mono_font_size),
+            "font.line_height" => Some(self.metrics.font_line_height),
+            "mono_font.line_height" => Some(self.metrics.mono_font_line_height),
             _ => None,
         }
     }
@@ -409,6 +421,11 @@ impl Theme {
         apply_metric!("metric.scrollbar.width", self.metrics.scrollbar_width);
         apply_metric!("metric.font.size", self.metrics.font_size);
         apply_metric!("metric.font.mono_size", self.metrics.mono_font_size);
+        apply_metric!("metric.font.line_height", self.metrics.font_line_height);
+        apply_metric!(
+            "metric.font.mono_line_height",
+            self.metrics.mono_font_line_height
+        );
 
         // gpui-component compatibility: accept `font.size` / `mono_font.size` when the canonical
         // `metric.font.*` keys are not present.
@@ -430,6 +447,28 @@ impl Theme {
                 next_metrics.insert("mono_font.size".to_string(), px);
                 if self.metrics.mono_font_size != px {
                     self.metrics.mono_font_size = px;
+                    changed = true;
+                }
+            }
+        }
+        if !cfg.metrics.contains_key("metric.font.line_height") {
+            if let Some(v) = cfg.metrics.get("font.line_height").copied() {
+                let px = Px(v);
+                next_metrics.insert("metric.font.line_height".to_string(), px);
+                next_metrics.insert("font.line_height".to_string(), px);
+                if self.metrics.font_line_height != px {
+                    self.metrics.font_line_height = px;
+                    changed = true;
+                }
+            }
+        }
+        if !cfg.metrics.contains_key("metric.font.mono_line_height") {
+            if let Some(v) = cfg.metrics.get("mono_font.line_height").copied() {
+                let px = Px(v);
+                next_metrics.insert("metric.font.mono_line_height".to_string(), px);
+                next_metrics.insert("mono_font.line_height".to_string(), px);
+                if self.metrics.mono_font_line_height != px {
+                    self.metrics.mono_font_line_height = px;
                     changed = true;
                 }
             }
@@ -478,6 +517,8 @@ fn default_theme() -> &'static Theme {
             scrollbar_width: Px(10.0),
             font_size: Px(13.0),
             mono_font_size: Px(13.0),
+            font_line_height: Px(16.0),
+            mono_font_line_height: Px(16.0),
         };
         let colors = ThemeColors {
             surface_background: parse_hex_srgb_to_linear("#24272E").unwrap(),

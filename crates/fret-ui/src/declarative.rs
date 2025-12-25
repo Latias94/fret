@@ -640,6 +640,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 let style = props.style.unwrap_or(TextStyle {
                     font: FontId::default(),
                     size: font_size,
+                    line_height: Some(
+                        cx.theme()
+                            .metric_by_key("font.line_height")
+                            .unwrap_or(cx.theme().metrics.font_line_height),
+                    ),
                     ..Default::default()
                 });
                 let constraints = TextConstraints {
@@ -987,6 +992,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 let style = props.style.unwrap_or(TextStyle {
                     font: FontId::default(),
                     size: font_size,
+                    line_height: Some(
+                        cx.theme()
+                            .metric_by_key("font.line_height")
+                            .unwrap_or(cx.theme().metrics.font_line_height),
+                    ),
                     ..Default::default()
                 });
                 let color = props

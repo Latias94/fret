@@ -31,6 +31,10 @@
     "metric.radius.lg": 12.0,
     "metric.padding.sm": 10.0,
     "metric.padding.md": 12.0,
-    "metric.scrollbar.width": 10.0
+    "metric.scrollbar.width": 10.0,
+    "metric.font.size": 13.0,
+    "metric.font.mono_size": 13.0,
+    "metric.font.line_height": 16.0,
+    "metric.font.mono_line_height": 16.0
   }
 }

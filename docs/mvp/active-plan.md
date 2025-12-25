@@ -30,7 +30,8 @@ definitions live in `docs/mvp/reference-plan.md`.
 - MVP 53: typography v1 (shadcn-friendly)
   - landed: text style expressiveness (weight + line-height + tracking/letter-spacing)
   - landed: text blob caching keys incorporate typography parameters (ADR 0029)
-  - pending: theme-level typography tokens/aliases (ADR 0050 follow-up)
+  - landed: baseline theme metrics for `metric.font.line_height` / `metric.font.mono_line_height`
+  - pending: richer theme-level typography vocab (weight/tracking presets, size-specific line heights)
 - MVP 54: shadcn semantic palette alias expansion (ADR 0050 follow-up)
   - add best-effort alias keys for `primary/secondary/destructive/input/card/...` to reduce component-only `component.*` drift
 - MVP 55: recipes → declarative props

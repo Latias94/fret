@@ -47,6 +47,10 @@
     "metric.list.separator_inset_x": 10.0,
     "metric.list.row_highlight_inset_y": 2.0,
     "metric.scrollbar.width": 10.0,
+    "metric.font.size": 13.0,
+    "metric.font.mono_size": 13.0,
+    "metric.font.line_height": 16.0,
+    "metric.font.mono_line_height": 16.0,
 
     "component.space.0": 0.0,
     "component.space.0p5": 2.0,

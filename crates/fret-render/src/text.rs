@@ -349,7 +349,7 @@ impl TextSystem {
             }
         }
         if let Some(line_height) = style.line_height {
-            let line_height_px = (line_height.0 * scale).max(0.0);
+            let line_height_px = (line_height.0 * scale).max(font_size_px);
             if line_height_px.is_finite() {
                 attrs = attrs.metrics(Metrics::new(font_size_px, line_height_px));
             }
@@ -501,7 +501,7 @@ impl TextSystem {
             }
         }
         if let Some(line_height) = style.line_height {
-            let line_height_px = (line_height.0 * scale).max(0.0);
+            let line_height_px = (line_height.0 * scale).max(font_size_px);
             if line_height_px.is_finite() {
                 attrs = attrs.metrics(Metrics::new(font_size_px, line_height_px));
             }

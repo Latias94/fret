@@ -66,6 +66,11 @@ impl Text {
         self.style.size = theme
             .metric_by_key("font.size")
             .unwrap_or(theme.metrics.font_size);
+        self.style.line_height = Some(
+            theme
+                .metric_by_key("font.line_height")
+                .unwrap_or(theme.metrics.font_line_height),
+        );
         self.color = theme
             .color_by_key("foreground")
             .unwrap_or(theme.colors.text_primary);
