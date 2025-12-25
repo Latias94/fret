@@ -9,6 +9,9 @@ use fret_ui::{
 };
 use std::{collections::HashMap, sync::Arc};
 
+use crate::StyleRefinement;
+use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
+
 #[derive(Debug, Clone)]
 pub struct PopoverItem {
     pub label: Arc<str>,
@@ -164,6 +167,7 @@ struct PreparedRow {
 #[derive(Debug)]
 pub struct Popover {
     style: PopoverStyle,
+    style_override: bool,
     last_bounds: Rect,
     last_serial: Option<u64>,
     last_theme_revision: Option<u64>,
@@ -176,6 +180,7 @@ impl Popover {
     pub fn new() -> Self {
         Self {
             style: PopoverStyle::default(),
+            style_override: false,
             last_bounds: Rect::default(),
             last_serial: None,
             last_theme_revision: None,
@@ -185,15 +190,40 @@ impl Popover {
         }
     }
 
+    pub fn with_style(mut self, style: PopoverStyle) -> Self {
+        self.style = style;
+        self.style_override = true;
+        self
+    }
+
     fn sync_style_from_theme(&mut self, theme: &Theme) {
+        if self.style_override {
+            return;
+        }
         if self.last_theme_revision == Some(theme.revision()) {
             return;
         }
         self.last_theme_revision = Some(theme.revision());
-        let radius = theme.metrics.radius_md;
-        self.style.background = theme.colors.menu_background;
-        self.style.border_color = theme.colors.menu_border;
-        self.style.corner_radii = Corners::all(radius);
+
+        let surface = resolve_surface_chrome(
+            theme,
+            &StyleRefinement::default(),
+            SurfaceTokenKeys {
+                padding_x: Some("metric.padding.md"),
+                padding_y: Some("metric.padding.sm"),
+                radius: Some("metric.radius.md"),
+                border_width: None,
+                bg: Some("color.menu.background"),
+                border: Some("color.menu.border"),
+            },
+        );
+
+        self.style.padding_x = surface.padding_x;
+        self.style.padding_y = surface.padding_y;
+        self.style.border = Edges::all(surface.border_width);
+        self.style.background = surface.background;
+        self.style.border_color = surface.border_color;
+        self.style.corner_radii = Corners::all(surface.radius);
         self.style.row_hover = theme.colors.menu_item_hover;
         self.style.row_selected = theme.colors.menu_item_selected;
         self.style.text_color = theme.colors.text_primary;
