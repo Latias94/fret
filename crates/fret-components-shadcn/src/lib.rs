@@ -15,6 +15,7 @@ pub mod card;
 pub mod empty;
 pub mod kbd;
 pub mod label;
+pub mod toggle;
 
 pub use alert::{Alert, AlertDescription, AlertTitle, AlertVariant};
 pub use badge::{Badge, BadgeVariant};
@@ -23,6 +24,7 @@ pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardT
 pub use empty::Empty;
 pub use kbd::Kbd;
 pub use label::Label;
+pub use toggle::{Toggle, ToggleSize, ToggleVariant};
 
 pub mod input {
     pub use fret_components_ui::text_field::TextField as Input;

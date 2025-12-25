@@ -76,6 +76,9 @@
     "component.empty.description_px": 14.0,
     "component.empty.description_line_height": 20.0,
 
+    "component.toggle.text_px": 14.0,
+    "component.toggle.line_height": 20.0,
+
     "component.space.0": 0.0,
     "component.space.0p5": 2.0,
     "component.space.1": 4.0,
