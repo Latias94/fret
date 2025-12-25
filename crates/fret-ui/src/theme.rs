@@ -245,6 +245,11 @@ impl Theme {
             "border" => Some(self.colors.panel_border),
             "ring" => Some(self.colors.focus_ring),
 
+            // Surfaces.
+            "card.background" => Some(self.colors.panel_background),
+            "card.foreground" => Some(self.colors.text_primary),
+            "card.border" => Some(self.colors.panel_border),
+
             // Common state semantics.
             "selection.background" => Some(self.colors.selection_background),
             "muted.background" => Some(self.colors.panel_background),
@@ -252,9 +257,18 @@ impl Theme {
             "accent.background" => Some(self.colors.hover_background),
             "accent.foreground" => Some(self.colors.text_primary),
 
+            // Primary/secondary/destructive semantic palette (best-effort fallbacks).
+            "primary.background" => Some(self.colors.accent),
+            "primary.foreground" => Some(self.colors.text_primary),
+            "secondary.background" => Some(self.colors.panel_background),
+            "secondary.foreground" => Some(self.colors.text_primary),
+            "destructive.background" => Some(self.colors.viewport_gizmo_x),
+            "destructive.foreground" => Some(self.colors.text_primary),
+
             // Popovers/menus map well onto the existing menu surface tokens.
             "popover.background" => Some(self.colors.menu_background),
             "popover.foreground" => Some(self.colors.text_primary),
+            "popover.border" => Some(self.colors.menu_border),
 
             // List semantics used heavily by gpui-component.
             "list.background" => Some(self.colors.list_background),
@@ -264,6 +278,8 @@ impl Theme {
 
             // Inputs.
             "input.border" => Some(self.colors.panel_border),
+            "input.background" => Some(self.colors.panel_background),
+            "input.foreground" => Some(self.colors.text_primary),
             "caret" => Some(self.colors.text_primary),
 
             // Scrollbars.
@@ -603,4 +619,37 @@ fn parse_hex_srgb_to_linear(s: &str) -> Option<Color> {
         b: srgb_channel_to_linear(b),
         a: a as f32 / 255.0,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Theme;
+
+    #[test]
+    fn shadcn_semantic_palette_aliases_exist_on_default_theme() {
+        let host = crate::test_host::TestHost::default();
+        let theme = Theme::global(&host);
+
+        for key in [
+            "background",
+            "foreground",
+            "border",
+            "ring",
+            "card.background",
+            "card.foreground",
+            "primary.background",
+            "primary.foreground",
+            "secondary.background",
+            "secondary.foreground",
+            "destructive.background",
+            "destructive.foreground",
+            "input.background",
+            "input.border",
+            "input.foreground",
+            "popover.background",
+            "popover.foreground",
+        ] {
+            assert!(theme.color_by_key(key).is_some(), "missing alias {key}");
+        }
+    }
 }

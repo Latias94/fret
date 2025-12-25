@@ -7,8 +7,8 @@ use crate::elements::{ElementCx, GlobalElementId, NodeEntry};
 use crate::tree::UiTree;
 use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget};
 use fret_core::{
-    AppWindowId, Color, CursorIcon, DrawOrder, Edges, Event, FontId, MouseButton, NodeId, Px, Rect,
-    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle,
+    AppWindowId, Color, CursorIcon, DrawOrder, Edges, Event, FontId, MouseButton, NodeId, Point,
+    Px, Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextStyle,
 };
 use std::collections::HashMap;
 use taffy::{
@@ -158,6 +158,7 @@ struct TextCache {
 struct ElementHostWidget {
     element: GlobalElementId,
     text_cache: TextCache,
+    hit_testable: bool,
 }
 
 impl ElementHostWidget {
@@ -172,6 +173,10 @@ impl ElementHostWidget {
 }
 
 impl<H: UiHost> Widget<H> for ElementHostWidget {
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        self.hit_testable
+    }
+
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         let Some(window) = cx.window else {
             return;
@@ -294,6 +299,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         if matches!(instance, ElementInstance::Flex(_)) {
             // Flex is a layout container; it does not imply semantics beyond its children.
         }
+
+        if let ElementInstance::Pressable(props) = instance {
+            cx.set_disabled(!props.enabled);
+        }
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
@@ -310,6 +319,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
         let Some(instance) = self.instance(cx.app, window, cx.node) else {
             return Size::new(Px(0.0), Px(0.0));
+        };
+
+        self.hit_testable = match &instance {
+            ElementInstance::Pressable(p) => p.enabled,
+            _ => true,
         };
 
         match instance {
@@ -647,8 +661,12 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     ),
                     ..Default::default()
                 });
+                let measure_width = match props.layout.size.width {
+                    Length::Px(px) => Px(px.0.min(cx.available.width.0.max(0.0))),
+                    Length::Fill | Length::Auto => cx.available.width,
+                };
                 let constraints = TextConstraints {
-                    max_width: Some(cx.available.width),
+                    max_width: Some(measure_width),
                     wrap: props.wrap,
                     scale_factor: cx.scale_factor,
                 };
@@ -658,12 +676,13 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 self.text_cache.last_text = Some(props.text.clone());
                 self.text_cache.last_style = Some(style);
                 self.text_cache.last_wrap = Some(props.wrap);
-                self.text_cache.last_width = Some(cx.available.width);
+                self.text_cache.last_width = Some(measure_width);
                 self.text_cache.last_theme_revision = Some(theme_revision);
 
-                metrics.size
+                clamp_to_constraints(metrics.size, props.layout, cx.available)
             }
             ElementInstance::VirtualList(props) => {
+                let size = clamp_to_constraints(cx.available, props.layout, cx.available);
                 let mut needs_redraw = false;
                 crate::elements::with_element_state(
                     &mut *cx.app,
@@ -674,7 +693,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         let prev_viewport_h = state.viewport_h;
                         let prev_offset_y = state.offset_y;
 
-                        let viewport_h = Px(cx.bounds.size.height.0.max(0.0));
+                        let viewport_h = Px(size.height.0.max(0.0));
                         if state.viewport_h != viewport_h {
                             state.viewport_h = viewport_h;
                         }
@@ -728,12 +747,12 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     let y = cx.bounds.origin.y.0 + row_h.0 * idx as f32 - offset_y.0;
                     let child_bounds = Rect::new(
                         fret_core::Point::new(cx.bounds.origin.x, Px(y)),
-                        Size::new(cx.bounds.size.width, row_h),
+                        Size::new(size.width, row_h),
                     );
                     let _ = cx.layout_in(child, child_bounds);
                 }
 
-                cx.available
+                size
             }
             ElementInstance::Flex(props) => {
                 let pad_x = props.padding_x.0.max(0.0);
@@ -1115,6 +1134,7 @@ pub fn render_root<H: UiHost>(
                 let node = ui.create_node(ElementHostWidget {
                     element: root_id,
                     text_cache: TextCache::default(),
+                    hit_testable: true,
                 });
                 window_state.set_node_entry(
                     root_id,
@@ -1203,6 +1223,7 @@ fn mount_element<H: UiHost>(
             let node = ui.create_node(ElementHostWidget {
                 element: id,
                 text_cache: TextCache::default(),
+                hit_testable: true,
             });
             window_state.set_node_entry(
                 id,

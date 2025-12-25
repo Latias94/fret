@@ -43,8 +43,13 @@ pub fn container_props(theme: &Theme, refinement: StyleRefinement) -> ContainerP
         .map(|m| m.resolve(theme))
         .unwrap_or(Px(0.0));
 
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    if let Some(min_h) = refinement.min_height.as_ref().map(|m| m.resolve(theme)) {
+        layout.size.min_height = Some(min_h);
+    }
+
     ContainerProps {
-        layout: Default::default(),
+        layout,
         padding_x,
         padding_y,
         background,
