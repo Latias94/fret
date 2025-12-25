@@ -1,5 +1,5 @@
 use crate::{
-    Theme, UiHost,
+    Theme, UiHost, declarative,
     widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
 use fret_core::PlatformCapabilities;
@@ -277,6 +277,20 @@ impl ObservationIndex {
 
         for (model, mask) in next {
             self.by_model.entry(model).or_default().insert(node, mask);
+        }
+    }
+
+    fn remove_node(&mut self, node: NodeId) {
+        let Some(prev) = self.by_node.remove(&node) else {
+            return;
+        };
+        for model in prev.keys() {
+            if let Some(nodes) = self.by_model.get_mut(model) {
+                nodes.remove(&node);
+                if nodes.is_empty() {
+                    self.by_model.remove(model);
+                }
+            }
         }
     }
 }
@@ -726,6 +740,91 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub fn set_children(&mut self, parent: NodeId, children: Vec<NodeId>) {
+        let Some(old_children) = self.nodes.get(parent).map(|n| n.children.clone()) else {
+            return;
+        };
+
+        for old in old_children {
+            if let Some(n) = self.nodes.get_mut(old) {
+                if n.parent == Some(parent) {
+                    n.parent = None;
+                }
+            }
+        }
+
+        for &child in &children {
+            if let Some(n) = self.nodes.get_mut(child) {
+                n.parent = Some(parent);
+            }
+        }
+
+        if let Some(n) = self.nodes.get_mut(parent) {
+            n.children = children;
+            n.invalidation.hit_test = true;
+            n.invalidation.layout = true;
+            n.invalidation.paint = true;
+        }
+    }
+
+    pub fn replace_widget(&mut self, node: NodeId, widget: impl Widget<H> + 'static) {
+        let Some(n) = self.nodes.get_mut(node) else {
+            return;
+        };
+        n.widget = Some(Box::new(widget));
+        n.invalidation.hit_test = true;
+        n.invalidation.layout = true;
+        n.invalidation.paint = true;
+    }
+
+    pub fn remove_subtree(&mut self, text: &mut dyn TextService, root: NodeId) -> Vec<NodeId> {
+        if self.root_to_layer.contains_key(&root) {
+            return Vec::new();
+        }
+        let mut removed: Vec<NodeId> = Vec::new();
+        self.remove_subtree_inner(text, root, &mut removed);
+        removed
+    }
+
+    fn remove_subtree_inner(
+        &mut self,
+        text: &mut dyn TextService,
+        node: NodeId,
+        removed: &mut Vec<NodeId>,
+    ) {
+        if self.root_to_layer.contains_key(&node) {
+            return;
+        }
+        let Some(n) = self.nodes.get(node) else {
+            return;
+        };
+        let parent = n.parent;
+        let children = n.children.clone();
+
+        for child in children {
+            self.remove_subtree_inner(text, child, removed);
+        }
+
+        if let Some(parent) = parent
+            && let Some(p) = self.nodes.get_mut(parent)
+        {
+            p.children.retain(|&c| c != node);
+        }
+
+        if self.focus == Some(node) {
+            self.focus = None;
+        }
+        if self.captured == Some(node) {
+            self.captured = None;
+        }
+
+        self.cleanup_subtree_inner(text, node);
+        self.nodes.remove(node);
+        self.observed_in_layout.remove_node(node);
+        self.observed_in_paint.remove_node(node);
+        removed.push(node);
+    }
+
     pub fn children(&self, parent: NodeId) -> Vec<NodeId> {
         self.nodes
             .get(parent)
@@ -1068,6 +1167,41 @@ impl<H: UiHost> UiTree<H> {
             self.node_in_any_layer(target, &active_layers)
                 .then_some(target)
         })();
+
+        if let Some(window) = self.window
+            && matches!(event, Event::Pointer(_))
+            && let Some(pos) = event_position(event)
+        {
+            let hit = self.hit_test_layers(&active_layers, pos);
+            let hovered_pressable: Option<crate::elements::GlobalElementId> =
+                declarative::with_window_frame(app, window, |window_frame| {
+                    let Some(window_frame) = window_frame else {
+                        return None;
+                    };
+                    let mut node = hit;
+                    while let Some(id) = node {
+                        if let Some(record) = window_frame.instances.get(&id)
+                            && matches!(record.instance, declarative::ElementInstance::Pressable(_))
+                        {
+                            return Some(record.element);
+                        }
+                        node = self.nodes.get(id).and_then(|n| n.parent);
+                    }
+                    None
+                });
+
+            let (prev_node, next_node) =
+                crate::elements::update_hovered_pressable(app, window, hovered_pressable);
+            if prev_node.is_some() || next_node.is_some() {
+                needs_redraw = true;
+                if let Some(node) = prev_node {
+                    self.mark_invalidation(node, Invalidation::Paint);
+                }
+                if let Some(node) = next_node {
+                    self.mark_invalidation(node, Invalidation::Paint);
+                }
+            }
+        }
 
         let target = if let Some(captured) = captured {
             Some(captured)

@@ -1,4 +1,6 @@
+pub mod declarative;
 pub mod dock;
+pub mod element;
 pub mod elements;
 pub mod host;
 pub mod menu_overlay;

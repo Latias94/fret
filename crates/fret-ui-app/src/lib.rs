@@ -5,7 +5,9 @@
 
 pub use fret_app::App;
 
+pub use fret_ui::declarative;
 pub use fret_ui::dock;
+pub use fret_ui::element;
 pub use fret_ui::elements;
 pub use fret_ui::theme;
 pub use fret_ui::tree;

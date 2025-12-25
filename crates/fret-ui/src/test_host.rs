@@ -26,6 +26,10 @@ impl TestHost {
         Self::default()
     }
 
+    pub(crate) fn advance_frame(&mut self) {
+        self.frame_id.0 = self.frame_id.0.saturating_add(1);
+    }
+
     pub(crate) fn take_effects(&mut self) -> Vec<Effect> {
         std::mem::take(&mut self.effects)
     }

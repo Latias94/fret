@@ -1,4 +1,4 @@
-use fret_core::{AppWindowId, FrameId, Rect};
+use fret_core::{AppWindowId, FrameId, NodeId, Px, Rect};
 use std::{
     any::{Any, TypeId},
     collections::HashMap,
@@ -7,6 +7,10 @@ use std::{
 };
 
 use crate::UiHost;
+use crate::element::{
+    AnyElement, ColumnProps, ContainerProps, ElementKind, PressableProps, PressableState, RowProps,
+    StackProps, TextProps, VirtualListProps, VirtualListState,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct GlobalElementId(pub u64);
@@ -49,12 +53,22 @@ pub struct WindowElementState {
     prepared_frame: FrameId,
     prev_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
     cur_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
+    nodes: HashMap<GlobalElementId, NodeEntry>,
+    hovered_pressable: Option<GlobalElementId>,
+    pressed_pressable: Option<GlobalElementId>,
 }
 
 #[derive(Debug)]
 struct StateEntry {
     value: Box<dyn Any>,
     last_seen_frame: FrameId,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct NodeEntry {
+    pub node: NodeId,
+    pub last_seen_frame: FrameId,
+    pub root: GlobalElementId,
 }
 
 impl WindowElementState {
@@ -72,6 +86,18 @@ impl WindowElementState {
             &mut self.cur_unkeyed_fingerprints,
         );
         self.cur_unkeyed_fingerprints.clear();
+    }
+
+    pub(crate) fn node_entry(&self, id: GlobalElementId) -> Option<NodeEntry> {
+        self.nodes.get(&id).copied()
+    }
+
+    pub(crate) fn set_node_entry(&mut self, id: GlobalElementId, entry: NodeEntry) {
+        self.nodes.insert(id, entry);
+    }
+
+    pub(crate) fn retain_nodes(&mut self, f: impl FnMut(&GlobalElementId, &mut NodeEntry) -> bool) {
+        self.nodes.retain(f);
     }
 }
 
@@ -228,6 +254,225 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
         self.stack.pop();
         out
     }
+
+    #[track_caller]
+    pub fn container(
+        &mut self,
+        props: ContainerProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Container(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn pressable(
+        &mut self,
+        props: PressableProps,
+        f: impl FnOnce(&mut Self, PressableState) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let hovered = cx.window_state.hovered_pressable == Some(id);
+            let pressed = cx.window_state.pressed_pressable == Some(id);
+            let children = f(cx, PressableState { hovered, pressed });
+            AnyElement::new(id, ElementKind::Pressable(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn stack(&mut self, f: impl FnOnce(&mut Self) -> Vec<AnyElement>) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Stack(StackProps::default()), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn column(
+        &mut self,
+        props: ColumnProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Column(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn row(
+        &mut self,
+        props: RowProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Row(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn text(&mut self, text: impl Into<std::sync::Arc<str>>) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::Text(TextProps::new(text)), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn virtual_list(
+        &mut self,
+        len: usize,
+        row_height: Px,
+        overscan: usize,
+        f: impl FnOnce(&mut Self, std::ops::Range<usize>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+
+            let (offset_y, viewport_h) = cx.with_state(VirtualListState::default, |state| {
+                (
+                    Px(state.offset_y.0.max(0.0)),
+                    Px(state.viewport_h.0.max(0.0)),
+                )
+            });
+
+            let content_h = Px(row_height.0.max(0.0) * len as f32);
+            let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
+            let offset_y = Px(offset_y.0.min(max_offset.0));
+
+            let (mut start, mut end) = if viewport_h.0 <= 0.0 || row_height.0 <= 0.0 || len == 0 {
+                (0usize, 0usize)
+            } else {
+                let start = (offset_y.0 / row_height.0).floor() as isize;
+                let end = ((offset_y.0 + viewport_h.0) / row_height.0).ceil() as isize;
+                let start = start.max(0) as usize;
+                let end = end.max(start as isize) as usize;
+                (start, end.min(len))
+            };
+
+            let o = overscan.min(len);
+            start = start.saturating_sub(o);
+            end = (end + o).min(len);
+
+            let children = f(cx, start..end);
+            AnyElement::new(
+                id,
+                ElementKind::VirtualList(VirtualListProps {
+                    len,
+                    row_height,
+                    overscan,
+                    visible_start: start,
+                    visible_end: end,
+                }),
+                children,
+            )
+        })
+    }
+}
+
+pub fn with_element_state<H: UiHost, S: Any, R>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+    init: impl FnOnce() -> S,
+    f: impl FnOnce(&mut S) -> R,
+) -> R {
+    let frame_id = app.frame_id();
+    app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+        runtime.prepare_window_for_frame(window, frame_id);
+        let window_state = runtime.for_window_mut(window);
+
+        let key = (element, TypeId::of::<S>());
+        let entry = window_state.state.entry(key).or_insert_with(|| StateEntry {
+            value: Box::new(init()),
+            last_seen_frame: frame_id,
+        });
+        entry.last_seen_frame = frame_id;
+
+        let state = entry
+            .value
+            .downcast_mut::<S>()
+            .expect("element state type mismatch");
+        f(state)
+    })
+}
+
+pub(crate) fn with_window_state<H: UiHost, R>(
+    app: &mut H,
+    window: AppWindowId,
+    f: impl FnOnce(&mut WindowElementState) -> R,
+) -> R {
+    let frame_id = app.frame_id();
+    app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+        runtime.prepare_window_for_frame(window, frame_id);
+        let window_state = runtime.for_window_mut(window);
+        f(window_state)
+    })
+}
+
+pub(crate) fn update_hovered_pressable<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    next: Option<GlobalElementId>,
+) -> (Option<NodeId>, Option<NodeId>) {
+    with_window_state(app, window, |st| {
+        let prev = st.hovered_pressable;
+        if prev == next {
+            return (None, None);
+        }
+        let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
+        let next_node = next.and_then(|id| st.node_entry(id).map(|e| e.node));
+        st.hovered_pressable = next;
+        (prev_node, next_node)
+    })
+}
+
+pub(crate) fn set_pressed_pressable<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    pressed: Option<GlobalElementId>,
+) -> Option<NodeId> {
+    with_window_state(app, window, |st| {
+        let prev = st.pressed_pressable;
+        if prev == pressed {
+            return None;
+        }
+        let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
+        st.pressed_pressable = pressed;
+        prev_node
+    })
+}
+
+pub(crate) fn is_hovered_pressable<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> bool {
+    with_window_state(app, window, |st| st.hovered_pressable == Some(element))
+}
+
+pub fn take_element_state<H: UiHost, S: Any>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> Option<S> {
+    app.with_global_mut(ElementRuntime::new, |runtime, app| {
+        runtime.prepare_window_for_frame(window, app.frame_id());
+        let window_state = runtime.for_window_mut(window);
+        window_state
+            .state
+            .remove(&(element, TypeId::of::<S>()))
+            .and_then(|e| e.value.downcast::<S>().ok())
+            .map(|b| *b)
+    })
 }
 
 pub fn global_root(window: AppWindowId, name: &str) -> GlobalElementId {
