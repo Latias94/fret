@@ -218,6 +218,12 @@ impl DialogOverlay {
             },
         );
 
+        let mut title_style = crate::Size::Small.control_text_style(theme);
+        title_style.size = title_style.size + Px(1.0);
+        self.style.title_style = title_style;
+        self.style.body_style = crate::Size::Small.control_text_style(theme);
+        self.style.button_style = crate::Size::Small.control_text_style(theme);
+
         self.style.corner_radius = surface.radius;
         self.style.border = Edges::all(surface.border_width);
         self.style.padding = surface.padding_x;

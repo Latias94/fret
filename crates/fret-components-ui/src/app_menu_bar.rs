@@ -79,6 +79,9 @@ impl AppMenuBar {
         self.padding_y = theme.metrics.padding_sm;
         self.gap = theme.metrics.padding_sm;
         self.corner_radius = theme.metrics.radius_md;
+        self.style.size = theme.metrics.font_size;
+        let computed_h = theme.metrics.font_size + self.padding_y * 2.0;
+        self.height = Px(30.0_f32.max(computed_h.0));
     }
 
     fn current_menu_serial<H: UiHost>(app: &H, window: fret_core::AppWindowId) -> Option<u64> {

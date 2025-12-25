@@ -92,16 +92,18 @@ impl Size {
     }
 
     pub fn control_text_px(self, theme: &Theme) -> Px {
-        self.metric(
-            theme,
-            "control.text_px",
-            match self {
-                Self::XSmall => Px(12.0),
-                Self::Small => Px(13.0),
-                Self::Medium => Px(13.0),
-                Self::Large => Px(14.0),
-            },
-        )
+        let base = theme
+            .metric_by_key("font.size")
+            .unwrap_or(theme.metrics.font_size);
+        let fallback = match self {
+            // Keep the current defaults when `metric.font.size == 13px`,
+            // while allowing themes to scale typography globally.
+            Self::XSmall => base - Px(1.0),
+            Self::Small => base,
+            Self::Medium => base,
+            Self::Large => base + Px(1.0),
+        };
+        self.metric(theme, "control.text_px", fallback)
     }
 
     pub fn control_text_style(self, theme: &Theme) -> TextStyle {

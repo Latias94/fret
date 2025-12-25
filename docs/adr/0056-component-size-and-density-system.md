@@ -69,6 +69,8 @@ The sizing system consumes theme values via:
 Rules:
 
 - **Baseline**: use the typed theme tokens as a fallback (so the UI kit works without extra theme keys).
+- **Typography baseline**: `control_text_size` falls back to the theme’s global base typography
+  (`metric.font.size`, alias `font.size`), so components scale consistently when a theme changes font sizing.
 - **Override**: allow overriding specific sizing-derived metrics via namespaced keys
   (e.g. `component.size.md.input_h`, `component.size.sm.list_py`) if we later need fine control.
 - **List-specific metrics**: allow `metric.list.*` keys to remain as a stable escape hatch, but consume them

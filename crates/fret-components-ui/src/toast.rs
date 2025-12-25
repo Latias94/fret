@@ -333,6 +333,11 @@ impl ToastOverlay {
         }
         self.last_theme_revision = Some(theme.revision());
 
+        self.style.title_style = crate::Size::Small.control_text_style(theme);
+        self.style.description_style = crate::Size::XSmall.control_text_style(theme);
+        self.style.action_style = crate::Size::XSmall.control_text_style(theme);
+        self.style.close_style = crate::Size::Large.control_text_style(theme);
+
         self.style.background = theme.colors.menu_background;
         self.style.border_color = theme.colors.menu_border;
         self.style.corner_radius = theme.metrics.radius_lg;

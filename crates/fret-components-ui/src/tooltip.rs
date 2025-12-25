@@ -172,6 +172,8 @@ impl TooltipOverlay {
         }
         self.last_theme_revision = Some(theme.revision());
 
+        self.style.text_style = crate::Size::XSmall.control_text_style(theme);
+
         let radius = theme.metrics.radius_sm;
         self.style.background = Color {
             a: 0.94,
