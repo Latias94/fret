@@ -2,6 +2,7 @@ use fret_core::{Corners, Edges, FontId, Px, TextStyle};
 use fret_runtime::Model;
 use fret_ui::{BoundTextArea, TextAreaStyle, Theme, UiHost, Widget};
 
+use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use crate::style::StyleRefinement;
 use crate::{Sizable, Size};
 
@@ -47,83 +48,48 @@ impl TextAreaField {
         }
         self.last_theme_revision = Some(theme.revision());
 
-        let mut chrome = TextAreaStyle {
-            padding_x: self.size.input_px(theme),
-            padding_y: self.size.input_py(theme),
-            background: theme.colors.panel_background,
-            border: Edges::all(Px(1.0)),
-            border_color: theme.colors.panel_border,
-            corner_radii: Corners::all(self.size.control_radius(theme)),
-            text_color: theme.colors.text_primary,
-            selection_color: theme.colors.selection_background,
-            caret_color: theme.colors.text_primary,
+        let resolved = resolve_input_chrome(
+            theme,
+            self.size,
+            &self.style,
+            InputTokenKeys {
+                padding_x: Some("component.text_area.padding_x"),
+                padding_y: Some("component.text_area.padding_y"),
+                min_height: Some("component.text_area.min_height"),
+                radius: Some("component.text_area.radius"),
+                border_width: Some("component.text_area.border_width"),
+                bg: Some("component.text_area.bg"),
+                border: Some("component.text_area.border"),
+                border_focus: Some("component.text_area.border_focus"),
+                fg: Some("component.text_area.fg"),
+                text_px: Some("component.text_area.text_px"),
+                selection: Some("component.text_area.selection"),
+            },
+        );
+
+        let chrome = TextAreaStyle {
+            padding_x: resolved.padding_x,
+            padding_y: resolved.padding_y,
+            background: resolved.background,
+            border: Edges::all(resolved.border_width),
+            border_color: resolved.border_color,
+            corner_radii: Corners::all(resolved.radius),
+            text_color: resolved.text_color,
+            selection_color: resolved.selection_color,
+            caret_color: resolved.text_color,
             preedit_bg_color: fret_core::Color {
                 a: 0.22,
-                ..theme.colors.selection_background
+                ..resolved.selection_color
             },
             preedit_underline_color: theme.colors.accent,
         };
 
-        if let Some(px) = theme.metric_by_key("component.text_area.padding_x") {
-            chrome.padding_x = px;
-        }
-        if let Some(px) = theme.metric_by_key("component.text_area.padding_y") {
-            chrome.padding_y = px;
-        }
-        if let Some(px) = theme.metric_by_key("component.text_area.radius") {
-            chrome.corner_radii = Corners::all(px);
-        }
-        if let Some(px) = theme.metric_by_key("component.text_area.border_width") {
-            chrome.border = Edges::all(px);
-        }
-        if let Some(bg) = theme.color_by_key("component.text_area.bg") {
-            chrome.background = bg;
-        }
-        if let Some(c) = theme.color_by_key("component.text_area.border") {
-            chrome.border_color = c;
-        }
-        if let Some(c) = theme.color_by_key("component.text_area.fg") {
-            chrome.text_color = c;
-            chrome.caret_color = c;
-        }
-        if let Some(c) = theme.color_by_key("component.text_area.selection") {
-            chrome.selection_color = c;
-        }
-
-        if let Some(padding_x) = self.style.padding_x.clone() {
-            chrome.padding_x = padding_x.resolve(theme);
-        }
-        if let Some(padding_y) = self.style.padding_y.clone() {
-            chrome.padding_y = padding_y.resolve(theme);
-        }
-        if let Some(radius) = self.style.radius.clone() {
-            chrome.corner_radii = Corners::all(radius.resolve(theme));
-        }
-        if let Some(border_width) = self.style.border_width.clone() {
-            chrome.border = Edges::all(border_width.resolve(theme));
-        }
-        if let Some(bg) = self.style.background.clone() {
-            chrome.background = bg.resolve(theme);
-        }
-        if let Some(c) = self.style.border_color.clone() {
-            chrome.border_color = c.resolve(theme);
-        }
-        if let Some(c) = self.style.text_color.clone() {
-            let c = c.resolve(theme);
-            chrome.text_color = c;
-            chrome.caret_color = c;
-        }
-
-        let text_px = theme
-            .metric_by_key("component.text_area.text_px")
-            .unwrap_or_else(|| self.size.control_text_px(theme));
+        let text_px = resolved.text_px;
         self.inner.set_text_style(TextStyle {
             font: FontId::default(),
             size: text_px,
         });
 
-        chrome.padding_x = Px(chrome.padding_x.0.max(0.0));
-        chrome.padding_y = Px(chrome.padding_y.0.max(0.0));
         self.inner.set_min_height(self.min_height);
         self.inner.set_style(chrome);
     }

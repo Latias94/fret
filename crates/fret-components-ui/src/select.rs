@@ -7,6 +7,7 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::{Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
+use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use crate::style::StyleRefinement;
 use crate::{PopoverItem, PopoverRequest, PopoverService, Sizable, Size as ComponentSize};
 
@@ -123,77 +124,35 @@ impl Select {
         }
         self.last_theme_revision = Some(theme.revision());
 
-        let padding_x = self
-            .style
-            .padding_x
-            .as_ref()
-            .map(|m| m.resolve(theme))
-            .or_else(|| theme.metric_by_key("component.select.padding_x"))
-            .unwrap_or_else(|| self.size.input_px(theme));
-        let padding_y = self
-            .style
-            .padding_y
-            .as_ref()
-            .map(|m| m.resolve(theme))
-            .or_else(|| theme.metric_by_key("component.select.padding_y"))
-            .unwrap_or_else(|| self.size.input_py(theme));
-        let min_height = self
-            .style
-            .min_height
-            .as_ref()
-            .map(|m| m.resolve(theme))
-            .or_else(|| theme.metric_by_key("component.select.min_height"))
-            .unwrap_or_else(|| self.size.input_h(theme));
-        let radius = self
-            .style
-            .radius
-            .as_ref()
-            .map(|m| m.resolve(theme))
-            .or_else(|| theme.metric_by_key("component.select.radius"))
-            .unwrap_or_else(|| self.size.control_radius(theme));
-        let border_width = self
-            .style
-            .border_width
-            .as_ref()
-            .map(|m| m.resolve(theme))
-            .or_else(|| theme.metric_by_key("component.select.border_width"))
-            .unwrap_or(Px(1.0));
-
-        let background = self
-            .style
-            .background
-            .as_ref()
-            .map(|c| c.resolve(theme))
-            .or_else(|| theme.color_by_key("component.select.bg"))
-            .unwrap_or(theme.colors.panel_background);
-        let border_color = self
-            .style
-            .border_color
-            .as_ref()
-            .map(|c| c.resolve(theme))
-            .or_else(|| theme.color_by_key("component.select.border"))
-            .unwrap_or(theme.colors.panel_border);
-        let text_color = self
-            .style
-            .text_color
-            .as_ref()
-            .map(|c| c.resolve(theme))
-            .or_else(|| theme.color_by_key("component.select.fg"))
-            .unwrap_or(theme.colors.text_primary);
-        let text_size = theme
-            .metric_by_key("component.select.text_px")
-            .unwrap_or_else(|| self.size.control_text_px(theme));
+        let resolved = resolve_input_chrome(
+            theme,
+            self.size,
+            &self.style,
+            InputTokenKeys {
+                padding_x: Some("component.select.padding_x"),
+                padding_y: Some("component.select.padding_y"),
+                min_height: Some("component.select.min_height"),
+                radius: Some("component.select.radius"),
+                border_width: Some("component.select.border_width"),
+                bg: Some("component.select.bg"),
+                border: Some("component.select.border"),
+                border_focus: Some("component.select.border_focus"),
+                fg: Some("component.select.fg"),
+                text_px: Some("component.select.text_px"),
+                selection: Some("component.select.selection"),
+            },
+        );
 
         self.resolved = ResolvedSelectStyle {
-            padding_x,
-            padding_y,
-            min_height,
-            radius,
-            border_width,
-            background,
-            border_color,
-            text_color,
-            text_size,
+            padding_x: resolved.padding_x,
+            padding_y: resolved.padding_y,
+            min_height: resolved.min_height,
+            radius: resolved.radius,
+            border_width: resolved.border_width,
+            background: resolved.background,
+            border_color: resolved.border_color,
+            text_color: resolved.text_color,
+            text_size: resolved.text_px,
         };
 
         // Any style change can affect text layout. Keep the old blob until the next paint can

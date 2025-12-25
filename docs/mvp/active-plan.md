@@ -1038,6 +1038,7 @@ Status:
   - `crates/fret-components-ui`: token-driven components + Tailwind-like typed style refinements (`Button`, `IconButton`, `TextField`, `Select`, `Checkbox`, `Switch`, `Separator`, `Tabs`, `Toolbar`).
     - Tailwind-like primitive vocabulary is now explicit and reusable: `Space` + `Radius` (typed) backed by theme extension tokens (`component.space.*`, `component.radius.*`).
     - Component authoring ergonomics are now GPUI-component-like: `StyleRefinement` is a composable “style patch” and `StyledExt` provides `.styled().px_3().py_2().rounded_md()...` chains; any component can opt in by implementing `RefineStyle`.
+    - Recipes (P0): component-level “recipes” provide shared, token-driven chrome contracts. Input-family controls (TextField/Select/Combobox/TextAreaField) share a single `resolve_input_chrome(...)` resolver that enforces a stable override priority (callsite refinement → component tokens → shared input tokens → size/baseline fallbacks).
     - `command_palette::install_command_palette` provides a one-call subtree install pattern (input + list + keyboard nav) for app ergonomics.
     - `ResizablePanelGroup` provides a component-level naming surface for the resizable split primitive (shadcn-style vocabulary).
     - `Combobox` provides a minimal typeahead + anchored list interaction (focus stays in input; list is `Popover`-backed).

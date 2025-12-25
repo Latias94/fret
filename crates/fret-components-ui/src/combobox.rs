@@ -4,6 +4,7 @@ use fret_core::{Event, KeyCode, Modifiers, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::{BoundTextInput, EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
 
+use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use crate::style::StyleRefinement;
 use crate::{PopoverItem, PopoverRequest, PopoverService, Size};
 
@@ -38,6 +39,7 @@ pub struct Combobox {
 
     size: Size,
     style: StyleRefinement,
+    min_height: Px,
 
     input: BoundTextInput,
     last_bounds: fret_core::Rect,
@@ -61,6 +63,7 @@ impl Combobox {
             query,
             size: Size::Medium,
             style: StyleRefinement::default(),
+            min_height: Px(0.0),
             input: BoundTextInput::new(query),
             last_bounds: fret_core::Rect::default(),
             last_theme_revision: None,
@@ -244,68 +247,41 @@ impl Combobox {
         }
         self.last_theme_revision = Some(theme.revision());
 
+        let resolved = resolve_input_chrome(
+            theme,
+            self.size,
+            &self.style,
+            InputTokenKeys {
+                // Reuse text-field keys as the component-specific override surface.
+                padding_x: Some("component.text_field.padding_x"),
+                padding_y: Some("component.text_field.padding_y"),
+                min_height: Some("component.text_field.min_height"),
+                radius: Some("component.text_field.radius"),
+                border_width: Some("component.text_field.border_width"),
+                bg: Some("component.text_field.bg"),
+                border: Some("component.text_field.border"),
+                border_focus: Some("component.text_field.border_focus"),
+                fg: Some("component.text_field.fg"),
+                text_px: Some("component.text_field.text_px"),
+                selection: Some("component.text_field.selection"),
+            },
+        );
+
         let snap = theme.snapshot();
         let mut chrome = fret_ui::TextInputStyle::from_theme(snap);
 
-        chrome.padding_x = self.size.input_px(theme);
-        chrome.padding_y = self.size.input_py(theme);
-        chrome.corner_radii = fret_core::geometry::Corners::all(self.size.control_radius(theme));
+        chrome.padding_x = resolved.padding_x;
+        chrome.padding_y = resolved.padding_y;
+        chrome.corner_radii = fret_core::geometry::Corners::all(resolved.radius);
+        chrome.border = fret_core::geometry::Edges::all(resolved.border_width);
+        chrome.background = resolved.background;
+        chrome.border_color = resolved.border_color;
+        chrome.border_color_focused = resolved.border_color_focused;
+        chrome.text_color = resolved.text_color;
+        chrome.caret_color = resolved.text_color;
+        chrome.selection_color = resolved.selection_color;
 
-        // Best-effort component namespace defaults (reuse text-field tokens to keep themes simple).
-        if let Some(px) = theme.metric_by_key("component.text_field.padding_x") {
-            chrome.padding_x = px;
-        }
-        if let Some(px) = theme.metric_by_key("component.text_field.padding_y") {
-            chrome.padding_y = px;
-        }
-        if let Some(px) = theme.metric_by_key("component.text_field.radius") {
-            chrome.corner_radii = fret_core::geometry::Corners::all(px);
-        }
-        if let Some(bg) = theme.color_by_key("component.text_field.bg") {
-            chrome.background = bg;
-        }
-        if let Some(c) = theme.color_by_key("component.text_field.border") {
-            chrome.border_color = c;
-        }
-        if let Some(c) = theme.color_by_key("component.text_field.border_focus") {
-            chrome.border_color_focused = c;
-        }
-        if let Some(c) = theme.color_by_key("component.text_field.fg") {
-            chrome.text_color = c;
-            chrome.caret_color = c;
-        }
-        if let Some(c) = theme.color_by_key("component.text_field.selection") {
-            chrome.selection_color = c;
-        }
-
-        // Tailwind-like typed refinements override tokens.
-        if let Some(padding_x) = self.style.padding_x.clone() {
-            chrome.padding_x = padding_x.resolve(theme);
-        }
-        if let Some(padding_y) = self.style.padding_y.clone() {
-            chrome.padding_y = padding_y.resolve(theme);
-        }
-        if let Some(radius) = self.style.radius.clone() {
-            chrome.corner_radii = fret_core::geometry::Corners::all(radius.resolve(theme));
-        }
-        if let Some(border_width) = self.style.border_width.clone() {
-            chrome.border = fret_core::geometry::Edges::all(border_width.resolve(theme));
-        }
-        if let Some(bg) = self.style.background.clone() {
-            chrome.background = bg.resolve(theme);
-        }
-        if let Some(c) = self.style.border_color.clone() {
-            chrome.border_color = c.resolve(theme);
-        }
-        if let Some(c) = self.style.text_color.clone() {
-            let c = c.resolve(theme);
-            chrome.text_color = c;
-            chrome.caret_color = c;
-        }
-
-        let text_px = theme
-            .metric_by_key("component.text_field.text_px")
-            .unwrap_or_else(|| self.size.control_text_px(theme));
+        let text_px = resolved.text_px;
 
         self.input.set_text_style(TextStyle {
             font: fret_core::FontId::default(),
@@ -313,9 +289,7 @@ impl Combobox {
         });
         self.input.set_chrome_style(chrome);
 
-        // Minimum height needs to be stable even for empty input.
-        let min_h = self.size.input_h(theme).0.max(0.0);
-        let _ = min_h;
+        self.min_height = resolved.min_height;
     }
 }
 
@@ -428,7 +402,7 @@ impl<H: UiHost> Widget<H> for Combobox {
 
         // `BoundTextInput` is the entire widget surface.
         let inner = self.input.layout(cx);
-        let min_h = self.size.input_h(cx.theme()).0.max(0.0);
+        let min_h = self.min_height.0.max(0.0);
         let h = inner.height.0.max(min_h).min(cx.available.height.0);
         fret_core::Size::new(inner.width, Px(h))
     }

@@ -4,6 +4,7 @@
 //! Styling is token-driven and supports namespaced extension tokens (see ADR 0050).
 
 mod list_style;
+pub mod recipes;
 mod sizing;
 mod style;
 mod styled;
