@@ -4,8 +4,8 @@ use fret_core::{Color, Corners, Edges, Px, TextStyle, TextWrap};
 use fret_runtime::CommandId;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, MainAlign, PressableProps,
-    RowProps, SpacerProps, TextProps,
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, FlexItemStyle, FlexProps,
+    LayoutStyle, Length, MainAlign, PressableProps, SizeStyle, TextProps,
 };
 use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
 
@@ -151,13 +151,14 @@ fn text_element<H: UiHost>(
     text: Arc<str>,
     style: TextStyle,
     color: Color,
+    layout: LayoutStyle,
 ) -> AnyElement {
     cx.keyed(key, |cx| {
         let id = cx.root_id();
         AnyElement::new(
             id,
             ElementKind::Text(TextProps {
-                layout: Default::default(),
+                layout,
                 text,
                 style: Some(style),
                 color: Some(color),
@@ -312,6 +313,7 @@ pub fn command_palette_list<H: UiHost>(
                                         size: small_px,
                                     },
                                     muted_fg,
+                                    Default::default(),
                                 )]
                             },
                         ),
@@ -353,8 +355,22 @@ pub fn command_palette_list<H: UiHost>(
                                             ..Default::default()
                                         },
                                         |cx| {
-                                            vec![cx.row(
-                                                RowProps {
+                                            let left_layout = LayoutStyle {
+                                                flex: FlexItemStyle {
+                                                    grow: 1.0,
+                                                    shrink: 1.0,
+                                                    basis: Length::Px(Px(0.0)),
+                                                    ..Default::default()
+                                                },
+                                                size: SizeStyle {
+                                                    min_width: Some(Px(0.0)),
+                                                    ..Default::default()
+                                                },
+                                            };
+
+                                            vec![cx.flex(
+                                                FlexProps {
+                                                    direction: fret_core::Axis::Horizontal,
                                                     gap: row_gap,
                                                     justify: MainAlign::Start,
                                                     align: CrossAlign::Center,
@@ -365,6 +381,7 @@ pub fn command_palette_list<H: UiHost>(
 
                                                     out.push(cx.column(
                                                         ColumnProps {
+                                                            layout: left_layout,
                                                             gap: col_gap,
                                                             justify: MainAlign::Start,
                                                             align: CrossAlign::Start,
@@ -388,6 +405,7 @@ pub fn command_palette_list<H: UiHost>(
                                                                     size: text_px,
                                                                 },
                                                                 label_color,
+                                                                Default::default(),
                                                             ));
 
                                                             if let Some(detail) = detail.clone() {
@@ -400,6 +418,7 @@ pub fn command_palette_list<H: UiHost>(
                                                                         size: small_px,
                                                                     },
                                                                     muted_fg,
+                                                                    Default::default(),
                                                                 ));
                                                             }
 
@@ -407,14 +426,16 @@ pub fn command_palette_list<H: UiHost>(
                                                         },
                                                     ));
 
-                                                    out.push(cx.spacer(SpacerProps {
-                                                        min: Px(0.0),
-                                                        ..Default::default()
-                                                    }));
-
                                                     if let Some(sc) = shortcut.clone()
                                                         && !sc.is_empty()
                                                     {
+                                                        let shortcut_layout = LayoutStyle {
+                                                            flex: FlexItemStyle {
+                                                                shrink: 0.0,
+                                                                ..Default::default()
+                                                            },
+                                                            ..Default::default()
+                                                        };
                                                         out.push(text_element(
                                                             cx,
                                                             "shortcut",
@@ -424,6 +445,7 @@ pub fn command_palette_list<H: UiHost>(
                                                                 size: small_px,
                                                             },
                                                             muted_fg,
+                                                            shortcut_layout,
                                                         ));
                                                     }
 
