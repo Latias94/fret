@@ -10,14 +10,13 @@ use fret_components_ui::{
     button::{Button, ButtonIntent, ButtonVariant},
     checkbox::Checkbox,
     combobox::Combobox,
-    command::{CommandItem, CommandList},
+    command::CommandItem,
     command_palette::{
         CommandPaletteHandles, install_command_palette, render_command_palette_list,
     },
     dropdown_menu::DropdownMenuButton,
     frame::Frame,
     icon_button::IconButton,
-    list_view::ListView,
     progress::ProgressBar,
     resizable_panel_group::ResizablePanelGroup,
     scroll_area::ScrollArea,
@@ -305,8 +304,6 @@ fn build_ui_kit_contents(
     let command_title = ui.create_node(Text::new("Command (search + virtual list)"));
     ui.add_child(col, command_title);
 
-    let command_query = app.models_mut().insert(String::new());
-    let command_selection = app.models_mut().insert(None::<Arc<str>>);
     let command_items = app.models_mut().insert(vec![
         CommandItem::new("ui_kit.action.one", "Run Action One")
             .group("Actions")
@@ -335,34 +332,6 @@ fn build_ui_kit_contents(
         CommandItem::new("disabled.example", "Disabled item").disabled(),
     ]);
 
-    let command_frame = ui.create_node(
-        Frame::default()
-            .styled()
-            .rounded_md()
-            .border_1()
-            .px_3()
-            .py_2()
-            .finish(),
-    );
-    ui.add_child(col, command_frame);
-
-    let command_col = ui.create_node(Column::new().with_spacing(Px(8.0)));
-    ui.add_child(command_frame, command_col);
-
-    let command_query_field =
-        ui.create_node(TextField::new(command_query).with_size(ComponentSize::Medium));
-    ui.add_child(command_col, command_query_field);
-
-    let command_list_panel = ui.create_node(FixedPanel::new(Px(180.0), Color::TRANSPARENT));
-    ui.add_child(command_col, command_list_panel);
-
-    let command_list = ui.create_node(
-        CommandList::new(command_items, command_query)
-            .with_size(ComponentSize::Medium)
-            .with_selection_model(command_selection),
-    );
-    ui.add_child(command_list_panel, command_list);
-
     let palette_open_row = ui.create_node(Row::new().with_spacing(Px(10.0)));
     ui.add_child(col, palette_open_row);
     let open_palette = ui.create_node(
@@ -386,70 +355,6 @@ fn build_ui_kit_contents(
     for i in 0..8 {
         let row = ui.create_node(Text::new(format!("ScrollArea row {}", i + 1)));
         ui.add_child(scroll_area_content, row);
-    }
-
-    let list_matrix_label = ui.create_node(Text::new("Lists (size matrix: xs/sm/md/lg)"));
-    ui.add_child(col, list_matrix_label);
-
-    let list_items: Vec<String> = (0..2_000).map(|i| format!("Item {}", i + 1)).collect();
-    let list_items_model = app.models_mut().insert(list_items);
-
-    for size in [
-        ComponentSize::XSmall,
-        ComponentSize::Small,
-        ComponentSize::Medium,
-        ComponentSize::Large,
-    ] {
-        let group_frame = ui.create_node(
-            Frame::default()
-                .styled()
-                .rounded_md()
-                .border_1()
-                .px_3()
-                .py_2()
-                .finish(),
-        );
-        ui.add_child(col, group_frame);
-
-        let group = ui.create_node(Column::new().with_spacing(Px(8.0)));
-        ui.add_child(group_frame, group);
-
-        let header = ui.create_node(Text::new(format!("Size {}", size.as_str())));
-        ui.add_child(group, header);
-
-        let list_view_label = ui.create_node(Text::new("ListView"));
-        ui.add_child(group, list_view_label);
-
-        let list_panel = ui.create_node(FixedPanel::new(Px(140.0), Color::TRANSPARENT));
-        ui.add_child(group, list_panel);
-
-        let selection_model = app.models_mut().insert(None::<usize>);
-        let list_view = ui.create_node(
-            ListView::new(list_items_model)
-                .with_selection_model(selection_model)
-                .with_size(size),
-        );
-        ui.add_child(list_panel, list_view);
-
-        let command_list_label = ui.create_node(Text::new("CommandList"));
-        ui.add_child(group, command_list_label);
-
-        let command_list_panel = ui.create_node(FixedPanel::new(Px(180.0), Color::TRANSPARENT));
-        ui.add_child(group, command_list_panel);
-
-        let query_model = app.models_mut().insert(String::new());
-        let selection_model = app.models_mut().insert(None::<Arc<str>>);
-        let command_list = ui.create_node(
-            CommandList::new(command_items, query_model)
-                .with_size(size)
-                .with_selection_model(selection_model),
-        );
-        ui.add_child(command_list_panel, command_list);
-
-        // Note: the old `VirtualListRow` schema-based list is intentionally not showcased here.
-        // The preferred direction is the composable declarative `VirtualList` (see the
-        // "Declarative (experimental)" section below), which allows rows to be arbitrary element
-        // subtrees (MVP 50).
     }
 
     let separator = ui.create_node(Separator::horizontal());

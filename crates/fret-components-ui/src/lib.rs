@@ -22,7 +22,6 @@ pub mod dialog_overlay;
 pub mod dropdown_menu;
 pub mod frame;
 pub mod icon_button;
-pub mod list_view;
 pub mod popover;
 pub mod progress;
 pub mod resizable_panel_group;

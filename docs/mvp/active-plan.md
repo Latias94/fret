@@ -40,6 +40,7 @@ definitions live in `docs/mvp/reference-plan.md`.
 - MVP 56: unify the VirtualList contract surface
   - converge on “framework owns virtualization, components own selection/keyboard/menu policies”
   - treat schema-based `VirtualListRow` as legacy during migration, then remove.
+  - keep `fret-components-ui` free of schema-based retained list widgets (prefer declarative composition)
 
 ## ADR Notes
 
