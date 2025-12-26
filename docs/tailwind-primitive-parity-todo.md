@@ -123,6 +123,7 @@ Fret does **not** need to replicate every numeric preset from gpui-component, bu
   and ensure paint/hit-test semantics stay consistent (ADR 0057).
 - [ ] Add typed text helpers needed by shadcn recipes: `truncate`, `whitespace_nowrap`, and a minimal
   `text_*` size vocabulary at the component surface (not necessarily at the runtime substrate).
+  - [x] `truncate` helper exists: `crates/fret-components-ui/src/declarative/text.rs`
 
 ### P2 — explicitly decide on non-trivial Tailwind semantics (avoid accidental commitments)
 

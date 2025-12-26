@@ -2020,7 +2020,17 @@ impl WinitDriver for UiKitDriver {
                                             _ => "Last month",
                                         };
 
-                                        vec![cx.text(name), cx.text(status), cx.text(updated)]
+                                        vec![
+                                            fret_components_ui::declarative::text::text_truncate(
+                                                cx, name,
+                                            ),
+                                            fret_components_ui::declarative::text::text_truncate(
+                                                cx, status,
+                                            ),
+                                            fret_components_ui::declarative::text::text_truncate(
+                                                cx, updated,
+                                            ),
+                                        ]
                                     },
                                 ),
                             fret_components_ui::declarative::list::list_virtualized(

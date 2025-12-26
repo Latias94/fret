@@ -3,6 +3,7 @@ pub mod icon;
 pub mod list;
 pub mod stack;
 pub mod style;
+pub mod text;
 pub mod text_field;
 
 #[cfg(test)]
