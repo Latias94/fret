@@ -412,9 +412,10 @@ mod tests {
     use crate::PopoverSurfaceRequest;
     use fret_app::App;
     use fret_core::{
-        PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, Px, Rect, Scene,
-        Size, TextService, geometry::Point,
+        Event, KeyCode, Modifiers, MouseButton, PathCommand, PathConstraints, PathId, PathMetrics,
+        PathService, PathStyle, PointerEvent, Px, Rect, Scene, Size, TextService, geometry::Point,
     };
+    use fret_runtime::Effect;
     use fret_ui::{
         UiTree,
         widget::{LayoutCx, PaintCx, Widget},
@@ -479,6 +480,42 @@ mod tests {
         fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
     }
 
+    fn run_frame(ui: &mut UiTree<App>, host: &mut App, services: &mut FakeServices) {
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut scene = Scene::default();
+        ui.layout_all(host, services, bounds, 1.0);
+        ui.paint_all(host, services, bounds, &mut scene, 1.0);
+    }
+
+    fn pump_commands(
+        overlays: &mut WindowOverlays,
+        host: &mut App,
+        ui: &mut UiTree<App>,
+        services: &mut FakeServices,
+        window: AppWindowId,
+    ) -> Vec<CommandId> {
+        let mut app_commands: Vec<CommandId> = Vec::new();
+        loop {
+            let effects = host.flush_effects();
+            if effects.is_empty() {
+                break;
+            }
+            for effect in effects {
+                if let Effect::Command { command, .. } = effect {
+                    let handled =
+                        overlays.handle_command(host, ui, services, window, &command);
+                    if !handled {
+                        app_commands.push(command);
+                    }
+                }
+            }
+        }
+        app_commands
+    }
+
     #[test]
     fn command_palette_open_focuses_first_focusable_descendant() {
         let mut host = App::new();
@@ -530,6 +567,335 @@ mod tests {
             &mut scene,
             1.0,
         );
+    }
+
+    #[test]
+    fn command_palette_escape_closes_and_restores_focus() {
+        let mut host = App::new();
+        let mut services = FakeServices::default();
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        ui.set_root(root);
+
+        let mut overlays = WindowOverlays::install(&mut ui);
+
+        let prev_focus = ui.create_node(Focusable);
+        ui.add_child(root, prev_focus);
+        ui.set_focus(Some(prev_focus));
+
+        let palette_root = overlays.command_palette_node();
+        let content_root = ui.create_node(fret_ui::primitives::Column::new());
+        ui.add_child(palette_root, content_root);
+
+        let focus_target = ui.create_node(Focusable);
+        ui.add_child(content_root, focus_target);
+
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut services,
+            window,
+            &CommandId::from("command_palette.open"),
+        );
+        assert!(handled);
+        assert_eq!(ui.focus(), Some(focus_target));
+
+        run_frame(&mut ui, &mut host, &mut services);
+
+        ui.dispatch_event(
+            &mut host,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Escape,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let app_commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
+        assert!(app_commands.is_empty());
+        assert_eq!(ui.focus(), Some(prev_focus));
+    }
+
+    #[test]
+    fn command_palette_click_outside_closes_and_restores_focus() {
+        let mut host = App::new();
+        let mut services = FakeServices::default();
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        ui.set_root(root);
+
+        let mut overlays = WindowOverlays::install(&mut ui);
+
+        let prev_focus = ui.create_node(Focusable);
+        ui.add_child(root, prev_focus);
+        ui.set_focus(Some(prev_focus));
+
+        let palette_root = overlays.command_palette_node();
+        let content_root = ui.create_node(fret_ui::primitives::Column::new());
+        ui.add_child(palette_root, content_root);
+
+        let focus_target = ui.create_node(Focusable);
+        ui.add_child(content_root, focus_target);
+
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut services,
+            window,
+            &CommandId::from("command_palette.open"),
+        );
+        assert!(handled);
+        run_frame(&mut ui, &mut host, &mut services);
+
+        ui.dispatch_event(
+            &mut host,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: Point::new(Px(0.0), Px(0.0)),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        let app_commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
+        assert!(app_commands.is_empty());
+        assert_eq!(ui.focus(), Some(prev_focus));
+    }
+
+    #[test]
+    fn dialog_escape_closes_dispatches_cancel_and_restores_focus() {
+        let mut host = App::new();
+        let mut services = FakeServices::default();
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        ui.set_root(root);
+
+        let mut overlays = WindowOverlays::install(&mut ui);
+
+        let prev_focus = ui.create_node(Focusable);
+        ui.add_child(root, prev_focus);
+        ui.set_focus(Some(prev_focus));
+
+        host.with_global_mut(DialogService::default, |service, _app| {
+            service.set_request(
+                window,
+                crate::DialogRequest {
+                    owner: prev_focus,
+                    title: "Test".into(),
+                    message: "Body".into(),
+                    actions: vec![crate::DialogAction::cancel("Cancel")],
+                    default_action: None,
+                    cancel_command: Some(CommandId::from("test.dialog.cancel")),
+                },
+            );
+        });
+
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut services,
+            window,
+            &CommandId::from("dialog.open"),
+        );
+        assert!(handled);
+        assert_eq!(ui.focus(), Some(overlays.dialog_node));
+
+        run_frame(&mut ui, &mut host, &mut services);
+
+        ui.dispatch_event(
+            &mut host,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Escape,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let app_commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
+        assert_eq!(app_commands, vec![CommandId::from("test.dialog.cancel")]);
+        assert_eq!(ui.focus(), Some(prev_focus));
+
+        let still_open = host
+            .global::<DialogService>()
+            .and_then(|s| s.request(window))
+            .is_some();
+        assert!(!still_open, "expected dialog request to be cleared");
+    }
+
+    #[test]
+    fn dialog_click_outside_closes_and_restores_focus() {
+        let mut host = App::new();
+        let mut services = FakeServices::default();
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        ui.set_root(root);
+
+        let mut overlays = WindowOverlays::install(&mut ui);
+
+        let prev_focus = ui.create_node(Focusable);
+        ui.add_child(root, prev_focus);
+        ui.set_focus(Some(prev_focus));
+
+        host.with_global_mut(DialogService::default, |service, _app| {
+            service.set_request(
+                window,
+                crate::DialogRequest {
+                    owner: prev_focus,
+                    title: "Test".into(),
+                    message: "Body".into(),
+                    actions: vec![crate::DialogAction::cancel("Cancel")],
+                    default_action: None,
+                    cancel_command: Some(CommandId::from("test.dialog.cancel")),
+                },
+            );
+        });
+
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut services,
+            window,
+            &CommandId::from("dialog.open"),
+        );
+        assert!(handled);
+        run_frame(&mut ui, &mut host, &mut services);
+
+        ui.dispatch_event(
+            &mut host,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: Point::new(Px(0.0), Px(0.0)),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        let app_commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
+        assert_eq!(app_commands, vec![CommandId::from("test.dialog.cancel")]);
+        assert_eq!(ui.focus(), Some(prev_focus));
+    }
+
+    #[test]
+    fn sheet_escape_closes_and_restores_focus() {
+        let mut host = App::new();
+        let mut services = FakeServices::default();
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        ui.set_root(root);
+
+        let mut overlays = WindowOverlays::install(&mut ui);
+
+        let prev_focus = ui.create_node(Focusable);
+        ui.add_child(root, prev_focus);
+        ui.set_focus(Some(prev_focus));
+
+        host.with_global_mut(SheetService::default, |service, _app| {
+            service.set_request(window, crate::SheetRequest::new(prev_focus));
+        });
+
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut services,
+            window,
+            &CommandId::from("sheet.open"),
+        );
+        assert!(handled);
+        assert_eq!(ui.focus(), Some(overlays.sheet_node));
+
+        run_frame(&mut ui, &mut host, &mut services);
+
+        ui.dispatch_event(
+            &mut host,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Escape,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let app_commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
+        assert!(app_commands.is_empty());
+        assert_eq!(ui.focus(), Some(prev_focus));
+
+        let still_open = host
+            .global::<SheetService>()
+            .and_then(|s| s.request(window))
+            .is_some();
+        assert!(!still_open, "expected sheet request to be cleared");
+    }
+
+    #[test]
+    fn sheet_click_outside_closes_and_restores_focus() {
+        let mut host = App::new();
+        let mut services = FakeServices::default();
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        ui.set_root(root);
+
+        let mut overlays = WindowOverlays::install(&mut ui);
+
+        let prev_focus = ui.create_node(Focusable);
+        ui.add_child(root, prev_focus);
+        ui.set_focus(Some(prev_focus));
+
+        host.with_global_mut(SheetService::default, |service, _app| {
+            service.set_request(
+                window,
+                crate::SheetRequest::new(prev_focus).side(crate::SheetSide::Right),
+            );
+        });
+
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut services,
+            window,
+            &CommandId::from("sheet.open"),
+        );
+        assert!(handled);
+        run_frame(&mut ui, &mut host, &mut services);
+
+        ui.dispatch_event(
+            &mut host,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: Point::new(Px(0.0), Px(0.0)),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        let app_commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
+        assert!(app_commands.is_empty());
+        assert_eq!(ui.focus(), Some(prev_focus));
     }
 
     #[test]
