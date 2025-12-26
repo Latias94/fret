@@ -1,9 +1,9 @@
 use fret_app::{App, Effect, WindowRequest};
-use fret_core::{
-    AppWindowId, Color, Event, KeyCode, PlatformCapabilities, Point, Px, Rect, Scene, Size,
-    SvgFit, UiServices,
-};
 use fret_core::SvgService as _;
+use fret_core::{
+    AppWindowId, Color, Event, KeyCode, PlatformCapabilities, Point, Px, Rect, Scene, Size, SvgFit,
+    UiServices,
+};
 use fret_render::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use std::time::{Duration, Instant};
@@ -129,14 +129,14 @@ impl SvgAtlasStressDriver {
         println!("  Space: toggle phase (A/B)");
         println!("  T: toggle auto phase flip");
         println!("  F: cycle SvgFit mode");
-        println!("  B: cycle svg_raster_budget_bytes preset");
+        println!("  B: cycle svg_raster_budget_bytes preset (standalone rasters only)");
         println!("  H: print this help");
     }
 
     fn print_state(state: &SvgAtlasStressState) {
         let budget = state.budget_presets[state.budget_index];
         println!(
-            "phase={} auto_phase={} fit={:?} svg_raster_budget_bytes={}KB",
+            "phase={} auto_phase={} fit={:?} svg_raster_budget_bytes={}KB (standalone only)",
             if state.phase { "B" } else { "A" },
             state.auto_phase,
             state.fit_mode,
@@ -298,7 +298,7 @@ fn run_headless(frames: u64, budget_bytes: u64) -> anyhow::Result<()> {
 
     if let Some(snap) = renderer.take_svg_perf_snapshot() {
         println!(
-            "headless: frames={} wall={:.2}s prepare={:.2}ms hits={} misses={} alpha_raster={} ({:.2}ms) atlas_inserts={} atlas_write={:.2}ms pages={} rasters={} bytes={}KB",
+            "headless: frames={} wall={:.2}s prepare={:.2}ms hits={} misses={} alpha_raster={} ({:.2}ms) atlas_inserts={} atlas_write={:.2}ms pages={} rasters={} standalone={}KB atlas={}KB",
             frames,
             elapsed.as_secs_f64(),
             snap.prepare_svg_ops_us as f64 / 1000.0,
@@ -310,7 +310,8 @@ fn run_headless(frames: u64, budget_bytes: u64) -> anyhow::Result<()> {
             snap.alpha_atlas_write_us as f64 / 1000.0,
             snap.atlas_pages_live,
             snap.svg_rasters_live,
-            snap.svg_raster_bytes_live / 1024
+            snap.svg_standalone_bytes_live / 1024,
+            snap.svg_mask_atlas_bytes_live / 1024
         );
     }
 
@@ -320,7 +321,12 @@ fn run_headless(frames: u64, budget_bytes: u64) -> anyhow::Result<()> {
 impl WinitDriver for SvgAtlasStressDriver {
     type WindowState = SvgAtlasStressState;
 
-    fn gpu_ready(&mut self, _app: &mut App, _context: &fret_render::WgpuContext, renderer: &mut fret_render::Renderer) {
+    fn gpu_ready(
+        &mut self,
+        _app: &mut App,
+        _context: &fret_render::WgpuContext,
+        renderer: &mut fret_render::Renderer,
+    ) {
         renderer.set_svg_perf_enabled(true);
     }
 
@@ -359,7 +365,7 @@ impl WinitDriver for SvgAtlasStressDriver {
                     return;
                 }
                 println!(
-                    "renderer_svg: frames={} prepare={:.2}ms hits={} misses={} alpha_raster={} ({:.2}ms) rgba_raster={} ({:.2}ms) atlas_inserts={} atlas_write={:.2}ms pages={} rasters={} bytes={}KB",
+                    "renderer_svg: frames={} prepare={:.2}ms hits={} misses={} alpha_raster={} ({:.2}ms) rgba_raster={} ({:.2}ms) atlas_inserts={} atlas_write={:.2}ms pages={} rasters={} standalone={}KB atlas={}KB",
                     snap.frames,
                     snap.prepare_svg_ops_us as f64 / 1000.0,
                     snap.cache_hits,
@@ -372,7 +378,8 @@ impl WinitDriver for SvgAtlasStressDriver {
                     snap.alpha_atlas_write_us as f64 / 1000.0,
                     snap.atlas_pages_live,
                     snap.svg_rasters_live,
-                    snap.svg_raster_bytes_live / 1024
+                    snap.svg_standalone_bytes_live / 1024,
+                    snap.svg_mask_atlas_bytes_live / 1024
                 );
             }
             state.last_renderer_report = Some(now);
@@ -450,8 +457,14 @@ impl WinitDriver for SvgAtlasStressDriver {
         let svg_square = state.svg_square.expect("svg registered");
         let svg_wide = state.svg_wide.expect("svg registered");
 
-        let icons_emitted =
-            record_scene(scene, bounds, state.phase, state.fit_mode, svg_square, svg_wide);
+        let icons_emitted = record_scene(
+            scene,
+            bounds,
+            state.phase,
+            state.fit_mode,
+            svg_square,
+            svg_wide,
+        );
 
         let elapsed = render_start.elapsed();
         state.render_time_accum += elapsed;

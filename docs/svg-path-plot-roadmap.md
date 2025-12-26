@@ -1,6 +1,6 @@
-# Codex MVP: SVG / Path / Plot Rendering Roadmap
+# MVP: SVG / Path / Plot Rendering Roadmap
 
-Status: active (owned by Codex; do not treat as the repo-wide MVP plan).
+Status: active (workstream notes; do not treat as the repo-wide roadmap).
 
 ## Goal
 
@@ -52,7 +52,7 @@ Build a GPUI/Zed-aligned rendering foundation for:
 ### Next
 
 1. SVG alpha-mask atlas compaction strategy (optional)
-   - Current MVP uses “append-only” packing per page (shelf packing) and page-level eviction.
+   - Current MVP uses “append-only” packing per page (shelf packing) and does **not** auto-evict atlas pages.
    - If fragmentation becomes a problem, add a free-rect allocator or periodic rebuild.
 2. Capability-driven defaults
    - Decide default `path_msaa_samples` (compat-first vs quality-first).
@@ -81,9 +81,9 @@ Plot/implot-like widgets should stay in UI/component crates and only emit those 
   - SVG raster cache keyed by `(SvgId, target_box, smooth_scale, kind, fit)`.
   - Alpha-mask atlas pages registered as images; multiple icons share one `ImageId`.
 - Reclamation:
-  - Byte budget (`svg_raster_budget_bytes`) governs both standalone rasters and atlas pages.
-  - Best-effort eviction: never evict rasters/pages used in the current frame.
-  - Atlas eviction is page-based (drop a whole page + its entries).
+  - Byte budget (`svg_raster_budget_bytes`) governs **standalone** rasters only (e.g. RGBA images, or alpha masks that can’t fit in the atlas).
+  - Alpha-mask atlas pages are **append-only** and are reclaimed only via explicit teardown (e.g. `SvgService::unregister_svg`) or future explicit “clear” APIs.
+  - Best-effort eviction: never evict standalone rasters used in the current frame.
 
 ## Risks / pitfalls (what to watch)
 

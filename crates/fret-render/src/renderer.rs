@@ -114,7 +114,8 @@ pub struct SvgPerfSnapshot {
 
     pub atlas_pages_live: usize,
     pub svg_rasters_live: usize,
-    pub svg_raster_bytes_live: u64,
+    pub svg_standalone_bytes_live: u64,
+    pub svg_mask_atlas_bytes_live: u64,
 }
 
 #[derive(Debug, Default)]
@@ -845,7 +846,10 @@ pub struct Renderer {
     svg_rasters: HashMap<SvgRasterKey, SvgRasterEntry>,
     svg_mask_atlas_pages: Vec<Option<SvgMaskAtlasPage>>,
     svg_mask_atlas_free: Vec<usize>,
+    // Bytes used by standalone SVG rasters (not atlas-backed).
     svg_raster_bytes: u64,
+    // Bytes reserved by SVG alpha-mask atlas pages.
+    svg_mask_atlas_bytes: u64,
     svg_raster_budget_bytes: u64,
     svg_raster_epoch: u64,
     svg_perf_enabled: bool,
@@ -926,9 +930,14 @@ impl Renderer {
             return None;
         }
 
-        let pages_live = self.svg_mask_atlas_pages.iter().filter(|p| p.is_some()).count();
+        let pages_live = self
+            .svg_mask_atlas_pages
+            .iter()
+            .filter(|p| p.is_some())
+            .count();
         let rasters_live = self.svg_rasters.len();
-        let bytes_live = self.svg_raster_bytes;
+        let standalone_bytes_live = self.svg_raster_bytes;
+        let atlas_bytes_live = self.svg_mask_atlas_bytes;
 
         let snap = SvgPerfSnapshot {
             frames: self.svg_perf.frames,
@@ -951,7 +960,8 @@ impl Renderer {
 
             atlas_pages_live: pages_live,
             svg_rasters_live: rasters_live,
-            svg_raster_bytes_live: bytes_live,
+            svg_standalone_bytes_live: standalone_bytes_live,
+            svg_mask_atlas_bytes_live: atlas_bytes_live,
         };
 
         self.svg_perf = SvgPerfStats::default();
@@ -1061,24 +1071,6 @@ impl Renderer {
         let cur_epoch = self.svg_raster_epoch;
 
         while self.svg_raster_bytes > self.svg_raster_budget_bytes {
-            let mut victim_atlas_page: Option<(usize, u64)> = None;
-            for (idx, page) in self.svg_mask_atlas_pages.iter().enumerate() {
-                let Some(page) = page.as_ref() else {
-                    continue;
-                };
-                if page.last_used_epoch == cur_epoch {
-                    continue;
-                }
-                match victim_atlas_page {
-                    None => victim_atlas_page = Some((idx, page.last_used_epoch)),
-                    Some((_, best_epoch)) => {
-                        if page.last_used_epoch < best_epoch {
-                            victim_atlas_page = Some((idx, page.last_used_epoch));
-                        }
-                    }
-                }
-            }
-
             let mut victim_standalone: Option<(SvgRasterKey, u64)> = None;
             for (k, v) in &self.svg_rasters {
                 if v.last_used_epoch == cur_epoch {
@@ -1097,41 +1089,16 @@ impl Renderer {
                 }
             }
 
-            enum Victim {
-                AtlasPage(usize),
-                Standalone(SvgRasterKey),
-            }
-
-            let victim = match (victim_atlas_page, victim_standalone) {
-                (None, None) => None,
-                (Some((index, _)), None) => Some(Victim::AtlasPage(index)),
-                (None, Some((key, _))) => Some(Victim::Standalone(key)),
-                (Some((page_idx, page_epoch)), Some((entry_key, entry_epoch))) => {
-                    if page_epoch <= entry_epoch {
-                        Some(Victim::AtlasPage(page_idx))
-                    } else {
-                        Some(Victim::Standalone(entry_key))
-                    }
-                }
-            };
-
-            let Some(victim) = victim else {
-                // Cache is over budget but all entries were used this frame. Keep correctness and
-                // allow a temporary overshoot.
+            let Some((victim_key, _)) = victim_standalone else {
+                // Cache is over budget but all standalone entries were used this frame (or there
+                // are no standalone entries). Keep correctness and allow a temporary overshoot.
                 break;
             };
 
-            match victim {
-                Victim::AtlasPage(index) => {
-                    self.evict_svg_mask_atlas_page(index);
-                }
-                Victim::Standalone(key) => {
-                    if let Some(entry) = self.svg_rasters.remove(&key) {
-                        self.drop_svg_raster_entry(entry);
-                    } else {
-                        break;
-                    }
-                }
+            if let Some(entry) = self.svg_rasters.remove(&victim_key) {
+                self.drop_svg_raster_entry(entry);
+            } else {
+                break;
             }
         }
     }
@@ -1202,8 +1169,8 @@ impl Renderer {
         });
         self.svg_mask_atlas_pages[idx] = Some(page);
 
-        self.svg_raster_bytes = self
-            .svg_raster_bytes
+        self.svg_mask_atlas_bytes = self
+            .svg_mask_atlas_bytes
             .saturating_add(u64::from(size_px.0).saturating_mul(u64::from(size_px.1)));
         idx
     }
@@ -1305,7 +1272,7 @@ impl Renderer {
             let _ = self.svg_rasters.remove(&k);
         }
 
-        self.svg_raster_bytes = self.svg_raster_bytes.saturating_sub(page.bytes());
+        self.svg_mask_atlas_bytes = self.svg_mask_atlas_bytes.saturating_sub(page.bytes());
         let _ = self.unregister_image(page.image);
 
         self.svg_mask_atlas_free.push(page_index);
@@ -1448,6 +1415,7 @@ impl Renderer {
             }
         };
 
+        let is_standalone = matches!(&storage, SvgRasterStorage::Standalone { .. });
         self.svg_rasters.insert(
             key,
             SvgRasterEntry {
@@ -1459,7 +1427,9 @@ impl Renderer {
                 storage,
             },
         );
-        self.svg_raster_bytes = self.svg_raster_bytes.saturating_add(approx_bytes);
+        if is_standalone {
+            self.svg_raster_bytes = self.svg_raster_bytes.saturating_add(approx_bytes);
+        }
 
         Some((image, uv, size_px))
     }
@@ -1721,6 +1691,7 @@ impl Renderer {
             svg_mask_atlas_pages: Vec::new(),
             svg_mask_atlas_free: Vec::new(),
             svg_raster_bytes: 0,
+            svg_mask_atlas_bytes: 0,
             svg_raster_budget_bytes: 64 * 1024 * 1024,
             svg_raster_epoch: 0,
             svg_perf_enabled: false,
