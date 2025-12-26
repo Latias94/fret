@@ -113,7 +113,7 @@ Status legend:
 | Menubar | `ui/menubar.tsx` | `fret_components_shadcn::menubar::*` | ✅ | Currently a thin re-export of `AppMenuBar`. |
 | Native Select | `ui/native-select.tsx` |  | ❌ | Probably non-goal (Fret is not HTML). |
 | Navigation Menu | `ui/navigation-menu.tsx` |  | ❌ | Likely later; depends on menu + focus routing. |
-| Pagination | `ui/pagination.tsx` |  | ❌ | Not critical for editor UIs; can be added later. |
+| Pagination | `ui/pagination.tsx` | `fret_components_shadcn::Pagination*` | ✅ | Taxonomy + first-pass recipe parity; uses Pressable + focus-visible ring. |
 | Popover | `ui/popover.tsx` | `fret_components_ui::popover::*` | ✅ | Ensure placement + dismissal parity. |
 | Progress | `ui/progress.tsx` | `fret_components_shadcn::progress::*` | ✅ | Currently `Progress` is a thin alias of `ProgressBar`. |
 | Radio Group | `ui/radio-group.tsx` | `fret_components_shadcn::RadioGroup` | ✅ | First pass: single-choice selection model + keyboard arrows + focus-visible ring. |

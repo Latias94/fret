@@ -26,6 +26,7 @@ pub mod input_group;
 pub mod item;
 pub mod kbd;
 pub mod label;
+pub mod pagination;
 pub mod radio_group;
 pub mod skeleton;
 pub mod spinner;
@@ -56,6 +57,10 @@ pub use item::{
 };
 pub use kbd::Kbd;
 pub use label::Label;
+pub use pagination::{
+    Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
+    PaginationLinkSize, PaginationNext, PaginationPrevious,
+};
 pub use radio_group::{RadioGroup, RadioGroupItem};
 pub use skeleton::Skeleton;
 pub use spinner::Spinner;

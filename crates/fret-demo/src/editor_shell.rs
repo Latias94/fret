@@ -2071,12 +2071,15 @@ impl GenericWidget<App> for InspectorPanel {
 mod inspector_tests {
     use super::*;
     use fret_app::App;
-    use fret_core::{TextBlobId, TextMetrics, TextService};
+    use fret_core::{
+        PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, TextBlobId,
+        TextMetrics, TextService,
+    };
 
     #[derive(Default)]
-    struct FakeTextService;
+    struct FakeServices;
 
-    impl TextService for FakeTextService {
+    impl TextService for FakeServices {
         fn prepare(
             &mut self,
             _text: &str,
@@ -2095,6 +2098,19 @@ mod inspector_tests {
         fn release(&mut self, _blob: TextBlobId) {}
     }
 
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
     #[test]
     fn inspector_layout_does_not_panic_with_zero_width() {
         let mut app = App::new();
@@ -2107,10 +2123,10 @@ mod inspector_tests {
         let inspector = ui.create_node(InspectorPanel::new(selection, world));
         ui.set_root(inspector);
 
-        let mut text = FakeTextService::default();
+        let mut services = FakeServices::default();
         let _ = ui.layout(
             &mut app,
-            &mut text,
+            &mut services,
             inspector,
             Size::new(Px(0.0), Px(100.0)),
             1.0,

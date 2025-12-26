@@ -21,6 +21,10 @@ use fret_components_shadcn::{
     ItemDescription as ShadcnItemDescription, ItemGroup as ShadcnItemGroup,
     ItemMedia as ShadcnItemMedia, ItemMediaVariant as ShadcnItemMediaVariant,
     ItemSeparator as ShadcnItemSeparator, ItemTitle as ShadcnItemTitle,
+    Pagination as ShadcnPagination, PaginationContent as ShadcnPaginationContent,
+    PaginationEllipsis as ShadcnPaginationEllipsis, PaginationItem as ShadcnPaginationItem,
+    PaginationLink as ShadcnPaginationLink, PaginationLinkSize as ShadcnPaginationLinkSize,
+    PaginationNext as ShadcnPaginationNext, PaginationPrevious as ShadcnPaginationPrevious,
     RadioGroup as ShadcnRadioGroup, RadioGroupItem as ShadcnRadioGroupItem,
     Skeleton as ShadcnSkeleton, Spinner as ShadcnSpinner, ToggleGroup as ShadcnToggleGroup,
     ToggleGroupItem as ShadcnToggleGroupItem, ToggleSize as ShadcnToggleSize,
@@ -94,6 +98,7 @@ struct UiKitWindowState {
     declarative_text: Model<String>,
     declarative_selection: Model<Option<usize>>,
     declarative_items: Model<Vec<String>>,
+    declarative_page: Model<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -951,6 +956,7 @@ impl WinitDriver for UiKitDriver {
                 .collect::<Vec<_>>(),
         );
         let declarative_text = app.models_mut().insert("".to_string());
+        let declarative_page = app.models_mut().insert(1usize);
 
         UiKitWindowState {
             ui,
@@ -966,6 +972,7 @@ impl WinitDriver for UiKitDriver {
             declarative_text,
             declarative_selection,
             declarative_items,
+            declarative_page,
         }
     }
 
@@ -1012,6 +1019,20 @@ impl WinitDriver for UiKitDriver {
             let _ = app
                 .models_mut()
                 .update(state.declarative_selection, |v| *v = Some(index));
+            app.request_redraw(window);
+            return;
+        }
+
+        if let Some(page) = command
+            .as_str()
+            .strip_prefix("ui_kit.pagination.goto.")
+            .and_then(|s| s.parse::<usize>().ok())
+        {
+            let total_pages = 10usize;
+            let page = page.clamp(1, total_pages);
+            let _ = app
+                .models_mut()
+                .update(state.declarative_page, |v| *v = page);
             app.request_redraw(window);
             return;
         }
@@ -1229,12 +1250,19 @@ impl WinitDriver for UiKitDriver {
             "ui-kit-declarative-list",
             |cx| {
                 cx.observe_model(state.declarative_items, Invalidation::Layout);
+                cx.observe_model(state.declarative_page, Invalidation::Layout);
                 let values = cx
                     .app
                     .models()
                     .get(state.declarative_items)
                     .cloned()
                     .unwrap_or_default();
+                let current_page = cx
+                    .app
+                    .models()
+                    .get(state.declarative_page)
+                    .copied()
+                    .unwrap_or(1usize);
 
                 let size = fret_components_ui::Size::Medium;
                 let (
@@ -1402,6 +1430,70 @@ impl WinitDriver for UiKitDriver {
                                     .into_element(cx)]
                                 },
                             ),
+                            cx.text("shadcn/ui v4 Pagination (prototype)"),
+                            {
+                                let total_pages = 10usize;
+                                let page = current_page.clamp(1, total_pages);
+
+                                let prev = ShadcnPaginationItem::new(
+                                    ShadcnPaginationPrevious::new()
+                                        .disabled(page <= 1)
+                                        .on_click(fret_app::CommandId::new(format!(
+                                            "ui_kit.pagination.goto.{}",
+                                            page.saturating_sub(1).max(1)
+                                        )))
+                                        .into_element(cx),
+                                )
+                                .into_element(cx);
+
+                                let next = ShadcnPaginationItem::new(
+                                    ShadcnPaginationNext::new()
+                                        .disabled(page >= total_pages)
+                                        .on_click(fret_app::CommandId::new(format!(
+                                            "ui_kit.pagination.goto.{}",
+                                            (page + 1).min(total_pages)
+                                        )))
+                                        .into_element(cx),
+                                )
+                                .into_element(cx);
+
+                                let mut items = Vec::new();
+                                items.push(prev);
+
+                                for i in 1..=5 {
+                                    let link = ShadcnPaginationLink::new(vec![cx.text(i.to_string())])
+                                        .size(ShadcnPaginationLinkSize::Icon)
+                                        .active(i == page)
+                                        .on_click(fret_app::CommandId::new(format!(
+                                            "ui_kit.pagination.goto.{i}"
+                                        )))
+                                        .into_element(cx);
+                                    items.push(ShadcnPaginationItem::new(link).into_element(cx));
+                                }
+
+                                items.push(
+                                    ShadcnPaginationItem::new(
+                                        ShadcnPaginationEllipsis::new().into_element(cx),
+                                    )
+                                    .into_element(cx),
+                                );
+
+                                let last = ShadcnPaginationLink::new(vec![cx.text(total_pages.to_string())])
+                                    .size(ShadcnPaginationLinkSize::Icon)
+                                    .active(total_pages == page)
+                                    .on_click(fret_app::CommandId::new(format!(
+                                        "ui_kit.pagination.goto.{total_pages}"
+                                    )))
+                                    .into_element(cx);
+                                items.push(ShadcnPaginationItem::new(last).into_element(cx));
+
+                                items.push(next);
+
+                                ShadcnPagination::new(vec![
+                                    ShadcnPaginationContent::new(items).into_element(cx),
+                                ])
+                                .into_element(cx)
+                            },
                             cx.text("Truncate (ellipsis)"),
                             cx.container(
                                 fret_ui_app::element::ContainerProps {
