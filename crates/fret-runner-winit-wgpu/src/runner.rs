@@ -332,6 +332,10 @@ pub struct WinitRunnerConfig {
     ///
     /// This is used for `SceneOp::SvgMaskIcon` and `SceneOp::SvgImage` rasterizations.
     pub svg_raster_budget_bytes: u64,
+    /// MSAA sample count used by the renderer's offscreen path pass.
+    ///
+    /// Set to `1` to disable MSAA-based AA for paths (more compatible, lower quality).
+    pub path_msaa_samples: u32,
     pub wgpu_init: WgpuInit,
 }
 
@@ -367,6 +371,7 @@ impl Default for WinitRunnerConfig {
             external_drop_max_file_bytes: 32 * 1024 * 1024,
             external_drop_max_files: 128,
             svg_raster_budget_bytes: 64 * 1024 * 1024,
+            path_msaa_samples: 4,
             wgpu_init: WgpuInit::CreateDefault,
         }
     }
@@ -2146,6 +2151,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
             };
         let mut renderer = Renderer::new(&context.device);
         renderer.set_svg_raster_budget_bytes(self.config.svg_raster_budget_bytes);
+        renderer.set_path_msaa_samples(self.config.path_msaa_samples);
 
         self.context = Some(context);
         self.renderer = Some(renderer);

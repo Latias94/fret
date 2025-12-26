@@ -284,21 +284,38 @@ fn metrics_from_path_commands(
         max_y = Some(max_y.map_or(y, |v| v.max(y)));
     };
 
+    // Keep bounds semantics aligned with `build_lyon_path`: if a segment appears before a `MoveTo`,
+    // treat it as an implicit `MoveTo(end)` (control points are ignored because there is no
+    // well-defined start point).
+    let mut active = false;
     for cmd in commands {
         match *cmd {
-            fret_core::PathCommand::MoveTo(p) | fret_core::PathCommand::LineTo(p) => {
+            fret_core::PathCommand::MoveTo(p) => {
                 include_point(p);
+                active = true;
+            }
+            fret_core::PathCommand::LineTo(p) => {
+                include_point(p);
+                active = true;
             }
             fret_core::PathCommand::QuadTo { ctrl, to } => {
-                include_point(ctrl);
+                if active {
+                    include_point(ctrl);
+                }
                 include_point(to);
+                active = true;
             }
             fret_core::PathCommand::CubicTo { ctrl1, ctrl2, to } => {
-                include_point(ctrl1);
-                include_point(ctrl2);
+                if active {
+                    include_point(ctrl1);
+                    include_point(ctrl2);
+                }
                 include_point(to);
+                active = true;
             }
-            fret_core::PathCommand::Close => {}
+            fret_core::PathCommand::Close => {
+                active = false;
+            }
         }
     }
 
@@ -558,8 +575,9 @@ struct PathDraw {
 struct PathIntermediate {
     size: (u32, u32),
     format: wgpu::TextureFormat,
+    sample_count: u32,
     resolved_view: wgpu::TextureView,
-    msaa_view: wgpu::TextureView,
+    msaa_view: Option<wgpu::TextureView>,
     bind_group: wgpu::BindGroup,
 }
 
@@ -608,6 +626,7 @@ pub struct Renderer {
 
     path_msaa_pipeline_format: Option<wgpu::TextureFormat>,
     path_msaa_pipeline: Option<wgpu::RenderPipeline>,
+    path_msaa_pipeline_sample_count: Option<u32>,
 
     composite_pipeline_format: Option<wgpu::TextureFormat>,
     composite_pipeline: Option<wgpu::RenderPipeline>,
@@ -633,6 +652,8 @@ pub struct Renderer {
     svg_raster_bytes: u64,
     svg_raster_budget_bytes: u64,
     svg_raster_epoch: u64,
+
+    path_msaa_samples: u32,
 
     render_targets: RenderTargetRegistry,
     images: ImageRegistry,
@@ -704,6 +725,14 @@ impl Renderer {
     pub fn set_svg_raster_budget_bytes(&mut self, bytes: u64) {
         // Keep a small non-zero floor so callers can't accidentally force unbounded thrash.
         self.svg_raster_budget_bytes = bytes.max(1024);
+    }
+
+    pub fn path_msaa_samples(&self) -> u32 {
+        self.path_msaa_samples
+    }
+
+    pub fn set_path_msaa_samples(&mut self, samples: u32) {
+        self.path_msaa_samples = samples.max(1);
     }
 
     fn svg_target_box_px(rect: Rect, scale_factor: f32) -> (u32, u32) {
@@ -892,10 +921,14 @@ impl Renderer {
         viewport_size: (u32, u32),
         format: wgpu::TextureFormat,
     ) {
-        const PATH_MSAA_SAMPLES: u32 = 4;
+        let sample_count = self.path_msaa_samples.max(1);
 
         let needs_rebuild = match &self.path_intermediate {
-            Some(cur) => cur.size != viewport_size || cur.format != format,
+            Some(cur) => {
+                cur.size != viewport_size
+                    || cur.format != format
+                    || cur.sample_count != sample_count
+            }
             None => true,
         };
         if !needs_rebuild {
@@ -918,21 +951,25 @@ impl Renderer {
         });
         let resolved_view = resolved_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        let msaa_texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("fret path intermediate msaa"),
-            size: wgpu::Extent3d {
-                width: viewport_size.0,
-                height: viewport_size.1,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: PATH_MSAA_SAMPLES,
-            dimension: wgpu::TextureDimension::D2,
-            format,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            view_formats: &[],
-        });
-        let msaa_view = msaa_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let msaa_view = if sample_count > 1 {
+            let msaa_texture = device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("fret path intermediate msaa"),
+                size: wgpu::Extent3d {
+                    width: viewport_size.0,
+                    height: viewport_size.1,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count,
+                dimension: wgpu::TextureDimension::D2,
+                format,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                view_formats: &[],
+            });
+            Some(msaa_texture.create_view(&wgpu::TextureViewDescriptor::default()))
+        } else {
+            None
+        };
 
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret path intermediate bind group"),
@@ -952,6 +989,7 @@ impl Renderer {
         self.path_intermediate = Some(PathIntermediate {
             size: viewport_size,
             format,
+            sample_count,
             resolved_view,
             msaa_view,
             bind_group,
@@ -1114,6 +1152,7 @@ impl Renderer {
             path_pipeline: None,
             path_msaa_pipeline_format: None,
             path_msaa_pipeline: None,
+            path_msaa_pipeline_sample_count: None,
             composite_pipeline_format: None,
             composite_pipeline: None,
             path_vertex_buffers,
@@ -1133,6 +1172,7 @@ impl Renderer {
             svg_raster_bytes: 0,
             svg_raster_budget_bytes: 64 * 1024 * 1024,
             svg_raster_epoch: 0,
+            path_msaa_samples: 4,
             render_targets: RenderTargetRegistry::default(),
             images: ImageRegistry::default(),
             viewport_bind_groups: HashMap::new(),
@@ -1629,9 +1669,12 @@ impl Renderer {
     }
 
     fn ensure_path_msaa_pipeline(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
-        const PATH_MSAA_SAMPLES: u32 = 4;
+        let sample_count = self.path_msaa_samples.max(1);
 
-        if self.path_msaa_pipeline_format == Some(format) && self.path_msaa_pipeline.is_some() {
+        if self.path_msaa_pipeline_format == Some(format)
+            && self.path_msaa_pipeline.is_some()
+            && self.path_msaa_pipeline_sample_count == Some(sample_count)
+        {
             return;
         }
 
@@ -1682,7 +1725,7 @@ impl Renderer {
             },
             depth_stencil: None,
             multisample: wgpu::MultisampleState {
-                count: PATH_MSAA_SAMPLES,
+                count: sample_count,
                 mask: !0,
                 alpha_to_coverage_enabled: false,
             },
@@ -1701,6 +1744,7 @@ impl Renderer {
         });
 
         self.path_msaa_pipeline_format = Some(format);
+        self.path_msaa_pipeline_sample_count = Some(sample_count);
         self.path_msaa_pipeline = Some(pipeline);
     }
 
@@ -2081,12 +2125,23 @@ impl Renderer {
                             encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                                 label: Some("fret path intermediate pass"),
                                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                                    view: &intermediate.msaa_view,
+                                    view: intermediate
+                                        .msaa_view
+                                        .as_ref()
+                                        .unwrap_or(&intermediate.resolved_view),
                                     depth_slice: None,
-                                    resolve_target: Some(&intermediate.resolved_view),
+                                    resolve_target: if intermediate.sample_count > 1 {
+                                        Some(&intermediate.resolved_view)
+                                    } else {
+                                        None
+                                    },
                                     ops: wgpu::Operations {
                                         load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                                        store: wgpu::StoreOp::Discard,
+                                        store: if intermediate.sample_count > 1 {
+                                            wgpu::StoreOp::Discard
+                                        } else {
+                                            wgpu::StoreOp::Store
+                                        },
                                     },
                                 })],
                                 depth_stencil_attachment: None,
