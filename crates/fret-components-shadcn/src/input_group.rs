@@ -162,7 +162,7 @@ impl InputGroup {
         }
 
         if let Some(p) = slot_ref.take() {
-            cx.text.release(p.blob);
+            cx.services.text().release(p.blob);
         }
 
         let glyph: IconGlyph = cx
@@ -188,7 +188,10 @@ impl InputGroup {
             line_height: Some(size),
             ..Default::default()
         };
-        let (blob, metrics) = cx.text.prepare(glyph.text.as_ref(), style, constraints);
+        let (blob, metrics) = cx
+            .services
+            .text()
+            .prepare(glyph.text.as_ref(), style, constraints);
 
         *slot_ref = Some(PreparedIcon {
             icon: icon.clone(),
@@ -207,13 +210,13 @@ enum IconSlot {
 }
 
 impl<H: UiHost> Widget<H> for InputGroup {
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
-        self.inner.cleanup_resources(text);
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
+        self.inner.cleanup_resources(services);
         if let Some(p) = self.prepared_leading.take() {
-            text.release(p.blob);
+            services.text().release(p.blob);
         }
         if let Some(p) = self.prepared_trailing.take() {
-            text.release(p.blob);
+            services.text().release(p.blob);
         }
     }
 

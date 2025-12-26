@@ -113,13 +113,13 @@ impl Toolbar {
 }
 
 impl<H: UiHost> Widget<H> for Toolbar {
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         for blob in self.pending_release.drain(..) {
-            text.release(blob);
+            services.text().release(blob);
         }
         for item in self.prepared.drain(..) {
             if let Some(blob) = item.blob {
-                text.release(blob);
+                services.text().release(blob);
             }
         }
         self.prepared_scale_factor_bits = None;
@@ -204,9 +204,10 @@ impl<H: UiHost> Widget<H> for Toolbar {
 
         let mut max_metrics_h = Px(0.0);
         for item in &self.items {
-            let metrics = cx
-                .text
-                .measure(item.label.as_ref(), self.style, text_constraints);
+            let metrics =
+                cx.services
+                    .text()
+                    .measure(item.label.as_ref(), self.style, text_constraints);
             max_metrics_h = Px(max_metrics_h.0.max(metrics.size.height.0));
         }
 
@@ -219,7 +220,8 @@ impl<H: UiHost> Widget<H> for Toolbar {
         for item in &self.items {
             let label = item.label.clone();
             let metrics = cx
-                .text
+                .services
+                .text()
                 .measure(label.as_ref(), self.style, text_constraints);
             let w = Px(metrics.size.width.0 + self.padding_x.0 * 2.0);
             let bounds = Rect::new(Point::new(Px(x), Px(y)), Size::new(w, height));
@@ -252,7 +254,7 @@ impl<H: UiHost> Widget<H> for Toolbar {
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         for blob in self.pending_release.drain(..) {
-            cx.text.release(blob);
+            cx.services.text().release(blob);
         }
 
         if self.items.is_empty() || cx.bounds.size.height.0 <= 0.0 {
@@ -266,7 +268,7 @@ impl<H: UiHost> Widget<H> for Toolbar {
         if self.prepared_scale_factor_bits != Some(scale_bits) {
             for item in &mut self.prepared {
                 if let Some(blob) = item.blob.take() {
-                    cx.text.release(blob);
+                    cx.services.text().release(blob);
                 }
             }
             self.prepared_scale_factor_bits = Some(scale_bits);
@@ -291,7 +293,8 @@ impl<H: UiHost> Widget<H> for Toolbar {
         for (i, item) in self.prepared.iter_mut().enumerate() {
             if item.blob.is_none() {
                 let (blob, metrics) =
-                    cx.text
+                    cx.services
+                        .text()
                         .prepare(item.label.as_ref(), self.style, text_constraints);
                 item.blob = Some(blob);
                 item.metrics = metrics;

@@ -203,7 +203,7 @@ impl<H: UiHost> Widget<H> for CommandPaletteOverlay {
         }
     }
 
-    fn cleanup_resources(&mut self, _text: &mut dyn fret_core::TextService) {
+    fn cleanup_resources(&mut self, _services: &mut dyn fret_core::UiServices) {
         self.last_theme_revision = None;
         self.panel_bounds = Rect::default();
     }

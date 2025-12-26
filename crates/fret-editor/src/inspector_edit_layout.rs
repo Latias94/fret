@@ -168,7 +168,7 @@ impl<H: UiHost> Widget<H> for InspectorEditHint {
             size: Px(12.0),
             ..Default::default()
         };
-        let (blob, metrics) = cx.text.prepare(
+        let (blob, metrics) = cx.services.text().prepare(
             msg,
             style,
             fret_core::TextConstraints {
@@ -191,6 +191,6 @@ impl<H: UiHost> Widget<H> for InspectorEditHint {
                 a: 0.95,
             },
         });
-        cx.text.release(blob);
+        cx.services.text().release(blob);
     }
 }

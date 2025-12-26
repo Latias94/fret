@@ -217,9 +217,9 @@ impl Sizable for Checkbox {
 }
 
 impl<H: UiHost> Widget<H> for Checkbox {
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         if let Some(p) = self.prepared.take() {
-            text.release(p.blob);
+            services.text().release(p.blob);
         }
         self.prepared_scale_factor_bits = None;
         self.prepared_theme_revision = None;
@@ -327,7 +327,10 @@ impl<H: UiHost> Widget<H> for Checkbox {
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let metrics = cx.text.measure(&self.label, text_style, text_constraints);
+        let metrics = cx
+            .services
+            .text()
+            .measure(&self.label, text_style, text_constraints);
 
         let box_w = self.resolved.box_size.0.max(0.0);
         let gap = self.resolved.gap.0.max(0.0);
@@ -351,7 +354,7 @@ impl<H: UiHost> Widget<H> for Checkbox {
             || self.prepared_theme_revision != Some(theme_rev)
         {
             if let Some(p) = self.prepared.take() {
-                cx.text.release(p.blob);
+                cx.services.text().release(p.blob);
             }
             self.prepared_scale_factor_bits = None;
             self.prepared_theme_revision = None;
@@ -369,7 +372,10 @@ impl<H: UiHost> Widget<H> for Checkbox {
                 overflow: TextOverflow::Clip,
                 scale_factor: cx.scale_factor,
             };
-            let (blob, metrics) = cx.text.prepare(&self.label, text_style, text_constraints);
+            let (blob, metrics) =
+                cx.services
+                    .text()
+                    .prepare(&self.label, text_style, text_constraints);
             self.prepared = Some(PreparedText { blob, metrics });
             self.prepared_scale_factor_bits = Some(scale_bits);
             self.prepared_theme_revision = Some(theme_rev);

@@ -247,9 +247,9 @@ impl Popover {
         self.style.row_height = rows.row_height;
     }
 
-    fn cleanup(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup(&mut self, services: &mut dyn fret_core::UiServices) {
         for row in self.rows.drain(..) {
-            text.release(row.label);
+            services.text().release(row.label);
         }
     }
 
@@ -266,7 +266,7 @@ impl Popover {
     }
 
     fn close_popover<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>) {
-        self.cleanup(cx.text);
+        self.cleanup(cx.services);
         cx.dispatch_command(CommandId::from("popover.close"));
         cx.stop_propagation();
     }
@@ -291,7 +291,7 @@ impl Popover {
                 service.set_result(window, request.owner, index);
             });
         cx.app.push_effect(Effect::UiInvalidateLayout { window });
-        self.cleanup(cx.text);
+        self.cleanup(cx.services);
         cx.dispatch_command(CommandId::from("popover.close"));
         cx.stop_propagation();
     }
@@ -308,9 +308,11 @@ impl Popover {
         let mut max_w = Px(120.0);
         let mut prepared: Vec<(fret_core::TextBlobId, TextMetrics, bool)> = Vec::new();
         for item in &request.items {
-            let (blob, metrics) =
-                cx.text
-                    .prepare(item.label.as_ref(), self.style.text_style, text_constraints);
+            let (blob, metrics) = cx.services.text().prepare(
+                item.label.as_ref(),
+                self.style.text_style,
+                text_constraints,
+            );
             max_w = Px(max_w.0.max(metrics.size.width.0));
             prepared.push((blob, metrics, item.enabled));
         }
@@ -375,8 +377,8 @@ impl Default for Popover {
 }
 
 impl<H: UiHost> Widget<H> for Popover {
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
-        self.cleanup(text);
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
+        self.cleanup(services);
         self.last_serial = None;
         self.hover_row = None;
         self.panel_bounds = Rect::default();
@@ -481,7 +483,7 @@ impl<H: UiHost> Widget<H> for Popover {
             .map(|(serial, request)| (serial, request.clone()))
         else {
             if self.last_serial.is_some() {
-                self.cleanup(cx.text);
+                self.cleanup(cx.services);
                 self.last_serial = None;
                 self.panel_bounds = Rect::default();
                 self.hover_row = None;
@@ -494,7 +496,7 @@ impl<H: UiHost> Widget<H> for Popover {
         self.last_bounds = cx.bounds;
 
         if rebuild {
-            self.cleanup(cx.text);
+            self.cleanup(cx.services);
             self.rebuild_rows(cx, &request);
         }
 

@@ -1,8 +1,8 @@
 use fret_core::{
     Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, Edges, NodeId, PanelKey,
     RenderTargetId, Scene, SceneOp, SemanticsRole, TextBlobId, TextConstraints, TextMetrics,
-    TextOverflow, TextService, TextStyle, TextWrap, ViewportFit, ViewportInputEvent,
-    ViewportInputKind, ViewportMapping, WindowAnchor, WindowMetricsService,
+    TextOverflow, TextStyle, TextWrap, ViewportFit, ViewportInputEvent, ViewportInputKind,
+    ViewportMapping, WindowAnchor, WindowMetricsService,
     geometry::{Point, Px, Rect, Size},
 };
 use fret_runtime::{CommandId, DragKind, Effect, Menu, MenuItem, WhenExpr, WindowRequest};
@@ -574,7 +574,7 @@ impl DockSpace {
 
     fn rebuild_tab_titles(
         &mut self,
-        text: &mut dyn TextService,
+        services: &mut dyn fret_core::UiServices,
         theme: crate::ThemeSnapshot,
         scale_factor: f32,
         dock: &DockManager,
@@ -625,10 +625,10 @@ impl DockSpace {
         self.last_tab_text_scale_factor = Some(scale_factor);
 
         for (_, title) in self.tab_titles.drain() {
-            text.release(title.blob);
+            services.text().release(title.blob);
         }
         if let Some(glyph) = self.tab_close_glyph.take() {
-            text.release(glyph.blob);
+            services.text().release(glyph.blob);
         }
 
         let pad_x = theme.metrics.padding_md;
@@ -641,7 +641,7 @@ impl DockSpace {
             scale_factor,
         };
 
-        let (close_blob, close_metrics) = text.prepare(
+        let (close_blob, close_metrics) = services.text().prepare(
             "×",
             self.tab_close_style,
             TextConstraints {
@@ -663,7 +663,9 @@ impl DockSpace {
                 .map(|p| p.title.as_str())
                 .unwrap_or(panel.kind.0.as_str());
             let title_hash = hash_title(title);
-            let (blob, metrics) = text.prepare(title, self.tab_text_style, constraints);
+            let (blob, metrics) = services
+                .text()
+                .prepare(title, self.tab_text_style, constraints);
             self.tab_titles.insert(
                 panel,
                 PreparedTabTitle {
@@ -728,7 +730,7 @@ impl DockSpace {
 
     fn rebuild_empty_state(
         &mut self,
-        text: &mut dyn TextService,
+        services: &mut dyn fret_core::UiServices,
         theme: crate::ThemeSnapshot,
         scale_factor: f32,
         max_width: Px,
@@ -743,7 +745,7 @@ impl DockSpace {
         self.last_empty_state_scale_factor = Some(scale_factor);
 
         if let Some(prev) = self.empty_state.take() {
-            text.release(prev.blob);
+            services.text().release(prev.blob);
         }
 
         let constraints = TextConstraints {
@@ -752,7 +754,7 @@ impl DockSpace {
             overflow: TextOverflow::Clip,
             scale_factor,
         };
-        let (blob, metrics) = text.prepare(
+        let (blob, metrics) = services.text().prepare(
             "No panels in this window.\nUse File → Layout → Reset Layout.",
             self.empty_state_style,
             constraints,
@@ -766,7 +768,7 @@ impl DockSpace {
 
     fn rebuild_dock_hint_glyphs(
         &mut self,
-        text: &mut dyn TextService,
+        services: &mut dyn fret_core::UiServices,
         theme: crate::ThemeSnapshot,
         scale_factor: f32,
     ) {
@@ -782,7 +784,7 @@ impl DockSpace {
 
         if let Some(prev) = self.dock_hint_glyphs.take() {
             for glyph in [prev.center, prev.left, prev.right, prev.top, prev.bottom] {
-                text.release(glyph.blob);
+                services.text().release(glyph.blob);
             }
         }
 
@@ -794,7 +796,9 @@ impl DockSpace {
         };
 
         let mut prepare = |ch: &str| -> PreparedGlyph {
-            let (blob, metrics) = text.prepare(ch, self.dock_hint_style, constraints);
+            let (blob, metrics) = services
+                .text()
+                .prepare(ch, self.dock_hint_style, constraints);
             PreparedGlyph { blob, metrics }
         };
 
@@ -822,7 +826,7 @@ impl DockSpace {
 
         let pad = theme.metrics.padding_md.0.max(0.0);
         let max_w = Px((cx.bounds.size.width.0 - pad * 2.0).max(0.0));
-        self.rebuild_empty_state(cx.text, theme, cx.scale_factor, max_w);
+        self.rebuild_empty_state(cx.services, theme, cx.scale_factor, max_w);
 
         let Some(text) = self.empty_state else {
             return;
@@ -2038,8 +2042,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
         let theme = cx.theme().snapshot();
         if let Some(dock) = cx.app.global::<DockManager>() {
-            self.rebuild_tab_titles(cx.text, theme, cx.scale_factor, dock, &layout);
-            self.rebuild_dock_hint_glyphs(cx.text, theme, cx.scale_factor);
+            self.rebuild_tab_titles(cx.services, theme, cx.scale_factor, dock, &layout);
+            self.rebuild_dock_hint_glyphs(cx.services, theme, cx.scale_factor);
         }
 
         if let Some(dock) = cx.app.global_mut::<DockManager>() {
@@ -3715,6 +3719,22 @@ mod tests {
         }
 
         fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeTextService {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
     }
 
     #[test]

@@ -191,7 +191,7 @@ impl DropdownMenuButton {
             return;
         }
 
-        self.cleanup_prepared(cx.text);
+        self.cleanup_prepared(cx.services);
         self.prepared_scale_factor_bits = Some(scale_bits);
         self.prepared_theme_revision = Some(theme_rev);
 
@@ -208,8 +208,11 @@ impl DropdownMenuButton {
             ..Default::default()
         };
 
-        let (label_blob, label_metrics) = cx.text.prepare(self.label.as_ref(), style, constraints);
-        let (chev_blob, chev_metrics) = cx.text.prepare("▾", style, constraints);
+        let (label_blob, label_metrics) =
+            cx.services
+                .text()
+                .prepare(self.label.as_ref(), style, constraints);
+        let (chev_blob, chev_metrics) = cx.services.text().prepare("▾", style, constraints);
 
         self.label_prepared = Some(PreparedText {
             blob: label_blob,
@@ -221,12 +224,12 @@ impl DropdownMenuButton {
         });
     }
 
-    fn cleanup_prepared(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup_prepared(&mut self, services: &mut dyn fret_core::UiServices) {
         if let Some(p) = self.label_prepared.take() {
-            text.release(p.blob);
+            services.text().release(p.blob);
         }
         if let Some(p) = self.chevron_prepared.take() {
-            text.release(p.blob);
+            services.text().release(p.blob);
         }
         self.prepared_scale_factor_bits = None;
         self.prepared_theme_revision = None;
@@ -240,8 +243,8 @@ impl Sizable for DropdownMenuButton {
 }
 
 impl<H: UiHost> Widget<H> for DropdownMenuButton {
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
-        self.cleanup_prepared(text);
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
+        self.cleanup_prepared(services);
     }
 
     fn is_focusable(&self) -> bool {
@@ -325,8 +328,11 @@ impl<H: UiHost> Widget<H> for DropdownMenuButton {
             size: self.resolved.text_size,
             ..Default::default()
         };
-        let label_metrics = cx.text.measure(self.label.as_ref(), style, constraints);
-        let chevron_metrics = cx.text.measure("▾", style, constraints);
+        let label_metrics = cx
+            .services
+            .text()
+            .measure(self.label.as_ref(), style, constraints);
+        let chevron_metrics = cx.services.text().measure("▾", style, constraints);
 
         let pad_y = self.resolved.padding_y.0.max(0.0);
         let content_h = label_metrics

@@ -236,7 +236,8 @@ impl Tabs {
         let mut x = cx.bounds.origin.x.0;
         for (i, label) in self.tabs.iter().cloned().enumerate() {
             let metrics = cx
-                .text
+                .services
+                .text()
                 .measure(label.as_ref(), text_style, text_constraints);
             let w = (metrics.size.width.0 + pad_x * 2.0).max(0.0);
             let rect = Rect::new(
@@ -265,10 +266,10 @@ impl Sizable for Tabs {
 }
 
 impl<H: UiHost> Widget<H> for Tabs {
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         for tab in self.prepared.drain(..) {
             if let Some(blob) = tab.blob {
-                text.release(blob);
+                services.text().release(blob);
             }
         }
         self.prepared_scale_factor_bits = None;
@@ -396,7 +397,7 @@ impl<H: UiHost> Widget<H> for Tabs {
         {
             for tab in &mut self.prepared {
                 if let Some(blob) = tab.blob.take() {
-                    cx.text.release(blob);
+                    cx.services.text().release(blob);
                 }
             }
             self.prepared_scale_factor_bits = Some(scale_bits);
@@ -432,7 +433,8 @@ impl<H: UiHost> Widget<H> for Tabs {
                     scale_factor: cx.scale_factor,
                 };
                 let (blob, metrics) =
-                    cx.text
+                    cx.services
+                        .text()
                         .prepare(tab.label.as_ref(), text_style, text_constraints);
                 tab.blob = Some(blob);
                 tab.metrics = metrics;

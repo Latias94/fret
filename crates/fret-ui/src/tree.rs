@@ -5,7 +5,7 @@ use crate::{
 use fret_core::PlatformCapabilities;
 use fret_core::{
     AppWindowId, Event, FrameId, KeyCode, NodeId, Point, PointerEvent, Rect, Scene, SceneOp,
-    SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, TextService,
+    SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, UiServices,
 };
 use fret_runtime::{
     CommandId, DragKind, Effect, InputContext, KeyChord, KeymapService, ModelId, Platform,
@@ -354,12 +354,12 @@ impl<H: UiHost> UiTree<H> {
     fn dispatch_event_to_node_chain(
         &mut self,
         app: &mut H,
-        text: &mut dyn TextService,
+        services: &mut dyn UiServices,
         input_ctx: &InputContext,
         start: NodeId,
         event: &Event,
     ) -> bool {
-        let text_ptr: *mut dyn TextService = text;
+        let services_ptr: *mut dyn UiServices = services;
 
         let mut node_id = start;
         loop {
@@ -378,7 +378,7 @@ impl<H: UiHost> UiTree<H> {
                         .unwrap_or_default();
                     let mut cx = EventCx {
                         app,
-                        text: unsafe { &mut *text_ptr },
+                        services: unsafe { &mut *services_ptr },
                         node: node_id,
                         window: tree.window,
                         input_ctx: input_ctx.clone(),
@@ -575,7 +575,7 @@ impl<H: UiHost> UiTree<H> {
     fn replay_captured_keystrokes(
         &mut self,
         app: &mut H,
-        text_service: &mut dyn TextService,
+        services: &mut dyn UiServices,
         ctx: &InputContext,
         keystrokes: Vec<CapturedKeystroke>,
     ) {
@@ -598,18 +598,18 @@ impl<H: UiHost> UiTree<H> {
                 modifiers: stroke.chord.mods,
                 repeat: false,
             };
-            self.dispatch_event(app, text_service, &down);
+            self.dispatch_event(app, services, &down);
 
             if let Some(text) = stroke.text {
                 let event = Event::TextInput(text);
-                self.dispatch_event(app, text_service, &event);
+                self.dispatch_event(app, services, &event);
             }
 
             let up = Event::KeyUp {
                 key: stroke.chord.key,
                 modifiers: stroke.chord.mods,
             };
-            self.dispatch_event(app, text_service, &up);
+            self.dispatch_event(app, services, &up);
         }
 
         self.replaying_pending_shortcut = prev;
@@ -777,18 +777,18 @@ impl<H: UiHost> UiTree<H> {
         n.invalidation.paint = true;
     }
 
-    pub fn remove_subtree(&mut self, text: &mut dyn TextService, root: NodeId) -> Vec<NodeId> {
+    pub fn remove_subtree(&mut self, services: &mut dyn UiServices, root: NodeId) -> Vec<NodeId> {
         if self.root_to_layer.contains_key(&root) {
             return Vec::new();
         }
         let mut removed: Vec<NodeId> = Vec::new();
-        self.remove_subtree_inner(text, root, &mut removed);
+        self.remove_subtree_inner(services, root, &mut removed);
         removed
     }
 
     fn remove_subtree_inner(
         &mut self,
-        text: &mut dyn TextService,
+        services: &mut dyn UiServices,
         node: NodeId,
         removed: &mut Vec<NodeId>,
     ) {
@@ -802,7 +802,7 @@ impl<H: UiHost> UiTree<H> {
         let children = n.children.clone();
 
         for child in children {
-            self.remove_subtree_inner(text, child, removed);
+            self.remove_subtree_inner(services, child, removed);
         }
 
         if let Some(parent) = parent
@@ -818,7 +818,7 @@ impl<H: UiHost> UiTree<H> {
             self.captured = None;
         }
 
-        self.cleanup_subtree_inner(text, node);
+        self.cleanup_subtree_inner(services, node);
         self.nodes.remove(node);
         self.observed_in_layout.remove_node(node);
         self.observed_in_paint.remove_node(node);
@@ -856,7 +856,7 @@ impl<H: UiHost> UiTree<H> {
     pub fn layout_all(
         &mut self,
         app: &mut H,
-        text: &mut dyn TextService,
+        services: &mut dyn UiServices,
         bounds: Rect,
         scale_factor: f32,
     ) {
@@ -874,7 +874,7 @@ impl<H: UiHost> UiTree<H> {
             .map(|layer| self.layers[layer].root)
             .collect();
         for root in roots {
-            let _ = self.layout_in(app, text, root, bounds, scale_factor);
+            let _ = self.layout_in(app, services, root, bounds, scale_factor);
         }
 
         if self.semantics_requested {
@@ -890,7 +890,7 @@ impl<H: UiHost> UiTree<H> {
     pub fn paint_all(
         &mut self,
         app: &mut H,
-        text: &mut dyn TextService,
+        services: &mut dyn UiServices,
         bounds: Rect,
         scene: &mut Scene,
         scale_factor: f32,
@@ -919,7 +919,7 @@ impl<H: UiHost> UiTree<H> {
             .map(|layer| self.layers[layer].root)
             .collect();
         for root in roots {
-            self.paint(app, text, root, bounds, scene, scale_factor);
+            self.paint(app, services, root, bounds, scene, scale_factor);
         }
 
         if cache_enabled {
@@ -936,7 +936,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    pub fn dispatch_event(&mut self, app: &mut H, text: &mut dyn TextService, event: &Event) {
+    pub fn dispatch_event(&mut self, app: &mut H, services: &mut dyn UiServices, event: &Event) {
         let Some(base_root) = self
             .base_layer
             .and_then(|id| self.layers.get(id).map(|l| l.root))
@@ -990,7 +990,7 @@ impl<H: UiHost> UiTree<H> {
                     command,
                 });
             } else {
-                self.replay_captured_keystrokes(app, text, &input_ctx, pending.keystrokes);
+                self.replay_captured_keystrokes(app, services, &input_ctx, pending.keystrokes);
             }
             return;
         }
@@ -1004,7 +1004,7 @@ impl<H: UiHost> UiTree<H> {
                     continue;
                 }
                 let stopped =
-                    self.dispatch_event_to_node_chain(app, text, &input_ctx, layer.root, event);
+                    self.dispatch_event_to_node_chain(app, services, &input_ctx, layer.root, event);
                 if stopped {
                     return;
                 }
@@ -1040,7 +1040,7 @@ impl<H: UiHost> UiTree<H> {
 
         let mut needs_redraw = false;
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
-        let text_ptr: *mut dyn TextService = text;
+        let services_ptr: *mut dyn UiServices = services;
 
         if let Event::KeyDown {
             key,
@@ -1110,7 +1110,7 @@ impl<H: UiHost> UiTree<H> {
                     if let Some(token) = pending.timer {
                         app.push_effect(Effect::CancelTimer { token });
                     }
-                    self.replay_captured_keystrokes(app, text, &input_ctx, pending.keystrokes);
+                    self.replay_captured_keystrokes(app, services, &input_ctx, pending.keystrokes);
                     return;
                 }
 
@@ -1299,7 +1299,7 @@ impl<H: UiHost> UiTree<H> {
                     .unwrap_or_default();
                 let mut cx = EventCx {
                     app,
-                    text: unsafe { &mut *text_ptr },
+                    services: unsafe { &mut *services_ptr },
                     node: node_id,
                     window: tree.window,
                     input_ctx: input_ctx.clone(),
@@ -1381,7 +1381,8 @@ impl<H: UiHost> UiTree<H> {
                 if !layer.wants_pointer_move_events || !layer.visible {
                     continue;
                 }
-                let _ = self.dispatch_event_to_node_chain(app, text, &input_ctx, layer.root, event);
+                let _ =
+                    self.dispatch_event_to_node_chain(app, services, &input_ctx, layer.root, event);
             }
         }
     }
@@ -1389,7 +1390,7 @@ impl<H: UiHost> UiTree<H> {
     pub fn dispatch_command(
         &mut self,
         app: &mut H,
-        text: &mut dyn TextService,
+        services: &mut dyn UiServices,
         command: &CommandId,
     ) -> bool {
         let Some(base_root) = self
@@ -1430,16 +1431,15 @@ impl<H: UiHost> UiTree<H> {
 
         let mut handled = false;
         let mut needs_redraw = false;
-        let text_ptr: *mut dyn TextService = text;
+        let services_ptr: *mut dyn UiServices = services;
 
         loop {
             let (did_handle, invalidations, requested_focus, stop_propagation, parent) = self
                 .with_widget_mut(node_id, |widget, tree| {
                     let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                    let text = unsafe { &mut *text_ptr };
                     let mut cx = CommandCx {
                         app,
-                        text,
+                        services: unsafe { &mut *services_ptr },
                         node: node_id,
                         window: tree.window,
                         input_ctx: input_ctx.clone(),
@@ -1621,7 +1621,7 @@ impl<H: UiHost> UiTree<H> {
     pub fn layout(
         &mut self,
         app: &mut H,
-        text: &mut dyn TextService,
+        services: &mut dyn UiServices,
         root: NodeId,
         available: Size,
         scale_factor: f32,
@@ -1630,46 +1630,46 @@ impl<H: UiHost> UiTree<H> {
             Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
             available,
         );
-        self.layout_in(app, text, root, bounds, scale_factor)
+        self.layout_in(app, services, root, bounds, scale_factor)
     }
 
     pub fn layout_in(
         &mut self,
         app: &mut H,
-        text: &mut dyn TextService,
+        services: &mut dyn UiServices,
         root: NodeId,
         bounds: Rect,
         scale_factor: f32,
     ) -> Size {
-        self.layout_node(app, text, root, bounds, scale_factor)
+        self.layout_node(app, services, root, bounds, scale_factor)
     }
 
     pub fn paint(
         &mut self,
         app: &mut H,
-        text: &mut dyn TextService,
+        services: &mut dyn UiServices,
         root: NodeId,
         bounds: Rect,
         scene: &mut Scene,
         scale_factor: f32,
     ) {
-        self.paint_node(app, text, root, bounds, scene, scale_factor);
+        self.paint_node(app, services, root, bounds, scene, scale_factor);
     }
 
-    pub fn cleanup_subtree(&mut self, text: &mut dyn TextService, root: NodeId) {
-        self.cleanup_subtree_inner(text, root);
+    pub fn cleanup_subtree(&mut self, services: &mut dyn UiServices, root: NodeId) {
+        self.cleanup_subtree_inner(services, root);
     }
 
-    fn cleanup_subtree_inner(&mut self, text: &mut dyn TextService, node: NodeId) {
+    fn cleanup_subtree_inner(&mut self, services: &mut dyn UiServices, node: NodeId) {
         let Some(n) = self.nodes.get(node) else {
             return;
         };
         let children = n.children.clone();
 
-        self.with_widget_mut(node, |widget, _tree| widget.cleanup_resources(text));
+        self.with_widget_mut(node, |widget, _tree| widget.cleanup_resources(services));
 
         for child in children {
-            self.cleanup_subtree_inner(text, child);
+            self.cleanup_subtree_inner(services, child);
         }
     }
 
@@ -1694,7 +1694,7 @@ impl<H: UiHost> UiTree<H> {
     fn layout_node(
         &mut self,
         app: &mut H,
-        text: &mut dyn TextService,
+        services: &mut dyn UiServices,
         node: NodeId,
         bounds: Rect,
         scale_factor: f32,
@@ -1743,11 +1743,11 @@ impl<H: UiHost> UiTree<H> {
 
         let tree_ptr: *mut UiTree<H> = self;
         let app_ptr: *mut H = app;
-        let text_ptr: *mut dyn TextService = text;
+        let services_ptr: *mut dyn UiServices = services;
         let sf = scale_factor;
         let mut layout_child = move |child: NodeId, bounds: Rect| -> Size {
             unsafe {
-                (&mut *tree_ptr).layout_node(&mut *app_ptr, &mut *text_ptr, child, bounds, sf)
+                (&mut *tree_ptr).layout_node(&mut *app_ptr, &mut *services_ptr, child, bounds, sf)
             }
         };
 
@@ -1771,7 +1771,7 @@ impl<H: UiHost> UiTree<H> {
                 bounds,
                 available: bounds.size,
                 scale_factor: sf,
-                text: unsafe { &mut *text_ptr },
+                services: unsafe { &mut *services_ptr },
                 observe_model: &mut observe_model,
                 layout_child: &mut layout_child,
             };
@@ -1803,7 +1803,7 @@ impl<H: UiHost> UiTree<H> {
     fn paint_node(
         &mut self,
         app: &mut H,
-        text: &mut dyn TextService,
+        services: &mut dyn UiServices,
         node: NodeId,
         bounds: Rect,
         scene: &mut Scene,
@@ -1816,14 +1816,14 @@ impl<H: UiHost> UiTree<H> {
         let tree_ref: *const UiTree<H> = self as *const UiTree<H>;
         let tree_ptr: *mut UiTree<H> = self;
         let app_ptr: *mut H = app;
-        let text_ptr: *mut dyn TextService = text;
+        let services_ptr: *mut dyn UiServices = services;
         let scene_ptr: *mut Scene = scene;
         let sf = scale_factor;
         let mut paint_child = move |child: NodeId, bounds: Rect| {
             unsafe {
                 (&mut *tree_ptr).paint_node(
                     &mut *app_ptr,
-                    &mut *text_ptr,
+                    &mut *services_ptr,
                     child,
                     bounds,
                     &mut *scene_ptr,
@@ -1910,7 +1910,7 @@ impl<H: UiHost> UiTree<H> {
                 children: &children,
                 bounds,
                 scale_factor: sf,
-                text: unsafe { &mut *text_ptr },
+                services: unsafe { &mut *services_ptr },
                 observe_model: &mut observe_model,
                 scene,
                 paint_child: &mut paint_child,
@@ -2243,9 +2243,9 @@ mod tests {
     };
 
     #[derive(Default)]
-    struct FakeTextService;
+    struct FakeUiServices;
 
-    impl TextService for FakeTextService {
+    impl TextService for FakeUiServices {
         fn prepare(
             &mut self,
             _text: &str,
@@ -2264,6 +2264,22 @@ mod tests {
         fn release(&mut self, _blob: fret_core::TextBlobId) {}
     }
 
+    impl fret_core::PathService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
     struct ObservingWidget {
         model: Model<u32>,
     }
@@ -2271,7 +2287,7 @@ mod tests {
     impl<H: UiHost> Widget<H> for ObservingWidget {
         fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
             cx.observe_model(self.model, Invalidation::Layout);
-            let _ = cx.text.prepare(
+            let _ = cx.services.text().prepare(
                 "x",
                 TextStyle {
                     font: fret_core::FontId::default(),
@@ -2306,15 +2322,15 @@ mod tests {
         let node = ui.create_node(ObservingWidget { model });
         ui.set_root(node);
 
-        let mut text = FakeTextService;
+        let mut services = FakeUiServices;
         let bounds = Rect::new(
             Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
             Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
         );
         ui.request_semantics_snapshot();
-        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
         let mut scene = Scene::default();
-        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
         if let Some(n) = ui.nodes.get_mut(node) {
             n.invalidation.clear();
@@ -2364,20 +2380,20 @@ mod tests {
         });
         ui.set_root(node);
 
-        let mut text = FakeTextService;
+        let mut services = FakeUiServices;
         let bounds = Rect::new(
             Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
             Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
         );
 
         let mut scene = Scene::default();
-        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
         assert_eq!(paints.load(Ordering::SeqCst), 1);
         assert_eq!(scene.ops_len(), 1);
 
         ui.ingest_paint_cache_source(&mut scene);
         scene.clear();
-        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
         assert_eq!(paints.load(Ordering::SeqCst), 1);
         assert_eq!(scene.ops_len(), 1);
 
@@ -2385,7 +2401,7 @@ mod tests {
 
         ui.ingest_paint_cache_source(&mut scene);
         scene.clear();
-        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
         assert_eq!(paints.load(Ordering::SeqCst), 2);
         assert_eq!(scene.ops_len(), 1);
 
@@ -2395,7 +2411,7 @@ mod tests {
         );
         ui.ingest_paint_cache_source(&mut scene);
         scene.clear();
-        ui.paint_all(&mut app, &mut text, bounds2, &mut scene, 1.0);
+        ui.paint_all(&mut app, &mut services, bounds2, &mut scene, 1.0);
         assert_eq!(paints.load(Ordering::SeqCst), 3);
         assert_eq!(scene.ops_len(), 1);
     }
@@ -2447,16 +2463,16 @@ mod tests {
         let overlay = ui.create_node(TransparentOverlay);
         let _ = ui.push_overlay_root_ex(overlay, false, true);
 
-        let mut text = FakeTextService;
+        let mut services = FakeUiServices;
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(100.0), Px(100.0)),
         );
-        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         ui.dispatch_event(
             &mut app,
-            &mut text,
+            &mut services,
             &Event::Pointer(fret_core::PointerEvent::Up {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
@@ -2482,14 +2498,14 @@ mod tests {
         });
         ui.set_root(node);
 
-        let mut text = FakeTextService;
+        let mut services = FakeUiServices;
         let mut scene = Scene::default();
 
         let bounds_a = Rect::new(
             Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
             Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
         );
-        ui.paint_all(&mut app, &mut text, bounds_a, &mut scene, 1.0);
+        ui.paint_all(&mut app, &mut services, bounds_a, &mut scene, 1.0);
         assert_eq!(paints.load(Ordering::SeqCst), 1);
         assert_eq!(scene.ops_len(), 1);
 
@@ -2500,7 +2516,7 @@ mod tests {
             Point::new(fret_core::Px(20.0), fret_core::Px(15.0)),
             Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
         );
-        ui.paint_all(&mut app, &mut text, bounds_b, &mut scene, 1.0);
+        ui.paint_all(&mut app, &mut services, bounds_b, &mut scene, 1.0);
         assert_eq!(paints.load(Ordering::SeqCst), 1);
         assert_eq!(scene.ops_len(), 1);
 
@@ -2525,13 +2541,13 @@ mod tests {
         let overlay_root = ui.create_node(crate::primitives::Stack::new());
         ui.push_overlay_root(overlay_root, true);
 
-        let mut text = FakeTextService;
+        let mut services = FakeUiServices;
         let bounds = Rect::new(
             Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
             Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
         );
         ui.request_semantics_snapshot();
-        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         assert_eq!(snap.roots.len(), 2);
@@ -2591,12 +2607,12 @@ mod tests {
         ui.add_child(root, probe);
         ui.set_root(root);
 
-        let mut text = FakeTextService;
+        let mut services = FakeUiServices;
         let size = Size::new(Px(120.0), Px(40.0));
 
         ui.layout_in(
             &mut app,
-            &mut text,
+            &mut services,
             root,
             Rect::new(Point::new(Px(0.0), Px(0.0)), size),
             1.0,
@@ -2606,7 +2622,7 @@ mod tests {
         // translates node bounds without re-running widget.layout for the subtree.
         ui.layout_in(
             &mut app,
-            &mut text,
+            &mut services,
             root,
             Rect::new(Point::new(Px(0.0), Px(100.0)), size),
             1.0,
@@ -2614,7 +2630,7 @@ mod tests {
 
         ui.dispatch_event(
             &mut app,
-            &mut text,
+            &mut services,
             &Event::Pointer(PointerEvent::Move {
                 position: Point::new(Px(10.0), Px(110.0)),
                 buttons: fret_core::MouseButtons::default(),

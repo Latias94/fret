@@ -444,7 +444,7 @@ impl<H: UiHost> Widget<H> for SheetOverlay {
         }
     }
 
-    fn cleanup_resources(&mut self, _text: &mut dyn fret_core::TextService) {
+    fn cleanup_resources(&mut self, _services: &mut dyn fret_core::UiServices) {
         self.last_theme_revision = None;
         self.last_serial = None;
         self.panel_bounds = Rect::default();

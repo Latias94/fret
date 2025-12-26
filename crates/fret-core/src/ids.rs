@@ -7,6 +7,7 @@ new_key_type! {
     pub struct ImageId;
     pub struct FontId;
     pub struct TextBlobId;
+    pub struct PathId;
     pub struct RenderTargetId;
 }
 

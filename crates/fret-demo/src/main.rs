@@ -4027,7 +4027,7 @@ impl WinitDriver for DemoDriver {
     fn handle_event(
         &mut self,
         app: &mut App,
-        text: &mut dyn fret_core::TextService,
+        services: &mut dyn fret_core::UiServices,
         window: fret_core::AppWindowId,
         state: &mut Self::WindowState,
         event: &fret_core::Event,
@@ -4162,7 +4162,7 @@ impl WinitDriver for DemoDriver {
             if let fret_core::PointerEvent::Down { .. } = pe {
                 if state.ui.is_layer_visible(state.layers.command_palette) {
                     // Command palette uses its own backdrop to dismiss; avoid demo-only right-click modal.
-                    state.ui.dispatch_event(app, text, event);
+                    state.ui.dispatch_event(app, services, event);
                     return;
                 }
                 if state.ui.is_layer_visible(state.layers.modal) {
@@ -4271,7 +4271,7 @@ impl WinitDriver for DemoDriver {
                 }
             }
         }
-        state.ui.dispatch_event(app, text, event);
+        state.ui.dispatch_event(app, services, event);
 
         if self.handle_asset_drop_requests(app) {
             for &w in self.logical_windows.keys() {
@@ -4283,12 +4283,12 @@ impl WinitDriver for DemoDriver {
     fn handle_command(
         &mut self,
         app: &mut App,
-        text: &mut dyn fret_core::TextService,
+        services: &mut dyn fret_core::UiServices,
         window: fret_core::AppWindowId,
         state: &mut Self::WindowState,
         command: CommandId,
     ) {
-        if state.ui.dispatch_command(app, text, &command) {
+        if state.ui.dispatch_command(app, services, &command) {
             return;
         }
 
@@ -4329,7 +4329,7 @@ impl WinitDriver for DemoDriver {
                 if vis {
                     state
                         .ui
-                        .cleanup_subtree(text, state.layers.command_palette_node);
+                        .cleanup_subtree(services, state.layers.command_palette_node);
                     state
                         .ui
                         .set_layer_visible(state.layers.command_palette, false);
@@ -4896,7 +4896,7 @@ impl WinitDriver for DemoDriver {
                 if state.ui.is_layer_visible(state.layers.command_palette) {
                     state
                         .ui
-                        .cleanup_subtree(text, state.layers.command_palette_node);
+                        .cleanup_subtree(services, state.layers.command_palette_node);
                     state
                         .ui
                         .set_layer_visible(state.layers.command_palette, false);
@@ -4928,7 +4928,7 @@ impl WinitDriver for DemoDriver {
                 if state.ui.is_layer_visible(state.layers.context_menu) {
                     state
                         .ui
-                        .cleanup_subtree(text, state.layers.context_menu_node);
+                        .cleanup_subtree(services, state.layers.context_menu_node);
                     state.ui.set_layer_visible(state.layers.context_menu, false);
                 }
 
@@ -4969,7 +4969,9 @@ impl WinitDriver for DemoDriver {
             }
             "popover.close" => {
                 if state.ui.is_layer_visible(state.layers.popover) {
-                    state.ui.cleanup_subtree(text, state.layers.popover_node);
+                    state
+                        .ui
+                        .cleanup_subtree(services, state.layers.popover_node);
                     state.ui.set_layer_visible(state.layers.popover, false);
                 }
 
@@ -6160,7 +6162,7 @@ impl WinitDriver for DemoDriver {
         state: &mut Self::WindowState,
         bounds: Rect,
         scale_factor: f32,
-        text: &mut dyn fret_core::TextService,
+        services: &mut dyn fret_core::UiServices,
         scene: &mut Scene,
     ) {
         state.ui.ingest_paint_cache_source(scene);
@@ -6208,7 +6210,7 @@ impl WinitDriver for DemoDriver {
             state.ui.request_semantics_snapshot();
         }
 
-        state.ui.layout_all(app, text, bounds, scale_factor);
+        state.ui.layout_all(app, services, bounds, scale_factor);
 
         if should_sample_semantics {
             let frame_id = app.frame_id();
@@ -6295,7 +6297,9 @@ impl WinitDriver for DemoDriver {
                 .map(|s| s.set_snapshot(window, snapshot));
         }
 
-        state.ui.paint_all(app, text, bounds, scene, scale_factor);
+        state
+            .ui
+            .paint_all(app, services, bounds, scene, scale_factor);
 
         if hud_enabled {
             let stats = state.ui.debug_stats();

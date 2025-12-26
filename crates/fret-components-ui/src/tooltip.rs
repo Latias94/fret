@@ -190,9 +190,9 @@ impl TooltipOverlay {
         self.style.padding_y = theme.metrics.padding_sm;
     }
 
-    fn cleanup(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup(&mut self, services: &mut dyn fret_core::UiServices) {
         if let Some(p) = self.prepared.take() {
-            text.release(p.blob);
+            services.text().release(p.blob);
         }
     }
 
@@ -213,7 +213,7 @@ impl TooltipOverlay {
             return self.prepared.as_ref().map(|p| p.metrics);
         }
 
-        self.cleanup(cx.text);
+        self.cleanup(cx.services);
         self.last_serial = Some(serial);
 
         let constraints = TextConstraints {
@@ -223,7 +223,8 @@ impl TooltipOverlay {
             scale_factor: cx.scale_factor,
         };
         let (blob, metrics) =
-            cx.text
+            cx.services
+                .text()
                 .prepare(request.text.as_ref(), self.style.text_style, constraints);
         self.prepared = Some(PreparedText {
             blob,
@@ -262,8 +263,8 @@ impl Default for TooltipOverlay {
 }
 
 impl<H: UiHost> Widget<H> for TooltipOverlay {
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
-        self.cleanup(text);
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
+        self.cleanup(services);
         self.last_serial = None;
         self.last_theme_revision = None;
     }
@@ -308,19 +309,19 @@ impl<H: UiHost> Widget<H> for TooltipOverlay {
         self.sync_style_from_theme(cx.theme());
 
         let Some(window) = cx.window else {
-            self.cleanup(cx.text);
+            self.cleanup(cx.services);
             self.last_serial = None;
             return;
         };
 
         let Some(service) = cx.app.global::<TooltipService>() else {
-            self.cleanup(cx.text);
+            self.cleanup(cx.services);
             self.last_serial = None;
             return;
         };
 
         let Some((serial, request)) = service.request(window).map(|(s, r)| (s, r.clone())) else {
-            self.cleanup(cx.text);
+            self.cleanup(cx.services);
             self.last_serial = None;
             return;
         };

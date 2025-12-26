@@ -44,7 +44,7 @@ impl CollapsibleTrigger {
 }
 
 impl<H: UiHost> Widget<H> for CollapsibleTrigger {
-    fn cleanup_resources(&mut self, _text: &mut dyn fret_core::TextService) {}
+    fn cleanup_resources(&mut self, _services: &mut dyn fret_core::UiServices) {}
 
     fn is_focusable(&self) -> bool {
         !self.disabled

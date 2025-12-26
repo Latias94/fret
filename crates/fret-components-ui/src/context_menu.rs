@@ -197,14 +197,14 @@ impl ContextMenu {
         self.style.separator_height = rows.separator_height;
     }
 
-    fn cleanup(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup(&mut self, services: &mut dyn fret_core::UiServices) {
         for panel in self.panels.drain(..) {
             for row in panel.rows {
                 if let Some(blob) = row.label {
-                    text.release(blob);
+                    services.text().release(blob);
                 }
                 if let Some(blob) = row.shortcut {
-                    text.release(blob);
+                    services.text().release(blob);
                 }
             }
         }
@@ -234,18 +234,18 @@ impl ContextMenu {
 
         let window = cx.window?;
         let Some(service) = cx.app.global::<ContextMenuService>() else {
-            self.cleanup(cx.text);
+            self.cleanup(cx.services);
             self.last_serial = None;
             return Some(window);
         };
         let Some((serial, request)) = service.request(window).map(|(s, r)| (s, r.clone())) else {
-            self.cleanup(cx.text);
+            self.cleanup(cx.services);
             self.last_serial = None;
             return Some(window);
         };
 
         if self.last_serial != Some(serial) {
-            self.cleanup(cx.text);
+            self.cleanup(cx.services);
             self.open_path.clear();
             self.selection.clear();
             self.hover_panel = None;
@@ -258,7 +258,7 @@ impl ContextMenu {
     }
 
     fn rebuild_panels<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>, request: &ContextMenuRequest) {
-        self.cleanup(cx.text);
+        self.cleanup(cx.services);
         self.panels.clear();
 
         let constraints = TextConstraints {
@@ -352,14 +352,19 @@ impl ContextMenu {
                             .map(|seq| format_sequence(request.input_ctx.platform, &seq))
                     });
 
-                    let (label, label_metrics) =
-                        cx.text
-                            .prepare(title.as_ref(), self.style.text_style, constraints);
+                    let (label, label_metrics) = cx.services.text().prepare(
+                        title.as_ref(),
+                        self.style.text_style,
+                        constraints,
+                    );
                     let label_w = label_metrics.size.width;
 
                     let (shortcut_blob, shortcut_metrics, shortcut_w) =
                         if let Some(s) = shortcut.as_deref() {
-                            let (b, m) = cx.text.prepare(s, self.style.text_style, constraints);
+                            let (b, m) =
+                                cx.services
+                                    .text()
+                                    .prepare(s, self.style.text_style, constraints);
                             let w = m.size.width;
                             (Some(b), Some(m), w)
                         } else {
@@ -384,7 +389,8 @@ impl ContextMenu {
                 MenuItem::Submenu { title, .. } => {
                     let label_text = format!("{title} ›");
                     let (label, label_metrics) =
-                        cx.text
+                        cx.services
+                            .text()
                             .prepare(&label_text, self.style.text_style, constraints);
                     max_content_w = Px(max_content_w.0.max(label_metrics.size.width.0));
 
@@ -542,7 +548,7 @@ impl ContextMenu {
             .with_global_mut(ContextMenuService::default, |service, _app| {
                 service.set_pending_action(window, None);
             });
-        self.cleanup(cx.text);
+        self.cleanup(cx.services);
         cx.dispatch_command(CommandId::from("context_menu.close"));
         cx.stop_propagation();
     }
@@ -557,7 +563,7 @@ impl ContextMenu {
             .with_global_mut(ContextMenuService::default, |service, _app| {
                 service.set_pending_action(window, Some(command));
             });
-        self.cleanup(cx.text);
+        self.cleanup(cx.services);
         cx.dispatch_command(CommandId::from("context_menu.close"));
         cx.stop_propagation();
     }
@@ -610,8 +616,8 @@ impl Default for ContextMenu {
 }
 
 impl<H: UiHost> Widget<H> for ContextMenu {
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
-        self.cleanup(text);
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
+        self.cleanup(services);
         self.last_serial = None;
         self.open_path.clear();
         self.selection.clear();

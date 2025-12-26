@@ -238,7 +238,7 @@ impl Toggle {
         }
 
         if let Some(p) = self.prepared.take() {
-            cx.text.release(p.blob);
+            cx.services.text().release(p.blob);
         }
 
         let constraints = TextConstraints {
@@ -247,9 +247,10 @@ impl Toggle {
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let (blob, metrics) = cx
-            .text
-            .prepare(&self.label, self.resolved.text_style, constraints);
+        let (blob, metrics) =
+            cx.services
+                .text()
+                .prepare(&self.label, self.resolved.text_style, constraints);
         self.prepared = Some(PreparedText { blob, metrics });
         self.prepared_theme_revision = Some(theme_rev);
         self.prepared_scale_factor_bits = Some(scale_bits);
@@ -257,9 +258,9 @@ impl Toggle {
 }
 
 impl<H: UiHost> Widget<H> for Toggle {
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         if let Some(p) = self.prepared.take() {
-            text.release(p.blob);
+            services.text().release(p.blob);
         }
         self.prepared_scale_factor_bits = None;
         self.prepared_theme_revision = None;

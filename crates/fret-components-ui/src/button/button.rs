@@ -336,9 +336,9 @@ fn resolve_button_colors(
 }
 
 impl<H: UiHost> Widget<H> for Button {
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         if let Some(prepared) = self.prepared.take() {
-            text.release(prepared.blob);
+            services.text().release(prepared.blob);
         }
         self.prepared_scale_factor_bits = None;
         self.prepared_theme_revision = None;
@@ -432,7 +432,10 @@ impl<H: UiHost> Widget<H> for Button {
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let metrics = cx.text.measure(&self.label, text_style, text_constraints);
+        let metrics = cx
+            .services
+            .text()
+            .measure(&self.label, text_style, text_constraints);
 
         let pad_x = self.resolved.padding_x.0.max(0.0);
         let pad_y = self.resolved.padding_y.0.max(0.0);
@@ -454,7 +457,7 @@ impl<H: UiHost> Widget<H> for Button {
             || self.prepared_theme_revision != Some(cx.theme().revision())
         {
             if let Some(prepared) = self.prepared.take() {
-                cx.text.release(prepared.blob);
+                cx.services.text().release(prepared.blob);
             }
             self.prepared_scale_factor_bits = None;
             self.prepared_theme_revision = None;
@@ -473,7 +476,10 @@ impl<H: UiHost> Widget<H> for Button {
                 overflow: TextOverflow::Clip,
                 scale_factor: cx.scale_factor,
             };
-            let (blob, metrics) = cx.text.prepare(&self.label, text_style, text_constraints);
+            let (blob, metrics) =
+                cx.services
+                    .text()
+                    .prepare(&self.label, text_style, text_constraints);
             self.prepared = Some(PreparedText { blob, metrics });
             self.prepared_scale_factor_bits = Some(scale_bits);
             self.prepared_theme_revision = Some(cx.theme().revision());

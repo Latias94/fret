@@ -1,4 +1,4 @@
-use fret_core::{AppWindowId, NodeId, TextService};
+use fret_core::{AppWindowId, NodeId, UiServices};
 use fret_runtime::{CommandId, Effect};
 use fret_ui::{
     UiHost,
@@ -109,7 +109,7 @@ impl WindowOverlays {
         &mut self,
         app: &mut H,
         ui: &mut UiTree<H>,
-        text: &mut dyn TextService,
+        services: &mut dyn UiServices,
         window: AppWindowId,
         command: &CommandId,
     ) -> bool {
@@ -133,7 +133,7 @@ impl WindowOverlays {
             }
             "command_palette.close" => {
                 if ui.is_layer_visible(self.command_palette_layer) {
-                    ui.cleanup_subtree(text, self.command_palette_node);
+                    ui.cleanup_subtree(services, self.command_palette_node);
                     ui.set_layer_visible(self.command_palette_layer, false);
                 }
 
@@ -149,7 +149,7 @@ impl WindowOverlays {
                     return self.handle_command(
                         app,
                         ui,
-                        text,
+                        services,
                         window,
                         &CommandId::from("command_palette.close"),
                     );
@@ -157,7 +157,7 @@ impl WindowOverlays {
                 self.handle_command(
                     app,
                     ui,
-                    text,
+                    services,
                     window,
                     &CommandId::from("command_palette.open"),
                 )
@@ -182,7 +182,7 @@ impl WindowOverlays {
             }
             "dialog.close" => {
                 if ui.is_layer_visible(self.dialog_layer) {
-                    ui.cleanup_subtree(text, self.dialog_node);
+                    ui.cleanup_subtree(services, self.dialog_node);
                     ui.set_layer_visible(self.dialog_layer, false);
                 }
 
@@ -231,7 +231,7 @@ impl WindowOverlays {
             }
             "sheet.close" => {
                 if ui.is_layer_visible(self.sheet_layer) {
-                    ui.cleanup_subtree(text, self.sheet_node);
+                    ui.cleanup_subtree(services, self.sheet_node);
                     ui.set_layer_visible(self.sheet_layer, false);
                 }
 
@@ -274,7 +274,7 @@ impl WindowOverlays {
             }
             "popover.close" => {
                 if ui.is_layer_visible(self.popover_layer) {
-                    ui.cleanup_subtree(text, self.popover_node);
+                    ui.cleanup_subtree(services, self.popover_node);
                     ui.set_layer_visible(self.popover_layer, false);
                 }
 
@@ -309,7 +309,7 @@ impl WindowOverlays {
             }
             "context_menu.close" => {
                 if ui.is_layer_visible(self.context_menu_layer) {
-                    ui.cleanup_subtree(text, self.context_menu_node);
+                    ui.cleanup_subtree(services, self.context_menu_node);
                     ui.set_layer_visible(self.context_menu_layer, false);
                 }
 

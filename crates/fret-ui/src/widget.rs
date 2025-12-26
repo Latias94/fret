@@ -1,7 +1,6 @@
 use crate::{ContextMenuRequest, ContextMenuService, Theme, UiHost};
 use fret_core::{
-    AppWindowId, Event, NodeId, Point, Rect, Scene, SemanticsFlags, SemanticsRole, Size,
-    TextService,
+    AppWindowId, Event, NodeId, Point, Rect, Scene, SemanticsFlags, SemanticsRole, Size, UiServices,
 };
 use fret_runtime::{CommandId, Effect, InputContext, Menu, Model, ModelId};
 
@@ -14,7 +13,7 @@ pub enum Invalidation {
 
 pub struct EventCx<'a, H: UiHost> {
     pub app: &'a mut H,
-    pub text: &'a mut dyn TextService,
+    pub services: &'a mut dyn UiServices,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
     pub input_ctx: InputContext,
@@ -112,7 +111,7 @@ impl<'a, H: UiHost> EventCx<'a, H> {
 
 pub struct CommandCx<'a, H: UiHost> {
     pub app: &'a mut H,
-    pub text: &'a mut dyn TextService,
+    pub services: &'a mut dyn UiServices,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
     pub input_ctx: InputContext,
@@ -160,7 +159,7 @@ pub struct LayoutCx<'a, H: UiHost> {
     pub bounds: Rect,
     pub available: Size,
     pub scale_factor: f32,
-    pub text: &'a mut dyn TextService,
+    pub services: &'a mut dyn UiServices,
     pub observe_model: &'a mut dyn FnMut(ModelId, Invalidation),
     pub layout_child: &'a mut dyn FnMut(NodeId, Rect) -> Size,
 }
@@ -192,7 +191,7 @@ pub struct PaintCx<'a, H: UiHost> {
     pub children: &'a [NodeId],
     pub bounds: Rect,
     pub scale_factor: f32,
-    pub text: &'a mut dyn TextService,
+    pub services: &'a mut dyn UiServices,
     pub observe_model: &'a mut dyn FnMut(ModelId, Invalidation),
     pub scene: &'a mut Scene,
     pub paint_child: &'a mut dyn FnMut(NodeId, Rect),
@@ -252,7 +251,7 @@ pub trait Widget<H: UiHost> {
     fn command(&mut self, _cx: &mut CommandCx<'_, H>, _command: &CommandId) -> bool {
         false
     }
-    fn cleanup_resources(&mut self, _text: &mut dyn TextService) {}
+    fn cleanup_resources(&mut self, _services: &mut dyn UiServices) {}
     /// Whether hit-testing should be clipped to `bounds`.
     ///
     /// When `false`, children can receive pointer input even if they are positioned outside the

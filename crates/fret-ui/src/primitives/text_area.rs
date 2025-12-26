@@ -472,9 +472,9 @@ impl TextArea {
         self.prepared_key = None;
     }
 
-    fn flush_pending_releases(&mut self, text: &mut dyn fret_core::TextService) {
+    fn flush_pending_releases(&mut self, services: &mut dyn fret_core::UiServices) {
         for blob in self.pending_release.drain(..) {
-            text.release(blob);
+            services.text().release(blob);
         }
     }
 
@@ -576,7 +576,7 @@ impl TextArea {
         let Some(blob) = self.blob else {
             return;
         };
-        let hit = cx.text.hit_test_point(blob, point);
+        let hit = cx.services.hit_test_point(blob, point);
         if self.preedit.is_empty() {
             self.caret = hit.index;
             self.affinity = hit.affinity;
@@ -597,9 +597,9 @@ impl<H: UiHost> Widget<H> for TextArea {
         true
     }
 
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         self.queue_release_blob();
-        self.flush_pending_releases(text);
+        self.flush_pending_releases(services);
         self.metrics = None;
         self.prepared_key = None;
     }
@@ -846,10 +846,12 @@ impl<H: UiHost> Widget<H> for TextArea {
                 };
 
                 let caret_index = this.caret_display_index();
-                let caret_rect = cx.text.caret_rect(blob, caret_index, this.affinity);
+                let caret_rect = cx.services.caret_rect(blob, caret_index, this.affinity);
                 let y = Px(caret_rect.origin.y.0 + caret_rect.size.height.0 * 0.5);
                 let x = if at_line_end { Px(1.0e6) } else { Px(-1.0e6) };
-                let hit = cx.text.hit_test_point(blob, fret_core::Point::new(x, y));
+                let hit = cx
+                    .services
+                    .hit_test_point(blob, fret_core::Point::new(x, y));
                 this.caret = this.map_display_index_to_base(hit.index);
                 this.affinity = hit.affinity;
                 true
@@ -955,10 +957,12 @@ impl<H: UiHost> Widget<H> for TextArea {
                     return true;
                 };
                 let caret_index = self.caret_display_index();
-                let caret_rect = cx.text.caret_rect(blob, caret_index, self.affinity);
+                let caret_rect = cx.services.caret_rect(blob, caret_index, self.affinity);
                 let x = self.preferred_x.unwrap_or(caret_rect.origin.x);
                 let y = Px(caret_rect.origin.y.0 - 1.0);
-                let hit = cx.text.hit_test_point(blob, fret_core::Point::new(x, y));
+                let hit = cx
+                    .services
+                    .hit_test_point(blob, fret_core::Point::new(x, y));
                 self.caret = hit.index;
                 self.selection_anchor = self.caret;
                 self.affinity = hit.affinity;
@@ -973,10 +977,12 @@ impl<H: UiHost> Widget<H> for TextArea {
                     return true;
                 };
                 let caret_index = self.caret_display_index();
-                let caret_rect = cx.text.caret_rect(blob, caret_index, self.affinity);
+                let caret_rect = cx.services.caret_rect(blob, caret_index, self.affinity);
                 let x = self.preferred_x.unwrap_or(caret_rect.origin.x);
                 let y = Px(caret_rect.origin.y.0 + caret_rect.size.height.0 + 1.0);
-                let hit = cx.text.hit_test_point(blob, fret_core::Point::new(x, y));
+                let hit = cx
+                    .services
+                    .hit_test_point(blob, fret_core::Point::new(x, y));
                 self.caret = hit.index;
                 self.selection_anchor = self.caret;
                 self.affinity = hit.affinity;
@@ -1037,10 +1043,12 @@ impl<H: UiHost> Widget<H> for TextArea {
                     return true;
                 };
                 let caret_index = self.caret_display_index();
-                let caret_rect = cx.text.caret_rect(blob, caret_index, self.affinity);
+                let caret_rect = cx.services.caret_rect(blob, caret_index, self.affinity);
                 let x = self.preferred_x.unwrap_or(caret_rect.origin.x);
                 let y = Px(caret_rect.origin.y.0 - 1.0);
-                let hit = cx.text.hit_test_point(blob, fret_core::Point::new(x, y));
+                let hit = cx
+                    .services
+                    .hit_test_point(blob, fret_core::Point::new(x, y));
                 self.caret = hit.index;
                 self.affinity = hit.affinity;
                 self.preferred_x = Some(x);
@@ -1054,10 +1062,12 @@ impl<H: UiHost> Widget<H> for TextArea {
                     return true;
                 };
                 let caret_index = self.caret_display_index();
-                let caret_rect = cx.text.caret_rect(blob, caret_index, self.affinity);
+                let caret_rect = cx.services.caret_rect(blob, caret_index, self.affinity);
                 let x = self.preferred_x.unwrap_or(caret_rect.origin.x);
                 let y = Px(caret_rect.origin.y.0 + caret_rect.size.height.0 + 1.0);
-                let hit = cx.text.hit_test_point(blob, fret_core::Point::new(x, y));
+                let hit = cx
+                    .services
+                    .hit_test_point(blob, fret_core::Point::new(x, y));
                 self.caret = hit.index;
                 self.affinity = hit.affinity;
                 self.preferred_x = Some(x);
@@ -1171,11 +1181,17 @@ impl<H: UiHost> Widget<H> for TextArea {
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let mut metrics = cx.text.measure(layout_text, self.text_style, constraints);
+        let mut metrics = cx
+            .services
+            .text()
+            .measure(layout_text, self.text_style, constraints);
         let show_scrollbar = metrics.size.height.0 > inner.size.height.0;
         if show_scrollbar {
             constraints.max_width = Some(Px((inner.size.width.0 - scrollbar_w.0).max(0.0)));
-            metrics = cx.text.measure(layout_text, self.text_style, constraints);
+            metrics = cx
+                .services
+                .text()
+                .measure(layout_text, self.text_style, constraints);
         }
 
         self.metrics = Some(metrics);
@@ -1198,7 +1214,7 @@ impl<H: UiHost> Widget<H> for TextArea {
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
-        self.flush_pending_releases(cx.text);
+        self.flush_pending_releases(cx.services);
 
         let inner = self.inner_bounds();
 
@@ -1222,13 +1238,14 @@ impl<H: UiHost> Widget<H> for TextArea {
 
         if self.text_dirty || self.blob.is_none() || self.prepared_key != Some(key) {
             self.queue_release_blob();
-            self.flush_pending_releases(cx.text);
+            self.flush_pending_releases(cx.services);
             let layout_text = match self.layout_text() {
                 Some(s) => std::borrow::Cow::Owned(s),
                 None => std::borrow::Cow::Borrowed(self.text.as_str()),
             };
             let (blob, metrics) =
-                cx.text
+                cx.services
+                    .text()
                     .prepare(layout_text.as_ref(), self.text_style, constraints);
             self.blob = Some(blob);
             self.metrics = Some(metrics);
@@ -1275,7 +1292,7 @@ impl<H: UiHost> Widget<H> for TextArea {
             }
         };
 
-        cx.text.selection_rects(
+        cx.services.selection_rects(
             blob,
             (
                 map_base_to_display(self.selection_anchor),
@@ -1304,7 +1321,7 @@ impl<H: UiHost> Widget<H> for TextArea {
         if !self.preedit.is_empty() {
             let start = self.caret;
             let end = self.caret + self.preedit.len();
-            cx.text
+            cx.services
                 .selection_rects(blob, (start, end), &mut self.preedit_rects);
             for r in &self.preedit_rects {
                 let rect = Rect::new(
@@ -1349,7 +1366,7 @@ impl<H: UiHost> Widget<H> for TextArea {
             } else {
                 CaretAffinity::Downstream
             };
-            let caret = cx.text.caret_rect(blob, caret_index, affinity);
+            let caret = cx.services.caret_rect(blob, caret_index, affinity);
             let hairline = Px((1.0 / cx.scale_factor.max(1.0)).max(1.0 / 8.0));
             if self.ensure_caret_visible {
                 let caret_top = caret.origin.y.0;
@@ -1560,8 +1577,8 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
         true
     }
 
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
-        <TextArea as Widget<H>>::cleanup_resources(&mut self.area, text);
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
+        <TextArea as Widget<H>>::cleanup_resources(&mut self.area, services);
     }
 
     fn semantics(&mut self, cx: &mut crate::widget::SemanticsCx<'_, H>) {
@@ -1626,6 +1643,22 @@ mod tests {
         }
 
         fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeTextService {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
     }
 
     #[test]

@@ -9,7 +9,9 @@ pub mod input;
 pub mod panels;
 pub mod scene;
 pub mod semantics;
+pub mod services;
 pub mod text;
+pub mod vector_path;
 pub mod viewport;
 pub mod window;
 
@@ -23,8 +25,8 @@ pub use dock_layout::{
 pub use dock_op::DockOp;
 pub use geometry::{Corners, Edges, Point, Px, Rect, Size};
 pub use ids::{
-    AppWindowId, DockNodeId, ExternalDropToken, FontId, FrameId, ImageId, NodeId, RenderTargetId,
-    TextBlobId, TickId, TimerToken,
+    AppWindowId, DockNodeId, ExternalDropToken, FontId, FrameId, ImageId, NodeId, PathId,
+    RenderTargetId, TextBlobId, TickId, TimerToken,
 };
 pub use input::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
@@ -37,9 +39,14 @@ pub use scene::{Color, DrawOrder, Scene, SceneOp, SceneRecording, UvRect};
 pub use semantics::{
     SemanticsFlags, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot,
 };
+pub use services::UiServices;
 pub use text::{
     CaretAffinity, FontWeight, HitTestResult, TextConstraints, TextMetrics, TextOverflow,
     TextService, TextStyle, TextWrap,
+};
+pub use vector_path::{
+    FillRule, FillStyle, PathCommand, PathConstraints, PathMetrics, PathService, PathStyle,
+    StrokeStyle,
 };
 pub use viewport::{ViewportFit, ViewportMapped, ViewportMapping};
 pub use window::{WindowAnchor, WindowMetricsService};

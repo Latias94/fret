@@ -10,7 +10,7 @@ use fret_core::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
     ExternalDropDataEvent, ExternalDropFileData, ExternalDropReadError, ExternalDropToken,
     InternalDragEvent, InternalDragKind, Modifiers, MouseButton, PlatformCapabilities, Point, Px,
-    Rect, Scene, Size, TextService, ViewportInputEvent, WindowMetricsService,
+    Rect, Scene, Size, UiServices, ViewportInputEvent, WindowMetricsService,
 };
 use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
 use slotmap::SlotMap;
@@ -479,7 +479,7 @@ pub trait WinitDriver {
     fn handle_command(
         &mut self,
         _app: &mut App,
-        _text: &mut dyn TextService,
+        _services: &mut dyn UiServices,
         _window: fret_core::AppWindowId,
         _state: &mut Self::WindowState,
         _command: fret_app::CommandId,
@@ -489,7 +489,7 @@ pub trait WinitDriver {
     fn handle_global_command(
         &mut self,
         _app: &mut App,
-        _text: &mut dyn TextService,
+        _services: &mut dyn UiServices,
         _command: fret_app::CommandId,
     ) {
     }
@@ -512,7 +512,7 @@ pub trait WinitDriver {
     fn handle_event(
         &mut self,
         app: &mut App,
-        text: &mut dyn TextService,
+        services: &mut dyn UiServices,
         window: fret_core::AppWindowId,
         state: &mut Self::WindowState,
         event: &Event,
@@ -532,7 +532,7 @@ pub trait WinitDriver {
         state: &mut Self::WindowState,
         bounds: Rect,
         scale_factor: f32,
-        text: &mut dyn fret_core::TextService,
+        services: &mut dyn fret_core::UiServices,
         scene: &mut Scene,
     );
 
@@ -584,7 +584,7 @@ pub struct WinitRunner<D: WinitDriver> {
 
     context: Option<WgpuContext>,
     renderer: Option<Renderer>,
-    no_text: NoTextService,
+    no_services: NoUiServices,
 
     windows: SlotMap<fret_core::AppWindowId, WindowRuntime<D::WindowState>>,
     winit_to_app: HashMap<WindowId, fret_core::AppWindowId>,
@@ -661,7 +661,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             driver,
             context: None,
             renderer: None,
-            no_text: NoTextService,
+            no_services: NoUiServices,
             windows: SlotMap::with_key(),
             winit_to_app: HashMap::new(),
             main_window: None,
@@ -707,10 +707,10 @@ impl<D: WinitDriver> WinitRunner<D> {
         ExternalDragFiles { token, files }
     }
 
-    fn text_service_mut_ptr(&mut self) -> *mut dyn TextService {
+    fn ui_services_mut_ptr(&mut self) -> *mut dyn UiServices {
         match self.renderer.as_mut() {
-            Some(renderer) => renderer as &mut dyn TextService as *mut dyn TextService,
-            None => &mut self.no_text as &mut dyn TextService as *mut dyn TextService,
+            Some(renderer) => renderer as &mut dyn UiServices as *mut dyn UiServices,
+            None => &mut self.no_services as &mut dyn UiServices as *mut dyn UiServices,
         }
     }
 
@@ -1037,11 +1037,11 @@ impl<D: WinitDriver> WinitRunner<D> {
                 .and_then(|w| self.windows.contains_key(w).then_some(w));
 
             if let Some(window) = target {
-                let text_ptr = self.text_service_mut_ptr();
+                let services_ptr = self.ui_services_mut_ptr();
                 if let Some(state) = self.windows.get_mut(window) {
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *text_ptr },
+                        unsafe { &mut *services_ptr },
                         window,
                         &mut state.user,
                         &Event::Timer { token },
@@ -1128,11 +1128,11 @@ impl<D: WinitDriver> WinitRunner<D> {
                     }
                     Effect::Command { window, command } => match window {
                         Some(window) => {
-                            let text_ptr = self.text_service_mut_ptr();
+                            let services_ptr = self.ui_services_mut_ptr();
                             if let Some(state) = self.windows.get_mut(window) {
                                 self.driver.handle_command(
                                     &mut self.app,
-                                    unsafe { &mut *text_ptr },
+                                    unsafe { &mut *services_ptr },
                                     window,
                                     &mut state.user,
                                     command,
@@ -1140,10 +1140,10 @@ impl<D: WinitDriver> WinitRunner<D> {
                             }
                         }
                         None => {
-                            let text_ptr = self.text_service_mut_ptr();
+                            let services_ptr = self.ui_services_mut_ptr();
                             self.driver.handle_global_command(
                                 &mut self.app,
-                                unsafe { &mut *text_ptr },
+                                unsafe { &mut *services_ptr },
                                 command,
                             );
                         }
@@ -1161,11 +1161,11 @@ impl<D: WinitDriver> WinitRunner<D> {
                         else {
                             continue;
                         };
-                        let text_ptr = self.text_service_mut_ptr();
+                        let services_ptr = self.ui_services_mut_ptr();
                         if let Some(state) = self.windows.get_mut(window) {
                             self.driver.handle_event(
                                 &mut self.app,
-                                unsafe { &mut *text_ptr },
+                                unsafe { &mut *services_ptr },
                                 window,
                                 &mut state.user,
                                 &Event::ClipboardText(text),
@@ -1238,11 +1238,11 @@ impl<D: WinitDriver> WinitRunner<D> {
                             files.push(ExternalDropFileData { name, bytes });
                         }
 
-                        let text_ptr = self.text_service_mut_ptr();
+                        let services_ptr = self.ui_services_mut_ptr();
                         if let Some(state) = self.windows.get_mut(window) {
                             self.driver.handle_event(
                                 &mut self.app,
-                                unsafe { &mut *text_ptr },
+                                unsafe { &mut *services_ptr },
                                 window,
                                 &mut state.user,
                                 &Event::ExternalDropData(ExternalDropDataEvent {
@@ -1566,14 +1566,14 @@ impl<D: WinitDriver> WinitRunner<D> {
         window: fret_core::AppWindowId,
         pe: fret_core::PointerEvent,
     ) {
-        let text_ptr = self.text_service_mut_ptr();
+        let services_ptr = self.ui_services_mut_ptr();
 
         let Some(state) = self.windows.get_mut(window) else {
             return;
         };
         self.driver.handle_event(
             &mut self.app,
-            unsafe { &mut *text_ptr },
+            unsafe { &mut *services_ptr },
             window,
             &mut state.user,
             &Event::Pointer(pe),
@@ -1586,13 +1586,13 @@ impl<D: WinitDriver> WinitRunner<D> {
         kind: InternalDragKind,
         position: Point,
     ) {
-        let text_ptr = self.text_service_mut_ptr();
+        let services_ptr = self.ui_services_mut_ptr();
         let Some(state) = self.windows.get_mut(window) else {
             return;
         };
         self.driver.handle_event(
             &mut self.app,
-            unsafe { &mut *text_ptr },
+            unsafe { &mut *services_ptr },
             window,
             &mut state.user,
             &Event::InternalDrag(InternalDragEvent { position, kind }),
@@ -1938,9 +1938,9 @@ impl<D: WinitDriver> WinitRunner<D> {
     }
 }
 
-struct NoTextService;
+struct NoUiServices;
 
-impl TextService for NoTextService {
+impl fret_core::TextService for NoUiServices {
     fn prepare(
         &mut self,
         _text: &str,
@@ -1957,6 +1957,22 @@ impl TextService for NoTextService {
     }
 
     fn release(&mut self, _blob: fret_core::TextBlobId) {}
+}
+
+impl fret_core::PathService for NoUiServices {
+    fn prepare(
+        &mut self,
+        _commands: &[fret_core::PathCommand],
+        _style: fret_core::PathStyle,
+        _constraints: fret_core::PathConstraints,
+    ) -> (fret_core::PathId, fret_core::PathMetrics) {
+        (
+            fret_core::PathId::default(),
+            fret_core::PathMetrics::default(),
+        )
+    }
+
+    fn release(&mut self, _path: fret_core::PathId) {}
 }
 
 impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
@@ -2122,14 +2138,14 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
             return;
         };
 
-        let text_ptr = self.text_service_mut_ptr();
+        let services_ptr = self.ui_services_mut_ptr();
 
         match event {
             WindowEvent::CloseRequested => {
                 if let Some(state) = self.windows.get_mut(app_window) {
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *text_ptr },
+                        unsafe { &mut *services_ptr },
                         app_window,
                         &mut state.user,
                         &Event::WindowCloseRequested,
@@ -2158,7 +2174,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     let logical = position.to_logical::<f32>(state.window.scale_factor());
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *text_ptr },
+                        unsafe { &mut *services_ptr },
                         app_window,
                         &mut state.user,
                         &Event::WindowMoved {
@@ -2182,7 +2198,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                         ElementState::Pressed => {
                             self.driver.handle_event(
                                 &mut self.app,
-                                unsafe { &mut *text_ptr },
+                                unsafe { &mut *services_ptr },
                                 app_window,
                                 &mut state.user,
                                 &Event::KeyDown {
@@ -2196,7 +2212,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                             {
                                 self.driver.handle_event(
                                     &mut self.app,
-                                    unsafe { &mut *text_ptr },
+                                    unsafe { &mut *services_ptr },
                                     app_window,
                                     &mut state.user,
                                     &Event::TextInput(text),
@@ -2206,7 +2222,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                         ElementState::Released => {
                             self.driver.handle_event(
                                 &mut self.app,
-                                unsafe { &mut *text_ptr },
+                                unsafe { &mut *services_ptr },
                                 app_window,
                                 &mut state.user,
                                 &Event::KeyUp {
@@ -2231,7 +2247,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     };
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *text_ptr },
+                        unsafe { &mut *services_ptr },
                         app_window,
                         &mut state.user,
                         &Event::Ime(mapped),
@@ -2271,7 +2287,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 if let Some(state) = self.windows.get_mut(app_window) {
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *text_ptr },
+                        unsafe { &mut *services_ptr },
                         app_window,
                         &mut state.user,
                         &Event::ExternalDrag(ExternalDragEvent { position, kind }),
@@ -2311,7 +2327,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 if let Some(state) = self.windows.get_mut(app_window) {
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *text_ptr },
+                        unsafe { &mut *services_ptr },
                         app_window,
                         &mut state.user,
                         &Event::ExternalDrag(ExternalDragEvent { position, kind }),
@@ -2339,7 +2355,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 if let Some(state) = self.windows.get_mut(app_window) {
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *text_ptr },
+                        unsafe { &mut *services_ptr },
                         app_window,
                         &mut state.user,
                         &Event::ExternalDrag(ExternalDragEvent {
@@ -2364,7 +2380,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                         });
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *text_ptr },
+                        unsafe { &mut *services_ptr },
                         app_window,
                         &mut state.user,
                         &Event::WindowResized {
@@ -2374,7 +2390,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     );
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *text_ptr },
+                        unsafe { &mut *services_ptr },
                         app_window,
                         &mut state.user,
                         &Event::WindowScaleFactorChanged(scale),
@@ -2422,7 +2438,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     if let Some(state) = self.windows.get_mut(app_window) {
                         self.driver.handle_event(
                             &mut self.app,
-                            unsafe { &mut *text_ptr },
+                            unsafe { &mut *services_ptr },
                             app_window,
                             &mut state.user,
                             &Event::ExternalDrag(ExternalDragEvent {
@@ -2567,7 +2583,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     &mut state.user,
                     bounds,
                     scale_factor,
-                    renderer as &mut dyn fret_core::TextService,
+                    renderer as &mut dyn fret_core::UiServices,
                     &mut state.scene,
                 );
 

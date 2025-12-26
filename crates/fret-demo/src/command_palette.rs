@@ -193,9 +193,9 @@ impl CommandPalette {
 
     fn rebuild_items(&mut self, cx: &mut LayoutCx<'_>) {
         for item in self.items.drain(..) {
-            cx.text.release(item.title_blob);
+            cx.services.text().release(item.title_blob);
             if let Some(blob) = item.shortcut_blob {
-                cx.text.release(blob);
+                cx.services.text().release(blob);
             }
         }
 
@@ -253,10 +253,12 @@ impl CommandPalette {
             });
 
             let (title_blob, title_metrics) =
-                cx.text.prepare(meta.title.as_ref(), style, constraints);
+                cx.services
+                    .text()
+                    .prepare(meta.title.as_ref(), style, constraints);
 
             let (shortcut_blob, shortcut_metrics) = if let Some(s) = shortcut.as_deref() {
-                let (b, m) = cx.text.prepare(s, style, constraints);
+                let (b, m) = cx.services.text().prepare(s, style, constraints);
                 (Some(b), Some(m))
             } else {
                 (None, None)
@@ -326,16 +328,17 @@ impl GenericWidget<App> for CommandPalette {
         };
 
         if let Some(blob) = self.prompt_blob.take() {
-            cx.text.release(blob);
+            cx.services.text().release(blob);
         }
-        let (prompt_blob, prompt_metrics) = cx.text.prepare(">", style, constraints);
+        let (prompt_blob, prompt_metrics) = cx.services.text().prepare(">", style, constraints);
         self.prompt_blob = Some(prompt_blob);
         self.prompt_metrics = Some(prompt_metrics);
 
         if let Some(blob) = self.query_blob.take() {
-            cx.text.release(blob);
+            cx.services.text().release(blob);
         }
-        let (query_blob, query_metrics) = cx.text.prepare(&self.query, style, constraints);
+        let (query_blob, query_metrics) =
+            cx.services.text().prepare(&self.query, style, constraints);
         self.query_blob = Some(query_blob);
         self.query_metrics = Some(query_metrics);
 

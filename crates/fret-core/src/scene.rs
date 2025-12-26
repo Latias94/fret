@@ -1,6 +1,6 @@
 use crate::{
     geometry::{Corners, Edges, Point, Rect},
-    ids::{ImageId, RenderTargetId, TextBlobId},
+    ids::{ImageId, PathId, RenderTargetId, TextBlobId},
 };
 use slotmap::Key;
 
@@ -115,6 +115,13 @@ pub enum SceneOp {
         order: DrawOrder,
         origin: Point,
         text: TextBlobId,
+        color: Color,
+    },
+
+    Path {
+        order: DrawOrder,
+        origin: Point,
+        path: PathId,
         color: Color,
     },
 
@@ -261,6 +268,18 @@ fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             state = mix_u64(state, text.data().as_ffi());
             mix_color(state, color)
         }
+        SceneOp::Path {
+            order,
+            origin,
+            path,
+            color,
+        } => {
+            let mut state = mix_u64(state, 8);
+            state = mix_u64(state, u64::from(order.0));
+            state = mix_point(state, origin);
+            state = mix_u64(state, path.data().as_ffi());
+            mix_color(state, color)
+        }
         SceneOp::ViewportSurface {
             order,
             rect,
@@ -338,6 +357,17 @@ fn translate_scene_op(op: SceneOp, delta: Point) -> SceneOp {
             order,
             origin: translate_point(origin, delta),
             text,
+            color,
+        },
+        SceneOp::Path {
+            order,
+            origin,
+            path,
+            color,
+        } => SceneOp::Path {
+            order,
+            origin: translate_point(origin, delta),
+            path,
             color,
         },
         SceneOp::ViewportSurface {

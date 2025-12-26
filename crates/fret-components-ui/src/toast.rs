@@ -374,14 +374,14 @@ impl ToastOverlay {
         };
     }
 
-    fn cleanup(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup(&mut self, services: &mut dyn fret_core::UiServices) {
         for toast in self.prepared.drain(..) {
-            text.release(toast.title.blob);
+            services.text().release(toast.title.blob);
             if let Some(desc) = toast.description {
-                text.release(desc.blob);
+                services.text().release(desc.blob);
             }
             if let Some(action) = toast.action_label {
-                text.release(action.blob);
+                services.text().release(action.blob);
             }
         }
     }
@@ -493,20 +493,20 @@ impl<H: UiHost> Widget<H> for ToastOverlay {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
         let Some(window) = cx.window else {
-            self.cleanup(cx.text);
+            self.cleanup(cx.services);
             self.last_serial = None;
             self.last_scale_factor_bits = None;
             return;
         };
 
         let Some(service) = cx.app.global::<ToastService>() else {
-            self.cleanup(cx.text);
+            self.cleanup(cx.services);
             self.last_serial = None;
             return;
         };
 
         let Some((serial, items)) = service.items(window) else {
-            self.cleanup(cx.text);
+            self.cleanup(cx.services);
             self.last_serial = None;
             self.last_scale_factor_bits = None;
             return;
@@ -520,7 +520,7 @@ impl<H: UiHost> Widget<H> for ToastOverlay {
         self.last_serial = Some(serial);
         self.last_scale_factor_bits = Some(scale_bits);
         if rebuild {
-            self.cleanup(cx.text);
+            self.cleanup(cx.services);
             self.prepared.clear();
 
             let pad_x = self.style.padding_x.0.max(0.0);
@@ -544,7 +544,7 @@ impl<H: UiHost> Widget<H> for ToastOverlay {
                     overflow: TextOverflow::Clip,
                     scale_factor: cx.scale_factor,
                 };
-                let (title_blob, title_metrics) = cx.text.prepare(
+                let (title_blob, title_metrics) = cx.services.text().prepare(
                     entry.request.title.as_ref(),
                     self.style.title_style,
                     title_constraints,
@@ -562,9 +562,11 @@ impl<H: UiHost> Widget<H> for ToastOverlay {
                         overflow: TextOverflow::Clip,
                         scale_factor: cx.scale_factor,
                     };
-                    let (blob, metrics) =
-                        cx.text
-                            .prepare(desc.as_ref(), self.style.description_style, constraints);
+                    let (blob, metrics) = cx.services.text().prepare(
+                        desc.as_ref(),
+                        self.style.description_style,
+                        constraints,
+                    );
                     desc_prepared = Some(PreparedText { blob, metrics });
                 }
 
@@ -578,7 +580,7 @@ impl<H: UiHost> Widget<H> for ToastOverlay {
                         overflow: TextOverflow::Clip,
                         scale_factor: cx.scale_factor,
                     };
-                    let (blob, metrics) = cx.text.prepare(
+                    let (blob, metrics) = cx.services.text().prepare(
                         action.label.as_ref(),
                         self.style.action_style,
                         constraints,
@@ -721,7 +723,9 @@ impl<H: UiHost> Widget<H> for ToastOverlay {
                 scale_factor: cx.scale_factor,
             };
             let (close_blob, close_metrics) =
-                cx.text.prepare("×", self.style.close_style, constraints);
+                cx.services
+                    .text()
+                    .prepare("×", self.style.close_style, constraints);
             let close_x = Px(toast.close_bounds.origin.x.0
                 + (toast.close_bounds.size.width.0 - close_metrics.size.width.0) * 0.5);
             let close_y = Px(toast.close_bounds.origin.y.0 + pad_y + close_metrics.baseline.0);
@@ -731,12 +735,12 @@ impl<H: UiHost> Widget<H> for ToastOverlay {
                 text: close_blob,
                 color: self.style.close_color,
             });
-            cx.text.release(close_blob);
+            cx.services.text().release(close_blob);
         }
     }
 
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
-        self.cleanup(text);
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
+        self.cleanup(services);
         self.last_serial = None;
         self.last_theme_revision = None;
         self.last_bounds = Rect::default();

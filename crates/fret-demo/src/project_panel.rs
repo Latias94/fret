@@ -519,7 +519,7 @@ impl GenericWidget<App> for ProjectPanel {
             size: Px(12.0),
             ..Default::default()
         };
-        let (blob, metrics) = cx.text.prepare(
+        let (blob, metrics) = cx.services.text().prepare(
             label.as_str(),
             style,
             fret_core::TextConstraints {
@@ -536,6 +536,6 @@ impl GenericWidget<App> for ProjectPanel {
             text: blob,
             color: theme.colors.text_primary,
         });
-        cx.text.release(blob);
+        cx.services.text().release(blob);
     }
 }

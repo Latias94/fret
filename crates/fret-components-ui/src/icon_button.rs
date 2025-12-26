@@ -188,9 +188,9 @@ impl Sizable for IconButton {
 }
 
 impl<H: UiHost> Widget<H> for IconButton {
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         if let Some(p) = self.prepared.take() {
-            text.release(p.blob);
+            services.text().release(p.blob);
         }
         self.prepared_scale_bits = None;
         self.prepared_theme_revision = None;
@@ -321,7 +321,7 @@ impl<H: UiHost> Widget<H> for IconButton {
 
         if needs_prepare {
             if let Some(p) = self.prepared.take() {
-                cx.text.release(p.blob);
+                cx.services.text().release(p.blob);
             }
             let style = TextStyle {
                 font: icon_glyph.font,
@@ -334,9 +334,10 @@ impl<H: UiHost> Widget<H> for IconButton {
                 overflow: TextOverflow::Clip,
                 scale_factor: cx.scale_factor,
             };
-            let (blob, metrics) = cx
-                .text
-                .prepare(icon_glyph.text.as_ref(), style, constraints);
+            let (blob, metrics) =
+                cx.services
+                    .text()
+                    .prepare(icon_glyph.text.as_ref(), style, constraints);
             self.prepared = Some(PreparedText { blob, metrics });
             self.prepared_scale_bits = Some(scale_bits);
             self.prepared_theme_revision = Some(theme_rev);

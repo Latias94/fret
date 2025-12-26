@@ -290,7 +290,7 @@ impl DemoTopBarStatus {
         self.last_scale_factor = Some(cx.scale_factor);
 
         if let Some(blob) = self.text_blob.take() {
-            cx.text.release(blob);
+            cx.services.text().release(blob);
         }
         self.text = Self::compute_text(cx.app);
 
@@ -300,7 +300,10 @@ impl DemoTopBarStatus {
             overflow: fret_core::TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let (blob, metrics) = cx.text.prepare(&self.text, self.style, constraints);
+        let (blob, metrics) = cx
+            .services
+            .text()
+            .prepare(&self.text, self.style, constraints);
         self.text_blob = Some(blob);
         self.text_metrics = Some(metrics);
         true
@@ -409,7 +412,7 @@ impl DebugHudPanel {
         self.last_scale_factor = Some(cx.scale_factor);
 
         if let Some(blob) = self.text_blob.take() {
-            cx.text.release(blob);
+            cx.services.text().release(blob);
         }
 
         let layout_ms = stats.layout_time.as_secs_f64() * 1000.0;
@@ -440,7 +443,10 @@ impl DebugHudPanel {
             overflow: fret_core::TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let (blob, metrics) = cx.text.prepare(&self.text, self.style, constraints);
+        let (blob, metrics) = cx
+            .services
+            .text()
+            .prepare(&self.text, self.style, constraints);
         self.text_blob = Some(blob);
         self.text_metrics = Some(metrics);
         true
@@ -545,7 +551,7 @@ impl DebugInspectorOverlay {
         self.last_scale_factor = Some(cx.scale_factor);
 
         if let Some(blob) = self.text_blob.take() {
-            cx.text.release(blob);
+            cx.services.text().release(blob);
         }
 
         let layer_summary = snapshot.layers.iter().filter(|l| l.visible).count();
@@ -568,7 +574,10 @@ impl DebugInspectorOverlay {
             overflow: fret_core::TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let (blob, metrics) = cx.text.prepare(&self.text, self.style, constraints);
+        let (blob, metrics) = cx
+            .services
+            .text()
+            .prepare(&self.text, self.style, constraints);
         self.text_blob = Some(blob);
         self.text_metrics = Some(metrics);
     }

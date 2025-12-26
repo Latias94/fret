@@ -840,14 +840,14 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         }
     }
 
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         if let Some(blob) = self.text_cache.blob.take() {
-            text.release(blob);
+            services.text().release(blob);
         }
         self.text_cache.prepared_scale_factor_bits = None;
         self.text_cache.metrics = None;
         if let Some(input) = self.text_input.as_mut() {
-            input.cleanup_resources(text);
+            input.cleanup_resources(services);
         }
     }
 
@@ -1080,7 +1080,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     overflow: props.overflow,
                     scale_factor: cx.scale_factor,
                 };
-                let metrics = cx.text.measure(&props.text, style, constraints);
+                let metrics = cx.services.text().measure(&props.text, style, constraints);
 
                 self.text_cache.metrics = Some(metrics);
                 self.text_cache.last_text = Some(props.text.clone());
@@ -1847,9 +1847,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
                 if needs_prepare {
                     if let Some(blob) = self.text_cache.blob.take() {
-                        cx.text.release(blob);
+                        cx.services.text().release(blob);
                     }
-                    let (blob, metrics) = cx.text.prepare(&props.text, style, constraints);
+                    let (blob, metrics) =
+                        cx.services.text().prepare(&props.text, style, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
@@ -2119,7 +2120,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 pub fn render_root<H: UiHost>(
     ui: &mut UiTree<H>,
     app: &mut H,
-    text: &mut dyn fret_core::TextService,
+    services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
     root_name: &str,
@@ -2216,7 +2217,7 @@ pub fn render_root<H: UiHost>(
         });
 
         for node in stale_nodes {
-            let _ = ui.remove_subtree(text, node);
+            let _ = ui.remove_subtree(services, node);
         }
 
         root_node
@@ -2365,6 +2366,22 @@ mod tests {
         }
 
         fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeTextService {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
     }
 
     #[test]

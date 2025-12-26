@@ -248,15 +248,15 @@ impl DialogOverlay {
         self.style.button_gap = theme.metrics.padding_sm;
     }
 
-    fn cleanup_text(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup_text(&mut self, services: &mut dyn fret_core::UiServices) {
         if let Some(p) = self.prepared_title.take() {
-            text.release(p.blob);
+            services.text().release(p.blob);
         }
         if let Some(p) = self.prepared_body.take() {
-            text.release(p.blob);
+            services.text().release(p.blob);
         }
         for p in self.prepared_actions.drain(..) {
-            text.release(p.blob);
+            services.text().release(p.blob);
         }
     }
 
@@ -298,7 +298,7 @@ impl DialogOverlay {
         let panel_w = Px(max_w.max(0.0));
 
         let inner_w = Px((panel_w.0 - self.style.padding.0 * 2.0).max(0.0));
-        let title_metrics = cx.text.measure(
+        let title_metrics = cx.services.text().measure(
             request.title.as_ref(),
             self.style.title_style,
             TextConstraints {
@@ -308,7 +308,7 @@ impl DialogOverlay {
                 scale_factor: cx.scale_factor,
             },
         );
-        let body_metrics = cx.text.measure(
+        let body_metrics = cx.services.text().measure(
             request.message.as_ref(),
             self.style.body_style,
             TextConstraints {
@@ -328,7 +328,7 @@ impl DialogOverlay {
         let mut button_sizes: Vec<Size> = Vec::new();
         let mut actions_w = 0.0f32;
         for action in &request.actions {
-            let metrics = cx.text.measure(
+            let metrics = cx.services.text().measure(
                 action.label.as_ref(),
                 self.style.button_style,
                 button_constraints,
@@ -383,8 +383,8 @@ impl Default for DialogOverlay {
 }
 
 impl<H: UiHost> Widget<H> for DialogOverlay {
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
-        self.cleanup_text(text);
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
+        self.cleanup_text(services);
         self.last_serial = None;
         self.request = None;
         self.panel_bounds = Rect::default();
@@ -533,7 +533,7 @@ impl<H: UiHost> Widget<H> for DialogOverlay {
         };
 
         if self.last_serial != Some(serial) {
-            self.cleanup_text(cx.text);
+            self.cleanup_text(cx.services);
             self.last_serial = Some(serial);
             self.request = Some(request.clone());
         }
@@ -579,7 +579,7 @@ impl<H: UiHost> Widget<H> for DialogOverlay {
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let title_metrics = cx.text.measure(
+        let title_metrics = cx.services.text().measure(
             request.title.as_ref(),
             self.style.title_style,
             title_constraints,
@@ -594,9 +594,9 @@ impl<H: UiHost> Widget<H> for DialogOverlay {
             }
             _ => {
                 if let Some(p) = self.prepared_title.take() {
-                    cx.text.release(p.blob);
+                    cx.services.text().release(p.blob);
                 }
-                let (blob, metrics) = cx.text.prepare(
+                let (blob, metrics) = cx.services.text().prepare(
                     request.title.as_ref(),
                     self.style.title_style,
                     title_constraints,
@@ -628,7 +628,7 @@ impl<H: UiHost> Widget<H> for DialogOverlay {
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let body_metrics = cx.text.measure(
+        let body_metrics = cx.services.text().measure(
             request.message.as_ref(),
             self.style.body_style,
             body_constraints,
@@ -643,9 +643,9 @@ impl<H: UiHost> Widget<H> for DialogOverlay {
             }
             _ => {
                 if let Some(p) = self.prepared_body.take() {
-                    cx.text.release(p.blob);
+                    cx.services.text().release(p.blob);
                 }
-                let (blob, metrics) = cx.text.prepare(
+                let (blob, metrics) = cx.services.text().prepare(
                     request.message.as_ref(),
                     self.style.body_style,
                     body_constraints,
@@ -676,11 +676,11 @@ impl<H: UiHost> Widget<H> for DialogOverlay {
         };
         if self.prepared_actions.len() != request.actions.len() {
             for p in self.prepared_actions.drain(..) {
-                cx.text.release(p.blob);
+                cx.services.text().release(p.blob);
             }
         }
         for (i, action) in request.actions.iter().enumerate() {
-            let metrics = cx.text.measure(
+            let metrics = cx.services.text().measure(
                 action.label.as_ref(),
                 self.style.button_style,
                 button_constraints,
@@ -690,9 +690,9 @@ impl<H: UiHost> Widget<H> for DialogOverlay {
             });
             if needs_prepare {
                 if let Some(p) = self.prepared_actions.get_mut(i) {
-                    cx.text.release(p.blob);
+                    cx.services.text().release(p.blob);
                 }
-                let (blob, m) = cx.text.prepare(
+                let (blob, m) = cx.services.text().prepare(
                     action.label.as_ref(),
                     self.style.button_style,
                     button_constraints,

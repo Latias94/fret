@@ -242,9 +242,9 @@ impl Select {
 }
 
 impl<H: UiHost> Widget<H> for Select {
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         if let Some(b) = self.label_blob.take() {
-            text.release(b);
+            services.text().release(b);
         }
         self.label_metrics = None;
         self.label_scale_factor_bits = None;
@@ -337,7 +337,7 @@ impl<H: UiHost> Widget<H> for Select {
                 // itself (e.g. selection happens inside the popover overlay). Ensure we refresh
                 // our cached text in the next paint.
                 if let Some(blob) = self.label_blob.take() {
-                    cx.text.release(blob);
+                    cx.services.text().release(blob);
                 }
                 self.label_metrics = None;
                 self.label_scale_factor_bits = None;
@@ -363,7 +363,10 @@ impl<H: UiHost> Widget<H> for Select {
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let metrics = cx.text.measure(label.as_ref(), style, constraints);
+        let metrics = cx
+            .services
+            .text()
+            .measure(label.as_ref(), style, constraints);
 
         let content_h = (metrics.size.height.0 + pad_y.0 * 2.0).max(0.0);
         let h = Px(content_h.max(self.resolved.min_height.0.max(0.0)));
@@ -432,7 +435,7 @@ impl<H: UiHost> Widget<H> for Select {
 
         if needs_prepare {
             if let Some(b) = self.label_blob.take() {
-                cx.text.release(b);
+                cx.services.text().release(b);
             }
 
             let style = TextStyle {
@@ -446,7 +449,10 @@ impl<H: UiHost> Widget<H> for Select {
                 overflow: TextOverflow::Clip,
                 scale_factor: cx.scale_factor,
             };
-            let (blob, metrics) = cx.text.prepare(label.as_ref(), style, constraints);
+            let (blob, metrics) = cx
+                .services
+                .text()
+                .prepare(label.as_ref(), style, constraints);
             self.label_blob = Some(blob);
             self.label_metrics = Some(metrics);
             self.label_scale_factor_bits = Some(scale_bits);

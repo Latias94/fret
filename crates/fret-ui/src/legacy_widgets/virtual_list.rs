@@ -1011,16 +1011,16 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         self.offset_y = Px(max * t);
     }
 
-    fn release_prepared_row(text: &mut dyn fret_core::TextService, row: PreparedRow<D::Key>) {
+    fn release_prepared_row(services: &mut dyn fret_core::UiServices, row: PreparedRow<D::Key>) {
         if let Some(blob) = row.leading_blob {
-            text.release(blob);
+            services.text().release(blob);
         }
-        text.release(row.primary_blob);
+        services.text().release(row.primary_blob);
         if let Some(blob) = row.secondary_blob {
-            text.release(blob);
+            services.text().release(blob);
         }
         if let Some(blob) = row.trailing_blob {
-            text.release(blob);
+            services.text().release(blob);
         }
     }
 
@@ -1038,7 +1038,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
 
     fn prepare_row(
         &mut self,
-        text: &mut dyn fret_core::TextService,
+        services: &mut dyn fret_core::UiServices,
         scale_factor: f32,
         width: Px,
         index: usize,
@@ -1074,7 +1074,9 @@ impl<D: VirtualListDataSource> VirtualList<D> {
                     scale_factor,
                 };
                 let (primary_blob, primary_metrics) =
-                    text.prepare("", self.style.text_style, constraints);
+                    services
+                        .text()
+                        .prepare("", self.style.text_style, constraints);
                 let height = match self.row_height {
                     VirtualListRowHeight::Fixed(h) => h,
                     VirtualListRowHeight::Measured { min } => {
@@ -1092,8 +1094,11 @@ impl<D: VirtualListDataSource> VirtualList<D> {
                     overflow: TextOverflow::Clip,
                     scale_factor,
                 };
-                let (primary_blob, primary_metrics) =
-                    text.prepare(row_text.as_ref(), self.style.header_text_style, constraints);
+                let (primary_blob, primary_metrics) = services.text().prepare(
+                    row_text.as_ref(),
+                    self.style.header_text_style,
+                    constraints,
+                );
                 drop(row_text);
 
                 let height = match self.row_height {
@@ -1116,8 +1121,11 @@ impl<D: VirtualListDataSource> VirtualList<D> {
                         overflow: TextOverflow::Clip,
                         scale_factor,
                     };
-                    let (blob, metrics) =
-                        text.prepare(s.as_ref(), self.style.trailing_text_style, constraints);
+                    let (blob, metrics) = services.text().prepare(
+                        s.as_ref(),
+                        self.style.trailing_text_style,
+                        constraints,
+                    );
                     trailing_blob = Some(blob);
                     trailing_metrics = Some(metrics);
                 }
@@ -1130,7 +1138,9 @@ impl<D: VirtualListDataSource> VirtualList<D> {
                         scale_factor,
                     };
                     let (blob, metrics) =
-                        text.prepare(s.as_ref(), self.style.text_style, constraints);
+                        services
+                            .text()
+                            .prepare(s.as_ref(), self.style.text_style, constraints);
                     leading_blob = Some(blob);
                     leading_metrics = Some(metrics);
                 }
@@ -1151,7 +1161,9 @@ impl<D: VirtualListDataSource> VirtualList<D> {
                     scale_factor,
                 };
                 let (primary_blob, primary_metrics) =
-                    text.prepare(row_text.as_ref(), self.style.text_style, constraints);
+                    services
+                        .text()
+                        .prepare(row_text.as_ref(), self.style.text_style, constraints);
                 drop(row_text);
 
                 if let Some(s) = secondary_text.as_ref() {
@@ -1161,8 +1173,11 @@ impl<D: VirtualListDataSource> VirtualList<D> {
                         overflow: TextOverflow::Clip,
                         scale_factor,
                     };
-                    let (blob, metrics) =
-                        text.prepare(s.as_ref(), self.style.secondary_text_style, constraints);
+                    let (blob, metrics) = services.text().prepare(
+                        s.as_ref(),
+                        self.style.secondary_text_style,
+                        constraints,
+                    );
                     secondary_blob = Some(blob);
                     secondary_metrics = Some(metrics);
                 }
@@ -1254,7 +1269,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
 
     fn rebuild_prepared_rows(
         &mut self,
-        text: &mut dyn fret_core::TextService,
+        services: &mut dyn fret_core::UiServices,
         scale_factor: f32,
         width: Px,
     ) {
@@ -1262,7 +1277,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         let anchor_top = anchor.map(|(index, _)| self.row_top_offset(index));
 
         for row in self.prepared.drain(..) {
-            Self::release_prepared_row(text, row);
+            Self::release_prepared_row(services, row);
         }
 
         let visible = self.compute_visible_range();
@@ -1274,7 +1289,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         }
 
         for i in visible.start..visible.end {
-            self.prepare_row(text, scale_factor, width, i);
+            self.prepare_row(services, scale_factor, width, i);
         }
         self.prepared.sort_by_key(|r| r.index);
 
@@ -1286,7 +1301,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
 
     fn ensure_prepared(
         &mut self,
-        text: &mut dyn fret_core::TextService,
+        services: &mut dyn fret_core::UiServices,
         scale_factor: f32,
         width: Px,
     ) {
@@ -1295,7 +1310,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
 
         if self.prepared_dirty {
             self.prepared_dirty = false;
-            self.rebuild_prepared_rows(text, scale_factor, width);
+            self.rebuild_prepared_rows(services, scale_factor, width);
             return;
         }
 
@@ -1305,7 +1320,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         }
 
         if width != self.last_prepared_width || visible.start >= visible.end {
-            self.rebuild_prepared_rows(text, scale_factor, width);
+            self.rebuild_prepared_rows(services, scale_factor, width);
             return;
         }
 
@@ -1313,7 +1328,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
         let overlap_start = old.start.max(visible.start);
         let overlap_end = old.end.min(visible.end);
         if overlap_start >= overlap_end {
-            self.rebuild_prepared_rows(text, scale_factor, width);
+            self.rebuild_prepared_rows(services, scale_factor, width);
             return;
         }
 
@@ -1322,7 +1337,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             if row.index >= visible.start && row.index < visible.end {
                 kept.push(row);
             } else {
-                Self::release_prepared_row(text, row);
+                Self::release_prepared_row(services, row);
             }
         }
         self.prepared = kept;
@@ -1331,7 +1346,7 @@ impl<D: VirtualListDataSource> VirtualList<D> {
             if self.prepared.iter().any(|r| r.index == i) {
                 continue;
             }
-            self.prepare_row(text, scale_factor, width, i);
+            self.prepare_row(services, scale_factor, width, i);
         }
         self.prepared.sort_by_key(|r| r.index);
 
@@ -1735,7 +1750,7 @@ impl<H: UiHost, D: VirtualListDataSource> Widget<H> for VirtualList<D> {
         });
 
         let content = self.content_bounds();
-        self.ensure_prepared(cx.text, cx.scale_factor, content.size.width);
+        self.ensure_prepared(cx.services, cx.scale_factor, content.size.width);
         cx.scene.push(SceneOp::PushClipRect { rect: content });
 
         for row in &self.prepared {
@@ -1993,6 +2008,22 @@ mod tests {
         fn release(&mut self, _blob: TextBlobId) {}
     }
 
+    impl fret_core::PathService for FakeTextService {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
     #[derive(Debug, Clone)]
     struct TestDataSource {
         rows: Vec<String>,
@@ -2054,7 +2085,7 @@ mod tests {
             bounds,
             available: bounds.size,
             scale_factor: 1.0,
-            text: &mut text,
+            services: &mut text,
             observe_model: &mut observe_model,
             layout_child: &mut layout_child,
         };
@@ -2071,7 +2102,7 @@ mod tests {
             children: &[],
             bounds,
             scale_factor: 1.0,
-            text: &mut text,
+            services: &mut text,
             observe_model: &mut observe_model,
             scene: &mut scene,
             paint_child: &mut paint_child,
@@ -2133,7 +2164,7 @@ mod tests {
             bounds,
             available: bounds.size,
             scale_factor: 1.0,
-            text: &mut text,
+            services: &mut text,
             observe_model: &mut observe_model,
             layout_child: &mut layout_child,
         };
@@ -2150,7 +2181,7 @@ mod tests {
             children: &[],
             bounds,
             scale_factor: 1.0,
-            text: &mut text,
+            services: &mut text,
             observe_model: &mut observe_model,
             scene: &mut scene,
             paint_child: &mut paint_child,
@@ -2178,7 +2209,7 @@ mod tests {
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
         let mut cx = EventCx {
             app: &mut app,
-            text: &mut text,
+            services: &mut text,
             node: NodeId::default(),
             window: Some(AppWindowId::default()),
             input_ctx: InputContext::default(),
@@ -2225,7 +2256,7 @@ mod tests {
 
         let mut cx = EventCx {
             app: &mut app,
-            text: &mut text,
+            services: &mut text,
             node: NodeId::default(),
             window: Some(AppWindowId::default()),
             input_ctx: InputContext::default(),
@@ -2278,7 +2309,7 @@ mod tests {
             bounds,
             available: bounds.size,
             scale_factor: 1.0,
-            text: &mut text,
+            services: &mut text,
             observe_model: &mut observe_model,
             layout_child: &mut layout_child,
         };
@@ -2295,7 +2326,7 @@ mod tests {
             children: &[],
             bounds,
             scale_factor: 1.0,
-            text: &mut text,
+            services: &mut text,
             observe_model: &mut observe_model,
             scene: &mut scene,
             paint_child: &mut paint_child,
@@ -2347,7 +2378,7 @@ mod tests {
             bounds,
             available: bounds.size,
             scale_factor: 1.0,
-            text: &mut text,
+            services: &mut text,
             observe_model: &mut observe_model,
             layout_child: &mut layout_child,
         };

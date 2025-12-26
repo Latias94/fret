@@ -196,13 +196,13 @@ impl AppMenuBar {
 }
 
 impl<H: UiHost> Widget<H> for AppMenuBar {
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         for blob in self.pending_release.drain(..) {
-            text.release(blob);
+            services.text().release(blob);
         }
         for item in self.prepared.drain(..) {
             if let Some(blob) = item.blob {
-                text.release(blob);
+                services.text().release(blob);
             }
         }
         self.prepared_scale_factor_bits = None;
@@ -277,7 +277,8 @@ impl<H: UiHost> Widget<H> for AppMenuBar {
         let mut max_metrics_h = Px(0.0);
         for menu in &self.menu_bar.menus {
             let metrics = cx
-                .text
+                .services
+                .text()
                 .measure(menu.title.as_ref(), self.style, constraints);
             max_metrics_h = Px(max_metrics_h.0.max(metrics.size.height.0));
         }
@@ -290,7 +291,10 @@ impl<H: UiHost> Widget<H> for AppMenuBar {
 
         for (index, menu) in self.menu_bar.menus.iter().enumerate() {
             let title: std::sync::Arc<str> = menu.title.clone();
-            let metrics = cx.text.measure(title.as_ref(), self.style, constraints);
+            let metrics = cx
+                .services
+                .text()
+                .measure(title.as_ref(), self.style, constraints);
             let w = Px(metrics.size.width.0 + self.padding_x.0 * 2.0);
             let bounds = Rect::new(Point::new(Px(x), Px(y)), Size::new(w, row_h));
             x += w.0 + self.gap.0.max(0.0);
@@ -321,7 +325,7 @@ impl<H: UiHost> Widget<H> for AppMenuBar {
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         for blob in self.pending_release.drain(..) {
-            cx.text.release(blob);
+            cx.services.text().release(blob);
         }
 
         let theme = cx.theme().snapshot();
@@ -345,7 +349,7 @@ impl<H: UiHost> Widget<H> for AppMenuBar {
         if self.prepared_scale_factor_bits != Some(scale_bits) {
             for item in &mut self.prepared {
                 if let Some(blob) = item.blob.take() {
-                    cx.text.release(blob);
+                    cx.services.text().release(blob);
                 }
             }
             self.prepared_scale_factor_bits = Some(scale_bits);
@@ -363,9 +367,10 @@ impl<H: UiHost> Widget<H> for AppMenuBar {
                 Some(b) => b,
                 None => {
                     // Paint-time preparation ensures compatibility with subtree replay caching.
-                    let (b, m) = cx
-                        .text
-                        .prepare(item.title.as_ref(), self.style, constraints);
+                    let (b, m) =
+                        cx.services
+                            .text()
+                            .prepare(item.title.as_ref(), self.style, constraints);
                     item.blob = Some(b);
                     item.metrics = m;
                     b

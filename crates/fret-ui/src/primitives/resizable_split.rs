@@ -399,9 +399,9 @@ mod tests {
     use fret_runtime::Effect;
 
     #[derive(Default)]
-    struct FakeTextService;
+    struct FakeUiServices;
 
-    impl TextService for FakeTextService {
+    impl TextService for FakeUiServices {
         fn prepare(
             &mut self,
             _text: &str,
@@ -418,6 +418,22 @@ mod tests {
         }
 
         fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
     }
 
     struct Leaf;
@@ -446,15 +462,15 @@ mod tests {
         ui.add_child(root, b);
         ui.set_root(root);
 
-        let mut text = FakeTextService::default();
+        let mut services = FakeUiServices::default();
         let size = Size::new(Px(400.0), Px(120.0));
-        let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+        let _ = ui.layout(&mut app, &mut services, root, size, 1.0);
         let _ = app.take_effects();
 
         // With a fraction of 0.5 and gap=6, handle center should be near x=200.
         ui.dispatch_event(
             &mut app,
-            &mut text,
+            &mut services,
             &Event::Pointer(fret_core::PointerEvent::Move {
                 position: Point::new(Px(200.0), Px(10.0)),
                 buttons: fret_core::MouseButtons::default(),
@@ -491,14 +507,14 @@ mod tests {
         ui.add_child(root, b);
         ui.set_root(root);
 
-        let mut text = FakeTextService::default();
+        let mut services = FakeUiServices::default();
         let size = Size::new(Px(400.0), Px(120.0));
-        let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+        let _ = ui.layout(&mut app, &mut services, root, size, 1.0);
 
         // Start drag on the handle (near x=200 for a 0.5 split).
         ui.dispatch_event(
             &mut app,
-            &mut text,
+            &mut services,
             &Event::Pointer(fret_core::PointerEvent::Down {
                 position: Point::new(Px(200.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
@@ -509,7 +525,7 @@ mod tests {
         // Drag right.
         ui.dispatch_event(
             &mut app,
-            &mut text,
+            &mut services,
             &Event::Pointer(fret_core::PointerEvent::Move {
                 position: Point::new(Px(280.0), Px(10.0)),
                 buttons: fret_core::MouseButtons::default(),

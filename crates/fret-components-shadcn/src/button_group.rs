@@ -323,7 +323,7 @@ impl ButtonGroup {
 
         for p in self.prepared.drain(..) {
             if let Some(p) = p {
-                cx.text.release(p.blob);
+                cx.services.text().release(p.blob);
             }
         }
         self.prepared.clear();
@@ -343,7 +343,10 @@ impl ButtonGroup {
                 line_height: Some(self.resolved.line_height),
                 letter_spacing_em: None,
             };
-            let (blob, metrics) = cx.text.prepare(&item.label, text_style, constraints);
+            let (blob, metrics) = cx
+                .services
+                .text()
+                .prepare(&item.label, text_style, constraints);
             self.prepared.push(Some(PreparedText { blob, metrics }));
         }
 
@@ -359,10 +362,10 @@ impl Default for ButtonGroup {
 }
 
 impl<H: UiHost> Widget<H> for ButtonGroup {
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         for p in self.prepared.drain(..) {
             if let Some(p) = p {
-                text.release(p.blob);
+                services.text().release(p.blob);
             }
         }
         self.prepared_scale_factor_bits = None;

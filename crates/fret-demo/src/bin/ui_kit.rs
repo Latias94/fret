@@ -16,7 +16,11 @@ use fret_components_shadcn::{
     Field as ShadcnField, FieldDescription as ShadcnFieldDescription,
     FieldLabel as ShadcnFieldLabel, FieldOrientation as ShadcnFieldOrientation,
     HoverCard as ShadcnHoverCard, HoverCardContent as ShadcnHoverCardContent,
-    HoverCardTrigger as ShadcnHoverCardTrigger, InputGroup as ShadcnInputGroup,
+    HoverCardTrigger as ShadcnHoverCardTrigger, InputGroup as ShadcnInputGroup, Item as ShadcnItem,
+    ItemActions as ShadcnItemActions, ItemContent as ShadcnItemContent,
+    ItemDescription as ShadcnItemDescription, ItemGroup as ShadcnItemGroup,
+    ItemMedia as ShadcnItemMedia, ItemMediaVariant as ShadcnItemMediaVariant,
+    ItemSeparator as ShadcnItemSeparator, ItemTitle as ShadcnItemTitle,
     RadioGroup as ShadcnRadioGroup, RadioGroupItem as ShadcnRadioGroupItem,
     Skeleton as ShadcnSkeleton, Spinner as ShadcnSpinner, ToggleGroup as ShadcnToggleGroup,
     ToggleGroupItem as ShadcnToggleGroupItem, ToggleSize as ShadcnToggleSize,
@@ -51,7 +55,7 @@ use fret_components_ui::{
     tooltip::TooltipArea,
 };
 use fret_core::{
-    AppWindowId, Color, NodeId, PlatformCapabilities, Point, Px, Rect, Scene, Size, TextService,
+    AppWindowId, Color, NodeId, PlatformCapabilities, Point, Px, Rect, Scene, Size, UiServices,
 };
 use fret_render::{ImageColorSpace, ImageDescriptor, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
@@ -968,7 +972,7 @@ impl WinitDriver for UiKitDriver {
     fn handle_event(
         &mut self,
         app: &mut App,
-        text: &mut dyn TextService,
+        services: &mut dyn UiServices,
         window: AppWindowId,
         state: &mut Self::WindowState,
         event: &fret_core::Event,
@@ -978,25 +982,25 @@ impl WinitDriver for UiKitDriver {
             return;
         }
 
-        state.ui.dispatch_event(app, text, event);
+        state.ui.dispatch_event(app, services, event);
     }
 
     fn handle_command(
         &mut self,
         app: &mut App,
-        text: &mut dyn TextService,
+        services: &mut dyn UiServices,
         window: AppWindowId,
         state: &mut Self::WindowState,
         command: fret_app::CommandId,
     ) {
         if state
             .overlays
-            .handle_command(app, &mut state.ui, text, window, &command)
+            .handle_command(app, &mut state.ui, services, window, &command)
         {
             return;
         }
 
-        if state.ui.dispatch_command(app, text, &command) {
+        if state.ui.dispatch_command(app, services, &command) {
             return;
         }
 
@@ -1197,7 +1201,7 @@ impl WinitDriver for UiKitDriver {
         state: &mut Self::WindowState,
         bounds: Rect,
         scale_factor: f32,
-        text: &mut dyn fret_core::TextService,
+        services: &mut dyn fret_core::UiServices,
         scene: &mut Scene,
     ) {
         state.ui.ingest_paint_cache_source(scene);
@@ -1219,7 +1223,7 @@ impl WinitDriver for UiKitDriver {
         let root = fret_ui_app::declarative::render_root(
             &mut state.ui,
             app,
-            text,
+            services,
             window,
             desired_bounds,
             "ui-kit-declarative-list",
@@ -1335,6 +1339,69 @@ impl WinitDriver for UiKitDriver {
                                     .orientation(ShadcnFieldOrientation::Vertical)
                                     .into_element(cx)
                             },
+                            cx.text("shadcn/ui v4 Item (prototype)"),
+                            cx.container(
+                                fret_ui_app::element::ContainerProps {
+                                    layout: fret_ui_app::element::LayoutStyle {
+                                        size: fret_ui_app::element::SizeStyle {
+                                            width: fret_ui_app::element::Length::Px(Px(360.0)),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    vec![ShadcnItemGroup::new(vec![
+                                        ShadcnItem::new(vec![
+                                            ShadcnItemMedia::new(vec![
+                                                fret_components_ui::declarative::icon::icon(
+                                                    cx,
+                                                    IconId::new("settings"),
+                                                ),
+                                            ])
+                                            .variant(ShadcnItemMediaVariant::Icon)
+                                            .into_element(cx),
+                                            ShadcnItemContent::new(vec![
+                                                ShadcnItemTitle::new("Settings").into_element(cx),
+                                                ShadcnItemDescription::new("Configure the app.")
+                                                    .into_element(cx),
+                                            ])
+                                            .into_element(cx),
+                                            ShadcnItemActions::new(vec![
+                                                fret_components_ui::declarative::icon::icon(
+                                                    cx,
+                                                    IconId::new("chevron_down"),
+                                                ),
+                                            ])
+                                            .into_element(cx),
+                                        ])
+                                        .on_click("ui_kit.item.settings")
+                                        .into_element(cx),
+                                        ShadcnItemSeparator::new().into_element(cx),
+                                        ShadcnItem::new(vec![
+                                            ShadcnItemMedia::new(vec![
+                                                fret_components_ui::declarative::icon::icon(
+                                                    cx,
+                                                    IconId::new("play"),
+                                                ),
+                                            ])
+                                            .variant(ShadcnItemMediaVariant::Icon)
+                                            .into_element(cx),
+                                            ShadcnItemContent::new(vec![
+                                                ShadcnItemTitle::new("Play").into_element(cx),
+                                                ShadcnItemDescription::new("Run the project.")
+                                                    .into_element(cx),
+                                            ])
+                                            .into_element(cx),
+                                        ])
+                                        .on_click("ui_kit.item.play")
+                                        .disabled(true)
+                                        .into_element(cx),
+                                    ])
+                                    .into_element(cx)]
+                                },
+                            ),
                             cx.text("Truncate (ellipsis)"),
                             cx.container(
                                 fret_ui_app::element::ContainerProps {
@@ -1715,19 +1782,21 @@ impl WinitDriver for UiKitDriver {
         render_command_palette_list(
             &mut state.ui,
             app,
-            text,
+            services,
             window,
             &state.command_palette,
             ComponentSize::Medium,
         );
 
-        state.ui.layout_all(app, text, bounds, scale_factor);
+        state.ui.layout_all(app, services, bounds, scale_factor);
         if let Some(root) = state.declarative_root
             && let Some(b) = state.ui.debug_node_bounds(root)
         {
             state.declarative_bounds = b;
         }
-        state.ui.paint_all(app, text, bounds, scene, scale_factor);
+        state
+            .ui
+            .paint_all(app, services, bounds, scene, scale_factor);
     }
 
     fn window_create_spec(

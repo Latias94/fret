@@ -3,6 +3,7 @@ use fret_core::{
     geometry::{Corners, Edges, Rect},
     scene::{Color, Scene, SceneOp},
 };
+use slotmap::SlotMap;
 use std::collections::HashMap;
 
 use crate::images::{ImageDescriptor, ImageRegistry};
@@ -124,6 +125,66 @@ fn rect_to_pixels(rect: Rect, scale_factor: f32) -> (f32, f32, f32, f32) {
     )
 }
 
+fn metrics_from_path_commands(
+    commands: &[fret_core::PathCommand],
+    style: fret_core::PathStyle,
+) -> fret_core::PathMetrics {
+    let mut min_x: Option<f32> = None;
+    let mut min_y: Option<f32> = None;
+    let mut max_x: Option<f32> = None;
+    let mut max_y: Option<f32> = None;
+
+    let mut include_point = |p: fret_core::Point| {
+        let x = p.x.0;
+        let y = p.y.0;
+        min_x = Some(min_x.map_or(x, |v| v.min(x)));
+        min_y = Some(min_y.map_or(y, |v| v.min(y)));
+        max_x = Some(max_x.map_or(x, |v| v.max(x)));
+        max_y = Some(max_y.map_or(y, |v| v.max(y)));
+    };
+
+    for cmd in commands {
+        match *cmd {
+            fret_core::PathCommand::MoveTo(p) | fret_core::PathCommand::LineTo(p) => {
+                include_point(p);
+            }
+            fret_core::PathCommand::QuadTo { ctrl, to } => {
+                include_point(ctrl);
+                include_point(to);
+            }
+            fret_core::PathCommand::CubicTo { ctrl1, ctrl2, to } => {
+                include_point(ctrl1);
+                include_point(ctrl2);
+                include_point(to);
+            }
+            fret_core::PathCommand::Close => {}
+        }
+    }
+
+    let (Some(mut min_x), Some(mut min_y), Some(mut max_x), Some(mut max_y)) =
+        (min_x, min_y, max_x, max_y)
+    else {
+        return fret_core::PathMetrics::default();
+    };
+
+    if let fret_core::PathStyle::Stroke(stroke) = style {
+        let half = stroke.width.0.max(0.0) * 0.5;
+        min_x -= half;
+        min_y -= half;
+        max_x += half;
+        max_y += half;
+    }
+
+    let w = (max_x - min_x).max(0.0);
+    let h = (max_y - min_y).max(0.0);
+    fret_core::PathMetrics {
+        bounds: Rect::new(
+            fret_core::Point::new(fret_core::Px(min_x), fret_core::Px(min_y)),
+            fret_core::Size::new(fret_core::Px(w), fret_core::Px(h)),
+        ),
+    }
+}
+
 fn scissor_from_rect(rect: Rect, scale_factor: f32, viewport: (u32, u32)) -> Option<ScissorRect> {
     let (vw, vh) = viewport;
     if vw == 0 || vh == 0 {
@@ -234,6 +295,8 @@ pub struct Renderer {
 
     text_system: TextSystem,
 
+    paths: SlotMap<fret_core::PathId, PreparedPath>,
+
     render_targets: RenderTargetRegistry,
     images: ImageRegistry,
 
@@ -248,6 +311,11 @@ pub struct Renderer {
     scene_encoding_cache_key: Option<SceneEncodingCacheKey>,
     scene_encoding_cache: SceneEncoding,
     scene_encoding_scratch: SceneEncoding,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PreparedPath {
+    metrics: fret_core::PathMetrics,
 }
 
 pub struct RenderSceneParams<'a> {
@@ -421,6 +489,7 @@ impl Renderer {
             text_vertex_buffer_index: 0,
             text_vertex_capacity,
             text_system,
+            paths: SlotMap::with_key(),
             render_targets: RenderTargetRegistry::default(),
             images: ImageRegistry::default(),
             viewport_bind_groups: HashMap::new(),
@@ -1461,6 +1530,10 @@ impl Renderer {
                         }));
                     }
                 }
+                SceneOp::Path { .. } => {
+                    // MVP-PATH-0: core contract only. Renderer implementation is added in later MVPs.
+                    flush_quad_batch!();
+                }
                 SceneOp::ViewportSurface {
                     rect,
                     target,
@@ -1611,6 +1684,25 @@ impl fret_core::TextService for Renderer {
 
     fn release(&mut self, blob: fret_core::TextBlobId) {
         self.text_system.release(blob);
+    }
+}
+
+impl fret_core::PathService for Renderer {
+    fn prepare(
+        &mut self,
+        commands: &[fret_core::PathCommand],
+        style: fret_core::PathStyle,
+        _constraints: fret_core::PathConstraints,
+    ) -> (fret_core::PathId, fret_core::PathMetrics) {
+        let metrics = metrics_from_path_commands(commands, style);
+        let id = self.paths.insert(PreparedPath { metrics });
+        (id, metrics)
+    }
+
+    fn release(&mut self, path: fret_core::PathId) {
+        if let Some(p) = self.paths.remove(path) {
+            let _ = p.metrics;
+        }
     }
 }
 

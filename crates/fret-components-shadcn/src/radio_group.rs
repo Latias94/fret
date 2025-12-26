@@ -202,7 +202,7 @@ impl RadioGroup {
 
         for p in self.prepared.drain(..) {
             if let Some(p) = p {
-                cx.text.release(p.blob);
+                cx.services.text().release(p.blob);
             }
         }
         self.prepared.clear();
@@ -216,7 +216,8 @@ impl RadioGroup {
 
         for item in &self.items {
             let (blob, metrics) =
-                cx.text
+                cx.services
+                    .text()
                     .prepare(&item.label, self.resolved.text_style, constraints);
             self.prepared.push(Some(PreparedText { blob, metrics }));
         }
@@ -304,10 +305,10 @@ impl RadioGroup {
 }
 
 impl<H: UiHost> Widget<H> for RadioGroup {
-    fn cleanup_resources(&mut self, text: &mut dyn fret_core::TextService) {
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         for p in self.prepared.drain(..) {
             if let Some(p) = p {
-                text.release(p.blob);
+                services.text().release(p.blob);
             }
         }
         self.prepared_scale_factor_bits = None;

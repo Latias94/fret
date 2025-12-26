@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::TextService;
+use fret_core::UiServices;
 use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Px, Rect, Size};
 use fret_runtime::{CommandId, Model};
 use fret_ui::primitives::{Column, Stack};
@@ -275,7 +275,7 @@ pub fn install_command_palette<H: UiHost>(
 pub fn render_command_palette_list<H: UiHost>(
     ui: &mut UiTree<H>,
     app: &mut H,
-    text: &mut dyn TextService,
+    services: &mut dyn UiServices,
     window: AppWindowId,
     handles: &CommandPaletteHandles,
     size: ComponentSize,
@@ -287,7 +287,7 @@ pub fn render_command_palette_list<H: UiHost>(
     let root = fret_ui::declarative::render_root(
         ui,
         app,
-        text,
+        services,
         window,
         bounds,
         "command-palette-list",
