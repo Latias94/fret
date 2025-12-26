@@ -707,10 +707,13 @@ impl<D: WinitDriver> WinitRunner<D> {
         ExternalDragFiles { token, files }
     }
 
-    fn ui_services_mut_ptr(&mut self) -> *mut dyn UiServices {
-        match self.renderer.as_mut() {
-            Some(renderer) => renderer as &mut dyn UiServices as *mut dyn UiServices,
-            None => &mut self.no_services as &mut dyn UiServices as *mut dyn UiServices,
+    fn ui_services_mut<'a>(
+        renderer: &'a mut Option<Renderer>,
+        no_services: &'a mut NoUiServices,
+    ) -> &'a mut dyn UiServices {
+        match renderer.as_mut() {
+            Some(renderer) => renderer as &mut dyn UiServices,
+            None => no_services as &mut dyn UiServices,
         }
     }
 
@@ -1037,11 +1040,11 @@ impl<D: WinitDriver> WinitRunner<D> {
                 .and_then(|w| self.windows.contains_key(w).then_some(w));
 
             if let Some(window) = target {
-                let services_ptr = self.ui_services_mut_ptr();
+                let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                 if let Some(state) = self.windows.get_mut(window) {
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *services_ptr },
+                        services,
                         window,
                         &mut state.user,
                         &Event::Timer { token },
@@ -1128,11 +1131,14 @@ impl<D: WinitDriver> WinitRunner<D> {
                     }
                     Effect::Command { window, command } => match window {
                         Some(window) => {
-                            let services_ptr = self.ui_services_mut_ptr();
                             if let Some(state) = self.windows.get_mut(window) {
+                                let services = Self::ui_services_mut(
+                                    &mut self.renderer,
+                                    &mut self.no_services,
+                                );
                                 self.driver.handle_command(
                                     &mut self.app,
-                                    unsafe { &mut *services_ptr },
+                                    services,
                                     window,
                                     &mut state.user,
                                     command,
@@ -1140,12 +1146,10 @@ impl<D: WinitDriver> WinitRunner<D> {
                             }
                         }
                         None => {
-                            let services_ptr = self.ui_services_mut_ptr();
-                            self.driver.handle_global_command(
-                                &mut self.app,
-                                unsafe { &mut *services_ptr },
-                                command,
-                            );
+                            let services =
+                                Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
+                            self.driver
+                                .handle_global_command(&mut self.app, services, command);
                         }
                     },
                     Effect::ClipboardSetText { text } => {
@@ -1161,11 +1165,12 @@ impl<D: WinitDriver> WinitRunner<D> {
                         else {
                             continue;
                         };
-                        let services_ptr = self.ui_services_mut_ptr();
                         if let Some(state) = self.windows.get_mut(window) {
+                            let services =
+                                Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                             self.driver.handle_event(
                                 &mut self.app,
-                                unsafe { &mut *services_ptr },
+                                services,
                                 window,
                                 &mut state.user,
                                 &Event::ClipboardText(text),
@@ -1238,11 +1243,12 @@ impl<D: WinitDriver> WinitRunner<D> {
                             files.push(ExternalDropFileData { name, bytes });
                         }
 
-                        let services_ptr = self.ui_services_mut_ptr();
                         if let Some(state) = self.windows.get_mut(window) {
+                            let services =
+                                Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                             self.driver.handle_event(
                                 &mut self.app,
-                                unsafe { &mut *services_ptr },
+                                services,
                                 window,
                                 &mut state.user,
                                 &Event::ExternalDropData(ExternalDropDataEvent {
@@ -1566,14 +1572,13 @@ impl<D: WinitDriver> WinitRunner<D> {
         window: fret_core::AppWindowId,
         pe: fret_core::PointerEvent,
     ) {
-        let services_ptr = self.ui_services_mut_ptr();
-
         let Some(state) = self.windows.get_mut(window) else {
             return;
         };
+        let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
         self.driver.handle_event(
             &mut self.app,
-            unsafe { &mut *services_ptr },
+            services,
             window,
             &mut state.user,
             &Event::Pointer(pe),
@@ -1586,13 +1591,13 @@ impl<D: WinitDriver> WinitRunner<D> {
         kind: InternalDragKind,
         position: Point,
     ) {
-        let services_ptr = self.ui_services_mut_ptr();
         let Some(state) = self.windows.get_mut(window) else {
             return;
         };
+        let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
         self.driver.handle_event(
             &mut self.app,
-            unsafe { &mut *services_ptr },
+            services,
             window,
             &mut state.user,
             &Event::InternalDrag(InternalDragEvent { position, kind }),
@@ -2138,14 +2143,13 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
             return;
         };
 
-        let services_ptr = self.ui_services_mut_ptr();
-
         match event {
             WindowEvent::CloseRequested => {
                 if let Some(state) = self.windows.get_mut(app_window) {
+                    let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *services_ptr },
+                        services,
                         app_window,
                         &mut state.user,
                         &Event::WindowCloseRequested,
@@ -2172,9 +2176,10 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
             WindowEvent::Moved(position) => {
                 if let Some(state) = self.windows.get_mut(app_window) {
                     let logical = position.to_logical::<f32>(state.window.scale_factor());
+                    let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *services_ptr },
+                        services,
                         app_window,
                         &mut state.user,
                         &Event::WindowMoved {
@@ -2196,9 +2201,11 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
 
                     match event.state {
                         ElementState::Pressed => {
+                            let services =
+                                Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                             self.driver.handle_event(
                                 &mut self.app,
-                                unsafe { &mut *services_ptr },
+                                services,
                                 app_window,
                                 &mut state.user,
                                 &Event::KeyDown {
@@ -2210,9 +2217,13 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                             if let Some(text) = event.text
                                 && let Some(text) = sanitize_text_input(text.as_str())
                             {
+                                let services = Self::ui_services_mut(
+                                    &mut self.renderer,
+                                    &mut self.no_services,
+                                );
                                 self.driver.handle_event(
                                     &mut self.app,
-                                    unsafe { &mut *services_ptr },
+                                    services,
                                     app_window,
                                     &mut state.user,
                                     &Event::TextInput(text),
@@ -2220,9 +2231,11 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                             }
                         }
                         ElementState::Released => {
+                            let services =
+                                Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                             self.driver.handle_event(
                                 &mut self.app,
-                                unsafe { &mut *services_ptr },
+                                services,
                                 app_window,
                                 &mut state.user,
                                 &Event::KeyUp {
@@ -2245,9 +2258,10 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                             fret_core::ImeEvent::Preedit { text, cursor }
                         }
                     };
+                    let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *services_ptr },
+                        services,
                         app_window,
                         &mut state.user,
                         &Event::Ime(mapped),
@@ -2285,9 +2299,10 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 self.external_drop_payloads.insert(token, files);
 
                 if let Some(state) = self.windows.get_mut(app_window) {
+                    let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *services_ptr },
+                        services,
                         app_window,
                         &mut state.user,
                         &Event::ExternalDrag(ExternalDragEvent { position, kind }),
@@ -2325,9 +2340,10 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 self.external_drop_payloads.insert(token, files);
 
                 if let Some(state) = self.windows.get_mut(app_window) {
+                    let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *services_ptr },
+                        services,
                         app_window,
                         &mut state.user,
                         &Event::ExternalDrag(ExternalDragEvent { position, kind }),
@@ -2353,9 +2369,10 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 }
 
                 if let Some(state) = self.windows.get_mut(app_window) {
+                    let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *services_ptr },
+                        services,
                         app_window,
                         &mut state.user,
                         &Event::ExternalDrag(ExternalDragEvent {
@@ -2378,9 +2395,10 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                                 Size::new(Px(logical.width), Px(logical.height)),
                             );
                         });
+                    let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *services_ptr },
+                        services,
                         app_window,
                         &mut state.user,
                         &Event::WindowResized {
@@ -2388,9 +2406,10 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                             height: Px(logical.height),
                         },
                     );
+                    let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                     self.driver.handle_event(
                         &mut self.app,
-                        unsafe { &mut *services_ptr },
+                        services,
                         app_window,
                         &mut state.user,
                         &Event::WindowScaleFactorChanged(scale),
@@ -2436,9 +2455,11 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     let kind =
                         ExternalDragKind::OverFiles(Self::external_drag_files(token, &paths));
                     if let Some(state) = self.windows.get_mut(app_window) {
+                        let services =
+                            Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                         self.driver.handle_event(
                             &mut self.app,
-                            unsafe { &mut *services_ptr },
+                            services,
                             app_window,
                             &mut state.user,
                             &Event::ExternalDrag(ExternalDragEvent {

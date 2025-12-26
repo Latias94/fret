@@ -402,8 +402,8 @@ mod tests {
     use super::*;
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Event, Modifiers, Point, PointerEvent, Px, Rect, Size, TextBlobId,
-        PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, TextConstraints,
+        AppWindowId, Event, Modifiers, PathCommand, PathConstraints, PathId, PathMetrics,
+        PathService, PathStyle, Point, PointerEvent, Px, Rect, Size, TextBlobId, TextConstraints,
         TextMetrics, TextService, TextStyle,
     };
     use fret_ui::UiTree;

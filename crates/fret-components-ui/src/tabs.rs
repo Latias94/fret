@@ -512,8 +512,8 @@ mod tests {
     use super::*;
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Event, Modifiers, Point, PointerEvent, Px, Rect, Scene, SceneOp, Size,
-        PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, TextBlobId,
+        AppWindowId, Event, Modifiers, PathCommand, PathConstraints, PathId, PathMetrics,
+        PathService, PathStyle, Point, PointerEvent, Px, Rect, Scene, SceneOp, Size, TextBlobId,
         TextConstraints, TextMetrics, TextService, TextStyle,
     };
     use fret_ui::primitives::{Column, Scroll};
