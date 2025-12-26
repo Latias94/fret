@@ -270,6 +270,7 @@ impl<H: UiHost> Widget<H> for AccordionTrigger {
 pub struct AccordionContent {
     selection: SelectionModel,
     value: Arc<str>,
+    open_cached: bool,
 }
 
 impl AccordionContent {
@@ -285,6 +286,7 @@ impl AccordionContent {
         Self {
             selection,
             value: value.into(),
+            open_cached: false,
         }
     }
 
@@ -312,7 +314,7 @@ impl<H: UiHost> Widget<H> for AccordionContent {
     }
 
     fn hit_test_children(&self, _bounds: Rect, _position: Point) -> bool {
-        false
+        self.open_cached
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
@@ -321,7 +323,9 @@ impl<H: UiHost> Widget<H> for AccordionContent {
             SelectionModel::Multiple(m) => cx.observe_model(m, Invalidation::Layout),
         }
 
-        if !self.is_open(cx.app) {
+        let open = self.is_open(cx.app);
+        self.open_cached = open;
+        if !open {
             return Size::new(Px(0.0), Px(0.0));
         }
 
@@ -342,7 +346,9 @@ impl<H: UiHost> Widget<H> for AccordionContent {
             SelectionModel::Multiple(m) => cx.observe_model(m, Invalidation::Paint),
         }
 
-        if !self.is_open(cx.app) {
+        let open = self.is_open(cx.app);
+        self.open_cached = open;
+        if !open {
             return;
         }
         for &child in cx.children {

@@ -82,8 +82,8 @@ Status legend:
 | Accordion | `ui/accordion.tsx` | `fret_components_shadcn::Accordion*` | ✅ | First pass: selection model drives open/close; no animation or built-in chevron. |
 | Alert | `ui/alert.tsx` | `fret_components_shadcn::Alert` | ✅ | First-pass composition helper; verify token parity. |
 | Alert Dialog | `ui/alert-dialog.tsx` | `fret_components_shadcn::AlertDialogRequest` | ✅ | Policy wrapper over `DialogOverlay`: cancel closes without a command by default. |
-| Aspect Ratio | `ui/aspect-ratio.tsx` |  | ❌ | Depends on Tailwind layout primitives + image/media element. |
-| Avatar | `ui/avatar.tsx` |  | ❌ | Needs image + fallback initials/icon. |
+| Aspect Ratio | `ui/aspect-ratio.tsx` | `fret_components_shadcn::AspectRatio` | ✅ | Declarative helper over ADR 0057 aspect ratio semantics. |
+| Avatar | `ui/avatar.tsx` | `fret_components_shadcn::{Avatar, AvatarImage, AvatarFallback}` | ✅ | Declarative composition: clipped rounded root + image/fallback layers. |
 | Badge | `ui/badge.tsx` | `fret_components_shadcn::Badge` | ✅ | First-pass composition helper; verify variants. |
 | Breadcrumb | `ui/breadcrumb.tsx` |  | ❌ | Needs link-like text + separators. |
 | Button | `ui/button.tsx` | `fret_components_shadcn::Button` | ✅ | Wrapper exists; verify hover/active/disabled parity. |
@@ -105,7 +105,7 @@ Status legend:
 | Form | `ui/form.tsx` |  | ❌ | Likely a higher-level “form framework” decision in Fret. |
 | Hover Card | `ui/hover-card.tsx` |  | ❌ | Can likely map to tooltip/popover hybrid. |
 | Input | `ui/input.tsx` | `fret_components_shadcn::Input` | ✅ | Currently maps to `TextField`; use `InputGroup` for icon-slot patterns. |
-| Input Group | `ui/input-group.tsx` |  | ❌ | Depends on per-edge padding + icon slots (Tailwind primitives). |
+| Input Group | `ui/input-group.tsx` | `fret_components_shadcn::InputGroup` | ✅ | Leading/trailing icon slots + sizing tokens; first-pass parity. |
 | Input OTP | `ui/input-otp.tsx` |  | ❌ | Needs multi-cell input + paste semantics. |
 | Item | `ui/item.tsx` |  | ❌ | Upstream is a generic “item row” primitive; define Fret equivalent. |
 | Kbd | `ui/kbd.tsx` | `fret_components_shadcn::Kbd` | ✅ | First-pass composition helper. |

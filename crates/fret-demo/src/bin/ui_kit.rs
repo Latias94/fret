@@ -6,6 +6,8 @@ use fret_components_icons::IconId;
 use fret_components_shadcn::{
     Accordion as ShadcnAccordion, AccordionContent as ShadcnAccordionContent,
     AccordionItem as ShadcnAccordionItem, AccordionTrigger as ShadcnAccordionTrigger,
+    AspectRatio as ShadcnAspectRatio, Avatar as ShadcnAvatar,
+    AvatarFallback as ShadcnAvatarFallback, AvatarImage as ShadcnAvatarImage,
     Button as ShadcnButton, ButtonSize as ShadcnButtonSize, ButtonVariant as ShadcnButtonVariant,
     Collapsible as ShadcnCollapsible, CollapsibleContent as ShadcnCollapsibleContent,
     CollapsibleTrigger as ShadcnCollapsibleTrigger, InputGroup as ShadcnInputGroup,
@@ -1296,14 +1298,14 @@ impl WinitDriver for UiKitDriver {
 	                                },
 	                            ),
 	                            cx.text("Image"),
-	                            cx.row(
-	                                fret_ui_app::element::RowProps {
-	                                    gap: outer_gap,
-                                    align: fret_ui_app::element::CrossAlign::Center,
-                                    ..Default::default()
-                                },
-                                |cx| {
-                                    let mut out = Vec::new();
+		                            cx.row(
+		                                fret_ui_app::element::RowProps {
+		                                    gap: outer_gap,
+	                                    align: fret_ui_app::element::CrossAlign::Center,
+	                                    ..Default::default()
+	                                },
+		                                |cx| {
+		                                    let mut out = Vec::new();
 
                                     if let Some(img) = declarative_image {
                                         let mut p = fret_ui_app::element::ImageProps::new(img);
@@ -1319,13 +1321,110 @@ impl WinitDriver for UiKitDriver {
                                     out.push(cx.text(
                                         "Declarative Image (SceneOp::Image/ImageRegion) with explicit size.",
                                     ));
-                                    out
-                                },
-                            ),
-                            cx.text("Scroll"),
-                            cx.scroll(
-                                fret_ui_app::element::ScrollProps {
-                                    layout: fret_ui_app::element::LayoutStyle {
+		                                    out
+		                                },
+		                            ),
+		                            cx.text("shadcn/ui v4 Avatar (prototype)"),
+		                            cx.row(
+		                                fret_ui_app::element::RowProps {
+		                                    gap: outer_gap,
+		                                    align: fret_ui_app::element::CrossAlign::Center,
+		                                    ..Default::default()
+		                                },
+		                                |cx| {
+		                                    let mut out = Vec::new();
+
+		                                    let avatar = {
+		                                        let mut layers =
+		                                            vec![ShadcnAvatarFallback::new("FO").into_element(
+		                                                cx,
+		                                            )];
+		                                        if let Some(img) = declarative_image {
+		                                            layers.push(
+		                                                ShadcnAvatarImage::new(img).into_element(cx),
+		                                            );
+		                                        }
+		                                        ShadcnAvatar::new(layers).into_element(cx)
+		                                    };
+		                                    out.push(avatar);
+
+		                                    let avatar_lg = {
+		                                        let layers =
+		                                            vec![ShadcnAvatarFallback::new("LG").into_element(
+		                                                cx,
+		                                            )];
+		                                        ShadcnAvatar::new(layers)
+		                                            .refine_layout(
+		                                                fret_components_ui::LayoutRefinement::default()
+		                                                    .w_px(
+		                                                        fret_components_ui::MetricRef::space(
+		                                                            fret_components_ui::Space::N10,
+		                                                        ),
+		                                                    )
+		                                                    .h_px(
+		                                                        fret_components_ui::MetricRef::space(
+		                                                            fret_components_ui::Space::N10,
+		                                                        ),
+		                                                    ),
+		                                            )
+		                                            .into_element(cx)
+		                                    };
+		                                    out.push(avatar_lg);
+
+		                                    out.push(cx.text(
+		                                        "Declarative Avatar layers: fallback under image (if present).",
+		                                    ));
+		                                    out
+		                                },
+		                            ),
+		                            cx.text("shadcn/ui v4 Aspect Ratio (prototype)"),
+		                            cx.row(
+		                                fret_ui_app::element::RowProps {
+		                                    gap: outer_gap,
+		                                    align: fret_ui_app::element::CrossAlign::Center,
+		                                    ..Default::default()
+		                                },
+		                                |cx| {
+		                                    let mut out = Vec::new();
+
+		                                    if let Some(img) = declarative_image {
+		                                        let mut p = fret_ui_app::element::ImageProps::new(img);
+		                                        p.layout.position =
+		                                            fret_ui_app::element::PositionStyle::Absolute;
+		                                        p.layout.inset.top = Some(Px(0.0));
+		                                        p.layout.inset.right = Some(Px(0.0));
+		                                        p.layout.inset.bottom = Some(Px(0.0));
+		                                        p.layout.inset.left = Some(Px(0.0));
+		                                        p.layout.size.width =
+		                                            fret_ui_app::element::Length::Fill;
+		                                        p.layout.size.height =
+		                                            fret_ui_app::element::Length::Fill;
+
+		                                        let image = cx.image_props(p);
+		                                        out.push(
+		                                            ShadcnAspectRatio::new(16.0 / 9.0, image)
+		                                                .refine_layout(
+		                                                    fret_components_ui::LayoutRefinement::default()
+		                                                        .w_px(
+		                                                            fret_components_ui::MetricRef::Px(Px(220.0)),
+		                                                        ),
+		                                                )
+		                                                .into_element(cx),
+		                                        );
+		                                    } else {
+		                                        out.push(cx.text("Image not ready yet"));
+		                                    }
+
+		                                    out.push(cx.text(
+		                                        "AspectRatio sets width=Fill + height=Auto by default (ADR 0057).",
+		                                    ));
+		                                    out
+		                                },
+		                            ),
+		                            cx.text("Scroll"),
+		                            cx.scroll(
+		                                fret_ui_app::element::ScrollProps {
+		                                    layout: fret_ui_app::element::LayoutStyle {
                                         size: fret_ui_app::element::SizeStyle {
                                             height: fret_ui_app::element::Length::Px(Px(72.0)),
                                             ..Default::default()

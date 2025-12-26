@@ -191,11 +191,15 @@ impl<H: UiHost> Widget<H> for CollapsibleTrigger {
 
 pub struct CollapsibleContent {
     open: Model<bool>,
+    open_cached: bool,
 }
 
 impl CollapsibleContent {
     pub fn new(open: Model<bool>) -> Self {
-        Self { open }
+        Self {
+            open,
+            open_cached: false,
+        }
     }
 
     fn is_open<H: UiHost>(&self, app: &H) -> bool {
@@ -213,12 +217,14 @@ impl<H: UiHost> Widget<H> for CollapsibleContent {
     }
 
     fn hit_test_children(&self, _bounds: Rect, _position: Point) -> bool {
-        false
+        self.open_cached
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         cx.observe_model(self.open, Invalidation::Layout);
-        if !self.is_open(cx.app) {
+        let open = self.is_open(cx.app);
+        self.open_cached = open;
+        if !open {
             return Size::new(Px(0.0), Px(0.0));
         }
 
@@ -235,7 +241,9 @@ impl<H: UiHost> Widget<H> for CollapsibleContent {
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         cx.observe_model(self.open, Invalidation::Paint);
-        if !self.is_open(cx.app) {
+        let open = self.is_open(cx.app);
+        self.open_cached = open;
+        if !open {
             return;
         }
         for &child in cx.children {
