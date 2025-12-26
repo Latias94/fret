@@ -32,7 +32,13 @@
     "color.viewport.gizmo.y": "#2ECC71FF",
     "color.viewport.gizmo.handle.background": "#1E2229FF",
     "color.viewport.gizmo.handle.border": "#D7DEE9FF",
-    "color.viewport.rotate_gizmo": "#FFC44AFF"
+    "color.viewport.rotate_gizmo": "#FFC44AFF",
+
+    "sidebar.background": "#2B3038",
+    "sidebar.foreground": "#D7DEE9",
+    "sidebar.border": "#3A424D",
+    "sidebar.accent": "#363C46",
+    "sidebar.accent.foreground": "#D7DEE9"
   },
   "metrics": {
     "metric.radius.sm": 6.0,
@@ -121,6 +127,13 @@
     "component.calendar.cell_size": 40.0,
     "component.calendar.gap": 4.0,
 
-    "component.navigation_menu.gap": 6.0
+    "component.navigation_menu.gap": 6.0,
+
+    "component.sidebar.width": 256.0,
+    "component.sidebar.width_icon": 48.0,
+    "component.sidebar.group_label_px": 12.0,
+    "component.sidebar.group_label_line_height": 16.0,
+    "component.sidebar.menu_button_px": 13.0,
+    "component.sidebar.menu_button_line_height": 16.0
   }
 }

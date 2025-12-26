@@ -1,0 +1,544 @@
+use std::sync::Arc;
+
+use fret_components_icons::IconId;
+use fret_components_ui::declarative::icon as decl_icon;
+use fret_components_ui::declarative::style as decl_style;
+use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_core::{Color, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_runtime::CommandId;
+use fret_ui::element::{
+    AnyElement, CrossAlign, FlexProps, HoverCardAlign, HoverCardProps, MainAlign, Overflow,
+    PressableProps, RingStyle, ScrollProps, SpacerProps, TextProps,
+};
+use fret_ui::{ElementCx, Theme, UiHost};
+
+fn sidebar_width(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("component.sidebar.width")
+        .unwrap_or(Px(256.0))
+}
+
+fn sidebar_width_icon(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("component.sidebar.width_icon")
+        .unwrap_or(Px(48.0))
+}
+
+fn sidebar_bg(theme: &Theme) -> Color {
+    theme
+        .color_by_key("sidebar.background")
+        .or_else(|| theme.color_by_key("sidebar"))
+        .unwrap_or(theme.colors.panel_background)
+}
+
+fn sidebar_fg(theme: &Theme) -> Color {
+    theme
+        .color_by_key("sidebar.foreground")
+        .or_else(|| theme.color_by_key("sidebar-foreground"))
+        .unwrap_or(theme.colors.text_primary)
+}
+
+fn sidebar_border(theme: &Theme) -> Color {
+    theme
+        .color_by_key("sidebar.border")
+        .or_else(|| theme.color_by_key("sidebar-border"))
+        .or_else(|| theme.color_by_key("border"))
+        .unwrap_or(theme.colors.panel_border)
+}
+
+fn sidebar_accent(theme: &Theme) -> Color {
+    theme
+        .color_by_key("sidebar.accent")
+        .or_else(|| theme.color_by_key("sidebar-accent"))
+        .or_else(|| theme.color_by_key("accent"))
+        .unwrap_or(theme.colors.hover_background)
+}
+
+fn sidebar_accent_fg(theme: &Theme) -> Color {
+    theme
+        .color_by_key("sidebar.accent.foreground")
+        .or_else(|| theme.color_by_key("sidebar-accent-foreground"))
+        .or_else(|| theme.color_by_key("accent-foreground"))
+        .unwrap_or(theme.colors.text_primary)
+}
+
+fn sidebar_ring(theme: &Theme, radius: Px) -> RingStyle {
+    decl_style::focus_ring(theme, radius)
+}
+
+fn menu_button_style(theme: &Theme) -> TextStyle {
+    let size = theme
+        .metric_by_key("component.sidebar.menu_button_px")
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or(theme.metrics.font_size);
+    let line_height = theme
+        .metric_by_key("component.sidebar.menu_button_line_height")
+        .or_else(|| theme.metric_by_key("font.line_height"))
+        .unwrap_or(theme.metrics.font_line_height);
+    TextStyle {
+        font: FontId::default(),
+        size,
+        weight: FontWeight::MEDIUM,
+        line_height: Some(line_height),
+        ..Default::default()
+    }
+}
+
+/// shadcn/ui `Sidebar` (V1).
+///
+/// This is implemented as a declarative composition surface (not a retained widget), so it can
+/// fully participate in Tailwind-like layout/style refinements.
+#[derive(Debug, Clone)]
+pub struct Sidebar {
+    children: Vec<AnyElement>,
+    collapsed: bool,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+}
+
+impl Sidebar {
+    pub fn new(children: Vec<AnyElement>) -> Self {
+        Self {
+            children,
+            collapsed: false,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn collapsed(mut self, collapsed: bool) -> Self {
+        self.collapsed = collapsed;
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+
+        let w = if self.collapsed {
+            sidebar_width_icon(&theme)
+        } else {
+            sidebar_width(&theme)
+        };
+        let layout = LayoutRefinement::default()
+            .w_px(MetricRef::Px(w))
+            .h_full()
+            .merge(self.layout);
+
+        let chrome = ChromeRefinement::default()
+            .bg(ColorRef::Color(sidebar_bg(&theme)))
+            .border_1()
+            .border_color(ColorRef::Color(sidebar_border(&theme)))
+            .merge(self.chrome);
+
+        let mut props = decl_style::container_props(&theme, chrome, layout);
+        props.layout.overflow = Overflow::Clip;
+
+        let children = self.children;
+        cx.container(props, move |_cx| children)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SidebarHeader {
+    children: Vec<AnyElement>,
+}
+
+impl SidebarHeader {
+    pub fn new(children: Vec<AnyElement>) -> Self {
+        Self { children }
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let props = decl_style::container_props(
+            &theme,
+            ChromeRefinement::default().p(Space::N2),
+            LayoutRefinement::default(),
+        );
+        let children = self.children;
+        cx.container(props, move |_cx| children)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SidebarFooter {
+    children: Vec<AnyElement>,
+}
+
+impl SidebarFooter {
+    pub fn new(children: Vec<AnyElement>) -> Self {
+        Self { children }
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let props = decl_style::container_props(
+            &theme,
+            ChromeRefinement::default().p(Space::N2),
+            LayoutRefinement::default(),
+        );
+        let children = self.children;
+        cx.container(props, move |_cx| children)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SidebarContent {
+    children: Vec<AnyElement>,
+    collapsed: bool,
+}
+
+impl SidebarContent {
+    pub fn new(children: Vec<AnyElement>) -> Self {
+        Self {
+            children,
+            collapsed: false,
+        }
+    }
+
+    pub fn collapsed(mut self, collapsed: bool) -> Self {
+        self.collapsed = collapsed;
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+
+        let mut props = ScrollProps::default();
+        props.layout.size.height = fret_ui::element::Length::Fill;
+        if self.collapsed {
+            props.layout.overflow = Overflow::Clip;
+        }
+
+        let children = self.children;
+        cx.scroll(props, move |cx| {
+            let mut col = FlexProps::default();
+            col.direction = fret_core::Axis::Vertical;
+            col.gap = decl_style::space(&theme, Space::N2);
+            col.layout.size.width = fret_ui::element::Length::Fill;
+            col.layout.size.height = fret_ui::element::Length::Auto;
+            col.padding = Edges::all(decl_style::space(&theme, Space::N2));
+
+            vec![cx.flex(col, move |_cx| children)]
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SidebarGroup {
+    children: Vec<AnyElement>,
+}
+
+impl SidebarGroup {
+    pub fn new(children: Vec<AnyElement>) -> Self {
+        Self { children }
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let chrome = ChromeRefinement::default().p(Space::N2);
+        let props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
+        let children = self.children;
+        cx.container(props, move |_cx| children)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SidebarGroupLabel {
+    text: Arc<str>,
+    collapsed: bool,
+}
+
+impl SidebarGroupLabel {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self {
+            text: text.into(),
+            collapsed: false,
+        }
+    }
+
+    pub fn collapsed(mut self, collapsed: bool) -> Self {
+        self.collapsed = collapsed;
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        if self.collapsed {
+            return cx.spacer(fret_ui::element::SpacerProps {
+                min: Px(0.0),
+                ..Default::default()
+            });
+        }
+
+        let fg = sidebar_fg(&theme);
+        let mut fg = fg;
+        fg.a = (fg.a * 0.7).clamp(0.0, 1.0);
+
+        let size = theme
+            .metric_by_key("component.sidebar.group_label_px")
+            .unwrap_or(Px(12.0));
+        let line_height = theme
+            .metric_by_key("component.sidebar.group_label_line_height")
+            .unwrap_or(Px(16.0));
+
+        cx.text_props(TextProps {
+            layout: Default::default(),
+            text: self.text,
+            style: Some(TextStyle {
+                font: FontId::default(),
+                size,
+                weight: FontWeight::MEDIUM,
+                line_height: Some(line_height),
+                ..Default::default()
+            }),
+            color: Some(fg),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SidebarMenu {
+    children: Vec<AnyElement>,
+}
+
+impl SidebarMenu {
+    pub fn new(children: Vec<AnyElement>) -> Self {
+        Self { children }
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        let mut props = FlexProps::default();
+        props.direction = fret_core::Axis::Vertical;
+        props.gap = Px(4.0);
+        props.layout.size.width = fret_ui::element::Length::Fill;
+        props.layout.size.height = fret_ui::element::Length::Auto;
+        let children = self.children;
+        cx.flex(props, move |_cx| children)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SidebarMenuItem {
+    child: AnyElement,
+}
+
+impl SidebarMenuItem {
+    pub fn new(child: AnyElement) -> Self {
+        Self { child }
+    }
+
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementCx<'_, H>) -> AnyElement {
+        self.child
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SidebarMenuButton {
+    label: Arc<str>,
+    icon: Option<IconId>,
+    active: bool,
+    disabled: bool,
+    collapsed: bool,
+    on_click: Option<CommandId>,
+}
+
+impl SidebarMenuButton {
+    pub fn new(label: impl Into<Arc<str>>) -> Self {
+        Self {
+            label: label.into(),
+            icon: None,
+            active: false,
+            disabled: false,
+            collapsed: false,
+            on_click: None,
+        }
+    }
+
+    pub fn icon(mut self, icon: IconId) -> Self {
+        self.icon = Some(icon);
+        self
+    }
+
+    pub fn active(mut self, active: bool) -> Self {
+        self.active = active;
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn collapsed(mut self, collapsed: bool) -> Self {
+        self.collapsed = collapsed;
+        self
+    }
+
+    pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
+        self.on_click = Some(command.into());
+        self
+    }
+
+    fn build_button<H: UiHost>(&self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+
+        let radius = decl_style::radius(&theme, Radius::Md);
+        let ring = sidebar_ring(&theme, radius);
+
+        let mut pressable = PressableProps::default();
+        pressable.enabled = !self.disabled;
+        pressable.on_click = self.on_click.clone();
+        pressable.focus_ring = Some(ring);
+        pressable.layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+
+        let label = self.label.clone();
+        let icon = self.icon.clone();
+        let active = self.active;
+        let disabled = self.disabled;
+        let collapsed = self.collapsed;
+
+        cx.pressable(pressable, move |cx, st| {
+            let theme = Theme::global(&*cx.app).clone();
+
+            let bg = if active {
+                sidebar_accent(&theme)
+            } else if st.hovered || st.pressed {
+                sidebar_accent(&theme)
+            } else {
+                Color::TRANSPARENT
+            };
+
+            let fg = if disabled {
+                theme.colors.text_disabled
+            } else if active || st.hovered || st.pressed {
+                sidebar_accent_fg(&theme)
+            } else {
+                sidebar_fg(&theme)
+            };
+
+            let chrome = if bg.a > 0.0 {
+                ChromeRefinement::default()
+                    .bg(ColorRef::Color(bg))
+                    .rounded(Radius::Md)
+            } else {
+                ChromeRefinement::default().rounded(Radius::Md)
+            };
+
+            let mut props = decl_style::container_props(
+                &theme,
+                chrome,
+                LayoutRefinement::default()
+                    .w_full()
+                    .min_h(fret_components_ui::MetricRef::Px(Px(32.0))),
+            );
+            props.layout.overflow = Overflow::Clip;
+
+            let inner_gap = decl_style::space(&theme, Space::N2);
+
+            vec![cx.container(props, move |cx| {
+                let mut row = FlexProps::default();
+                row.direction = fret_core::Axis::Horizontal;
+                row.gap = inner_gap;
+                row.align = CrossAlign::Center;
+                row.justify = MainAlign::Start;
+                row.layout.size.width = fret_ui::element::Length::Fill;
+                row.layout.size.height = fret_ui::element::Length::Fill;
+                row.padding = Edges {
+                    top: Px(0.0),
+                    right: inner_gap,
+                    bottom: Px(0.0),
+                    left: inner_gap,
+                };
+
+                let label = label.clone();
+                let icon = icon.clone();
+                vec![cx.flex(row, move |cx| {
+                    let mut out = Vec::new();
+                    if let Some(icon) = icon.clone() {
+                        out.push(decl_icon::icon(cx, icon));
+                    }
+                    if !collapsed {
+                        out.push(cx.text_props(TextProps {
+                            layout: Default::default(),
+                            text: label.clone(),
+                            style: Some(menu_button_style(&theme)),
+                            color: Some(fg),
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Ellipsis,
+                        }));
+                    } else {
+                        out.push(cx.spacer(SpacerProps {
+                            min: Px(0.0),
+                            ..Default::default()
+                        }));
+                    }
+                    out
+                })]
+            })]
+        })
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        let button = self.build_button(cx);
+
+        if !self.collapsed {
+            return button;
+        }
+
+        // In collapsed (icon) mode, show the label via a hover card.
+        let theme = Theme::global(&*cx.app).clone();
+
+        let mut hover = HoverCardProps::default();
+        hover.align = HoverCardAlign::Center;
+        hover.side_offset = Px(8.0);
+        hover.layout = decl_style::layout_style(&theme, LayoutRefinement::default());
+
+        let label = self.label.clone();
+        cx.hover_card(hover, move |cx| {
+            let trigger = button;
+
+            let chrome = ChromeRefinement::default()
+                .bg(ColorRef::Color(
+                    theme
+                        .color_by_key("popover.background")
+                        .unwrap_or(theme.colors.menu_background),
+                ))
+                .border_1()
+                .border_color(ColorRef::Color(
+                    theme
+                        .color_by_key("popover.border")
+                        .unwrap_or(theme.colors.menu_border),
+                ))
+                .rounded(Radius::Md)
+                .p(Space::N2);
+            let mut props =
+                decl_style::container_props(&theme, chrome, LayoutRefinement::default());
+            props.layout.overflow = Overflow::Clip;
+            let content = cx.container(props, move |cx| {
+                vec![cx.text_props(TextProps {
+                    layout: Default::default(),
+                    text: label.clone(),
+                    style: Some(menu_button_style(&theme)),
+                    color: Some(sidebar_fg(&theme)),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                })]
+            });
+
+            vec![trigger, content]
+        })
+    }
+}

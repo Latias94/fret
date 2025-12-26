@@ -3,12 +3,12 @@ use std::hash::{Hash, Hasher};
 
 use fret_core::{ImageId, UvRect};
 
+use crate::Renderer;
 use crate::images::{ImageColorSpace, ImageDescriptor};
 use crate::svg::{
     SMOOTH_SVG_SCALE_FACTOR, SvgAlphaMask, SvgRenderer, SvgRgbaImage, upload_alpha_mask,
     upload_rgba_image,
 };
-use crate::Renderer;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SvgRasterKind {
@@ -78,6 +78,62 @@ impl SvgImageCache {
         self.entries.clear();
     }
 
+    /// Removes a cached entry if present.
+    ///
+    /// This mirrors GPUI's `PlatformAtlas::remove(key)` style: the cache is stable by default, and
+    /// callers explicitly invalidate when assets change or when they want to reclaim memory.
+    pub fn remove(
+        &mut self,
+        renderer: &mut Renderer,
+        svg_bytes: &[u8],
+        target_box_px: (u32, u32),
+        kind: SvgRasterKind,
+        smooth_scale_factor: f32,
+    ) -> bool {
+        let key = SvgCacheKey {
+            bytes_hash: hash_bytes(svg_bytes),
+            target_w: target_box_px.0,
+            target_h: target_box_px.1,
+            smooth_scale_bits: smooth_scale_factor.to_bits(),
+            kind,
+        };
+        let Some(entry) = self.entries.remove(&key) else {
+            return false;
+        };
+        let _ = renderer.unregister_image(entry.image);
+        true
+    }
+
+    pub fn remove_alpha_mask(
+        &mut self,
+        renderer: &mut Renderer,
+        svg_bytes: &[u8],
+        target_box_px: (u32, u32),
+    ) -> bool {
+        self.remove(
+            renderer,
+            svg_bytes,
+            target_box_px,
+            SvgRasterKind::AlphaMask,
+            SMOOTH_SVG_SCALE_FACTOR,
+        )
+    }
+
+    pub fn remove_rgba(
+        &mut self,
+        renderer: &mut Renderer,
+        svg_bytes: &[u8],
+        target_box_px: (u32, u32),
+    ) -> bool {
+        self.remove(
+            renderer,
+            svg_bytes,
+            target_box_px,
+            SvgRasterKind::Rgba,
+            SMOOTH_SVG_SCALE_FACTOR,
+        )
+    }
+
     pub fn get_or_create_alpha_mask(
         &mut self,
         device: &wgpu::Device,
@@ -121,9 +177,9 @@ impl SvgImageCache {
             });
         }
 
-        let mask: SvgAlphaMask = self
-            .renderer
-            .render_alpha_mask_fit(svg_bytes, target_box_px, smooth_scale_factor)?;
+        let mask: SvgAlphaMask =
+            self.renderer
+                .render_alpha_mask_fit(svg_bytes, target_box_px, smooth_scale_factor)?;
         let uploaded = upload_alpha_mask(device, queue, &mask);
         let image = renderer.register_image(ImageDescriptor {
             view: uploaded.view.clone(),
@@ -191,9 +247,9 @@ impl SvgImageCache {
             });
         }
 
-        let rgba: SvgRgbaImage = self
-            .renderer
-            .render_rgba_fit(svg_bytes, target_box_px, smooth_scale_factor)?;
+        let rgba: SvgRgbaImage =
+            self.renderer
+                .render_rgba_fit(svg_bytes, target_box_px, smooth_scale_factor)?;
         let uploaded = upload_rgba_image(device, queue, &rgba);
         let image = renderer.register_image(ImageDescriptor {
             view: uploaded.view.clone(),
@@ -233,4 +289,3 @@ fn hash_bytes(bytes: &[u8]) -> u64 {
     bytes.hash(&mut h);
     h.finish()
 }
-

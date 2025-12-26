@@ -1083,9 +1083,8 @@ impl WinitDriver for UiKitDriver {
         let declarative_text = app.models_mut().insert("".to_string());
         let declarative_page = app.models_mut().insert(1usize);
         let declarative_sidebar_collapsed = app.models_mut().insert(false);
-        let declarative_sidebar_selected = app
-            .models_mut()
-            .insert(Some(Arc::<str>::from("dashboard")));
+        let declarative_sidebar_selected =
+            app.models_mut().insert(Some(Arc::<str>::from("dashboard")));
 
         UiKitWindowState {
             ui,

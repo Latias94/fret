@@ -122,7 +122,7 @@ Status legend:
 | Select | `ui/select.tsx` | `fret_components_shadcn::select::*` | ✅ | Ensure focus + typeahead parity. |
 | Separator | `ui/separator.tsx` | `fret_components_shadcn::Separator` | ✅ | Mostly styling. |
 | Sheet | `ui/sheet.tsx` | `fret_components_shadcn::sheet::*` | ✅ | Modal overlay shell + app-provided content under `WindowOverlays`. |
-| Sidebar | `ui/sidebar.tsx` |  | ❌ | Big surface; likely later after nav/tree contracts stabilize. |
+| Sidebar | `ui/sidebar.tsx` | `fret_components_shadcn::{Sidebar, SidebarHeader, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuItem, SidebarMenuButton}` | ✅ | Declarative V1: collapsible icon mode + grouped menu buttons (mobile offcanvas TBD). |
 | Skeleton | `ui/skeleton.tsx` | `fret_components_shadcn::Skeleton` | ✅ | `bg-accent + rounded-md + animate-pulse` (frame-driven). |
 | Slider | `ui/slider.tsx` | `fret_components_shadcn::slider::*` | ✅ | Currently a thin re-export. |
 | Sonner | `ui/sonner.tsx` | `fret_components_shadcn::sonner::*` | ✅ | Thin re-export; treat as primary toast ref. |
@@ -218,6 +218,8 @@ These checklists are the acceptance criteria for “interaction parity”.
 
 ### P2 — larger surfaces (likely require dedicated contracts)
 
-- [ ] `Table` / `DataTable` (virtualized table, resizing, selection; not DOM semantics)
-- [ ] `Sidebar` / `NavigationMenu` (navigation contracts + tree patterns)
-- [ ] `Calendar` / `DatePicker` (date model + navigation; optional for editor MVP)
+- [x] `Table` (basic facade + styling)
+- [ ] `DataTable` (virtualized table, resizing, selection; not DOM semantics)
+- [x] `Sidebar` / `NavigationMenu` (V1; navigation contracts + tree patterns still evolving)
+- [x] `Calendar` (date model + navigation)
+- [ ] `DatePicker` (popover integration, input parsing, focus/keyboard)

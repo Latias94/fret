@@ -31,6 +31,7 @@ pub mod label;
 pub mod navigation_menu;
 pub mod pagination;
 pub mod radio_group;
+pub mod sidebar;
 pub mod skeleton;
 pub mod spinner;
 pub mod table;
@@ -69,6 +70,10 @@ pub use pagination::{
     PaginationLinkSize, PaginationNext, PaginationPrevious,
 };
 pub use radio_group::{RadioGroup, RadioGroupItem};
+pub use sidebar::{
+    Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader,
+    SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+};
 pub use skeleton::Skeleton;
 pub use spinner::Spinner;
 pub use table::{
