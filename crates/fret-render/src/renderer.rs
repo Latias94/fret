@@ -467,6 +467,22 @@ fn tessellate_path_commands(
     out
 }
 
+fn svg_draw_rect_px(
+    target_x: f32,
+    target_y: f32,
+    target_w: f32,
+    target_h: f32,
+    raster_size_px: (u32, u32),
+    smooth_scale_factor: f32,
+) -> (f32, f32, f32, f32) {
+    let smooth = smooth_scale_factor.max(1.0);
+    let draw_w = (raster_size_px.0 as f32 / smooth).min(target_w.max(0.0));
+    let draw_h = (raster_size_px.1 as f32 / smooth).min(target_h.max(0.0));
+    let x0 = target_x + ((target_w - draw_w).max(0.0) * 0.5);
+    let y0 = target_y + ((target_h - draw_h).max(0.0) * 0.5);
+    (x0, y0, x0 + draw_w, y0 + draw_h)
+}
+
 fn scissor_from_rect(rect: Rect, scale_factor: f32, viewport: (u32, u32)) -> Option<ScissorRect> {
     let (vw, vh) = viewport;
     if vw == 0 || vh == 0 {
@@ -2896,10 +2912,8 @@ impl Renderer {
                     let mut premul = color_to_linear_rgba_premul(*color);
                     premul = premul.map(|c| c * o);
 
-                    let x0 = x;
-                    let y0 = y;
-                    let x1 = x + w;
-                    let y1 = y + h;
+                    let (x0, y0, x1, y1) =
+                        svg_draw_rect_px(x, y, w, h, entry.size_px, SMOOTH_SVG_SCALE_FACTOR);
 
                     let (u0, v0, u1, v1) = (0.0, 0.0, 1.0, 1.0);
                     text_vertices.extend_from_slice(&[
@@ -2970,10 +2984,8 @@ impl Renderer {
                     let first_vertex = viewport_vertices.len() as u32;
                     let o = opacity.clamp(0.0, 1.0);
 
-                    let x0 = x;
-                    let y0 = y;
-                    let x1 = x + w;
-                    let y1 = y + h;
+                    let (x0, y0, x1, y1) =
+                        svg_draw_rect_px(x, y, w, h, entry.size_px, SMOOTH_SVG_SCALE_FACTOR);
 
                     viewport_vertices.extend_from_slice(&[
                         ViewportVertex {
@@ -3789,6 +3801,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 mod tests {
     use super::{
         PATH_SHADER, QUAD_SHADER, TEXT_SHADER, VIEWPORT_SHADER, clamp_corner_radii_for_rect,
+        svg_draw_rect_px,
     };
 
     #[test]
@@ -3814,5 +3827,12 @@ mod tests {
     fn corner_radii_clamp_is_nan_safe() {
         let radii = clamp_corner_radii_for_rect(f32::NAN, 6.0, [999.0, -1.0, f32::NAN, 0.0]);
         assert_eq!(radii, [0.0, 0.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn svg_draw_rect_centers_contained_raster() {
+        // target 100x50, raster 100x100 at smooth=2 => draw 50x50 centered.
+        let (x0, y0, x1, y1) = svg_draw_rect_px(0.0, 0.0, 100.0, 50.0, (100, 100), 2.0);
+        assert_eq!((x0, y0, x1, y1), (25.0, 0.0, 75.0, 50.0));
     }
 }

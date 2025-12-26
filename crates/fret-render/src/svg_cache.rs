@@ -38,12 +38,14 @@ struct SvgCacheEntry {
     _texture: wgpu::Texture,
 }
 
-/// App-owned cache for SVG rasterization results.
+/// App-owned cache for *manual* SVG rasterization results.
 ///
-/// This intentionally does not implement automatic eviction yet:
-/// if other code holds `ImageId`s beyond the cache's awareness, evicting would cause icons/images
-/// to disappear. Once we move alpha masks into an atlas or introduce refcounting/pinning, we can
-/// safely add an LRU policy.
+/// Prefer the newer `SvgId` + `SceneOp::SvgMaskIcon/SvgImage` pipeline when possible: it keeps SVG
+/// rasters as renderer-internal resources (so the renderer can safely apply LRU/byte budgets).
+///
+/// This cache stores `ImageId`s that are visible to application code, so it intentionally avoids
+/// automatic eviction: if other code holds `ImageId`s beyond the cache's awareness, evicting would
+/// cause icons/images to disappear. Callers can explicitly `remove_*` or `clear`.
 pub struct SvgImageCache {
     renderer: SvgRenderer,
     entries: HashMap<SvgCacheKey, SvgCacheEntry>,
