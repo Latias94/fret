@@ -107,7 +107,8 @@ struct UiKitWindowState {
     declarative_selection: Model<Option<usize>>,
     declarative_items: Model<Vec<String>>,
     declarative_page: Model<usize>,
-    svg_cache: SvgImageCache,
+    declarative_sidebar_collapsed: Model<bool>,
+    declarative_sidebar_selected: Model<Option<Arc<str>>>,
     svg_mask_icon: Option<CachedSvgImage>,
     svg_rgba_image: Option<CachedSvgImage>,
 }
@@ -947,7 +948,7 @@ impl WinitDriver for UiKitDriver {
 
     fn gpu_frame_prepare(
         &mut self,
-        _app: &mut App,
+        app: &mut App,
         _window: AppWindowId,
         state: &mut Self::WindowState,
         context: &WgpuContext,
@@ -979,31 +980,37 @@ impl WinitDriver for UiKitDriver {
             (rgba_logical * scale_factor).ceil().max(1.0) as u32,
         );
 
-        if state.svg_mask_icon.is_none() {
-            match state.svg_cache.get_or_create_alpha_mask(
-                &context.device,
-                &context.queue,
-                renderer,
-                SVG_MASK.as_bytes(),
-                icon_px,
-            ) {
-                Ok(img) => state.svg_mask_icon = Some(img),
-                Err(err) => tracing::warn!(error = %err, "ui-kit failed to rasterize SVG mask"),
-            }
+        if state.svg_mask_icon.is_some() && state.svg_rgba_image.is_some() {
+            return;
         }
 
-        if state.svg_rgba_image.is_none() {
-            match state.svg_cache.get_or_create_rgba(
-                &context.device,
-                &context.queue,
-                renderer,
-                SVG_RGBA.as_bytes(),
-                rgba_px,
-            ) {
-                Ok(img) => state.svg_rgba_image = Some(img),
-                Err(err) => tracing::warn!(error = %err, "ui-kit failed to rasterize SVG RGBA"),
+        app.with_global_mut(SvgImageCache::new, |cache, _app| {
+            if state.svg_mask_icon.is_none() {
+                match cache.get_or_create_alpha_mask(
+                    &context.device,
+                    &context.queue,
+                    renderer,
+                    SVG_MASK.as_bytes(),
+                    icon_px,
+                ) {
+                    Ok(img) => state.svg_mask_icon = Some(img),
+                    Err(err) => tracing::warn!(error = %err, "ui-kit failed to rasterize SVG mask"),
+                }
             }
-        }
+
+            if state.svg_rgba_image.is_none() {
+                match cache.get_or_create_rgba(
+                    &context.device,
+                    &context.queue,
+                    renderer,
+                    SVG_RGBA.as_bytes(),
+                    rgba_px,
+                ) {
+                    Ok(img) => state.svg_rgba_image = Some(img),
+                    Err(err) => tracing::warn!(error = %err, "ui-kit failed to rasterize SVG RGBA"),
+                }
+            }
+        });
     }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
@@ -1075,6 +1082,10 @@ impl WinitDriver for UiKitDriver {
         );
         let declarative_text = app.models_mut().insert("".to_string());
         let declarative_page = app.models_mut().insert(1usize);
+        let declarative_sidebar_collapsed = app.models_mut().insert(false);
+        let declarative_sidebar_selected = app
+            .models_mut()
+            .insert(Some(Arc::<str>::from("dashboard")));
 
         UiKitWindowState {
             ui,
@@ -1091,7 +1102,8 @@ impl WinitDriver for UiKitDriver {
             declarative_selection,
             declarative_items,
             declarative_page,
-            svg_cache: SvgImageCache::new(),
+            declarative_sidebar_collapsed,
+            declarative_sidebar_selected,
             svg_mask_icon: None,
             svg_rgba_image: None,
         }
