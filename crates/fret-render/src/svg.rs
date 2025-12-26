@@ -10,6 +10,12 @@ pub struct SvgAlphaMask {
     pub alpha: Vec<u8>,
 }
 
+pub struct UploadedAlphaMask {
+    pub texture: wgpu::Texture,
+    pub view: wgpu::TextureView,
+    pub size_px: (u32, u32),
+}
+
 #[derive(Clone)]
 pub struct SvgRenderer {
     usvg_options: Arc<usvg::Options<'static>>,
@@ -92,6 +98,75 @@ impl SvgRenderer {
         target_box_px: (u32, u32),
     ) -> Result<SvgAlphaMask, usvg::Error> {
         self.render_alpha_mask_fit(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR)
+    }
+}
+
+pub fn upload_alpha_mask(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    mask: &SvgAlphaMask,
+) -> UploadedAlphaMask {
+    let (w, h) = mask.size_px;
+    let texture = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("fret svg alpha mask"),
+        size: wgpu::Extent3d {
+            width: w,
+            height: h,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::R8Unorm,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+        view_formats: &[],
+    });
+    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+    let bytes_per_row = w;
+    let aligned_bytes_per_row = bytes_per_row.div_ceil(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
+        * wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+    let aligned_bytes_per_row = aligned_bytes_per_row.max(bytes_per_row);
+    let data = if aligned_bytes_per_row == bytes_per_row {
+        mask.alpha.clone()
+    } else {
+        let mut padded = vec![0u8; (aligned_bytes_per_row * h) as usize];
+        for row in 0..h as usize {
+            let src0 = row * w as usize;
+            let src1 = src0 + w as usize;
+            let dst0 = row * aligned_bytes_per_row as usize;
+            let dst1 = dst0 + w as usize;
+            padded[dst0..dst1].copy_from_slice(&mask.alpha[src0..src1]);
+        }
+        padded
+    };
+
+    if w > 0 && h > 0 {
+        queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture: &texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            &data,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(aligned_bytes_per_row),
+                rows_per_image: Some(h),
+            },
+            wgpu::Extent3d {
+                width: w,
+                height: h,
+                depth_or_array_layers: 1,
+            },
+        );
+    }
+
+    UploadedAlphaMask {
+        texture,
+        view,
+        size_px: (w, h),
     }
 }
 
