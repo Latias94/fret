@@ -950,12 +950,16 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
         match instance {
             ElementInstance::Container(props) => {
-                let pad_x = props.padding_x.0.max(0.0);
-                let pad_y = props.padding_y.0.max(0.0);
+                let pad_left = props.padding.left.0.max(0.0);
+                let pad_right = props.padding.right.0.max(0.0);
+                let pad_top = props.padding.top.0.max(0.0);
+                let pad_bottom = props.padding.bottom.0.max(0.0);
+                let pad_w = pad_left + pad_right;
+                let pad_h = pad_top + pad_bottom;
 
                 let inner_avail = Size::new(
-                    Px((cx.available.width.0 - pad_x * 2.0).max(0.0)),
-                    Px((cx.available.height.0 - pad_y * 2.0).max(0.0)),
+                    Px((cx.available.width.0 - pad_w).max(0.0)),
+                    Px((cx.available.height.0 - pad_h).max(0.0)),
                 );
 
                 let probe_bounds =
@@ -972,18 +976,18 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 }
 
                 let desired = Size::new(
-                    Px((max_child.width.0 + pad_x * 2.0).max(0.0)),
-                    Px((max_child.height.0 + pad_y * 2.0).max(0.0)),
+                    Px((max_child.width.0 + pad_w).max(0.0)),
+                    Px((max_child.height.0 + pad_h).max(0.0)),
                 );
                 let desired = clamp_to_constraints(desired, props.layout, cx.available);
 
                 let inner_origin = fret_core::Point::new(
-                    Px(cx.bounds.origin.x.0 + pad_x),
-                    Px(cx.bounds.origin.y.0 + pad_y),
+                    Px(cx.bounds.origin.x.0 + pad_left),
+                    Px(cx.bounds.origin.y.0 + pad_top),
                 );
                 let inner_size = Size::new(
-                    Px((desired.width.0 - pad_x * 2.0).max(0.0)),
-                    Px((desired.height.0 - pad_y * 2.0).max(0.0)),
+                    Px((desired.width.0 - pad_w).max(0.0)),
+                    Px((desired.height.0 - pad_h).max(0.0)),
                 );
                 let inner_bounds = Rect::new(inner_origin, inner_size);
 
@@ -1193,11 +1197,15 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 size
             }
             ElementInstance::Flex(props) => {
-                let pad_x = props.padding_x.0.max(0.0);
-                let pad_y = props.padding_y.0.max(0.0);
+                let pad_left = props.padding.left.0.max(0.0);
+                let pad_right = props.padding.right.0.max(0.0);
+                let pad_top = props.padding.top.0.max(0.0);
+                let pad_bottom = props.padding.bottom.0.max(0.0);
+                let pad_w = pad_left + pad_right;
+                let pad_h = pad_top + pad_bottom;
                 let inner_origin = fret_core::Point::new(
-                    Px(cx.bounds.origin.x.0 + pad_x),
-                    Px(cx.bounds.origin.y.0 + pad_y),
+                    Px(cx.bounds.origin.x.0 + pad_left),
+                    Px(cx.bounds.origin.y.0 + pad_top),
                 );
                 let outer_avail_w = match props.layout.size.width {
                     Length::Px(px) => Px(px.0.min(cx.available.width.0.max(0.0))),
@@ -1209,8 +1217,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 };
 
                 let inner_avail = Size::new(
-                    Px((outer_avail_w.0 - pad_x * 2.0).max(0.0)),
-                    Px((outer_avail_h.0 - pad_y * 2.0).max(0.0)),
+                    Px((outer_avail_w.0 - pad_w).max(0.0)),
+                    Px((outer_avail_h.0 - pad_h).max(0.0)),
                 );
 
                 let mut taffy: TaffyTree<Option<NodeId>> = TaffyTree::new();
@@ -1234,11 +1242,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     },
                     size: TaffySize {
                         width: match props.layout.size.width {
-                            Length::Px(px) => Dimension::length((px.0 - pad_x * 2.0).max(0.0)),
+                            Length::Px(px) => Dimension::length((px.0 - pad_w).max(0.0)),
                             other => taffy_dimension(other),
                         },
                         height: match props.layout.size.height {
-                            Length::Px(px) => Dimension::length((px.0 - pad_y * 2.0).max(0.0)),
+                            Length::Px(px) => Dimension::length((px.0 - pad_h).max(0.0)),
                             other => taffy_dimension(other),
                         },
                     },
@@ -1382,17 +1390,21 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 );
 
                 let desired = Size::new(
-                    Px((inner_size.width.0 + pad_x * 2.0).max(0.0)),
-                    Px((inner_size.height.0 + pad_y * 2.0).max(0.0)),
+                    Px((inner_size.width.0 + pad_w).max(0.0)),
+                    Px((inner_size.height.0 + pad_h).max(0.0)),
                 );
                 clamp_to_constraints(desired, props.layout, cx.available)
             }
             ElementInstance::Grid(props) => {
-                let pad_x = props.padding_x.0.max(0.0);
-                let pad_y = props.padding_y.0.max(0.0);
+                let pad_left = props.padding.left.0.max(0.0);
+                let pad_right = props.padding.right.0.max(0.0);
+                let pad_top = props.padding.top.0.max(0.0);
+                let pad_bottom = props.padding.bottom.0.max(0.0);
+                let pad_w = pad_left + pad_right;
+                let pad_h = pad_top + pad_bottom;
                 let inner_origin = fret_core::Point::new(
-                    Px(cx.bounds.origin.x.0 + pad_x),
-                    Px(cx.bounds.origin.y.0 + pad_y),
+                    Px(cx.bounds.origin.x.0 + pad_left),
+                    Px(cx.bounds.origin.y.0 + pad_top),
                 );
 
                 let outer_avail_w = match props.layout.size.width {
@@ -1405,8 +1417,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 };
 
                 let inner_avail = Size::new(
-                    Px((outer_avail_w.0 - pad_x * 2.0).max(0.0)),
-                    Px((outer_avail_h.0 - pad_y * 2.0).max(0.0)),
+                    Px((outer_avail_w.0 - pad_w).max(0.0)),
+                    Px((outer_avail_h.0 - pad_h).max(0.0)),
                 );
 
                 let mut taffy: TaffyTree<Option<NodeId>> = TaffyTree::new();
@@ -1420,8 +1432,14 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         height: LengthPercentage::length(props.gap.0.max(0.0)),
                     },
                     size: TaffySize {
-                        width: taffy_dimension(props.layout.size.width),
-                        height: taffy_dimension(props.layout.size.height),
+                        width: match props.layout.size.width {
+                            Length::Px(px) => Dimension::length((px.0 - pad_w).max(0.0)),
+                            other => taffy_dimension(other),
+                        },
+                        height: match props.layout.size.height {
+                            Length::Px(px) => Dimension::length((px.0 - pad_h).max(0.0)),
+                            other => taffy_dimension(other),
+                        },
                     },
                     max_size: TaffySize {
                         width: Dimension::length(inner_avail.width.0.max(0.0)),
@@ -1553,8 +1571,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 );
 
                 let desired = Size::new(
-                    Px((inner_size.width.0 + pad_x * 2.0).max(0.0)),
-                    Px((inner_size.height.0 + pad_y * 2.0).max(0.0)),
+                    Px((inner_size.width.0 + pad_w).max(0.0)),
+                    Px((inner_size.height.0 + pad_h).max(0.0)),
                 );
                 clamp_to_constraints(desired, props.layout, cx.available)
             }
@@ -2259,8 +2277,7 @@ fn mount_element<H: UiHost>(
             layout: p.layout,
             direction: fret_core::Axis::Vertical,
             gap: p.gap,
-            padding_x: p.padding_x,
-            padding_y: p.padding_y,
+            padding: p.padding,
             justify: p.justify,
             align: p.align,
             wrap: false,
@@ -2269,8 +2286,7 @@ fn mount_element<H: UiHost>(
             layout: p.layout,
             direction: fret_core::Axis::Horizontal,
             gap: p.gap,
-            padding_x: p.padding_x,
-            padding_y: p.padding_y,
+            padding: p.padding,
             justify: p.justify,
             align: p.align,
             wrap: false,
@@ -3734,8 +3750,7 @@ mod tests {
             |cx| {
                 vec![cx.container(
                     crate::element::ContainerProps {
-                        padding_x: Px(4.0),
-                        padding_y: Px(6.0),
+                        padding: fret_core::Edges::symmetric(Px(4.0), Px(6.0)),
                         background: Some(Color {
                             r: 1.0,
                             g: 0.0,
@@ -3885,8 +3900,7 @@ mod tests {
                     |cx, _state| {
                         vec![cx.container(
                             crate::element::ContainerProps {
-                                padding_x: Px(4.0),
-                                padding_y: Px(4.0),
+                                padding: fret_core::Edges::all(Px(4.0)),
                                 ..Default::default()
                             },
                             |cx| vec![cx.text("hi")],
@@ -3968,8 +3982,7 @@ mod tests {
                     crate::element::FlexProps {
                         direction: fret_core::Axis::Horizontal,
                         gap: Px(5.0),
-                        padding_x: Px(4.0),
-                        padding_y: Px(6.0),
+                        padding: fret_core::Edges::symmetric(Px(4.0), Px(6.0)),
                         ..Default::default()
                     },
                     |cx| vec![cx.text("a"), cx.text("b")],

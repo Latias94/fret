@@ -123,4 +123,13 @@ impl Edges {
             left: value,
         }
     }
+
+    pub const fn symmetric(horizontal: Px, vertical: Px) -> Self {
+        Self {
+            top: vertical,
+            right: horizontal,
+            bottom: vertical,
+            left: horizontal,
+        }
+    }
 }

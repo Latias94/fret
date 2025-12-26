@@ -1260,8 +1260,7 @@ impl WinitDriver for UiKitDriver {
 
                                     vec![cx.container(
                                         fret_ui_app::element::ContainerProps {
-                                            padding_x: outer_gap,
-                                            padding_y: outer_gap,
+                                            padding: fret_core::Edges::all(outer_gap),
                                             background: bg,
                                             shadow: Some(shadow),
                                             border: fret_core::Edges::all(fret_core::Px(1.0)),
@@ -1289,14 +1288,13 @@ impl WinitDriver for UiKitDriver {
                                             width: fret_ui_app::element::Length::Px(Px(260.0)),
                                             ..Default::default()
                                         },
-		                                        ..Default::default()
-		                                    },
-		                                    padding_x: outer_gap,
-		                                    padding_y: outer_gap,
-		                                    background: Some(theme_snapshot.colors.panel_background),
-		                                    shadow: None,
-		                                    border: fret_core::Edges::all(fret_core::Px(1.0)),
-		                                    border_color: Some(theme_snapshot.colors.panel_border),
+			                                        ..Default::default()
+			                                    },
+			                                    padding: fret_core::Edges::all(outer_gap),
+			                                    background: Some(theme_snapshot.colors.panel_background),
+			                                    shadow: None,
+			                                    border: fret_core::Edges::all(fret_core::Px(1.0)),
+			                                    border_color: Some(theme_snapshot.colors.panel_border),
 		                                    corner_radii: fret_core::Corners::all(radius),
 		                                },
 		                                |cx| {
@@ -1359,8 +1357,7 @@ impl WinitDriver for UiKitDriver {
                             {
                                 let trigger = cx.container(
                                     fret_ui_app::element::ContainerProps {
-                                        padding_x: Px(12.0),
-                                        padding_y: Px(8.0),
+                                        padding: fret_core::Edges::symmetric(Px(12.0), Px(8.0)),
                                         background: Some(theme_snapshot.colors.panel_background),
                                         border: fret_core::Edges::all(Px(1.0)),
                                         border_color: Some(theme_snapshot.colors.panel_border),
@@ -1417,35 +1414,33 @@ impl WinitDriver for UiKitDriver {
                                 },
                             ),
 		                            cx.text("Absolute badge (position/inset)"),
-		                            cx.container(
-		                                fret_ui_app::element::ContainerProps {
-	                                    layout: fret_ui_app::element::LayoutStyle {
-	                                        size: fret_ui_app::element::SizeStyle {
-	                                            width: fret_ui_app::element::Length::Px(Px(260.0)),
-	                                            ..Default::default()
-	                                        },
-	                                        ..Default::default()
-	                                    },
-	                                    padding_x: outer_gap,
-	                                    padding_y: outer_gap,
-	                                    background: Some(theme_snapshot.colors.panel_background),
-	                                    shadow: None,
-	                                    border: fret_core::Edges::all(fret_core::Px(1.0)),
-	                                    border_color: Some(theme_snapshot.colors.panel_border),
+			                            cx.container(
+			                                fret_ui_app::element::ContainerProps {
+		                                    layout: fret_ui_app::element::LayoutStyle {
+		                                        size: fret_ui_app::element::SizeStyle {
+		                                            width: fret_ui_app::element::Length::Px(Px(260.0)),
+		                                            ..Default::default()
+		                                        },
+		                                        ..Default::default()
+		                                    },
+		                                    padding: fret_core::Edges::all(outer_gap),
+		                                    background: Some(theme_snapshot.colors.panel_background),
+		                                    shadow: None,
+		                                    border: fret_core::Edges::all(fret_core::Px(1.0)),
+		                                    border_color: Some(theme_snapshot.colors.panel_border),
 	                                    corner_radii: fret_core::Corners::all(radius),
 	                                },
 	                                |cx| {
 	                                    let mut badge = fret_ui_app::element::ContainerProps::default();
-	                                    badge.background =
-	                                        Some(theme_snapshot.colors.accent);
-	                                    badge.corner_radii =
-	                                        fret_core::Corners::all(Px(999.0));
-	                                    badge.padding_x = secondary_gap;
-	                                    badge.padding_y = fret_core::Px(0.0);
-	                                    badge.layout.position =
-	                                        fret_ui_app::element::PositionStyle::Absolute;
-	                                    badge.layout.inset.top = Some(Px(0.0));
-	                                    badge.layout.inset.right = Some(Px(0.0));
+		                                    badge.background =
+		                                        Some(theme_snapshot.colors.accent);
+		                                    badge.corner_radii =
+		                                        fret_core::Corners::all(Px(999.0));
+		                                    badge.padding = fret_core::Edges::symmetric(secondary_gap, fret_core::Px(0.0));
+		                                    badge.layout.position =
+		                                        fret_ui_app::element::PositionStyle::Absolute;
+		                                    badge.layout.inset.top = Some(Px(0.0));
+		                                    badge.layout.inset.right = Some(Px(0.0));
 
 	                                    vec![
 	                                        cx.text(

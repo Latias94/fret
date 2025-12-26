@@ -30,23 +30,24 @@ fn resolve_length(theme: &Theme, l: &LengthRefinement) -> Length {
     }
 }
 
-fn resolve_padding(theme: &Theme, padding: Option<&PaddingRefinement>) -> (Px, Px) {
+fn resolve_padding(theme: &Theme, padding: Option<&PaddingRefinement>) -> Edges {
     let Some(p) = padding else {
-        return (Px(0.0), Px(0.0));
+        return Edges::all(Px(0.0));
     };
-    let px = p
-        .left
-        .as_ref()
-        .or(p.right.as_ref())
-        .map(|m| m.resolve(theme))
-        .unwrap_or(Px(0.0));
-    let py = p
-        .top
-        .as_ref()
-        .or(p.bottom.as_ref())
-        .map(|m| m.resolve(theme))
-        .unwrap_or(Px(0.0));
-    (px, py)
+    Edges {
+        top: p.top.as_ref().map(|m| m.resolve(theme)).unwrap_or(Px(0.0)),
+        right: p
+            .right
+            .as_ref()
+            .map(|m| m.resolve(theme))
+            .unwrap_or(Px(0.0)),
+        bottom: p
+            .bottom
+            .as_ref()
+            .map(|m| m.resolve(theme))
+            .unwrap_or(Px(0.0)),
+        left: p.left.as_ref().map(|m| m.resolve(theme)).unwrap_or(Px(0.0)),
+    }
 }
 
 pub fn layout_style(theme: &Theme, refinement: LayoutRefinement) -> LayoutStyle {
@@ -137,7 +138,7 @@ pub fn container_props(
     chrome: ChromeRefinement,
     layout_refinement: LayoutRefinement,
 ) -> ContainerProps {
-    let (padding_x, padding_y) = resolve_padding(theme, chrome.padding.as_ref());
+    let padding = resolve_padding(theme, chrome.padding.as_ref());
 
     let background = chrome.background.as_ref().map(|c| c.resolve(theme));
 
@@ -158,8 +159,7 @@ pub fn container_props(
 
     ContainerProps {
         layout,
-        padding_x,
-        padding_y,
+        padding,
         background,
         shadow: None,
         border: Edges::all(border_width),

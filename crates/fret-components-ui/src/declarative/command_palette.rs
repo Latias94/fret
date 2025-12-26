@@ -278,8 +278,7 @@ pub fn command_palette_list<H: UiHost>(
                     match &row.kind {
                         RowKind::Header { label } => cx.container(
                             ContainerProps {
-                                padding_x: row_px,
-                                padding_y: Px((row_py.0 * 0.75).max(0.0)),
+                                padding: Edges::symmetric(row_px, Px((row_py.0 * 0.75).max(0.0))),
                                 ..Default::default()
                             },
                             |cx| {
@@ -329,8 +328,7 @@ pub fn command_palette_list<H: UiHost>(
 
                                     vec![cx.container(
                                         ContainerProps {
-                                            padding_x: row_px,
-                                            padding_y: row_py,
+                                            padding: Edges::symmetric(row_px, row_py),
                                             background: bg,
                                             ..Default::default()
                                         },

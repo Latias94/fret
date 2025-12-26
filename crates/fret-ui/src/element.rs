@@ -150,8 +150,7 @@ pub enum Length {
 #[derive(Debug, Clone, Copy)]
 pub struct ContainerProps {
     pub layout: LayoutStyle,
-    pub padding_x: Px,
-    pub padding_y: Px,
+    pub padding: Edges,
     pub background: Option<Color>,
     pub shadow: Option<ShadowStyle>,
     pub border: Edges,
@@ -163,8 +162,7 @@ impl Default for ContainerProps {
     fn default() -> Self {
         Self {
             layout: LayoutStyle::default(),
-            padding_x: Px(0.0),
-            padding_y: Px(0.0),
+            padding: Edges::all(Px(0.0)),
             background: None,
             shadow: None,
             border: Edges::all(Px(0.0)),
@@ -257,8 +255,7 @@ impl Default for StackProps {
 pub struct ColumnProps {
     pub layout: LayoutStyle,
     pub gap: Px,
-    pub padding_x: Px,
-    pub padding_y: Px,
+    pub padding: Edges,
     pub justify: MainAlign,
     pub align: CrossAlign,
 }
@@ -268,8 +265,7 @@ impl Default for ColumnProps {
         Self {
             layout: LayoutStyle::default(),
             gap: Px(0.0),
-            padding_x: Px(0.0),
-            padding_y: Px(0.0),
+            padding: Edges::all(Px(0.0)),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
         }
@@ -280,8 +276,7 @@ impl Default for ColumnProps {
 pub struct RowProps {
     pub layout: LayoutStyle,
     pub gap: Px,
-    pub padding_x: Px,
-    pub padding_y: Px,
+    pub padding: Edges,
     pub justify: MainAlign,
     pub align: CrossAlign,
 }
@@ -291,8 +286,7 @@ impl Default for RowProps {
         Self {
             layout: LayoutStyle::default(),
             gap: Px(0.0),
-            padding_x: Px(0.0),
-            padding_y: Px(0.0),
+            padding: Edges::all(Px(0.0)),
             justify: MainAlign::Start,
             align: CrossAlign::Center,
         }
@@ -488,8 +482,7 @@ pub struct FlexProps {
     pub layout: LayoutStyle,
     pub direction: fret_core::Axis,
     pub gap: Px,
-    pub padding_x: Px,
-    pub padding_y: Px,
+    pub padding: Edges,
     pub justify: MainAlign,
     pub align: CrossAlign,
     pub wrap: bool,
@@ -501,8 +494,7 @@ impl Default for FlexProps {
             layout: LayoutStyle::default(),
             direction: fret_core::Axis::Horizontal,
             gap: Px(0.0),
-            padding_x: Px(0.0),
-            padding_y: Px(0.0),
+            padding: Edges::all(Px(0.0)),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
             wrap: false,
@@ -516,8 +508,7 @@ pub struct GridProps {
     pub cols: u16,
     pub rows: Option<u16>,
     pub gap: Px,
-    pub padding_x: Px,
-    pub padding_y: Px,
+    pub padding: Edges,
     pub justify: MainAlign,
     pub align: CrossAlign,
 }
@@ -529,8 +520,7 @@ impl Default for GridProps {
             cols: 1,
             rows: None,
             gap: Px(0.0),
-            padding_x: Px(0.0),
-            padding_y: Px(0.0),
+            padding: Edges::all(Px(0.0)),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
         }

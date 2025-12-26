@@ -111,14 +111,15 @@ This table is intentionally “semantic”, not a 1:1 class inventory.
 
 - `p-*`, `px-*`, `py-*` → `ChromeRefinement` helpers (`p_*`, `px_*`, `py_*`)
 - `pt/pr/pb/pl-*` → `ChromeRefinement::{pt,pr,pb,pl}`
-  - **Surface/control chrome**: padding is interpreted as symmetric `padding_x/padding_y` (axis),
-    so a single-edge refinement acts as axis shorthand (`pr-*` behaves like `px-*`, `pb-*` like
-    `py-*`) to avoid no-ops.
-  - **Inputs**: padding is truly per-edge (Tailwind-like), because inputs frequently reserve space
-    for leading/trailing icons.
-  - Constraint: symmetric surfaces/controls cannot represent different values for both edges of an
-    axis (e.g. `pl-*` and `pr-*` with different values). The resolver uses a deterministic
-    preference and the other edge becomes a no-op; prefer `px/py` for unambiguous intent.
+  - **Retained surface/control recipes**: padding is interpreted as symmetric `padding_x/padding_y`
+    (axis), so a single-edge refinement acts as axis shorthand (`pr-*` behaves like `px-*`,
+    `pb-*` like `py-*`) to avoid no-ops.
+    - If both edges for an axis are set with different values (e.g. `pl-*` + `pr-*`), the
+      resolver picks a deterministic winner (`left` over `right`, `top` over `bottom`).
+  - **Declarative containers**: padding is truly per-edge (Tailwind-like). `pt/pr/pb/pl` affect only
+    that edge, while `px/py` set both edges of an axis.
+  - **Inputs**: padding is truly per-edge (Tailwind-like) in both retained and declarative paths,
+    because inputs frequently reserve space for leading/trailing icons.
 - `gap-*` → container layout (`FlexProps.gap`, `GridProps.gap`) via component-layer helpers
 - `m-*`, `mx-*`, `my-*`, `mt/mr/mb/ml-*` → `LayoutRefinement` (`m/mx/my/mt/mr/mb/ml`)
 

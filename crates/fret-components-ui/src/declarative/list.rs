@@ -118,8 +118,7 @@ pub fn list_virtualized<H: UiHost, K: std::hash::Hash>(
 
                             vec![cx.container(
                                 ContainerProps {
-                                    padding_x: row_px,
-                                    padding_y: row_py,
+                                    padding: Edges::symmetric(row_px, row_py),
                                     background: bg,
                                     ..Default::default()
                                 },
