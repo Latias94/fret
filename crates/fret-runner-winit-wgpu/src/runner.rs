@@ -1996,6 +1996,16 @@ impl fret_core::PathService for NoUiServices {
     fn release(&mut self, _path: fret_core::PathId) {}
 }
 
+impl fret_core::SvgService for NoUiServices {
+    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+        fret_core::SvgId::default()
+    }
+
+    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        false
+    }
+}
+
 impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
     fn device_event(
         &mut self,

@@ -384,6 +384,16 @@ mod tests {
         fn release(&mut self, _path: PathId) {}
     }
 
+    impl fret_core::SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            false
+        }
+    }
+
     struct Focusable;
 
     impl<H: UiHost> Widget<H> for Focusable {

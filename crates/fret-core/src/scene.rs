@@ -1,6 +1,6 @@
 use crate::{
     geometry::{Corners, Edges, Point, Rect},
-    ids::{ImageId, PathId, RenderTargetId, TextBlobId},
+    ids::{ImageId, PathId, RenderTargetId, SvgId, TextBlobId},
 };
 use slotmap::Key;
 
@@ -120,6 +120,23 @@ pub enum SceneOp {
         image: ImageId,
         uv: UvRect,
         color: Color,
+        opacity: f32,
+    },
+
+    /// Draw an SVG as a monochrome icon: rasterize to an alpha mask, then tint with a solid color.
+    SvgMaskIcon {
+        order: DrawOrder,
+        rect: Rect,
+        svg: SvgId,
+        color: Color,
+        opacity: f32,
+    },
+
+    /// Draw an SVG as an RGBA image: rasterize and upload as an image texture.
+    SvgImage {
+        order: DrawOrder,
+        rect: Rect,
+        svg: SvgId,
         opacity: f32,
     },
 
@@ -287,6 +304,32 @@ fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             state = mix_color(state, color);
             mix_f32(state, opacity)
         }
+        SceneOp::SvgMaskIcon {
+            order,
+            rect,
+            svg,
+            color,
+            opacity,
+        } => {
+            let mut state = mix_u64(state, 10);
+            state = mix_u64(state, u64::from(order.0));
+            state = mix_rect(state, rect);
+            state = mix_u64(state, svg.data().as_ffi());
+            state = mix_color(state, color);
+            mix_f32(state, opacity)
+        }
+        SceneOp::SvgImage {
+            order,
+            rect,
+            svg,
+            opacity,
+        } => {
+            let mut state = mix_u64(state, 11);
+            state = mix_u64(state, u64::from(order.0));
+            state = mix_rect(state, rect);
+            state = mix_u64(state, svg.data().as_ffi());
+            mix_f32(state, opacity)
+        }
         SceneOp::Text {
             order,
             origin,
@@ -392,6 +435,30 @@ fn translate_scene_op(op: SceneOp, delta: Point) -> SceneOp {
             image,
             uv,
             color,
+            opacity,
+        },
+        SceneOp::SvgMaskIcon {
+            order,
+            rect,
+            svg,
+            color,
+            opacity,
+        } => SceneOp::SvgMaskIcon {
+            order,
+            rect: translate_rect(rect, delta),
+            svg,
+            color,
+            opacity,
+        },
+        SceneOp::SvgImage {
+            order,
+            rect,
+            svg,
+            opacity,
+        } => SceneOp::SvgImage {
+            order,
+            rect: translate_rect(rect, delta),
+            svg,
             opacity,
         },
         SceneOp::Text {

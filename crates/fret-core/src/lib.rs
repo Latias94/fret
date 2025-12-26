@@ -10,6 +10,7 @@ pub mod panels;
 pub mod scene;
 pub mod semantics;
 pub mod services;
+pub mod svg;
 pub mod text;
 pub mod vector_path;
 pub mod viewport;
@@ -26,7 +27,7 @@ pub use dock_op::DockOp;
 pub use geometry::{Corners, Edges, Point, Px, Rect, Size};
 pub use ids::{
     AppWindowId, DockNodeId, ExternalDropToken, FontId, FrameId, ImageId, NodeId, PathId,
-    RenderTargetId, TextBlobId, TickId, TimerToken,
+    RenderTargetId, SvgId, TextBlobId, TickId, TimerToken,
 };
 pub use input::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
@@ -40,6 +41,7 @@ pub use semantics::{
     SemanticsFlags, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot,
 };
 pub use services::UiServices;
+pub use svg::SvgService;
 pub use text::{
     CaretAffinity, FontWeight, HitTestResult, TextConstraints, TextMetrics, TextOverflow,
     TextService, TextStyle, TextWrap,

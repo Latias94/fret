@@ -1,12 +1,12 @@
-use crate::{PathService, TextService};
+use crate::{PathService, SvgService, TextService};
 
 /// UI runtime services passed to widgets during layout/paint/event handling.
 ///
 /// This is intentionally a single `&mut` handle so runtimes can pass a single renderer-owned
 /// service object (similar to how GPUI passes a `Window`/context that provides multiple facilities).
-pub trait UiServices: TextService + PathService {}
+pub trait UiServices: TextService + PathService + SvgService {}
 
-impl<T> UiServices for T where T: TextService + PathService {}
+impl<T> UiServices for T where T: TextService + PathService + SvgService {}
 
 impl dyn UiServices + '_ {
     pub fn text(&mut self) -> &mut dyn TextService {
@@ -14,6 +14,10 @@ impl dyn UiServices + '_ {
     }
 
     pub fn path(&mut self) -> &mut dyn PathService {
+        self
+    }
+
+    pub fn svg(&mut self) -> &mut dyn SvgService {
         self
     }
 }

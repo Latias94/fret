@@ -556,6 +556,16 @@ mod tests {
         fn release(&mut self, _path: PathId) {}
     }
 
+    impl fret_core::SvgService for FakeText {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            false
+        }
+    }
+
     fn min_text_y(scene: &Scene) -> Option<Px> {
         scene
             .ops()

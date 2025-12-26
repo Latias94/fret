@@ -443,6 +443,16 @@ mod tests {
         fn release(&mut self, _path: PathId) {}
     }
 
+    impl fret_core::SvgService for FakeText {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            false
+        }
+    }
+
     #[test]
     fn slider_drag_updates_model_value() {
         let mut app = App::new();

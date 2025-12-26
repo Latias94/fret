@@ -5,6 +5,7 @@ new_key_type! {
     pub struct NodeId;
     pub struct DockNodeId;
     pub struct ImageId;
+    pub struct SvgId;
     pub struct FontId;
     pub struct TextBlobId;
     pub struct PathId;

@@ -10,8 +10,10 @@ use lyon::tessellation::{
 use slotmap::SlotMap;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
+use std::sync::Arc;
 
-use crate::images::{ImageDescriptor, ImageRegistry};
+use crate::images::{ImageColorSpace, ImageDescriptor, ImageRegistry};
+use crate::svg::{SMOOTH_SVG_SCALE_FACTOR, SvgRenderer, upload_alpha_mask, upload_rgba_image};
 use crate::targets::{RenderTargetDescriptor, RenderTargetRegistry};
 use crate::text::TextSystem;
 
@@ -76,6 +78,27 @@ struct ScissorRect {
     y: u32,
     w: u32,
     h: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum SvgRasterKind {
+    AlphaMask,
+    Rgba,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct SvgRasterKey {
+    svg: fret_core::SvgId,
+    target_w: u32,
+    target_h: u32,
+    smooth_scale_bits: u32,
+    kind: SvgRasterKind,
+}
+
+struct SvgRasterEntry {
+    image: fret_core::ImageId,
+    size_px: (u32, u32),
+    _texture: wgpu::Texture,
 }
 
 impl ScissorRect {
@@ -216,6 +239,14 @@ fn hash_path_commands(commands: &[fret_core::PathCommand]) -> u64 {
                 state = mix_u64(state, 5);
             }
         }
+    }
+    state
+}
+
+fn hash_bytes(bytes: &[u8]) -> u64 {
+    let mut state = 0u64;
+    for &b in bytes {
+        state = mix_u64(state, u64::from(b));
     }
     state
 }
@@ -593,6 +624,11 @@ pub struct Renderer {
     path_cache_capacity: usize,
     path_cache_epoch: u64,
 
+    svg_renderer: SvgRenderer,
+    svgs: SlotMap<fret_core::SvgId, Arc<[u8]>>,
+    svg_hash_index: HashMap<u64, Vec<fret_core::SvgId>>,
+    svg_rasters: HashMap<SvgRasterKey, SvgRasterEntry>,
+
     render_targets: RenderTargetRegistry,
     images: ImageRegistry,
 
@@ -656,6 +692,129 @@ struct SceneEncodingCacheKey {
 }
 
 impl Renderer {
+    fn svg_target_box_px(rect: Rect, scale_factor: f32) -> (u32, u32) {
+        let w = (rect.size.width.0 * scale_factor).ceil().max(1.0);
+        let h = (rect.size.height.0 * scale_factor).ceil().max(1.0);
+        (w as u32, h as u32)
+    }
+
+    fn svg_raster_key(
+        svg: fret_core::SvgId,
+        rect: Rect,
+        scale_factor: f32,
+        kind: SvgRasterKind,
+    ) -> SvgRasterKey {
+        let (target_w, target_h) = Self::svg_target_box_px(rect, scale_factor);
+        SvgRasterKey {
+            svg,
+            target_w,
+            target_h,
+            smooth_scale_bits: SMOOTH_SVG_SCALE_FACTOR.to_bits(),
+            kind,
+        }
+    }
+
+    fn prepare_svg_ops(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        scene: &Scene,
+        scale_factor: f32,
+    ) {
+        for op in scene.ops() {
+            match op {
+                SceneOp::SvgMaskIcon { rect, svg, .. } => {
+                    let _ = self.ensure_svg_raster(
+                        device,
+                        queue,
+                        *svg,
+                        *rect,
+                        scale_factor,
+                        SvgRasterKind::AlphaMask,
+                    );
+                }
+                SceneOp::SvgImage { rect, svg, .. } => {
+                    let _ = self.ensure_svg_raster(
+                        device,
+                        queue,
+                        *svg,
+                        *rect,
+                        scale_factor,
+                        SvgRasterKind::Rgba,
+                    );
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn ensure_svg_raster(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        svg: fret_core::SvgId,
+        rect: Rect,
+        scale_factor: f32,
+        kind: SvgRasterKind,
+    ) -> Option<(fret_core::ImageId, fret_core::UvRect, (u32, u32))> {
+        let key = Self::svg_raster_key(svg, rect, scale_factor, kind);
+        if let Some(e) = self.svg_rasters.get(&key) {
+            return Some((e.image, fret_core::UvRect::FULL, e.size_px));
+        }
+
+        let bytes = self.svgs.get(svg)?;
+        let target_box_px = (key.target_w, key.target_h);
+
+        let (texture, view, size_px, image_format, color_space) = match kind {
+            SvgRasterKind::AlphaMask => {
+                let mask = self
+                    .svg_renderer
+                    .render_alpha_mask_fit(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR)
+                    .ok()?;
+                let uploaded = upload_alpha_mask(device, queue, &mask);
+                (
+                    uploaded.texture,
+                    uploaded.view,
+                    uploaded.size_px,
+                    wgpu::TextureFormat::R8Unorm,
+                    ImageColorSpace::Linear,
+                )
+            }
+            SvgRasterKind::Rgba => {
+                let rgba = self
+                    .svg_renderer
+                    .render_rgba_fit(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR)
+                    .ok()?;
+                let uploaded = upload_rgba_image(device, queue, &rgba);
+                (
+                    uploaded.texture,
+                    uploaded.view,
+                    uploaded.size_px,
+                    wgpu::TextureFormat::Rgba8UnormSrgb,
+                    ImageColorSpace::Srgb,
+                )
+            }
+        };
+
+        let image = self.register_image(ImageDescriptor {
+            view: view.clone(),
+            size: size_px,
+            format: image_format,
+            color_space,
+        });
+
+        self.svg_rasters.insert(
+            key,
+            SvgRasterEntry {
+                image,
+                size_px,
+                _texture: texture,
+            },
+        );
+
+        Some((image, fret_core::UvRect::FULL, size_px))
+    }
+
     fn ensure_path_intermediate(
         &mut self,
         device: &wgpu::Device,
@@ -896,6 +1055,10 @@ impl Renderer {
             path_cache: HashMap::new(),
             path_cache_capacity: 2048,
             path_cache_epoch: 0,
+            svg_renderer: SvgRenderer::new(),
+            svgs: SlotMap::with_key(),
+            svg_hash_index: HashMap::new(),
+            svg_rasters: HashMap::new(),
             render_targets: RenderTargetRegistry::default(),
             images: ImageRegistry::default(),
             viewport_bind_groups: HashMap::new(),
@@ -1667,6 +1830,7 @@ impl Renderer {
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
 
         self.text_system.flush_uploads(queue);
+        self.prepare_svg_ops(device, queue, scene, scale_factor);
 
         let key = SceneEncodingCacheKey {
             format,
@@ -2527,6 +2691,166 @@ impl Renderer {
                         image: *image,
                     }));
                 }
+                SceneOp::SvgMaskIcon { .. } => {
+                    flush_quad_batch!();
+                    let SceneOp::SvgMaskIcon {
+                        rect,
+                        svg,
+                        color,
+                        opacity,
+                        ..
+                    } = op
+                    else {
+                        unreachable!();
+                    };
+                    if *opacity <= 0.0 || color.a <= 0.0 {
+                        continue;
+                    }
+
+                    let key =
+                        Self::svg_raster_key(*svg, *rect, scale_factor, SvgRasterKind::AlphaMask);
+                    let Some(entry) = self.svg_rasters.get(&key) else {
+                        continue;
+                    };
+                    if self.images.get(entry.image).is_none() {
+                        continue;
+                    }
+
+                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
+                    if w <= 0.0 || h <= 0.0 {
+                        continue;
+                    }
+
+                    let first_vertex = text_vertices.len() as u32;
+                    let o = opacity.clamp(0.0, 1.0);
+                    let mut premul = color_to_linear_rgba_premul(*color);
+                    premul = premul.map(|c| c * o);
+
+                    let x0 = x;
+                    let y0 = y;
+                    let x1 = x + w;
+                    let y1 = y + h;
+
+                    let (u0, v0, u1, v1) = (0.0, 0.0, 1.0, 1.0);
+                    text_vertices.extend_from_slice(&[
+                        TextVertex {
+                            pos_px: [x0, y0],
+                            uv: [u0, v0],
+                            color: premul,
+                        },
+                        TextVertex {
+                            pos_px: [x1, y0],
+                            uv: [u1, v0],
+                            color: premul,
+                        },
+                        TextVertex {
+                            pos_px: [x1, y1],
+                            uv: [u1, v1],
+                            color: premul,
+                        },
+                        TextVertex {
+                            pos_px: [x0, y0],
+                            uv: [u0, v0],
+                            color: premul,
+                        },
+                        TextVertex {
+                            pos_px: [x1, y1],
+                            uv: [u1, v1],
+                            color: premul,
+                        },
+                        TextVertex {
+                            pos_px: [x0, y1],
+                            uv: [u0, v1],
+                            color: premul,
+                        },
+                    ]);
+
+                    ordered_draws.push(OrderedDraw::Mask(MaskDraw {
+                        scissor: current_scissor,
+                        first_vertex,
+                        vertex_count: 6,
+                        image: entry.image,
+                    }));
+                }
+                SceneOp::SvgImage { .. } => {
+                    flush_quad_batch!();
+                    let SceneOp::SvgImage {
+                        rect, svg, opacity, ..
+                    } = op
+                    else {
+                        unreachable!();
+                    };
+                    if *opacity <= 0.0 {
+                        continue;
+                    }
+
+                    let key = Self::svg_raster_key(*svg, *rect, scale_factor, SvgRasterKind::Rgba);
+                    let Some(entry) = self.svg_rasters.get(&key) else {
+                        continue;
+                    };
+                    if self.images.get(entry.image).is_none() {
+                        continue;
+                    }
+
+                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
+                    if w <= 0.0 || h <= 0.0 {
+                        continue;
+                    }
+
+                    let first_vertex = viewport_vertices.len() as u32;
+                    let o = opacity.clamp(0.0, 1.0);
+
+                    let x0 = x;
+                    let y0 = y;
+                    let x1 = x + w;
+                    let y1 = y + h;
+
+                    viewport_vertices.extend_from_slice(&[
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [0.0, 0.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y0],
+                            uv: [1.0, 0.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [1.0, 1.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [0.0, 0.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [1.0, 1.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y1],
+                            uv: [0.0, 1.0],
+                            opacity: o,
+                            _pad: [0.0; 3],
+                        },
+                    ]);
+
+                    ordered_draws.push(OrderedDraw::Image(ImageDraw {
+                        scissor: current_scissor,
+                        first_vertex,
+                        vertex_count: 6,
+                        image: entry.image,
+                    }));
+                }
                 SceneOp::Text {
                     origin,
                     text,
@@ -2866,6 +3190,55 @@ impl fret_core::PathService for Renderer {
         }
 
         self.prune_path_cache();
+    }
+}
+
+impl fret_core::SvgService for Renderer {
+    fn register_svg(&mut self, bytes: &[u8]) -> fret_core::SvgId {
+        let h = hash_bytes(bytes);
+        if let Some(ids) = self.svg_hash_index.get(&h) {
+            for &id in ids {
+                let Some(existing) = self.svgs.get(id) else {
+                    continue;
+                };
+                if existing.as_ref() == bytes {
+                    return id;
+                }
+            }
+        }
+
+        let id = self.svgs.insert(Arc::<[u8]>::from(bytes));
+        self.svg_hash_index.entry(h).or_default().push(id);
+        id
+    }
+
+    fn unregister_svg(&mut self, svg: fret_core::SvgId) -> bool {
+        let Some(bytes) = self.svgs.remove(svg) else {
+            return false;
+        };
+
+        let h = hash_bytes(&bytes);
+        if let Some(list) = self.svg_hash_index.get_mut(&h) {
+            list.retain(|id| *id != svg);
+            if list.is_empty() {
+                self.svg_hash_index.remove(&h);
+            }
+        }
+
+        // Drop any cached rasterizations for this SVG and unregister their images.
+        let mut keys_to_remove: Vec<SvgRasterKey> = Vec::new();
+        for k in self.svg_rasters.keys() {
+            if k.svg == svg {
+                keys_to_remove.push(*k);
+            }
+        }
+        for k in keys_to_remove {
+            if let Some(entry) = self.svg_rasters.remove(&k) {
+                let _ = self.unregister_image(entry.image);
+            }
+        }
+
+        true
     }
 }
 
