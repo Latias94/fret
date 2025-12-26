@@ -12,6 +12,8 @@ Enable **SVG icon rendering** in Fret with a design aligned with Zed/GPUI:
 - Upload alpha mask as a GPU texture.
 - Draw the icon by sampling the mask and multiplying by a **tint color** (GPU).
 
+Also support SVG as a regular image (RGBA) for cases that require original SVG colors.
+
 This provides a high-quality and theme-friendly icon path without requiring a full SVG feature
 surface (filters, gradients, nested masks, text shaping, etc.).
 
@@ -85,6 +87,9 @@ Important detail: WebGPU requires `bytes_per_row` alignment. We must pad rows wh
 **Helper**: `fret-render` provides `upload_alpha_mask(...) -> UploadedAlphaMask` which handles row
 padding for `R8Unorm` uploads.
 
+**Helper**: `fret-render` provides `upload_rgba_image(...) -> UploadedRgbaImage` which uploads
+`Rgba8UnormSrgb` data and handles row padding.
+
 ### UI usage
 
 Expose a small retained widget:
@@ -135,6 +140,11 @@ let image_id = renderer.register_image(fret_render::ImageDescriptor {
 
 - [ ] Add cache keyed by `(svg_hash, size_box, scale_factor)` producing `ImageId`
 - [ ] Add optional “smooth scale factor” policy (similar to GPUI’s `SMOOTH_SVG_SCALE_FACTOR`)
+
+### IMG-0: SVG as image (RGBA)
+
+- [ ] Add `fret-render::SvgRenderer::render_rgba` (unpremultiplied RGBA output)
+- [ ] Add `upload_rgba_image` helper
 
 ## Risks / gotchas
 

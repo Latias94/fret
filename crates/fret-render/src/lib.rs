@@ -10,7 +10,10 @@ pub use error::RenderError;
 pub use images::{ImageColorSpace, ImageDescriptor, ImageRegistry};
 pub use renderer::{ClearColor, RenderSceneParams, Renderer};
 pub use surface::SurfaceState;
-pub use svg::{SMOOTH_SVG_SCALE_FACTOR, SvgAlphaMask, SvgRenderer, UploadedAlphaMask, upload_alpha_mask};
+pub use svg::{
+    SMOOTH_SVG_SCALE_FACTOR, SvgAlphaMask, SvgRenderer, SvgRgbaImage, UploadedAlphaMask,
+    UploadedRgbaImage, upload_alpha_mask, upload_rgba_image,
+};
 pub use targets::{RenderTargetColorSpace, RenderTargetDescriptor, RenderTargetRegistry};
 
 pub struct WgpuContext {
