@@ -3841,6 +3841,40 @@ impl WinitDriver for DemoDriver {
         let ui_kit_progress_node = ui.create_node(ProgressBar::new(ui_kit_slider));
         ui.add_child(ui_kit_root, ui_kit_progress_node);
 
+        let ui_kit_path_label = ui.create_node(fret_ui_app::Text::new("Path (MVP)"));
+        ui.add_child(ui_kit_root, ui_kit_path_label);
+        let ui_kit_path_frame = ui.create_node(Frame::new(
+            ChromeRefinement::default()
+                .rounded_md()
+                .border_1()
+                .px_3()
+                .py_1(),
+        ));
+        let ui_kit_path_commands = vec![
+            fret_core::PathCommand::MoveTo(Point::new(Px(0.0), Px(40.0))),
+            fret_core::PathCommand::CubicTo {
+                ctrl1: Point::new(Px(40.0), Px(0.0)),
+                ctrl2: Point::new(Px(120.0), Px(80.0)),
+                to: Point::new(Px(160.0), Px(40.0)),
+            },
+            fret_core::PathCommand::LineTo(Point::new(Px(240.0), Px(10.0))),
+            fret_core::PathCommand::LineTo(Point::new(Px(300.0), Px(70.0))),
+        ];
+        let ui_kit_path_node = ui.create_node(
+            fret_ui_app::Path::new(ui_kit_path_commands)
+                .style(fret_core::PathStyle::Stroke(fret_core::StrokeStyle {
+                    width: Px(2.5),
+                }))
+                .color(Color {
+                    r: 0.25,
+                    g: 0.70,
+                    b: 1.0,
+                    a: 1.0,
+                }),
+        );
+        ui.add_child(ui_kit_path_frame, ui_kit_path_node);
+        ui.add_child(ui_kit_root, ui_kit_path_frame);
+
         let ui_kit_select_node = ui.create_node(
             Select::new(
                 ui_kit_select,

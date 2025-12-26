@@ -1,6 +1,6 @@
 # MVP: Vector Paths + SVG Icons (GPUI-Aligned)
 
-Status: MVP-PATH-0 implemented; MVP-PATH-1 pending
+Status: MVP-PATH-0 implemented; MVP-PATH-1 implemented (renderer + `Path` primitive)
 
 Last updated: 2025-12-26
 

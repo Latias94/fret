@@ -26,8 +26,8 @@ pub use fret_ui::legacy_widgets::{
 };
 
 pub use fret_ui::primitives::{
-    BoundTextArea, BoundTextInput, Clip, Column, Image, ResizableSplit, Row, Scroll, Split, Stack,
-    Text, TextArea, TextAreaStyle, TextInput, TextInputStyle,
+    BoundTextArea, BoundTextInput, Clip, Column, Image, Path, ResizableSplit, Row, Scroll, Split,
+    Stack, Text, TextArea, TextAreaStyle, TextInput, TextInputStyle,
 };
 
 pub use fret_ui::{

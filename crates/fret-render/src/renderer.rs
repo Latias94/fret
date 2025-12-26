@@ -3,6 +3,10 @@ use fret_core::{
     geometry::{Corners, Edges, Rect},
     scene::{Color, Scene, SceneOp},
 };
+use lyon::tessellation::{
+    BuffersBuilder, FillOptions, FillTessellator, FillVertex, StrokeOptions, StrokeTessellator,
+    StrokeVertex, VertexBuffers,
+};
 use slotmap::SlotMap;
 use std::collections::HashMap;
 
@@ -55,6 +59,13 @@ struct ViewportVertex {
 struct TextVertex {
     pos_px: [f32; 2],
     uv: [f32; 2],
+    color: [f32; 4],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+struct PathVertex {
+    pos_px: [f32; 2],
     color: [f32; 4],
 }
 
@@ -185,6 +196,130 @@ fn metrics_from_path_commands(
     }
 }
 
+fn build_lyon_path(commands: &[fret_core::PathCommand]) -> lyon::path::Path {
+    use lyon::math::point;
+
+    let mut builder = lyon::path::Path::builder();
+    let mut active = false;
+
+    for cmd in commands {
+        match *cmd {
+            fret_core::PathCommand::MoveTo(p) => {
+                if active {
+                    builder.end(false);
+                }
+                builder.begin(point(p.x.0, p.y.0));
+                active = true;
+            }
+            fret_core::PathCommand::LineTo(p) => {
+                let to = point(p.x.0, p.y.0);
+                if !active {
+                    builder.begin(to);
+                    active = true;
+                } else {
+                    builder.line_to(to);
+                }
+            }
+            fret_core::PathCommand::QuadTo { ctrl, to } => {
+                let ctrl = point(ctrl.x.0, ctrl.y.0);
+                let to = point(to.x.0, to.y.0);
+                if !active {
+                    builder.begin(to);
+                    active = true;
+                } else {
+                    builder.quadratic_bezier_to(ctrl, to);
+                }
+            }
+            fret_core::PathCommand::CubicTo { ctrl1, ctrl2, to } => {
+                let ctrl1 = point(ctrl1.x.0, ctrl1.y.0);
+                let ctrl2 = point(ctrl2.x.0, ctrl2.y.0);
+                let to = point(to.x.0, to.y.0);
+                if !active {
+                    builder.begin(to);
+                    active = true;
+                } else {
+                    builder.cubic_bezier_to(ctrl1, ctrl2, to);
+                }
+            }
+            fret_core::PathCommand::Close => {
+                if active {
+                    builder.end(true);
+                    active = false;
+                }
+            }
+        }
+    }
+
+    if active {
+        builder.end(false);
+    }
+
+    builder.build()
+}
+
+fn tessellate_path_commands(
+    commands: &[fret_core::PathCommand],
+    style: fret_core::PathStyle,
+    constraints: fret_core::PathConstraints,
+) -> Vec<[f32; 2]> {
+    if commands.is_empty() {
+        return Vec::new();
+    }
+
+    let path = build_lyon_path(commands);
+
+    let scale = constraints.scale_factor.max(1.0);
+    let tolerance = (0.25 / scale).clamp(0.01, 1.0);
+
+    let mut buffers: VertexBuffers<[f32; 2], u32> = VertexBuffers::new();
+    match style {
+        fret_core::PathStyle::Fill(fill) => {
+            let fill_rule = match fill.rule {
+                fret_core::FillRule::NonZero => lyon::tessellation::FillRule::NonZero,
+                fret_core::FillRule::EvenOdd => lyon::tessellation::FillRule::EvenOdd,
+            };
+            let opts = FillOptions::default()
+                .with_tolerance(tolerance)
+                .with_fill_rule(fill_rule);
+            let mut tessellator = FillTessellator::new();
+            let _ = tessellator.tessellate_path(
+                &path,
+                &opts,
+                &mut BuffersBuilder::new(&mut buffers, |v: FillVertex| {
+                    let p = v.position();
+                    [p.x, p.y]
+                }),
+            );
+        }
+        fret_core::PathStyle::Stroke(stroke) => {
+            let width = stroke.width.0.max(0.0);
+            let opts = StrokeOptions::default()
+                .with_line_width(width)
+                .with_tolerance(tolerance)
+                .with_line_join(lyon::tessellation::LineJoin::Round)
+                .with_start_cap(lyon::tessellation::LineCap::Round)
+                .with_end_cap(lyon::tessellation::LineCap::Round);
+            let mut tessellator = StrokeTessellator::new();
+            let _ = tessellator.tessellate_path(
+                &path,
+                &opts,
+                &mut BuffersBuilder::new(&mut buffers, |v: StrokeVertex| {
+                    let p = v.position();
+                    [p.x, p.y]
+                }),
+            );
+        }
+    }
+
+    let mut out = Vec::with_capacity(buffers.indices.len());
+    for idx in buffers.indices {
+        if let Some(v) = buffers.vertices.get(idx as usize) {
+            out.push(*v);
+        }
+    }
+    out
+}
+
 fn scissor_from_rect(rect: Rect, scale_factor: f32, viewport: (u32, u32)) -> Option<ScissorRect> {
     let (vw, vh) = viewport;
     if vw == 0 || vh == 0 {
@@ -258,11 +393,18 @@ struct TextDraw {
     vertex_count: u32,
 }
 
+struct PathDraw {
+    scissor: ScissorRect,
+    first_vertex: u32,
+    vertex_count: u32,
+}
+
 enum OrderedDraw {
     Quad(DrawCall),
     Viewport(ViewportDraw),
     Image(ImageDraw),
     Text(TextDraw),
+    Path(PathDraw),
 }
 
 pub struct Renderer {
@@ -293,6 +435,13 @@ pub struct Renderer {
     text_vertex_buffer_index: usize,
     text_vertex_capacity: usize,
 
+    path_pipeline_format: Option<wgpu::TextureFormat>,
+    path_pipeline: Option<wgpu::RenderPipeline>,
+
+    path_vertex_buffers: Vec<wgpu::Buffer>,
+    path_vertex_buffer_index: usize,
+    path_vertex_capacity: usize,
+
     text_system: TextSystem,
 
     paths: SlotMap<fret_core::PathId, PreparedPath>,
@@ -313,9 +462,10 @@ pub struct Renderer {
     scene_encoding_scratch: SceneEncoding,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 struct PreparedPath {
     metrics: fret_core::PathMetrics,
+    triangles: Vec<[f32; 2]>,
 }
 
 pub struct RenderSceneParams<'a> {
@@ -332,6 +482,7 @@ struct SceneEncoding {
     instances: Vec<QuadInstance>,
     viewport_vertices: Vec<ViewportVertex>,
     text_vertices: Vec<TextVertex>,
+    path_vertices: Vec<PathVertex>,
     ordered_draws: Vec<OrderedDraw>,
 }
 
@@ -340,6 +491,7 @@ impl SceneEncoding {
         self.instances.clear();
         self.viewport_vertices.clear();
         self.text_vertices.clear();
+        self.path_vertices.clear();
         self.ordered_draws.clear();
     }
 }
@@ -467,6 +619,18 @@ impl Renderer {
             })
             .collect();
 
+        let path_vertex_capacity = 1024;
+        let path_vertex_buffers = (0..FRAMES_IN_FLIGHT)
+            .map(|i| {
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(&format!("fret path vertices #{i}")),
+                    size: (path_vertex_capacity * std::mem::size_of::<PathVertex>()) as u64,
+                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                })
+            })
+            .collect();
+
         Self {
             uniform_buffer,
             uniform_bind_group,
@@ -488,6 +652,11 @@ impl Renderer {
             text_vertex_buffers,
             text_vertex_buffer_index: 0,
             text_vertex_capacity,
+            path_pipeline_format: None,
+            path_pipeline: None,
+            path_vertex_buffers,
+            path_vertex_buffer_index: 0,
+            path_vertex_capacity,
             text_system,
             paths: SlotMap::with_key(),
             render_targets: RenderTargetRegistry::default(),
@@ -723,6 +892,76 @@ impl Renderer {
         self.text_pipeline = Some(pipeline);
     }
 
+    fn ensure_path_pipeline(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
+        if self.path_pipeline_format == Some(format) && self.path_pipeline.is_some() {
+            return;
+        }
+
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("fret path shader"),
+            source: wgpu::ShaderSource::Wgsl(PATH_SHADER.into()),
+        });
+
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("fret path pipeline layout"),
+            bind_group_layouts: &[&self.uniform_bind_group_layout],
+            immediate_size: 0,
+        });
+
+        let vertex_stride = std::mem::size_of::<PathVertex>() as wgpu::BufferAddress;
+        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("fret path pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: Some("vs_main"),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: vertex_stride,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &[
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 0,
+                            shader_location: 0,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x4,
+                            offset: 8,
+                            shader_location: 1,
+                        },
+                    ],
+                }],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            }),
+            multiview_mask: None,
+            cache: None,
+        });
+
+        self.path_pipeline_format = Some(format);
+        self.path_pipeline = Some(pipeline);
+    }
+
     fn ensure_pipeline(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
         if self.quad_pipeline_format == Some(format) && self.quad_pipeline.is_some() {
             return;
@@ -871,6 +1110,28 @@ impl Renderer {
         self.text_vertex_capacity = new_capacity;
     }
 
+    fn ensure_path_vertex_capacity(&mut self, device: &wgpu::Device, needed: usize) {
+        if needed <= self.path_vertex_capacity {
+            return;
+        }
+
+        let new_capacity = needed
+            .next_power_of_two()
+            .max(self.path_vertex_capacity * 2);
+        self.path_vertex_buffers = (0..self.path_vertex_buffers.len())
+            .map(|i| {
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(&format!("fret path vertices (resized) #{i}")),
+                    size: (new_capacity * std::mem::size_of::<PathVertex>()) as u64,
+                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                })
+            })
+            .collect();
+        self.path_vertex_buffer_index = 0;
+        self.path_vertex_capacity = new_capacity;
+    }
+
     pub fn render_scene(
         &mut self,
         device: &wgpu::Device,
@@ -888,6 +1149,7 @@ impl Renderer {
         self.ensure_viewport_pipeline(device, format);
         self.ensure_pipeline(device, format);
         self.ensure_text_pipeline(device, format);
+        self.ensure_path_pipeline(device, format);
 
         let uniform = ViewportUniform {
             viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
@@ -927,10 +1189,12 @@ impl Renderer {
         let instances = &encoding.instances;
         let viewport_vertices = &encoding.viewport_vertices;
         let text_vertices = &encoding.text_vertices;
+        let path_vertices = &encoding.path_vertices;
 
         self.ensure_instance_capacity(device, instances.len());
         self.ensure_viewport_vertex_capacity(device, viewport_vertices.len());
         self.ensure_text_vertex_capacity(device, text_vertices.len());
+        self.ensure_path_vertex_capacity(device, path_vertices.len());
 
         let instance_buffer_index = self.instance_buffer_index;
         self.instance_buffer_index = (self.instance_buffer_index + 1) % self.instance_buffers.len();
@@ -957,6 +1221,14 @@ impl Renderer {
         let text_vertex_buffer = &self.text_vertex_buffers[text_vertex_buffer_index];
         if !text_vertices.is_empty() {
             queue.write_buffer(text_vertex_buffer, 0, bytemuck::cast_slice(&text_vertices));
+        }
+
+        let path_vertex_buffer_index = self.path_vertex_buffer_index;
+        self.path_vertex_buffer_index =
+            (self.path_vertex_buffer_index + 1) % self.path_vertex_buffers.len();
+        let path_vertex_buffer = &self.path_vertex_buffers[path_vertex_buffer_index];
+        if !path_vertices.is_empty() {
+            queue.write_buffer(path_vertex_buffer, 0, bytemuck::cast_slice(path_vertices));
         }
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -986,6 +1258,7 @@ impl Renderer {
                 Quad,
                 Viewport,
                 Text,
+                Path,
             }
 
             let quad_pipeline = self
@@ -1000,6 +1273,10 @@ impl Renderer {
                 .text_pipeline
                 .as_ref()
                 .expect("text pipeline must exist");
+            let path_pipeline = self
+                .path_pipeline
+                .as_ref()
+                .expect("path pipeline must exist");
 
             let mut active_pipeline = ActivePipeline::None;
 
@@ -1096,6 +1373,29 @@ impl Renderer {
                             pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
                             pass.set_bind_group(1, self.text_system.atlas_bind_group(), &[]);
                             active_pipeline = ActivePipeline::Text;
+                        }
+
+                        pass.set_scissor_rect(
+                            draw.scissor.x,
+                            draw.scissor.y,
+                            draw.scissor.w,
+                            draw.scissor.h,
+                        );
+                        pass.draw(
+                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                            0..1,
+                        );
+                    }
+                    OrderedDraw::Path(draw) => {
+                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                            continue;
+                        }
+
+                        if !matches!(active_pipeline, ActivePipeline::Path) {
+                            pass.set_pipeline(path_pipeline);
+                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                            pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
+                            active_pipeline = ActivePipeline::Path;
                         }
 
                         pass.set_scissor_rect(
@@ -1217,6 +1517,7 @@ impl Renderer {
         let instances = &mut encoding.instances;
         let viewport_vertices = &mut encoding.viewport_vertices;
         let text_vertices = &mut encoding.text_vertices;
+        let path_vertices = &mut encoding.path_vertices;
         let ordered_draws = &mut encoding.ordered_draws;
 
         let mut scissor_stack: Vec<ScissorRect> =
@@ -1531,8 +1832,46 @@ impl Renderer {
                     }
                 }
                 SceneOp::Path { .. } => {
-                    // MVP-PATH-0: core contract only. Renderer implementation is added in later MVPs.
                     flush_quad_batch!();
+                    let SceneOp::Path {
+                        origin,
+                        path,
+                        color,
+                        ..
+                    } = op
+                    else {
+                        unreachable!();
+                    };
+                    if color.a <= 0.0 {
+                        continue;
+                    }
+                    let Some(prepared) = self.paths.get(*path) else {
+                        continue;
+                    };
+                    if prepared.triangles.is_empty() {
+                        continue;
+                    }
+
+                    let first_vertex = path_vertices.len() as u32;
+                    let ox = origin.x.0 * scale_factor;
+                    let oy = origin.y.0 * scale_factor;
+                    let premul = color_to_linear_rgba_premul(*color);
+
+                    for p in &prepared.triangles {
+                        path_vertices.push(PathVertex {
+                            pos_px: [ox + p[0] * scale_factor, oy + p[1] * scale_factor],
+                            color: premul,
+                        });
+                    }
+
+                    let vertex_count = (path_vertices.len() as u32).saturating_sub(first_vertex);
+                    if vertex_count > 0 {
+                        ordered_draws.push(OrderedDraw::Path(PathDraw {
+                            scissor: current_scissor,
+                            first_vertex,
+                            vertex_count,
+                        }));
+                    }
                 }
                 SceneOp::ViewportSurface {
                     rect,
@@ -1692,10 +2031,11 @@ impl fret_core::PathService for Renderer {
         &mut self,
         commands: &[fret_core::PathCommand],
         style: fret_core::PathStyle,
-        _constraints: fret_core::PathConstraints,
+        constraints: fret_core::PathConstraints,
     ) -> (fret_core::PathId, fret_core::PathMetrics) {
         let metrics = metrics_from_path_commands(commands, style);
-        let id = self.paths.insert(PreparedPath { metrics });
+        let triangles = tessellate_path_commands(commands, style, constraints);
+        let id = self.paths.insert(PreparedPath { metrics, triangles });
         (id, metrics)
     }
 
@@ -1898,6 +2238,45 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 }
 "#;
 
+const PATH_SHADER: &str = r#"
+struct Viewport {
+  viewport_size: vec2<f32>,
+  _pad: vec2<f32>,
+};
+
+@group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct VsIn {
+  @location(0) pos_px: vec2<f32>,
+  @location(1) color: vec4<f32>,
+};
+
+struct VsOut {
+  @builtin(position) clip_pos: vec4<f32>,
+  @location(0) color: vec4<f32>,
+};
+
+fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
+  let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
+  let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
+  return vec2<f32>(ndc_x, ndc_y);
+}
+
+@vertex
+fn vs_main(input: VsIn) -> VsOut {
+  var out: VsOut;
+  let clip_xy = to_clip_space(input.pos_px);
+  out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
+  out.color = input.color;
+  return out;
+}
+
+@fragment
+fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
+  return input.color;
+}
+"#;
+
 const TEXT_SHADER: &str = r#"
 struct Viewport {
   viewport_size: vec2<f32>,
@@ -1947,13 +2326,16 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 
 #[cfg(test)]
 mod tests {
-    use super::{QUAD_SHADER, TEXT_SHADER, VIEWPORT_SHADER, clamp_corner_radii_for_rect};
+    use super::{
+        PATH_SHADER, QUAD_SHADER, TEXT_SHADER, VIEWPORT_SHADER, clamp_corner_radii_for_rect,
+    };
 
     #[test]
     fn shaders_parse_as_wgsl() {
         for (name, src) in [
             ("viewport", VIEWPORT_SHADER),
             ("quad", QUAD_SHADER),
+            ("path", PATH_SHADER),
             ("text", TEXT_SHADER),
         ] {
             naga::front::wgsl::parse_str(src)

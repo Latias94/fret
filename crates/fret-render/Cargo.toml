@@ -10,6 +10,7 @@ fret-core = { path = "../fret-core" }
 slotmap.workspace = true
 thiserror.workspace = true
 cosmic-text.workspace = true
+lyon.workspace = true
 
 [dev-dependencies]
 naga.workspace = true
