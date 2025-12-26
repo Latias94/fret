@@ -1,9 +1,10 @@
-use fret_app::App;
+use fret_app::{App, Effect, WindowRequest};
 use fret_core::{
     AppWindowId, Color, Event, KeyCode, PlatformCapabilities, Point, Px, Rect, Scene, Size,
     SvgFit, UiServices,
 };
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
+use std::time::{Duration, Instant};
 use winit::event_loop::EventLoop;
 
 const SVG_SQUARE: &str = r#"
@@ -79,12 +80,17 @@ struct SvgAtlasStressState {
     svg_square: Option<fret_core::SvgId>,
     svg_wide: Option<fret_core::SvgId>,
     frame: u64,
+    start: Option<Instant>,
+    last_report: Option<Instant>,
+    render_time_accum: Duration,
+    render_frames_accum: u64,
     phase: bool,
     auto_phase: bool,
     fit_mode: FitMode,
     budget_presets: Vec<u64>,
     budget_index: usize,
     budget_applied: u64,
+    max_frames: Option<u64>,
 }
 
 impl Default for SvgAtlasStressState {
@@ -93,18 +99,25 @@ impl Default for SvgAtlasStressState {
             svg_square: None,
             svg_wide: None,
             frame: 0,
+            start: None,
+            last_report: None,
+            render_time_accum: Duration::ZERO,
+            render_frames_accum: 0,
             phase: false,
             auto_phase: true,
             fit_mode: FitMode::Mixed,
             budget_presets: vec![256 * 1024, 1024 * 1024, 4 * 1024 * 1024, 64 * 1024 * 1024],
             budget_index: 1,
             budget_applied: 0,
+            max_frames: None,
         }
     }
 }
 
 #[derive(Default)]
-struct SvgAtlasStressDriver;
+struct SvgAtlasStressDriver {
+    max_frames: Option<u64>,
+}
 
 impl SvgAtlasStressDriver {
     fn print_help() {
@@ -133,7 +146,8 @@ impl WinitDriver for SvgAtlasStressDriver {
 
     fn create_window_state(&mut self, _app: &mut App, _window: AppWindowId) -> Self::WindowState {
         Self::print_help();
-        let st = SvgAtlasStressState::default();
+        let mut st = SvgAtlasStressState::default();
+        st.max_frames = self.max_frames;
         Self::print_state(&st);
         st
     }
@@ -203,6 +217,14 @@ impl WinitDriver for SvgAtlasStressDriver {
         services: &mut dyn fret_core::UiServices,
         scene: &mut Scene,
     ) {
+        let render_start = Instant::now();
+
+        if state.start.is_none() {
+            let now = Instant::now();
+            state.start = Some(now);
+            state.last_report = Some(now);
+        }
+
         state.frame = state.frame.wrapping_add(1);
         if state.auto_phase && state.frame % 180 == 0 {
             state.phase = !state.phase;
@@ -244,6 +266,7 @@ impl WinitDriver for SvgAtlasStressDriver {
         let cols = (usable_w / step).floor().max(1.0) as usize;
         let rows = (usable_h / step).floor().max(1.0) as usize;
 
+        let mut icons_emitted = 0usize;
         for row in 0..rows {
             for col in 0..cols {
                 let parity = (row + col) % 2 == 0;
@@ -283,7 +306,43 @@ impl WinitDriver for SvgAtlasStressDriver {
                     color,
                     opacity: 1.0,
                 });
+                icons_emitted += 1;
             }
+        }
+
+        let elapsed = render_start.elapsed();
+        state.render_time_accum += elapsed;
+        state.render_frames_accum = state.render_frames_accum.saturating_add(1);
+
+        let report_every = Duration::from_secs(1);
+        if let Some(last) = state.last_report
+            && last.elapsed() >= report_every
+        {
+            let avg_us = if state.render_frames_accum == 0 {
+                0.0
+            } else {
+                state.render_time_accum.as_secs_f64() * 1_000_000.0
+                    / state.render_frames_accum as f64
+            };
+            println!(
+                "frames={} icons/frame={} avg_driver_render={:.1}us budget={}KB fit={:?} phase={}",
+                state.frame,
+                icons_emitted,
+                avg_us,
+                state.budget_presets[state.budget_index] / 1024,
+                state.fit_mode,
+                if state.phase { "B" } else { "A" }
+            );
+            state.last_report = Some(Instant::now());
+            state.render_time_accum = Duration::ZERO;
+            state.render_frames_accum = 0;
+        }
+
+        if let Some(max) = state.max_frames
+            && state.frame >= max
+        {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
         }
 
         app.request_redraw(window);
@@ -327,9 +386,26 @@ fn main() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let driver = SvgAtlasStressDriver::default();
+    let mut max_frames: Option<u64> = None;
+    let mut args = std::env::args().skip(1);
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--frames" => {
+                let Some(value) = args.next() else {
+                    anyhow::bail!("--frames requires a value");
+                };
+                max_frames = Some(value.parse()?);
+            }
+            "--help" | "-h" => {
+                println!("Usage: fret-svg-atlas-stress [--frames N]");
+                return Ok(());
+            }
+            other => anyhow::bail!("unknown arg: {other}"),
+        }
+    }
+
+    let driver = SvgAtlasStressDriver { max_frames };
     let mut runner = WinitRunner::new(config, app, driver);
     event_loop.run_app(&mut runner)?;
     Ok(())
 }
-
