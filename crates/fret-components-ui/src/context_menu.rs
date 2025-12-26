@@ -318,6 +318,28 @@ impl ContextMenu {
             .find_map(|i| rows.get(i).filter(|r| matches(r)).map(|r| r.raw_index))
     }
 
+    fn selectable_rows(panel: &PreparedPanel) -> Vec<usize> {
+        panel
+            .rows
+            .iter()
+            .filter(|r| {
+                r.enabled
+                    && matches!(
+                        r.kind,
+                        PreparedRowKind::Command(_) | PreparedRowKind::Submenu
+                    )
+            })
+            .map(|r| r.raw_index)
+            .collect()
+    }
+
+    fn page_step(&self, panel: &PreparedPanel) -> usize {
+        let view_h = (panel.bounds.size.height.0 - self.style.padding_y.0 * 2.0).max(0.0);
+        let row_h = self.style.row_height.0.max(1.0);
+        let page = (view_h / row_h).floor() as usize;
+        page.max(1)
+    }
+
     fn current_depth(&self) -> usize {
         self.open_path.len()
     }
@@ -819,18 +841,7 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         let Some(panel) = self.panels.get(depth) else {
                             return;
                         };
-                        let selectable: Vec<usize> = panel
-                            .rows
-                            .iter()
-                            .filter(|r| {
-                                r.enabled
-                                    && matches!(
-                                        r.kind,
-                                        PreparedRowKind::Command(_) | PreparedRowKind::Submenu
-                                    )
-                            })
-                            .map(|r| r.raw_index)
-                            .collect();
+                        let selectable = Self::selectable_rows(panel);
                         if selectable.is_empty() {
                             return;
                         }
@@ -844,24 +855,39 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         cx.request_redraw();
                         cx.stop_propagation();
                     }
+                    KeyCode::PageUp | KeyCode::PageDown => {
+                        self.clear_typeahead();
+                        let depth = self.current_depth();
+                        let Some(panel) = self.panels.get(depth) else {
+                            return;
+                        };
+                        let selectable = Self::selectable_rows(panel);
+                        if selectable.is_empty() {
+                            return;
+                        }
+
+                        let step = self.page_step(panel);
+                        let cur = self
+                            .selection_raw(depth)
+                            .and_then(|raw| selectable.iter().position(|v| *v == raw));
+                        let cur = cur.unwrap_or(0);
+                        let next_i = match key {
+                            KeyCode::PageDown => (cur + step).min(selectable.len() - 1),
+                            KeyCode::PageUp => cur.saturating_sub(step),
+                            _ => cur,
+                        };
+                        self.set_selection_raw(depth, Some(selectable[next_i]));
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                    }
                     KeyCode::ArrowDown | KeyCode::ArrowUp => {
                         self.clear_typeahead();
                         let depth = self.current_depth();
                         let Some(panel) = self.panels.get(depth) else {
                             return;
                         };
-                        let selectable: Vec<usize> = panel
-                            .rows
-                            .iter()
-                            .filter(|r| {
-                                r.enabled
-                                    && matches!(
-                                        r.kind,
-                                        PreparedRowKind::Command(_) | PreparedRowKind::Submenu
-                                    )
-                            })
-                            .map(|r| r.raw_index)
-                            .collect();
+                        let selectable = Self::selectable_rows(panel);
                         if selectable.is_empty() {
                             return;
                         }

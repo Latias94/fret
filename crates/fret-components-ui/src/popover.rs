@@ -401,6 +401,48 @@ impl Popover {
         None
     }
 
+    fn page_step(&self, window_bounds: Rect) -> usize {
+        let view_h = (window_bounds.size.height.0 - self.style.padding_y.0 * 2.0).max(0.0);
+        let row_h = self.style.row_height.0.max(1.0);
+        let page = (view_h / row_h).floor() as usize;
+        page.max(1)
+    }
+
+    fn page_step_enabled(&self, window_bounds: Rect, start: usize, dir: i32) -> Option<usize> {
+        let len = self.rows.len();
+        if len == 0 {
+            return None;
+        }
+        let step = self.page_step(window_bounds);
+        let unclamped = if dir >= 0 {
+            start.saturating_add(step)
+        } else {
+            start.saturating_sub(step)
+        };
+        let mut idx = unclamped.min(len.saturating_sub(1));
+
+        if self.rows.get(idx).is_some_and(|r| r.enabled) {
+            return Some(idx);
+        }
+
+        if dir >= 0 {
+            while idx + 1 < len {
+                idx += 1;
+                if self.rows.get(idx).is_some_and(|r| r.enabled) {
+                    return Some(idx);
+                }
+            }
+        } else {
+            while idx > 0 {
+                idx -= 1;
+                if self.rows.get(idx).is_some_and(|r| r.enabled) {
+                    return Some(idx);
+                }
+            }
+        }
+        None
+    }
+
     fn typeahead_char(key: KeyCode, modifiers: &Modifiers) -> Option<char> {
         if modifiers.ctrl || modifiers.meta || modifiers.alt || modifiers.alt_gr {
             return None;
@@ -594,34 +636,60 @@ impl<H: UiHost> Widget<H> for Popover {
                     }
                     KeyCode::ArrowDown => {
                         self.clear_typeahead();
-                    let base = self
-                        .hover_row
-                        .or(request.selected)
-                        .or_else(|| self.first_enabled_row())
-                        .unwrap_or(0);
-                    if let Some(next) = self.next_enabled_row(base, 1) {
-                        self.hover_row = Some(next);
-                    }
-                    cx.invalidate_self(Invalidation::Paint);
-                    cx.request_redraw();
+                        let base = self
+                            .hover_row
+                            .or(request.selected)
+                            .or_else(|| self.first_enabled_row())
+                            .unwrap_or(0);
+                        if let Some(next) = self.next_enabled_row(base, 1) {
+                            self.hover_row = Some(next);
+                        }
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
                     }
                     KeyCode::ArrowUp => {
                         self.clear_typeahead();
-                    let base = self
-                        .hover_row
-                        .or(request.selected)
-                        .or_else(|| self.first_enabled_row())
-                        .unwrap_or(0);
-                    if let Some(next) = self.next_enabled_row(base, -1) {
-                        self.hover_row = Some(next);
+                        let base = self
+                            .hover_row
+                            .or(request.selected)
+                            .or_else(|| self.first_enabled_row())
+                            .unwrap_or(0);
+                        if let Some(next) = self.next_enabled_row(base, -1) {
+                            self.hover_row = Some(next);
+                        }
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
                     }
-                    cx.invalidate_self(Invalidation::Paint);
-                    cx.request_redraw();
+                    KeyCode::PageDown => {
+                        self.clear_typeahead();
+                        let base = self
+                            .hover_row
+                            .or(request.selected)
+                            .or_else(|| self.first_enabled_row())
+                            .unwrap_or(0);
+                        if let Some(next) = self.page_step_enabled(cx.bounds, base, 1) {
+                            self.hover_row = Some(next);
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                        }
+                    }
+                    KeyCode::PageUp => {
+                        self.clear_typeahead();
+                        let base = self
+                            .hover_row
+                            .or(request.selected)
+                            .or_else(|| self.first_enabled_row())
+                            .unwrap_or(0);
+                        if let Some(next) = self.page_step_enabled(cx.bounds, base, -1) {
+                            self.hover_row = Some(next);
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                        }
                     }
                     KeyCode::Home => {
                         self.clear_typeahead();
-                    if let Some(i) = self.first_enabled_row() {
-                        self.hover_row = Some(i);
+                        if let Some(i) = self.first_enabled_row() {
+                            self.hover_row = Some(i);
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                     }
