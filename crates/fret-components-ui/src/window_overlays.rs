@@ -900,7 +900,7 @@ mod tests {
     }
 
     #[test]
-    fn context_menu_arrow_keys_skip_disabled_and_space_activates() {
+    fn context_menu_initial_selection_skips_disabled_and_space_activates() {
         let mut host = App::new();
         let mut services = FakeServices::default();
 
@@ -967,16 +967,6 @@ mod tests {
         assert_eq!(ui.focus(), Some(overlays.context_menu_node));
 
         run_frame(&mut ui, &mut host, &mut services);
-
-        ui.dispatch_event(
-            &mut host,
-            &mut services,
-            &Event::KeyDown {
-                key: KeyCode::ArrowDown,
-                modifiers: Modifiers::default(),
-                repeat: false,
-            },
-        );
         ui.dispatch_event(
             &mut host,
             &mut services,
@@ -1455,6 +1445,231 @@ mod tests {
 
         let commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
         assert_eq!(commands, vec![cmd0]);
+        assert_eq!(ui.focus(), Some(trigger));
+    }
+
+    #[test]
+    fn context_menu_submenu_arrow_right_opens_and_arrow_left_closes() {
+        let mut host = App::new();
+        let mut services = FakeServices::default();
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        ui.set_root(root);
+
+        let mut overlays = WindowOverlays::install(&mut ui);
+
+        let trigger = ui.create_node(Focusable);
+        ui.add_child(root, trigger);
+        ui.set_focus(Some(trigger));
+
+        let cmd_disabled = CommandId::from("test.menu.sub.disabled");
+        let cmd_enabled = CommandId::from("test.menu.sub.enabled");
+        host.commands_mut().register(
+            cmd_disabled.clone(),
+            CommandMeta::new("Alpha").with_when(WhenExpr::parse("false").unwrap()),
+        );
+        host.commands_mut()
+            .register(cmd_enabled.clone(), CommandMeta::new("Beta"));
+
+        let menu = Menu {
+            title: "Menu".into(),
+            items: vec![MenuItem::Submenu {
+                title: "Sub".into(),
+                when: None,
+                items: vec![
+                    MenuItem::Command {
+                        command: cmd_disabled,
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: cmd_enabled.clone(),
+                        when: None,
+                    },
+                ],
+            }],
+        };
+
+        host.with_global_mut(ContextMenuService::default, |service, _app| {
+            service.set_request(
+                window,
+                ContextMenuRequest {
+                    position: Point::new(Px(10.0), Px(10.0)),
+                    menu,
+                    input_ctx: Default::default(),
+                    menu_bar: None,
+                },
+            );
+        });
+
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut services,
+            window,
+            &CommandId::from("context_menu.open"),
+        );
+        assert!(handled);
+        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+
+        run_frame(&mut ui, &mut host, &mut services);
+
+        ui.dispatch_event(
+            &mut host,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        run_frame(&mut ui, &mut host, &mut services);
+        ui.dispatch_event(
+            &mut host,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowLeft,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        run_frame(&mut ui, &mut host, &mut services);
+
+        let commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
+        assert_eq!(commands, Vec::<CommandId>::new());
+        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+
+        ui.dispatch_event(
+            &mut host,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        run_frame(&mut ui, &mut host, &mut services);
+
+        // First Space re-opens the submenu (no command yet).
+        let commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
+        assert_eq!(commands, Vec::<CommandId>::new());
+        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+
+        ui.dispatch_event(
+            &mut host,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        // Second Space activates the first enabled item (skipping the disabled one) and closes.
+        let commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
+        assert_eq!(commands, vec![cmd_enabled]);
+        assert_eq!(ui.focus(), Some(trigger));
+    }
+
+    #[test]
+    fn context_menu_submenu_enter_opens_and_space_activates_first_enabled() {
+        let mut host = App::new();
+        let mut services = FakeServices::default();
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        ui.set_root(root);
+
+        let mut overlays = WindowOverlays::install(&mut ui);
+
+        let trigger = ui.create_node(Focusable);
+        ui.add_child(root, trigger);
+        ui.set_focus(Some(trigger));
+
+        let cmd_disabled = CommandId::from("test.menu.sub.disabled");
+        let cmd_enabled = CommandId::from("test.menu.sub.enabled");
+        host.commands_mut().register(
+            cmd_disabled.clone(),
+            CommandMeta::new("Alpha").with_when(WhenExpr::parse("false").unwrap()),
+        );
+        host.commands_mut()
+            .register(cmd_enabled.clone(), CommandMeta::new("Beta"));
+
+        let menu = Menu {
+            title: "Menu".into(),
+            items: vec![MenuItem::Submenu {
+                title: "Sub".into(),
+                when: None,
+                items: vec![
+                    MenuItem::Command {
+                        command: cmd_disabled,
+                        when: None,
+                    },
+                    MenuItem::Command {
+                        command: cmd_enabled.clone(),
+                        when: None,
+                    },
+                ],
+            }],
+        };
+
+        host.with_global_mut(ContextMenuService::default, |service, _app| {
+            service.set_request(
+                window,
+                ContextMenuRequest {
+                    position: Point::new(Px(10.0), Px(10.0)),
+                    menu,
+                    input_ctx: Default::default(),
+                    menu_bar: None,
+                },
+            );
+        });
+
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut services,
+            window,
+            &CommandId::from("context_menu.open"),
+        );
+        assert!(handled);
+        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+
+        run_frame(&mut ui, &mut host, &mut services);
+
+        ui.dispatch_event(
+            &mut host,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        run_frame(&mut ui, &mut host, &mut services);
+
+        let commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
+        assert_eq!(commands, Vec::<CommandId>::new());
+        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+
+        ui.dispatch_event(
+            &mut host,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
+        assert_eq!(commands, vec![cmd_enabled]);
         assert_eq!(ui.focus(), Some(trigger));
     }
 

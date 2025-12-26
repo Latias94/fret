@@ -546,12 +546,23 @@ impl ContextMenu {
             let first = rows
                 .iter()
                 .find(|r| {
-                    matches!(
-                        r.kind,
-                        PreparedRowKind::Command(_) | PreparedRowKind::Submenu
-                    )
+                    r.enabled
+                        && matches!(
+                            r.kind,
+                            PreparedRowKind::Command(_) | PreparedRowKind::Submenu
+                        )
                 })
-                .map(|r| r.raw_index);
+                .map(|r| r.raw_index)
+                .or_else(|| {
+                    rows.iter()
+                        .find(|r| {
+                            matches!(
+                                r.kind,
+                                PreparedRowKind::Command(_) | PreparedRowKind::Submenu
+                            )
+                        })
+                        .map(|r| r.raw_index)
+                });
             self.set_selection_raw(depth, first);
         }
 
@@ -829,10 +840,22 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         let Some(row) = panel.rows.iter().find(|r| r.raw_index == raw) else {
                             return;
                         };
-                        if let PreparedRowKind::Command(cmd) = &row.kind
-                            && row.enabled
-                        {
-                            self.activate_command(cx, window, cmd.clone());
+                        match &row.kind {
+                            PreparedRowKind::Command(cmd) => {
+                                if row.enabled {
+                                    self.activate_command(cx, window, cmd.clone());
+                                }
+                            }
+                            PreparedRowKind::Submenu => {
+                                if self.open_path.len() == depth {
+                                    self.open_path.push(raw);
+                                    self.set_selection_raw(depth + 1, None);
+                                    cx.invalidate_self(Invalidation::Paint);
+                                    cx.request_redraw();
+                                    cx.stop_propagation();
+                                }
+                            }
+                            PreparedRowKind::Separator => {}
                         }
                     }
                     KeyCode::Home | KeyCode::End => {
