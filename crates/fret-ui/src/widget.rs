@@ -1,6 +1,7 @@
 use crate::{ContextMenuRequest, ContextMenuService, Theme, UiHost};
 use fret_core::{
-    AppWindowId, Event, NodeId, Point, Rect, Scene, SemanticsFlags, SemanticsRole, Size, UiServices,
+    AppWindowId, Corners, Event, NodeId, Point, Rect, Scene, SemanticsFlags, SemanticsRole, Size,
+    UiServices,
 };
 use fret_runtime::{CommandId, Effect, InputContext, Menu, Model, ModelId};
 
@@ -260,6 +261,16 @@ pub trait Widget<H: UiHost> {
     /// Default: `true`.
     fn clips_hit_test(&self, _bounds: Rect) -> bool {
         true
+    }
+    /// Optional rounded-rectangle clip shape for hit-testing.
+    ///
+    /// When provided and `clips_hit_test(...)` is `true`, the runtime additionally clips pointer
+    /// targeting to the rounded-rectangle defined by `bounds` + these corner radii. This keeps
+    /// hit-testing consistent with `overflow: clip` + rounded corners.
+    ///
+    /// Default: `None` (rectangular clipping only).
+    fn clip_hit_test_corner_radii(&self, _bounds: Rect) -> Option<Corners> {
+        None
     }
     /// Hit-test predicate for pointer input targeting.
     ///

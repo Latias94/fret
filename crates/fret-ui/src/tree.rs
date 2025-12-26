@@ -4,8 +4,8 @@ use crate::{
 };
 use fret_core::PlatformCapabilities;
 use fret_core::{
-    AppWindowId, Event, FrameId, KeyCode, NodeId, Point, PointerEvent, Rect, Scene, SceneOp,
-    SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, UiServices,
+    AppWindowId, Corners, Event, FrameId, KeyCode, NodeId, Point, PointerEvent, Px, Rect, Scene,
+    SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, UiServices,
 };
 use fret_runtime::{
     CommandId, DragKind, Effect, InputContext, KeyChord, KeymapService, ModelId, Platform,
@@ -1950,13 +1950,18 @@ impl<H: UiHost> UiTree<H> {
 
     fn hit_test_node(&self, node: NodeId, position: Point) -> Option<NodeId> {
         let n = self.nodes.get(node)?;
-        let clips_hit_test = n
-            .widget
-            .as_ref()
-            .map(|w| w.clips_hit_test(n.bounds))
-            .unwrap_or(true);
-        if clips_hit_test && !n.bounds.contains(position) {
-            return None;
+        let widget = n.widget.as_ref();
+        let clips_hit_test = widget.map(|w| w.clips_hit_test(n.bounds)).unwrap_or(true);
+        if clips_hit_test {
+            if !n.bounds.contains(position) {
+                return None;
+            }
+            if let Some(w) = widget
+                && let Some(radii) = w.clip_hit_test_corner_radii(n.bounds)
+                && !Self::point_in_rounded_rect(n.bounds, radii, position)
+            {
+                return None;
+            }
         }
 
         let hit_test_children = n
@@ -1978,6 +1983,67 @@ impl<H: UiHost> UiTree<H> {
                 .map(|w| w.hit_test(n.bounds, position))
                 .unwrap_or(true);
         hit.then_some(node)
+    }
+
+    fn point_in_rounded_rect(bounds: Rect, radii: Corners, position: Point) -> bool {
+        if !bounds.contains(position) {
+            return false;
+        }
+
+        let w = bounds.size.width.0.max(0.0);
+        let h = bounds.size.height.0.max(0.0);
+        let limit = 0.5 * w.min(h);
+
+        let tl = Px(radii.top_left.0.max(0.0).min(limit));
+        let tr = Px(radii.top_right.0.max(0.0).min(limit));
+        let br = Px(radii.bottom_right.0.max(0.0).min(limit));
+        let bl = Px(radii.bottom_left.0.max(0.0).min(limit));
+
+        let left = bounds.origin.x.0;
+        let top = bounds.origin.y.0;
+        let right = left + w;
+        let bottom = top + h;
+
+        let x = position.x.0;
+        let y = position.y.0;
+
+        // Top-left corner
+        if tl.0 > 0.0 && x < left + tl.0 && y < top + tl.0 {
+            let cx = left + tl.0;
+            let cy = top + tl.0;
+            let dx = x - cx;
+            let dy = y - cy;
+            return dx * dx + dy * dy <= tl.0 * tl.0;
+        }
+
+        // Top-right corner
+        if tr.0 > 0.0 && x > right - tr.0 && y < top + tr.0 {
+            let cx = right - tr.0;
+            let cy = top + tr.0;
+            let dx = x - cx;
+            let dy = y - cy;
+            return dx * dx + dy * dy <= tr.0 * tr.0;
+        }
+
+        // Bottom-right corner
+        if br.0 > 0.0 && x > right - br.0 && y > bottom - br.0 {
+            let cx = right - br.0;
+            let cy = bottom - br.0;
+            let dx = x - cx;
+            let dy = y - cy;
+            return dx * dx + dy * dy <= br.0 * br.0;
+        }
+
+        // Bottom-left corner
+        if bl.0 > 0.0 && x < left + bl.0 && y > bottom - bl.0 {
+            let cx = left + bl.0;
+            let cy = bottom - bl.0;
+            let dx = x - cx;
+            let dy = y - cy;
+            return dx * dx + dy * dy <= bl.0 * bl.0;
+        }
+
+        true
     }
 
     fn mark_invalidation(&mut self, node: NodeId, inv: Invalidation) {
@@ -2320,6 +2386,22 @@ mod tests {
         }
     }
 
+    struct RoundedClipWidget;
+
+    impl<H: UiHost> Widget<H> for RoundedClipWidget {
+        fn clips_hit_test(&self, _bounds: Rect) -> bool {
+            true
+        }
+
+        fn clip_hit_test_corner_radii(&self, _bounds: Rect) -> Option<Corners> {
+            Some(Corners::all(Px(20.0)))
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
     #[test]
     fn model_change_invalidates_observers() {
         let mut app = crate::test_host::TestHost::new();
@@ -2356,6 +2438,30 @@ mod tests {
         let n = ui.nodes.get(node).unwrap();
         assert!(n.invalidation.layout);
         assert!(n.invalidation.paint);
+    }
+
+    #[test]
+    fn hit_test_respects_rounded_overflow_clip() {
+        let mut app = crate::test_host::TestHost::new();
+        let mut ui = UiTree::new();
+        ui.set_window(AppWindowId::default());
+
+        let node = ui.create_node(RoundedClipWidget);
+        ui.set_root(node);
+
+        let mut services = FakeUiServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Inside bounds, but outside the rounded corner arc.
+        assert_eq!(ui.hit_test(node, Point::new(Px(1.0), Px(1.0))), None);
+
+        // Inside the rounded rectangle.
+        assert_eq!(ui.hit_test(node, Point::new(Px(25.0), Px(25.0))), Some(node));
     }
 
     struct CountingPaintWidget {

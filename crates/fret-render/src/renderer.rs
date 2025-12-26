@@ -4515,9 +4515,18 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 "#;
 
 const COMPOSITE_PREMUL_SHADER: &str = r#"
+const MAX_CLIPS: u32 = 8u;
+
+struct ClipRRect {
+  rect: vec4<f32>,
+  corner_radii: vec4<f32>,
+};
+
 struct Viewport {
   viewport_size: vec2<f32>,
-  _pad: vec2<f32>,
+  clip_count: u32,
+  _pad0: u32,
+  clips: array<ClipRRect, MAX_CLIPS>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -4535,12 +4544,60 @@ struct VsOut {
   @builtin(position) clip_pos: vec4<f32>,
   @location(0) uv: vec2<f32>,
   @location(1) opacity: f32,
+  @location(2) pixel_pos: vec2<f32>,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
   let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
   let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
   return vec2<f32>(ndc_x, ndc_y);
+}
+
+fn pick_corner_radius(center_to_point: vec2<f32>, radii: vec4<f32>) -> f32 {
+  if (center_to_point.x < 0.0) {
+    if (center_to_point.y < 0.0) { return radii.x; }
+    return radii.w;
+  }
+  if (center_to_point.y < 0.0) { return radii.y; }
+  return radii.z;
+}
+
+fn quad_sdf_impl(corner_center_to_point: vec2<f32>, corner_radius: f32) -> f32 {
+  if (corner_radius == 0.0) {
+    return max(corner_center_to_point.x, corner_center_to_point.y);
+  }
+  let signed_distance_to_inset_quad =
+    length(max(vec2<f32>(0.0), corner_center_to_point)) +
+    min(0.0, max(corner_center_to_point.x, corner_center_to_point.y));
+  return signed_distance_to_inset_quad - corner_radius;
+}
+
+fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corner_radii: vec4<f32>) -> f32 {
+  let center = rect_origin + rect_size * 0.5;
+  let center_to_point = point - center;
+  let half_size = rect_size * 0.5;
+  let corner_radius = pick_corner_radius(center_to_point, corner_radii);
+  let corner_to_point = abs(center_to_point) - half_size;
+  let corner_center_to_point = corner_to_point + corner_radius;
+  return quad_sdf_impl(corner_center_to_point, corner_radius);
+}
+
+fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  for (var i = 0u; i < MAX_CLIPS; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
+    let clip = viewport.clips[i];
+    let sdf = quad_sdf(pixel_pos, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    let aa = max(fwidth(sdf), 1e-4);
+    let a = 1.0 - smoothstep(-aa, aa, sdf);
+    alpha = alpha * a;
+    if (alpha <= 0.0) {
+      break;
+    }
+  }
+  return alpha;
 }
 
 @vertex
@@ -4550,21 +4607,35 @@ fn vs_main(input: VsIn) -> VsOut {
   out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
   out.uv = input.uv;
   out.opacity = input.opacity;
+  out.pixel_pos = input.pos_px;
   return out;
 }
 
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(input.pixel_pos);
+  if (clip <= 0.0) {
+    discard;
+  }
   let sample = textureSample(tex, tex_sampler, input.uv);
   let o = clamp(input.opacity, 0.0, 1.0);
-  return vec4<f32>(sample.rgb * o, sample.a * o);
+  return vec4<f32>(sample.rgb * o, sample.a * o) * clip;
 }
 "#;
 
 const PATH_SHADER: &str = r#"
+const MAX_CLIPS: u32 = 8u;
+
+struct ClipRRect {
+  rect: vec4<f32>,
+  corner_radii: vec4<f32>,
+};
+
 struct Viewport {
   viewport_size: vec2<f32>,
-  _pad: vec2<f32>,
+  clip_count: u32,
+  _pad0: u32,
+  clips: array<ClipRRect, MAX_CLIPS>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -4577,6 +4648,7 @@ struct VsIn {
 struct VsOut {
   @builtin(position) clip_pos: vec4<f32>,
   @location(0) color: vec4<f32>,
+  @location(1) pixel_pos: vec2<f32>,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
@@ -4585,25 +4657,86 @@ fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
   return vec2<f32>(ndc_x, ndc_y);
 }
 
+fn pick_corner_radius(center_to_point: vec2<f32>, radii: vec4<f32>) -> f32 {
+  if (center_to_point.x < 0.0) {
+    if (center_to_point.y < 0.0) { return radii.x; }
+    return radii.w;
+  }
+  if (center_to_point.y < 0.0) { return radii.y; }
+  return radii.z;
+}
+
+fn quad_sdf_impl(corner_center_to_point: vec2<f32>, corner_radius: f32) -> f32 {
+  if (corner_radius == 0.0) {
+    return max(corner_center_to_point.x, corner_center_to_point.y);
+  }
+  let signed_distance_to_inset_quad =
+    length(max(vec2<f32>(0.0), corner_center_to_point)) +
+    min(0.0, max(corner_center_to_point.x, corner_center_to_point.y));
+  return signed_distance_to_inset_quad - corner_radius;
+}
+
+fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corner_radii: vec4<f32>) -> f32 {
+  let center = rect_origin + rect_size * 0.5;
+  let center_to_point = point - center;
+  let half_size = rect_size * 0.5;
+  let corner_radius = pick_corner_radius(center_to_point, corner_radii);
+  let corner_to_point = abs(center_to_point) - half_size;
+  let corner_center_to_point = corner_to_point + corner_radius;
+  return quad_sdf_impl(corner_center_to_point, corner_radius);
+}
+
+fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  for (var i = 0u; i < MAX_CLIPS; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
+    let clip = viewport.clips[i];
+    let sdf = quad_sdf(pixel_pos, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    let aa = max(fwidth(sdf), 1e-4);
+    let a = 1.0 - smoothstep(-aa, aa, sdf);
+    alpha = alpha * a;
+    if (alpha <= 0.0) {
+      break;
+    }
+  }
+  return alpha;
+}
+
 @vertex
 fn vs_main(input: VsIn) -> VsOut {
   var out: VsOut;
   let clip_xy = to_clip_space(input.pos_px);
   out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
   out.color = input.color;
+  out.pixel_pos = input.pos_px;
   return out;
 }
 
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
-  return input.color;
+  let clip = clip_alpha(input.pixel_pos);
+  if (clip <= 0.0) {
+    discard;
+  }
+  return input.color * clip;
 }
 "#;
 
 const TEXT_SHADER: &str = r#"
+const MAX_CLIPS: u32 = 8u;
+
+struct ClipRRect {
+  rect: vec4<f32>,
+  corner_radii: vec4<f32>,
+};
+
 struct Viewport {
   viewport_size: vec2<f32>,
-  _pad: vec2<f32>,
+  clip_count: u32,
+  _pad0: u32,
+  clips: array<ClipRRect, MAX_CLIPS>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -4621,12 +4754,60 @@ struct VsOut {
   @builtin(position) clip_pos: vec4<f32>,
   @location(0) uv: vec2<f32>,
   @location(1) color: vec4<f32>,
+  @location(2) pixel_pos: vec2<f32>,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
   let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
   let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
   return vec2<f32>(ndc_x, ndc_y);
+}
+
+fn pick_corner_radius(center_to_point: vec2<f32>, radii: vec4<f32>) -> f32 {
+  if (center_to_point.x < 0.0) {
+    if (center_to_point.y < 0.0) { return radii.x; }
+    return radii.w;
+  }
+  if (center_to_point.y < 0.0) { return radii.y; }
+  return radii.z;
+}
+
+fn quad_sdf_impl(corner_center_to_point: vec2<f32>, corner_radius: f32) -> f32 {
+  if (corner_radius == 0.0) {
+    return max(corner_center_to_point.x, corner_center_to_point.y);
+  }
+  let signed_distance_to_inset_quad =
+    length(max(vec2<f32>(0.0), corner_center_to_point)) +
+    min(0.0, max(corner_center_to_point.x, corner_center_to_point.y));
+  return signed_distance_to_inset_quad - corner_radius;
+}
+
+fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corner_radii: vec4<f32>) -> f32 {
+  let center = rect_origin + rect_size * 0.5;
+  let center_to_point = point - center;
+  let half_size = rect_size * 0.5;
+  let corner_radius = pick_corner_radius(center_to_point, corner_radii);
+  let corner_to_point = abs(center_to_point) - half_size;
+  let corner_center_to_point = corner_to_point + corner_radius;
+  return quad_sdf_impl(corner_center_to_point, corner_radius);
+}
+
+fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  for (var i = 0u; i < MAX_CLIPS; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
+    let clip = viewport.clips[i];
+    let sdf = quad_sdf(pixel_pos, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    let aa = max(fwidth(sdf), 1e-4);
+    let a = 1.0 - smoothstep(-aa, aa, sdf);
+    alpha = alpha * a;
+    if (alpha <= 0.0) {
+      break;
+    }
+  }
+  return alpha;
 }
 
 @vertex
@@ -4636,21 +4817,35 @@ fn vs_main(input: VsIn) -> VsOut {
   out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
   out.uv = input.uv;
   out.color = input.color;
+  out.pixel_pos = input.pos_px;
   return out;
 }
 
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(input.pixel_pos);
+  if (clip <= 0.0) {
+    discard;
+  }
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
   let coverage = tex.r;
-  return vec4<f32>(input.color.rgb * coverage, input.color.a * coverage);
+  return vec4<f32>(input.color.rgb * coverage, input.color.a * coverage) * clip;
 }
 "#;
 
 const MASK_SHADER: &str = r#"
+const MAX_CLIPS: u32 = 8u;
+
+struct ClipRRect {
+  rect: vec4<f32>,
+  corner_radii: vec4<f32>,
+};
+
 struct Viewport {
   viewport_size: vec2<f32>,
-  _pad: vec2<f32>,
+  clip_count: u32,
+  _pad0: u32,
+  clips: array<ClipRRect, MAX_CLIPS>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -4668,12 +4863,60 @@ struct VsOut {
   @builtin(position) clip_pos: vec4<f32>,
   @location(0) uv: vec2<f32>,
   @location(1) color: vec4<f32>,
+  @location(2) pixel_pos: vec2<f32>,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
   let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
   let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
   return vec2<f32>(ndc_x, ndc_y);
+}
+
+fn pick_corner_radius(center_to_point: vec2<f32>, radii: vec4<f32>) -> f32 {
+  if (center_to_point.x < 0.0) {
+    if (center_to_point.y < 0.0) { return radii.x; }
+    return radii.w;
+  }
+  if (center_to_point.y < 0.0) { return radii.y; }
+  return radii.z;
+}
+
+fn quad_sdf_impl(corner_center_to_point: vec2<f32>, corner_radius: f32) -> f32 {
+  if (corner_radius == 0.0) {
+    return max(corner_center_to_point.x, corner_center_to_point.y);
+  }
+  let signed_distance_to_inset_quad =
+    length(max(vec2<f32>(0.0), corner_center_to_point)) +
+    min(0.0, max(corner_center_to_point.x, corner_center_to_point.y));
+  return signed_distance_to_inset_quad - corner_radius;
+}
+
+fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corner_radii: vec4<f32>) -> f32 {
+  let center = rect_origin + rect_size * 0.5;
+  let center_to_point = point - center;
+  let half_size = rect_size * 0.5;
+  let corner_radius = pick_corner_radius(center_to_point, corner_radii);
+  let corner_to_point = abs(center_to_point) - half_size;
+  let corner_center_to_point = corner_to_point + corner_radius;
+  return quad_sdf_impl(corner_center_to_point, corner_radius);
+}
+
+fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  for (var i = 0u; i < MAX_CLIPS; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
+    let clip = viewport.clips[i];
+    let sdf = quad_sdf(pixel_pos, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    let aa = max(fwidth(sdf), 1e-4);
+    let a = 1.0 - smoothstep(-aa, aa, sdf);
+    alpha = alpha * a;
+    if (alpha <= 0.0) {
+      break;
+    }
+  }
+  return alpha;
 }
 
 @vertex
@@ -4683,22 +4926,27 @@ fn vs_main(input: VsIn) -> VsOut {
   out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
   out.uv = input.uv;
   out.color = input.color;
+  out.pixel_pos = input.pos_px;
   return out;
 }
 
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(input.pixel_pos);
+  if (clip <= 0.0) {
+    discard;
+  }
   let tex = textureSample(mask_texture, mask_sampler, input.uv);
   let coverage = tex.r;
-  return vec4<f32>(input.color.rgb * coverage, input.color.a * coverage);
+  return vec4<f32>(input.color.rgb * coverage, input.color.a * coverage) * clip;
 }
 "#;
 
 #[cfg(test)]
 mod tests {
     use super::{
-        PATH_SHADER, QUAD_SHADER, TEXT_SHADER, VIEWPORT_SHADER, clamp_corner_radii_for_rect,
-        svg_draw_rect_px,
+        COMPOSITE_PREMUL_SHADER, MASK_SHADER, PATH_SHADER, QUAD_SHADER, TEXT_SHADER,
+        VIEWPORT_SHADER, clamp_corner_radii_for_rect, svg_draw_rect_px,
     };
 
     #[test]
@@ -4706,8 +4954,10 @@ mod tests {
         for (name, src) in [
             ("viewport", VIEWPORT_SHADER),
             ("quad", QUAD_SHADER),
+            ("composite_premul", COMPOSITE_PREMUL_SHADER),
             ("path", PATH_SHADER),
             ("text", TEXT_SHADER),
+            ("mask", MASK_SHADER),
         ] {
             naga::front::wgsl::parse_str(src)
                 .unwrap_or_else(|err| panic!("WGSL parse failed for {name} shader: {err}"));

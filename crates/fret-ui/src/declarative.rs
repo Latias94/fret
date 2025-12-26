@@ -64,9 +64,23 @@ fn scrollbar_thumb_rect(track: Rect, viewport_h: Px, content_h: Px, offset_y: Px
     ))
 }
 
-fn paint_children_clipped_if<H: UiHost>(cx: &mut PaintCx<'_, H>, clip: bool) {
+fn paint_children_clipped_if<H: UiHost>(
+    cx: &mut PaintCx<'_, H>,
+    clip: bool,
+    corner_radii: Option<fret_core::Corners>,
+) {
     if clip {
-        cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
+        if let Some(radii) = corner_radii
+            && (radii.top_left.0 > 0.0
+                || radii.top_right.0 > 0.0
+                || radii.bottom_right.0 > 0.0
+                || radii.bottom_left.0 > 0.0)
+        {
+            cx.scene
+                .push(SceneOp::PushClipRRect { rect: cx.bounds, corner_radii: radii });
+        } else {
+            cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
+        }
     }
 
     for &child in cx.children {
@@ -422,6 +436,7 @@ struct ElementHostWidget {
     is_focusable: bool,
     is_text_input: bool,
     clips_hit_test: bool,
+    clip_hit_test_corner_radii: Option<fret_core::Corners>,
     scrollbar_hit_rect: Option<Rect>,
     text_input: Option<BoundTextInput>,
     hover_card_open: bool,
@@ -441,6 +456,10 @@ impl ElementHostWidget {
 impl<H: UiHost> Widget<H> for ElementHostWidget {
     fn clips_hit_test(&self, _bounds: Rect) -> bool {
         self.clips_hit_test
+    }
+
+    fn clip_hit_test_corner_radii(&self, _bounds: Rect) -> Option<fret_core::Corners> {
+        self.clip_hit_test_corner_radii
     }
 
     fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
@@ -954,6 +973,20 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             | ElementInstance::Spinner(_)
             | ElementInstance::Text(_) => true,
             ElementInstance::Spacer(_) => true,
+        };
+        self.clip_hit_test_corner_radii = match &instance {
+            ElementInstance::Container(p) if matches!(p.layout.overflow, Overflow::Clip) => {
+                if p.corner_radii.top_left.0 > 0.0
+                    || p.corner_radii.top_right.0 > 0.0
+                    || p.corner_radii.bottom_right.0 > 0.0
+                    || p.corner_radii.bottom_left.0 > 0.0
+                {
+                    Some(p.corner_radii)
+                } else {
+                    None
+                }
+            }
+            _ => None,
         };
         self.scrollbar_hit_rect = None;
 
@@ -1925,20 +1958,24 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     });
                 }
 
-                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip));
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    Some(props.corner_radii),
+                );
             }
             ElementInstance::Stack(props) => {
-                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip));
+                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip), None);
             }
             ElementInstance::Flex(props) => {
-                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip));
+                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip), None);
             }
             ElementInstance::Grid(props) => {
-                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip));
+                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip), None);
             }
             ElementInstance::Spacer(_props) => {}
             ElementInstance::Pressable(props) => {
-                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip));
+                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip), None);
 
                 if props.enabled
                     && cx.focus == Some(cx.node)
@@ -2290,6 +2327,7 @@ pub fn render_root<H: UiHost>(
                     is_focusable: false,
                     is_text_input: false,
                     clips_hit_test: true,
+                    clip_hit_test_corner_radii: None,
                     scrollbar_hit_rect: None,
                     text_input: None,
                     hover_card_open: false,
@@ -2386,6 +2424,7 @@ fn mount_element<H: UiHost>(
                 is_focusable: false,
                 is_text_input: false,
                 clips_hit_test: true,
+                clip_hit_test_corner_radii: None,
                 scrollbar_hit_rect: None,
                 text_input: None,
                 hover_card_open: false,
@@ -3250,6 +3289,48 @@ mod tests {
     }
 
     #[test]
+    fn overflow_clip_with_corner_radii_pushes_rounded_clip_rect() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(60.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp-overflow-clip-rounded",
+            |cx| {
+                let mut props = crate::element::ContainerProps::default();
+                props.layout.overflow = crate::element::Overflow::Clip;
+                props.corner_radii = fret_core::Corners::all(Px(8.0));
+                vec![cx.container(props, |cx| vec![cx.text("child")])]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+        assert!(
+            scene
+                .ops()
+                .iter()
+                .any(|op| matches!(op, SceneOp::PushClipRRect { .. })),
+            "expected container overflow clip + corner radii to push a rounded clip rect"
+        );
+    }
+
+    #[test]
     fn overflow_visible_does_not_push_clip_rect() {
         let mut app = TestHost::new();
         let mut ui: UiTree<TestHost> = UiTree::new();
@@ -3281,7 +3362,7 @@ mod tests {
             !scene
                 .ops()
                 .iter()
-                .any(|op| matches!(op, SceneOp::PushClipRect { .. })),
+                .any(|op| matches!(op, SceneOp::PushClipRect { .. } | SceneOp::PushClipRRect { .. })),
             "expected no clip ops by default"
         );
     }
