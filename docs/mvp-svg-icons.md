@@ -1,6 +1,6 @@
 # MVP: SVG Icons (Alpha Mask + Tint)
 
-Status: **Draft / In Progress**
+Status: **ICON-0/ICON-1/IMG-0 implemented; ICON-2 pending**
 
 This document is intentionally standalone to avoid interfering with other in-flight docs.
 
@@ -127,14 +127,14 @@ let image_id = renderer.register_image(fret_render::ImageDescriptor {
 
 ### ICON-0: Mask primitive (renderer + UI)
 
-- [ ] Add `SceneOp::MaskImage`
-- [ ] Add renderer mask pipeline (same vertex format as text; texture bind group like images)
-- [ ] Add `fret-ui::primitives::MaskImage`
+- [x] Add `SceneOp::MaskImage`
+- [x] Add renderer mask pipeline (same vertex format as text; texture bind group like images)
+- [x] Add `fret-ui::primitives::MaskImage`
 
 ### ICON-1: SVG alpha mask rasterization
 
-- [ ] Add `fret-render::SvgRenderer::render_alpha_mask`
-- [ ] Add unit test for alpha-mask generation (CPU-only)
+- [x] Add `fret-render::SvgRenderer::render_alpha_mask`
+- [x] Add unit test for alpha-mask generation (CPU-only)
 
 ### ICON-2: Caching + integration
 
@@ -143,8 +143,8 @@ let image_id = renderer.register_image(fret_render::ImageDescriptor {
 
 ### IMG-0: SVG as image (RGBA)
 
-- [ ] Add `fret-render::SvgRenderer::render_rgba` (unpremultiplied RGBA output)
-- [ ] Add `upload_rgba_image` helper
+- [x] Add `fret-render::SvgRenderer::render_rgba` (unpremultiplied RGBA output)
+- [x] Add `upload_rgba_image` helper
 
 ## Risks / gotchas
 

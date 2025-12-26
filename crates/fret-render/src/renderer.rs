@@ -525,9 +525,7 @@ struct PathDraw {
 struct PathIntermediate {
     size: (u32, u32),
     format: wgpu::TextureFormat,
-    resolved_texture: wgpu::Texture,
     resolved_view: wgpu::TextureView,
-    msaa_texture: wgpu::Texture,
     msaa_view: wgpu::TextureView,
     bind_group: wgpu::BindGroup,
 }
@@ -724,9 +722,7 @@ impl Renderer {
         self.path_intermediate = Some(PathIntermediate {
             size: viewport_size,
             format,
-            resolved_texture,
             resolved_view,
-            msaa_texture,
             msaa_view,
             bind_group,
         });
@@ -1756,7 +1752,6 @@ impl Renderer {
                 Text,
                 Mask,
                 Composite,
-                Path,
             }
 
             let quad_pipeline = self

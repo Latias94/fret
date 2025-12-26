@@ -1,6 +1,6 @@
 # MVP: Vector Paths + SVG Icons (GPUI-Aligned)
 
-Status: MVP-PATH-0 implemented; MVP-PATH-1 implemented (renderer + `Path` primitive); MVP-PATH-2 implemented (cache + bounds culling)
+Status: MVP-PATH-0..2 implemented; SVG alpha-mask+tint implemented; SVG RGBA implemented; Path MSAA+composite implemented
 
 Last updated: 2025-12-26
 
@@ -27,19 +27,33 @@ We “follow the mature upstream” here:
 - GPUI’s “path quality” pipeline includes a dedicated shader path rasterization stage.
   - `repo-ref/zed/crates/gpui/src/platform/blade/shaders.wgsl` (path rasterization + sampling)
 
+## Implementation pointers (Fret)
+
+- Core contract:
+  - `crates/fret-core/src/vector_path.rs` (`PathCommand`, `PathService`)
+  - `crates/fret-core/src/scene.rs` (`SceneOp::Path`, `SceneOp::MaskImage`)
+- Renderer:
+  - `crates/fret-render/src/renderer.rs` (path tessellation cache, path MSAA intermediate + composite, mask pipeline)
+  - `crates/fret-render/src/svg.rs` (CPU SVG rasterization + upload helpers)
+- UI primitives:
+  - `crates/fret-ui/src/primitives/path.rs`
+  - `crates/fret-ui/src/primitives/mask_image.rs`
+
 Non-goal for Fret: introduce an app-facing “offscreen render target + composite” API as the primary vector path solution.
 If we use intermediate textures internally for correctness/quality (like GPUI’s path pipeline), that is an implementation
 detail inside `fret-render`, not a new UI-level feature.
 
 ## Current Fret constraint (today)
 
-`fret-core::SceneOp` currently supports:
+`fret-core::SceneOp` now supports:
 
-- `Quad`, `Text`, `Image`, `ViewportSurface`
+- `Quad`, `Text`, `Image`/`ImageRegion`, `ViewportSurface`
+- `Path` (handle-based; payload lives behind `PathService`)
+- `MaskImage` (alpha mask + tint; intended for icons)
 - `PushClipRect/PopClip` (scissor stack in `fret-render`)
 
-It does **not** have a `Path`/`Mesh`/`Triangles` primitive, so plots/curves/SVG paths cannot be expressed directly in the
-scene contract today.
+It still intentionally does **not** expose a “submit triangles/mesh” UI-level API; triangles remain an internal renderer
+detail.
 
 ## Goals
 
@@ -161,26 +175,23 @@ Acceptance:
 
 ### MVP-PATH-3: SVG icon (GPUI-style alpha mask + tint)
 
-Deliverables:
+Deliverables (implemented in a non-atlas form):
 
-- A renderer-owned SVG cache/atlas:
-  - rasterize with `usvg + resvg`,
-  - store alpha mask in an atlas,
-  - draw tinted sprite as part of normal scene execution.
-- A component-level `SvgIcon` helper that chooses this path (not `Text` glyph fallback) when configured.
+- `SceneOp::MaskImage` + mask shader pipeline (tint on GPU).
+- `fret-render::SvgRenderer::render_alpha_mask` (CPU `usvg+resvg`), `upload_alpha_mask` helper.
 
-Acceptance:
+Acceptance (met for MVP):
 
 - Icons are tintable via theme colors.
-- Icon quality is stable across DPI changes (GPUI-style “render at 2x” is acceptable if we choose it).
+- Quality is stable across DPI changes via `SMOOTH_SVG_SCALE_FACTOR = 2`.
 
-### MVP-PATH-4: Quality upgrades (choose one, intentionally)
+### MVP-PATH-4: Quality upgrades (current direction)
 
-Option A (pragmatic): MSAA for path pipeline + proper joins/caps.
+We follow GPUI’s “intermediate + composite” strategy where it exists, but keep it internal to the renderer.
 
-Option B (GPUI-like): introduce a path rasterization stage with analytic coverage and a sampling pass.
+Option A (pragmatic, implemented): MSAA for path pass + composite the premultiplied intermediate texture into the main pass.
 
-We should not do both at once; pick a target based on observed quality/perf gaps after MVP-PATH-2.
+Option B (GPUI-like, future): analytic coverage path rasterization stage (per-vertex signed-distance/coverage) and a sampling pass.
 
 Acceptance:
 
@@ -226,7 +237,7 @@ Acceptance:
 ## Progress tracker (edit in place)
 
 - [x] MVP-PATH-0: core contract scaffolding
-- [ ] MVP-PATH-1: renderer triangle pipeline + demo plot
-- [ ] MVP-PATH-2: caching + bounds culling
-- [ ] MVP-PATH-3: SVG alpha-mask icons + tint
-- [ ] MVP-PATH-4: quality upgrade (pick A or B)
+- [x] MVP-PATH-1: renderer triangle pipeline + demo plot
+- [x] MVP-PATH-2: caching + bounds culling
+- [x] MVP-PATH-3: SVG alpha-mask icons + tint
+- [x] MVP-PATH-4: quality upgrade (Option A: MSAA + composite)
