@@ -8,12 +8,15 @@ use fret_components_shadcn::{
     AccordionItem as ShadcnAccordionItem, AccordionTrigger as ShadcnAccordionTrigger,
     AspectRatio as ShadcnAspectRatio, Avatar as ShadcnAvatar,
     AvatarFallback as ShadcnAvatarFallback, AvatarImage as ShadcnAvatarImage,
-    Button as ShadcnButton, ButtonSize as ShadcnButtonSize, ButtonVariant as ShadcnButtonVariant,
-    Collapsible as ShadcnCollapsible, CollapsibleContent as ShadcnCollapsibleContent,
-    CollapsibleTrigger as ShadcnCollapsibleTrigger, InputGroup as ShadcnInputGroup,
-    RadioGroup as ShadcnRadioGroup, RadioGroupItem as ShadcnRadioGroupItem,
-    ToggleGroup as ShadcnToggleGroup, ToggleGroupItem as ShadcnToggleGroupItem,
-    ToggleSize as ShadcnToggleSize, ToggleVariant as ShadcnToggleVariant,
+    Button as ShadcnButton, ButtonGroup as ShadcnButtonGroup,
+    ButtonGroupItem as ShadcnButtonGroupItem,
+    ButtonGroupOrientation as ShadcnButtonGroupOrientation, ButtonSize as ShadcnButtonSize,
+    ButtonVariant as ShadcnButtonVariant, Collapsible as ShadcnCollapsible,
+    CollapsibleContent as ShadcnCollapsibleContent, CollapsibleTrigger as ShadcnCollapsibleTrigger,
+    InputGroup as ShadcnInputGroup, RadioGroup as ShadcnRadioGroup,
+    RadioGroupItem as ShadcnRadioGroupItem, ToggleGroup as ShadcnToggleGroup,
+    ToggleGroupItem as ShadcnToggleGroupItem, ToggleSize as ShadcnToggleSize,
+    ToggleVariant as ShadcnToggleVariant,
 };
 use fret_components_ui::{
     ChromeRefinement, ContextMenuService, DialogAction, DialogRequest, DialogService,
@@ -315,6 +318,52 @@ fn build_ui_kit_contents(
     ui.add_child(shadcn_buttons, shadcn_link);
     ui.add_child(shadcn_buttons_frame, shadcn_buttons);
     ui.add_child(col, shadcn_buttons_frame);
+
+    let shadcn_button_group_label =
+        ui.create_node(Text::new("shadcn/ui v4 ButtonGroup (prototype)"));
+    ui.add_child(col, shadcn_button_group_label);
+    let shadcn_button_group_row = ui.create_node(Row::new().with_spacing(Px(10.0)));
+    let shadcn_button_group = ui.create_node(
+        ShadcnButtonGroup::new()
+            .orientation(ShadcnButtonGroupOrientation::Horizontal)
+            .item(
+                ShadcnButtonGroupItem::new("Left")
+                    .variant(ShadcnButtonVariant::Outline)
+                    .on_click("ui_kit.button_group.left"),
+            )
+            .item(
+                ShadcnButtonGroupItem::new("Middle")
+                    .variant(ShadcnButtonVariant::Outline)
+                    .on_click("ui_kit.button_group.middle"),
+            )
+            .item(
+                ShadcnButtonGroupItem::new("Right")
+                    .variant(ShadcnButtonVariant::Outline)
+                    .on_click("ui_kit.button_group.right"),
+            ),
+    );
+    let shadcn_button_group_vertical = ui.create_node(
+        ShadcnButtonGroup::new()
+            .orientation(ShadcnButtonGroupOrientation::Vertical)
+            .item(
+                ShadcnButtonGroupItem::new("Top")
+                    .variant(ShadcnButtonVariant::Outline)
+                    .on_click("ui_kit.button_group.top"),
+            )
+            .item(
+                ShadcnButtonGroupItem::new("Center")
+                    .variant(ShadcnButtonVariant::Outline)
+                    .disabled(true),
+            )
+            .item(
+                ShadcnButtonGroupItem::new("Bottom")
+                    .variant(ShadcnButtonVariant::Outline)
+                    .on_click("ui_kit.button_group.bottom"),
+            ),
+    );
+    ui.add_child(shadcn_button_group_row, shadcn_button_group);
+    ui.add_child(shadcn_button_group_row, shadcn_button_group_vertical);
+    ui.add_child(col, shadcn_button_group_row);
 
     let dialogs_row = ui.create_node(Row::new().with_spacing(Px(10.0)));
     let open_dialog = ui.create_node(Button::new("Open Dialog").on_click("ui_kit.dialog.open"));

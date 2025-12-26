@@ -87,7 +87,7 @@ Status legend:
 | Badge | `ui/badge.tsx` | `fret_components_shadcn::Badge` | ✅ | First-pass composition helper; verify variants. |
 | Breadcrumb | `ui/breadcrumb.tsx` |  | ❌ | Needs link-like text + separators. |
 | Button | `ui/button.tsx` | `fret_components_shadcn::Button` | ✅ | Wrapper exists; verify hover/active/disabled parity. |
-| Button Group | `ui/button-group.tsx` |  | ❌ | Requires consistent border/radius merging rules. |
+| Button Group | `ui/button-group.tsx` | `fret_components_shadcn::{ButtonGroup, ButtonGroupItem}` | ✅ | Segmented buttons (radius merge + border collapse) with keyboard navigation. |
 | Calendar | `ui/calendar.tsx` |  | ❌ | Likely needs date model + navigation + selection. |
 | Card | `ui/card.tsx` | `fret_components_shadcn::Card*` | ✅ | First-pass slots exist; verify spacing + typography tokens. |
 | Carousel | `ui/carousel.tsx` |  | ❌ | Not a near-term priority for editor UIs. |

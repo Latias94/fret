@@ -336,7 +336,7 @@ impl<H: UiHost> Widget<H> for Button {
     }
 
     fn is_focusable(&self) -> bool {
-        true
+        !self.disabled
     }
 
     fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
