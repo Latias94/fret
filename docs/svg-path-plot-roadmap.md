@@ -84,6 +84,7 @@ Plot/implot-like widgets should stay in UI/component crates and only emit those 
   - Byte budget (`svg_raster_budget_bytes`) governs **standalone** rasters only (e.g. RGBA images, or alpha masks that can’t fit in the atlas).
   - Alpha-mask atlas pages are **append-only** and are reclaimed only via explicit teardown (e.g. `SvgService::unregister_svg`) or future explicit “clear” APIs.
   - Best-effort eviction: never evict standalone rasters used in the current frame.
+  - Explicit knob: `Renderer::clear_svg_raster_cache()` drops all cached rasterizations without unregistering `SvgId`.
 
 ## Risks / pitfalls (what to watch)
 

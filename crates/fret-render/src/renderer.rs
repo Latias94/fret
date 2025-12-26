@@ -925,6 +925,28 @@ impl Renderer {
         self.svg_perf = SvgPerfStats::default();
     }
 
+    /// Drop all cached SVG rasterizations (standalone rasters and alpha-mask atlas pages) while
+    /// keeping the underlying registered SVG bytes (`SvgId`) intact.
+    ///
+    /// This is the GPUI-style explicit lifecycle knob: apps can decide when to reclaim memory and
+    /// accept the cost of re-rasterizing later.
+    pub fn clear_svg_raster_cache(&mut self) {
+        let rasters = std::mem::take(&mut self.svg_rasters);
+        for (_, entry) in rasters {
+            if matches!(entry.storage, SvgRasterStorage::Standalone { .. }) {
+                let _ = self.unregister_image(entry.image);
+            }
+        }
+        self.svg_raster_bytes = 0;
+
+        for idx in 0..self.svg_mask_atlas_pages.len() {
+            self.evict_svg_mask_atlas_page(idx);
+        }
+        self.svg_mask_atlas_pages.clear();
+        self.svg_mask_atlas_free.clear();
+        self.svg_mask_atlas_bytes = 0;
+    }
+
     pub fn take_svg_perf_snapshot(&mut self) -> Option<SvgPerfSnapshot> {
         if !self.svg_perf_enabled {
             return None;

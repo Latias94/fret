@@ -94,6 +94,7 @@ struct SvgAtlasStressState {
     budget_applied: u64,
     max_frames: Option<u64>,
     last_renderer_report: Option<Instant>,
+    clear_requested: bool,
 }
 
 impl Default for SvgAtlasStressState {
@@ -114,6 +115,7 @@ impl Default for SvgAtlasStressState {
             budget_applied: 0,
             max_frames: None,
             last_renderer_report: None,
+            clear_requested: false,
         }
     }
 }
@@ -130,6 +132,7 @@ impl SvgAtlasStressDriver {
         println!("  T: toggle auto phase flip");
         println!("  F: cycle SvgFit mode");
         println!("  B: cycle svg_raster_budget_bytes preset (standalone rasters only)");
+        println!("  C: clear svg raster cache");
         println!("  H: print this help");
     }
 
@@ -347,6 +350,11 @@ impl WinitDriver for SvgAtlasStressDriver {
         renderer: &mut fret_render::Renderer,
         _scale_factor: f32,
     ) {
+        if state.clear_requested {
+            renderer.clear_svg_raster_cache();
+            state.clear_requested = false;
+        }
+
         let desired = state.budget_presets[state.budget_index];
         if state.budget_applied != desired {
             renderer.set_svg_raster_budget_bytes(desired);
@@ -417,6 +425,10 @@ impl WinitDriver for SvgAtlasStressDriver {
             KeyCode::KeyB => {
                 state.budget_index = (state.budget_index + 1) % state.budget_presets.len();
                 Self::print_state(state);
+            }
+            KeyCode::KeyC => {
+                state.clear_requested = true;
+                println!("svg_atlas_stress: clear svg raster cache requested");
             }
             KeyCode::KeyH => Self::print_help(),
             _ => {}
