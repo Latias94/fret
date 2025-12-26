@@ -76,6 +76,7 @@ Status legend:
 - ✅ = present in `fret-components-shadcn` (at least taxonomy parity)
 - ◐ = implemented in `fret-components-ui` but not surfaced as shadcn taxonomy yet
 - ❌ = missing (no implementation in-tree yet)
+- — = non-goal (tracked for transparency)
 
 | shadcn v4 component | Upstream ref | Fret mapping (today) | Status | Notes |
 | --- | --- | --- | --- | --- |
@@ -90,8 +91,8 @@ Status legend:
 | Button Group | `ui/button-group.tsx` | `fret_components_shadcn::{ButtonGroup, ButtonGroupItem}` | ✅ | Segmented buttons (radius merge + border collapse) with keyboard navigation. |
 | Calendar | `ui/calendar.tsx` | `fret_components_shadcn::Calendar` | ✅ | Retained widget: month view + prev/next + single-date selection (no range/multi-month yet). |
 | Card | `ui/card.tsx` | `fret_components_shadcn::Card*` | ✅ | First-pass slots exist; verify spacing + typography tokens. |
-| Carousel | `ui/carousel.tsx` |  | ❌ | Not a near-term priority for editor UIs. |
-| Chart | `ui/chart.tsx` |  | ❌ | Not a near-term priority; depends on a charting substrate. |
+| Carousel | `ui/carousel.tsx` |  | — | Non-goal (v1). |
+| Chart | `ui/chart.tsx` |  | — | Non-goal (v1); depends on a charting substrate. |
 | Checkbox | `ui/checkbox.tsx` | `fret_components_shadcn::checkbox::*` | ✅ | Validate focus-visible + keyboard toggle. |
 | Collapsible | `ui/collapsible.tsx` | `fret_components_shadcn::Collapsible*` | ✅ | First pass: `Model<bool>` drives open/close; trigger handles click + Enter/Space. |
 | Combobox | `ui/combobox.tsx` | `fret_components_shadcn::combobox::*` | ✅ | Currently a thin re-export. |
@@ -102,7 +103,7 @@ Status legend:
 | Dropdown Menu | `ui/dropdown-menu.tsx` | `fret_components_ui::dropdown_menu::*` | ✅ | Ensure keyboard navigation parity. |
 | Empty | `ui/empty.tsx` | `fret_components_shadcn::Empty` | ✅ | First-pass composition helper; add icon/action slots later. |
 | Field | `ui/field.tsx` | `fret_components_shadcn::Field*` | ✅ | First pass: declarative composition helpers (no HTML `for`/aria wiring yet). |
-| Form | `ui/form.tsx` |  | ❌ | Likely a higher-level “form framework” decision in Fret. |
+| Form | `ui/form.tsx` |  | — | Non-goal (v1); likely a higher-level “form framework” decision in Fret. |
 | Hover Card | `ui/hover-card.tsx` | `fret_components_shadcn::{HoverCard, HoverCardTrigger, HoverCardContent}` | ✅ | Declarative hover primitive (no open/close animations yet). |
 | Input | `ui/input.tsx` | `fret_components_shadcn::Input` | ✅ | Currently maps to `TextField`; use `InputGroup` for icon-slot patterns. |
 | Input Group | `ui/input-group.tsx` | `fret_components_shadcn::InputGroup` | ✅ | Leading/trailing icon slots + sizing tokens; first-pass parity. |
@@ -111,7 +112,7 @@ Status legend:
 | Kbd | `ui/kbd.tsx` | `fret_components_shadcn::Kbd` | ✅ | First-pass composition helper. |
 | Label | `ui/label.tsx` | `fret_components_shadcn::Label` | ✅ | First-pass helper; semantics binding is a follow-up. |
 | Menubar | `ui/menubar.tsx` | `fret_components_shadcn::menubar::*` | ✅ | Currently a thin re-export of `AppMenuBar`. |
-| Native Select | `ui/native-select.tsx` |  | ❌ | Probably non-goal (Fret is not HTML). |
+| Native Select | `ui/native-select.tsx` |  | — | Non-goal (v1) (Fret is not HTML). |
 | Navigation Menu | `ui/navigation-menu.tsx` | `fret_components_shadcn::{NavigationMenu, NavigationMenuItem, NavigationMenuLink}` | ✅ | Prototype: uses `Popover` overlay for list-like content (rich panels TBD). |
 | Pagination | `ui/pagination.tsx` | `fret_components_shadcn::Pagination*` | ✅ | Taxonomy + first-pass recipe parity; uses Pressable + focus-visible ring. |
 | Popover | `ui/popover.tsx` | `fret_components_ui::popover::*` | ✅ | Ensure placement + dismissal parity. |
