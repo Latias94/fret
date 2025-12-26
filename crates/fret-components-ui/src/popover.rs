@@ -368,6 +368,28 @@ impl Popover {
             });
         }
     }
+
+    fn first_enabled_row(&self) -> Option<usize> {
+        self.rows.iter().position(|r| r.enabled)
+    }
+
+    fn next_enabled_row(&self, start: usize, dir: i32) -> Option<usize> {
+        let len = self.rows.len();
+        if len == 0 {
+            return None;
+        }
+        for step in 1..=len {
+            let idx = if dir >= 0 {
+                (start + step) % len
+            } else {
+                (start + len - (step % len)) % len
+            };
+            if self.rows.get(idx).is_some_and(|r| r.enabled) {
+                return Some(idx);
+            }
+        }
+        None
+    }
 }
 
 impl Default for Popover {
@@ -444,16 +466,26 @@ impl<H: UiHost> Widget<H> for Popover {
                     }
                 }
                 KeyCode::ArrowDown => {
-                    let start = self.hover_row.or(request.selected).unwrap_or(0);
-                    let next = (start + 1).min(self.rows.len().saturating_sub(1));
-                    self.hover_row = Some(next);
+                    let base = self
+                        .hover_row
+                        .or(request.selected)
+                        .or_else(|| self.first_enabled_row())
+                        .unwrap_or(0);
+                    if let Some(next) = self.next_enabled_row(base, 1) {
+                        self.hover_row = Some(next);
+                    }
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                 }
                 KeyCode::ArrowUp => {
-                    let start = self.hover_row.or(request.selected).unwrap_or(0);
-                    let next = start.saturating_sub(1);
-                    self.hover_row = Some(next);
+                    let base = self
+                        .hover_row
+                        .or(request.selected)
+                        .or_else(|| self.first_enabled_row())
+                        .unwrap_or(0);
+                    if let Some(next) = self.next_enabled_row(base, -1) {
+                        self.hover_row = Some(next);
+                    }
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                 }
@@ -498,6 +530,9 @@ impl<H: UiHost> Widget<H> for Popover {
         if rebuild {
             self.cleanup(cx.services);
             self.rebuild_rows(cx, &request);
+            self.hover_row = request
+                .selected
+                .filter(|&i| self.rows.get(i).is_some_and(|r| r.enabled));
         }
 
         if request.items.is_empty() {

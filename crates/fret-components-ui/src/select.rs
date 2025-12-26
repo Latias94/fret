@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, CursorIcon, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
-    SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
+    Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect,
+    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::{Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
@@ -276,55 +276,67 @@ impl<H: UiHost> Widget<H> for Select {
             cx.request_redraw();
         }
 
-        let Event::Pointer(pe) = event else {
-            return;
-        };
-        match pe {
-            fret_core::PointerEvent::Move { position, .. } => {
-                let hovered = self.last_bounds.contains(*position);
-                if hovered != self.hovered {
-                    self.hovered = hovered;
+        match event {
+            Event::KeyDown { key, modifiers, .. } => {
+                if modifiers.ctrl || modifiers.meta || modifiers.alt || modifiers.alt_gr {
+                    return;
+                }
+                match key {
+                    KeyCode::Enter | KeyCode::Space => {
+                        self.toggle_popover(cx);
+                        cx.stop_propagation();
+                    }
+                    _ => {}
+                }
+            }
+            Event::Pointer(pe) => match pe {
+                fret_core::PointerEvent::Move { position, .. } => {
+                    let hovered = self.last_bounds.contains(*position);
+                    if hovered != self.hovered {
+                        self.hovered = hovered;
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                    }
+                    if hovered || cx.captured == Some(cx.node) {
+                        cx.set_cursor_icon(CursorIcon::Pointer);
+                    }
+                }
+                fret_core::PointerEvent::Down {
+                    position, button, ..
+                } => {
+                    if *button != MouseButton::Left {
+                        return;
+                    }
+                    if !self.last_bounds.contains(*position) {
+                        return;
+                    }
+                    self.pressed = true;
+                    cx.capture_pointer(cx.node);
+                    cx.request_focus(cx.node);
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
+                    cx.stop_propagation();
                 }
-                if hovered || cx.captured == Some(cx.node) {
-                    cx.set_cursor_icon(CursorIcon::Pointer);
+                fret_core::PointerEvent::Up {
+                    position, button, ..
+                } => {
+                    if *button != MouseButton::Left {
+                        return;
+                    }
+                    cx.release_pointer_capture();
+                    let was_pressed = self.pressed;
+                    self.pressed = false;
+                    let hovered = self.last_bounds.contains(*position);
+                    self.hovered = hovered;
+                    if was_pressed && hovered {
+                        self.toggle_popover(cx);
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
                 }
-            }
-            fret_core::PointerEvent::Down {
-                position, button, ..
-            } => {
-                if *button != MouseButton::Left {
-                    return;
-                }
-                if !self.last_bounds.contains(*position) {
-                    return;
-                }
-                self.pressed = true;
-                cx.capture_pointer(cx.node);
-                cx.request_focus(cx.node);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                cx.stop_propagation();
-            }
-            fret_core::PointerEvent::Up {
-                position, button, ..
-            } => {
-                if *button != MouseButton::Left {
-                    return;
-                }
-                cx.release_pointer_capture();
-                let was_pressed = self.pressed;
-                self.pressed = false;
-                let hovered = self.last_bounds.contains(*position);
-                self.hovered = hovered;
-                if was_pressed && hovered {
-                    self.toggle_popover(cx);
-                }
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                cx.stop_propagation();
-            }
+                _ => {}
+            },
             _ => {}
         }
     }
