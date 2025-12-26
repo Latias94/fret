@@ -1,0 +1,116 @@
+# Codex MVP: SVG / Path / Plot Rendering Roadmap
+
+Status: active (owned by Codex; do not treat as the repo-wide MVP plan).
+
+## Goal
+
+Build a GPUI/Zed-aligned rendering foundation for:
+
+- SVG icons/images (SVG-as-icon and SVG-as-image).
+- Vector paths (lines/curves) as a general accelerated primitive.
+- Higher-level “plot/implot-like” widgets built on top (data → paths + interactions).
+
+## Non-goals (for now)
+
+- Full GPU-native SVG path rendering (no SVG → GPU path commands directly).
+- GPUI-style analytic coverage AA for curves (we rely on MSAA for now).
+- A full plot component MVP before the rendering substrate is stable.
+
+## Baseline (what fret does today)
+
+### SVG (GPUI-aligned)
+
+- CPU rasterization: `usvg` parses + `resvg/tiny-skia` renders into a CPU pixmap.
+- Two productized upload paths:
+  - **Alpha mask icon**: store `alpha` only (R8Unorm), tint on GPU (`SceneOp::SvgMaskIcon`).
+  - **RGBA image**: store unpremultiplied RGBA (Rgba8UnormSrgb), premultiply in shader (`SceneOp::SvgImage`).
+- Cache is inside the renderer (scene-driven prepare), not exposed as an external “svg cache object”.
+
+### Path (implot substrate)
+
+- CPU tessellation: `lyon` converts `PathCommand` into triangles (fill/stroke).
+- GPU drawing:
+  - When MSAA > 1: draw paths into an offscreen MSAA intermediate, then composite back to keep strict draw order.
+  - When MSAA == 1: draw directly into the main pass (fast path).
+
+## GPUI/Zed reference alignment (high level)
+
+- SVG: CPU rasterize → GPU composite (matches GPUI).
+- Icon path: alpha mask + tint on GPU (matches GPUI “monochrome sprite” concept).
+- Paths: CPU-generated geometry; GPU ultimately still draws triangles (same fundamental primitive).
+
+## Work items (incremental plan)
+
+### Done
+
+- SVG scene ops + UI primitives: `SvgMaskIcon` / `SvgImage`.
+- SVG raster caching inside `fret-render` with byte-budget + LRU epoch.
+- `SvgFit` modes: `Contain` (default), `Width`, `Stretch`.
+- Path MSAA samples configurable, and MSAA==1 uses direct draw fast path.
+- SVG alpha-mask **atlas pages** (reduce bind group / texture switching for many icons).
+
+### Next
+
+1. SVG alpha-mask atlas compaction strategy (optional)
+   - Current MVP uses “append-only” packing per page (shelf packing) and page-level eviction.
+   - If fragmentation becomes a problem, add a free-rect allocator or periodic rebuild.
+2. Capability-driven defaults
+   - Decide default `path_msaa_samples` (compat-first vs quality-first).
+   - Consider GPU limits / backend quirks (fallback when sample_count unsupported).
+3. Plot substrate (renderer stays generic)
+   - Keep renderer responsible only for “draw paths efficiently”.
+   - Build plot widget responsible for:
+     - data → paths (downsampling, line joins, area fills, markers),
+     - hit testing / hover / zoom & pan,
+     - axes / ticks / labels (text).
+
+## Key design stance: “Renderer accelerates paths; plot owns semantics”
+
+The renderer should expose a small set of general primitives that map cleanly to GPU work:
+
+- Rect quads (already exists).
+- Images and alpha masks (already exists).
+- Paths (already exists; triangles under the hood).
+- Optional: clipped layers / offscreen surfaces (only if GPUI does it and we need it).
+
+Plot/implot-like widgets should stay in UI/component crates and only emit those primitives.
+
+## Resource lifecycle & reclamation (GPUI-inspired)
+
+- Keep caches internal to `fret-render`:
+  - SVG raster cache keyed by `(SvgId, target_box, smooth_scale, kind, fit)`.
+  - Alpha-mask atlas pages registered as images; multiple icons share one `ImageId`.
+- Reclamation:
+  - Byte budget (`svg_raster_budget_bytes`) governs both standalone rasters and atlas pages.
+  - Best-effort eviction: never evict rasters/pages used in the current frame.
+  - Atlas eviction is page-based (drop a whole page + its entries).
+
+## Risks / pitfalls (what to watch)
+
+1. Atlas sampling artifacts (bleeding)
+   - Linear filtering can bleed across neighbors without padding.
+   - MVP mitigates with padded + edge-extruded writes for each icon.
+2. Budget vs correctness
+   - If the current frame needs more than the budget, eviction must not break drawing.
+   - Implementation must allow temporary overshoot (correctness first).
+3. MSAA compatibility
+   - Some backends/devices may not support the chosen MSAA sample count for a format.
+   - Prefer capability-driven or conservative defaults; treat MSAA as a quality knob.
+4. CPU SVG cost
+   - Rasterization is CPU-heavy; too many unique sizes per frame will hurt.
+   - Encourage consistent icon sizing and caching; avoid animating target size every frame.
+5. Fragmentation
+   - Atlas pages are append-only in MVP; removing entries does not reclaim sub-rects.
+   - If many short-lived icons exist, consider page rebuild or a real allocator.
+
+## Validation checklist
+
+- SVG icon alpha-mask:
+  - Same SVG tinted with multiple colors looks consistent (ignores original SVG fills).
+  - No visible bleeding when many icons are packed in the atlas.
+- SVG image RGBA:
+  - Semi-transparent SVG has no “dark/white fringe” (premul/unpremul correctness).
+- Path:
+  - With MSAA off, edges are visibly jaggier (expected).
+  - With MSAA on, edges improve and ordering stays correct with other draws.
+
