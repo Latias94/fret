@@ -4,15 +4,14 @@ use fret_core::{Color, Corners, Edges, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, ElementKind, LayoutStyle, MainAlign, PressableProps,
-    TextProps,
+    AnyElement, ContainerProps, ElementKind, LayoutStyle, PressableProps, TextProps,
 };
 use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
 
 use super::stack;
 use super::style;
 use crate::command::CommandItem;
-use crate::{LayoutRefinement, Size, Space};
+use crate::{Items, Justify, LayoutRefinement, Size, Space};
 
 #[derive(Debug, Clone)]
 enum RowKind {
@@ -337,8 +336,8 @@ pub fn command_palette_list<H: UiHost>(
                                                 cx,
                                                 stack::HStackProps::default()
                                                     .gap(row_gap)
-                                                    .justify(MainAlign::Start)
-                                                    .align(CrossAlign::Center),
+                                                    .justify(Justify::Start)
+                                                    .items(Items::Center),
                                                 |cx| {
                                                     let mut out = Vec::new();
 
@@ -347,8 +346,8 @@ pub fn command_palette_list<H: UiHost>(
                                                         stack::VStackProps::default()
                                                             .layout(row_left_layout.clone())
                                                             .gap(col_gap)
-                                                            .justify(MainAlign::Start)
-                                                            .align(CrossAlign::Start),
+                                                            .justify(Justify::Start)
+                                                            .items(Items::Start),
                                                         |cx| {
                                                             let mut col = Vec::new();
                                                             let label_color = if *enabled {

@@ -112,16 +112,19 @@ Fret does **not** need to replicate every numeric preset from gpui-component, bu
 
 ### P1 — bring parity closer to gpui-component (quality-of-life + fewer one-offs)
 
-- [ ] Add `gap-x` / `gap-y` semantics (or decide to keep a single `gap` and document it).
-  - If we keep uniform `gap` only, require a clear component-layer workaround pattern.
-- [ ] Add typed alignment wrappers (`items_*`, `justify_*`) to avoid leaking runtime enums into recipes.
-- [ ] Add typed sizing wrappers (`w_*`, `h_*`, `min_w_*`, `max_w_*`, `size_full`, `w_full`, `h_full`).
+- [x] Add `gap-x` / `gap-y` semantics (or decide to keep a single `gap` and document it).
+  - Implemented for component-layer stacks: `HStackProps::gap_x` and `VStackProps::gap_y`.
+- [x] Add typed alignment wrappers (`items_*`, `justify_*`) to avoid leaking runtime enums into recipes.
+  - `Justify` / `Items` live in `crates/fret-components-ui/src/style.rs` and are used by `hstack/vstack`.
+- [x] Add typed sizing wrappers (`w_*`, `h_*`, `min_w_*`, `max_w_*`, `size_full`, `w_full`, `h_full`).
   - Decide which are “scale-based” (Space) vs “absolute” (Px) vs “semantic” (`full`).
   - Note: we currently provide `LayoutRefinement::{w/h/min/max,w_full,h_full,size_full}`; the
     remaining work is scale-based sugar and narrowing the surface so recipes rarely touch `MetricRef`.
-- [ ] Add typed overflow wrappers (`overflow_hidden`, `overflow_scroll`, `overflow_x_*`, `overflow_y_*`)
+- [x] Add typed overflow wrappers (`overflow_hidden`, `overflow_scroll`, `overflow_x_*`, `overflow_y_*`)
   and ensure paint/hit-test semantics stay consistent (ADR 0057).
-- [ ] Add typed text helpers needed by shadcn recipes: `truncate`, `whitespace_nowrap`, and a minimal
+  - `overflow_scroll` is implemented as an explicit scroll element wrapper:
+    `crates/fret-components-ui/src/declarative/scroll.rs`
+- [x] Add typed text helpers needed by shadcn recipes: `truncate`, `whitespace_nowrap`, and a minimal
   `text_*` size vocabulary at the component surface (not necessarily at the runtime substrate).
   - [x] `truncate` helper exists: `crates/fret-components-ui/src/declarative/text.rs`
   - [x] `whitespace-nowrap` helper exists: `crates/fret-components-ui/src/declarative/text.rs`

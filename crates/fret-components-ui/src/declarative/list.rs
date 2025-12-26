@@ -1,12 +1,11 @@
 use fret_core::{Color, Corners, Edges, Px};
 use fret_runtime::CommandId;
 use fret_runtime::Model;
-use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, MainAlign, PressableProps, RowProps, SpacerProps,
-};
+use fret_ui::element::{AnyElement, ContainerProps, PressableProps, SpacerProps};
 use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
 
-use crate::{MetricRef, Size, Space};
+use crate::declarative::stack;
+use crate::{Items, Justify, MetricRef, Size, Space};
 
 fn resolve_list_colors(theme: &Theme) -> (Color, Color, Color, Color) {
     let list_bg = theme
@@ -46,10 +45,6 @@ fn resolve_row_padding_y(theme: &Theme) -> Px {
     MetricRef::space(Space::N1p5).resolve(theme)
 }
 
-fn resolve_row_gap(theme: &Theme) -> Px {
-    MetricRef::space(Space::N2).resolve(theme)
-}
-
 /// Declarative virtualized list helper (component-friendly, row content is fully composable).
 ///
 /// This intentionally avoids a fixed row schema (`VirtualListRow { text/secondary/trailing... }`)
@@ -82,7 +77,6 @@ pub fn list_virtualized<H: UiHost, K: std::hash::Hash>(
     let row_h = row_height.unwrap_or_else(|| resolve_row_height(theme, size));
     let row_px = resolve_row_padding_x(theme);
     let row_py = resolve_row_padding_y(theme);
-    let row_gap = resolve_row_gap(theme);
 
     cx.container(
         ContainerProps {
@@ -123,13 +117,12 @@ pub fn list_virtualized<H: UiHost, K: std::hash::Hash>(
                                     ..Default::default()
                                 },
                                 |cx| {
-                                    vec![cx.row(
-                                        RowProps {
-                                            gap: row_gap,
-                                            justify: MainAlign::Start,
-                                            align: CrossAlign::Center,
-                                            ..Default::default()
-                                        },
+                                    vec![stack::hstack(
+                                        cx,
+                                        stack::HStackProps::default()
+                                            .gap_x(Space::N2)
+                                            .justify(Justify::Start)
+                                            .items(Items::Center),
                                         |cx| row_contents(cx, i),
                                     )]
                                 },

@@ -131,6 +131,10 @@ pub fn apply_layout_refinement(
             layout.flex.basis = resolve_length(theme, basis);
         }
     }
+
+    if let Some(overflow) = refinement.overflow {
+        layout.overflow = overflow.to_overflow();
+    }
 }
 
 pub fn container_props(

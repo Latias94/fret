@@ -100,6 +100,7 @@ Fret has a strict separation:
 - `LayoutStyle.overflow = Clip` is Tailwind-like `overflow-hidden` (paint + hit-test clip).
 - “Scrollable” behavior is **not** a boolean flag; it uses an explicit `Scroll` element
   (`crates/fret-ui/src/element.rs`).
+  - Component-layer helper: `crates/fret-components-ui/src/declarative/scroll.rs` (`overflow_scroll`)
 
 This avoids CSS-like ambiguous “overflow auto” semantics and keeps virtualization boundaries clear.
 
@@ -121,6 +122,9 @@ This table is intentionally “semantic”, not a 1:1 class inventory.
   - **Inputs**: padding is truly per-edge (Tailwind-like) in both retained and declarative paths,
     because inputs frequently reserve space for leading/trailing icons.
 - `gap-*` → container layout (`FlexProps.gap`, `GridProps.gap`) via component-layer helpers
+- `gap-x-*` / `gap-y-*` → component-layer stack helpers:
+  - `HStackProps::gap_x(Space)` (horizontal stacks)
+  - `VStackProps::gap_y(Space)` (vertical stacks)
 - `m-*`, `mx-*`, `my-*`, `mt/mr/mb/ml-*` → `LayoutRefinement` (`m/mx/my/mt/mr/mb/ml`)
 
 ### Flex / sizing

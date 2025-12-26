@@ -51,6 +51,7 @@ pub use dialog_overlay::{DialogAction, DialogOverlay, DialogRequest, DialogServi
 pub use sheet_overlay::{SheetOverlay, SheetRequest, SheetService, SheetSide, SheetStyle};
 pub use sizing::{Sizable, Size};
 pub use style::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+pub use style::{Items, Justify, OverflowRefinement};
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
 pub use text_area_field::TextAreaField;
 pub use toast::{ToastAction, ToastKind, ToastOverlay, ToastRequest, ToastService, ToastStyle};

@@ -1,9 +1,7 @@
 use fret_components_icons::IconId;
 use fret_core::{Axis, Edges, FontId, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
-use fret_ui::element::{
-    ContainerProps, CrossAlign, FlexProps, Length, MainAlign, SizeStyle, TextInputProps,
-};
+use fret_ui::element::{ContainerProps, FlexProps, Length, SizeStyle, TextInputProps};
 use fret_ui::widget::Invalidation;
 use fret_ui::{ElementCx, Theme, UiHost};
 
@@ -11,7 +9,7 @@ use crate::declarative::icon;
 use crate::declarative::style as decl_style;
 use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use crate::style::ChromeRefinement;
-use crate::{LayoutRefinement, MetricRef, Size, Space};
+use crate::{Items, Justify, LayoutRefinement, MetricRef, Size, Space};
 
 #[track_caller]
 pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
@@ -114,8 +112,8 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
                         direction: Axis::Horizontal,
                         gap: Px(0.0),
                         padding: Edges::symmetric(base_px, Px(0.0)),
-                        justify: MainAlign::Center,
-                        align: CrossAlign::Center,
+                        justify: Justify::Center.to_main_align(),
+                        align: Items::Center.to_cross_align(),
                         wrap: false,
                     },
                     |cx| vec![icon::icon(cx, leading_icon)],
@@ -149,8 +147,8 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
                                     direction: Axis::Horizontal,
                                     gap: Px(0.0),
                                     padding: Edges::symmetric(base_px, Px(0.0)),
-                                    justify: MainAlign::Center,
-                                    align: CrossAlign::Center,
+                                    justify: Justify::Center.to_main_align(),
+                                    align: Items::Center.to_cross_align(),
                                     wrap: false,
                                 },
                                 |cx| vec![icon::icon(cx, IconId::new("x"))],

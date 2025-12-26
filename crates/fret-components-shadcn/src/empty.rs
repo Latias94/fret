@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_components_ui::{
+    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
+};
 use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, CrossAlign, MainAlign, TextProps};
+use fret_ui::element::{AnyElement, TextProps};
 use fret_ui::{ElementCx, Theme, UiHost};
 
 use fret_components_ui::declarative::stack;
@@ -90,8 +92,8 @@ pub fn empty<H: UiHost>(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N1p5)
-                .justify(MainAlign::Start)
-                .align(CrossAlign::Start),
+                .justify(Justify::Start)
+                .items(Items::Start),
             |cx| {
                 let mut out = Vec::new();
                 out.push(cx.text_props(TextProps {

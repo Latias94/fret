@@ -1,15 +1,15 @@
-use fret_ui::element::{AnyElement, ColumnProps, CrossAlign, MainAlign, RowProps};
+use fret_ui::element::{AnyElement, ColumnProps, RowProps};
 use fret_ui::{ElementCx, Theme, UiHost};
 
 use crate::declarative::style;
-use crate::{LayoutRefinement, Space};
+use crate::{Items, Justify, LayoutRefinement, Space};
 
 #[derive(Debug, Clone)]
 pub struct HStackProps {
     pub layout: LayoutRefinement,
     pub gap: Space,
-    pub justify: MainAlign,
-    pub align: CrossAlign,
+    pub justify: Justify,
+    pub items: Items,
 }
 
 impl Default for HStackProps {
@@ -17,8 +17,8 @@ impl Default for HStackProps {
         Self {
             layout: LayoutRefinement::default(),
             gap: Space::N0,
-            justify: MainAlign::Start,
-            align: CrossAlign::Center,
+            justify: Justify::Start,
+            items: Items::Center,
         }
     }
 }
@@ -29,19 +29,55 @@ impl HStackProps {
         self
     }
 
+    pub fn gap_x(self, space: Space) -> Self {
+        self.gap(space)
+    }
+
     pub fn layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = layout;
         self
     }
 
-    pub fn justify(mut self, justify: MainAlign) -> Self {
+    pub fn justify(mut self, justify: Justify) -> Self {
         self.justify = justify;
         self
     }
 
-    pub fn align(mut self, align: CrossAlign) -> Self {
-        self.align = align;
+    pub fn items(mut self, items: Items) -> Self {
+        self.items = items;
         self
+    }
+
+    pub fn justify_start(self) -> Self {
+        self.justify(Justify::Start)
+    }
+
+    pub fn justify_center(self) -> Self {
+        self.justify(Justify::Center)
+    }
+
+    pub fn justify_end(self) -> Self {
+        self.justify(Justify::End)
+    }
+
+    pub fn justify_between(self) -> Self {
+        self.justify(Justify::Between)
+    }
+
+    pub fn items_start(self) -> Self {
+        self.items(Items::Start)
+    }
+
+    pub fn items_center(self) -> Self {
+        self.items(Items::Center)
+    }
+
+    pub fn items_end(self) -> Self {
+        self.items(Items::End)
+    }
+
+    pub fn items_stretch(self) -> Self {
+        self.items(Items::Stretch)
     }
 }
 
@@ -60,8 +96,8 @@ pub fn hstack<H: UiHost>(
         RowProps {
             layout,
             gap,
-            justify: props.justify,
-            align: props.align,
+            justify: props.justify.to_main_align(),
+            align: props.items.to_cross_align(),
             ..Default::default()
         },
         f,
@@ -72,8 +108,8 @@ pub fn hstack<H: UiHost>(
 pub struct VStackProps {
     pub layout: LayoutRefinement,
     pub gap: Space,
-    pub justify: MainAlign,
-    pub align: CrossAlign,
+    pub justify: Justify,
+    pub items: Items,
 }
 
 impl Default for VStackProps {
@@ -81,8 +117,8 @@ impl Default for VStackProps {
         Self {
             layout: LayoutRefinement::default(),
             gap: Space::N0,
-            justify: MainAlign::Start,
-            align: CrossAlign::Stretch,
+            justify: Justify::Start,
+            items: Items::Stretch,
         }
     }
 }
@@ -93,19 +129,55 @@ impl VStackProps {
         self
     }
 
+    pub fn gap_y(self, space: Space) -> Self {
+        self.gap(space)
+    }
+
     pub fn layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = layout;
         self
     }
 
-    pub fn justify(mut self, justify: MainAlign) -> Self {
+    pub fn justify(mut self, justify: Justify) -> Self {
         self.justify = justify;
         self
     }
 
-    pub fn align(mut self, align: CrossAlign) -> Self {
-        self.align = align;
+    pub fn items(mut self, items: Items) -> Self {
+        self.items = items;
         self
+    }
+
+    pub fn justify_start(self) -> Self {
+        self.justify(Justify::Start)
+    }
+
+    pub fn justify_center(self) -> Self {
+        self.justify(Justify::Center)
+    }
+
+    pub fn justify_end(self) -> Self {
+        self.justify(Justify::End)
+    }
+
+    pub fn justify_between(self) -> Self {
+        self.justify(Justify::Between)
+    }
+
+    pub fn items_start(self) -> Self {
+        self.items(Items::Start)
+    }
+
+    pub fn items_center(self) -> Self {
+        self.items(Items::Center)
+    }
+
+    pub fn items_end(self) -> Self {
+        self.items(Items::End)
+    }
+
+    pub fn items_stretch(self) -> Self {
+        self.items(Items::Stretch)
     }
 }
 
@@ -124,8 +196,8 @@ pub fn vstack<H: UiHost>(
         ColumnProps {
             layout,
             gap,
-            justify: props.justify,
-            align: props.align,
+            justify: props.justify.to_main_align(),
+            align: props.items.to_cross_align(),
             ..Default::default()
         },
         f,
