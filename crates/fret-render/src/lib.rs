@@ -3,6 +3,7 @@ mod images;
 mod renderer;
 mod surface;
 mod svg;
+mod svg_cache;
 mod targets;
 mod text;
 
@@ -14,6 +15,7 @@ pub use svg::{
     SMOOTH_SVG_SCALE_FACTOR, SvgAlphaMask, SvgRenderer, SvgRgbaImage, UploadedAlphaMask,
     UploadedRgbaImage, upload_alpha_mask, upload_rgba_image,
 };
+pub use svg_cache::{CachedSvgImage, SvgImageCache, SvgRasterKind};
 pub use targets::{RenderTargetColorSpace, RenderTargetDescriptor, RenderTargetRegistry};
 
 pub struct WgpuContext {

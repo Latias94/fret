@@ -1,6 +1,6 @@
 # MVP: SVG Icons (Alpha Mask + Tint)
 
-Status: **ICON-0/ICON-1/IMG-0 implemented; ICON-2 pending**
+Status: **ICON-0/ICON-1/ICON-2/IMG-0 implemented**
 
 This document is intentionally standalone to avoid interfering with other in-flight docs.
 
@@ -123,6 +123,18 @@ let image_id = renderer.register_image(fret_render::ImageDescriptor {
 // MaskImage::new(image_id).tint(Color::WHITE)
 ```
 
+### Cached usage sketch (recommended)
+
+For UI code, prefer a persistent `SvgImageCache` owned by the app/runner.
+
+Pseudo-code:
+
+```rust
+let cached = svg_cache.get_or_create_alpha_mask(&device, &queue, &mut renderer, svg_bytes, (16, 16))?;
+// In UI paint:
+// MaskImage::new(cached.image).with_uv(cached.uv).tint(Color::WHITE)
+```
+
 ## Roadmap
 
 ### ICON-0: Mask primitive (renderer + UI)
@@ -138,7 +150,7 @@ let image_id = renderer.register_image(fret_render::ImageDescriptor {
 
 ### ICON-2: Caching + integration
 
-- [ ] Add cache keyed by `(svg_hash, size_box, scale_factor)` producing `ImageId`
+- [x] Add cache keyed by `(svg_hash, size_box, scale_factor)` producing `ImageId`
 - [ ] Add optional “smooth scale factor” policy (similar to GPUI’s `SMOOTH_SVG_SCALE_FACTOR`)
 
 ### IMG-0: SVG as image (RGBA)
