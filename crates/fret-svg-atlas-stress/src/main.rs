@@ -230,7 +230,12 @@ fn record_scene(
     icons_emitted
 }
 
-fn run_headless(frames: u64, budget_bytes: u64) -> anyhow::Result<()> {
+fn run_headless(
+    frames: u64,
+    budget_bytes: u64,
+    wait_gpu: bool,
+    wait_every: u64,
+) -> anyhow::Result<()> {
     let ctx = pollster::block_on(WgpuContext::new())?;
     let mut renderer = Renderer::new(&ctx.device);
     renderer.set_svg_raster_budget_bytes(budget_bytes);
@@ -270,6 +275,7 @@ fn run_headless(frames: u64, budget_bytes: u64) -> anyhow::Result<()> {
     let mut phase = false;
     let fit_mode = FitMode::Mixed;
 
+    let wait_every = wait_every.max(1);
     let start = Instant::now();
     for frame in 0..frames {
         if frame != 0 && frame % 180 == 0 {
@@ -289,19 +295,28 @@ fn run_headless(frames: u64, budget_bytes: u64) -> anyhow::Result<()> {
             },
         );
         ctx.queue.submit([cmd]);
+        if wait_gpu && (frame % wait_every == 0) {
+            // Block until the GPU has completed submitted work. This makes the benchmark closer
+            // to end-to-end cost (rather than submit-only).
+            let _ = ctx.device.poll(wgpu::PollType::wait_indefinitely());
+        }
         if frame % 60 == 0 {
             let _ = ctx.device.poll(wgpu::PollType::Poll);
             println!("headless progress: {frame}/{frames}");
         }
     }
-    // Avoid indefinite blocking in headless mode; we care primarily about CPU-side rasterization
-    // and upload scheduling costs here.
-    let _ = ctx.device.poll(wgpu::PollType::Poll);
+    let _ = ctx
+        .device
+        .poll(if wait_gpu {
+            wgpu::PollType::wait_indefinitely()
+        } else {
+            wgpu::PollType::Poll
+        });
     let elapsed = start.elapsed();
 
     if let Some(snap) = renderer.take_svg_perf_snapshot() {
         println!(
-            "headless: frames={} wall={:.2}s prepare={:.2}ms hits={} misses={} alpha_raster={} ({:.2}ms) atlas_inserts={} atlas_write={:.2}ms pages={} rasters={} standalone={}KB atlas={}KB",
+            "headless: frames={} wall={:.2}s prepare={:.2}ms hits={} misses={} alpha_raster={} ({:.2}ms) atlas_inserts={} atlas_write={:.2}ms pages={} rasters={} standalone={}KB atlas={}KB wait_gpu={} wait_every={}",
             frames,
             elapsed.as_secs_f64(),
             snap.prepare_svg_ops_us as f64 / 1000.0,
@@ -314,7 +329,9 @@ fn run_headless(frames: u64, budget_bytes: u64) -> anyhow::Result<()> {
             snap.atlas_pages_live,
             snap.svg_rasters_live,
             snap.svg_standalone_bytes_live / 1024,
-            snap.svg_mask_atlas_bytes_live / 1024
+            snap.svg_mask_atlas_bytes_live / 1024,
+            wait_gpu,
+            wait_every
         );
     }
 
@@ -557,6 +574,8 @@ fn main() -> anyhow::Result<()> {
     let mut max_frames: Option<u64> = None;
     let mut headless = false;
     let mut budget_kb: Option<u64> = None;
+    let mut wait_gpu = false;
+    let mut wait_every: u64 = 1;
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -573,8 +592,17 @@ fn main() -> anyhow::Result<()> {
                 };
                 budget_kb = Some(value.parse()?);
             }
+            "--wait-gpu" => wait_gpu = true,
+            "--wait-every" => {
+                let Some(value) = args.next() else {
+                    anyhow::bail!("--wait-every requires a value");
+                };
+                wait_every = value.parse()?;
+            }
             "--help" | "-h" => {
-                println!("Usage: fret-svg-atlas-stress [--frames N] [--headless] [--budget-kb KB]");
+                println!(
+                    "Usage: fret-svg-atlas-stress [--frames N] [--headless] [--budget-kb KB] [--wait-gpu] [--wait-every N]"
+                );
                 return Ok(());
             }
             other => anyhow::bail!("unknown arg: {other}"),
@@ -584,7 +612,7 @@ fn main() -> anyhow::Result<()> {
     if headless {
         let frames = max_frames.unwrap_or(600);
         let budget = budget_kb.map(|kb| kb * 1024).unwrap_or(1024 * 1024);
-        return run_headless(frames, budget);
+        return run_headless(frames, budget, wait_gpu, wait_every);
     }
 
     let driver = SvgAtlasStressDriver { max_frames };
