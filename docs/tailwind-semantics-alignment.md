@@ -72,15 +72,16 @@ See ADR 0062 and `crates/fret-ui/src/declarative.rs`.
 
 ### Margin rules (Tailwind-like `m-*`, `mt-*`, `mx-*`, …)
 
-Margins are expressed as per-edge px in `LayoutStyle.margin` and are consumed by layout containers
-that participate in flow (primarily `Flex`/`Grid` via Taffy).
+Margins are expressed as per-edge values in `LayoutStyle.margin` and are consumed by layout
+containers that participate in flow (primarily `Flex`/`Grid` via Taffy).
 
-Non-goals (currently):
+Fret supports the practical Tailwind subset used by gpui-component:
 
-- `mx-auto` (“auto margins”)
-- negative margins (`-m-*`)
-
-These must be handled by explicit layout helpers if needed (ADR 0062).
+- **Px margins** (`m-*`, `mt-*`, `mx-*`, …): map to per-edge px.
+- **Auto margins** (`m-auto`, `mx-auto`, …): map to `MarginEdge::Auto`.
+  - Primary use: horizontal centering via `mx-auto` inside a flow container.
+- **Negative margins** (`-m-*`, `-mt-*`, …): represented as signed metrics (sign applies after
+  token resolution), then mapped to negative px.
 
 ### Aspect ratio (Tailwind-like `aspect-*`)
 
@@ -126,6 +127,8 @@ This table is intentionally “semantic”, not a 1:1 class inventory.
   - `HStackProps::gap_x(Space)` (horizontal stacks)
   - `VStackProps::gap_y(Space)` (vertical stacks)
 - `m-*`, `mx-*`, `my-*`, `mt/mr/mb/ml-*` → `LayoutRefinement` (`m/mx/my/mt/mr/mb/ml`)
+- `m-auto`, `mx-auto`, `my-auto`, `mt-auto`, … → `LayoutRefinement::{m_auto,mx_auto,my_auto,mt_auto,...}`
+- `-m-*`, `-mx-*`, `-mt-*`, … → `LayoutRefinement::{m_neg,mx_neg,mt_neg,...}`
 
 ### Flex / sizing
 
@@ -144,6 +147,7 @@ Runtime default:
 
 - `relative` / `absolute` → `LayoutRefinement::{relative,absolute}`
 - `inset-*`, `top/right/bottom/left-*` → `LayoutRefinement::{inset,top,right,bottom,left}`
+- negative inset (`-top-*`, `-inset-*`) → `LayoutRefinement::{top_neg,right_neg,...}` / `LayoutRefinement::{inset}` with signed edges
 
 ### Shadows / rings (shadcn polish)
 

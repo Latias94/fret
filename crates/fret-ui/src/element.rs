@@ -45,11 +45,42 @@ pub struct LayoutStyle {
     pub size: SizeStyle,
     pub flex: FlexItemStyle,
     pub overflow: Overflow,
-    pub margin: Edges,
+    pub margin: MarginEdges,
     pub position: PositionStyle,
     pub inset: InsetStyle,
     pub aspect_ratio: Option<f32>,
     pub grid: GridItemStyle,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MarginEdge {
+    Px(Px),
+    Auto,
+}
+
+impl Default for MarginEdge {
+    fn default() -> Self {
+        Self::Px(Px(0.0))
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct MarginEdges {
+    pub top: MarginEdge,
+    pub right: MarginEdge,
+    pub bottom: MarginEdge,
+    pub left: MarginEdge,
+}
+
+impl MarginEdges {
+    pub fn all(edge: MarginEdge) -> Self {
+        Self {
+            top: edge,
+            right: edge,
+            bottom: edge,
+            left: edge,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]

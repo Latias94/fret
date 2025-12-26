@@ -30,9 +30,11 @@ We want a similar authoring experience, but we must preserve Fret's core contrac
 
 Extend the declarative `LayoutStyle` vocabulary to cover:
 
-- **Margin**: per-edge margins in logical px.
+- **Margin**: per-edge margins in logical px, plus `auto` edges (for `mx-auto`-style centering).
+  - Negative margins are allowed (signed px), matching Tailwind/gpui-component usage.
 - **Position**: `static`/`relative`/`absolute`.
 - **Inset**: per-edge offsets for positioned elements.
+  - Negative inset offsets are allowed (signed px), matching Tailwind usage (e.g. `-top-*`).
 - **Aspect ratio**: preferred ratio (width / height).
 - **Grid**: `display: grid` and a minimal repeat-based template vocabulary compatible with Taffy.
 
@@ -87,4 +89,3 @@ Grid is not a substitute for virtualization (ADR 0042). Large tables/lists remai
 - Full CSS layout model parity (CSS grid areas, auto-flow, subgrid, etc.).
 - Global z-index ordering across arbitrary clips and overlay roots.
 - Implicit “layout engine everywhere”: docking/splits/virtualization remain explicit containers.
-

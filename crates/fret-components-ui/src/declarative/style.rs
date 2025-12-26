@@ -1,7 +1,7 @@
 use fret_core::{Color, Corners, Edges, Px};
 use fret_ui::Theme;
 use fret_ui::element::{
-    ContainerProps, LayoutStyle, Length, RingPlacement, RingStyle, ShadowStyle,
+    ContainerProps, LayoutStyle, Length, MarginEdge, RingPlacement, RingStyle, ShadowStyle,
 };
 
 use crate::style::{
@@ -74,10 +74,18 @@ pub fn apply_layout_refinement(
         left,
     }) = refinement.margin
     {
-        layout.margin.top = top.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
-        layout.margin.right = right.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
-        layout.margin.bottom = bottom.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
-        layout.margin.left = left.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
+        layout.margin.top = top
+            .map(|m| m.resolve(theme))
+            .unwrap_or(MarginEdge::Px(Px(0.0)));
+        layout.margin.right = right
+            .map(|m| m.resolve(theme))
+            .unwrap_or(MarginEdge::Px(Px(0.0)));
+        layout.margin.bottom = bottom
+            .map(|m| m.resolve(theme))
+            .unwrap_or(MarginEdge::Px(Px(0.0)));
+        layout.margin.left = left
+            .map(|m| m.resolve(theme))
+            .unwrap_or(MarginEdge::Px(Px(0.0)));
     }
     if let Some(InsetRefinement {
         top,

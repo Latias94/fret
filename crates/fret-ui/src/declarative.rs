@@ -325,12 +325,21 @@ fn taffy_rect_lpa_from_inset(
     }
 }
 
-fn taffy_rect_lpa_from_edges(edges: Edges) -> TaffyRect<LengthPercentageAuto> {
+fn taffy_lpa_margin_edge(edge: crate::element::MarginEdge) -> LengthPercentageAuto {
+    match edge {
+        crate::element::MarginEdge::Px(px) => LengthPercentageAuto::length(px.0),
+        crate::element::MarginEdge::Auto => LengthPercentageAuto::auto(),
+    }
+}
+
+fn taffy_rect_lpa_from_margin_edges(
+    margin: crate::element::MarginEdges,
+) -> TaffyRect<LengthPercentageAuto> {
     TaffyRect {
-        left: LengthPercentageAuto::length(edges.left.0),
-        right: LengthPercentageAuto::length(edges.right.0),
-        top: LengthPercentageAuto::length(edges.top.0),
-        bottom: LengthPercentageAuto::length(edges.bottom.0),
+        left: taffy_lpa_margin_edge(margin.left),
+        right: taffy_lpa_margin_edge(margin.right),
+        top: taffy_lpa_margin_edge(margin.top),
+        bottom: taffy_lpa_margin_edge(margin.bottom),
     }
 }
 
@@ -1243,11 +1252,13 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     size: TaffySize {
                         width: match props.layout.size.width {
                             Length::Px(px) => Dimension::length((px.0 - pad_w).max(0.0)),
-                            other => taffy_dimension(other),
+                            Length::Fill => Dimension::length(inner_avail.width.0.max(0.0)),
+                            Length::Auto => Dimension::auto(),
                         },
                         height: match props.layout.size.height {
                             Length::Px(px) => Dimension::length((px.0 - pad_h).max(0.0)),
-                            other => taffy_dimension(other),
+                            Length::Fill => Dimension::length(inner_avail.height.0.max(0.0)),
+                            Length::Auto => Dimension::auto(),
                         },
                     },
                     max_size: TaffySize {
@@ -1307,7 +1318,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                 .map(|p| Dimension::length(p.0))
                                 .unwrap_or_else(Dimension::auto),
                         },
-                        margin: taffy_rect_lpa_from_edges(layout_style.margin),
+                        margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
                         flex_grow: layout_style.flex.grow.max(0.0),
                         flex_shrink: layout_style.flex.shrink.max(0.0),
                         flex_basis: taffy_dimension(layout_style.flex.basis),
@@ -1368,30 +1379,157 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     )
                     .expect("taffy compute");
 
+                let root_layout = taffy.layout(root).expect("taffy root layout");
+                let container_inner_size = Size::new(
+                    Px(root_layout.size.width.max(0.0)),
+                    Px(root_layout.size.height.max(0.0)),
+                );
+                let auto_margin_inner_size = Size::new(
+                    match props.layout.size.width {
+                        Length::Fill => inner_avail.width,
+                        _ => container_inner_size.width,
+                    },
+                    match props.layout.size.height {
+                        Length::Fill => inner_avail.height,
+                        _ => container_inner_size.height,
+                    },
+                );
+
                 for child_node in child_nodes {
                     let layout = taffy.layout(child_node).expect("taffy layout");
                     let Some(child) = taffy.get_node_context(child_node).and_then(|c| *c) else {
                         continue;
                     };
+                    let child_style = layout_style_for_node(cx.app, window, child);
+                    let single_child = cx.children.len() == 1;
+
+                    let mut x = layout.location.x;
+                    let mut y = layout.location.y;
+
+                    let margin_left_auto =
+                        matches!(child_style.margin.left, crate::element::MarginEdge::Auto);
+                    let margin_right_auto =
+                        matches!(child_style.margin.right, crate::element::MarginEdge::Auto);
+                    let margin_top_auto =
+                        matches!(child_style.margin.top, crate::element::MarginEdge::Auto);
+                    let margin_bottom_auto =
+                        matches!(child_style.margin.bottom, crate::element::MarginEdge::Auto);
+
+                    let margin_px = |edge: crate::element::MarginEdge| match edge {
+                        crate::element::MarginEdge::Px(px) => px.0,
+                        crate::element::MarginEdge::Auto => 0.0,
+                    };
+
+                    match props.direction {
+                        fret_core::Axis::Horizontal => {
+                            if single_child && (margin_left_auto || margin_right_auto) {
+                                let left = if margin_left_auto {
+                                    0.0
+                                } else {
+                                    margin_px(child_style.margin.left)
+                                };
+                                let right = if margin_right_auto {
+                                    0.0
+                                } else {
+                                    margin_px(child_style.margin.right)
+                                };
+                                let free = auto_margin_inner_size.width.0
+                                    - layout.size.width
+                                    - left
+                                    - right;
+                                if margin_left_auto && margin_right_auto {
+                                    x = (left + (free.max(0.0) / 2.0)).max(0.0);
+                                } else if margin_left_auto {
+                                    x = (left + free.max(0.0)).max(0.0);
+                                } else if margin_right_auto {
+                                    x = left.max(0.0);
+                                }
+                            }
+
+                            if margin_top_auto || margin_bottom_auto {
+                                let top = if margin_top_auto {
+                                    0.0
+                                } else {
+                                    margin_px(child_style.margin.top)
+                                };
+                                let bottom = if margin_bottom_auto {
+                                    0.0
+                                } else {
+                                    margin_px(child_style.margin.bottom)
+                                };
+                                let free = auto_margin_inner_size.height.0
+                                    - layout.size.height
+                                    - top
+                                    - bottom;
+                                if margin_top_auto && margin_bottom_auto {
+                                    y = (top + (free.max(0.0) / 2.0)).max(0.0);
+                                } else if margin_top_auto {
+                                    y = (top + free.max(0.0)).max(0.0);
+                                } else if margin_bottom_auto {
+                                    y = top.max(0.0);
+                                }
+                            }
+                        }
+                        fret_core::Axis::Vertical => {
+                            if single_child && (margin_top_auto || margin_bottom_auto) {
+                                let top = if margin_top_auto {
+                                    0.0
+                                } else {
+                                    margin_px(child_style.margin.top)
+                                };
+                                let bottom = if margin_bottom_auto {
+                                    0.0
+                                } else {
+                                    margin_px(child_style.margin.bottom)
+                                };
+                                let free = auto_margin_inner_size.height.0
+                                    - layout.size.height
+                                    - top
+                                    - bottom;
+                                if margin_top_auto && margin_bottom_auto {
+                                    y = (top + (free.max(0.0) / 2.0)).max(0.0);
+                                } else if margin_top_auto {
+                                    y = (top + free.max(0.0)).max(0.0);
+                                } else if margin_bottom_auto {
+                                    y = top.max(0.0);
+                                }
+                            }
+
+                            if margin_left_auto || margin_right_auto {
+                                let left = if margin_left_auto {
+                                    0.0
+                                } else {
+                                    margin_px(child_style.margin.left)
+                                };
+                                let right = if margin_right_auto {
+                                    0.0
+                                } else {
+                                    margin_px(child_style.margin.right)
+                                };
+                                let free = auto_margin_inner_size.width.0
+                                    - layout.size.width
+                                    - left
+                                    - right;
+                                if margin_left_auto && margin_right_auto {
+                                    x = (left + (free.max(0.0) / 2.0)).max(0.0);
+                                } else if margin_left_auto {
+                                    x = (left + free.max(0.0)).max(0.0);
+                                } else if margin_right_auto {
+                                    x = left.max(0.0);
+                                }
+                            }
+                        }
+                    }
                     let rect = Rect::new(
-                        fret_core::Point::new(
-                            Px(inner_origin.x.0 + layout.location.x),
-                            Px(inner_origin.y.0 + layout.location.y),
-                        ),
+                        fret_core::Point::new(Px(inner_origin.x.0 + x), Px(inner_origin.y.0 + y)),
                         Size::new(Px(layout.size.width), Px(layout.size.height)),
                     );
                     let _ = cx.layout_in(child, rect);
                 }
 
-                let layout = taffy.layout(root).expect("taffy root layout");
-                let inner_size = Size::new(
-                    Px(layout.size.width.max(0.0)),
-                    Px(layout.size.height.max(0.0)),
-                );
-
                 let desired = Size::new(
-                    Px((inner_size.width.0 + pad_w).max(0.0)),
-                    Px((inner_size.height.0 + pad_h).max(0.0)),
+                    Px((container_inner_size.width.0 + pad_w).max(0.0)),
+                    Px((container_inner_size.height.0 + pad_h).max(0.0)),
                 );
                 clamp_to_constraints(desired, props.layout, cx.available)
             }
@@ -1434,11 +1572,13 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     size: TaffySize {
                         width: match props.layout.size.width {
                             Length::Px(px) => Dimension::length((px.0 - pad_w).max(0.0)),
-                            other => taffy_dimension(other),
+                            Length::Fill => Dimension::length(inner_avail.width.0.max(0.0)),
+                            Length::Auto => Dimension::auto(),
                         },
                         height: match props.layout.size.height {
                             Length::Px(px) => Dimension::length((px.0 - pad_h).max(0.0)),
-                            other => taffy_dimension(other),
+                            Length::Fill => Dimension::length(inner_avail.height.0.max(0.0)),
+                            Length::Auto => Dimension::auto(),
                         },
                     },
                     max_size: TaffySize {
@@ -1490,7 +1630,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                 .map(|p| Dimension::length(p.0))
                                 .unwrap_or_else(Dimension::auto),
                         },
-                        margin: taffy_rect_lpa_from_edges(layout_style.margin),
+                        margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
                         grid_column: taffy_grid_line(layout_style.grid.column),
                         grid_row: taffy_grid_line(layout_style.grid.row),
                         ..Default::default()
@@ -3377,6 +3517,11 @@ mod tests {
                     crate::element::FlexProps {
                         direction: fret_core::Axis::Horizontal,
                         gap: Px(0.0),
+                        layout: {
+                            let mut l = crate::element::LayoutStyle::default();
+                            l.size.width = crate::element::Length::Fill;
+                            l
+                        },
                         ..Default::default()
                     },
                     |cx| {
@@ -3387,7 +3532,7 @@ mod tests {
                         let mut b = crate::element::ContainerProps::default();
                         b.layout.size.width = crate::element::Length::Px(Px(10.0));
                         b.layout.size.height = crate::element::Length::Px(Px(10.0));
-                        b.layout.margin.left = Px(5.0);
+                        b.layout.margin.left = crate::element::MarginEdge::Px(Px(5.0));
 
                         vec![cx.container(a, |_cx| vec![]), cx.container(b, |_cx| vec![])]
                     },
@@ -3405,6 +3550,119 @@ mod tests {
 
         assert_eq!(a_bounds.origin.x, Px(0.0));
         assert_eq!(b_bounds.origin.x, Px(15.0));
+    }
+
+    #[test]
+    fn flex_child_auto_margins_center_child() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(40.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp62-flex-mx-auto",
+            |cx| {
+                vec![cx.flex(
+                    crate::element::FlexProps {
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(0.0),
+                        layout: {
+                            let mut l = crate::element::LayoutStyle::default();
+                            l.size.width = crate::element::Length::Fill;
+                            l
+                        },
+                        ..Default::default()
+                    },
+                    |cx| {
+                        let mut a = crate::element::ContainerProps::default();
+                        a.layout.size.width = crate::element::Length::Px(Px(10.0));
+                        a.layout.size.height = crate::element::Length::Px(Px(10.0));
+                        a.layout.margin.left = crate::element::MarginEdge::Auto;
+                        a.layout.margin.right = crate::element::MarginEdge::Auto;
+                        vec![cx.container(a, |_cx| vec![])]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let flex_node = ui.children(root)[0];
+        let flex_bounds = ui.debug_node_bounds(flex_node).expect("flex bounds");
+        assert_eq!(flex_bounds.size.width, Px(100.0));
+        let children = ui.children(flex_node);
+        assert_eq!(children.len(), 1);
+        let a_bounds = ui.debug_node_bounds(children[0]).expect("a bounds");
+
+        assert_eq!(a_bounds.origin.x, Px(45.0));
+    }
+
+    #[test]
+    fn flex_child_negative_margin_shifts_layout() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(40.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp62-flex-negative-margin",
+            |cx| {
+                vec![cx.flex(
+                    crate::element::FlexProps {
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(0.0),
+                        ..Default::default()
+                    },
+                    |cx| {
+                        let mut a = crate::element::ContainerProps::default();
+                        a.layout.size.width = crate::element::Length::Px(Px(10.0));
+                        a.layout.size.height = crate::element::Length::Px(Px(10.0));
+
+                        let mut b = crate::element::ContainerProps::default();
+                        b.layout.size.width = crate::element::Length::Px(Px(10.0));
+                        b.layout.size.height = crate::element::Length::Px(Px(10.0));
+                        b.layout.margin.left = crate::element::MarginEdge::Px(Px(-5.0));
+
+                        vec![cx.container(a, |_cx| vec![]), cx.container(b, |_cx| vec![])]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let flex_node = ui.children(root)[0];
+        let children = ui.children(flex_node);
+        assert_eq!(children.len(), 2);
+        let a_bounds = ui.debug_node_bounds(children[0]).expect("a bounds");
+        let b_bounds = ui.debug_node_bounds(children[1]).expect("b bounds");
+
+        assert_eq!(a_bounds.origin.x, Px(0.0));
+        assert_eq!(b_bounds.origin.x, Px(5.0));
     }
 
     #[test]
@@ -3465,6 +3723,60 @@ mod tests {
         let badge_bounds = ui.debug_node_bounds(children[1]).expect("badge bounds");
         assert_eq!(badge_bounds.origin.x, Px(90.0));
         assert_eq!(badge_bounds.origin.y, Px(0.0));
+    }
+
+    #[test]
+    fn container_absolute_negative_inset_offsets_outside_parent() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(200.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp62-stack-absolute-negative-inset",
+            |cx| {
+                vec![
+                    cx.container(crate::element::ContainerProps::default(), |cx| {
+                        let mut base = crate::element::ContainerProps::default();
+                        base.layout.size.width = crate::element::Length::Px(Px(100.0));
+                        base.layout.size.height = crate::element::Length::Px(Px(80.0));
+
+                        let mut badge = crate::element::ContainerProps::default();
+                        badge.layout.size.width = crate::element::Length::Px(Px(10.0));
+                        badge.layout.size.height = crate::element::Length::Px(Px(10.0));
+                        badge.layout.position = crate::element::PositionStyle::Absolute;
+                        badge.layout.inset.top = Some(Px(-5.0));
+                        badge.layout.inset.left = Some(Px(-6.0));
+
+                        vec![
+                            cx.container(base, |_cx| vec![]),
+                            cx.container(badge, |_cx| vec![]),
+                        ]
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let container_node = ui.children(root)[0];
+        let children = ui.children(container_node);
+        assert_eq!(children.len(), 2);
+        let badge_bounds = ui.debug_node_bounds(children[1]).expect("badge bounds");
+        assert_eq!(badge_bounds.origin.x, Px(-6.0));
+        assert_eq!(badge_bounds.origin.y, Px(-5.0));
     }
 
     #[test]

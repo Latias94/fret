@@ -27,7 +27,7 @@ composition and shadcn-style component parity.
 - Non-goals:
   - A runtime Tailwind class parser.
   - Global CSS-like `z-index` (see ADR 0062).
-  - Full Tailwind “auto margin” semantics (requires a dedicated layout contract; see TODO below).
+  - Full CSS “auto layout” parity beyond what Taffy expresses (percentages, calc(), etc.).
 
 ## Key references (design contracts)
 
@@ -132,12 +132,12 @@ Fret does **not** need to replicate every numeric preset from gpui-component, bu
 
 ### P2 — explicitly decide on non-trivial Tailwind semantics (avoid accidental commitments)
 
-- [ ] Decide how to handle `mx-auto` / “auto margins”.
-  - Option A (recommended): declare as non-goal until a dedicated layout contract exists.
-  - Option B: introduce an explicit `CenterX`/`Center` layout helper container (not “CSS auto”).
-  - Option C: extend `LayoutStyle` with an “auto” edge enum (bigger commitment; requires ADR).
-- [ ] Decide how to represent negative spacing (`mx_neg_*`, `top_neg_*`) in a typed system.
-  - If supported: ensure it composes with `merge` semantics safely and doesn’t break hit-testing.
+- [x] Support `mx-auto` / “auto margins” in declarative layout.
+  - Implemented via a dedicated `MarginEdge::Auto` runtime contract (Taffy-backed).
+  - Exposed at the component layer as `LayoutRefinement::{m_auto,mx_auto,my_auto,mt_auto,...}`.
+- [x] Support negative spacing (`-m-*`, `-inset-*`) in a typed system.
+  - Implemented via `SignedMetricRef` (sign is applied after token resolution).
+  - Exposed as `LayoutRefinement::{m_neg,mx_neg,mt_neg,...}` and `LayoutRefinement::{top_neg,...}`.
 
 ## Implementation notes (where code will likely land)
 
