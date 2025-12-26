@@ -11,28 +11,28 @@ use fret_components_shadcn::{
     Breadcrumb as ShadcnBreadcrumb, BreadcrumbItem as ShadcnBreadcrumbItem, Button as ShadcnButton,
     ButtonGroup as ShadcnButtonGroup, ButtonGroupItem as ShadcnButtonGroupItem,
     ButtonGroupOrientation as ShadcnButtonGroupOrientation, ButtonSize as ShadcnButtonSize,
-    ButtonVariant as ShadcnButtonVariant, Collapsible as ShadcnCollapsible,
-    CollapsibleContent as ShadcnCollapsibleContent, CollapsibleTrigger as ShadcnCollapsibleTrigger,
-    Field as ShadcnField, FieldDescription as ShadcnFieldDescription,
-    FieldLabel as ShadcnFieldLabel, FieldOrientation as ShadcnFieldOrientation,
-    HoverCard as ShadcnHoverCard, HoverCardContent as ShadcnHoverCardContent,
-    HoverCardTrigger as ShadcnHoverCardTrigger, InputGroup as ShadcnInputGroup,
-    InputOTP as ShadcnInputOTP, InputOTPGroup as ShadcnInputOTPGroup,
-    InputOtpPattern as ShadcnInputOtpPattern, Item as ShadcnItem, ItemActions as ShadcnItemActions,
-    ItemContent as ShadcnItemContent, ItemDescription as ShadcnItemDescription,
-    ItemGroup as ShadcnItemGroup, ItemMedia as ShadcnItemMedia,
-    ItemMediaVariant as ShadcnItemMediaVariant, ItemSeparator as ShadcnItemSeparator,
-    ItemTitle as ShadcnItemTitle, Pagination as ShadcnPagination,
-    PaginationContent as ShadcnPaginationContent, PaginationEllipsis as ShadcnPaginationEllipsis,
-    PaginationItem as ShadcnPaginationItem, PaginationLink as ShadcnPaginationLink,
-    PaginationLinkSize as ShadcnPaginationLinkSize, PaginationNext as ShadcnPaginationNext,
-    PaginationPrevious as ShadcnPaginationPrevious, RadioGroup as ShadcnRadioGroup,
-    RadioGroupItem as ShadcnRadioGroupItem, Skeleton as ShadcnSkeleton, Spinner as ShadcnSpinner,
-    Table as ShadcnTable, TableBody as ShadcnTableBody, TableCaption as ShadcnTableCaption,
-    TableCell as ShadcnTableCell, TableHead as ShadcnTableHead, TableHeader as ShadcnTableHeader,
-    TableRow as ShadcnTableRow, ToggleGroup as ShadcnToggleGroup,
-    ToggleGroupItem as ShadcnToggleGroupItem, ToggleSize as ShadcnToggleSize,
-    ToggleVariant as ShadcnToggleVariant,
+    ButtonVariant as ShadcnButtonVariant, Calendar as ShadcnCalendar,
+    Collapsible as ShadcnCollapsible, CollapsibleContent as ShadcnCollapsibleContent,
+    CollapsibleTrigger as ShadcnCollapsibleTrigger, Date as ShadcnDate, Field as ShadcnField,
+    FieldDescription as ShadcnFieldDescription, FieldLabel as ShadcnFieldLabel,
+    FieldOrientation as ShadcnFieldOrientation, HoverCard as ShadcnHoverCard,
+    HoverCardContent as ShadcnHoverCardContent, HoverCardTrigger as ShadcnHoverCardTrigger,
+    InputGroup as ShadcnInputGroup, InputOTP as ShadcnInputOTP,
+    InputOTPGroup as ShadcnInputOTPGroup, InputOtpPattern as ShadcnInputOtpPattern,
+    Item as ShadcnItem, ItemActions as ShadcnItemActions, ItemContent as ShadcnItemContent,
+    ItemDescription as ShadcnItemDescription, ItemGroup as ShadcnItemGroup,
+    ItemMedia as ShadcnItemMedia, ItemMediaVariant as ShadcnItemMediaVariant,
+    ItemSeparator as ShadcnItemSeparator, ItemTitle as ShadcnItemTitle,
+    Pagination as ShadcnPagination, PaginationContent as ShadcnPaginationContent,
+    PaginationEllipsis as ShadcnPaginationEllipsis, PaginationItem as ShadcnPaginationItem,
+    PaginationLink as ShadcnPaginationLink, PaginationLinkSize as ShadcnPaginationLinkSize,
+    PaginationNext as ShadcnPaginationNext, PaginationPrevious as ShadcnPaginationPrevious,
+    RadioGroup as ShadcnRadioGroup, RadioGroupItem as ShadcnRadioGroupItem,
+    Skeleton as ShadcnSkeleton, Spinner as ShadcnSpinner, Table as ShadcnTable,
+    TableBody as ShadcnTableBody, TableCaption as ShadcnTableCaption, TableCell as ShadcnTableCell,
+    TableHead as ShadcnTableHead, TableHeader as ShadcnTableHeader, TableRow as ShadcnTableRow,
+    ToggleGroup as ShadcnToggleGroup, ToggleGroupItem as ShadcnToggleGroupItem,
+    ToggleSize as ShadcnToggleSize, ToggleVariant as ShadcnToggleVariant,
 };
 use fret_components_ui::{
     ChromeRefinement, ContextMenuService, DialogAction, DialogRequest, DialogService,
@@ -426,6 +426,12 @@ fn build_ui_kit_contents(
             .group(ShadcnInputOTPGroup::new().slot(3).slot(4).slot(5)),
     );
     ui.add_child(col, otp);
+
+    let calendar_label = ui.create_node(Text::new("shadcn/ui v4 Calendar (prototype)"));
+    ui.add_child(col, calendar_label);
+    let calendar_model = app.models_mut().insert(None::<ShadcnDate>);
+    let calendar = ui.create_node(ShadcnCalendar::new(calendar_model).month(2025, 1));
+    ui.add_child(col, calendar);
 
     let checkbox_model = app.models_mut().insert(false);
     let checkbox = ui.create_node(Checkbox::new(checkbox_model, "Enable option"));

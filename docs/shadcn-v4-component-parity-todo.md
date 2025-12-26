@@ -88,7 +88,7 @@ Status legend:
 | Breadcrumb | `ui/breadcrumb.tsx` | `fret_components_shadcn::{Breadcrumb, BreadcrumbItem}` | ✅ | Builder renders shadcn-style link/page + separators + ellipsis. |
 | Button | `ui/button.tsx` | `fret_components_shadcn::Button` | ✅ | Wrapper exists; verify hover/active/disabled parity. |
 | Button Group | `ui/button-group.tsx` | `fret_components_shadcn::{ButtonGroup, ButtonGroupItem}` | ✅ | Segmented buttons (radius merge + border collapse) with keyboard navigation. |
-| Calendar | `ui/calendar.tsx` |  | ❌ | Likely needs date model + navigation + selection. |
+| Calendar | `ui/calendar.tsx` | `fret_components_shadcn::Calendar` | ✅ | Retained widget: month view + prev/next + single-date selection (no range/multi-month yet). |
 | Card | `ui/card.tsx` | `fret_components_shadcn::Card*` | ✅ | First-pass slots exist; verify spacing + typography tokens. |
 | Carousel | `ui/carousel.tsx` |  | ❌ | Not a near-term priority for editor UIs. |
 | Chart | `ui/chart.tsx` |  | ❌ | Not a near-term priority; depends on a charting substrate. |

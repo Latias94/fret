@@ -116,6 +116,9 @@
     "component.shadow.lg.spread": 1.0,
     "component.shadow.lg.softness": 4.0,
 
-    "component.table.row_min_h": 40.0
+    "component.table.row_min_h": 40.0,
+
+    "component.calendar.cell_size": 40.0,
+    "component.calendar.gap": 4.0
   }
 }
