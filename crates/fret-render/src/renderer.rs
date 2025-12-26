@@ -9,6 +9,7 @@ use lyon::tessellation::{
 };
 use slotmap::SlotMap;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 
 use crate::images::{ImageDescriptor, ImageRegistry};
 use crate::targets::{RenderTargetDescriptor, RenderTargetRegistry};
@@ -134,6 +135,102 @@ fn rect_to_pixels(rect: Rect, scale_factor: f32) -> (f32, f32, f32, f32) {
         rect.size.width.0 * scale_factor,
         rect.size.height.0 * scale_factor,
     )
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct PathCacheKey {
+    commands_hash: u64,
+    commands_len: u32,
+    style_key: u64,
+    scale_factor_bits: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CachedPathEntry {
+    id: fret_core::PathId,
+    refs: u32,
+    last_used_epoch: u64,
+}
+
+fn mix_u64(mut state: u64, value: u64) -> u64 {
+    state ^= value.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    state = state.rotate_left(7);
+    state = state.wrapping_mul(0xD6E8_FEB8_6659_FD93);
+    state
+}
+
+fn mix_f32(state: u64, value: f32) -> u64 {
+    mix_u64(state, u64::from(value.to_bits()))
+}
+
+fn mix_path_style(state: u64, style: fret_core::PathStyle) -> u64 {
+    match style {
+        fret_core::PathStyle::Fill(fill) => {
+            let mut state = mix_u64(state, 0xF11);
+            let rule = match fill.rule {
+                fret_core::FillRule::NonZero => 1u64,
+                fret_core::FillRule::EvenOdd => 2u64,
+            };
+            state = mix_u64(state, rule);
+            state
+        }
+        fret_core::PathStyle::Stroke(stroke) => {
+            let mut state = mix_u64(state, 0x570);
+            state = mix_f32(state, stroke.width.0);
+            state
+        }
+    }
+}
+
+fn hash_path_commands(commands: &[fret_core::PathCommand]) -> u64 {
+    let mut state = 0u64;
+    for cmd in commands {
+        match *cmd {
+            fret_core::PathCommand::MoveTo(p) => {
+                state = mix_u64(state, 1);
+                state = mix_f32(state, p.x.0);
+                state = mix_f32(state, p.y.0);
+            }
+            fret_core::PathCommand::LineTo(p) => {
+                state = mix_u64(state, 2);
+                state = mix_f32(state, p.x.0);
+                state = mix_f32(state, p.y.0);
+            }
+            fret_core::PathCommand::QuadTo { ctrl, to } => {
+                state = mix_u64(state, 3);
+                state = mix_f32(state, ctrl.x.0);
+                state = mix_f32(state, ctrl.y.0);
+                state = mix_f32(state, to.x.0);
+                state = mix_f32(state, to.y.0);
+            }
+            fret_core::PathCommand::CubicTo { ctrl1, ctrl2, to } => {
+                state = mix_u64(state, 4);
+                state = mix_f32(state, ctrl1.x.0);
+                state = mix_f32(state, ctrl1.y.0);
+                state = mix_f32(state, ctrl2.x.0);
+                state = mix_f32(state, ctrl2.y.0);
+                state = mix_f32(state, to.x.0);
+                state = mix_f32(state, to.y.0);
+            }
+            fret_core::PathCommand::Close => {
+                state = mix_u64(state, 5);
+            }
+        }
+    }
+    state
+}
+
+fn path_cache_key(
+    commands: &[fret_core::PathCommand],
+    style: fret_core::PathStyle,
+    constraints: fret_core::PathConstraints,
+) -> PathCacheKey {
+    PathCacheKey {
+        commands_hash: hash_path_commands(commands),
+        commands_len: commands.len().min(u32::MAX as usize) as u32,
+        style_key: mix_path_style(0, style),
+        scale_factor_bits: constraints.scale_factor.to_bits(),
+    }
 }
 
 fn metrics_from_path_commands(
@@ -445,6 +542,9 @@ pub struct Renderer {
     text_system: TextSystem,
 
     paths: SlotMap<fret_core::PathId, PreparedPath>,
+    path_cache: HashMap<PathCacheKey, CachedPathEntry>,
+    path_cache_capacity: usize,
+    path_cache_epoch: u64,
 
     render_targets: RenderTargetRegistry,
     images: ImageRegistry,
@@ -466,6 +566,7 @@ pub struct Renderer {
 struct PreparedPath {
     metrics: fret_core::PathMetrics,
     triangles: Vec<[f32; 2]>,
+    cache_key: PathCacheKey,
 }
 
 pub struct RenderSceneParams<'a> {
@@ -659,6 +760,9 @@ impl Renderer {
             path_vertex_capacity,
             text_system,
             paths: SlotMap::with_key(),
+            path_cache: HashMap::new(),
+            path_cache_capacity: 2048,
+            path_cache_epoch: 0,
             render_targets: RenderTargetRegistry::default(),
             images: ImageRegistry::default(),
             viewport_bind_groups: HashMap::new(),
@@ -670,6 +774,42 @@ impl Renderer {
             scene_encoding_cache_key: None,
             scene_encoding_cache: SceneEncoding::default(),
             scene_encoding_scratch: SceneEncoding::default(),
+        }
+    }
+
+    fn bump_path_cache_epoch(&mut self) -> u64 {
+        self.path_cache_epoch = self.path_cache_epoch.wrapping_add(1);
+        self.path_cache_epoch
+    }
+
+    fn prune_path_cache(&mut self) {
+        if self.path_cache.len() <= self.path_cache_capacity {
+            return;
+        }
+
+        // Simple O(n) eviction: drop least-recently-used entries with refs == 0.
+        // This keeps the implementation small and deterministic for MVP-PATH-2.
+        while self.path_cache.len() > self.path_cache_capacity {
+            let mut victim: Option<(PathCacheKey, CachedPathEntry)> = None;
+            for (k, v) in &self.path_cache {
+                if v.refs != 0 {
+                    continue;
+                }
+                let replace = match victim {
+                    None => true,
+                    Some((_, cur)) => v.last_used_epoch < cur.last_used_epoch,
+                };
+                if replace {
+                    victim = Some((*k, *v));
+                }
+            }
+
+            let Some((key, entry)) = victim else {
+                break;
+            };
+
+            self.path_cache.remove(&key);
+            self.paths.remove(entry.id);
         }
     }
 
@@ -1852,6 +1992,23 @@ impl Renderer {
                         continue;
                     }
 
+                    let path_bounds = Rect::new(
+                        fret_core::Point::new(
+                            origin.x + prepared.metrics.bounds.origin.x,
+                            origin.y + prepared.metrics.bounds.origin.y,
+                        ),
+                        prepared.metrics.bounds.size,
+                    );
+                    let Some(bounds_scissor) =
+                        scissor_from_rect(path_bounds, scale_factor, viewport_size)
+                    else {
+                        continue;
+                    };
+                    let clipped_scissor = intersect_scissor(current_scissor, bounds_scissor);
+                    if clipped_scissor.w == 0 || clipped_scissor.h == 0 {
+                        continue;
+                    }
+
                     let first_vertex = path_vertices.len() as u32;
                     let ox = origin.x.0 * scale_factor;
                     let oy = origin.y.0 * scale_factor;
@@ -1867,7 +2024,7 @@ impl Renderer {
                     let vertex_count = (path_vertices.len() as u32).saturating_sub(first_vertex);
                     if vertex_count > 0 {
                         ordered_draws.push(OrderedDraw::Path(PathDraw {
-                            scissor: current_scissor,
+                            scissor: clipped_scissor,
                             first_vertex,
                             vertex_count,
                         }));
@@ -2033,16 +2190,57 @@ impl fret_core::PathService for Renderer {
         style: fret_core::PathStyle,
         constraints: fret_core::PathConstraints,
     ) -> (fret_core::PathId, fret_core::PathMetrics) {
+        let key = path_cache_key(commands, style, constraints);
+        let epoch = self.bump_path_cache_epoch();
+
+        match self.path_cache.entry(key) {
+            Entry::Occupied(mut e) => {
+                let entry = e.get_mut();
+                entry.refs = entry.refs.saturating_add(1);
+                entry.last_used_epoch = epoch;
+                let id = entry.id;
+
+                if let Some(prepared) = self.paths.get(id) {
+                    return (id, prepared.metrics);
+                }
+
+                // Cache entry is stale (should be rare). Rebuild it.
+                e.remove();
+            }
+            Entry::Vacant(_) => {}
+        }
+
         let metrics = metrics_from_path_commands(commands, style);
         let triangles = tessellate_path_commands(commands, style, constraints);
-        let id = self.paths.insert(PreparedPath { metrics, triangles });
+        let id = self.paths.insert(PreparedPath {
+            metrics,
+            triangles,
+            cache_key: key,
+        });
+        self.path_cache.insert(
+            key,
+            CachedPathEntry {
+                id,
+                refs: 1,
+                last_used_epoch: epoch,
+            },
+        );
+        self.prune_path_cache();
         (id, metrics)
     }
 
     fn release(&mut self, path: fret_core::PathId) {
-        if let Some(p) = self.paths.remove(path) {
-            let _ = p.metrics;
+        let Some(cache_key) = self.paths.get(path).map(|p| p.cache_key) else {
+            return;
+        };
+
+        if let Some(entry) = self.path_cache.get_mut(&cache_key) {
+            if entry.refs > 0 {
+                entry.refs -= 1;
+            }
         }
+
+        self.prune_path_cache();
     }
 }
 

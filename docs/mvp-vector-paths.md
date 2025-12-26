@@ -1,6 +1,6 @@
 # MVP: Vector Paths + SVG Icons (GPUI-Aligned)
 
-Status: MVP-PATH-0 implemented; MVP-PATH-1 implemented (renderer + `Path` primitive)
+Status: MVP-PATH-0 implemented; MVP-PATH-1 implemented (renderer + `Path` primitive); MVP-PATH-2 implemented (cache + bounds culling)
 
 Last updated: 2025-12-26
 
@@ -149,9 +149,9 @@ Acceptance:
 Deliverables:
 
 - Renderer cache keyed by:
-  - `PathId` content hash (or scene fingerprint + per-path index),
+  - path command stream hash + command length,
   - stroke/fill style,
-  - scale factor (tessellation is scale-dependent for quality and pixel snapping).
+  - scale factor (tessellation tolerance is scale-dependent).
 - Basic culling using path bounds + current clip rect.
 
 Acceptance:
