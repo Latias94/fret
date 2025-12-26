@@ -13,11 +13,20 @@ Maintain the next MVP items here as a small, high-signal queue. If a task change
 - MVP 49 (in progress): Make the declarative component authoring model (ADR 0028 + ADR 0039) the primary, end-to-end usable path (not just a state store): `IntoElement` + `Render`/`RenderOnce` + composition ergonomics, plus a clear `render_root(...)` contract (when it must be called, and what it guarantees).
 - MVP 50 (in progress): Consolidate virtualization around composable, declarative row content (GPUI-style): migrate remaining list-like surfaces off fixed-schema runtime rows (`VirtualListRow { text/secondary/trailing... }`) and retire the legacy path where feasible.
 - MVP 51 (in progress): Tighten the framework/components boundary by moving “standard surfaces” (popover/dialog/menu/tooltip/toast/command palette/menubar) fully into the components layer, keeping `fret-ui` as runtime substrate + performance primitives. `fret-components-ui` remains the reusable infrastructure, while `fret-components-shadcn` becomes the shadcn/ui (v4) aligned naming/taxonomy surface. Legacy retained widgets stay behind `fret-ui`’s `legacy-widgets` feature (`crates/fret-ui/src/legacy_widgets/*`) until removal.
-- MVP 60 (next): Rounded clipping / `overflow-hidden` semantics (shadcn-critical).
-  - Add a rounded-rect clip op to the scene contract (see ADR 0063), and make declarative `Overflow::Clip` capable of producing rounded clips when corner radii are present.
-  - Renderer must preserve ordering semantics (ADR 0002 / ADR 0009) and provide smooth edges (AA) on the clip boundary.
+- MVP 60 (done): Rounded clipping / `overflow-hidden` semantics (shadcn-critical).
+  - Landed: `SceneOp::PushClipRRect` (ADR 0063) + renderer soft clipping (AA) + UI hit-test parity.
 - MVP 61 (next): Declarative layout performance hardening (Taffy integration).
   - Avoid rebuilding a fresh Taffy tree per layout pass; cache and update nodes across frames and eliminate redundant `layout_in(...)` calls during measurement.
+- MVP 62 (next): Overlay behavior + placement contract (APG/Radix/Floating UI alignment).
+  - Lock dismissal/focus rules for popover/menu/tooltip/dialog/sheet (Radix-like outcomes).
+  - Implement stable anchored positioning with flip/shift/size/arrow and deterministic results across windows (Floating-like algorithms).
+  - See: `docs/reference-stack-ui-behavior.md`.
+- MVP 63 (next): Unify scroll ergonomics around a single handle model (GPUI-like).
+  - Introduce a consistent `ScrollHandle`-style substrate: offset, scroll-to, scrollbar, and scroll-into-view primitives.
+  - Ensure `ScrollArea` + `VirtualList` composition shares one contract surface (no divergent wheel/drag behavior).
+- MVP 64 (next): APG-aligned keyboard/focus patterns as reusable component-layer recipes.
+  - Roving focus, typeahead, Home/End/PageUp/PageDown patterns for menus/listbox/combobox/tree.
+  - Expand semantics roles/flags where needed to keep future accessibility bridge viable (ADR 0033).
 - MVP 59 (next): Eliminate Tailwind-like “layout no-ops” and harden composition semantics by splitting style patches into `ChromeRefinement` vs `LayoutRefinement`, standardizing token/key vocabulary, and making `merge` semantics match Tailwind-style edge accumulation (e.g. `mt-*` + `ml-*` should compose without dropping edges). Layout refinements must apply only in the declarative path (or explicit layout wrappers), never silently in retained widgets.
 - MVP 55 (next): Expand style patch → layout bridging so Tailwind-like recipes can drive declarative layout without widget-local magic numbers: map additional sizing/flex/overflow knobs into declarative `LayoutStyle` (beyond the current minimal subset).
 - MVP 58 (next): Implement Tailwind layout primitives at the runtime vocabulary level (margin, position/inset, grid, aspect-ratio) per ADR 0062, so shadcn-style layouts (badges, input icons, simple grids) are expressible without bespoke components.

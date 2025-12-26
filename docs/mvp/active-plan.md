@@ -31,6 +31,8 @@ definitions live in `docs/mvp/reference-plan.md`.
 - MVP 58: Tailwind layout primitives (runtime vocabulary) (ADR 0062)
   - `LayoutStyle` supports margin, position/inset, grid, and aspect-ratio
   - enables common shadcn patterns (badge overlays, input icons, simple grids) without bespoke per-widget layout logic
+- MVP 60: rounded clipping / `overflow-hidden` semantics (shadcn-critical)
+  - landed: `SceneOp::PushClipRRect` (ADR 0063) + renderer soft clipping (AA) + UI hit-test parity
 
 ## Next Queue (What We Should Build Next)
 
@@ -57,13 +59,20 @@ definitions live in `docs/mvp/reference-plan.md`.
   - in progress: schema-based retained `VirtualList` moved under `fret-ui::legacy_widgets`
   - in progress: `fret-ui-app` no longer re-exports legacy `VirtualList*` at the crate root (must use `fret_ui_app::legacy_widgets::VirtualList`)
   - in progress: remove component-level helpers that produce legacy `VirtualListStyle` (components should prefer declarative composition)
-- MVP 60: rounded clipping / `overflow-hidden` semantics (shadcn-critical)
-  - extend the `SceneOp` contract with a rounded-rect clip (ADR 0063)
-  - wire declarative `Overflow::Clip` to produce rounded clips when corner radii exist (avoid “rounded corners but content bleeds”)
-  - keep hit-test semantics consistent with paint clipping for overflow-hidden content
 - MVP 61: declarative layout performance hardening (Taffy integration)
   - cache/reuse the Taffy tree and node ids across frames (avoid rebuild + allocation churn)
   - avoid double layout of children (`layout_in` during measure + final `layout_in`) where possible
+- MVP 62: overlay behavior + placement contract (APG/Radix/Floating UI alignment)
+  - treat APG as the keyboard/focus baseline for composite widgets (menus/listbox/combobox/tree)
+  - align dismissal/focus/portal outcomes with Radix UI Primitives (without a DOM runtime)
+  - implement deterministic anchored positioning + collision avoidance (Floating-like flip/shift/size/arrow)
+  - reference stack: `docs/reference-stack-ui-behavior.md`
+- MVP 63: unify scroll ergonomics around a single handle model (GPUI-like)
+  - define a `ScrollHandle`-style substrate: offset, scroll-to, scroll-into-view, scrollbar behavior
+  - ensure `ScrollArea` and `VirtualList` share one contract surface (wheel/drag/page/track semantics)
+- MVP 64: lock APG-aligned keyboard patterns as reusable recipes
+  - roving focus + typeahead + Home/End/PageUp/PageDown patterns as shared helpers
+  - expand semantics roles/flags where needed to keep accessibility bridge viable (ADR 0033)
 
 ## ADR Notes
 

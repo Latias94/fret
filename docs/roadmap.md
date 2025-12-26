@@ -46,7 +46,13 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Adopt layout constraints + optional Flex/Grid integration boundary (ADR 0035).
 - P0: Fix declarative composable sizing semantics (fit-content by default, typed size constraints, and a Taffy-backed `Flex` container) so Tailwind/shadcn component composition is viable without per-widget layout hacks. (done; ADR 0057 / MVP 52)
 - P0: Adopt Tailwind layout vocabulary as framework-level `LayoutStyle` semantics (margin, position/inset, grid, aspect ratio) so shadcn-style composition can express common patterns (badge overlays, input icons, simple grids) without bespoke per-widget layout hacks. (ADR 0062)
-- P0: Adopt rounded clipping / `overflow-hidden` semantics as a first-class renderer feature (ADR 0063), so shadcn-style surfaces (Popover/HoverCard/ScrollArea) do not rely on per-component “mask hacks”.
+- P0: Adopt rounded clipping / `overflow-hidden` semantics as a first-class renderer feature (ADR 0063), so shadcn-style surfaces (Popover/HoverCard/ScrollArea) do not rely on per-component “mask hacks”. (done; MVP 60)
+- P0: Adopt a “behavior reference stack” for component parity without DOM/CSS dependencies:
+  - APG (keyboard/focus semantics baseline),
+  - Radix primitives (dismissal/focus/portal outcomes),
+  - Floating UI (placement + collision algorithms),
+  - cmdk (command palette interaction details).
+  - See: `docs/reference-stack-ui-behavior.md`.
 - P0: Adopt observability strategy (tracing + inspector hooks + renderer metrics) (ADR 0036).
 - P0: Adopt workspace/repo boundaries and external `fret-components` strategy (ADR 0037).
 - P0: Adopt component authoring model (Render/RenderOnce + IntoElement) (ADR 0039).
