@@ -120,6 +120,9 @@ pub mod toast {
     pub use fret_components_ui::toast::*;
 }
 
+#[cfg(test)]
+mod test_host;
+
 pub mod popover {
     pub use fret_components_ui::popover::*;
 }

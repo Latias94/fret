@@ -485,110 +485,14 @@ impl<H: UiHost> Widget<H> for Toggle {
 #[cfg(test)]
 mod tests {
     use super::Toggle;
+    use crate::test_host::TestHost;
     use fret_runtime::ModelStore;
-    use std::any::Any;
-
-    use fret_core::{AppWindowId, FrameId, Point, TickId, TimerToken};
-    use fret_runtime::{CommandRegistry, DragKind, DragSession, Effect, ModelId, UiHost};
     use fret_ui::Widget;
 
     #[test]
     fn disabled_toggle_is_not_focusable() {
         let mut models = ModelStore::default();
         let model = models.insert(false);
-
-        #[derive(Default)]
-        struct TestHost;
-
-        impl UiHost for TestHost {
-            fn set_global<T: Any>(&mut self, _value: T) {
-                unimplemented!()
-            }
-
-            fn global<T: Any>(&self) -> Option<&T> {
-                unimplemented!()
-            }
-
-            fn global_mut<T: Any>(&mut self) -> Option<&mut T> {
-                unimplemented!()
-            }
-
-            fn with_global_mut<T: Any, R>(
-                &mut self,
-                _init: impl FnOnce() -> T,
-                _f: impl FnOnce(&mut T, &mut Self) -> R,
-            ) -> R {
-                unimplemented!()
-            }
-
-            fn models(&self) -> &ModelStore {
-                unimplemented!()
-            }
-
-            fn models_mut(&mut self) -> &mut ModelStore {
-                unimplemented!()
-            }
-
-            fn take_changed_models(&mut self) -> Vec<ModelId> {
-                unimplemented!()
-            }
-
-            fn commands(&self) -> &CommandRegistry {
-                unimplemented!()
-            }
-
-            fn request_redraw(&mut self, _window: AppWindowId) {
-                unimplemented!()
-            }
-
-            fn push_effect(&mut self, _effect: Effect) {
-                unimplemented!()
-            }
-
-            fn tick_id(&self) -> TickId {
-                unimplemented!()
-            }
-
-            fn frame_id(&self) -> FrameId {
-                unimplemented!()
-            }
-
-            fn next_timer_token(&mut self) -> TimerToken {
-                unimplemented!()
-            }
-
-            fn drag(&self) -> Option<&DragSession> {
-                unimplemented!()
-            }
-
-            fn drag_mut(&mut self) -> Option<&mut DragSession> {
-                unimplemented!()
-            }
-
-            fn cancel_drag(&mut self) {
-                unimplemented!()
-            }
-
-            fn begin_drag_with_kind<T: Any>(
-                &mut self,
-                _kind: DragKind,
-                _source_window: AppWindowId,
-                _start: Point,
-                _payload: T,
-            ) {
-                unimplemented!()
-            }
-
-            fn begin_cross_window_drag_with_kind<T: Any>(
-                &mut self,
-                _kind: DragKind,
-                _source_window: AppWindowId,
-                _start: Point,
-                _payload: T,
-            ) {
-                unimplemented!()
-            }
-        }
 
         let toggle = Toggle::new(model, "Toggle");
         assert!(<Toggle as Widget<TestHost>>::is_focusable(&toggle));
