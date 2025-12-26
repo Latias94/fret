@@ -444,7 +444,7 @@ impl<H: UiHost> Widget<H> for ToggleGroup {
     }
 
     fn is_focusable(&self) -> bool {
-        true
+        !self.disabled && self.items.iter().any(|it| !it.disabled)
     }
 
     fn hit_test(&self, _bounds: Rect, position: Point) -> bool {
@@ -464,6 +464,10 @@ impl<H: UiHost> Widget<H> for ToggleGroup {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
         self.sync_active_index(cx.app);
+
+        if self.disabled {
+            return;
+        }
 
         match event {
             Event::Pointer(pe) => match pe {
@@ -566,7 +570,7 @@ impl<H: UiHost> Widget<H> for ToggleGroup {
                         cx.stop_propagation();
                     }
                     KeyCode::Enter | KeyCode::Space => {
-                        if self.pressed_index.is_none() {
+                        if self.pressed_index.is_none() && self.is_item_enabled(self.active_index) {
                             self.pressed_index = Some(self.active_index);
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
@@ -667,6 +671,11 @@ impl<H: UiHost> Widget<H> for ToggleGroup {
         self.observe_selection_model(cx);
         self.last_bounds = cx.bounds;
         self.sync_active_index(cx.app);
+
+        if self.disabled {
+            self.hovered_index = None;
+            self.pressed_index = None;
+        }
 
         let n = self.items.len();
         if n == 0 {

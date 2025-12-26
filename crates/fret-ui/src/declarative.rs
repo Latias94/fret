@@ -904,10 +904,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             _ => true,
         };
         self.is_text_input = matches!(&instance, ElementInstance::TextInput(_));
-        self.is_focusable = matches!(
-            &instance,
-            ElementInstance::TextInput(_) | ElementInstance::Pressable(_)
-        );
+        self.is_focusable = match &instance {
+            ElementInstance::TextInput(_) => true,
+            ElementInstance::Pressable(p) => p.enabled,
+            _ => false,
+        };
         self.clips_hit_test = match &instance {
             ElementInstance::Container(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Pressable(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -2713,6 +2714,42 @@ mod tests {
                 .any(|e| matches!(e, Effect::Command { command, .. } if *command == cmd)),
             "expected click command effect"
         );
+    }
+
+    #[test]
+    fn pressable_disabled_is_not_focusable() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(30.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "pressable-disabled-focus",
+            |cx| {
+                vec![cx.pressable(
+                    crate::element::PressableProps {
+                        enabled: false,
+                        ..Default::default()
+                    },
+                    |cx, _state| vec![cx.text("disabled")],
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        assert_eq!(ui.first_focusable_descendant(root), None);
     }
 
     #[test]

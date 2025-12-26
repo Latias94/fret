@@ -315,7 +315,7 @@ impl<H: UiHost> Widget<H> for RadioGroup {
     }
 
     fn is_focusable(&self) -> bool {
-        true
+        !self.disabled && self.items.iter().any(|it| !it.disabled)
     }
 
     fn hit_test(&self, _bounds: Rect, position: Point) -> bool {
@@ -436,7 +436,7 @@ impl<H: UiHost> Widget<H> for RadioGroup {
                         cx.stop_propagation();
                     }
                     KeyCode::Enter | KeyCode::Space => {
-                        if self.pressed_index.is_none() {
+                        if self.pressed_index.is_none() && self.is_item_enabled(self.active_index) {
                             self.pressed_index = Some(self.active_index);
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
@@ -547,6 +547,11 @@ impl<H: UiHost> Widget<H> for RadioGroup {
         cx.observe_model(self.model, Invalidation::Paint);
         self.last_bounds = cx.bounds;
         self.sync_active_index(cx.app);
+
+        if self.disabled {
+            self.hovered_index = None;
+            self.pressed_index = None;
+        }
 
         let n = self.items.len();
         if n == 0 {
