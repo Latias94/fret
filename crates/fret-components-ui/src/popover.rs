@@ -1,6 +1,7 @@
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, NodeId, Point, Px, Rect,
-    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
+    Color, Corners, DrawOrder, Edges, Event, KeyCode, Modifiers, MouseButton, NodeId, Point, Px,
+    Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_runtime::{CommandId, Effect};
 use fret_ui::{
@@ -8,6 +9,7 @@ use fret_ui::{
     widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
 use std::{collections::HashMap, sync::Arc};
+use std::time::{Duration, Instant};
 
 use crate::ChromeRefinement;
 use crate::Size as ComponentSize;
@@ -180,6 +182,8 @@ pub struct Popover {
     hover_row: Option<usize>,
     rows: Vec<PreparedRow>,
     panel_bounds: Rect,
+    typeahead: String,
+    typeahead_last: Option<Instant>,
 }
 
 impl Popover {
@@ -194,6 +198,8 @@ impl Popover {
             hover_row: None,
             rows: Vec::new(),
             panel_bounds: Rect::default(),
+            typeahead: String::new(),
+            typeahead_last: None,
         }
     }
 
@@ -394,6 +400,106 @@ impl Popover {
         }
         None
     }
+
+    fn typeahead_char(key: KeyCode, modifiers: &Modifiers) -> Option<char> {
+        if modifiers.ctrl || modifiers.meta || modifiers.alt || modifiers.alt_gr {
+            return None;
+        }
+        Some(match key {
+            KeyCode::KeyA => 'a',
+            KeyCode::KeyB => 'b',
+            KeyCode::KeyC => 'c',
+            KeyCode::KeyD => 'd',
+            KeyCode::KeyE => 'e',
+            KeyCode::KeyF => 'f',
+            KeyCode::KeyG => 'g',
+            KeyCode::KeyH => 'h',
+            KeyCode::KeyI => 'i',
+            KeyCode::KeyJ => 'j',
+            KeyCode::KeyK => 'k',
+            KeyCode::KeyL => 'l',
+            KeyCode::KeyM => 'm',
+            KeyCode::KeyN => 'n',
+            KeyCode::KeyO => 'o',
+            KeyCode::KeyP => 'p',
+            KeyCode::KeyQ => 'q',
+            KeyCode::KeyR => 'r',
+            KeyCode::KeyS => 's',
+            KeyCode::KeyT => 't',
+            KeyCode::KeyU => 'u',
+            KeyCode::KeyV => 'v',
+            KeyCode::KeyW => 'w',
+            KeyCode::KeyX => 'x',
+            KeyCode::KeyY => 'y',
+            KeyCode::KeyZ => 'z',
+            KeyCode::Digit0 | KeyCode::Numpad0 => '0',
+            KeyCode::Digit1 | KeyCode::Numpad1 => '1',
+            KeyCode::Digit2 | KeyCode::Numpad2 => '2',
+            KeyCode::Digit3 | KeyCode::Numpad3 => '3',
+            KeyCode::Digit4 | KeyCode::Numpad4 => '4',
+            KeyCode::Digit5 | KeyCode::Numpad5 => '5',
+            KeyCode::Digit6 | KeyCode::Numpad6 => '6',
+            KeyCode::Digit7 | KeyCode::Numpad7 => '7',
+            KeyCode::Digit8 | KeyCode::Numpad8 => '8',
+            KeyCode::Digit9 | KeyCode::Numpad9 => '9',
+            _ => return None,
+        })
+    }
+
+    fn typeahead_timeout() -> Duration {
+        Duration::from_millis(1000)
+    }
+
+    fn clear_typeahead(&mut self) {
+        self.typeahead.clear();
+        self.typeahead_last = None;
+    }
+
+    fn handle_typeahead(&mut self, request: &PopoverRequest, typed: char) -> bool {
+        let now = Instant::now();
+        if self
+            .typeahead_last
+            .is_some_and(|t| now.duration_since(t) > Self::typeahead_timeout())
+        {
+            self.typeahead.clear();
+        }
+        self.typeahead_last = Some(now);
+
+        let lower = typed.to_ascii_lowercase();
+        let cycle_same = self.typeahead.len() == 1 && self.typeahead.chars().next() == Some(lower);
+
+        if self.typeahead.is_empty() {
+            self.typeahead.push(lower);
+        } else if !cycle_same {
+            self.typeahead.push(lower);
+        }
+
+        let query = self.typeahead.as_str();
+        let start = self
+            .hover_row
+            .or(request.selected)
+            .map(|i| i.saturating_add(1))
+            .unwrap_or(0);
+
+        let find_from = |from: usize| {
+            (from..request.items.len()).chain(0..from).find(|&i| {
+                request
+                    .items
+                    .get(i)
+                    .is_some_and(|it| it.enabled && it.label.to_ascii_lowercase().starts_with(query))
+            })
+        };
+
+        if let Some(i) = find_from(start) {
+            self.hover_row = Some(i);
+            true
+        } else if cycle_same && query.len() == 1 {
+            // Keep cycling behavior stable if there were no matches for the repeated character.
+            false
+        } else {
+            false
+        }
+    }
 }
 
 impl Default for Popover {
@@ -435,6 +541,7 @@ impl<H: UiHost> Widget<H> for Popover {
                 let hovered = self.hit_test_row(*position);
                 if hovered != self.hover_row {
                     self.hover_row = hovered;
+                    self.clear_typeahead();
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                 }
@@ -462,14 +569,31 @@ impl<H: UiHost> Widget<H> for Popover {
                     self.activate_row(cx, window, &request, i);
                 }
             }
-            Event::KeyDown { key, .. } => match key {
-                KeyCode::Escape => self.close_popover(cx),
-                KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
-                    if let Some(i) = self.hover_row.or(request.selected) {
-                        self.activate_row(cx, window, &request, i);
+            Event::KeyDown {
+                key, modifiers, ..
+            } => {
+                if let Some(c) = Self::typeahead_char(*key, modifiers) {
+                    if self.handle_typeahead(&request, c) {
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
                     }
+                    return;
                 }
-                KeyCode::ArrowDown => {
+
+                match key {
+                    KeyCode::Escape => {
+                        self.clear_typeahead();
+                        self.close_popover(cx);
+                    }
+                    KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
+                        self.clear_typeahead();
+                        if let Some(i) = self.hover_row.or(request.selected) {
+                            self.activate_row(cx, window, &request, i);
+                        }
+                    }
+                    KeyCode::ArrowDown => {
+                        self.clear_typeahead();
                     let base = self
                         .hover_row
                         .or(request.selected)
@@ -480,8 +604,9 @@ impl<H: UiHost> Widget<H> for Popover {
                     }
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
-                }
-                KeyCode::ArrowUp => {
+                    }
+                    KeyCode::ArrowUp => {
+                        self.clear_typeahead();
                     let base = self
                         .hover_row
                         .or(request.selected)
@@ -492,23 +617,26 @@ impl<H: UiHost> Widget<H> for Popover {
                     }
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
-                }
-                KeyCode::Home => {
+                    }
+                    KeyCode::Home => {
+                        self.clear_typeahead();
                     if let Some(i) = self.first_enabled_row() {
                         self.hover_row = Some(i);
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                     }
-                }
-                KeyCode::End => {
+                    }
+                    KeyCode::End => {
+                        self.clear_typeahead();
                     if let Some(i) = self.last_enabled_row() {
                         self.hover_row = Some(i);
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                     }
+                    }
+                    _ => {}
                 }
-                _ => {}
-            },
+            }
             _ => {}
         }
     }
@@ -551,6 +679,7 @@ impl<H: UiHost> Widget<H> for Popover {
             self.hover_row = request
                 .selected
                 .filter(|&i| self.rows.get(i).is_some_and(|r| r.enabled));
+            self.clear_typeahead();
         }
 
         if request.items.is_empty() {

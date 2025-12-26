@@ -10,6 +10,7 @@ use fret_ui::{
     widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use crate::ChromeRefinement;
 use crate::Size as ComponentSize;
@@ -102,6 +103,8 @@ pub struct ContextMenu {
     hover_panel: Option<usize>,
     hover_row: Option<usize>,
     panels: Vec<PreparedPanel>,
+    typeahead: String,
+    typeahead_last: Option<Instant>,
 }
 
 #[derive(Debug)]
@@ -116,6 +119,7 @@ struct PreparedRow {
     height: Px,
     kind: PreparedRowKind,
     enabled: bool,
+    label_text: Option<Arc<str>>,
     label: Option<fret_core::TextBlobId>,
     label_metrics: Option<TextMetrics>,
     shortcut: Option<fret_core::TextBlobId>,
@@ -143,6 +147,8 @@ impl ContextMenu {
             hover_panel: None,
             hover_row: None,
             panels: Vec::new(),
+            typeahead: String::new(),
+            typeahead_last: None,
         }
     }
 
@@ -210,6 +216,108 @@ impl ContextMenu {
         }
     }
 
+    fn typeahead_timeout() -> Duration {
+        Duration::from_millis(1000)
+    }
+
+    fn clear_typeahead(&mut self) {
+        self.typeahead.clear();
+        self.typeahead_last = None;
+    }
+
+    fn typeahead_char(key: KeyCode, modifiers: &fret_core::Modifiers) -> Option<char> {
+        if modifiers.ctrl || modifiers.meta || modifiers.alt || modifiers.alt_gr {
+            return None;
+        }
+        Some(match key {
+            KeyCode::KeyA => 'a',
+            KeyCode::KeyB => 'b',
+            KeyCode::KeyC => 'c',
+            KeyCode::KeyD => 'd',
+            KeyCode::KeyE => 'e',
+            KeyCode::KeyF => 'f',
+            KeyCode::KeyG => 'g',
+            KeyCode::KeyH => 'h',
+            KeyCode::KeyI => 'i',
+            KeyCode::KeyJ => 'j',
+            KeyCode::KeyK => 'k',
+            KeyCode::KeyL => 'l',
+            KeyCode::KeyM => 'm',
+            KeyCode::KeyN => 'n',
+            KeyCode::KeyO => 'o',
+            KeyCode::KeyP => 'p',
+            KeyCode::KeyQ => 'q',
+            KeyCode::KeyR => 'r',
+            KeyCode::KeyS => 's',
+            KeyCode::KeyT => 't',
+            KeyCode::KeyU => 'u',
+            KeyCode::KeyV => 'v',
+            KeyCode::KeyW => 'w',
+            KeyCode::KeyX => 'x',
+            KeyCode::KeyY => 'y',
+            KeyCode::KeyZ => 'z',
+            KeyCode::Digit0 | KeyCode::Numpad0 => '0',
+            KeyCode::Digit1 | KeyCode::Numpad1 => '1',
+            KeyCode::Digit2 | KeyCode::Numpad2 => '2',
+            KeyCode::Digit3 | KeyCode::Numpad3 => '3',
+            KeyCode::Digit4 | KeyCode::Numpad4 => '4',
+            KeyCode::Digit5 | KeyCode::Numpad5 => '5',
+            KeyCode::Digit6 | KeyCode::Numpad6 => '6',
+            KeyCode::Digit7 | KeyCode::Numpad7 => '7',
+            KeyCode::Digit8 | KeyCode::Numpad8 => '8',
+            KeyCode::Digit9 | KeyCode::Numpad9 => '9',
+            _ => return None,
+        })
+    }
+
+    fn update_typeahead(&mut self, typed: char) -> String {
+        let now = Instant::now();
+        if self
+            .typeahead_last
+            .is_some_and(|t| now.duration_since(t) > Self::typeahead_timeout())
+        {
+            self.typeahead.clear();
+        }
+        self.typeahead_last = Some(now);
+
+        let lower = typed.to_ascii_lowercase();
+        let cycle_same = self.typeahead.len() == 1 && self.typeahead.chars().next() == Some(lower);
+
+        if self.typeahead.is_empty() {
+            self.typeahead.push(lower);
+        } else if !cycle_same {
+            self.typeahead.push(lower);
+        }
+        self.typeahead.clone()
+    }
+
+    fn find_typeahead_match(
+        rows: &[PreparedRow],
+        selected_raw: Option<usize>,
+        query: &str,
+    ) -> Option<usize> {
+        let start_idx = selected_raw
+            .and_then(|raw| rows.iter().position(|r| r.raw_index == raw))
+            .map(|i| i.saturating_add(1))
+            .unwrap_or(0);
+
+        let matches = |row: &PreparedRow| {
+            row.enabled
+                && matches!(
+                    row.kind,
+                    PreparedRowKind::Command(_) | PreparedRowKind::Submenu
+                )
+                && row
+                    .label_text
+                    .as_deref()
+                    .is_some_and(|t| t.to_ascii_lowercase().starts_with(query))
+        };
+
+        (start_idx..rows.len())
+            .chain(0..start_idx)
+            .find_map(|i| rows.get(i).filter(|r| matches(r)).map(|r| r.raw_index))
+    }
+
     fn current_depth(&self) -> usize {
         self.open_path.len()
     }
@@ -250,6 +358,7 @@ impl ContextMenu {
             self.selection.clear();
             self.hover_panel = None;
             self.hover_row = None;
+            self.clear_typeahead();
             self.last_serial = Some(serial);
         }
 
@@ -329,6 +438,7 @@ impl ContextMenu {
                         height: self.style.separator_height,
                         kind: PreparedRowKind::Separator,
                         enabled: false,
+                        label_text: None,
                         label: None,
                         label_metrics: None,
                         shortcut: None,
@@ -380,6 +490,7 @@ impl ContextMenu {
                         height: self.style.row_height,
                         kind: PreparedRowKind::Command(command.clone()),
                         enabled,
+                        label_text: Some(title.clone()),
                         label: Some(label),
                         label_metrics: Some(label_metrics),
                         shortcut: shortcut_blob,
@@ -399,6 +510,7 @@ impl ContextMenu {
                         height: self.style.row_height,
                         kind: PreparedRowKind::Submenu,
                         enabled: true,
+                        label_text: Some(title.clone()),
                         label: Some(label),
                         label_metrics: Some(label_metrics),
                         shortcut: None,
@@ -660,11 +772,31 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                 if modifiers.ctrl || modifiers.meta || modifiers.alt {
                     return;
                 }
+
+                if let Some(c) = Self::typeahead_char(*key, modifiers) {
+                    let depth = self.current_depth();
+                    let query = self.update_typeahead(c);
+                    let selected = self.selection_raw(depth);
+                    let next = self
+                        .panels
+                        .get(depth)
+                        .and_then(|p| Self::find_typeahead_match(&p.rows, selected, &query));
+                    if let Some(raw) = next {
+                        self.set_selection_raw(depth, Some(raw));
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                    }
+                    return;
+                }
+
                 match key {
                     KeyCode::Escape => {
+                        self.clear_typeahead();
                         self.close_menu(cx, window);
                     }
                     KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
+                        self.clear_typeahead();
                         let depth = self.current_depth();
                         let Some(raw) = self.selection_raw(depth) else {
                             return;
@@ -682,6 +814,7 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         }
                     }
                     KeyCode::Home | KeyCode::End => {
+                        self.clear_typeahead();
                         let depth = self.current_depth();
                         let Some(panel) = self.panels.get(depth) else {
                             return;
@@ -712,6 +845,7 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         cx.stop_propagation();
                     }
                     KeyCode::ArrowDown | KeyCode::ArrowUp => {
+                        self.clear_typeahead();
                         let depth = self.current_depth();
                         let Some(panel) = self.panels.get(depth) else {
                             return;
@@ -750,6 +884,7 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         cx.stop_propagation();
                     }
                     KeyCode::ArrowRight => {
+                        self.clear_typeahead();
                         let depth = self.current_depth();
                         let Some(raw) = self.selection_raw(depth) else {
                             return;
@@ -771,6 +906,7 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         }
                     }
                     KeyCode::ArrowLeft => {
+                        self.clear_typeahead();
                         if self.open_path.pop().is_some() {
                             self.selection.truncate(self.open_path.len() + 1);
                             cx.invalidate_self(Invalidation::Paint);
@@ -785,6 +921,7 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                 fret_core::PointerEvent::Move { position, .. } => {
                     if let Some((panel, row)) = self.hit_test(*position) {
                         if self.hover_panel != Some(panel) || self.hover_row != Some(row) {
+                            self.clear_typeahead();
                             self.hover_panel = Some(panel);
                             self.hover_row = Some(row);
 
