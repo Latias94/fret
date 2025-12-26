@@ -3,3 +3,6 @@
 .DS_Store
 /local
 /.fret
+/.codanna
+/.fastembed_cache
+/.codannaignore
