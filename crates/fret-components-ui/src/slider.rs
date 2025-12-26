@@ -403,7 +403,8 @@ mod tests {
     use fret_app::App;
     use fret_core::{
         AppWindowId, Event, Modifiers, Point, PointerEvent, Px, Rect, Size, TextBlobId,
-        TextConstraints, TextMetrics, TextService, TextStyle,
+        PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, TextConstraints,
+        TextMetrics, TextService, TextStyle,
     };
     use fret_ui::UiTree;
 
@@ -427,6 +428,19 @@ mod tests {
         }
 
         fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeText {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
     }
 
     #[test]

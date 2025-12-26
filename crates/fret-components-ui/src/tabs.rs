@@ -513,7 +513,8 @@ mod tests {
     use fret_app::App;
     use fret_core::{
         AppWindowId, Event, Modifiers, Point, PointerEvent, Px, Rect, Scene, SceneOp, Size,
-        TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle,
+        PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, TextBlobId,
+        TextConstraints, TextMetrics, TextService, TextStyle,
     };
     use fret_ui::primitives::{Column, Scroll};
     use fret_ui::{EventCx, LayoutCx, PaintCx, UiHost, UiTree, Widget};
@@ -540,6 +541,19 @@ mod tests {
         }
 
         fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeText {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
     }
 
     fn min_text_y(scene: &Scene) -> Option<Px> {

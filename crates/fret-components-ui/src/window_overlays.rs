@@ -340,16 +340,19 @@ impl WindowOverlays {
 mod tests {
     use super::*;
     use fret_app::App;
-    use fret_core::{Px, Rect, Scene, Size, geometry::Point};
+    use fret_core::{
+        PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, Px, Rect, Scene,
+        Size, TextService, geometry::Point,
+    };
     use fret_ui::{
         UiTree,
         widget::{LayoutCx, PaintCx, Widget},
     };
 
     #[derive(Default)]
-    struct FakeTextService;
+    struct FakeServices;
 
-    impl TextService for FakeTextService {
+    impl TextService for FakeServices {
         fn prepare(
             &mut self,
             _text: &str,
@@ -366,6 +369,19 @@ mod tests {
         }
 
         fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
     }
 
     struct Focusable;
@@ -385,7 +401,7 @@ mod tests {
     #[test]
     fn command_palette_open_focuses_first_focusable_descendant() {
         let mut host = App::new();
-        let mut text = FakeTextService::default();
+        let mut services = FakeServices::default();
 
         let window = AppWindowId::default();
         let mut ui: UiTree<App> = UiTree::new();
@@ -406,7 +422,7 @@ mod tests {
         let handled = overlays.handle_command(
             &mut host,
             &mut ui,
-            &mut text,
+            &mut services,
             window,
             &CommandId::from("command_palette.open"),
         );
@@ -416,7 +432,7 @@ mod tests {
         let mut scene = Scene::default();
         ui.layout_all(
             &mut host,
-            &mut text,
+            &mut services,
             Rect::new(
                 Point::new(Px(0.0), Px(0.0)),
                 Size::new(Px(800.0), Px(600.0)),
@@ -425,7 +441,7 @@ mod tests {
         );
         ui.paint_all(
             &mut host,
-            &mut text,
+            &mut services,
             Rect::new(
                 Point::new(Px(0.0), Px(0.0)),
                 Size::new(Px(800.0), Px(600.0)),

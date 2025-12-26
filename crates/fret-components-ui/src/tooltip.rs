@@ -445,6 +445,22 @@ mod tests {
         fn release(&mut self, _blob: fret_core::TextBlobId) {}
     }
 
+    impl fret_core::PathService for FakeTextService {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
     #[test]
     fn tooltip_overlay_layout_initializes_and_observes_service_model() {
         let mut app = App::new();
