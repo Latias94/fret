@@ -871,6 +871,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-svg-atlas-stress"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fret-app",
+ "fret-core",
+ "fret-render",
+ "fret-runner-winit-wgpu",
+ "tracing-subscriber",
+ "winit",
+]
+
+[[package]]
 name = "fret-ui"
 version = "0.1.0"
 dependencies = [

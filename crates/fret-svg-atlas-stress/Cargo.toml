@@ -1,0 +1,14 @@
+[package]
+name = "fret-svg-atlas-stress"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+fret-app = { path = "../fret-app" }
+fret-core = { path = "../fret-core" }
+fret-render = { path = "../fret-render" }
+fret-runner-winit-wgpu = { path = "../fret-runner-winit-wgpu" }
+tracing-subscriber.workspace = true
+winit.workspace = true
+

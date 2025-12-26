@@ -114,3 +114,12 @@ Plot/implot-like widgets should stay in UI/component crates and only emit those 
   - With MSAA off, edges are visibly jaggier (expected).
   - With MSAA on, edges improve and ordering stays correct with other draws.
 
+## Local validation demo
+
+- Run: `cargo run -p fret-svg-atlas-stress`
+- Controls:
+  - `Space`: toggle phase (A/B)
+  - `T`: toggle auto phase flip
+  - `F`: cycle `SvgFit` mode
+  - `B`: cycle `svg_raster_budget_bytes` presets
+  - `H`: print help to stdout
