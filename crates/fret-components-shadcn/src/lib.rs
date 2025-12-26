@@ -20,6 +20,7 @@ pub mod button_group;
 pub mod card;
 pub mod collapsible;
 pub mod empty;
+pub mod field;
 pub mod hover_card;
 pub mod input_group;
 pub mod kbd;
@@ -42,6 +43,10 @@ pub use button_group::{ButtonGroup, ButtonGroupItem, ButtonGroupOrientation};
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
 pub use collapsible::{Collapsible, CollapsibleContent, CollapsibleTrigger};
 pub use empty::Empty;
+pub use field::{
+    Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend,
+    FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle,
+};
 pub use hover_card::{HoverCard, HoverCardContent, HoverCardTrigger};
 pub use input_group::InputGroup;
 pub use kbd::Kbd;

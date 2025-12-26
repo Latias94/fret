@@ -13,6 +13,8 @@ use fret_components_shadcn::{
     ButtonGroupOrientation as ShadcnButtonGroupOrientation, ButtonSize as ShadcnButtonSize,
     ButtonVariant as ShadcnButtonVariant, Collapsible as ShadcnCollapsible,
     CollapsibleContent as ShadcnCollapsibleContent, CollapsibleTrigger as ShadcnCollapsibleTrigger,
+    Field as ShadcnField, FieldDescription as ShadcnFieldDescription,
+    FieldLabel as ShadcnFieldLabel, FieldOrientation as ShadcnFieldOrientation,
     HoverCard as ShadcnHoverCard, HoverCardContent as ShadcnHoverCardContent,
     HoverCardTrigger as ShadcnHoverCardTrigger, InputGroup as ShadcnInputGroup,
     RadioGroup as ShadcnRadioGroup, RadioGroupItem as ShadcnRadioGroupItem,
@@ -1313,6 +1315,26 @@ impl WinitDriver for UiKitDriver {
                                 IconId::new("search"),
                                 fret_app::CommandId::from("ui_kit.declarative_text.clear"),
                             ),
+                            cx.text("shadcn/ui v4 Field (prototype)"),
+                            {
+                                let control = fret_components_ui::declarative::text_field::text_field_with_leading_icon_and_clear(
+                                    cx,
+                                    state.declarative_text,
+                                    size,
+                                    IconId::new("search"),
+                                    fret_app::CommandId::from("ui_kit.declarative_text.clear"),
+                                );
+                                ShadcnField::new(control)
+                                    .label(ShadcnFieldLabel::new("Full name").into_element(cx))
+                                    .description(
+                                        ShadcnFieldDescription::new(
+                                            "This appears on invoices and emails.",
+                                        )
+                                        .into_element(cx),
+                                    )
+                                    .orientation(ShadcnFieldOrientation::Vertical)
+                                    .into_element(cx)
+                            },
                             cx.text("Truncate (ellipsis)"),
                             cx.container(
                                 fret_ui_app::element::ContainerProps {

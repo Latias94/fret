@@ -101,7 +101,7 @@ Status legend:
 | Drawer | `ui/drawer.tsx` | `fret_components_shadcn::open_drawer` | ✅ | Compatibility alias: mapped to a bottom sheet (no drag gestures yet). |
 | Dropdown Menu | `ui/dropdown-menu.tsx` | `fret_components_ui::dropdown_menu::*` | ✅ | Ensure keyboard navigation parity. |
 | Empty | `ui/empty.tsx` | `fret_components_shadcn::Empty` | ✅ | First-pass composition helper; add icon/action slots later. |
-| Field | `ui/field.tsx` |  | ❌ | Needs label/control/help-text composition patterns. |
+| Field | `ui/field.tsx` | `fret_components_shadcn::Field*` | ✅ | First pass: declarative composition helpers (no HTML `for`/aria wiring yet). |
 | Form | `ui/form.tsx` |  | ❌ | Likely a higher-level “form framework” decision in Fret. |
 | Hover Card | `ui/hover-card.tsx` | `fret_components_shadcn::{HoverCard, HoverCardTrigger, HoverCardContent}` | ✅ | Declarative hover primitive (no open/close animations yet). |
 | Input | `ui/input.tsx` | `fret_components_shadcn::Input` | ✅ | Currently maps to `TextField`; use `InputGroup` for icon-slot patterns. |
