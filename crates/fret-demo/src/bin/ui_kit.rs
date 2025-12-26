@@ -18,7 +18,6 @@ use fret_components_shadcn::{
     HoverCard as ShadcnHoverCard, HoverCardContent as ShadcnHoverCardContent,
     HoverCardTrigger as ShadcnHoverCardTrigger, InputGroup as ShadcnInputGroup,
     InputOTP as ShadcnInputOTP, InputOTPGroup as ShadcnInputOTPGroup,
-    InputOTPSeparator as ShadcnInputOTPSeparator, InputOTPSlot as ShadcnInputOTPSlot,
     InputOtpPattern as ShadcnInputOtpPattern, Item as ShadcnItem, ItemActions as ShadcnItemActions,
     ItemContent as ShadcnItemContent, ItemDescription as ShadcnItemDescription,
     ItemGroup as ShadcnItemGroup, ItemMedia as ShadcnItemMedia,
@@ -29,8 +28,11 @@ use fret_components_shadcn::{
     PaginationLinkSize as ShadcnPaginationLinkSize, PaginationNext as ShadcnPaginationNext,
     PaginationPrevious as ShadcnPaginationPrevious, RadioGroup as ShadcnRadioGroup,
     RadioGroupItem as ShadcnRadioGroupItem, Skeleton as ShadcnSkeleton, Spinner as ShadcnSpinner,
-    ToggleGroup as ShadcnToggleGroup, ToggleGroupItem as ShadcnToggleGroupItem,
-    ToggleSize as ShadcnToggleSize, ToggleVariant as ShadcnToggleVariant,
+    Table as ShadcnTable, TableBody as ShadcnTableBody, TableCaption as ShadcnTableCaption,
+    TableCell as ShadcnTableCell, TableHead as ShadcnTableHead, TableHeader as ShadcnTableHeader,
+    TableRow as ShadcnTableRow, ToggleGroup as ShadcnToggleGroup,
+    ToggleGroupItem as ShadcnToggleGroupItem, ToggleSize as ShadcnToggleSize,
+    ToggleVariant as ShadcnToggleVariant,
 };
 use fret_components_ui::{
     ChromeRefinement, ContextMenuService, DialogAction, DialogRequest, DialogService,
@@ -1830,6 +1832,52 @@ impl WinitDriver for UiKitDriver {
                                     )]
                                 },
                             ),
+                            cx.text("shadcn/ui v4 Table (prototype)"),
+                            {
+                                let header = ShadcnTableHeader::new(vec![ShadcnTableRow::new(
+                                    3,
+                                    vec![
+                                        ShadcnTableHead::new("Project").into_element(cx),
+                                        ShadcnTableHead::new("Status").into_element(cx),
+                                        ShadcnTableHead::new("Last updated").into_element(cx),
+                                    ],
+                                )
+                                .into_element(cx)])
+                                .into_element(cx);
+
+                                let rows = [
+                                    ("Project 0", "Modified", "2 hours ago"),
+                                    ("Project 1", "Active", "Yesterday"),
+                                    ("Project 2", "Paused", "Last week"),
+                                ];
+                                let mut body_rows = Vec::new();
+                                for (i, (name, status, updated)) in rows.iter().enumerate() {
+                                    let is_last = i + 1 == rows.len();
+                                    body_rows.push(
+                                        ShadcnTableRow::new(
+                                            3,
+                                            vec![
+                                                ShadcnTableCell::new(cx.text(*name))
+                                                    .into_element(cx),
+                                                ShadcnTableCell::new(cx.text(*status))
+                                                    .into_element(cx),
+                                                ShadcnTableCell::new(cx.text(*updated))
+                                                    .into_element(cx),
+                                            ],
+                                        )
+                                        .border_bottom(!is_last)
+                                        .into_element(cx),
+                                    );
+                                }
+
+                                let body = ShadcnTableBody::new(body_rows).into_element(cx);
+                                let caption = ShadcnTableCaption::new(
+                                    "A small table demo (layout + hover parity).",
+                                )
+                                .into_element(cx);
+
+                                ShadcnTable::new(vec![header, body, caption]).into_element(cx)
+                            },
                             fret_components_ui::declarative::list::list_virtualized(
                                 cx,
                                 Some(state.declarative_selection),

@@ -114,6 +114,8 @@
     "component.shadow.lg.offset_x": 0.0,
     "component.shadow.lg.offset_y": 6.0,
     "component.shadow.lg.spread": 1.0,
-    "component.shadow.lg.softness": 4.0
+    "component.shadow.lg.softness": 4.0,
+
+    "component.table.row_min_h": 40.0
   }
 }

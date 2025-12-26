@@ -128,7 +128,7 @@ Status legend:
 | Sonner | `ui/sonner.tsx` | `fret_components_shadcn::sonner::*` | ✅ | Thin re-export; treat as primary toast ref. |
 | Spinner | `ui/spinner.tsx` | `fret_components_shadcn::Spinner` | ✅ | Dot-ring (frame-driven) until transforms land. |
 | Switch | `ui/switch.tsx` | `fret_components_shadcn::switch::*` | ✅ | Validate keyboard toggle + focus ring. |
-| Table | `ui/table.tsx` |  | ❌ | Needs virtualized table contract (not DOM table). |
+| Table | `ui/table.tsx` | `fret_components_shadcn::{Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell, TableCaption}` | ✅ | Declarative composition facade; no horizontal scroll primitive yet (wrap in `ScrollArea` if needed). |
 | Tabs | `ui/tabs.tsx` | `fret_components_shadcn::tabs::*` | ✅ | Ensure keyboard navigation parity. |
 | Textarea | `ui/textarea.tsx` | `fret_components_shadcn::Textarea` | ✅ | Needs multiline editing parity over time. |
 | Toggle | `ui/toggle.tsx` | `fret_components_shadcn::Toggle` | ✅ | Two-state button; variants/sizes should be validated. |

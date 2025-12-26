@@ -31,6 +31,7 @@ pub mod pagination;
 pub mod radio_group;
 pub mod skeleton;
 pub mod spinner;
+pub mod table;
 pub mod toggle;
 pub mod toggle_group;
 
@@ -66,6 +67,9 @@ pub use pagination::{
 pub use radio_group::{RadioGroup, RadioGroupItem};
 pub use skeleton::Skeleton;
 pub use spinner::Spinner;
+pub use table::{
+    Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
+};
 pub use toggle::{Toggle, ToggleSize, ToggleVariant};
 pub use toggle_group::{ToggleGroup, ToggleGroupItem, ToggleGroupType};
 
