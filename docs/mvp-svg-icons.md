@@ -82,6 +82,9 @@ Upload the mask as `wgpu::TextureFormat::R8Unorm` and register it as an `ImageId
 
 Important detail: WebGPU requires `bytes_per_row` alignment. We must pad rows when uploading.
 
+**Helper**: `fret-render` provides `upload_alpha_mask(...) -> UploadedAlphaMask` which handles row
+padding for `R8Unorm` uploads.
+
 ### UI usage
 
 Expose a small retained widget:
@@ -91,6 +94,29 @@ Expose a small retained widget:
 So UI code can render icons with:
 
 - `MaskImage::new(mask_image_id).tint(color).opacity(…).with_uv(…)`
+
+### Quick usage sketch
+
+1. Rasterize SVG bytes into an alpha mask (CPU).
+2. Upload alpha mask into an `R8Unorm` texture and register it as an `ImageId`.
+3. Draw with `MaskImage` and a tint color.
+
+Pseudo-code:
+
+```rust
+let svg = fret_render::SvgRenderer::new();
+let mask = svg.render_alpha_mask(svg_bytes, (16, 16))?;
+let uploaded = fret_render::upload_alpha_mask(&device, &queue, &mask);
+let image_id = renderer.register_image(fret_render::ImageDescriptor {
+    view: uploaded.view.clone(),
+    size: uploaded.size_px,
+    format: wgpu::TextureFormat::R8Unorm,
+    color_space: fret_render::ImageColorSpace::Linear,
+});
+
+// In UI paint:
+// MaskImage::new(image_id).tint(Color::WHITE)
+```
 
 ## Roadmap
 
@@ -127,4 +153,3 @@ emits geometry for the renderer. This aligns with the same separation principle:
 
 - renderer = generic drawing acceleration
 - plot/widget = data-to-geometry strategy + interaction
-
