@@ -3,6 +3,8 @@ use fret_core::{
     AppWindowId, Color, Event, KeyCode, PlatformCapabilities, Point, Px, Rect, Scene, Size,
     SvgFit, UiServices,
 };
+use fret_core::SvgService as _;
+use fret_render::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use std::time::{Duration, Instant};
 use winit::event_loop::EventLoop;
@@ -143,6 +145,178 @@ impl SvgAtlasStressDriver {
     }
 }
 
+fn record_scene(
+    scene: &mut Scene,
+    bounds: Rect,
+    phase: bool,
+    fit_mode: FitMode,
+    svg_square: fret_core::SvgId,
+    svg_wide: fret_core::SvgId,
+) -> usize {
+    scene.clear();
+
+    scene.push(fret_core::SceneOp::Quad {
+        order: fret_core::DrawOrder(0),
+        rect: bounds,
+        background: Color {
+            r: 0.06,
+            g: 0.07,
+            b: 0.08,
+            a: 1.0,
+        },
+        border: fret_core::Edges::all(Px(0.0)),
+        border_color: Color::TRANSPARENT,
+        corner_radii: fret_core::Corners::all(Px(0.0)),
+    });
+
+    let margin = Px(12.0);
+    let cell = Px(40.0);
+    let gap = Px(2.0);
+    let start = Point::new(bounds.origin.x + margin, bounds.origin.y + margin);
+    let usable_w = (bounds.size.width.0 - margin.0 * 2.0).max(0.0);
+    let usable_h = (bounds.size.height.0 - margin.0 * 2.0).max(0.0);
+
+    let step = cell.0 + gap.0;
+    let cols = (usable_w / step).floor().max(1.0) as usize;
+    let rows = (usable_h / step).floor().max(1.0) as usize;
+
+    let mut icons_emitted = 0usize;
+    for row in 0..rows {
+        for col in 0..cols {
+            let parity = (row + col) % 2 == 0;
+            if parity != phase {
+                continue;
+            }
+
+            let idx = row * cols + col;
+            let w = 10.0 + (idx % 31) as f32;
+            let h = 10.0 + ((idx / 31) % 31) as f32;
+            let size = Size::new(Px(w), Px(h));
+
+            let cell_origin = Point::new(
+                start.x + Px(col as f32 * step),
+                start.y + Px(row as f32 * step),
+            );
+            let x = cell_origin.x + Px((cell.0 - size.width.0).max(0.0) * 0.5);
+            let y = cell_origin.y + Px((cell.0 - size.height.0).max(0.0) * 0.5);
+            let rect = Rect::new(Point::new(x, y), size);
+
+            let fit = fit_mode.to_fit(idx);
+            let svg = if idx % 5 == 0 { svg_wide } else { svg_square };
+
+            let rgb = hsv_to_rgb((idx as f32 * 0.031).rem_euclid(1.0), 0.75, 0.95);
+            let color = Color {
+                r: rgb.r,
+                g: rgb.g,
+                b: rgb.b,
+                a: 1.0,
+            };
+
+            scene.push(fret_core::SceneOp::SvgMaskIcon {
+                order: fret_core::DrawOrder(1),
+                rect,
+                svg,
+                fit,
+                color,
+                opacity: 1.0,
+            });
+            icons_emitted += 1;
+        }
+    }
+
+    icons_emitted
+}
+
+fn run_headless(frames: u64, budget_bytes: u64) -> anyhow::Result<()> {
+    let ctx = pollster::block_on(WgpuContext::new())?;
+    let mut renderer = Renderer::new(&ctx.device);
+    renderer.set_svg_raster_budget_bytes(budget_bytes);
+    renderer.set_svg_perf_enabled(true);
+
+    let svg_square = renderer.register_svg(SVG_SQUARE.as_bytes());
+    let svg_wide = renderer.register_svg(SVG_WIDE.as_bytes());
+
+    let viewport_size = (980u32, 720u32);
+    let scale_factor = 2.0f32;
+    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("fret headless target"),
+        size: wgpu::Extent3d {
+            width: viewport_size.0,
+            height: viewport_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        view_formats: &[],
+    });
+    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(
+            Px(viewport_size.0 as f32 / scale_factor),
+            Px(viewport_size.1 as f32 / scale_factor),
+        ),
+    );
+
+    let mut scene = Scene::default();
+    let mut phase = false;
+    let fit_mode = FitMode::Mixed;
+
+    let start = Instant::now();
+    for frame in 0..frames {
+        if frame != 0 && frame % 180 == 0 {
+            phase = !phase;
+        }
+        let _icons = record_scene(&mut scene, bounds, phase, fit_mode, svg_square, svg_wide);
+        let cmd = renderer.render_scene(
+            &ctx.device,
+            &ctx.queue,
+            RenderSceneParams {
+                format,
+                target_view: &view,
+                scene: &scene,
+                clear: ClearColor::default(),
+                scale_factor,
+                viewport_size,
+            },
+        );
+        ctx.queue.submit([cmd]);
+        if frame % 60 == 0 {
+            let _ = ctx.device.poll(wgpu::PollType::Poll);
+            println!("headless progress: {frame}/{frames}");
+        }
+    }
+    // Avoid indefinite blocking in headless mode; we care primarily about CPU-side rasterization
+    // and upload scheduling costs here.
+    let _ = ctx.device.poll(wgpu::PollType::Poll);
+    let elapsed = start.elapsed();
+
+    if let Some(snap) = renderer.take_svg_perf_snapshot() {
+        println!(
+            "headless: frames={} wall={:.2}s prepare={:.2}ms hits={} misses={} alpha_raster={} ({:.2}ms) atlas_inserts={} atlas_write={:.2}ms pages={} rasters={} bytes={}KB",
+            frames,
+            elapsed.as_secs_f64(),
+            snap.prepare_svg_ops_us as f64 / 1000.0,
+            snap.cache_hits,
+            snap.cache_misses,
+            snap.alpha_raster_count,
+            snap.alpha_raster_us as f64 / 1000.0,
+            snap.alpha_atlas_inserts,
+            snap.alpha_atlas_write_us as f64 / 1000.0,
+            snap.atlas_pages_live,
+            snap.svg_rasters_live,
+            snap.svg_raster_bytes_live / 1024
+        );
+    }
+
+    Ok(())
+}
+
 impl WinitDriver for SvgAtlasStressDriver {
     type WindowState = SvgAtlasStressState;
 
@@ -276,76 +450,8 @@ impl WinitDriver for SvgAtlasStressDriver {
         let svg_square = state.svg_square.expect("svg registered");
         let svg_wide = state.svg_wide.expect("svg registered");
 
-        scene.clear();
-
-        scene.push(fret_core::SceneOp::Quad {
-            order: fret_core::DrawOrder(0),
-            rect: bounds,
-            background: Color {
-                r: 0.06,
-                g: 0.07,
-                b: 0.08,
-                a: 1.0,
-            },
-            border: fret_core::Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
-            corner_radii: fret_core::Corners::all(Px(0.0)),
-        });
-
-        let margin = Px(12.0);
-        let cell = Px(40.0);
-        let gap = Px(2.0);
-        let start = Point::new(bounds.origin.x + margin, bounds.origin.y + margin);
-        let usable_w = (bounds.size.width.0 - margin.0 * 2.0).max(0.0);
-        let usable_h = (bounds.size.height.0 - margin.0 * 2.0).max(0.0);
-
-        let step = cell.0 + gap.0;
-        let cols = (usable_w / step).floor().max(1.0) as usize;
-        let rows = (usable_h / step).floor().max(1.0) as usize;
-
-        let mut icons_emitted = 0usize;
-        for row in 0..rows {
-            for col in 0..cols {
-                let parity = (row + col) % 2 == 0;
-                if parity != state.phase {
-                    continue;
-                }
-
-                let idx = row * cols + col;
-                let w = 10.0 + (idx % 31) as f32;
-                let h = 10.0 + ((idx / 31) % 31) as f32;
-                let size = Size::new(Px(w), Px(h));
-
-                let cell_origin = Point::new(
-                    start.x + Px(col as f32 * step),
-                    start.y + Px(row as f32 * step),
-                );
-                let x = cell_origin.x + Px((cell.0 - size.width.0).max(0.0) * 0.5);
-                let y = cell_origin.y + Px((cell.0 - size.height.0).max(0.0) * 0.5);
-                let rect = Rect::new(Point::new(x, y), size);
-
-                let fit = state.fit_mode.to_fit(idx);
-                let svg = if idx % 5 == 0 { svg_wide } else { svg_square };
-
-                let rgb = hsv_to_rgb((idx as f32 * 0.031).rem_euclid(1.0), 0.75, 0.95);
-                let color = Color {
-                    r: rgb.r,
-                    g: rgb.g,
-                    b: rgb.b,
-                    a: 1.0,
-                };
-
-                scene.push(fret_core::SceneOp::SvgMaskIcon {
-                    order: fret_core::DrawOrder(1),
-                    rect,
-                    svg,
-                    fit,
-                    color,
-                    opacity: 1.0,
-                });
-                icons_emitted += 1;
-            }
-        }
+        let icons_emitted =
+            record_scene(scene, bounds, state.phase, state.fit_mode, svg_square, svg_wide);
 
         let elapsed = render_start.elapsed();
         state.render_time_accum += elapsed;
@@ -424,21 +530,36 @@ fn main() -> anyhow::Result<()> {
     };
 
     let mut max_frames: Option<u64> = None;
+    let mut headless = false;
+    let mut budget_kb: Option<u64> = None;
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
+            "--headless" => headless = true,
             "--frames" => {
                 let Some(value) = args.next() else {
                     anyhow::bail!("--frames requires a value");
                 };
                 max_frames = Some(value.parse()?);
             }
+            "--budget-kb" => {
+                let Some(value) = args.next() else {
+                    anyhow::bail!("--budget-kb requires a value");
+                };
+                budget_kb = Some(value.parse()?);
+            }
             "--help" | "-h" => {
-                println!("Usage: fret-svg-atlas-stress [--frames N]");
+                println!("Usage: fret-svg-atlas-stress [--frames N] [--headless] [--budget-kb KB]");
                 return Ok(());
             }
             other => anyhow::bail!("unknown arg: {other}"),
         }
+    }
+
+    if headless {
+        let frames = max_frames.unwrap_or(600);
+        let budget = budget_kb.map(|kb| kb * 1024).unwrap_or(1024 * 1024);
+        return run_headless(frames, budget);
     }
 
     let driver = SvgAtlasStressDriver { max_frames };

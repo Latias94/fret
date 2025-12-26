@@ -879,7 +879,9 @@ dependencies = [
  "fret-core",
  "fret-render",
  "fret-runner-winit-wgpu",
+ "pollster",
  "tracing-subscriber",
+ "wgpu",
  "winit",
 ]
 

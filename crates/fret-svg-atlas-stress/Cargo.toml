@@ -9,6 +9,7 @@ fret-app = { path = "../fret-app" }
 fret-core = { path = "../fret-core" }
 fret-render = { path = "../fret-render" }
 fret-runner-winit-wgpu = { path = "../fret-runner-winit-wgpu" }
+pollster.workspace = true
 tracing-subscriber.workspace = true
+wgpu.workspace = true
 winit.workspace = true
-
