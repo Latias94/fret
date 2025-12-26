@@ -107,7 +107,7 @@ Status legend:
 | Input | `ui/input.tsx` | `fret_components_shadcn::Input` | ✅ | Currently maps to `TextField`; use `InputGroup` for icon-slot patterns. |
 | Input Group | `ui/input-group.tsx` | `fret_components_shadcn::InputGroup` | ✅ | Leading/trailing icon slots + sizing tokens; first-pass parity. |
 | Input OTP | `ui/input-otp.tsx` |  | ❌ | Needs multi-cell input + paste semantics. |
-| Item | `ui/item.tsx` |  | ❌ | Upstream is a generic “item row” primitive; define Fret equivalent. |
+| Item | `ui/item.tsx` | `fret_components_shadcn::Item*` | ✅ | First pass: generic “item row” with media/content/actions slots. |
 | Kbd | `ui/kbd.tsx` | `fret_components_shadcn::Kbd` | ✅ | First-pass composition helper. |
 | Label | `ui/label.tsx` | `fret_components_shadcn::Label` | ✅ | First-pass helper; semantics binding is a follow-up. |
 | Menubar | `ui/menubar.tsx` | `fret_components_shadcn::menubar::*` | ✅ | Currently a thin re-export of `AppMenuBar`. |

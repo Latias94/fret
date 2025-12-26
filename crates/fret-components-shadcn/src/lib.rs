@@ -23,6 +23,7 @@ pub mod empty;
 pub mod field;
 pub mod hover_card;
 pub mod input_group;
+pub mod item;
 pub mod kbd;
 pub mod label;
 pub mod radio_group;
@@ -49,6 +50,10 @@ pub use field::{
 };
 pub use hover_card::{HoverCard, HoverCardContent, HoverCardTrigger};
 pub use input_group::InputGroup;
+pub use item::{
+    Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
+    ItemMediaVariant, ItemSeparator, ItemSize, ItemTitle, ItemVariant, item_group,
+};
 pub use kbd::Kbd;
 pub use label::Label;
 pub use radio_group::{RadioGroup, RadioGroupItem};
