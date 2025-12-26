@@ -464,6 +464,22 @@ fn intersect_scissor(a: ScissorRect, b: ScissorRect) -> ScissorRect {
     ScissorRect { x: x0, y: y0, w, h }
 }
 
+fn union_scissor(a: ScissorRect, b: ScissorRect) -> ScissorRect {
+    let ax1 = a.x.saturating_add(a.w);
+    let ay1 = a.y.saturating_add(a.h);
+    let bx1 = b.x.saturating_add(b.w);
+    let by1 = b.y.saturating_add(b.h);
+
+    let x0 = a.x.min(b.x);
+    let y0 = a.y.min(b.y);
+    let x1 = ax1.max(bx1);
+    let y1 = ay1.max(by1);
+
+    let w = x1.saturating_sub(x0);
+    let h = y1.saturating_sub(y0);
+    ScissorRect { x: x0, y: y0, w, h }
+}
+
 struct DrawCall {
     scissor: ScissorRect,
     first_instance: u32,
@@ -477,6 +493,7 @@ struct ViewportDraw {
     target: fret_core::RenderTargetId,
 }
 
+#[derive(Clone, Copy)]
 struct ImageDraw {
     scissor: ScissorRect,
     first_vertex: u32,
@@ -484,6 +501,7 @@ struct ImageDraw {
     image: fret_core::ImageId,
 }
 
+#[derive(Clone, Copy)]
 struct MaskDraw {
     scissor: ScissorRect,
     first_vertex: u32,
@@ -497,10 +515,21 @@ struct TextDraw {
     vertex_count: u32,
 }
 
+#[derive(Clone, Copy)]
 struct PathDraw {
     scissor: ScissorRect,
     first_vertex: u32,
     vertex_count: u32,
+}
+
+struct PathIntermediate {
+    size: (u32, u32),
+    format: wgpu::TextureFormat,
+    resolved_texture: wgpu::Texture,
+    resolved_view: wgpu::TextureView,
+    msaa_texture: wgpu::Texture,
+    msaa_view: wgpu::TextureView,
+    bind_group: wgpu::BindGroup,
 }
 
 enum OrderedDraw {
@@ -546,9 +575,18 @@ pub struct Renderer {
     path_pipeline_format: Option<wgpu::TextureFormat>,
     path_pipeline: Option<wgpu::RenderPipeline>,
 
+    path_msaa_pipeline_format: Option<wgpu::TextureFormat>,
+    path_msaa_pipeline: Option<wgpu::RenderPipeline>,
+
+    composite_pipeline_format: Option<wgpu::TextureFormat>,
+    composite_pipeline: Option<wgpu::RenderPipeline>,
+
     path_vertex_buffers: Vec<wgpu::Buffer>,
     path_vertex_buffer_index: usize,
     path_vertex_capacity: usize,
+
+    path_intermediate: Option<PathIntermediate>,
+    path_composite_vertices: wgpu::Buffer,
 
     text_system: TextSystem,
 
@@ -620,6 +658,79 @@ struct SceneEncodingCacheKey {
 }
 
 impl Renderer {
+    fn ensure_path_intermediate(
+        &mut self,
+        device: &wgpu::Device,
+        viewport_size: (u32, u32),
+        format: wgpu::TextureFormat,
+    ) {
+        const PATH_MSAA_SAMPLES: u32 = 4;
+
+        let needs_rebuild = match &self.path_intermediate {
+            Some(cur) => cur.size != viewport_size || cur.format != format,
+            None => true,
+        };
+        if !needs_rebuild {
+            return;
+        }
+
+        let resolved_texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("fret path intermediate resolved"),
+            size: wgpu::Extent3d {
+                width: viewport_size.0,
+                height: viewport_size.1,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+        let resolved_view = resolved_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        let msaa_texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("fret path intermediate msaa"),
+            size: wgpu::Extent3d {
+                width: viewport_size.0,
+                height: viewport_size.1,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: PATH_MSAA_SAMPLES,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            view_formats: &[],
+        });
+        let msaa_view = msaa_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("fret path intermediate bind group"),
+            layout: &self.viewport_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Sampler(&self.viewport_sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&resolved_view),
+                },
+            ],
+        });
+
+        self.path_intermediate = Some(PathIntermediate {
+            size: viewport_size,
+            format,
+            resolved_texture,
+            resolved_view,
+            msaa_texture,
+            msaa_view,
+            bind_group,
+        });
+    }
     pub fn new(device: &wgpu::Device) -> Self {
         let uniform_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -743,6 +854,13 @@ impl Renderer {
             })
             .collect();
 
+        let path_composite_vertices = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret path composite vertices"),
+            size: (6 * std::mem::size_of::<ViewportVertex>()) as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         Self {
             uniform_buffer,
             uniform_bind_group,
@@ -768,9 +886,15 @@ impl Renderer {
             text_vertex_capacity,
             path_pipeline_format: None,
             path_pipeline: None,
+            path_msaa_pipeline_format: None,
+            path_msaa_pipeline: None,
+            composite_pipeline_format: None,
+            composite_pipeline: None,
             path_vertex_buffers,
             path_vertex_buffer_index: 0,
             path_vertex_capacity,
+            path_intermediate: None,
+            path_composite_vertices,
             text_system,
             paths: SlotMap::with_key(),
             path_cache: HashMap::new(),
@@ -1123,6 +1247,84 @@ impl Renderer {
         self.mask_pipeline = Some(pipeline);
     }
 
+    fn ensure_composite_pipeline(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
+        if self.composite_pipeline_format == Some(format) && self.composite_pipeline.is_some() {
+            return;
+        }
+
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("fret composite premul shader"),
+            source: wgpu::ShaderSource::Wgsl(COMPOSITE_PREMUL_SHADER.into()),
+        });
+
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("fret composite premul pipeline layout"),
+            bind_group_layouts: &[
+                &self.uniform_bind_group_layout,
+                &self.viewport_bind_group_layout,
+            ],
+            immediate_size: 0,
+        });
+
+        let vertex_stride = std::mem::size_of::<ViewportVertex>() as wgpu::BufferAddress;
+        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("fret composite premul pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: Some("vs_main"),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: vertex_stride,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &[
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 0,
+                            shader_location: 0,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 8,
+                            shader_location: 1,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32,
+                            offset: 16,
+                            shader_location: 2,
+                        },
+                    ],
+                }],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            }),
+            multiview_mask: None,
+            cache: None,
+        });
+
+        self.composite_pipeline_format = Some(format);
+        self.composite_pipeline = Some(pipeline);
+    }
+
     fn ensure_path_pipeline(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
         if self.path_pipeline_format == Some(format) && self.path_pipeline.is_some() {
             return;
@@ -1191,6 +1393,82 @@ impl Renderer {
 
         self.path_pipeline_format = Some(format);
         self.path_pipeline = Some(pipeline);
+    }
+
+    fn ensure_path_msaa_pipeline(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
+        const PATH_MSAA_SAMPLES: u32 = 4;
+
+        if self.path_msaa_pipeline_format == Some(format) && self.path_msaa_pipeline.is_some() {
+            return;
+        }
+
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("fret path msaa shader"),
+            source: wgpu::ShaderSource::Wgsl(PATH_SHADER.into()),
+        });
+
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("fret path msaa pipeline layout"),
+            bind_group_layouts: &[&self.uniform_bind_group_layout],
+            immediate_size: 0,
+        });
+
+        let vertex_stride = std::mem::size_of::<PathVertex>() as wgpu::BufferAddress;
+        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("fret path msaa pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: Some("vs_main"),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: vertex_stride,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &[
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 0,
+                            shader_location: 0,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x4,
+                            offset: 8,
+                            shader_location: 1,
+                        },
+                    ],
+                }],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState {
+                count: PATH_MSAA_SAMPLES,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            }),
+            multiview_mask: None,
+            cache: None,
+        });
+
+        self.path_msaa_pipeline_format = Some(format);
+        self.path_msaa_pipeline = Some(pipeline);
     }
 
     fn ensure_pipeline(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
@@ -1381,7 +1659,10 @@ impl Renderer {
         self.ensure_pipeline(device, format);
         self.ensure_text_pipeline(device, format);
         self.ensure_mask_pipeline(device, format);
+        self.ensure_composite_pipeline(device, format);
         self.ensure_path_pipeline(device, format);
+        self.ensure_path_msaa_pipeline(device, format);
+        self.ensure_path_intermediate(device, viewport_size, format);
 
         let uniform = ViewportUniform {
             viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
@@ -1468,29 +1749,13 @@ impl Renderer {
         });
 
         {
-            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("fret renderer pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: target_view,
-                    depth_slice: None,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(clear.0),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-                multiview_mask: None,
-            });
-
             enum ActivePipeline {
                 None,
                 Quad,
                 Viewport,
                 Text,
                 Mask,
+                Composite,
                 Path,
             }
 
@@ -1510,17 +1775,193 @@ impl Renderer {
                 .mask_pipeline
                 .as_ref()
                 .expect("mask pipeline must exist");
+            let composite_pipeline = self
+                .composite_pipeline
+                .as_ref()
+                .expect("composite pipeline must exist");
             let path_pipeline = self
                 .path_pipeline
                 .as_ref()
                 .expect("path pipeline must exist");
+            let path_msaa_pipeline = self
+                .path_msaa_pipeline
+                .as_ref()
+                .expect("path msaa pipeline must exist");
 
             let mut active_pipeline = ActivePipeline::None;
 
-            for item in &encoding.ordered_draws {
+            fn begin_main_pass<'a>(
+                encoder: &'a mut wgpu::CommandEncoder,
+                target_view: &'a wgpu::TextureView,
+                load: wgpu::LoadOp<wgpu::Color>,
+            ) -> wgpu::RenderPass<'a> {
+                encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: Some("fret renderer pass"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view: target_view,
+                        depth_slice: None,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load,
+                            store: wgpu::StoreOp::Store,
+                        },
+                    })],
+                    depth_stencil_attachment: None,
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
+                    multiview_mask: None,
+                })
+            }
+
+            let mut pass = begin_main_pass(&mut encoder, target_view, wgpu::LoadOp::Clear(clear.0));
+
+            let mut i = 0usize;
+            while i < encoding.ordered_draws.len() {
+                let item = &encoding.ordered_draws[i];
+
+                if let OrderedDraw::Path(first) = item {
+                    let mut union = first.scissor;
+                    let mut end = i + 1;
+                    while end < encoding.ordered_draws.len() {
+                        match &encoding.ordered_draws[end] {
+                            OrderedDraw::Path(d) => {
+                                union = union_scissor(union, d.scissor);
+                                end += 1;
+                            }
+                            _ => break,
+                        }
+                    }
+
+                    // Render the path batch to an intermediate MSAA target, then composite into the
+                    // main pass to preserve strict op ordering.
+                    drop(pass);
+
+                    let Some(intermediate) = &self.path_intermediate else {
+                        pass = begin_main_pass(&mut encoder, target_view, wgpu::LoadOp::Load);
+                        i = end;
+                        continue;
+                    };
+
+                    {
+                        let mut path_pass =
+                            encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                label: Some("fret path intermediate pass"),
+                                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                    view: &intermediate.msaa_view,
+                                    depth_slice: None,
+                                    resolve_target: Some(&intermediate.resolved_view),
+                                    ops: wgpu::Operations {
+                                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                                        store: wgpu::StoreOp::Discard,
+                                    },
+                                })],
+                                depth_stencil_attachment: None,
+                                timestamp_writes: None,
+                                occlusion_query_set: None,
+                                multiview_mask: None,
+                            });
+
+                        path_pass.set_pipeline(path_msaa_pipeline);
+                        path_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                        path_pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
+
+                        for j in i..end {
+                            let OrderedDraw::Path(draw) = &encoding.ordered_draws[j] else {
+                                unreachable!();
+                            };
+                            if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                                continue;
+                            }
+                            path_pass.set_scissor_rect(
+                                draw.scissor.x,
+                                draw.scissor.y,
+                                draw.scissor.w,
+                                draw.scissor.h,
+                            );
+                            path_pass.draw(
+                                draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                                0..1,
+                            );
+                        }
+                    }
+
+                    pass = begin_main_pass(&mut encoder, target_view, wgpu::LoadOp::Load);
+                    active_pipeline = ActivePipeline::None;
+
+                    if union.w > 0 && union.h > 0 {
+                        let x0 = union.x as f32;
+                        let y0 = union.y as f32;
+                        let x1 = (union.x + union.w) as f32;
+                        let y1 = (union.y + union.h) as f32;
+
+                        let vw = viewport_size.0.max(1) as f32;
+                        let vh = viewport_size.1.max(1) as f32;
+                        let u0 = x0 / vw;
+                        let v0 = y0 / vh;
+                        let u1 = x1 / vw;
+                        let v1 = y1 / vh;
+
+                        let vertices: [ViewportVertex; 6] = [
+                            ViewportVertex {
+                                pos_px: [x0, y0],
+                                uv: [u0, v0],
+                                opacity: 1.0,
+                                _pad: [0.0; 3],
+                            },
+                            ViewportVertex {
+                                pos_px: [x1, y0],
+                                uv: [u1, v0],
+                                opacity: 1.0,
+                                _pad: [0.0; 3],
+                            },
+                            ViewportVertex {
+                                pos_px: [x1, y1],
+                                uv: [u1, v1],
+                                opacity: 1.0,
+                                _pad: [0.0; 3],
+                            },
+                            ViewportVertex {
+                                pos_px: [x0, y0],
+                                uv: [u0, v0],
+                                opacity: 1.0,
+                                _pad: [0.0; 3],
+                            },
+                            ViewportVertex {
+                                pos_px: [x1, y1],
+                                uv: [u1, v1],
+                                opacity: 1.0,
+                                _pad: [0.0; 3],
+                            },
+                            ViewportVertex {
+                                pos_px: [x0, y1],
+                                uv: [u0, v1],
+                                opacity: 1.0,
+                                _pad: [0.0; 3],
+                            },
+                        ];
+                        queue.write_buffer(
+                            &self.path_composite_vertices,
+                            0,
+                            bytemuck::cast_slice(&vertices),
+                        );
+
+                        pass.set_pipeline(composite_pipeline);
+                        pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                        pass.set_bind_group(1, &intermediate.bind_group, &[]);
+                        pass.set_vertex_buffer(0, self.path_composite_vertices.slice(..));
+                        pass.set_scissor_rect(union.x, union.y, union.w, union.h);
+                        pass.draw(0..6, 0..1);
+                        active_pipeline = ActivePipeline::Composite;
+                    }
+
+                    i = end;
+                    continue;
+                }
+
                 match item {
                     OrderedDraw::Quad(draw) => {
                         if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                            i += 1;
                             continue;
                         }
 
@@ -1544,6 +1985,7 @@ impl Renderer {
                     }
                     OrderedDraw::Viewport(draw) => {
                         if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                            i += 1;
                             continue;
                         }
 
@@ -1558,6 +2000,7 @@ impl Renderer {
                         else {
                             // Missing bind group should only happen if the target vanished
                             // between encoding and rendering.
+                            i += 1;
                             continue;
                         };
                         pass.set_bind_group(1, bind_group, &[]);
@@ -1574,6 +2017,7 @@ impl Renderer {
                     }
                     OrderedDraw::Image(draw) => {
                         if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                            i += 1;
                             continue;
                         }
 
@@ -1585,6 +2029,7 @@ impl Renderer {
                         }
 
                         let Some((_, bind_group)) = self.image_bind_groups.get(&draw.image) else {
+                            i += 1;
                             continue;
                         };
                         pass.set_bind_group(1, bind_group, &[]);
@@ -1601,6 +2046,7 @@ impl Renderer {
                     }
                     OrderedDraw::Mask(draw) => {
                         if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                            i += 1;
                             continue;
                         }
 
@@ -1612,6 +2058,7 @@ impl Renderer {
                         }
 
                         let Some((_, bind_group)) = self.image_bind_groups.get(&draw.image) else {
+                            i += 1;
                             continue;
                         };
                         pass.set_bind_group(1, bind_group, &[]);
@@ -1628,6 +2075,7 @@ impl Renderer {
                     }
                     OrderedDraw::Text(draw) => {
                         if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                            i += 1;
                             continue;
                         }
 
@@ -1651,29 +2099,12 @@ impl Renderer {
                         );
                     }
                     OrderedDraw::Path(draw) => {
-                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                            continue;
-                        }
-
-                        if !matches!(active_pipeline, ActivePipeline::Path) {
-                            pass.set_pipeline(path_pipeline);
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
-                            pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
-                            active_pipeline = ActivePipeline::Path;
-                        }
-
-                        pass.set_scissor_rect(
-                            draw.scissor.x,
-                            draw.scissor.y,
-                            draw.scissor.w,
-                            draw.scissor.h,
-                        );
-                        pass.draw(
-                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                            0..1,
-                        );
+                        // Handled by the batching path above.
+                        let _ = (draw, path_pipeline);
                     }
                 }
+
+                i += 1;
             }
         }
 
@@ -2632,6 +3063,53 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let tex = textureSample(viewport_texture, viewport_sampler, input.uv);
   let a = tex.a * input.opacity;
   return vec4<f32>(tex.rgb * a, a);
+}
+"#;
+
+const COMPOSITE_PREMUL_SHADER: &str = r#"
+struct Viewport {
+  viewport_size: vec2<f32>,
+  _pad: vec2<f32>,
+};
+
+@group(0) @binding(0) var<uniform> viewport: Viewport;
+
+@group(1) @binding(0) var tex_sampler: sampler;
+@group(1) @binding(1) var tex: texture_2d<f32>;
+
+struct VsIn {
+  @location(0) pos_px: vec2<f32>,
+  @location(1) uv: vec2<f32>,
+  @location(2) opacity: f32,
+};
+
+struct VsOut {
+  @builtin(position) clip_pos: vec4<f32>,
+  @location(0) uv: vec2<f32>,
+  @location(1) opacity: f32,
+};
+
+fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
+  let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
+  let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
+  return vec2<f32>(ndc_x, ndc_y);
+}
+
+@vertex
+fn vs_main(input: VsIn) -> VsOut {
+  var out: VsOut;
+  let clip_xy = to_clip_space(input.pos_px);
+  out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
+  out.uv = input.uv;
+  out.opacity = input.opacity;
+  return out;
+}
+
+@fragment
+fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
+  let sample = textureSample(tex, tex_sampler, input.uv);
+  let o = clamp(input.opacity, 0.0, 1.0);
+  return vec4<f32>(sample.rgb * o, sample.a * o);
 }
 "#;
 
