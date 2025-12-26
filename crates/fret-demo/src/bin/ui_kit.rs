@@ -23,16 +23,18 @@ use fret_components_shadcn::{
     ItemDescription as ShadcnItemDescription, ItemGroup as ShadcnItemGroup,
     ItemMedia as ShadcnItemMedia, ItemMediaVariant as ShadcnItemMediaVariant,
     ItemSeparator as ShadcnItemSeparator, ItemTitle as ShadcnItemTitle,
-    Pagination as ShadcnPagination, PaginationContent as ShadcnPaginationContent,
-    PaginationEllipsis as ShadcnPaginationEllipsis, PaginationItem as ShadcnPaginationItem,
-    PaginationLink as ShadcnPaginationLink, PaginationLinkSize as ShadcnPaginationLinkSize,
-    PaginationNext as ShadcnPaginationNext, PaginationPrevious as ShadcnPaginationPrevious,
-    RadioGroup as ShadcnRadioGroup, RadioGroupItem as ShadcnRadioGroupItem,
-    Skeleton as ShadcnSkeleton, Spinner as ShadcnSpinner, Table as ShadcnTable,
-    TableBody as ShadcnTableBody, TableCaption as ShadcnTableCaption, TableCell as ShadcnTableCell,
-    TableHead as ShadcnTableHead, TableHeader as ShadcnTableHeader, TableRow as ShadcnTableRow,
-    ToggleGroup as ShadcnToggleGroup, ToggleGroupItem as ShadcnToggleGroupItem,
-    ToggleSize as ShadcnToggleSize, ToggleVariant as ShadcnToggleVariant,
+    NavigationMenu as ShadcnNavigationMenu, NavigationMenuItem as ShadcnNavigationMenuItem,
+    NavigationMenuLink as ShadcnNavigationMenuLink, Pagination as ShadcnPagination,
+    PaginationContent as ShadcnPaginationContent, PaginationEllipsis as ShadcnPaginationEllipsis,
+    PaginationItem as ShadcnPaginationItem, PaginationLink as ShadcnPaginationLink,
+    PaginationLinkSize as ShadcnPaginationLinkSize, PaginationNext as ShadcnPaginationNext,
+    PaginationPrevious as ShadcnPaginationPrevious, RadioGroup as ShadcnRadioGroup,
+    RadioGroupItem as ShadcnRadioGroupItem, Skeleton as ShadcnSkeleton, Spinner as ShadcnSpinner,
+    Table as ShadcnTable, TableBody as ShadcnTableBody, TableCaption as ShadcnTableCaption,
+    TableCell as ShadcnTableCell, TableHead as ShadcnTableHead, TableHeader as ShadcnTableHeader,
+    TableRow as ShadcnTableRow, ToggleGroup as ShadcnToggleGroup,
+    ToggleGroupItem as ShadcnToggleGroupItem, ToggleSize as ShadcnToggleSize,
+    ToggleVariant as ShadcnToggleVariant,
 };
 use fret_components_ui::{
     ChromeRefinement, ContextMenuService, DialogAction, DialogRequest, DialogService,
@@ -432,6 +434,33 @@ fn build_ui_kit_contents(
     let calendar_model = app.models_mut().insert(None::<ShadcnDate>);
     let calendar = ui.create_node(ShadcnCalendar::new(calendar_model).month(2025, 1));
     ui.add_child(col, calendar);
+
+    let nav_menu_label = ui.create_node(Text::new("shadcn/ui v4 Navigation Menu (prototype)"));
+    ui.add_child(col, nav_menu_label);
+    let nav_menu = ui.create_node(
+        ShadcnNavigationMenu::new()
+            .item(
+                ShadcnNavigationMenuItem::new("Getting started")
+                    .link(
+                        ShadcnNavigationMenuLink::new("Introduction").on_click("ui_kit.nav.intro"),
+                    )
+                    .link(
+                        ShadcnNavigationMenuLink::new("Installation")
+                            .on_click("ui_kit.nav.install"),
+                    )
+                    .link(
+                        ShadcnNavigationMenuLink::new("Typography")
+                            .on_click("ui_kit.nav.typography"),
+                    ),
+            )
+            .item(
+                ShadcnNavigationMenuItem::new("Components")
+                    .link(ShadcnNavigationMenuLink::new("Buttons").on_click("ui_kit.nav.buttons"))
+                    .link(ShadcnNavigationMenuLink::new("Forms").on_click("ui_kit.nav.forms"))
+                    .link(ShadcnNavigationMenuLink::new("Tables").on_click("ui_kit.nav.tables")),
+            ),
+    );
+    ui.add_child(col, nav_menu);
 
     let checkbox_model = app.models_mut().insert(false);
     let checkbox = ui.create_node(Checkbox::new(checkbox_model, "Enable option"));
@@ -1076,6 +1105,12 @@ impl WinitDriver for UiKitDriver {
             "ui_kit.action.three" => {
                 tracing::info!("action three");
             }
+            "ui_kit.nav.intro" => tracing::info!("nav: introduction"),
+            "ui_kit.nav.install" => tracing::info!("nav: installation"),
+            "ui_kit.nav.typography" => tracing::info!("nav: typography"),
+            "ui_kit.nav.buttons" => tracing::info!("nav: buttons"),
+            "ui_kit.nav.forms" => tracing::info!("nav: forms"),
+            "ui_kit.nav.tables" => tracing::info!("nav: tables"),
             "ui_kit.dialog.open" => {
                 let request = DialogRequest {
                     owner: state.root,

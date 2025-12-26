@@ -112,7 +112,7 @@ Status legend:
 | Label | `ui/label.tsx` | `fret_components_shadcn::Label` | ✅ | First-pass helper; semantics binding is a follow-up. |
 | Menubar | `ui/menubar.tsx` | `fret_components_shadcn::menubar::*` | ✅ | Currently a thin re-export of `AppMenuBar`. |
 | Native Select | `ui/native-select.tsx` |  | ❌ | Probably non-goal (Fret is not HTML). |
-| Navigation Menu | `ui/navigation-menu.tsx` |  | ❌ | Likely later; depends on menu + focus routing. |
+| Navigation Menu | `ui/navigation-menu.tsx` | `fret_components_shadcn::{NavigationMenu, NavigationMenuItem, NavigationMenuLink}` | ✅ | Prototype: uses `Popover` overlay for list-like content (rich panels TBD). |
 | Pagination | `ui/pagination.tsx` | `fret_components_shadcn::Pagination*` | ✅ | Taxonomy + first-pass recipe parity; uses Pressable + focus-visible ring. |
 | Popover | `ui/popover.tsx` | `fret_components_ui::popover::*` | ✅ | Ensure placement + dismissal parity. |
 | Progress | `ui/progress.tsx` | `fret_components_shadcn::progress::*` | ✅ | Currently `Progress` is a thin alias of `ProgressBar`. |

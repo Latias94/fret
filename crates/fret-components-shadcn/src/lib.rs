@@ -28,6 +28,7 @@ pub mod input_otp;
 pub mod item;
 pub mod kbd;
 pub mod label;
+pub mod navigation_menu;
 pub mod pagination;
 pub mod radio_group;
 pub mod skeleton;
@@ -62,6 +63,7 @@ pub use item::{
 };
 pub use kbd::Kbd;
 pub use label::Label;
+pub use navigation_menu::{NavigationMenu, NavigationMenuItem, NavigationMenuLink};
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
     PaginationLinkSize, PaginationNext, PaginationPrevious,
