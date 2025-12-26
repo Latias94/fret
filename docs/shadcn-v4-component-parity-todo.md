@@ -264,7 +264,7 @@ These checklists are the acceptance criteria for “interaction parity”.
 ### P2 — larger surfaces (likely require dedicated contracts)
 
 - [x] `Table` (basic facade + styling)
-- [ ] `DataTable` (virtualized table, resizing, selection; not DOM semantics)
+- [x] `DataTable` (virtualized table V1: fixed header + fixed row height; not DOM semantics)
 - [x] `Sidebar` / `NavigationMenu` (V1; navigation contracts + tree patterns still evolving)
 - [x] `Calendar` (date model + navigation)
 - [x] `DatePicker` (popover integration; input parsing is a follow-up)

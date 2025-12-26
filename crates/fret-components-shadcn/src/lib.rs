@@ -20,6 +20,7 @@ pub mod button_group;
 pub mod calendar;
 pub mod card;
 pub mod collapsible;
+pub mod data_table;
 pub mod date_picker;
 pub mod empty;
 pub mod field;
@@ -51,6 +52,7 @@ pub use button_group::{ButtonGroup, ButtonGroupItem, ButtonGroupOrientation};
 pub use calendar::{Calendar, Date};
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
 pub use collapsible::{Collapsible, CollapsibleContent, CollapsibleTrigger};
+pub use data_table::{DataTable, DataTableRowState};
 pub use date_picker::DatePicker;
 pub use empty::Empty;
 pub use field::{
