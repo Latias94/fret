@@ -1,6 +1,7 @@
 mod clip;
 mod column;
 mod image;
+mod mask_image;
 mod path;
 mod resizable_split;
 mod row;
@@ -13,6 +14,7 @@ mod text_area;
 pub use clip::Clip;
 pub use column::Column;
 pub use image::Image;
+pub use mask_image::MaskImage;
 pub use path::Path;
 pub use resizable_split::ResizableSplit;
 pub use row::Row;

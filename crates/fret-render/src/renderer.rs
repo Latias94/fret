@@ -484,6 +484,13 @@ struct ImageDraw {
     image: fret_core::ImageId,
 }
 
+struct MaskDraw {
+    scissor: ScissorRect,
+    first_vertex: u32,
+    vertex_count: u32,
+    image: fret_core::ImageId,
+}
+
 struct TextDraw {
     scissor: ScissorRect,
     first_vertex: u32,
@@ -500,6 +507,7 @@ enum OrderedDraw {
     Quad(DrawCall),
     Viewport(ViewportDraw),
     Image(ImageDraw),
+    Mask(MaskDraw),
     Text(TextDraw),
     Path(PathDraw),
 }
@@ -527,6 +535,9 @@ pub struct Renderer {
 
     text_pipeline_format: Option<wgpu::TextureFormat>,
     text_pipeline: Option<wgpu::RenderPipeline>,
+
+    mask_pipeline_format: Option<wgpu::TextureFormat>,
+    mask_pipeline: Option<wgpu::RenderPipeline>,
 
     text_vertex_buffers: Vec<wgpu::Buffer>,
     text_vertex_buffer_index: usize,
@@ -750,6 +761,8 @@ impl Renderer {
             viewport_vertex_capacity,
             text_pipeline_format: None,
             text_pipeline: None,
+            mask_pipeline_format: None,
+            mask_pipeline: None,
             text_vertex_buffers,
             text_vertex_buffer_index: 0,
             text_vertex_capacity,
@@ -1032,6 +1045,84 @@ impl Renderer {
         self.text_pipeline = Some(pipeline);
     }
 
+    fn ensure_mask_pipeline(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
+        if self.mask_pipeline_format == Some(format) && self.mask_pipeline.is_some() {
+            return;
+        }
+
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("fret mask shader"),
+            source: wgpu::ShaderSource::Wgsl(MASK_SHADER.into()),
+        });
+
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("fret mask pipeline layout"),
+            bind_group_layouts: &[
+                &self.uniform_bind_group_layout,
+                &self.viewport_bind_group_layout,
+            ],
+            immediate_size: 0,
+        });
+
+        let vertex_stride = std::mem::size_of::<TextVertex>() as wgpu::BufferAddress;
+        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("fret mask pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: Some("vs_main"),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: vertex_stride,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &[
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 0,
+                            shader_location: 0,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 8,
+                            shader_location: 1,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x4,
+                            offset: 16,
+                            shader_location: 2,
+                        },
+                    ],
+                }],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            }),
+            multiview_mask: None,
+            cache: None,
+        });
+
+        self.mask_pipeline_format = Some(format);
+        self.mask_pipeline = Some(pipeline);
+    }
+
     fn ensure_path_pipeline(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
         if self.path_pipeline_format == Some(format) && self.path_pipeline.is_some() {
             return;
@@ -1289,6 +1380,7 @@ impl Renderer {
         self.ensure_viewport_pipeline(device, format);
         self.ensure_pipeline(device, format);
         self.ensure_text_pipeline(device, format);
+        self.ensure_mask_pipeline(device, format);
         self.ensure_path_pipeline(device, format);
 
         let uniform = ViewportUniform {
@@ -1398,6 +1490,7 @@ impl Renderer {
                 Quad,
                 Viewport,
                 Text,
+                Mask,
                 Path,
             }
 
@@ -1413,6 +1506,10 @@ impl Renderer {
                 .text_pipeline
                 .as_ref()
                 .expect("text pipeline must exist");
+            let mask_pipeline = self
+                .mask_pipeline
+                .as_ref()
+                .expect("mask pipeline must exist");
             let path_pipeline = self
                 .path_pipeline
                 .as_ref()
@@ -1485,6 +1582,33 @@ impl Renderer {
                             pass.set_bind_group(0, &self.uniform_bind_group, &[]);
                             pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
                             active_pipeline = ActivePipeline::Viewport;
+                        }
+
+                        let Some((_, bind_group)) = self.image_bind_groups.get(&draw.image) else {
+                            continue;
+                        };
+                        pass.set_bind_group(1, bind_group, &[]);
+                        pass.set_scissor_rect(
+                            draw.scissor.x,
+                            draw.scissor.y,
+                            draw.scissor.w,
+                            draw.scissor.h,
+                        );
+                        pass.draw(
+                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                            0..1,
+                        );
+                    }
+                    OrderedDraw::Mask(draw) => {
+                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                            continue;
+                        }
+
+                        if !matches!(active_pipeline, ActivePipeline::Mask) {
+                            pass.set_pipeline(mask_pipeline);
+                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                            pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
+                            active_pipeline = ActivePipeline::Mask;
                         }
 
                         let Some((_, bind_group)) = self.image_bind_groups.get(&draw.image) else {
@@ -1609,11 +1733,11 @@ impl Renderer {
 
     fn prepare_image_bind_groups(&mut self, device: &wgpu::Device, draws: &[OrderedDraw]) {
         for item in draws {
-            let OrderedDraw::Image(draw) = item else {
-                continue;
+            let image = match item {
+                OrderedDraw::Image(draw) => draw.image,
+                OrderedDraw::Mask(draw) => draw.image,
+                _ => continue,
             };
-
-            let image = draw.image;
             let Some(view) = self.images.get(image) else {
                 continue;
             };
@@ -1896,6 +2020,81 @@ impl Renderer {
                     ]);
 
                     ordered_draws.push(OrderedDraw::Image(ImageDraw {
+                        scissor: current_scissor,
+                        first_vertex,
+                        vertex_count: 6,
+                        image: *image,
+                    }));
+                }
+                SceneOp::MaskImage { .. } => {
+                    flush_quad_batch!();
+                    let SceneOp::MaskImage {
+                        rect,
+                        image,
+                        uv,
+                        color,
+                        opacity,
+                        ..
+                    } = op
+                    else {
+                        unreachable!();
+                    };
+                    if *opacity <= 0.0 || color.a <= 0.0 {
+                        continue;
+                    }
+                    if self.images.get(*image).is_none() {
+                        continue;
+                    }
+                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
+                    if w <= 0.0 || h <= 0.0 {
+                        continue;
+                    }
+
+                    let first_vertex = text_vertices.len() as u32;
+                    let o = opacity.clamp(0.0, 1.0);
+                    let mut premul = color_to_linear_rgba_premul(*color);
+                    premul = premul.map(|c| c * o);
+
+                    let x0 = x;
+                    let y0 = y;
+                    let x1 = x + w;
+                    let y1 = y + h;
+
+                    let (u0, v0, u1, v1) = (uv.u0, uv.v0, uv.u1, uv.v1);
+                    text_vertices.extend_from_slice(&[
+                        TextVertex {
+                            pos_px: [x0, y0],
+                            uv: [u0, v0],
+                            color: premul,
+                        },
+                        TextVertex {
+                            pos_px: [x1, y0],
+                            uv: [u1, v0],
+                            color: premul,
+                        },
+                        TextVertex {
+                            pos_px: [x1, y1],
+                            uv: [u1, v1],
+                            color: premul,
+                        },
+                        TextVertex {
+                            pos_px: [x0, y0],
+                            uv: [u0, v0],
+                            color: premul,
+                        },
+                        TextVertex {
+                            pos_px: [x1, y1],
+                            uv: [u1, v1],
+                            color: premul,
+                        },
+                        TextVertex {
+                            pos_px: [x0, y1],
+                            uv: [u0, v1],
+                            color: premul,
+                        },
+                    ]);
+
+                    ordered_draws.push(OrderedDraw::Mask(MaskDraw {
                         scissor: current_scissor,
                         first_vertex,
                         vertex_count: 6,
@@ -2517,6 +2716,53 @@ fn vs_main(input: VsIn) -> VsOut {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
+  let coverage = tex.r;
+  return vec4<f32>(input.color.rgb * coverage, input.color.a * coverage);
+}
+"#;
+
+const MASK_SHADER: &str = r#"
+struct Viewport {
+  viewport_size: vec2<f32>,
+  _pad: vec2<f32>,
+};
+
+@group(0) @binding(0) var<uniform> viewport: Viewport;
+
+@group(1) @binding(0) var mask_sampler: sampler;
+@group(1) @binding(1) var mask_texture: texture_2d<f32>;
+
+struct VsIn {
+  @location(0) pos_px: vec2<f32>,
+  @location(1) uv: vec2<f32>,
+  @location(2) color: vec4<f32>,
+};
+
+struct VsOut {
+  @builtin(position) clip_pos: vec4<f32>,
+  @location(0) uv: vec2<f32>,
+  @location(1) color: vec4<f32>,
+};
+
+fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
+  let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
+  let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
+  return vec2<f32>(ndc_x, ndc_y);
+}
+
+@vertex
+fn vs_main(input: VsIn) -> VsOut {
+  var out: VsOut;
+  let clip_xy = to_clip_space(input.pos_px);
+  out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
+  out.uv = input.uv;
+  out.color = input.color;
+  return out;
+}
+
+@fragment
+fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
+  let tex = textureSample(mask_texture, mask_sampler, input.uv);
   let coverage = tex.r;
   return vec4<f32>(input.color.rgb * coverage, input.color.a * coverage);
 }

@@ -111,6 +111,18 @@ pub enum SceneOp {
         opacity: f32,
     },
 
+    /// Draw an alpha mask image tinted with a solid color.
+    ///
+    /// The referenced `image` is expected to store coverage in the red channel (e.g. `R8Unorm`).
+    MaskImage {
+        order: DrawOrder,
+        rect: Rect,
+        image: ImageId,
+        uv: UvRect,
+        color: Color,
+        opacity: f32,
+    },
+
     Text {
         order: DrawOrder,
         origin: Point,
@@ -256,6 +268,25 @@ fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             state = mix_f32(state, uv.v1);
             mix_f32(state, opacity)
         }
+        SceneOp::MaskImage {
+            order,
+            rect,
+            image,
+            uv,
+            color,
+            opacity,
+        } => {
+            let mut state = mix_u64(state, 9);
+            state = mix_u64(state, u64::from(order.0));
+            state = mix_rect(state, rect);
+            state = mix_u64(state, image.data().as_ffi());
+            state = mix_f32(state, uv.u0);
+            state = mix_f32(state, uv.v0);
+            state = mix_f32(state, uv.u1);
+            state = mix_f32(state, uv.v1);
+            state = mix_color(state, color);
+            mix_f32(state, opacity)
+        }
         SceneOp::Text {
             order,
             origin,
@@ -346,6 +377,21 @@ fn translate_scene_op(op: SceneOp, delta: Point) -> SceneOp {
             rect: translate_rect(rect, delta),
             image,
             uv,
+            opacity,
+        },
+        SceneOp::MaskImage {
+            order,
+            rect,
+            image,
+            uv,
+            color,
+            opacity,
+        } => SceneOp::MaskImage {
+            order,
+            rect: translate_rect(rect, delta),
+            image,
+            uv,
+            color,
             opacity,
         },
         SceneOp::Text {

@@ -6,11 +6,14 @@ edition.workspace = true
 [dependencies]
 wgpu.workspace = true
 bytemuck.workspace = true
+anyhow.workspace = true
 fret-core = { path = "../fret-core" }
 slotmap.workspace = true
 thiserror.workspace = true
 cosmic-text.workspace = true
 lyon.workspace = true
+resvg.workspace = true
+usvg.workspace = true
 
 [dev-dependencies]
 naga.workspace = true
