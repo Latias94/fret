@@ -732,7 +732,17 @@ impl Renderer {
     }
 
     pub fn set_path_msaa_samples(&mut self, samples: u32) {
-        self.path_msaa_samples = samples.max(1);
+        let samples = samples.max(1);
+        let samples = samples.min(16);
+        if samples == 1 {
+            self.path_msaa_samples = 1;
+            return;
+        }
+
+        // wgpu requires sample counts to be powers of two. Prefer a conservative downgrade to the
+        // nearest supported-shape value (rather than rounding up to a potentially unsupported count).
+        let pow2_floor = 1u32 << (31 - samples.leading_zeros());
+        self.path_msaa_samples = pow2_floor.max(1);
     }
 
     fn svg_target_box_px(rect: Rect, scale_factor: f32) -> (u32, u32) {
@@ -1936,10 +1946,13 @@ impl Renderer {
         self.ensure_pipeline(device, format);
         self.ensure_text_pipeline(device, format);
         self.ensure_mask_pipeline(device, format);
-        self.ensure_composite_pipeline(device, format);
         self.ensure_path_pipeline(device, format);
-        self.ensure_path_msaa_pipeline(device, format);
-        self.ensure_path_intermediate(device, viewport_size, format);
+        let path_samples = self.path_msaa_samples.max(1);
+        if path_samples > 1 {
+            self.ensure_composite_pipeline(device, format);
+            self.ensure_path_msaa_pipeline(device, format);
+            self.ensure_path_intermediate(device, viewport_size, format);
+        }
 
         let uniform = ViewportUniform {
             viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
@@ -2035,6 +2048,7 @@ impl Renderer {
                 Text,
                 Mask,
                 Composite,
+                Path,
             }
 
             let quad_pipeline = self
@@ -2061,10 +2075,8 @@ impl Renderer {
                 .path_pipeline
                 .as_ref()
                 .expect("path pipeline must exist");
-            let path_msaa_pipeline = self
-                .path_msaa_pipeline
-                .as_ref()
-                .expect("path msaa pipeline must exist");
+            let path_msaa_pipeline = self.path_msaa_pipeline.as_ref();
+            let path_samples = self.path_msaa_samples.max(1);
 
             let mut active_pipeline = ActivePipeline::None;
 
@@ -2097,7 +2109,9 @@ impl Renderer {
             while i < encoding.ordered_draws.len() {
                 let item = &encoding.ordered_draws[i];
 
-                if let OrderedDraw::Path(first) = item {
+                if let OrderedDraw::Path(first) = item
+                    && path_samples > 1
+                {
                     let mut union = first.scissor;
                     let mut end = i + 1;
                     while end < encoding.ordered_draws.len() {
@@ -2121,6 +2135,12 @@ impl Renderer {
                     };
 
                     {
+                        let Some(path_msaa_pipeline) = path_msaa_pipeline else {
+                            pass = begin_main_pass(&mut encoder, target_view, wgpu::LoadOp::Load);
+                            i = end;
+                            continue;
+                        };
+
                         let mut path_pass =
                             encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                                 label: Some("fret path intermediate pass"),
@@ -2388,8 +2408,28 @@ impl Renderer {
                         );
                     }
                     OrderedDraw::Path(draw) => {
-                        // Handled by the batching path above.
-                        let _ = (draw, path_pipeline);
+                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                            i += 1;
+                            continue;
+                        }
+
+                        if !matches!(active_pipeline, ActivePipeline::Path) {
+                            pass.set_pipeline(path_pipeline);
+                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                            pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
+                            active_pipeline = ActivePipeline::Path;
+                        }
+
+                        pass.set_scissor_rect(
+                            draw.scissor.x,
+                            draw.scissor.y,
+                            draw.scissor.w,
+                            draw.scissor.h,
+                        );
+                        pass.draw(
+                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                            0..1,
+                        );
                     }
                 }
 
