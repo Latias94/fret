@@ -16,19 +16,21 @@ use fret_components_shadcn::{
     Field as ShadcnField, FieldDescription as ShadcnFieldDescription,
     FieldLabel as ShadcnFieldLabel, FieldOrientation as ShadcnFieldOrientation,
     HoverCard as ShadcnHoverCard, HoverCardContent as ShadcnHoverCardContent,
-    HoverCardTrigger as ShadcnHoverCardTrigger, InputGroup as ShadcnInputGroup, Item as ShadcnItem,
-    ItemActions as ShadcnItemActions, ItemContent as ShadcnItemContent,
-    ItemDescription as ShadcnItemDescription, ItemGroup as ShadcnItemGroup,
-    ItemMedia as ShadcnItemMedia, ItemMediaVariant as ShadcnItemMediaVariant,
-    ItemSeparator as ShadcnItemSeparator, ItemTitle as ShadcnItemTitle,
-    Pagination as ShadcnPagination, PaginationContent as ShadcnPaginationContent,
-    PaginationEllipsis as ShadcnPaginationEllipsis, PaginationItem as ShadcnPaginationItem,
-    PaginationLink as ShadcnPaginationLink, PaginationLinkSize as ShadcnPaginationLinkSize,
-    PaginationNext as ShadcnPaginationNext, PaginationPrevious as ShadcnPaginationPrevious,
-    RadioGroup as ShadcnRadioGroup, RadioGroupItem as ShadcnRadioGroupItem,
-    Skeleton as ShadcnSkeleton, Spinner as ShadcnSpinner, ToggleGroup as ShadcnToggleGroup,
-    ToggleGroupItem as ShadcnToggleGroupItem, ToggleSize as ShadcnToggleSize,
-    ToggleVariant as ShadcnToggleVariant,
+    HoverCardTrigger as ShadcnHoverCardTrigger, InputGroup as ShadcnInputGroup,
+    InputOTP as ShadcnInputOTP, InputOTPGroup as ShadcnInputOTPGroup,
+    InputOTPSeparator as ShadcnInputOTPSeparator, InputOTPSlot as ShadcnInputOTPSlot,
+    InputOtpPattern as ShadcnInputOtpPattern, Item as ShadcnItem, ItemActions as ShadcnItemActions,
+    ItemContent as ShadcnItemContent, ItemDescription as ShadcnItemDescription,
+    ItemGroup as ShadcnItemGroup, ItemMedia as ShadcnItemMedia,
+    ItemMediaVariant as ShadcnItemMediaVariant, ItemSeparator as ShadcnItemSeparator,
+    ItemTitle as ShadcnItemTitle, Pagination as ShadcnPagination,
+    PaginationContent as ShadcnPaginationContent, PaginationEllipsis as ShadcnPaginationEllipsis,
+    PaginationItem as ShadcnPaginationItem, PaginationLink as ShadcnPaginationLink,
+    PaginationLinkSize as ShadcnPaginationLinkSize, PaginationNext as ShadcnPaginationNext,
+    PaginationPrevious as ShadcnPaginationPrevious, RadioGroup as ShadcnRadioGroup,
+    RadioGroupItem as ShadcnRadioGroupItem, Skeleton as ShadcnSkeleton, Spinner as ShadcnSpinner,
+    ToggleGroup as ShadcnToggleGroup, ToggleGroupItem as ShadcnToggleGroupItem,
+    ToggleSize as ShadcnToggleSize, ToggleVariant as ShadcnToggleVariant,
 };
 use fret_components_ui::{
     ChromeRefinement, ContextMenuService, DialogAction, DialogRequest, DialogService,
@@ -409,6 +411,19 @@ fn build_ui_kit_contents(
             .trailing_icon(IconId::new("close")),
     );
     ui.add_child(col, input_group);
+
+    let input_otp_label = ui.create_node(Text::new("shadcn/ui v4 Input OTP (prototype)"));
+    ui.add_child(col, input_otp_label);
+    let otp_model = app.models_mut().insert("".to_string());
+    let otp = ui.create_node(
+        ShadcnInputOTP::new(otp_model)
+            .max_length(6)
+            .pattern(ShadcnInputOtpPattern::Digits)
+            .group(ShadcnInputOTPGroup::new().slot(0).slot(1).slot(2))
+            .separator()
+            .group(ShadcnInputOTPGroup::new().slot(3).slot(4).slot(5)),
+    );
+    ui.add_child(col, otp);
 
     let checkbox_model = app.models_mut().insert(false);
     let checkbox = ui.create_node(Checkbox::new(checkbox_model, "Enable option"));

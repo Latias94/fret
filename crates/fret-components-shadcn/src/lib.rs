@@ -23,6 +23,7 @@ pub mod empty;
 pub mod field;
 pub mod hover_card;
 pub mod input_group;
+pub mod input_otp;
 pub mod item;
 pub mod kbd;
 pub mod label;
@@ -51,6 +52,7 @@ pub use field::{
 };
 pub use hover_card::{HoverCard, HoverCardContent, HoverCardTrigger};
 pub use input_group::InputGroup;
+pub use input_otp::{InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot, InputOtpPattern};
 pub use item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
     ItemMediaVariant, ItemSeparator, ItemSize, ItemTitle, ItemVariant, item_group,

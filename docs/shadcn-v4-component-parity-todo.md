@@ -106,7 +106,7 @@ Status legend:
 | Hover Card | `ui/hover-card.tsx` | `fret_components_shadcn::{HoverCard, HoverCardTrigger, HoverCardContent}` | ✅ | Declarative hover primitive (no open/close animations yet). |
 | Input | `ui/input.tsx` | `fret_components_shadcn::Input` | ✅ | Currently maps to `TextField`; use `InputGroup` for icon-slot patterns. |
 | Input Group | `ui/input-group.tsx` | `fret_components_shadcn::InputGroup` | ✅ | Leading/trailing icon slots + sizing tokens; first-pass parity. |
-| Input OTP | `ui/input-otp.tsx` |  | ❌ | Needs multi-cell input + paste semantics. |
+| Input OTP | `ui/input-otp.tsx` | `fret_components_shadcn::InputOTP` | ✅ | Retained widget: multi-slot input + paste fill + per-slot focus ring. |
 | Item | `ui/item.tsx` | `fret_components_shadcn::Item*` | ✅ | First pass: generic “item row” with media/content/actions slots. |
 | Kbd | `ui/kbd.tsx` | `fret_components_shadcn::Kbd` | ✅ | First-pass composition helper. |
 | Label | `ui/label.tsx` | `fret_components_shadcn::Label` | ✅ | First-pass helper; semantics binding is a follow-up. |
