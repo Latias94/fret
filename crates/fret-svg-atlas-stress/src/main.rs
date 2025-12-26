@@ -95,6 +95,7 @@ struct SvgAtlasStressState {
     max_frames: Option<u64>,
     last_renderer_report: Option<Instant>,
     clear_requested: bool,
+    clear_atlas_requested: bool,
 }
 
 impl Default for SvgAtlasStressState {
@@ -116,6 +117,7 @@ impl Default for SvgAtlasStressState {
             max_frames: None,
             last_renderer_report: None,
             clear_requested: false,
+            clear_atlas_requested: false,
         }
     }
 }
@@ -133,6 +135,7 @@ impl SvgAtlasStressDriver {
         println!("  F: cycle SvgFit mode");
         println!("  B: cycle svg_raster_budget_bytes preset (standalone rasters only)");
         println!("  C: clear svg raster cache");
+        println!("  M: clear svg mask atlas cache");
         println!("  H: print this help");
     }
 
@@ -235,6 +238,9 @@ fn run_headless(
     budget_bytes: u64,
     wait_gpu: bool,
     wait_every: u64,
+    churn: bool,
+    churn_every: u64,
+    churn_drop: usize,
 ) -> anyhow::Result<()> {
     let ctx = pollster::block_on(WgpuContext::new())?;
     let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
@@ -243,6 +249,99 @@ fn run_headless(
 
     let svg_square = renderer.register_svg(SVG_SQUARE.as_bytes());
     let svg_wide = renderer.register_svg(SVG_WIDE.as_bytes());
+
+    #[derive(Clone, Copy)]
+    struct SvgVariant {
+        square: fret_core::SvgId,
+        wide: fret_core::SvgId,
+    }
+
+    fn register_variant(renderer: &mut Renderer, tag: u32) -> SvgVariant {
+        let mut square = String::from(SVG_SQUARE);
+        square.push_str(&format!("<!--variant:{tag}-->"));
+        let mut wide = String::from(SVG_WIDE);
+        wide.push_str(&format!("<!--variant:{tag}-->"));
+        let square = renderer.register_svg(square.as_bytes());
+        let wide = renderer.register_svg(wide.as_bytes());
+        SvgVariant { square, wide }
+    }
+
+    fn record_scene_churn(
+        scene: &mut Scene,
+        bounds: Rect,
+        phase: bool,
+        fit_mode: FitMode,
+        variants: &[SvgVariant],
+    ) -> usize {
+        if variants.is_empty() {
+            scene.clear();
+            return 0;
+        }
+        scene.clear();
+        scene.push(fret_core::SceneOp::Quad {
+            order: fret_core::DrawOrder(0),
+            rect: bounds,
+            background: Color {
+                r: 0.06,
+                g: 0.07,
+                b: 0.08,
+                a: 1.0,
+            },
+            border: fret_core::Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: fret_core::Corners::all(Px(0.0)),
+        });
+
+        let cols = 22u32;
+        let rows = 14u32;
+        let pad = Px(10.0);
+        let cell = Px(40.0);
+        let step = cell.0 + pad.0;
+        let start = Point::new(Px(18.0), Px(18.0));
+
+        let mut icons_emitted = 0usize;
+        for row in 0..rows {
+            for col in 0..cols {
+                let idx = (row * cols + col) as usize;
+                let size = if phase {
+                    Size::new(Px(cell.0), Px(cell.0))
+                } else {
+                    Size::new(Px(cell.0 * 0.8), Px(cell.0 * 0.8))
+                };
+                let cell_origin = Point::new(
+                    start.x + Px(col as f32 * step),
+                    start.y + Px(row as f32 * step),
+                );
+                let x = cell_origin.x + Px((cell.0 - size.width.0).max(0.0) * 0.5);
+                let y = cell_origin.y + Px((cell.0 - size.height.0).max(0.0) * 0.5);
+                let rect = Rect::new(Point::new(x, y), size);
+
+                let fit = fit_mode.to_fit(idx);
+                let v = variants[idx % variants.len()];
+                let svg = if idx % 5 == 0 { v.wide } else { v.square };
+
+                let rgb = hsv_to_rgb((idx as f32 * 0.031).rem_euclid(1.0), 0.75, 0.95);
+                let color = Color {
+                    r: rgb.r,
+                    g: rgb.g,
+                    b: rgb.b,
+                    a: 1.0,
+                };
+
+                scene.push(fret_core::SceneOp::SvgMaskIcon {
+                    order: fret_core::DrawOrder(1),
+                    rect,
+                    svg,
+                    fit,
+                    color,
+                    opacity: 1.0,
+                });
+                icons_emitted += 1;
+            }
+        }
+
+        icons_emitted
+    }
 
     let viewport_size = (980u32, 720u32);
     let scale_factor = 2.0f32;
@@ -274,14 +373,41 @@ fn run_headless(
     let mut scene = Scene::default();
     let mut phase = false;
     let fit_mode = FitMode::Mixed;
+    let mut next_tag: u32 = 0;
+    let mut variants: Vec<SvgVariant> = Vec::new();
+    if churn {
+        // Pre-fill with a small working set; churn will swap entries and create holes that the
+        // append-only atlas cannot reuse, surfacing fragmentation via growing pages + falling fill%.
+        for _ in 0..(churn_drop.max(1) * 2) {
+            variants.push(register_variant(&mut renderer, next_tag));
+            next_tag = next_tag.wrapping_add(1);
+        }
+    }
 
     let wait_every = wait_every.max(1);
+    let churn_every = churn_every.max(1);
     let start = Instant::now();
     for frame in 0..frames {
         if frame != 0 && frame % 180 == 0 {
             phase = !phase;
         }
-        let _icons = record_scene(&mut scene, bounds, phase, fit_mode, svg_square, svg_wide);
+        if churn && frame != 0 && frame % churn_every == 0 {
+            let drop_n = churn_drop.min(variants.len());
+            for v in variants.drain(0..drop_n) {
+                let _ = renderer.unregister_svg(v.square);
+                let _ = renderer.unregister_svg(v.wide);
+            }
+            for _ in 0..drop_n {
+                variants.push(register_variant(&mut renderer, next_tag));
+                next_tag = next_tag.wrapping_add(1);
+            }
+        }
+
+        let _icons = if churn {
+            record_scene_churn(&mut scene, bounds, phase, fit_mode, &variants)
+        } else {
+            record_scene(&mut scene, bounds, phase, fit_mode, svg_square, svg_wide)
+        };
         let cmd = renderer.render_scene(
             &ctx.device,
             &ctx.queue,
@@ -321,7 +447,7 @@ fn run_headless(
             (snap.svg_mask_atlas_used_px as f64 / snap.svg_mask_atlas_capacity_px as f64) * 100.0
         };
         println!(
-            "headless: frames={} wall={:.2}s prepare={:.2}ms hits={} misses={} alpha_raster={} ({:.2}ms) atlas_inserts={} atlas_write={:.2}ms pages={} rasters={} standalone={}KB atlas={}KB fill={:.1}% wait_gpu={} wait_every={}",
+            "headless: frames={} wall={:.2}s prepare={:.2}ms hits={} misses={} alpha_raster={} ({:.2}ms) atlas_inserts={} atlas_write={:.2}ms pages={} rasters={} standalone={}KB atlas={}KB fill={:.1}% wait_gpu={} wait_every={} churn={} churn_every={} churn_drop={}",
             frames,
             elapsed.as_secs_f64(),
             snap.prepare_svg_ops_us as f64 / 1000.0,
@@ -337,7 +463,10 @@ fn run_headless(
             snap.svg_mask_atlas_bytes_live / 1024,
             fill_pct,
             wait_gpu,
-            wait_every
+            wait_every,
+            churn,
+            churn_every,
+            churn_drop
         );
     }
 
@@ -376,6 +505,10 @@ impl WinitDriver for SvgAtlasStressDriver {
         if state.clear_requested {
             renderer.clear_svg_raster_cache();
             state.clear_requested = false;
+        }
+        if state.clear_atlas_requested {
+            renderer.clear_svg_mask_atlas_cache();
+            state.clear_atlas_requested = false;
         }
 
         let desired = state.budget_presets[state.budget_index];
@@ -459,6 +592,10 @@ impl WinitDriver for SvgAtlasStressDriver {
             KeyCode::KeyC => {
                 state.clear_requested = true;
                 println!("svg_atlas_stress: clear svg raster cache requested");
+            }
+            KeyCode::KeyM => {
+                state.clear_atlas_requested = true;
+                println!("svg_atlas_stress: clear svg mask atlas cache requested");
             }
             KeyCode::KeyH => Self::print_help(),
             _ => {}
@@ -589,6 +726,9 @@ fn main() -> anyhow::Result<()> {
     let mut budget_kb: Option<u64> = None;
     let mut wait_gpu = false;
     let mut wait_every: u64 = 1;
+    let mut churn = false;
+    let mut churn_every: u64 = 180;
+    let mut churn_drop: usize = 64;
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -612,9 +752,22 @@ fn main() -> anyhow::Result<()> {
                 };
                 wait_every = value.parse()?;
             }
+            "--churn" => churn = true,
+            "--churn-every" => {
+                let Some(value) = args.next() else {
+                    anyhow::bail!("--churn-every requires a value");
+                };
+                churn_every = value.parse()?;
+            }
+            "--churn-drop" => {
+                let Some(value) = args.next() else {
+                    anyhow::bail!("--churn-drop requires a value");
+                };
+                churn_drop = value.parse()?;
+            }
             "--help" | "-h" => {
                 println!(
-                    "Usage: fret-svg-atlas-stress [--frames N] [--headless] [--budget-kb KB] [--wait-gpu] [--wait-every N]"
+                    "Usage: fret-svg-atlas-stress [--frames N] [--headless] [--budget-kb KB] [--wait-gpu] [--wait-every N] [--churn] [--churn-every N] [--churn-drop N]"
                 );
                 return Ok(());
             }
@@ -625,7 +778,15 @@ fn main() -> anyhow::Result<()> {
     if headless {
         let frames = max_frames.unwrap_or(600);
         let budget = budget_kb.map(|kb| kb * 1024).unwrap_or(1024 * 1024);
-        return run_headless(frames, budget, wait_gpu, wait_every);
+        return run_headless(
+            frames,
+            budget,
+            wait_gpu,
+            wait_every,
+            churn,
+            churn_every,
+            churn_drop,
+        );
     }
 
     let driver = SvgAtlasStressDriver { max_frames };

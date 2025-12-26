@@ -120,6 +120,7 @@ Plot/implot-like widgets should stay in UI/component crates and only emit those 
 - Run: `cargo run -p fret-svg-atlas-stress`
 - Headless (CI-friendly-ish): `cargo run -p fret-svg-atlas-stress -- --headless --frames 600 --budget-kb 1024`
   - End-to-end-ish (wait GPU): `cargo run -p fret-svg-atlas-stress -- --headless --frames 600 --budget-kb 1024 --wait-gpu`
+  - Fragmentation/churn probe: `cargo run -p fret-svg-atlas-stress -- --headless --frames 600 --budget-kb 1024 --churn --churn-every 180 --churn-drop 64`
 - Controls:
   - `Space`: toggle phase (A/B)
   - `T`: toggle auto phase flip

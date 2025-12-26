@@ -971,6 +971,23 @@ impl Renderer {
         self.svg_mask_atlas_bytes = 0;
     }
 
+    /// Drop only the SVG alpha-mask atlas pages and their cached entries.
+    ///
+    /// This is a cheap explicit “defragment/rebuild” knob: the next `SceneOp::SvgMaskIcon` usage
+    /// will re-pack masks into fresh pages.
+    pub fn clear_svg_mask_atlas_cache(&mut self) {
+        self.svg_rasters.retain(|_, entry| {
+            matches!(entry.storage, SvgRasterStorage::Standalone { .. })
+        });
+
+        for idx in 0..self.svg_mask_atlas_pages.len() {
+            self.evict_svg_mask_atlas_page(idx);
+        }
+        self.svg_mask_atlas_pages.clear();
+        self.svg_mask_atlas_free.clear();
+        self.svg_mask_atlas_bytes = 0;
+    }
+
     pub fn take_svg_perf_snapshot(&mut self) -> Option<SvgPerfSnapshot> {
         if !self.svg_perf_enabled {
             return None;
