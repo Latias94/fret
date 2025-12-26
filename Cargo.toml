@@ -27,5 +27,6 @@ winit = "0.30.12"
 naga = "28.0.0"
 uuid = { version = "1", features = ["v4", "serde"] }
 lyon = "1"
+etagere = "0.2.15"
 resvg = { version = "0.45.0", default-features = false, features = ["text", "system-fonts", "memmap-fonts"] }
 usvg = { version = "0.45.0", default-features = false }

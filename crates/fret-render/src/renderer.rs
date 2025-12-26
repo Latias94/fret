@@ -163,16 +163,19 @@ struct SvgRasterKey {
 }
 
 enum SvgRasterStorage {
-    Standalone { _texture: wgpu::Texture },
-    MaskAtlas { page_index: usize },
+    Standalone {
+        _texture: wgpu::Texture,
+    },
+    MaskAtlas {
+        page_index: usize,
+        alloc_id: etagere::AllocId,
+    },
 }
 
 struct SvgMaskAtlasPage {
     image: fret_core::ImageId,
     size_px: (u32, u32),
-    cursor_x: u32,
-    cursor_y: u32,
-    row_h: u32,
+    allocator: etagere::BucketedAtlasAllocator,
     entries: usize,
     last_used_epoch: u64,
     _texture: wgpu::Texture,
@@ -190,35 +193,6 @@ struct SvgRasterEntry {
 impl SvgMaskAtlasPage {
     fn bytes(&self) -> u64 {
         u64::from(self.size_px.0).saturating_mul(u64::from(self.size_px.1))
-    }
-
-    fn try_alloc(&mut self, size_px: (u32, u32)) -> Option<(u32, u32)> {
-        let (w, h) = size_px;
-        if w == 0 || h == 0 {
-            return None;
-        }
-        let (page_w, page_h) = self.size_px;
-        if w > page_w || h > page_h {
-            return None;
-        }
-
-        let mut x = self.cursor_x;
-        let mut y = self.cursor_y;
-        let mut row_h = self.row_h;
-
-        if x.saturating_add(w) > page_w {
-            x = 0;
-            y = y.saturating_add(row_h);
-            row_h = 0;
-        }
-        if y.saturating_add(h) > page_h {
-            return None;
-        }
-
-        self.cursor_x = x.saturating_add(w);
-        self.cursor_y = y;
-        self.row_h = row_h.max(h);
-        Some((x, y))
     }
 }
 
@@ -976,9 +950,8 @@ impl Renderer {
     /// This is a cheap explicit “defragment/rebuild” knob: the next `SceneOp::SvgMaskIcon` usage
     /// will re-pack masks into fresh pages.
     pub fn clear_svg_mask_atlas_cache(&mut self) {
-        self.svg_rasters.retain(|_, entry| {
-            matches!(entry.storage, SvgRasterStorage::Standalone { .. })
-        });
+        self.svg_rasters
+            .retain(|_, entry| matches!(entry.storage, SvgRasterStorage::Standalone { .. }));
 
         for idx in 0..self.svg_mask_atlas_pages.len() {
             self.evict_svg_mask_atlas_page(idx);
@@ -1008,7 +981,7 @@ impl Renderer {
             .svg_rasters
             .values()
             .filter_map(|e| match e.storage {
-                SvgRasterStorage::MaskAtlas { page_index } => Some((page_index, e.size_px)),
+                SvgRasterStorage::MaskAtlas { page_index, .. } => Some((page_index, e.size_px)),
                 SvgRasterStorage::Standalone { .. } => None,
             })
             .filter(|(page_index, _)| {
@@ -1229,7 +1202,10 @@ impl Renderer {
                 self.svg_raster_bytes = self.svg_raster_bytes.saturating_sub(entry.approx_bytes);
                 let _ = self.unregister_image(entry.image);
             }
-            SvgRasterStorage::MaskAtlas { page_index } => {
+            SvgRasterStorage::MaskAtlas {
+                page_index,
+                alloc_id,
+            } => {
                 let Some(page) = self
                     .svg_mask_atlas_pages
                     .get_mut(page_index)
@@ -1237,6 +1213,7 @@ impl Renderer {
                 else {
                     return;
                 };
+                page.allocator.deallocate(alloc_id);
                 page.entries = page.entries.saturating_sub(1);
                 if page.entries == 0 {
                     self.evict_svg_mask_atlas_page(page_index);
@@ -1275,9 +1252,10 @@ impl Renderer {
         let page = SvgMaskAtlasPage {
             image,
             size_px,
-            cursor_x: 0,
-            cursor_y: 0,
-            row_h: 0,
+            allocator: etagere::BucketedAtlasAllocator::new(etagere::Size::new(
+                size_px.0 as i32,
+                size_px.1 as i32,
+            )),
             entries: 0,
             last_used_epoch: self.svg_raster_epoch,
             _texture: texture,
@@ -1300,7 +1278,13 @@ impl Renderer {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         mask: &SvgAlphaMask,
-    ) -> Option<(fret_core::ImageId, UvRect, (u32, u32), usize)> {
+    ) -> Option<(
+        fret_core::ImageId,
+        UvRect,
+        (u32, u32),
+        usize,
+        etagere::AllocId,
+    )> {
         let (w, h) = mask.size_px;
         if w == 0 || h == 0 {
             return None;
@@ -1317,13 +1301,15 @@ impl Renderer {
             return None;
         }
 
-        let mut alloc: Option<(usize, u32, u32)> = None;
+        let size = etagere::Size::new(w_pad as i32, h_pad as i32);
+
+        let mut alloc: Option<(usize, etagere::Allocation)> = None;
         for (idx, page) in self.svg_mask_atlas_pages.iter_mut().enumerate() {
             let Some(page) = page.as_mut() else {
                 continue;
             };
-            if let Some((x, y)) = page.try_alloc((w_pad, h_pad)) {
-                alloc = Some((idx, x, y));
+            if let Some(allocation) = page.allocator.allocate(size) {
+                alloc = Some((idx, allocation));
                 break;
             }
         }
@@ -1332,14 +1318,22 @@ impl Renderer {
             let page = self.svg_mask_atlas_pages[page_index]
                 .as_mut()
                 .expect("atlas page exists");
-            let (x, y) = page.try_alloc((w_pad, h_pad))?;
-            alloc = Some((page_index, x, y));
+            let allocation = page.allocator.allocate(size)?;
+            alloc = Some((page_index, allocation));
         }
 
-        let (page_index, x, y) = alloc?;
+        let (page_index, allocation) = alloc?;
         let page = self.svg_mask_atlas_pages[page_index]
             .as_mut()
             .expect("atlas page exists");
+        let Ok(x) = u32::try_from(allocation.rectangle.min.x) else {
+            page.allocator.deallocate(allocation.id);
+            return None;
+        };
+        let Ok(y) = u32::try_from(allocation.rectangle.min.y) else {
+            page.allocator.deallocate(allocation.id);
+            return None;
+        };
 
         let mut padded = vec![0u8; (w_pad as usize) * (h_pad as usize)];
         let max_x = w.saturating_sub(1);
@@ -1366,7 +1360,13 @@ impl Renderer {
         page.entries += 1;
         page.last_used_epoch = self.svg_raster_epoch;
 
-        Some((page.image, UvRect { u0, v0, u1, v1 }, (w, h), page_index))
+        Some((
+            page.image,
+            UvRect { u0, v0, u1, v1 },
+            (w, h),
+            page_index,
+            allocation.id,
+        ))
     }
 
     fn evict_svg_mask_atlas_page(&mut self, page_index: usize) {
@@ -1381,7 +1381,9 @@ impl Renderer {
         let mut keys_to_remove: Vec<SvgRasterKey> = Vec::new();
         for (k, v) in &self.svg_rasters {
             let is_page = match &v.storage {
-                SvgRasterStorage::MaskAtlas { page_index: idx } => *idx == page_index,
+                SvgRasterStorage::MaskAtlas {
+                    page_index: idx, ..
+                } => *idx == page_index,
                 SvgRasterStorage::Standalone { .. } => false,
             };
             if is_page {
@@ -1417,7 +1419,7 @@ impl Renderer {
                 let e = self.svg_rasters.get_mut(&key)?;
                 e.last_used_epoch = self.svg_raster_epoch;
                 let page_index = match &e.storage {
-                    SvgRasterStorage::MaskAtlas { page_index } => Some(*page_index),
+                    SvgRasterStorage::MaskAtlas { page_index, .. } => Some(*page_index),
                     SvgRasterStorage::Standalone { .. } => None,
                 };
                 (e.image, e.uv, e.size_px, page_index)
@@ -1450,7 +1452,7 @@ impl Renderer {
                 }
 
                 let t_insert = Instant::now();
-                if let Some((image, uv, size_px, page_index)) =
+                if let Some((image, uv, size_px, page_index, alloc_id)) =
                     self.insert_svg_alpha_mask_into_atlas(device, queue, &mask)
                 {
                     if self.svg_perf_enabled {
@@ -1464,7 +1466,8 @@ impl Renderer {
                         size_px,
                         0,
                         SvgRasterStorage::MaskAtlas {
-                            page_index: page_index,
+                            page_index,
+                            alloc_id,
                         },
                     )
                 } else {
@@ -2668,7 +2671,8 @@ impl Renderer {
 
         self.ensure_uniform_capacity(device, encoding.uniforms.len());
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
-        let mut uniform_bytes = vec![0u8; (self.uniform_stride * encoding.uniforms.len() as u64) as usize];
+        let mut uniform_bytes =
+            vec![0u8; (self.uniform_stride * encoding.uniforms.len() as u64) as usize];
         for (i, u) in encoding.uniforms.iter().enumerate() {
             let offset = (self.uniform_stride * i as u64) as usize;
             uniform_bytes[offset..offset + uniform_size as usize]

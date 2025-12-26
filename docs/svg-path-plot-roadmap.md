@@ -49,12 +49,13 @@ Build a GPUI/Zed-aligned rendering foundation for:
 - Path MSAA samples configurable, and MSAA==1 uses direct draw fast path.
 - Path MSAA is capability-driven per format (auto fallback to supported sample counts).
 - SVG alpha-mask **atlas pages** (reduce bind group / texture switching for many icons).
+- SVG alpha-mask atlas uses an allocator (`etagere`) so entries can be deallocated and space reused (GPUI-style).
 
 ### Next
 
-1. SVG alpha-mask atlas compaction strategy (optional)
-   - Current MVP uses “append-only” packing per page (shelf packing) and does **not** auto-evict atlas pages.
-   - If fragmentation becomes a problem, add a free-rect allocator or periodic rebuild.
+1. Atlas page lifecycle knobs (optional)
+   - Pages are reusable internally, but not automatically “compacted” across pages (no moving allocations).
+   - Keep explicit rebuild knobs (`Renderer::clear_svg_mask_atlas_cache()` / `clear_svg_raster_cache()`) as the primary operator control.
 2. Capability-driven defaults
    - Decide default `path_msaa_samples` (compat-first vs quality-first).
 3. Plot substrate (renderer stays generic)
@@ -82,7 +83,8 @@ Plot/implot-like widgets should stay in UI/component crates and only emit those 
   - Alpha-mask atlas pages registered as images; multiple icons share one `ImageId`.
 - Reclamation:
   - Byte budget (`svg_raster_budget_bytes`) governs **standalone** rasters only (e.g. RGBA images, or alpha masks that can’t fit in the atlas).
-  - Alpha-mask atlas pages are **append-only** and are reclaimed only via explicit teardown (e.g. `SvgService::unregister_svg`) or future explicit “clear” APIs.
+  - Alpha-mask atlas pages use an allocator (free-rect packing), so removing entries can reclaim sub-rects for reuse.
+  - Atlas pages are reclaimed only when explicitly cleared or when a page becomes empty.
   - Best-effort eviction: never evict standalone rasters used in the current frame.
   - Explicit knob: `Renderer::clear_svg_raster_cache()` drops all cached rasterizations without unregistering `SvgId`.
 
@@ -101,8 +103,8 @@ Plot/implot-like widgets should stay in UI/component crates and only emit those 
    - Rasterization is CPU-heavy; too many unique sizes per frame will hurt.
    - Encourage consistent icon sizing and caching; avoid animating target size every frame.
 5. Fragmentation
-   - Atlas pages are append-only in MVP; removing entries does not reclaim sub-rects.
-   - If many short-lived icons exist, consider page rebuild or a real allocator.
+   - Allocator reuse prevents per-page “append-only” growth, but there is no cross-page compaction.
+   - If churn causes page count to grow, use explicit rebuild (`clear_svg_mask_atlas_cache`) or consider an eviction policy.
 
 ## Validation checklist
 

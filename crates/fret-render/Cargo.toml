@@ -11,6 +11,7 @@ fret-core = { path = "../fret-core" }
 slotmap.workspace = true
 thiserror.workspace = true
 cosmic-text.workspace = true
+etagere.workspace = true
 lyon.workspace = true
 resvg.workspace = true
 usvg.workspace = true
