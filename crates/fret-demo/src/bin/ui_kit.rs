@@ -4,11 +4,14 @@ use fret_app::{
 };
 use fret_components_icons::IconId;
 use fret_components_shadcn::{
+    Accordion as ShadcnAccordion, AccordionContent as ShadcnAccordionContent,
+    AccordionItem as ShadcnAccordionItem, AccordionTrigger as ShadcnAccordionTrigger,
     Button as ShadcnButton, ButtonSize as ShadcnButtonSize, ButtonVariant as ShadcnButtonVariant,
-    InputGroup as ShadcnInputGroup, RadioGroup as ShadcnRadioGroup,
-    RadioGroupItem as ShadcnRadioGroupItem, ToggleGroup as ShadcnToggleGroup,
-    ToggleGroupItem as ShadcnToggleGroupItem, ToggleSize as ShadcnToggleSize,
-    ToggleVariant as ShadcnToggleVariant,
+    Collapsible as ShadcnCollapsible, CollapsibleContent as ShadcnCollapsibleContent,
+    CollapsibleTrigger as ShadcnCollapsibleTrigger, InputGroup as ShadcnInputGroup,
+    RadioGroup as ShadcnRadioGroup, RadioGroupItem as ShadcnRadioGroupItem,
+    ToggleGroup as ShadcnToggleGroup, ToggleGroupItem as ShadcnToggleGroupItem,
+    ToggleSize as ShadcnToggleSize, ToggleVariant as ShadcnToggleVariant,
 };
 use fret_components_ui::{
     ChromeRefinement, ContextMenuService, DialogAction, DialogRequest, DialogService,
@@ -378,6 +381,69 @@ fn build_ui_kit_contents(
             .item(ShadcnRadioGroupItem::new("compact", "Compact")),
     );
     ui.add_child(col, radio_group);
+
+    let collapsible_label = ui.create_node(Text::new("shadcn/ui v4 Collapsible (prototype)"));
+    ui.add_child(col, collapsible_label);
+    let collapsible_open = app.models_mut().insert(false);
+    let collapsible = ui.create_node(ShadcnCollapsible::new().with_spacing(Px(6.0)));
+    ui.add_child(col, collapsible);
+    let collapsible_trigger = ui.create_node(ShadcnCollapsibleTrigger::new(collapsible_open));
+    let collapsible_trigger_row = ui.create_node(Row::new().with_spacing(Px(8.0)));
+    let collapsible_trigger_text = ui.create_node(Text::new("Toggle details"));
+    let collapsible_trigger_chevron = ui.create_node(Text::new("▾"));
+    ui.add_child(collapsible_trigger_row, collapsible_trigger_text);
+    ui.add_child(collapsible_trigger_row, collapsible_trigger_chevron);
+    ui.add_child(collapsible_trigger, collapsible_trigger_row);
+    ui.add_child(collapsible, collapsible_trigger);
+    let collapsible_content = ui.create_node(ShadcnCollapsibleContent::new(collapsible_open));
+    let collapsible_content_frame = ui.create_node(
+        Frame::default()
+            .styled()
+            .rounded_md()
+            .border_1()
+            .px_3()
+            .py_2()
+            .finish(),
+    );
+    let collapsible_content_text = ui.create_node(Text::new("Hidden content (placeholder)."));
+    ui.add_child(collapsible_content_frame, collapsible_content_text);
+    ui.add_child(collapsible_content, collapsible_content_frame);
+    ui.add_child(collapsible, collapsible_content);
+
+    let accordion_label = ui.create_node(Text::new("shadcn/ui v4 Accordion (prototype)"));
+    ui.add_child(col, accordion_label);
+    let accordion_value = app.models_mut().insert(None::<Arc<str>>);
+    let accordion = ui.create_node(ShadcnAccordion::new().with_spacing(Px(6.0)));
+    ui.add_child(col, accordion);
+
+    for (value, title) in [("a", "Section A"), ("b", "Section B"), ("c", "Section C")] {
+        let item = ui.create_node(ShadcnAccordionItem::new().with_spacing(Px(4.0)));
+        ui.add_child(accordion, item);
+
+        let trigger = ui.create_node(ShadcnAccordionTrigger::single(accordion_value, value));
+        let trigger_row = ui.create_node(Row::new().with_spacing(Px(8.0)));
+        let trigger_title = ui.create_node(Text::new(title));
+        let trigger_chevron = ui.create_node(Text::new("▾"));
+        ui.add_child(trigger_row, trigger_title);
+        ui.add_child(trigger_row, trigger_chevron);
+        ui.add_child(trigger, trigger_row);
+        ui.add_child(item, trigger);
+
+        let content = ui.create_node(ShadcnAccordionContent::single(accordion_value, value));
+        let content_frame = ui.create_node(
+            Frame::default()
+                .styled()
+                .rounded_md()
+                .border_1()
+                .px_3()
+                .py_2()
+                .finish(),
+        );
+        let content_text = ui.create_node(Text::new(format!("Content for {title}")));
+        ui.add_child(content_frame, content_text);
+        ui.add_child(content, content_frame);
+        ui.add_child(item, content);
+    }
 
     let slider_model = app.models_mut().insert(0.35f32);
     let slider_label = ui.create_node(Text::new("Slider / Progress"));

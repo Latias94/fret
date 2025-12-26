@@ -8,11 +8,13 @@
 //! while `fret-components-ui` remains the reusable component infrastructure (StyledExt, tokens,
 //! recipes glue, etc.).
 
+pub mod accordion;
 pub mod alert;
 pub mod alert_dialog;
 pub mod badge;
 pub mod button;
 pub mod card;
+pub mod collapsible;
 pub mod empty;
 pub mod input_group;
 pub mod kbd;
@@ -21,11 +23,13 @@ pub mod radio_group;
 pub mod toggle;
 pub mod toggle_group;
 
+pub use accordion::{Accordion, AccordionContent, AccordionItem, AccordionTrigger};
 pub use alert::{Alert, AlertDescription, AlertTitle, AlertVariant};
 pub use alert_dialog::{AlertDialogDefaultAction, AlertDialogRequest};
 pub use badge::{Badge, BadgeVariant};
 pub use button::{Button, ButtonSize, ButtonVariant};
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
+pub use collapsible::{Collapsible, CollapsibleContent, CollapsibleTrigger};
 pub use empty::Empty;
 pub use input_group::InputGroup;
 pub use kbd::Kbd;

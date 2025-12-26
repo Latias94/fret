@@ -79,7 +79,7 @@ Status legend:
 
 | shadcn v4 component | Upstream ref | Fret mapping (today) | Status | Notes |
 | --- | --- | --- | --- | --- |
-| Accordion | `ui/accordion.tsx` |  | ❌ | Needs disclosure/animation + keyboard rules. |
+| Accordion | `ui/accordion.tsx` | `fret_components_shadcn::Accordion*` | ✅ | First pass: selection model drives open/close; no animation or built-in chevron. |
 | Alert | `ui/alert.tsx` | `fret_components_shadcn::Alert` | ✅ | First-pass composition helper; verify token parity. |
 | Alert Dialog | `ui/alert-dialog.tsx` | `fret_components_shadcn::AlertDialogRequest` | ✅ | Policy wrapper over `DialogOverlay`: cancel closes without a command by default. |
 | Aspect Ratio | `ui/aspect-ratio.tsx` |  | ❌ | Depends on Tailwind layout primitives + image/media element. |
@@ -93,7 +93,7 @@ Status legend:
 | Carousel | `ui/carousel.tsx` |  | ❌ | Not a near-term priority for editor UIs. |
 | Chart | `ui/chart.tsx` |  | ❌ | Not a near-term priority; depends on a charting substrate. |
 | Checkbox | `ui/checkbox.tsx` | `fret_components_shadcn::checkbox::*` | ✅ | Validate focus-visible + keyboard toggle. |
-| Collapsible | `ui/collapsible.tsx` |  | ❌ | Similar to accordion but single section. |
+| Collapsible | `ui/collapsible.tsx` | `fret_components_shadcn::Collapsible*` | ✅ | First pass: `Model<bool>` drives open/close; trigger handles click + Enter/Space. |
 | Combobox | `ui/combobox.tsx` | `fret_components_shadcn::combobox::*` | ✅ | Currently a thin re-export. |
 | Command | `ui/command.tsx` | `fret_components_ui::command_*` | ✅ | API shape differs; focus on behavior parity (cmdk-style). |
 | Context Menu | `ui/context-menu.tsx` | `fret_components_shadcn::context_menu::*` | ✅ | Currently a thin re-export. |
@@ -211,7 +211,7 @@ These checklists are the acceptance criteria for “interaction parity”.
 - [x] `Alert`, `Badge`, `Card`, `Empty`, `Kbd`, `Label` (mostly styling + semantics)
   - Status: first-pass declarative helpers exist in `crates/fret-components-shadcn/src`:
     `alert.rs`, `badge.rs`, `card.rs`, `empty.rs`, `kbd.rs`, `label.rs`.
-- [ ] `Accordion` / `Collapsible` (expansion model + keyboard)
+- [x] `Accordion` / `Collapsible` (expansion model + keyboard)
 - [x] `InputGroup` (icon slots + per-edge padding primitives; depends on Tailwind primitive parity)
 - [x] `RadioGroup` (selection model + keyboard arrows)
 - [x] `ToggleGroup` (selection policy, spacing/border merging, keyboard)
