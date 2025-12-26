@@ -86,6 +86,10 @@ pub enum SceneOp {
     PushClipRect {
         rect: Rect,
     },
+    PushClipRRect {
+        rect: Rect,
+        corner_radii: Corners,
+    },
     PopClip,
 
     Quad {
@@ -241,6 +245,11 @@ fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
         SceneOp::PushClipRect { rect } => {
             let state = mix_u64(state, 1);
             mix_rect(state, rect)
+        }
+        SceneOp::PushClipRRect { rect, corner_radii } => {
+            let mut state = mix_u64(state, 9);
+            state = mix_rect(state, rect);
+            mix_corners(state, corner_radii)
         }
         SceneOp::PopClip => mix_u64(state, 2),
         SceneOp::Quad {
@@ -402,6 +411,10 @@ fn translate_scene_op(op: SceneOp, delta: Point) -> SceneOp {
     match op {
         SceneOp::PushClipRect { rect } => SceneOp::PushClipRect {
             rect: translate_rect(rect, delta),
+        },
+        SceneOp::PushClipRRect { rect, corner_radii } => SceneOp::PushClipRRect {
+            rect: translate_rect(rect, delta),
+            corner_radii,
         },
         SceneOp::PopClip => SceneOp::PopClip,
         SceneOp::Quad {

@@ -34,11 +34,22 @@ impl Default for ClearColor {
     }
 }
 
+const MAX_CLIPS: usize = 8;
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+struct ClipRRectUniform {
+    rect: [f32; 4],
+    corner_radii: [f32; 4],
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct ViewportUniform {
     viewport_size: [f32; 2],
-    _pad: [f32; 2],
+    clip_count: u32,
+    _pad0: u32,
+    clips: [ClipRRectUniform; MAX_CLIPS],
 }
 
 #[repr(C)]
@@ -727,12 +738,14 @@ fn union_scissor(a: ScissorRect, b: ScissorRect) -> ScissorRect {
 
 struct DrawCall {
     scissor: ScissorRect,
+    uniform_index: u32,
     first_instance: u32,
     instance_count: u32,
 }
 
 struct ViewportDraw {
     scissor: ScissorRect,
+    uniform_index: u32,
     first_vertex: u32,
     vertex_count: u32,
     target: fret_core::RenderTargetId,
@@ -741,6 +754,7 @@ struct ViewportDraw {
 #[derive(Clone, Copy)]
 struct ImageDraw {
     scissor: ScissorRect,
+    uniform_index: u32,
     first_vertex: u32,
     vertex_count: u32,
     image: fret_core::ImageId,
@@ -749,6 +763,7 @@ struct ImageDraw {
 #[derive(Clone, Copy)]
 struct MaskDraw {
     scissor: ScissorRect,
+    uniform_index: u32,
     first_vertex: u32,
     vertex_count: u32,
     image: fret_core::ImageId,
@@ -756,6 +771,7 @@ struct MaskDraw {
 
 struct TextDraw {
     scissor: ScissorRect,
+    uniform_index: u32,
     first_vertex: u32,
     vertex_count: u32,
 }
@@ -763,6 +779,7 @@ struct TextDraw {
 #[derive(Clone, Copy)]
 struct PathDraw {
     scissor: ScissorRect,
+    uniform_index: u32,
     first_vertex: u32,
     vertex_count: u32,
 }
@@ -786,9 +803,12 @@ enum OrderedDraw {
 }
 
 pub struct Renderer {
+    adapter: wgpu::Adapter,
     uniform_buffer: wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
     uniform_bind_group_layout: wgpu::BindGroupLayout,
+    uniform_stride: u64,
+    uniform_capacity: usize,
 
     quad_pipeline_format: Option<wgpu::TextureFormat>,
     quad_pipeline: Option<wgpu::RenderPipeline>,
@@ -895,6 +915,7 @@ struct SceneEncoding {
     viewport_vertices: Vec<ViewportVertex>,
     text_vertices: Vec<TextVertex>,
     path_vertices: Vec<PathVertex>,
+    uniforms: Vec<ViewportUniform>,
     ordered_draws: Vec<OrderedDraw>,
 }
 
@@ -904,6 +925,7 @@ impl SceneEncoding {
         self.viewport_vertices.clear();
         self.text_vertices.clear();
         self.path_vertices.clear();
+        self.uniforms.clear();
         self.ordered_draws.clear();
     }
 }
@@ -1015,6 +1037,40 @@ impl Renderer {
         // nearest supported-shape value (rather than rounding up to a potentially unsupported count).
         let pow2_floor = 1u32 << (31 - samples.leading_zeros());
         self.path_msaa_samples = pow2_floor.max(1);
+    }
+
+    fn effective_path_msaa_samples(&self, format: wgpu::TextureFormat) -> u32 {
+        let requested = self.path_msaa_samples.max(1);
+        if requested == 1 {
+            return 1;
+        }
+
+        let features = self.adapter.get_texture_format_features(format);
+        if !features
+            .allowed_usages
+            .contains(wgpu::TextureUsages::RENDER_ATTACHMENT)
+        {
+            return 1;
+        }
+
+        // When MSAA is enabled we render into an intermediate and then sample from the resolved
+        // texture in the composite pass, so the format must be sampleable and support resolves.
+        if !features
+            .allowed_usages
+            .contains(wgpu::TextureUsages::TEXTURE_BINDING)
+            || !features
+                .flags
+                .contains(wgpu::TextureFormatFeatureFlags::MULTISAMPLE_RESOLVE)
+        {
+            return 1;
+        }
+
+        for candidate in [16u32, 8, 4, 2] {
+            if candidate <= requested && features.flags.sample_count_supported(candidate) {
+                return candidate;
+            }
+        }
+        1
     }
 
     fn svg_target_box_px(rect: Rect, scale_factor: f32) -> (u32, u32) {
@@ -1461,9 +1517,8 @@ impl Renderer {
         device: &wgpu::Device,
         viewport_size: (u32, u32),
         format: wgpu::TextureFormat,
+        sample_count: u32,
     ) {
-        let sample_count = self.path_msaa_samples.max(1);
-
         let needs_rebuild = match &self.path_intermediate {
             Some(cur) => {
                 cur.size != viewport_size
@@ -1536,7 +1591,12 @@ impl Renderer {
             bind_group,
         });
     }
-    pub fn new(device: &wgpu::Device) -> Self {
+    pub fn new(adapter: &wgpu::Adapter, device: &wgpu::Device) -> Self {
+        let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
+        // wgpu requires uniform dynamic offsets to be aligned to 256 bytes.
+        let uniform_stride = ((uniform_size + 255) / 256) * 256;
+        let uniform_capacity = 256usize;
+
         let uniform_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("fret quad uniforms layout"),
@@ -1545,14 +1605,8 @@ impl Renderer {
                     visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size:
-                            Some(
-                                std::num::NonZeroU64::new(
-                                    std::mem::size_of::<ViewportUniform>() as u64
-                                )
-                                .unwrap(),
-                            ),
+                        has_dynamic_offset: true,
+                        min_binding_size: Some(std::num::NonZeroU64::new(uniform_size).unwrap()),
                     },
                     count: None,
                 }],
@@ -1560,7 +1614,7 @@ impl Renderer {
 
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret quad uniforms buffer"),
-            size: std::mem::size_of::<ViewportUniform>() as u64,
+            size: uniform_stride * uniform_capacity as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -1570,7 +1624,11 @@ impl Renderer {
             layout: &uniform_bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
-                resource: uniform_buffer.as_entire_binding(),
+                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: &uniform_buffer,
+                    offset: 0,
+                    size: Some(std::num::NonZeroU64::new(uniform_size).unwrap()),
+                }),
             }],
         });
 
@@ -1667,9 +1725,12 @@ impl Renderer {
         });
 
         Self {
+            adapter: adapter.clone(),
             uniform_buffer,
             uniform_bind_group,
             uniform_bind_group_layout,
+            uniform_stride,
+            uniform_capacity,
             quad_pipeline_format: None,
             quad_pipeline: None,
             viewport_pipeline_format: None,
@@ -2214,9 +2275,12 @@ impl Renderer {
         self.path_pipeline = Some(pipeline);
     }
 
-    fn ensure_path_msaa_pipeline(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
-        let sample_count = self.path_msaa_samples.max(1);
-
+    fn ensure_path_msaa_pipeline(
+        &mut self,
+        device: &wgpu::Device,
+        format: wgpu::TextureFormat,
+        sample_count: u32,
+    ) {
         if self.path_msaa_pipeline_format == Some(format)
             && self.path_msaa_pipeline.is_some()
             && self.path_msaa_pipeline_sample_count == Some(sample_count)
@@ -2464,6 +2528,41 @@ impl Renderer {
         self.path_vertex_capacity = new_capacity;
     }
 
+    fn ensure_uniform_capacity(&mut self, device: &wgpu::Device, needed: usize) {
+        if needed <= self.uniform_capacity {
+            return;
+        }
+
+        let new_capacity = needed
+            .next_power_of_two()
+            .max(self.uniform_capacity.saturating_mul(2).max(1));
+        let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
+
+        let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret uniforms buffer (resized)"),
+            size: self.uniform_stride * new_capacity as u64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("fret uniforms bind group (resized)"),
+            layout: &self.uniform_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: &uniform_buffer,
+                    offset: 0,
+                    size: Some(std::num::NonZeroU64::new(uniform_size).unwrap()),
+                }),
+            }],
+        });
+
+        self.uniform_buffer = uniform_buffer;
+        self.uniform_bind_group = uniform_bind_group;
+        self.uniform_capacity = new_capacity;
+    }
+
     pub fn render_scene(
         &mut self,
         device: &wgpu::Device,
@@ -2483,18 +2582,12 @@ impl Renderer {
         self.ensure_text_pipeline(device, format);
         self.ensure_mask_pipeline(device, format);
         self.ensure_path_pipeline(device, format);
-        let path_samples = self.path_msaa_samples.max(1);
+        let path_samples = self.effective_path_msaa_samples(format);
         if path_samples > 1 {
             self.ensure_composite_pipeline(device, format);
-            self.ensure_path_msaa_pipeline(device, format);
-            self.ensure_path_intermediate(device, viewport_size, format);
+            self.ensure_path_msaa_pipeline(device, format, path_samples);
+            self.ensure_path_intermediate(device, viewport_size, format, path_samples);
         }
-
-        let uniform = ViewportUniform {
-            viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
-            _pad: [0.0, 0.0],
-        };
-        queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
 
         self.text_system.flush_uploads(queue);
         if self.svg_perf_enabled {
@@ -2530,6 +2623,16 @@ impl Renderer {
             self.scene_encoding_cache_key = Some(key);
             encoding
         };
+
+        self.ensure_uniform_capacity(device, encoding.uniforms.len());
+        let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
+        let mut uniform_bytes = vec![0u8; (self.uniform_stride * encoding.uniforms.len() as u64) as usize];
+        for (i, u) in encoding.uniforms.iter().enumerate() {
+            let offset = (self.uniform_stride * i as u64) as usize;
+            uniform_bytes[offset..offset + uniform_size as usize]
+                .copy_from_slice(bytemuck::bytes_of(u));
+        }
+        queue.write_buffer(&self.uniform_buffer, 0, &uniform_bytes);
 
         self.prepare_viewport_bind_groups(device, &encoding.ordered_draws);
         self.prepare_image_bind_groups(device, &encoding.ordered_draws);
@@ -2619,7 +2722,6 @@ impl Renderer {
                 .as_ref()
                 .expect("path pipeline must exist");
             let path_msaa_pipeline = self.path_msaa_pipeline.as_ref();
-            let path_samples = self.path_msaa_samples.max(1);
 
             let mut active_pipeline = ActivePipeline::None;
 
@@ -2647,6 +2749,7 @@ impl Renderer {
             }
 
             let mut pass = begin_main_pass(&mut encoder, target_view, wgpu::LoadOp::Clear(clear.0));
+            let mut active_uniform_offset: Option<u32> = None;
 
             let mut i = 0usize;
             while i < encoding.ordered_draws.len() {
@@ -2656,10 +2759,11 @@ impl Renderer {
                     && path_samples > 1
                 {
                     let mut union = first.scissor;
+                    let batch_uniform_index = first.uniform_index;
                     let mut end = i + 1;
                     while end < encoding.ordered_draws.len() {
                         match &encoding.ordered_draws[end] {
-                            OrderedDraw::Path(d) => {
+                            OrderedDraw::Path(d) if d.uniform_index == batch_uniform_index => {
                                 union = union_scissor(union, d.scissor);
                                 end += 1;
                             }
@@ -2714,9 +2818,9 @@ impl Renderer {
                             });
 
                         path_pass.set_pipeline(path_msaa_pipeline);
-                        path_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
                         path_pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
 
+                        let mut active_uniform_offset: Option<u32> = None;
                         for j in i..end {
                             let OrderedDraw::Path(draw) = &encoding.ordered_draws[j] else {
                                 unreachable!();
@@ -2730,6 +2834,16 @@ impl Renderer {
                                 draw.scissor.w,
                                 draw.scissor.h,
                             );
+                            let uniform_offset =
+                                (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                            if active_uniform_offset != Some(uniform_offset) {
+                                path_pass.set_bind_group(
+                                    0,
+                                    &self.uniform_bind_group,
+                                    &[uniform_offset],
+                                );
+                                active_uniform_offset = Some(uniform_offset);
+                            }
                             path_pass.draw(
                                 draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                                 0..1,
@@ -2739,6 +2853,7 @@ impl Renderer {
 
                     pass = begin_main_pass(&mut encoder, target_view, wgpu::LoadOp::Load);
                     active_pipeline = ActivePipeline::None;
+                    active_uniform_offset = None;
 
                     if union.w > 0 && union.h > 0 {
                         let x0 = union.x as f32;
@@ -2798,7 +2913,9 @@ impl Renderer {
                         );
 
                         pass.set_pipeline(composite_pipeline);
-                        pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+                        let uniform_offset =
+                            (u64::from(batch_uniform_index) * self.uniform_stride) as u32;
+                        pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
                         pass.set_bind_group(1, &intermediate.bind_group, &[]);
                         pass.set_vertex_buffer(0, self.path_composite_vertices.slice(..));
                         pass.set_scissor_rect(union.x, union.y, union.w, union.h);
@@ -2819,11 +2936,16 @@ impl Renderer {
 
                         if !matches!(active_pipeline, ActivePipeline::Quad) {
                             pass.set_pipeline(quad_pipeline);
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
                             pass.set_vertex_buffer(0, instance_buffer.slice(..));
                             active_pipeline = ActivePipeline::Quad;
                         }
 
+                        let uniform_offset =
+                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                        if active_uniform_offset != Some(uniform_offset) {
+                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                            active_uniform_offset = Some(uniform_offset);
+                        }
                         pass.set_scissor_rect(
                             draw.scissor.x,
                             draw.scissor.y,
@@ -2843,11 +2965,16 @@ impl Renderer {
 
                         if !matches!(active_pipeline, ActivePipeline::Viewport) {
                             pass.set_pipeline(viewport_pipeline);
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
                             pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
                             active_pipeline = ActivePipeline::Viewport;
                         }
 
+                        let uniform_offset =
+                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                        if active_uniform_offset != Some(uniform_offset) {
+                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                            active_uniform_offset = Some(uniform_offset);
+                        }
                         let Some((_, bind_group)) = self.viewport_bind_groups.get(&draw.target)
                         else {
                             // Missing bind group should only happen if the target vanished
@@ -2875,11 +3002,16 @@ impl Renderer {
 
                         if !matches!(active_pipeline, ActivePipeline::Viewport) {
                             pass.set_pipeline(viewport_pipeline);
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
                             pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
                             active_pipeline = ActivePipeline::Viewport;
                         }
 
+                        let uniform_offset =
+                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                        if active_uniform_offset != Some(uniform_offset) {
+                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                            active_uniform_offset = Some(uniform_offset);
+                        }
                         let Some((_, bind_group)) = self.image_bind_groups.get(&draw.image) else {
                             i += 1;
                             continue;
@@ -2904,11 +3036,16 @@ impl Renderer {
 
                         if !matches!(active_pipeline, ActivePipeline::Mask) {
                             pass.set_pipeline(mask_pipeline);
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
                             pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
                             active_pipeline = ActivePipeline::Mask;
                         }
 
+                        let uniform_offset =
+                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                        if active_uniform_offset != Some(uniform_offset) {
+                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                            active_uniform_offset = Some(uniform_offset);
+                        }
                         let Some((_, bind_group)) = self.image_bind_groups.get(&draw.image) else {
                             i += 1;
                             continue;
@@ -2933,12 +3070,17 @@ impl Renderer {
 
                         if !matches!(active_pipeline, ActivePipeline::Text) {
                             pass.set_pipeline(text_pipeline);
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
                             pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
                             pass.set_bind_group(1, self.text_system.atlas_bind_group(), &[]);
                             active_pipeline = ActivePipeline::Text;
                         }
 
+                        let uniform_offset =
+                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                        if active_uniform_offset != Some(uniform_offset) {
+                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                            active_uniform_offset = Some(uniform_offset);
+                        }
                         pass.set_scissor_rect(
                             draw.scissor.x,
                             draw.scissor.y,
@@ -2958,11 +3100,16 @@ impl Renderer {
 
                         if !matches!(active_pipeline, ActivePipeline::Path) {
                             pass.set_pipeline(path_pipeline);
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
                             pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
                             active_pipeline = ActivePipeline::Path;
                         }
 
+                        let uniform_offset =
+                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                        if active_uniform_offset != Some(uniform_offset) {
+                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                            active_uniform_offset = Some(uniform_offset);
+                        }
                         pass.set_scissor_rect(
                             draw.scissor.x,
                             draw.scissor.y,
@@ -3085,6 +3232,7 @@ impl Renderer {
         let viewport_vertices = &mut encoding.viewport_vertices;
         let text_vertices = &mut encoding.text_vertices;
         let path_vertices = &mut encoding.path_vertices;
+        let uniforms = &mut encoding.uniforms;
         let ordered_draws = &mut encoding.ordered_draws;
 
         let mut scissor_stack: Vec<ScissorRect> =
@@ -3094,15 +3242,27 @@ impl Renderer {
             .last()
             .expect("scissor stack must be non-empty");
 
-        let mut quad_batch: Option<(ScissorRect, u32)> = None;
+        let mut active_rounded_clips: Vec<ClipRRectUniform> = Vec::new();
+        let mut clip_kind_stack: Vec<bool> = Vec::new();
+
+        uniforms.push(ViewportUniform {
+            viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
+            clip_count: 0,
+            _pad0: 0,
+            clips: [ClipRRectUniform::zeroed(); MAX_CLIPS],
+        });
+        let mut current_uniform_index: u32 = 0;
+
+        let mut quad_batch: Option<(ScissorRect, u32, u32)> = None;
 
         macro_rules! flush_quad_batch {
             () => {{
-                if let Some((scissor, first_instance)) = quad_batch.take() {
+                if let Some((scissor, uniform_index, first_instance)) = quad_batch.take() {
                     let instance_count = (instances.len() as u32).saturating_sub(first_instance);
                     if instance_count > 0 {
                         ordered_draws.push(OrderedDraw::Quad(DrawCall {
                             scissor,
+                            uniform_index,
                             first_instance,
                             instance_count,
                         }));
@@ -3126,6 +3286,48 @@ impl Renderer {
 
                     current_scissor = combined;
                     scissor_stack.push(current_scissor);
+                    clip_kind_stack.push(false);
+                }
+                SceneOp::PushClipRRect { rect, corner_radii } => {
+                    let Some(new_scissor) = scissor_from_rect(*rect, scale_factor, viewport_size)
+                    else {
+                        continue;
+                    };
+
+                    let combined = intersect_scissor(current_scissor, new_scissor);
+                    if combined != current_scissor {
+                        flush_quad_batch!();
+                    }
+
+                    current_scissor = combined;
+                    scissor_stack.push(current_scissor);
+
+                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
+                    let radii = clamp_corner_radii_for_rect(w, h, corners_to_vec4(*corner_radii));
+                    let is_rrect = radii.iter().any(|v| *v > 0.0);
+                    if is_rrect && active_rounded_clips.len() < MAX_CLIPS {
+                        flush_quad_batch!();
+
+                        active_rounded_clips.push(ClipRRectUniform {
+                            rect: [x, y, w, h],
+                            corner_radii: radii,
+                        });
+
+                        let mut clips = [ClipRRectUniform::zeroed(); MAX_CLIPS];
+                        for (i, clip) in active_rounded_clips.iter().enumerate() {
+                            clips[i] = *clip;
+                        }
+                        current_uniform_index = uniforms.len() as u32;
+                        uniforms.push(ViewportUniform {
+                            viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
+                            clip_count: active_rounded_clips.len() as u32,
+                            _pad0: 0,
+                            clips,
+                        });
+                        clip_kind_stack.push(true);
+                    } else {
+                        clip_kind_stack.push(false);
+                    }
                 }
                 SceneOp::PopClip => {
                     if scissor_stack.len() > 1 {
@@ -3137,6 +3339,25 @@ impl Renderer {
                             flush_quad_batch!();
                             current_scissor = new_scissor;
                         }
+                    }
+
+                    if let Some(was_rrect) = clip_kind_stack.pop()
+                        && was_rrect
+                    {
+                        flush_quad_batch!();
+                        active_rounded_clips.pop();
+
+                        let mut clips = [ClipRRectUniform::zeroed(); MAX_CLIPS];
+                        for (i, clip) in active_rounded_clips.iter().enumerate() {
+                            clips[i] = *clip;
+                        }
+                        current_uniform_index = uniforms.len() as u32;
+                        uniforms.push(ViewportUniform {
+                            viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
+                            clip_count: active_rounded_clips.len() as u32,
+                            _pad0: 0,
+                            clips,
+                        });
                     }
                 }
                 SceneOp::Quad {
@@ -3156,13 +3377,19 @@ impl Renderer {
                     }
 
                     let needs_new_batch = match quad_batch {
-                        Some((scissor, _)) => scissor != current_scissor,
+                        Some((scissor, uniform_index, _)) => {
+                            scissor != current_scissor || uniform_index != current_uniform_index
+                        }
                         None => true,
                     };
 
                     if needs_new_batch {
                         flush_quad_batch!();
-                        quad_batch = Some((current_scissor, instances.len() as u32));
+                        quad_batch = Some((
+                            current_scissor,
+                            current_uniform_index,
+                            instances.len() as u32,
+                        ));
                     }
 
                     let corner_radii =
@@ -3246,6 +3473,7 @@ impl Renderer {
 
                     ordered_draws.push(OrderedDraw::Image(ImageDraw {
                         scissor: current_scissor,
+                        uniform_index: current_uniform_index,
                         first_vertex,
                         vertex_count: 6,
                         image: *image,
@@ -3324,6 +3552,7 @@ impl Renderer {
 
                     ordered_draws.push(OrderedDraw::Image(ImageDraw {
                         scissor: current_scissor,
+                        uniform_index: current_uniform_index,
                         first_vertex,
                         vertex_count: 6,
                         image: *image,
@@ -3399,6 +3628,7 @@ impl Renderer {
 
                     ordered_draws.push(OrderedDraw::Mask(MaskDraw {
                         scissor: current_scissor,
+                        uniform_index: current_uniform_index,
                         first_vertex,
                         vertex_count: 6,
                         image: *image,
@@ -3487,6 +3717,7 @@ impl Renderer {
                         .unwrap_or(current_scissor);
                     ordered_draws.push(OrderedDraw::Mask(MaskDraw {
                         scissor: svg_scissor,
+                        uniform_index: current_uniform_index,
                         first_vertex,
                         vertex_count: 6,
                         image: entry.image,
@@ -3572,6 +3803,7 @@ impl Renderer {
                         .unwrap_or(current_scissor);
                     ordered_draws.push(OrderedDraw::Image(ImageDraw {
                         scissor: svg_scissor,
+                        uniform_index: current_uniform_index,
                         first_vertex,
                         vertex_count: 6,
                         image: entry.image,
@@ -3641,6 +3873,7 @@ impl Renderer {
                     if vertex_count > 0 {
                         ordered_draws.push(OrderedDraw::Text(TextDraw {
                             scissor: current_scissor,
+                            uniform_index: current_uniform_index,
                             first_vertex,
                             vertex_count,
                         }));
@@ -3700,6 +3933,7 @@ impl Renderer {
                     if vertex_count > 0 {
                         ordered_draws.push(OrderedDraw::Path(PathDraw {
                             scissor: clipped_scissor,
+                            uniform_index: current_uniform_index,
                             first_vertex,
                             vertex_count,
                         }));
@@ -3772,6 +4006,7 @@ impl Renderer {
 
                     ordered_draws.push(OrderedDraw::Viewport(ViewportDraw {
                         scissor: current_scissor,
+                        uniform_index: current_uniform_index,
                         first_vertex,
                         vertex_count: 6,
                         target: *target,
@@ -3969,9 +4204,18 @@ impl fret_core::SvgService for Renderer {
 }
 
 const QUAD_SHADER: &str = r#"
+const MAX_CLIPS: u32 = 8u;
+
+struct ClipRRect {
+  rect: vec4<f32>,
+  corner_radii: vec4<f32>,
+};
+
 struct Viewport {
   viewport_size: vec2<f32>,
-  _pad: vec2<f32>,
+  clip_count: u32,
+  _pad0: u32,
+  clips: array<ClipRRect, MAX_CLIPS>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -4070,8 +4314,31 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  for (var i = 0u; i < MAX_CLIPS; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
+    let clip = viewport.clips[i];
+    let sdf = quad_sdf(pixel_pos, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    let aa = max(fwidth(sdf), 1e-4);
+    let a = 1.0 - smoothstep(-aa, aa, sdf);
+    alpha = alpha * a;
+    if (alpha <= 0.0) {
+      break;
+    }
+  }
+  return alpha;
+}
+
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(input.pixel_pos);
+  if (clip <= 0.0) {
+    discard;
+  }
+
   let outer_sdf = quad_sdf(input.pixel_pos, input.rect_origin, input.rect_size, input.corner_radii);
 
   // NOTE: AA must scale with derivatives. A fixed threshold (e.g. 0.5) breaks under DPI changes
@@ -4081,7 +4348,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 
   let border_sum = input.border.x + input.border.y + input.border.z + input.border.w;
   if (border_sum <= 0.0) {
-    return vec4<f32>(input.color.rgb, input.color.a) * alpha_outer;
+    return vec4<f32>(input.color.rgb, input.color.a) * (alpha_outer * clip);
   }
 
   // Border alignment: inside. Inner radii are derived by subtracting adjacent border widths.
@@ -4109,7 +4376,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let fill = vec4<f32>(input.color.rgb, input.color.a) * alpha_inner;
   let border = vec4<f32>(input.border_color.rgb, input.border_color.a) * border_cov;
 
-  return fill + border;
+  return (fill + border) * clip;
 }
 "#;
 

@@ -47,6 +47,7 @@ Build a GPUI/Zed-aligned rendering foundation for:
 - SVG raster caching inside `fret-render` with byte-budget + LRU epoch.
 - `SvgFit` modes: `Contain` (default), `Width`, `Stretch`.
 - Path MSAA samples configurable, and MSAA==1 uses direct draw fast path.
+- Path MSAA is capability-driven per format (auto fallback to supported sample counts).
 - SVG alpha-mask **atlas pages** (reduce bind group / texture switching for many icons).
 
 ### Next
@@ -56,7 +57,6 @@ Build a GPUI/Zed-aligned rendering foundation for:
    - If fragmentation becomes a problem, add a free-rect allocator or periodic rebuild.
 2. Capability-driven defaults
    - Decide default `path_msaa_samples` (compat-first vs quality-first).
-   - Consider GPU limits / backend quirks (fallback when sample_count unsupported).
 3. Plot substrate (renderer stays generic)
    - Keep renderer responsible only for “draw paths efficiently”.
    - Build plot widget responsible for:

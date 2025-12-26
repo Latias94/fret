@@ -237,7 +237,7 @@ fn run_headless(
     wait_every: u64,
 ) -> anyhow::Result<()> {
     let ctx = pollster::block_on(WgpuContext::new())?;
-    let mut renderer = Renderer::new(&ctx.device);
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
     renderer.set_svg_raster_budget_bytes(budget_bytes);
     renderer.set_svg_perf_enabled(true);
 

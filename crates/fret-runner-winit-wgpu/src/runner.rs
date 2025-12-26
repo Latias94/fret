@@ -2149,7 +2149,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     }
                 },
             };
-        let mut renderer = Renderer::new(&context.device);
+        let mut renderer = Renderer::new(&context.adapter, &context.device);
         renderer.set_svg_raster_budget_bytes(self.config.svg_raster_budget_bytes);
         renderer.set_path_msaa_samples(self.config.path_msaa_samples);
 
