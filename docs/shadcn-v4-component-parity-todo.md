@@ -98,7 +98,7 @@ Status legend:
 | Command | `ui/command.tsx` | `fret_components_ui::command_*` | ✅ | API shape differs; focus on behavior parity (cmdk-style). |
 | Context Menu | `ui/context-menu.tsx` | `fret_components_shadcn::context_menu::*` | ✅ | Currently a thin re-export. |
 | Dialog | `ui/dialog.tsx` | `fret_components_ui::dialog_*` | ✅ | Overlay/service model differs; ensure dismissal + inert background. |
-| Drawer | `ui/drawer.tsx` |  | ❌ | Could map to “sheet”/panel overlay later. |
+| Drawer | `ui/drawer.tsx` | `fret_components_shadcn::open_drawer` | ✅ | Compatibility alias: mapped to a bottom sheet (no drag gestures yet). |
 | Dropdown Menu | `ui/dropdown-menu.tsx` | `fret_components_ui::dropdown_menu::*` | ✅ | Ensure keyboard navigation parity. |
 | Empty | `ui/empty.tsx` | `fret_components_shadcn::Empty` | ✅ | First-pass composition helper; add icon/action slots later. |
 | Field | `ui/field.tsx` |  | ❌ | Needs label/control/help-text composition patterns. |
@@ -121,7 +121,7 @@ Status legend:
 | Scroll Area | `ui/scroll-area.tsx` | `fret_components_shadcn::scroll_area::*` | ✅ | Currently a thin re-export. |
 | Select | `ui/select.tsx` | `fret_components_shadcn::select::*` | ✅ | Ensure focus + typeahead parity. |
 | Separator | `ui/separator.tsx` | `fret_components_shadcn::Separator` | ✅ | Mostly styling. |
-| Sheet | `ui/sheet.tsx` |  | ❌ | Candidate to implement via overlay + dock/panel semantics. |
+| Sheet | `ui/sheet.tsx` | `fret_components_shadcn::sheet::*` | ✅ | Modal overlay shell + app-provided content under `WindowOverlays`. |
 | Sidebar | `ui/sidebar.tsx` |  | ❌ | Big surface; likely later after nav/tree contracts stabilize. |
 | Skeleton | `ui/skeleton.tsx` | `fret_components_shadcn::Skeleton` | ✅ | `bg-accent + rounded-md + animate-pulse` (frame-driven). |
 | Slider | `ui/slider.tsx` | `fret_components_shadcn::slider::*` | ✅ | Currently a thin re-export. |

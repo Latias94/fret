@@ -22,8 +22,8 @@ use fret_components_shadcn::{
 };
 use fret_components_ui::{
     ChromeRefinement, ContextMenuService, DialogAction, DialogRequest, DialogService,
-    PopoverService, Size as ComponentSize, StyledExt as _, ToastAction, TooltipService,
-    WindowOverlays,
+    PopoverService, SheetRequest, SheetService, SheetSide, Size as ComponentSize, StyledExt as _,
+    ToastAction, TooltipService, WindowOverlays,
     button::{Button, ButtonIntent, ButtonVariant},
     checkbox::Checkbox,
     combobox::Combobox,
@@ -371,8 +371,10 @@ fn build_ui_kit_contents(
     let open_dialog = ui.create_node(Button::new("Open Dialog").on_click("ui_kit.dialog.open"));
     let open_alert_dialog =
         ui.create_node(Button::new("Open AlertDialog").on_click("ui_kit.alert_dialog.open"));
+    let open_sheet = ui.create_node(Button::new("Open Sheet").on_click("ui_kit.sheet.open"));
     ui.add_child(dialogs_row, open_dialog);
     ui.add_child(dialogs_row, open_alert_dialog);
+    ui.add_child(dialogs_row, open_sheet);
     ui.add_child(col, dialogs_row);
 
     let text_model = app.models_mut().insert("Hello, components.".to_string());
@@ -547,6 +549,11 @@ fn build_ui_kit_contents(
             .keyword("alert-dialog")
             .keyword("dialog")
             .detail("Show an alert-style dialog (cancel closes silently)"),
+        CommandItem::new("ui_kit.sheet.open", "Open Sheet")
+            .group("Overlays")
+            .keyword("sheet")
+            .keyword("drawer")
+            .detail("Show a shadcn-style side sheet overlay"),
         CommandItem::new("command_palette.open", "Open Command Palette")
             .group("Overlays")
             .keyword("palette")
@@ -885,6 +892,18 @@ impl WinitDriver for UiKitDriver {
 
         let overlays = WindowOverlays::install(&mut ui);
 
+        // Sheet overlay content (installed once; shown/hidden via `sheet.open` / `sheet.close`).
+        let sheet_root = ui.create_node(Column::new().with_spacing(Px(10.0)));
+        ui.add_child(overlays.sheet_node(), sheet_root);
+        let sheet_title = ui.create_node(Text::new("Sheet"));
+        ui.add_child(sheet_root, sheet_title);
+        let sheet_desc = ui.create_node(Text::new(
+            "This is a shadcn-style Sheet overlay shell (content is app-provided).",
+        ));
+        ui.add_child(sheet_root, sheet_desc);
+        let sheet_close = ui.create_node(Button::new("Close").on_click("sheet.close"));
+        ui.add_child(sheet_root, sheet_close);
+
         let theme_candidates = discover_theme_candidates();
         let current_theme_name = Theme::global(app).name.clone();
         let initial_theme_index = theme_candidates
@@ -1060,6 +1079,20 @@ impl WinitDriver for UiKitDriver {
                 app.push_effect(Effect::Command {
                     window: Some(window),
                     command: fret_app::CommandId::from("dialog.open"),
+                });
+            }
+            "ui_kit.sheet.open" => {
+                let request = SheetRequest::new(state.root)
+                    .side(SheetSide::Right)
+                    .close_on_escape(true)
+                    .close_on_click_outside(true);
+
+                app.with_global_mut(SheetService::default, |service, _app| {
+                    service.set_request(window, request);
+                });
+                app.push_effect(Effect::Command {
+                    window: Some(window),
+                    command: fret_app::CommandId::from("sheet.open"),
                 });
             }
             "ui_kit.dialog.delete_confirmed" => {

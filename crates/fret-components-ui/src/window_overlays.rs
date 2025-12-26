@@ -7,7 +7,7 @@ use fret_ui::{
 
 use crate::{
     CommandPaletteOverlay, ContextMenu, ContextMenuService, DialogOverlay, DialogService, Popover,
-    PopoverService, ToastOverlay, TooltipOverlay,
+    PopoverService, SheetOverlay, SheetService, ToastOverlay, TooltipOverlay,
 };
 
 /// Standard window-level UI overlays (tooltips, popovers, context menus).
@@ -30,6 +30,10 @@ pub struct WindowOverlays {
     dialog_layer: UiLayerId,
     dialog_node: NodeId,
     dialog_previous_focus: Option<NodeId>,
+
+    sheet_layer: UiLayerId,
+    sheet_node: NodeId,
+    sheet_previous_focus: Option<NodeId>,
 
     popover_layer: UiLayerId,
     popover_node: NodeId,
@@ -60,6 +64,10 @@ impl WindowOverlays {
         let dialog_layer = ui.push_overlay_root(dialog_node, true);
         ui.set_layer_visible(dialog_layer, false);
 
+        let sheet_node = ui.create_node(SheetOverlay::new());
+        let sheet_layer = ui.push_overlay_root(sheet_node, true);
+        ui.set_layer_visible(sheet_layer, false);
+
         let popover_node = ui.create_node(Popover::new());
         let popover_layer = ui.push_overlay_root(popover_node, true);
         ui.set_layer_visible(popover_layer, false);
@@ -77,6 +85,9 @@ impl WindowOverlays {
             dialog_layer,
             dialog_node,
             dialog_previous_focus: None,
+            sheet_layer,
+            sheet_node,
+            sheet_previous_focus: None,
             popover_layer,
             popover_node,
             popover_previous_focus: None,
@@ -88,6 +99,10 @@ impl WindowOverlays {
 
     pub fn command_palette_node(&self) -> NodeId {
         self.command_palette_node
+    }
+
+    pub fn sheet_node(&self) -> NodeId {
+        self.sheet_node
     }
 
     pub fn handle_command<H: UiHost>(
@@ -183,6 +198,48 @@ impl WindowOverlays {
                 });
 
                 if let Some(prev) = self.dialog_previous_focus.take() {
+                    ui.set_focus(Some(prev));
+                }
+
+                app.request_redraw(window);
+                true
+            }
+            "sheet.open" => {
+                let has_request = app
+                    .global::<SheetService>()
+                    .and_then(|s| s.request(window))
+                    .is_some();
+                if !has_request {
+                    return true;
+                }
+
+                let visible = ui.is_layer_visible(self.sheet_layer);
+                if !visible {
+                    self.sheet_previous_focus = ui.focus();
+                    ui.set_layer_visible(self.sheet_layer, true);
+                }
+                let request_focus = app
+                    .global::<SheetService>()
+                    .and_then(|s| s.request(window))
+                    .map(|(_, req)| req.request_focus)
+                    .unwrap_or(true);
+                if request_focus {
+                    ui.set_focus(Some(self.sheet_node));
+                }
+                app.request_redraw(window);
+                true
+            }
+            "sheet.close" => {
+                if ui.is_layer_visible(self.sheet_layer) {
+                    ui.cleanup_subtree(text, self.sheet_node);
+                    ui.set_layer_visible(self.sheet_layer, false);
+                }
+
+                app.with_global_mut(SheetService::default, |service, _app| {
+                    service.clear(window);
+                });
+
+                if let Some(prev) = self.sheet_previous_focus.take() {
                     ui.set_focus(Some(prev));
                 }
 

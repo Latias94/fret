@@ -131,10 +131,10 @@ This table is intentionally “semantic”, not a 1:1 class inventory.
 - `min-w-0` → `LayoutRefinement::min_w_0()`
 - `w-full`, `h-full` → `LayoutRefinement::{w_full,h_full}` (maps to `Length::Fill`)
 
-Open decision:
+Runtime default:
 
-- The runtime default for `flex_shrink` should match DOM/Tailwind expectations (`shrink=1`).
-  Fixed items must opt out via `flex_shrink_0` (and often `min_w_0` for text rows).
+- `flex_shrink` defaults to `1` (DOM/Tailwind-aligned). Fixed items opt out via
+  `LayoutRefinement::flex_shrink_0()` (and often `min_w_0` for truncating text rows).
 
 ### Position / inset
 

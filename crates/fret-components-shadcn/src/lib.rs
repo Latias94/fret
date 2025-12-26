@@ -134,6 +134,9 @@ pub mod dialog {
     pub use fret_components_ui::dialog_overlay::*;
 }
 
+pub mod drawer;
+pub mod sheet;
+
 pub mod dropdown_menu {
     pub use fret_components_ui::dropdown_menu::*;
 }
@@ -154,6 +157,9 @@ pub use menubar::Menubar;
 pub use overlays::WindowOverlays;
 pub use separator::Separator;
 pub use textarea::Textarea;
+
+pub use drawer::open_drawer;
+pub use sheet::{SheetOverlay, SheetRequest, SheetService, SheetSide, SheetStyle, open_sheet};
 
 // Common infra re-exports so typical shadcn usage only needs one dependency.
 pub use fret_components_ui::{ChromeRefinement, LayoutRefinement, Radius, Size, Space, StyledExt};
