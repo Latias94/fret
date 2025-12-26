@@ -9,6 +9,7 @@
 //! recipes glue, etc.).
 
 pub mod alert;
+pub mod alert_dialog;
 pub mod badge;
 pub mod button;
 pub mod card;
@@ -21,6 +22,7 @@ pub mod toggle;
 pub mod toggle_group;
 
 pub use alert::{Alert, AlertDescription, AlertTitle, AlertVariant};
+pub use alert_dialog::{AlertDialogDefaultAction, AlertDialogRequest};
 pub use badge::{Badge, BadgeVariant};
 pub use button::{Button, ButtonSize, ButtonVariant};
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};

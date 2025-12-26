@@ -313,7 +313,10 @@ fn build_ui_kit_contents(
 
     let dialogs_row = ui.create_node(Row::new().with_spacing(Px(10.0)));
     let open_dialog = ui.create_node(Button::new("Open Dialog").on_click("ui_kit.dialog.open"));
+    let open_alert_dialog =
+        ui.create_node(Button::new("Open AlertDialog").on_click("ui_kit.alert_dialog.open"));
     ui.add_child(dialogs_row, open_dialog);
+    ui.add_child(dialogs_row, open_alert_dialog);
     ui.add_child(col, dialogs_row);
 
     let text_model = app.models_mut().insert("Hello, components.".to_string());
@@ -420,6 +423,11 @@ fn build_ui_kit_contents(
             .group("Overlays")
             .keyword("dialog")
             .detail("Show a modal dialog overlay"),
+        CommandItem::new("ui_kit.alert_dialog.open", "Open AlertDialog")
+            .group("Overlays")
+            .keyword("alert-dialog")
+            .keyword("dialog")
+            .detail("Show an alert-style dialog (cancel closes silently)"),
         CommandItem::new("command_palette.open", "Open Command Palette")
             .group("Overlays")
             .keyword("palette")
@@ -909,11 +917,40 @@ impl WinitDriver for UiKitDriver {
                     command: fret_app::CommandId::from("dialog.open"),
                 });
             }
+            "ui_kit.alert_dialog.open" => {
+                let request = DialogRequest {
+                    owner: state.root,
+                    title: Arc::from("Delete project?"),
+                    message: Arc::from(
+                        "This action cannot be undone.\n\nAre you sure you want to continue?",
+                    ),
+                    actions: vec![
+                        DialogAction::cancel("Cancel"),
+                        DialogAction::new(
+                            "Continue",
+                            fret_app::CommandId::from("ui_kit.alert_dialog.confirmed"),
+                        ),
+                    ],
+                    default_action: Some(1),
+                    cancel_command: None,
+                };
+
+                app.with_global_mut(DialogService::default, |service, _app| {
+                    service.set_request(window, request);
+                });
+                app.push_effect(Effect::Command {
+                    window: Some(window),
+                    command: fret_app::CommandId::from("dialog.open"),
+                });
+            }
             "ui_kit.dialog.delete_confirmed" => {
                 tracing::info!("dialog confirmed");
             }
             "ui_kit.dialog.cancelled" => {
                 tracing::info!("dialog cancelled");
+            }
+            "ui_kit.alert_dialog.confirmed" => {
+                tracing::info!("alert dialog confirmed");
             }
             "ui_kit.toast.success" => {
                 sonner::toast_success(app, window, "Build completed");

@@ -15,7 +15,7 @@ use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
 #[derive(Debug, Clone)]
 pub struct DialogAction {
     pub label: Arc<str>,
-    pub command: CommandId,
+    pub command: Option<CommandId>,
     pub enabled: bool,
 }
 
@@ -23,7 +23,15 @@ impl DialogAction {
     pub fn new(label: impl Into<Arc<str>>, command: CommandId) -> Self {
         Self {
             label: label.into(),
-            command,
+            command: Some(command),
+            enabled: true,
+        }
+    }
+
+    pub fn cancel(label: impl Into<Arc<str>>) -> Self {
+        Self {
+            label: label.into(),
+            command: None,
             enabled: true,
         }
     }
@@ -448,7 +456,7 @@ impl<H: UiHost> Widget<H> for DialogOverlay {
                         self.close_with_optional_action(
                             cx,
                             window,
-                            Some(request.actions[i].command.clone()),
+                            request.actions[i].command.clone(),
                         );
                         return;
                     }
@@ -474,7 +482,7 @@ impl<H: UiHost> Widget<H> for DialogOverlay {
                             self.close_with_optional_action(
                                 cx,
                                 window,
-                                Some(request.actions[i].command.clone()),
+                                request.actions[i].command.clone(),
                             );
                         }
                     }

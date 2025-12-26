@@ -81,7 +81,7 @@ Status legend:
 | --- | --- | --- | --- | --- |
 | Accordion | `ui/accordion.tsx` |  | ❌ | Needs disclosure/animation + keyboard rules. |
 | Alert | `ui/alert.tsx` | `fret_components_shadcn::Alert` | ✅ | First-pass composition helper; verify token parity. |
-| Alert Dialog | `ui/alert-dialog.tsx` |  | ❌ | Map to dialog overlay with “destructive confirm” policy. |
+| Alert Dialog | `ui/alert-dialog.tsx` | `fret_components_shadcn::AlertDialogRequest` | ✅ | Policy wrapper over `DialogOverlay`: cancel closes without a command by default. |
 | Aspect Ratio | `ui/aspect-ratio.tsx` |  | ❌ | Depends on Tailwind layout primitives + image/media element. |
 | Avatar | `ui/avatar.tsx` |  | ❌ | Needs image + fallback initials/icon. |
 | Badge | `ui/badge.tsx` | `fret_components_shadcn::Badge` | ✅ | First-pass composition helper; verify variants. |
