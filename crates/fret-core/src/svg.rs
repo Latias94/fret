@@ -1,5 +1,16 @@
 use crate::ids::SvgId;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum SvgFit {
+    /// Uniformly scale to fully fit inside the target rect (no cropping).
+    #[default]
+    Contain,
+    /// Uniformly scale based on target width (height may overflow and should be clipped).
+    Width,
+    /// Non-uniformly scale to match the target rect (may distort).
+    Stretch,
+}
+
 /// SVG asset registration service.
 ///
 /// This keeps `SceneOp` cheap (it stores `SvgId`, not raw bytes) while allowing renderers to

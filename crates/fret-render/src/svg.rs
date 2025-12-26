@@ -1,5 +1,6 @@
 use std::sync::{Arc, LazyLock};
 
+use fret_core::SvgFit;
 use resvg::tiny_skia::{Pixmap, Transform};
 
 pub const SMOOTH_SVG_SCALE_FACTOR: f32 = 2.0;
@@ -32,6 +33,51 @@ pub struct UploadedRgbaImage {
 #[derive(Clone)]
 pub struct SvgRenderer {
     usvg_options: Arc<usvg::Options<'static>>,
+}
+
+fn render_scale(
+    svg_size: usvg::Size,
+    target_box_px: (u32, u32),
+    smooth_scale_factor: f32,
+    fit: SvgFit,
+) -> Result<(f32, f32, u32, u32), usvg::Error> {
+    let (w, h) = target_box_px;
+    if w == 0 || h == 0 {
+        return Err(usvg::Error::InvalidSize);
+    }
+
+    let box_w = w as f32 * smooth_scale_factor;
+    let box_h = h as f32 * smooth_scale_factor;
+    let scale_x = box_w / svg_size.width();
+    let scale_y = box_h / svg_size.height();
+    if !scale_x.is_finite() || !scale_y.is_finite() || scale_x <= 0.0 || scale_y <= 0.0 {
+        return Err(usvg::Error::InvalidSize);
+    }
+
+    let (sx, sy, out_w, out_h) = match fit {
+        SvgFit::Contain => {
+            let scale = scale_x.min(scale_y);
+            let out_w = (svg_size.width() * scale).ceil() as u32;
+            let out_h = (svg_size.height() * scale).ceil() as u32;
+            (scale, scale, out_w, out_h)
+        }
+        SvgFit::Width => {
+            let out_w = (svg_size.width() * scale_x).ceil() as u32;
+            let out_h = (svg_size.height() * scale_x).ceil() as u32;
+            (scale_x, scale_x, out_w, out_h)
+        }
+        SvgFit::Stretch => {
+            let out_w = box_w.ceil() as u32;
+            let out_h = box_h.ceil() as u32;
+            (scale_x, scale_y, out_w, out_h)
+        }
+    };
+
+    if out_w == 0 || out_h == 0 {
+        return Err(usvg::Error::InvalidSize);
+    }
+
+    Ok((sx, sy, out_w, out_h))
 }
 
 impl SvgRenderer {
@@ -68,30 +114,23 @@ impl SvgRenderer {
         target_box_px: (u32, u32),
         smooth_scale_factor: f32,
     ) -> Result<SvgAlphaMask, usvg::Error> {
-        let (w, h) = target_box_px;
-        if w == 0 || h == 0 {
-            return Err(usvg::Error::InvalidSize);
-        }
+        self.render_alpha_mask_fit_mode(bytes, target_box_px, smooth_scale_factor, SvgFit::Contain)
+    }
 
+    pub fn render_alpha_mask_fit_mode(
+        &self,
+        bytes: &[u8],
+        target_box_px: (u32, u32),
+        smooth_scale_factor: f32,
+        fit: SvgFit,
+    ) -> Result<SvgAlphaMask, usvg::Error> {
         let tree = usvg::Tree::from_data(bytes, &self.usvg_options)?;
         let svg_size = tree.size();
-        let box_w = w as f32 * smooth_scale_factor;
-        let box_h = h as f32 * smooth_scale_factor;
-        let scale_x = box_w / svg_size.width();
-        let scale_y = box_h / svg_size.height();
-        let scale = scale_x.min(scale_y);
-        if !scale.is_finite() || scale <= 0.0 {
-            return Err(usvg::Error::InvalidSize);
-        }
-
-        let out_w = (svg_size.width() * scale) as u32;
-        let out_h = (svg_size.height() * scale) as u32;
-        if out_w == 0 || out_h == 0 {
-            return Err(usvg::Error::InvalidSize);
-        }
+        let (sx, sy, out_w, out_h) =
+            render_scale(svg_size, target_box_px, smooth_scale_factor, fit)?;
 
         let mut pixmap = Pixmap::new(out_w, out_h).ok_or(usvg::Error::InvalidSize)?;
-        let transform = Transform::from_scale(scale, scale);
+        let transform = Transform::from_scale(sx, sy);
         resvg::render(&tree, transform, &mut pixmap.as_mut());
 
         let alpha = pixmap
@@ -119,30 +158,23 @@ impl SvgRenderer {
         target_box_px: (u32, u32),
         smooth_scale_factor: f32,
     ) -> Result<SvgRgbaImage, usvg::Error> {
-        let (w, h) = target_box_px;
-        if w == 0 || h == 0 {
-            return Err(usvg::Error::InvalidSize);
-        }
+        self.render_rgba_fit_mode(bytes, target_box_px, smooth_scale_factor, SvgFit::Contain)
+    }
 
+    pub fn render_rgba_fit_mode(
+        &self,
+        bytes: &[u8],
+        target_box_px: (u32, u32),
+        smooth_scale_factor: f32,
+        fit: SvgFit,
+    ) -> Result<SvgRgbaImage, usvg::Error> {
         let tree = usvg::Tree::from_data(bytes, &self.usvg_options)?;
         let svg_size = tree.size();
-        let box_w = w as f32 * smooth_scale_factor;
-        let box_h = h as f32 * smooth_scale_factor;
-        let scale_x = box_w / svg_size.width();
-        let scale_y = box_h / svg_size.height();
-        let scale = scale_x.min(scale_y);
-        if !scale.is_finite() || scale <= 0.0 {
-            return Err(usvg::Error::InvalidSize);
-        }
-
-        let out_w = (svg_size.width() * scale) as u32;
-        let out_h = (svg_size.height() * scale) as u32;
-        if out_w == 0 || out_h == 0 {
-            return Err(usvg::Error::InvalidSize);
-        }
+        let (sx, sy, out_w, out_h) =
+            render_scale(svg_size, target_box_px, smooth_scale_factor, fit)?;
 
         let mut pixmap = Pixmap::new(out_w, out_h).ok_or(usvg::Error::InvalidSize)?;
-        let transform = Transform::from_scale(scale, scale);
+        let transform = Transform::from_scale(sx, sy);
         resvg::render(&tree, transform, &mut pixmap.as_mut());
 
         // tiny-skia pixmap stores RGBA premultiplied alpha. Our image pipeline expects

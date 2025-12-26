@@ -93,6 +93,7 @@ struct SvgRasterKey {
     target_h: u32,
     smooth_scale_bits: u32,
     kind: SvgRasterKind,
+    fit: fret_core::SvgFit,
 }
 
 struct SvgRasterEntry {
@@ -474,13 +475,28 @@ fn svg_draw_rect_px(
     target_h: f32,
     raster_size_px: (u32, u32),
     smooth_scale_factor: f32,
+    fit: fret_core::SvgFit,
 ) -> (f32, f32, f32, f32) {
     let smooth = smooth_scale_factor.max(1.0);
-    let draw_w = (raster_size_px.0 as f32 / smooth).min(target_w.max(0.0));
-    let draw_h = (raster_size_px.1 as f32 / smooth).min(target_h.max(0.0));
-    let x0 = target_x + ((target_w - draw_w).max(0.0) * 0.5);
-    let y0 = target_y + ((target_h - draw_h).max(0.0) * 0.5);
-    (x0, y0, x0 + draw_w, y0 + draw_h)
+    match fit {
+        fret_core::SvgFit::Contain => {
+            let draw_w = (raster_size_px.0 as f32 / smooth).min(target_w.max(0.0));
+            let draw_h = (raster_size_px.1 as f32 / smooth).min(target_h.max(0.0));
+            let x0 = target_x + ((target_w - draw_w).max(0.0) * 0.5);
+            let y0 = target_y + ((target_h - draw_h).max(0.0) * 0.5);
+            (x0, y0, x0 + draw_w, y0 + draw_h)
+        }
+        fret_core::SvgFit::Width => {
+            let draw_w = raster_size_px.0 as f32 / smooth;
+            let draw_h = raster_size_px.1 as f32 / smooth;
+            let x0 = target_x + (target_w - draw_w) * 0.5;
+            let y0 = target_y + (target_h - draw_h) * 0.5;
+            (x0, y0, x0 + draw_w, y0 + draw_h)
+        }
+        fret_core::SvgFit::Stretch => {
+            (target_x, target_y, target_x + target_w, target_y + target_h)
+        }
+    }
 }
 
 fn scissor_from_rect(rect: Rect, scale_factor: f32, viewport: (u32, u32)) -> Option<ScissorRect> {
@@ -772,6 +788,7 @@ impl Renderer {
         rect: Rect,
         scale_factor: f32,
         kind: SvgRasterKind,
+        fit: fret_core::SvgFit,
     ) -> SvgRasterKey {
         let (target_w, target_h) = Self::svg_target_box_px(rect, scale_factor);
         SvgRasterKey {
@@ -780,6 +797,7 @@ impl Renderer {
             target_h,
             smooth_scale_bits: SMOOTH_SVG_SCALE_FACTOR.to_bits(),
             kind,
+            fit,
         }
     }
 
@@ -792,7 +810,7 @@ impl Renderer {
     ) {
         for op in scene.ops() {
             match op {
-                SceneOp::SvgMaskIcon { rect, svg, .. } => {
+                SceneOp::SvgMaskIcon { rect, svg, fit, .. } => {
                     let _ = self.ensure_svg_raster(
                         device,
                         queue,
@@ -800,9 +818,10 @@ impl Renderer {
                         *rect,
                         scale_factor,
                         SvgRasterKind::AlphaMask,
+                        *fit,
                     );
                 }
-                SceneOp::SvgImage { rect, svg, .. } => {
+                SceneOp::SvgImage { rect, svg, fit, .. } => {
                     let _ = self.ensure_svg_raster(
                         device,
                         queue,
@@ -810,6 +829,7 @@ impl Renderer {
                         *rect,
                         scale_factor,
                         SvgRasterKind::Rgba,
+                        *fit,
                     );
                 }
                 _ => {}
@@ -871,8 +891,9 @@ impl Renderer {
         rect: Rect,
         scale_factor: f32,
         kind: SvgRasterKind,
+        fit: fret_core::SvgFit,
     ) -> Option<(fret_core::ImageId, fret_core::UvRect, (u32, u32))> {
-        let key = Self::svg_raster_key(svg, rect, scale_factor, kind);
+        let key = Self::svg_raster_key(svg, rect, scale_factor, kind, fit);
         if let Some(e) = self.svg_rasters.get_mut(&key) {
             e.last_used_epoch = self.svg_raster_epoch;
             return Some((e.image, fret_core::UvRect::FULL, e.size_px));
@@ -885,7 +906,7 @@ impl Renderer {
             SvgRasterKind::AlphaMask => {
                 let mask = self
                     .svg_renderer
-                    .render_alpha_mask_fit(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR)
+                    .render_alpha_mask_fit_mode(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR, fit)
                     .ok()?;
                 let uploaded = upload_alpha_mask(device, queue, &mask);
                 (
@@ -899,7 +920,7 @@ impl Renderer {
             SvgRasterKind::Rgba => {
                 let rgba = self
                     .svg_renderer
-                    .render_rgba_fit(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR)
+                    .render_rgba_fit_mode(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR, fit)
                     .ok()?;
                 let uploaded = upload_rgba_image(device, queue, &rgba);
                 (
@@ -2882,6 +2903,7 @@ impl Renderer {
                     let SceneOp::SvgMaskIcon {
                         rect,
                         svg,
+                        fit,
                         color,
                         opacity,
                         ..
@@ -2893,8 +2915,13 @@ impl Renderer {
                         continue;
                     }
 
-                    let key =
-                        Self::svg_raster_key(*svg, *rect, scale_factor, SvgRasterKind::AlphaMask);
+                    let key = Self::svg_raster_key(
+                        *svg,
+                        *rect,
+                        scale_factor,
+                        SvgRasterKind::AlphaMask,
+                        *fit,
+                    );
                     let Some(entry) = self.svg_rasters.get(&key) else {
                         continue;
                     };
@@ -2913,7 +2940,7 @@ impl Renderer {
                     premul = premul.map(|c| c * o);
 
                     let (x0, y0, x1, y1) =
-                        svg_draw_rect_px(x, y, w, h, entry.size_px, SMOOTH_SVG_SCALE_FACTOR);
+                        svg_draw_rect_px(x, y, w, h, entry.size_px, SMOOTH_SVG_SCALE_FACTOR, *fit);
 
                     let (u0, v0, u1, v1) = (0.0, 0.0, 1.0, 1.0);
                     text_vertices.extend_from_slice(&[
@@ -2949,8 +2976,11 @@ impl Renderer {
                         },
                     ]);
 
+                    let svg_scissor = scissor_from_rect(*rect, scale_factor, viewport_size)
+                        .map(|s| intersect_scissor(current_scissor, s))
+                        .unwrap_or(current_scissor);
                     ordered_draws.push(OrderedDraw::Mask(MaskDraw {
-                        scissor: current_scissor,
+                        scissor: svg_scissor,
                         first_vertex,
                         vertex_count: 6,
                         image: entry.image,
@@ -2959,7 +2989,11 @@ impl Renderer {
                 SceneOp::SvgImage { .. } => {
                     flush_quad_batch!();
                     let SceneOp::SvgImage {
-                        rect, svg, opacity, ..
+                        rect,
+                        svg,
+                        fit,
+                        opacity,
+                        ..
                     } = op
                     else {
                         unreachable!();
@@ -2968,7 +3002,8 @@ impl Renderer {
                         continue;
                     }
 
-                    let key = Self::svg_raster_key(*svg, *rect, scale_factor, SvgRasterKind::Rgba);
+                    let key =
+                        Self::svg_raster_key(*svg, *rect, scale_factor, SvgRasterKind::Rgba, *fit);
                     let Some(entry) = self.svg_rasters.get(&key) else {
                         continue;
                     };
@@ -2985,7 +3020,7 @@ impl Renderer {
                     let o = opacity.clamp(0.0, 1.0);
 
                     let (x0, y0, x1, y1) =
-                        svg_draw_rect_px(x, y, w, h, entry.size_px, SMOOTH_SVG_SCALE_FACTOR);
+                        svg_draw_rect_px(x, y, w, h, entry.size_px, SMOOTH_SVG_SCALE_FACTOR, *fit);
 
                     viewport_vertices.extend_from_slice(&[
                         ViewportVertex {
@@ -3026,8 +3061,11 @@ impl Renderer {
                         },
                     ]);
 
+                    let svg_scissor = scissor_from_rect(*rect, scale_factor, viewport_size)
+                        .map(|s| intersect_scissor(current_scissor, s))
+                        .unwrap_or(current_scissor);
                     ordered_draws.push(OrderedDraw::Image(ImageDraw {
-                        scissor: current_scissor,
+                        scissor: svg_scissor,
                         first_vertex,
                         vertex_count: 6,
                         image: entry.image,
@@ -3832,7 +3870,30 @@ mod tests {
     #[test]
     fn svg_draw_rect_centers_contained_raster() {
         // target 100x50, raster 100x100 at smooth=2 => draw 50x50 centered.
-        let (x0, y0, x1, y1) = svg_draw_rect_px(0.0, 0.0, 100.0, 50.0, (100, 100), 2.0);
+        let (x0, y0, x1, y1) = svg_draw_rect_px(
+            0.0,
+            0.0,
+            100.0,
+            50.0,
+            (100, 100),
+            2.0,
+            fret_core::SvgFit::Contain,
+        );
         assert_eq!((x0, y0, x1, y1), (25.0, 0.0, 75.0, 50.0));
+    }
+
+    #[test]
+    fn svg_draw_rect_width_can_overflow_height() {
+        // target 50x50, raster 100x200 at smooth=2 => draw 50x100, centered (overflows vertically).
+        let (x0, y0, x1, y1) = svg_draw_rect_px(
+            0.0,
+            0.0,
+            50.0,
+            50.0,
+            (100, 200),
+            2.0,
+            fret_core::SvgFit::Width,
+        );
+        assert_eq!((x0, y0, x1, y1), (0.0, -25.0, 50.0, 75.0));
     }
 }

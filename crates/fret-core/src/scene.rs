@@ -1,4 +1,5 @@
 use crate::{
+    SvgFit,
     geometry::{Corners, Edges, Point, Rect},
     ids::{ImageId, PathId, RenderTargetId, SvgId, TextBlobId},
 };
@@ -128,6 +129,7 @@ pub enum SceneOp {
         order: DrawOrder,
         rect: Rect,
         svg: SvgId,
+        fit: SvgFit,
         color: Color,
         opacity: f32,
     },
@@ -137,6 +139,7 @@ pub enum SceneOp {
         order: DrawOrder,
         rect: Rect,
         svg: SvgId,
+        fit: SvgFit,
         opacity: f32,
     },
 
@@ -308,6 +311,7 @@ fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             order,
             rect,
             svg,
+            fit,
             color,
             opacity,
         } => {
@@ -315,6 +319,14 @@ fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             state = mix_u64(state, u64::from(order.0));
             state = mix_rect(state, rect);
             state = mix_u64(state, svg.data().as_ffi());
+            state = mix_u64(
+                state,
+                match fit {
+                    SvgFit::Contain => 1,
+                    SvgFit::Width => 2,
+                    SvgFit::Stretch => 3,
+                },
+            );
             state = mix_color(state, color);
             mix_f32(state, opacity)
         }
@@ -322,12 +334,21 @@ fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             order,
             rect,
             svg,
+            fit,
             opacity,
         } => {
             let mut state = mix_u64(state, 11);
             state = mix_u64(state, u64::from(order.0));
             state = mix_rect(state, rect);
             state = mix_u64(state, svg.data().as_ffi());
+            state = mix_u64(
+                state,
+                match fit {
+                    SvgFit::Contain => 1,
+                    SvgFit::Width => 2,
+                    SvgFit::Stretch => 3,
+                },
+            );
             mix_f32(state, opacity)
         }
         SceneOp::Text {
@@ -441,12 +462,14 @@ fn translate_scene_op(op: SceneOp, delta: Point) -> SceneOp {
             order,
             rect,
             svg,
+            fit,
             color,
             opacity,
         } => SceneOp::SvgMaskIcon {
             order,
             rect: translate_rect(rect, delta),
             svg,
+            fit,
             color,
             opacity,
         },
@@ -454,11 +477,13 @@ fn translate_scene_op(op: SceneOp, delta: Point) -> SceneOp {
             order,
             rect,
             svg,
+            fit,
             opacity,
         } => SceneOp::SvgImage {
             order,
             rect: translate_rect(rect, delta),
             svg,
+            fit,
             opacity,
         },
         SceneOp::Text {

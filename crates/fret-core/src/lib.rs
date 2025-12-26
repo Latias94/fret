@@ -41,7 +41,7 @@ pub use semantics::{
     SemanticsFlags, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot,
 };
 pub use services::UiServices;
-pub use svg::SvgService;
+pub use svg::{SvgFit, SvgService};
 pub use text::{
     CaretAffinity, FontWeight, HitTestResult, TextConstraints, TextMetrics, TextOverflow,
     TextService, TextStyle, TextWrap,

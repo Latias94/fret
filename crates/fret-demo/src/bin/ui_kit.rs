@@ -13,7 +13,8 @@ use fret_components_shadcn::{
     ButtonGroupOrientation as ShadcnButtonGroupOrientation, ButtonSize as ShadcnButtonSize,
     ButtonVariant as ShadcnButtonVariant, Calendar as ShadcnCalendar,
     Collapsible as ShadcnCollapsible, CollapsibleContent as ShadcnCollapsibleContent,
-    CollapsibleTrigger as ShadcnCollapsibleTrigger, Date as ShadcnDate, Field as ShadcnField,
+    CollapsibleTrigger as ShadcnCollapsibleTrigger, DataTable as ShadcnDataTable,
+    DataTableRowState as ShadcnDataTableRowState, Date as ShadcnDate, Field as ShadcnField,
     FieldDescription as ShadcnFieldDescription, FieldLabel as ShadcnFieldLabel,
     FieldOrientation as ShadcnFieldOrientation, HoverCard as ShadcnHoverCard,
     HoverCardContent as ShadcnHoverCardContent, HoverCardTrigger as ShadcnHoverCardTrigger,
@@ -1125,6 +1126,18 @@ impl WinitDriver for UiKitDriver {
             return;
         }
 
+        if let Some(index) = command
+            .as_str()
+            .strip_prefix("ui_kit.data_table.select.")
+            .and_then(|s| s.parse::<usize>().ok())
+        {
+            let _ = app
+                .models_mut()
+                .update(state.declarative_selection, |v| *v = Some(index));
+            app.request_redraw(window);
+            return;
+        }
+
         if let Some(page) = command
             .as_str()
             .strip_prefix("ui_kit.pagination.goto.")
@@ -1359,6 +1372,7 @@ impl WinitDriver for UiKitDriver {
             |cx| {
                 cx.observe_model(state.declarative_items, Invalidation::Layout);
                 cx.observe_model(state.declarative_page, Invalidation::Layout);
+                cx.observe_model(state.declarative_selection, Invalidation::Paint);
                 let values = cx
                     .app
                     .models()
@@ -1371,6 +1385,12 @@ impl WinitDriver for UiKitDriver {
                     .get(state.declarative_page)
                     .copied()
                     .unwrap_or(1usize);
+                let selected_row = cx
+                    .app
+                    .models()
+                    .get(state.declarative_selection)
+                    .copied()
+                    .unwrap_or(None);
 
                 let size = fret_components_ui::Size::Medium;
                 let (
@@ -1969,6 +1989,40 @@ impl WinitDriver for UiKitDriver {
 
                                 ShadcnTable::new(vec![header, body, caption]).into_element(cx)
                             },
+                            cx.text("shadcn/ui v4 DataTable (prototype)"),
+                            ShadcnDataTable::new(["Project", "Status", "Last updated"], values.len())
+                                .refine_layout(
+                                    fret_components_ui::LayoutRefinement::default().h_px(
+                                        fret_components_ui::MetricRef::Px(Px(220.0)),
+                                    ),
+                                )
+                                .into_element(
+                                    cx,
+                                    |i| i as u64,
+                                    |i| ShadcnDataTableRowState {
+                                        selected: selected_row == Some(i),
+                                        enabled: true,
+                                        on_click: Some(CommandId::new(format!(
+                                            "ui_kit.data_table.select.{i}"
+                                        ))),
+                                    },
+                                    |cx, i| {
+                                        let name = values.get(i).map(String::as_str).unwrap_or("");
+                                        let status = match i % 3 {
+                                            0 => "Modified",
+                                            1 => "Active",
+                                            _ => "Paused",
+                                        };
+                                        let updated = match i % 4 {
+                                            0 => "2 hours ago",
+                                            1 => "Yesterday",
+                                            2 => "Last week",
+                                            _ => "Last month",
+                                        };
+
+                                        vec![cx.text(name), cx.text(status), cx.text(updated)]
+                                    },
+                                ),
                             fret_components_ui::declarative::list::list_virtualized(
                                 cx,
                                 Some(state.declarative_selection),
@@ -2071,6 +2125,7 @@ impl WinitDriver for UiKitDriver {
             order: fret_core::DrawOrder(1001),
             rect: Rect::new(Point::new(x0, y0), Size::new(rgba_size, rgba_size)),
             svg: svg_rgba,
+            fit: fret_core::SvgFit::Contain,
             opacity: 1.0,
         });
 
@@ -2082,6 +2137,7 @@ impl WinitDriver for UiKitDriver {
                 Size::new(icon_size, icon_size),
             ),
             svg: svg_mask,
+            fit: fret_core::SvgFit::Contain,
             color: theme.colors.text_primary,
             opacity: 1.0,
         });

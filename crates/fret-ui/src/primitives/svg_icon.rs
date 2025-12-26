@@ -1,4 +1,4 @@
-use fret_core::{Color, DrawOrder, Event, SceneOp, SemanticsRole, Size};
+use fret_core::{Color, DrawOrder, Event, SceneOp, SemanticsRole, Size, SvgFit};
 
 use crate::{LayoutCx, PaintCx, UiHost, Widget};
 
@@ -9,6 +9,7 @@ pub struct SvgIcon {
     tint: Color,
     opacity: f32,
     desired_size: Option<Size>,
+    fit: SvgFit,
 }
 
 impl SvgIcon {
@@ -23,6 +24,7 @@ impl SvgIcon {
             },
             opacity: 1.0,
             desired_size: None,
+            fit: SvgFit::Contain,
         }
     }
 
@@ -38,6 +40,11 @@ impl SvgIcon {
 
     pub fn with_size(mut self, size: Size) -> Self {
         self.desired_size = Some(size);
+        self
+    }
+
+    pub fn fit(mut self, fit: SvgFit) -> Self {
+        self.fit = fit;
         self
     }
 }
@@ -69,6 +76,7 @@ impl<H: UiHost> Widget<H> for SvgIcon {
             order: DrawOrder(0),
             rect: cx.bounds,
             svg,
+            fit: self.fit,
             color: tint,
             opacity,
         });
