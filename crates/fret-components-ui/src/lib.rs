@@ -65,5 +65,6 @@ pub use window_overlays::WindowOverlays;
 
 pub use popover::{Popover, PopoverItem, PopoverRequest, PopoverService, PopoverStyle};
 pub use popover_surface_overlay::{
-    PopoverSurfaceOverlay, PopoverSurfaceRequest, PopoverSurfaceService, PopoverSurfaceStyle,
+    PopoverSurfaceAlign, PopoverSurfaceOverlay, PopoverSurfaceRequest, PopoverSurfaceService,
+    PopoverSurfaceSide, PopoverSurfaceStyle,
 };
