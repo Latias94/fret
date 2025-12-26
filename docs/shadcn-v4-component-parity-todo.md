@@ -123,7 +123,7 @@ Status legend:
 | Separator | `ui/separator.tsx` | `fret_components_shadcn::Separator` | ✅ | Mostly styling. |
 | Sheet | `ui/sheet.tsx` |  | ❌ | Candidate to implement via overlay + dock/panel semantics. |
 | Sidebar | `ui/sidebar.tsx` |  | ❌ | Big surface; likely later after nav/tree contracts stabilize. |
-| Skeleton | `ui/skeleton.tsx` |  | ❌ | Pure composition + animation; optional. |
+| Skeleton | `ui/skeleton.tsx` | `fret_components_shadcn::Skeleton` | ✅ | `bg-accent + rounded-md + animate-pulse` (frame-driven). |
 | Slider | `ui/slider.tsx` | `fret_components_shadcn::slider::*` | ✅ | Currently a thin re-export. |
 | Sonner | `ui/sonner.tsx` | `fret_components_shadcn::sonner::*` | ✅ | Thin re-export; treat as primary toast ref. |
 | Spinner | `ui/spinner.tsx` |  | ❌ | Optional; pure drawing/animation. |

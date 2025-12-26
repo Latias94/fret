@@ -14,9 +14,9 @@ use fret_components_shadcn::{
     ButtonVariant as ShadcnButtonVariant, Collapsible as ShadcnCollapsible,
     CollapsibleContent as ShadcnCollapsibleContent, CollapsibleTrigger as ShadcnCollapsibleTrigger,
     InputGroup as ShadcnInputGroup, RadioGroup as ShadcnRadioGroup,
-    RadioGroupItem as ShadcnRadioGroupItem, ToggleGroup as ShadcnToggleGroup,
-    ToggleGroupItem as ShadcnToggleGroupItem, ToggleSize as ShadcnToggleSize,
-    ToggleVariant as ShadcnToggleVariant,
+    RadioGroupItem as ShadcnRadioGroupItem, Skeleton as ShadcnSkeleton,
+    ToggleGroup as ShadcnToggleGroup, ToggleGroupItem as ShadcnToggleGroupItem,
+    ToggleSize as ShadcnToggleSize, ToggleVariant as ShadcnToggleVariant,
 };
 use fret_components_ui::{
     ChromeRefinement, ContextMenuService, DialogAction, DialogRequest, DialogService,
@@ -1320,9 +1320,42 @@ impl WinitDriver for UiKitDriver {
                                 .item(ShadcnBreadcrumbItem::ellipsis())
                                 .item(ShadcnBreadcrumbItem::new("Breadcrumb"))
                                 .into_element(cx),
-	                            cx.text("Absolute badge (position/inset)"),
-	                            cx.container(
-	                                fret_ui_app::element::ContainerProps {
+                            cx.text("shadcn/ui v4 Skeleton (prototype)"),
+                            cx.container(
+                                fret_ui_app::element::ContainerProps {
+                                    layout: fret_ui_app::element::LayoutStyle {
+                                        size: fret_ui_app::element::SizeStyle {
+                                            width: fret_ui_app::element::Length::Px(Px(260.0)),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    vec![
+                                        ShadcnSkeleton::new()
+                                            .refine_layout(
+                                                fret_components_ui::LayoutRefinement::default()
+                                                    .w_full(),
+                                            )
+                                            .into_element(cx),
+                                        ShadcnSkeleton::new()
+                                            .secondary()
+                                            .refine_layout(
+                                                fret_components_ui::LayoutRefinement::default()
+                                                    .w_full()
+                                                    .h_px(fret_components_ui::MetricRef::space(
+                                                        fret_components_ui::Space::N2,
+                                                    )),
+                                            )
+                                            .into_element(cx),
+                                    ]
+                                },
+                            ),
+		                            cx.text("Absolute badge (position/inset)"),
+		                            cx.container(
+		                                fret_ui_app::element::ContainerProps {
 	                                    layout: fret_ui_app::element::LayoutStyle {
 	                                        size: fret_ui_app::element::SizeStyle {
 	                                            width: fret_ui_app::element::Length::Px(Px(260.0)),
