@@ -153,6 +153,19 @@ let cached = svg_cache.get_or_create_alpha_mask(&device, &queue, &mut renderer, 
 - [x] Add cache keyed by `(svg_hash, size_box, scale_factor)` producing `ImageId`
 - [ ] Add optional “smooth scale factor” policy (similar to GPUI’s `SMOOTH_SVG_SCALE_FACTOR`)
 
+### Reclamation (GPUI-aligned)
+
+GPUI’s atlas model is explicit-invalidation:
+
+- Insertion is cached by key (`PlatformAtlas::get_or_insert_with`).
+- Removal is explicit (`PlatformAtlas::remove`), see `repo-ref/zed/crates/gpui/src/platform.rs:832` and
+  `repo-ref/zed/crates/gpui/src/platform/mac/metal_atlas.rs:60`.
+
+For Fret, `SvgImageCache` follows the same principle:
+
+- Cache entries persist by default (good for a mostly-fixed icon set).
+- Call `SvgImageCache::remove*` or `SvgImageCache::clear` to reclaim memory / invalidate on asset changes.
+
 ### IMG-0: SVG as image (RGBA)
 
 - [x] Add `fret-render::SvgRenderer::render_rgba` (unpremultiplied RGBA output)
