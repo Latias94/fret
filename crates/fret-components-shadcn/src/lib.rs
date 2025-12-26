@@ -25,6 +25,7 @@ pub mod kbd;
 pub mod label;
 pub mod radio_group;
 pub mod skeleton;
+pub mod spinner;
 pub mod toggle;
 pub mod toggle_group;
 
@@ -45,6 +46,7 @@ pub use kbd::Kbd;
 pub use label::Label;
 pub use radio_group::{RadioGroup, RadioGroupItem};
 pub use skeleton::Skeleton;
+pub use spinner::Spinner;
 pub use toggle::{Toggle, ToggleSize, ToggleVariant};
 pub use toggle_group::{ToggleGroup, ToggleGroupItem, ToggleGroupType};
 

@@ -35,6 +35,7 @@ pub enum ElementKind {
     Flex(FlexProps),
     Grid(GridProps),
     Image(ImageProps),
+    Spinner(SpinnerProps),
     Scroll(ScrollProps),
 }
 
@@ -384,6 +385,34 @@ impl ImageProps {
             image,
             opacity: 1.0,
             uv: None,
+        }
+    }
+}
+
+/// A simple loading spinner primitive.
+///
+/// This is intentionally low-opinionated and renderer-friendly: it paints a ring of small rounded
+/// quads with frame-driven alpha modulation (`Effect::RequestAnimationFrame`).
+#[derive(Debug, Clone, Copy)]
+pub struct SpinnerProps {
+    pub layout: LayoutStyle,
+    pub color: Option<Color>,
+    pub dot_count: u8,
+    /// Phase increment per frame, in dot steps. (`0.0` disables animation.)
+    pub speed: f32,
+}
+
+impl Default for SpinnerProps {
+    fn default() -> Self {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Px(Px(16.0));
+        layout.size.height = Length::Px(Px(16.0));
+
+        Self {
+            layout,
+            color: None,
+            dot_count: 12,
+            speed: 0.2,
         }
     }
 }

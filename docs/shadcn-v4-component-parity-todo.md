@@ -126,7 +126,7 @@ Status legend:
 | Skeleton | `ui/skeleton.tsx` | `fret_components_shadcn::Skeleton` | ✅ | `bg-accent + rounded-md + animate-pulse` (frame-driven). |
 | Slider | `ui/slider.tsx` | `fret_components_shadcn::slider::*` | ✅ | Currently a thin re-export. |
 | Sonner | `ui/sonner.tsx` | `fret_components_shadcn::sonner::*` | ✅ | Thin re-export; treat as primary toast ref. |
-| Spinner | `ui/spinner.tsx` |  | ❌ | Optional; pure drawing/animation. |
+| Spinner | `ui/spinner.tsx` | `fret_components_shadcn::Spinner` | ✅ | Dot-ring (frame-driven) until transforms land. |
 | Switch | `ui/switch.tsx` | `fret_components_shadcn::switch::*` | ✅ | Validate keyboard toggle + focus ring. |
 | Table | `ui/table.tsx` |  | ❌ | Needs virtualized table contract (not DOM table). |
 | Tabs | `ui/tabs.tsx` | `fret_components_shadcn::tabs::*` | ✅ | Ensure keyboard navigation parity. |

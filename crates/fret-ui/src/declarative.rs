@@ -1,7 +1,7 @@
 use crate::UiHost;
 use crate::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
-    Overflow, PressableProps, SpacerProps, StackProps, TextProps,
+    Overflow, PressableProps, SpacerProps, SpinnerProps, StackProps, TextProps,
 };
 use crate::elements::{ElementCx, GlobalElementId, NodeEntry};
 use crate::primitives::BoundTextInput;
@@ -11,6 +11,7 @@ use fret_core::{
     AppWindowId, Color, CursorIcon, DrawOrder, Edges, Event, FontId, MouseButton, NodeId, Point,
     Px, Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle,
 };
+use fret_runtime::Effect;
 use std::collections::HashMap;
 use taffy::{
     TaffyTree,
@@ -173,6 +174,7 @@ pub(crate) enum ElementInstance {
     Flex(FlexProps),
     Grid(crate::element::GridProps),
     Image(crate::element::ImageProps),
+    Spinner(SpinnerProps),
     Scroll(crate::element::ScrollProps),
 }
 
@@ -209,6 +211,7 @@ fn layout_style_for_node<H: UiHost>(app: &mut H, window: AppWindowId, node: Node
             ElementInstance::Flex(p) => p.layout,
             ElementInstance::Grid(p) => p.layout,
             ElementInstance::Image(p) => p.layout,
+            ElementInstance::Spinner(p) => p.layout,
             ElementInstance::Scroll(p) => p.layout,
         })
         .unwrap_or_default()
@@ -872,7 +875,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::Flex(_) | ElementInstance::Grid(_) => {
                 // Flex/Grid are layout containers; they do not imply semantics beyond their children.
             }
-            ElementInstance::Image(_) | ElementInstance::Scroll(_) => {
+            ElementInstance::Image(_)
+            | ElementInstance::Spinner(_)
+            | ElementInstance::Scroll(_) => {
                 cx.set_role(SemanticsRole::Generic);
             }
             _ => {}
@@ -897,10 +902,12 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
         self.hit_testable = match &instance {
             ElementInstance::Pressable(p) => p.enabled,
+            ElementInstance::Spinner(_) => false,
             _ => true,
         };
         self.hit_test_children = match &instance {
             ElementInstance::Pressable(p) => p.enabled,
+            ElementInstance::Spinner(_) => false,
             _ => true,
         };
         self.is_text_input = matches!(&instance, ElementInstance::TextInput(_));
@@ -921,6 +928,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             // intended as overflow-visible containers).
             ElementInstance::VirtualList(_)
             | ElementInstance::Image(_)
+            | ElementInstance::Spinner(_)
             | ElementInstance::Text(_) => true,
             ElementInstance::Spacer(_) => true,
         };
@@ -1540,6 +1548,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 let desired = clamp_to_constraints(cx.available, props.layout, cx.available);
                 desired
             }
+            ElementInstance::Spinner(props) => {
+                let desired =
+                    clamp_to_constraints(Size::new(Px(16.0), Px(16.0)), props.layout, cx.available);
+                desired
+            }
             ElementInstance::Scroll(props) => {
                 let probe_bounds =
                     Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(1.0e9)));
@@ -1793,6 +1806,71 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         rect: cx.bounds,
                         image: props.image,
                         opacity,
+                    });
+                }
+            }
+            ElementInstance::Spinner(props) => {
+                let theme = cx.theme();
+                let base = props
+                    .color
+                    .or_else(|| theme.color_by_key("muted-foreground"))
+                    .unwrap_or(theme.colors.text_muted);
+
+                let n = (props.dot_count.max(1).min(32)) as usize;
+
+                let w = cx.bounds.size.width.0.max(0.0);
+                let h = cx.bounds.size.height.0.max(0.0);
+                let min_dim = w.min(h);
+                if min_dim <= 0.0 {
+                    return;
+                }
+
+                let dot = (min_dim * 0.18).clamp(2.0, (min_dim * 0.25).max(2.0));
+                let radius = (min_dim * 0.5 - dot * 0.5).max(0.0);
+
+                let cx0 = cx.bounds.origin.x.0 + w * 0.5;
+                let cy0 = cx.bounds.origin.y.0 + h * 0.5;
+
+                let speed = props.speed.max(0.0);
+                if speed > 0.0 {
+                    cx.app.push_effect(Effect::RequestAnimationFrame(window));
+                }
+
+                let phase = cx.app.frame_id().0 as f32 * speed;
+                let active = (phase.floor() as i32).rem_euclid(n as i32) as usize;
+                let tail_len = (n.min(5)).saturating_sub(1);
+
+                for i in 0..n {
+                    let dist = ((i + n) - active) % n;
+                    let t = if tail_len == 0 {
+                        if dist == 0 { 1.0 } else { 0.25 }
+                    } else if dist == 0 {
+                        1.0
+                    } else if dist <= tail_len {
+                        1.0 - dist as f32 / (tail_len as f32 + 1.0)
+                    } else {
+                        0.25
+                    };
+
+                    let angle = (i as f32 / n as f32) * std::f32::consts::TAU;
+                    let x = cx0 + radius * angle.cos() - dot * 0.5;
+                    let y = cy0 + radius * angle.sin() - dot * 0.5;
+
+                    let mut color = base;
+                    color.a = (color.a * t).clamp(0.0, 1.0);
+
+                    let rect = Rect::new(
+                        fret_core::Point::new(Px(x), Px(y)),
+                        Size::new(Px(dot), Px(dot)),
+                    );
+                    let r = Px(dot * 0.5);
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(0),
+                        rect,
+                        background: color,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: fret_core::Corners::all(r),
                     });
                 }
             }
@@ -2066,6 +2144,7 @@ fn mount_element<H: UiHost>(
         ElementKind::Flex(p) => ElementInstance::Flex(p),
         ElementKind::Grid(p) => ElementInstance::Grid(p),
         ElementKind::Image(p) => ElementInstance::Image(p),
+        ElementKind::Spinner(p) => ElementInstance::Spinner(p),
         ElementKind::Scroll(p) => ElementInstance::Scroll(p),
     };
 

@@ -14,7 +14,7 @@ use fret_components_shadcn::{
     ButtonVariant as ShadcnButtonVariant, Collapsible as ShadcnCollapsible,
     CollapsibleContent as ShadcnCollapsibleContent, CollapsibleTrigger as ShadcnCollapsibleTrigger,
     InputGroup as ShadcnInputGroup, RadioGroup as ShadcnRadioGroup,
-    RadioGroupItem as ShadcnRadioGroupItem, Skeleton as ShadcnSkeleton,
+    RadioGroupItem as ShadcnRadioGroupItem, Skeleton as ShadcnSkeleton, Spinner as ShadcnSpinner,
     ToggleGroup as ShadcnToggleGroup, ToggleGroupItem as ShadcnToggleGroupItem,
     ToggleSize as ShadcnToggleSize, ToggleVariant as ShadcnToggleVariant,
 };
@@ -1347,6 +1347,30 @@ impl WinitDriver for UiKitDriver {
                                                     .w_full()
                                                     .h_px(fret_components_ui::MetricRef::space(
                                                         fret_components_ui::Space::N2,
+                                                    )),
+                                            )
+                                            .into_element(cx),
+                                    ]
+                                },
+                            ),
+                            cx.text("shadcn/ui v4 Spinner (prototype)"),
+                            cx.row(
+                                fret_ui_app::element::RowProps {
+                                    gap: Px(10.0),
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    vec![
+                                        ShadcnSpinner::new().into_element(cx),
+                                        cx.text("Loading..."),
+                                        ShadcnSpinner::new()
+                                            .refine_layout(
+                                                fret_components_ui::LayoutRefinement::default()
+                                                    .w_px(fret_components_ui::MetricRef::Px(
+                                                        Px(24.0),
+                                                    ))
+                                                    .h_px(fret_components_ui::MetricRef::Px(
+                                                        Px(24.0),
                                                     )),
                                             )
                                             .into_element(cx),

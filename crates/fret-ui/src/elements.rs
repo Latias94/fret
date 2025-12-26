@@ -9,8 +9,8 @@ use std::{
 use crate::UiHost;
 use crate::element::{
     AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, ImageProps,
-    LayoutStyle, PressableProps, PressableState, RowProps, ScrollProps, SpacerProps, StackProps,
-    TextInputProps, TextProps, VirtualListProps, VirtualListState,
+    LayoutStyle, PressableProps, PressableState, RowProps, ScrollProps, SpacerProps, SpinnerProps,
+    StackProps, TextInputProps, TextProps, VirtualListProps, VirtualListState,
 };
 use crate::widget::Invalidation;
 use fret_runtime::{Model, ModelId};
@@ -393,6 +393,19 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             AnyElement::new(id, ElementKind::Image(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn spinner(&mut self) -> AnyElement {
+        self.spinner_props(SpinnerProps::default())
+    }
+
+    #[track_caller]
+    pub fn spinner_props(&mut self, props: SpinnerProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::Spinner(props), Vec::new())
         })
     }
 
