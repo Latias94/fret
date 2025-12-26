@@ -91,6 +91,7 @@ struct SvgAtlasStressState {
     budget_index: usize,
     budget_applied: u64,
     max_frames: Option<u64>,
+    last_renderer_report: Option<Instant>,
 }
 
 impl Default for SvgAtlasStressState {
@@ -110,6 +111,7 @@ impl Default for SvgAtlasStressState {
             budget_index: 1,
             budget_applied: 0,
             max_frames: None,
+            last_renderer_report: None,
         }
     }
 }
@@ -144,6 +146,10 @@ impl SvgAtlasStressDriver {
 impl WinitDriver for SvgAtlasStressDriver {
     type WindowState = SvgAtlasStressState;
 
+    fn gpu_ready(&mut self, _app: &mut App, _context: &fret_render::WgpuContext, renderer: &mut fret_render::Renderer) {
+        renderer.set_svg_perf_enabled(true);
+    }
+
     fn create_window_state(&mut self, _app: &mut App, _window: AppWindowId) -> Self::WindowState {
         Self::print_help();
         let mut st = SvgAtlasStressState::default();
@@ -165,6 +171,37 @@ impl WinitDriver for SvgAtlasStressDriver {
         if state.budget_applied != desired {
             renderer.set_svg_raster_budget_bytes(desired);
             state.budget_applied = desired;
+        }
+
+        let now = Instant::now();
+        let should_report = match state.last_renderer_report {
+            None => true,
+            Some(last) => now.duration_since(last) >= Duration::from_secs(1),
+        };
+        if should_report {
+            if let Some(snap) = renderer.take_svg_perf_snapshot() {
+                if snap.frames == 0 {
+                    state.last_renderer_report = Some(now);
+                    return;
+                }
+                println!(
+                    "renderer_svg: frames={} prepare={:.2}ms hits={} misses={} alpha_raster={} ({:.2}ms) rgba_raster={} ({:.2}ms) atlas_inserts={} atlas_write={:.2}ms pages={} rasters={} bytes={}KB",
+                    snap.frames,
+                    snap.prepare_svg_ops_us as f64 / 1000.0,
+                    snap.cache_hits,
+                    snap.cache_misses,
+                    snap.alpha_raster_count,
+                    snap.alpha_raster_us as f64 / 1000.0,
+                    snap.rgba_raster_count,
+                    snap.rgba_raster_us as f64 / 1000.0,
+                    snap.alpha_atlas_inserts,
+                    snap.alpha_atlas_write_us as f64 / 1000.0,
+                    snap.atlas_pages_live,
+                    snap.svg_rasters_live,
+                    snap.svg_raster_bytes_live / 1024
+                );
+            }
+            state.last_renderer_report = Some(now);
         }
     }
 

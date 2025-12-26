@@ -11,6 +11,7 @@ use slotmap::SlotMap;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use crate::images::{ImageColorSpace, ImageDescriptor, ImageRegistry};
 use crate::svg::{
@@ -90,6 +91,52 @@ enum SvgRasterKind {
 
 const SVG_MASK_ATLAS_PAGE_SIZE_PX: u32 = 1024;
 const SVG_MASK_ATLAS_PADDING_PX: u32 = 1;
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct SvgPerfSnapshot {
+    pub frames: u64,
+    pub prepare_svg_ops_us: u64,
+
+    pub cache_hits: u64,
+    pub cache_misses: u64,
+
+    pub alpha_raster_count: u64,
+    pub alpha_raster_us: u64,
+    pub rgba_raster_count: u64,
+    pub rgba_raster_us: u64,
+
+    pub alpha_atlas_inserts: u64,
+    pub alpha_atlas_write_us: u64,
+    pub alpha_standalone_uploads: u64,
+    pub alpha_standalone_upload_us: u64,
+    pub rgba_uploads: u64,
+    pub rgba_upload_us: u64,
+
+    pub atlas_pages_live: usize,
+    pub svg_rasters_live: usize,
+    pub svg_raster_bytes_live: u64,
+}
+
+#[derive(Debug, Default)]
+struct SvgPerfStats {
+    frames: u64,
+    prepare_svg_ops: Duration,
+
+    cache_hits: u64,
+    cache_misses: u64,
+
+    alpha_raster_count: u64,
+    alpha_raster: Duration,
+    rgba_raster_count: u64,
+    rgba_raster: Duration,
+
+    alpha_atlas_inserts: u64,
+    alpha_atlas_write: Duration,
+    alpha_standalone_uploads: u64,
+    alpha_standalone_upload: Duration,
+    rgba_uploads: u64,
+    rgba_upload: Duration,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct SvgRasterKey {
@@ -801,6 +848,8 @@ pub struct Renderer {
     svg_raster_bytes: u64,
     svg_raster_budget_bytes: u64,
     svg_raster_epoch: u64,
+    svg_perf_enabled: bool,
+    svg_perf: SvgPerfStats,
 
     path_msaa_samples: u32,
 
@@ -867,6 +916,48 @@ struct SceneEncodingCacheKey {
 }
 
 impl Renderer {
+    pub fn set_svg_perf_enabled(&mut self, enabled: bool) {
+        self.svg_perf_enabled = enabled;
+        self.svg_perf = SvgPerfStats::default();
+    }
+
+    pub fn take_svg_perf_snapshot(&mut self) -> Option<SvgPerfSnapshot> {
+        if !self.svg_perf_enabled {
+            return None;
+        }
+
+        let pages_live = self.svg_mask_atlas_pages.iter().filter(|p| p.is_some()).count();
+        let rasters_live = self.svg_rasters.len();
+        let bytes_live = self.svg_raster_bytes;
+
+        let snap = SvgPerfSnapshot {
+            frames: self.svg_perf.frames,
+            prepare_svg_ops_us: self.svg_perf.prepare_svg_ops.as_micros() as u64,
+
+            cache_hits: self.svg_perf.cache_hits,
+            cache_misses: self.svg_perf.cache_misses,
+
+            alpha_raster_count: self.svg_perf.alpha_raster_count,
+            alpha_raster_us: self.svg_perf.alpha_raster.as_micros() as u64,
+            rgba_raster_count: self.svg_perf.rgba_raster_count,
+            rgba_raster_us: self.svg_perf.rgba_raster.as_micros() as u64,
+
+            alpha_atlas_inserts: self.svg_perf.alpha_atlas_inserts,
+            alpha_atlas_write_us: self.svg_perf.alpha_atlas_write.as_micros() as u64,
+            alpha_standalone_uploads: self.svg_perf.alpha_standalone_uploads,
+            alpha_standalone_upload_us: self.svg_perf.alpha_standalone_upload.as_micros() as u64,
+            rgba_uploads: self.svg_perf.rgba_uploads,
+            rgba_upload_us: self.svg_perf.rgba_upload.as_micros() as u64,
+
+            atlas_pages_live: pages_live,
+            svg_rasters_live: rasters_live,
+            svg_raster_bytes_live: bytes_live,
+        };
+
+        self.svg_perf = SvgPerfStats::default();
+        Some(snap)
+    }
+
     pub fn svg_raster_budget_bytes(&self) -> u64 {
         self.svg_raster_budget_bytes
     }
@@ -1232,6 +1323,9 @@ impl Renderer {
     ) -> Option<(fret_core::ImageId, fret_core::UvRect, (u32, u32))> {
         let key = Self::svg_raster_key(svg, rect, scale_factor, kind, fit);
         if self.svg_rasters.contains_key(&key) {
+            if self.svg_perf_enabled {
+                self.svg_perf.cache_hits = self.svg_perf.cache_hits.saturating_add(1);
+            }
             let (image, uv, size_px, page_index) = {
                 let e = self.svg_rasters.get_mut(&key)?;
                 e.last_used_epoch = self.svg_raster_epoch;
@@ -1248,20 +1342,35 @@ impl Renderer {
             }
             return Some((image, uv, size_px));
         }
+        if self.svg_perf_enabled {
+            self.svg_perf.cache_misses = self.svg_perf.cache_misses.saturating_add(1);
+        }
 
         let bytes = self.svgs.get(svg)?;
         let target_box_px = (key.target_w, key.target_h);
 
         let (image, uv, size_px, approx_bytes, storage) = match kind {
             SvgRasterKind::AlphaMask => {
+                let t_raster = Instant::now();
                 let mask = self
                     .svg_renderer
                     .render_alpha_mask_fit_mode(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR, fit)
                     .ok()?;
+                if self.svg_perf_enabled {
+                    self.svg_perf.alpha_raster_count =
+                        self.svg_perf.alpha_raster_count.saturating_add(1);
+                    self.svg_perf.alpha_raster += t_raster.elapsed();
+                }
 
+                let t_insert = Instant::now();
                 if let Some((image, uv, size_px, page_index)) =
                     self.insert_svg_alpha_mask_into_atlas(device, queue, &mask)
                 {
+                    if self.svg_perf_enabled {
+                        self.svg_perf.alpha_atlas_inserts =
+                            self.svg_perf.alpha_atlas_inserts.saturating_add(1);
+                        self.svg_perf.alpha_atlas_write += t_insert.elapsed();
+                    }
                     (
                         image,
                         uv,
@@ -1272,7 +1381,16 @@ impl Renderer {
                         },
                     )
                 } else {
+                    if self.svg_perf_enabled {
+                        self.svg_perf.alpha_atlas_write += t_insert.elapsed();
+                    }
+                    let t_upload = Instant::now();
                     let uploaded = upload_alpha_mask(device, queue, &mask);
+                    if self.svg_perf_enabled {
+                        self.svg_perf.alpha_standalone_uploads =
+                            self.svg_perf.alpha_standalone_uploads.saturating_add(1);
+                        self.svg_perf.alpha_standalone_upload += t_upload.elapsed();
+                    }
                     let image = self.register_image(ImageDescriptor {
                         view: uploaded.view.clone(),
                         size: uploaded.size_px,
@@ -1293,11 +1411,22 @@ impl Renderer {
                 }
             }
             SvgRasterKind::Rgba => {
+                let t_raster = Instant::now();
                 let rgba = self
                     .svg_renderer
                     .render_rgba_fit_mode(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR, fit)
                     .ok()?;
+                if self.svg_perf_enabled {
+                    self.svg_perf.rgba_raster_count =
+                        self.svg_perf.rgba_raster_count.saturating_add(1);
+                    self.svg_perf.rgba_raster += t_raster.elapsed();
+                }
+                let t_upload = Instant::now();
                 let uploaded = upload_rgba_image(device, queue, &rgba);
+                if self.svg_perf_enabled {
+                    self.svg_perf.rgba_uploads = self.svg_perf.rgba_uploads.saturating_add(1);
+                    self.svg_perf.rgba_upload += t_upload.elapsed();
+                }
                 let image = self.register_image(ImageDescriptor {
                     view: uploaded.view.clone(),
                     size: uploaded.size_px,
@@ -1594,6 +1723,8 @@ impl Renderer {
             svg_raster_bytes: 0,
             svg_raster_budget_bytes: 64 * 1024 * 1024,
             svg_raster_epoch: 0,
+            svg_perf_enabled: false,
+            svg_perf: SvgPerfStats::default(),
             path_msaa_samples: 4,
             render_targets: RenderTargetRegistry::default(),
             images: ImageRegistry::default(),
@@ -2373,8 +2504,15 @@ impl Renderer {
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
 
         self.text_system.flush_uploads(queue);
+        if self.svg_perf_enabled {
+            self.svg_perf.frames = self.svg_perf.frames.saturating_add(1);
+        }
         self.bump_svg_raster_epoch();
+        let svg_prepare_start = Instant::now();
         self.prepare_svg_ops(device, queue, scene, scale_factor);
+        if self.svg_perf_enabled {
+            self.svg_perf.prepare_svg_ops += svg_prepare_start.elapsed();
+        }
 
         let key = SceneEncodingCacheKey {
             format,
