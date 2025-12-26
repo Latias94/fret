@@ -1,6 +1,6 @@
 use fret_app::{
-    App, BindingV1, Effect, KeySpecV1, Keymap, KeymapFileV1, KeymapService, Menu, MenuItem, Model,
-    WindowRequest,
+    App, BindingV1, CommandId, Effect, KeySpecV1, Keymap, KeymapFileV1, KeymapService, Menu,
+    MenuItem, Model, WindowRequest,
 };
 use fret_components_icons::IconId;
 use fret_components_shadcn::{
@@ -195,6 +195,7 @@ fn build_ui_kit_contents(
     app: &mut App,
     ui: &mut UiTree,
     parent: NodeId,
+    popover_surface_root: NodeId,
     image: Option<fret_core::ImageId>,
     theme_selected: Model<usize>,
     theme_options: Vec<SelectOption>,
@@ -451,6 +452,21 @@ fn build_ui_kit_contents(
     let calendar_model = app.models_mut().insert(None::<ShadcnDate>);
     let calendar = ui.create_node(ShadcnCalendar::new(calendar_model).month(2025, 1));
     ui.add_child(col, calendar);
+
+    let date_picker_label = ui.create_node(Text::new("shadcn/ui v4 DatePicker (prototype)"));
+    ui.add_child(col, date_picker_label);
+    let date_picker_model = app.models_mut().insert(None::<ShadcnDate>);
+    let date_picker_popover = ui.create_node(
+        ShadcnCalendar::new(date_picker_model)
+            .month(2025, 1)
+            .on_select(CommandId::from("popover_surface.close")),
+    );
+    ui.add_child(popover_surface_root, date_picker_popover);
+    let date_picker = ui.create_node(fret_components_shadcn::DatePicker::new(
+        date_picker_model,
+        date_picker_popover,
+    ));
+    ui.add_child(col, date_picker);
 
     let nav_menu_label = ui.create_node(Text::new("shadcn/ui v4 Navigation Menu (prototype)"));
     ui.add_child(col, nav_menu_label);
@@ -1016,6 +1032,7 @@ impl WinitDriver for UiKitDriver {
             app,
             &mut ui,
             scroll,
+            overlays.popover_surface_node(),
             self.ui_kit_image.as_ref().map(|i| i.id),
             theme_selected,
             theme_options,

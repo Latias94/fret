@@ -4,7 +4,7 @@ use fret_core::{
     Color, Corners, CursorIcon, DrawOrder, Edges, Event, FontId, KeyCode, MouseButton, Point, Px,
     Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextOverflow, TextStyle, TextWrap,
 };
-use fret_runtime::Model;
+use fret_runtime::{CommandId, Model};
 use fret_ui::widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget};
 use fret_ui::{Theme, UiHost};
 
@@ -194,6 +194,7 @@ enum HitTarget {
 /// - minimal keyboard navigation (click + arrows are not implemented).
 pub struct Calendar {
     model: Model<Option<Date>>,
+    on_select: Option<CommandId>,
     disabled: bool,
     show_outside_days: bool,
 
@@ -209,6 +210,7 @@ impl Calendar {
     pub fn new(model: Model<Option<Date>>) -> Self {
         Self {
             model,
+            on_select: None,
             disabled: false,
             show_outside_days: true,
             view_year: 2025,
@@ -217,6 +219,11 @@ impl Calendar {
             hovered: None,
             pressed: None,
         }
+    }
+
+    pub fn on_select(mut self, command: impl Into<CommandId>) -> Self {
+        self.on_select = Some(command.into());
+        self
     }
 
     pub fn month(mut self, year: i32, month: u8) -> Self {
@@ -469,6 +476,9 @@ impl<H: UiHost> Widget<H> for Calendar {
                             HitTarget::Day(date, in_month) => {
                                 if in_month {
                                     self.write_value(cx.app, Some(date));
+                                    if let Some(command) = self.on_select.clone() {
+                                        cx.dispatch_command(command);
+                                    }
                                     cx.invalidate_self(Invalidation::Paint);
                                     cx.request_redraw();
                                 }
@@ -756,6 +766,13 @@ impl<H: UiHost> Widget<H> for Calendar {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_core::{
+        MouseButton, NodeId, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
+        PathStyle, Point, Px, Rect, Size, SvgId, SvgService, TextBlobId,
+        TextConstraints, TextMetrics, TextService, TextStyle,
+    };
+    use fret_runtime::{CommandId, Effect, InputContext, Platform};
+    use fret_ui::{Theme, widget::EventCx};
 
     #[test]
     fn weekday_is_stable_for_known_dates() {
@@ -769,5 +786,130 @@ mod tests {
     fn days_in_month_handles_leap_years() {
         assert_eq!(days_in_month(2024, 2), 29);
         assert_eq!(days_in_month(2025, 2), 28);
+    }
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            false
+        }
+    }
+
+    #[test]
+    fn selecting_a_day_dispatches_on_select_command() {
+        let mut host = crate::test_host::TestHost::default();
+        let window = fret_core::AppWindowId::default();
+        let model = host.models_mut().insert(None::<Date>);
+
+        let mut calendar = Calendar::new(model)
+            .month(2025, 1)
+            .on_select(CommandId::from("popover_surface.close"));
+
+        // Establish bounds for hit testing.
+        calendar.last_bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(400.0)),
+        );
+
+        let theme = Theme::global(&host).clone();
+        let cell = cell_size(&theme);
+        let gap = gap(&theme);
+        let header_h = cell;
+        let grid_origin = Point::new(Px(0.0), Px(header_h.0 + gap.0));
+
+        let first_weekday = weekday_sun0(2025, 1, 1) as f32;
+        let col = first_weekday;
+        let pos = Point::new(
+            Px(grid_origin.x.0 + col * (cell.0 + gap.0) + 1.0),
+            Px(grid_origin.y.0 + 1.0),
+        );
+
+        let mut services = FakeServices::default();
+        let mut cx = EventCx {
+            app: &mut host,
+            services: &mut services,
+            node: NodeId::default(),
+            window: Some(window),
+            input_ctx: InputContext {
+                platform: Platform::Linux,
+                caps: fret_core::PlatformCapabilities::default(),
+                ui_has_modal: false,
+                focus_is_text_input: false,
+            },
+            children: &[],
+            focus: None,
+            captured: None,
+            bounds: calendar.last_bounds,
+            invalidations: Vec::new(),
+            requested_focus: None,
+            requested_capture: None,
+            requested_cursor: None,
+            stop_propagation: false,
+        };
+
+        calendar.event(
+            &mut cx,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        calendar.event(
+            &mut cx,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        let dispatched = host.effects().iter().any(|e| matches!(
+            e,
+            Effect::Command { window: Some(w), command }
+                if *w == window && command.as_str() == "popover_surface.close"
+        ));
+        assert!(
+            dispatched,
+            "expected on_select to dispatch popover_surface.close"
+        );
     }
 }

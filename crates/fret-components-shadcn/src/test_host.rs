@@ -132,3 +132,9 @@ impl UiHost for TestHost {
         ));
     }
 }
+
+impl TestHost {
+    pub(crate) fn effects(&self) -> &[Effect] {
+        &self.effects
+    }
+}

@@ -7,7 +7,8 @@ use fret_ui::{
 
 use crate::{
     CommandPaletteOverlay, ContextMenu, ContextMenuService, DialogOverlay, DialogService, Popover,
-    PopoverService, SheetOverlay, SheetService, ToastOverlay, TooltipOverlay,
+    PopoverService, PopoverSurfaceOverlay, PopoverSurfaceService, SheetOverlay, SheetService,
+    ToastOverlay, TooltipOverlay,
 };
 
 /// Standard window-level UI overlays (tooltips, popovers, context menus).
@@ -38,6 +39,10 @@ pub struct WindowOverlays {
     popover_layer: UiLayerId,
     popover_node: NodeId,
     popover_previous_focus: Option<NodeId>,
+
+    popover_surface_layer: UiLayerId,
+    popover_surface_node: NodeId,
+    popover_surface_previous_focus: Option<NodeId>,
 
     context_menu_layer: UiLayerId,
     context_menu_node: NodeId,
@@ -72,6 +77,10 @@ impl WindowOverlays {
         let popover_layer = ui.push_overlay_root(popover_node, true);
         ui.set_layer_visible(popover_layer, false);
 
+        let popover_surface_node = ui.create_node(PopoverSurfaceOverlay::new());
+        let popover_surface_layer = ui.push_overlay_root(popover_surface_node, true);
+        ui.set_layer_visible(popover_surface_layer, false);
+
         let context_menu_node = ui.create_node(ContextMenu::new());
         let context_menu_layer = ui.push_overlay_root(context_menu_node, true);
         ui.set_layer_visible(context_menu_layer, false);
@@ -91,6 +100,9 @@ impl WindowOverlays {
             popover_layer,
             popover_node,
             popover_previous_focus: None,
+            popover_surface_layer,
+            popover_surface_node,
+            popover_surface_previous_focus: None,
             context_menu_layer,
             context_menu_node,
             context_menu_previous_focus: None,
@@ -103,6 +115,10 @@ impl WindowOverlays {
 
     pub fn sheet_node(&self) -> NodeId {
         self.sheet_node
+    }
+
+    pub fn popover_surface_node(&self) -> NodeId {
+        self.popover_surface_node
     }
 
     pub fn handle_command<H: UiHost>(
@@ -283,6 +299,60 @@ impl WindowOverlays {
                 });
 
                 if let Some(prev) = self.popover_previous_focus.take() {
+                    ui.set_focus(Some(prev));
+                }
+
+                app.request_redraw(window);
+                true
+            }
+            "popover_surface.open" => {
+                let has_request = app
+                    .global::<PopoverSurfaceService>()
+                    .and_then(|s| s.request(window))
+                    .is_some();
+                if !has_request {
+                    return true;
+                }
+
+                let visible = ui.is_layer_visible(self.popover_surface_layer);
+                if !visible {
+                    self.popover_surface_previous_focus = ui.focus();
+                    ui.set_layer_visible(self.popover_surface_layer, true);
+                }
+
+                let request_focus = app
+                    .global::<PopoverSurfaceService>()
+                    .and_then(|s| s.request(window))
+                    .map(|(_, req)| req.request_focus)
+                    .unwrap_or(true);
+                if request_focus {
+                    let req = app
+                        .global::<PopoverSurfaceService>()
+                        .and_then(|s| s.request(window))
+                        .map(|(_, req)| req.clone());
+                    if let Some(req) = req {
+                        let focus = ui
+                            .first_focusable_descendant(req.content_node)
+                            .unwrap_or(req.content_node);
+                        ui.set_focus(Some(focus));
+                    } else {
+                        ui.set_focus(Some(self.popover_surface_node));
+                    }
+                }
+
+                app.request_redraw(window);
+                true
+            }
+            "popover_surface.close" => {
+                if ui.is_layer_visible(self.popover_surface_layer) {
+                    ui.set_layer_visible(self.popover_surface_layer, false);
+                }
+
+                app.with_global_mut(PopoverSurfaceService::default, |service, _app| {
+                    service.clear_request(window);
+                });
+
+                if let Some(prev) = self.popover_surface_previous_focus.take() {
                     ui.set_focus(Some(prev));
                 }
 

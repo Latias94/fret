@@ -23,6 +23,8 @@ pub mod dropdown_menu;
 pub mod frame;
 pub mod icon_button;
 pub mod popover;
+pub mod popover_surface;
+pub mod popover_surface_overlay;
 pub mod progress;
 pub mod resizable_panel_group;
 pub mod scroll_area;
@@ -62,3 +64,6 @@ pub use resizable_panel_group::ResizablePanelGroup;
 pub use window_overlays::WindowOverlays;
 
 pub use popover::{Popover, PopoverItem, PopoverRequest, PopoverService, PopoverStyle};
+pub use popover_surface_overlay::{
+    PopoverSurfaceOverlay, PopoverSurfaceRequest, PopoverSurfaceService, PopoverSurfaceStyle,
+};

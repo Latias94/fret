@@ -90,6 +90,7 @@ Status legend:
 | Button | `ui/button.tsx` | `fret_components_shadcn::Button` | ✅ | Wrapper exists; verify hover/active/disabled parity. |
 | Button Group | `ui/button-group.tsx` | `fret_components_shadcn::{ButtonGroup, ButtonGroupItem}` | ✅ | Segmented buttons (radius merge + border collapse) with keyboard navigation. |
 | Calendar | `ui/calendar.tsx` | `fret_components_shadcn::Calendar` | ✅ | Retained widget: month view + prev/next + single-date selection (no range/multi-month yet). |
+| Date Picker | `ui/date-picker.tsx` | `fret_components_shadcn::DatePicker` | ✅ | Trigger opens `PopoverSurfaceOverlay` anchored to the button; content node is app-installed (typically `Calendar::on_select(\"popover_surface.close\")`). |
 | Card | `ui/card.tsx` | `fret_components_shadcn::Card*` | ✅ | First-pass slots exist; verify spacing + typography tokens. |
 | Carousel | `ui/carousel.tsx` |  | — | Non-goal (v1). |
 | Chart | `ui/chart.tsx` |  | — | Non-goal (v1); depends on a charting substrate. |
@@ -154,6 +155,49 @@ Status legend:
   - what maps to `Command` vs `CommandDialog`-like flows
 - [x] Add a “parity test plan” section per P0 overlay component (manual checklist):
   - focus trapping / inert background, escape dismissal, click-outside, keyboard navigation.
+
+#### P0 Manual Acceptance Checklist (overlay + focus semantics)
+
+Treat these as "behavioral contracts" for shadcn alignment. Prefer turning each bullet into:
+
+- a small unit test when feasible (model-only logic), or
+- a deterministic demo scenario in `fret-demo --bin ui_kit`, with a repeatable repro script.
+
+**Dialog / AlertDialog (modal, focus restore)**
+
+- Open moves focus into the dialog (first focusable action by default).
+- `Escape` closes (uses `cancel_command` for `Dialog`, none for `AlertDialog` by default).
+- Clicking outside closes (same semantics as `Escape`).
+- `Enter` activates the default action (if enabled).
+- While open, pointer/keyboard does not interact with the underlying UI (modal barrier).
+- Close restores focus to the previously focused widget (including nested open/close sequences).
+
+**Sheet / Drawer (modal-ish panel, focus restore)**
+
+- Open moves focus into the sheet when `request_focus=true`.
+- `Escape` closes when `close_on_escape=true`.
+- Clicking outside closes when `close_on_click_outside=true`.
+- Underlay is inert while open (modal barrier semantics).
+- Close restores focus to the previously focused widget.
+
+**Popover / DropdownMenu / ContextMenu (non-modal)**
+
+- Open does not block the rest of the UI except where the popover is hit-testable.
+- Clicking outside closes (menu-like dismissal).
+- `Escape` closes and restores focus to trigger/previous focus (depending on component policy).
+- Keyboard navigation within the menu list is consistent (Up/Down, Home/End, typeahead if present).
+
+**Command (cmdk-like)**
+
+- Open focuses the command input (or first focusable descendant).
+- `Escape` closes and restores focus.
+- Arrow navigation is stable and does not depend on hover.
+- Filtering does not break selection/highlighting.
+
+**Tooltip / HoverCard (non-modal, pointer semantics)**
+
+- Tooltip shows on hover (with delay) and hides on move-out.
+- Tooltip does not steal focus and does not block pointer to underlying widgets unless hit-testable.
 
 #### Overlay Naming Contract (v1)
 
@@ -223,4 +267,4 @@ These checklists are the acceptance criteria for “interaction parity”.
 - [ ] `DataTable` (virtualized table, resizing, selection; not DOM semantics)
 - [x] `Sidebar` / `NavigationMenu` (V1; navigation contracts + tree patterns still evolving)
 - [x] `Calendar` (date model + navigation)
-- [ ] `DatePicker` (popover integration, input parsing, focus/keyboard)
+- [x] `DatePicker` (popover integration; input parsing is a follow-up)
