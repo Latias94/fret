@@ -315,8 +315,13 @@ fn run_headless(
     let elapsed = start.elapsed();
 
     if let Some(snap) = renderer.take_svg_perf_snapshot() {
+        let fill_pct = if snap.svg_mask_atlas_capacity_px == 0 {
+            0.0
+        } else {
+            (snap.svg_mask_atlas_used_px as f64 / snap.svg_mask_atlas_capacity_px as f64) * 100.0
+        };
         println!(
-            "headless: frames={} wall={:.2}s prepare={:.2}ms hits={} misses={} alpha_raster={} ({:.2}ms) atlas_inserts={} atlas_write={:.2}ms pages={} rasters={} standalone={}KB atlas={}KB wait_gpu={} wait_every={}",
+            "headless: frames={} wall={:.2}s prepare={:.2}ms hits={} misses={} alpha_raster={} ({:.2}ms) atlas_inserts={} atlas_write={:.2}ms pages={} rasters={} standalone={}KB atlas={}KB fill={:.1}% wait_gpu={} wait_every={}",
             frames,
             elapsed.as_secs_f64(),
             snap.prepare_svg_ops_us as f64 / 1000.0,
@@ -330,6 +335,7 @@ fn run_headless(
             snap.svg_rasters_live,
             snap.svg_standalone_bytes_live / 1024,
             snap.svg_mask_atlas_bytes_live / 1024,
+            fill_pct,
             wait_gpu,
             wait_every
         );
@@ -389,8 +395,14 @@ impl WinitDriver for SvgAtlasStressDriver {
                     state.last_renderer_report = Some(now);
                     return;
                 }
+                let fill_pct = if snap.svg_mask_atlas_capacity_px == 0 {
+                    0.0
+                } else {
+                    (snap.svg_mask_atlas_used_px as f64 / snap.svg_mask_atlas_capacity_px as f64)
+                        * 100.0
+                };
                 println!(
-                    "renderer_svg: frames={} prepare={:.2}ms hits={} misses={} alpha_raster={} ({:.2}ms) rgba_raster={} ({:.2}ms) atlas_inserts={} atlas_write={:.2}ms pages={} rasters={} standalone={}KB atlas={}KB",
+                    "renderer_svg: frames={} prepare={:.2}ms hits={} misses={} alpha_raster={} ({:.2}ms) rgba_raster={} ({:.2}ms) atlas_inserts={} atlas_write={:.2}ms pages={} rasters={} standalone={}KB atlas={}KB fill={:.1}%",
                     snap.frames,
                     snap.prepare_svg_ops_us as f64 / 1000.0,
                     snap.cache_hits,
@@ -404,7 +416,8 @@ impl WinitDriver for SvgAtlasStressDriver {
                     snap.atlas_pages_live,
                     snap.svg_rasters_live,
                     snap.svg_standalone_bytes_live / 1024,
-                    snap.svg_mask_atlas_bytes_live / 1024
+                    snap.svg_mask_atlas_bytes_live / 1024,
+                    fill_pct
                 );
             }
             state.last_renderer_report = Some(now);

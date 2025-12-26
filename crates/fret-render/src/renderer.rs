@@ -127,6 +127,8 @@ pub struct SvgPerfSnapshot {
     pub svg_rasters_live: usize,
     pub svg_standalone_bytes_live: u64,
     pub svg_mask_atlas_bytes_live: u64,
+    pub svg_mask_atlas_used_px: u64,
+    pub svg_mask_atlas_capacity_px: u64,
 }
 
 #[derive(Debug, Default)]
@@ -982,6 +984,27 @@ impl Renderer {
         let rasters_live = self.svg_rasters.len();
         let standalone_bytes_live = self.svg_raster_bytes;
         let atlas_bytes_live = self.svg_mask_atlas_bytes;
+        let atlas_capacity_px = u64::from(pages_live as u32)
+            .saturating_mul(u64::from(SVG_MASK_ATLAS_PAGE_SIZE_PX))
+            .saturating_mul(u64::from(SVG_MASK_ATLAS_PAGE_SIZE_PX));
+        let atlas_used_px = self
+            .svg_rasters
+            .values()
+            .filter_map(|e| match e.storage {
+                SvgRasterStorage::MaskAtlas { page_index } => Some((page_index, e.size_px)),
+                SvgRasterStorage::Standalone { .. } => None,
+            })
+            .filter(|(page_index, _)| {
+                self.svg_mask_atlas_pages
+                    .get(*page_index)
+                    .is_some_and(|p| p.is_some())
+            })
+            .fold(0u64, |acc, (_, (w, h))| {
+                let pad = u64::from(SVG_MASK_ATLAS_PADDING_PX.saturating_mul(2));
+                let w_pad = u64::from(w).saturating_add(pad);
+                let h_pad = u64::from(h).saturating_add(pad);
+                acc.saturating_add(w_pad.saturating_mul(h_pad))
+            });
 
         let snap = SvgPerfSnapshot {
             frames: self.svg_perf.frames,
@@ -1006,6 +1029,8 @@ impl Renderer {
             svg_rasters_live: rasters_live,
             svg_standalone_bytes_live: standalone_bytes_live,
             svg_mask_atlas_bytes_live: atlas_bytes_live,
+            svg_mask_atlas_used_px: atlas_used_px,
+            svg_mask_atlas_capacity_px: atlas_capacity_px,
         };
 
         self.svg_perf = SvgPerfStats::default();
@@ -4381,9 +4406,18 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 "#;
 
 const VIEWPORT_SHADER: &str = r#"
+const MAX_CLIPS: u32 = 8u;
+
+struct ClipRRect {
+  rect: vec4<f32>,
+  corner_radii: vec4<f32>,
+};
+
 struct Viewport {
   viewport_size: vec2<f32>,
-  _pad: vec2<f32>,
+  clip_count: u32,
+  _pad0: u32,
+  clips: array<ClipRRect, MAX_CLIPS>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -4401,12 +4435,60 @@ struct VsOut {
   @builtin(position) clip_pos: vec4<f32>,
   @location(0) uv: vec2<f32>,
   @location(1) opacity: f32,
+  @location(2) pixel_pos: vec2<f32>,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
   let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
   let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
   return vec2<f32>(ndc_x, ndc_y);
+}
+
+fn pick_corner_radius(center_to_point: vec2<f32>, radii: vec4<f32>) -> f32 {
+  if (center_to_point.x < 0.0) {
+    if (center_to_point.y < 0.0) { return radii.x; }
+    return radii.w;
+  }
+  if (center_to_point.y < 0.0) { return radii.y; }
+  return radii.z;
+}
+
+fn quad_sdf_impl(corner_center_to_point: vec2<f32>, corner_radius: f32) -> f32 {
+  if (corner_radius == 0.0) {
+    return max(corner_center_to_point.x, corner_center_to_point.y);
+  }
+  let signed_distance_to_inset_quad =
+    length(max(vec2<f32>(0.0), corner_center_to_point)) +
+    min(0.0, max(corner_center_to_point.x, corner_center_to_point.y));
+  return signed_distance_to_inset_quad - corner_radius;
+}
+
+fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corner_radii: vec4<f32>) -> f32 {
+  let center = rect_origin + rect_size * 0.5;
+  let center_to_point = point - center;
+  let half_size = rect_size * 0.5;
+  let corner_radius = pick_corner_radius(center_to_point, corner_radii);
+  let corner_to_point = abs(center_to_point) - half_size;
+  let corner_center_to_point = corner_to_point + corner_radius;
+  return quad_sdf_impl(corner_center_to_point, corner_radius);
+}
+
+fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  for (var i = 0u; i < MAX_CLIPS; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
+    let clip = viewport.clips[i];
+    let sdf = quad_sdf(pixel_pos, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    let aa = max(fwidth(sdf), 1e-4);
+    let a = 1.0 - smoothstep(-aa, aa, sdf);
+    alpha = alpha * a;
+    if (alpha <= 0.0) {
+      break;
+    }
+  }
+  return alpha;
 }
 
 @vertex
@@ -4416,13 +4498,18 @@ fn vs_main(input: VsIn) -> VsOut {
   out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
   out.uv = input.uv;
   out.opacity = input.opacity;
+  out.pixel_pos = input.pos_px;
   return out;
 }
 
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(input.pixel_pos);
+  if (clip <= 0.0) {
+    discard;
+  }
   let tex = textureSample(viewport_texture, viewport_sampler, input.uv);
-  let a = tex.a * input.opacity;
+  let a = tex.a * input.opacity * clip;
   return vec4<f32>(tex.rgb * a, a);
 }
 "#;
