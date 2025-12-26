@@ -423,6 +423,22 @@ pub trait WinitDriver {
     fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, _renderer: &mut Renderer) {}
 
     #[allow(clippy::too_many_arguments)]
+    /// Prepare GPU resources needed for the upcoming UI render.
+    ///
+    /// This runs on the render thread right before `render(...)`, and exists to support workflows
+    /// like SVG rasterization + texture registration that require `Device/Queue/Renderer` access.
+    fn gpu_frame_prepare(
+        &mut self,
+        _app: &mut App,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _context: &WgpuContext,
+        _renderer: &mut Renderer,
+        _scale_factor: f32,
+    ) {
+    }
+
+    #[allow(clippy::too_many_arguments)]
     fn record_engine_frame(
         &mut self,
         app: &mut App,
@@ -2596,6 +2612,15 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 let bounds = Rect::new(
                     Point::new(Px(0.0), Px(0.0)),
                     Size::new(Px(logical.width), Px(logical.height)),
+                );
+
+                self.driver.gpu_frame_prepare(
+                    &mut self.app,
+                    app_window,
+                    &mut state.user,
+                    context,
+                    renderer,
+                    scale_factor,
                 );
 
                 self.driver.render(

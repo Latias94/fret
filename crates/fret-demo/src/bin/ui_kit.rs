@@ -67,7 +67,9 @@ use fret_components_ui::{
 use fret_core::{
     AppWindowId, Color, NodeId, PlatformCapabilities, Point, Px, Rect, Scene, Size, UiServices,
 };
-use fret_render::{ImageColorSpace, ImageDescriptor, Renderer, WgpuContext};
+use fret_render::{
+    CachedSvgImage, ImageColorSpace, ImageDescriptor, Renderer, SvgImageCache, WgpuContext,
+};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui_app::{
     ColoredPanel, Column, FixedPanel, Invalidation, PanelThemeBackground, Row, Scroll, Stack, Text,
@@ -105,6 +107,9 @@ struct UiKitWindowState {
     declarative_selection: Model<Option<usize>>,
     declarative_items: Model<Vec<String>>,
     declarative_page: Model<usize>,
+    svg_cache: SvgImageCache,
+    svg_mask_icon: Option<CachedSvgImage>,
+    svg_rgba_image: Option<CachedSvgImage>,
 }
 
 #[derive(Debug, Clone)]
@@ -940,6 +945,67 @@ impl WinitDriver for UiKitDriver {
         self.ui_kit_image = Some(UiKitImage { id, texture, view });
     }
 
+    fn gpu_frame_prepare(
+        &mut self,
+        _app: &mut App,
+        _window: AppWindowId,
+        state: &mut Self::WindowState,
+        context: &WgpuContext,
+        renderer: &mut Renderer,
+        scale_factor: f32,
+    ) {
+        const SVG_MASK: &str = r#"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <path d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7z"/>
+</svg>
+"#;
+        const SVG_RGBA: &str = r##"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect x="0" y="0" width="32" height="32" fill="#0b1220"/>
+  <circle cx="16" cy="16" r="12" fill="#22c55e" fill-opacity="0.85"/>
+  <circle cx="20" cy="12" r="8" fill="#ef4444" fill-opacity="0.65"/>
+  <path d="M6 26h20" stroke="#eab308" stroke-width="3" stroke-linecap="round" />
+</svg>
+"##;
+
+        let icon_logical = 22.0f32;
+        let rgba_logical = 44.0f32;
+        let icon_px = (
+            (icon_logical * scale_factor).ceil().max(1.0) as u32,
+            (icon_logical * scale_factor).ceil().max(1.0) as u32,
+        );
+        let rgba_px = (
+            (rgba_logical * scale_factor).ceil().max(1.0) as u32,
+            (rgba_logical * scale_factor).ceil().max(1.0) as u32,
+        );
+
+        if state.svg_mask_icon.is_none() {
+            match state.svg_cache.get_or_create_alpha_mask(
+                &context.device,
+                &context.queue,
+                renderer,
+                SVG_MASK.as_bytes(),
+                icon_px,
+            ) {
+                Ok(img) => state.svg_mask_icon = Some(img),
+                Err(err) => tracing::warn!(error = %err, "ui-kit failed to rasterize SVG mask"),
+            }
+        }
+
+        if state.svg_rgba_image.is_none() {
+            match state.svg_cache.get_or_create_rgba(
+                &context.device,
+                &context.queue,
+                renderer,
+                SVG_RGBA.as_bytes(),
+                rgba_px,
+            ) {
+                Ok(img) => state.svg_rgba_image = Some(img),
+                Err(err) => tracing::warn!(error = %err, "ui-kit failed to rasterize SVG RGBA"),
+            }
+        }
+    }
+
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
         let mut ui = UiTree::new();
         ui.set_window(window);
@@ -1025,6 +1091,9 @@ impl WinitDriver for UiKitDriver {
             declarative_selection,
             declarative_items,
             declarative_page,
+            svg_cache: SvgImageCache::new(),
+            svg_mask_icon: None,
+            svg_rgba_image: None,
         }
     }
 
@@ -1993,6 +2062,53 @@ impl WinitDriver for UiKitDriver {
         state
             .ui
             .paint_all(app, services, bounds, scene, scale_factor);
+
+        // GPU-prepared SVG demo: alpha-mask+tint (icon) + RGBA (image).
+        // We draw directly into the scene so the demo remains independent of the UI tree.
+        let margin = Px(12.0);
+        let gap = Px(10.0);
+        let icon_size = Px(22.0);
+        let rgba_size = Px(44.0);
+        let total_w = rgba_size + gap + icon_size;
+        let x0 = Px((bounds.size.width.0 - margin.0 - total_w.0).max(0.0));
+        let y0 = Px((bounds.size.height.0 - margin.0 - rgba_size.0).max(0.0));
+
+        let theme = Theme::global(app).snapshot();
+        scene.push(fret_core::SceneOp::Quad {
+            order: fret_core::DrawOrder(1000),
+            rect: Rect::new(
+                Point::new(x0 - Px(8.0), y0 - Px(8.0)),
+                Size::new(total_w + Px(16.0), rgba_size + Px(16.0)),
+            ),
+            background: theme.colors.panel_background,
+            border: fret_core::Edges::all(Px(1.0)),
+            border_color: theme.colors.panel_border,
+            corner_radii: fret_core::Corners::all(Px(10.0)),
+        });
+
+        if let Some(rgba) = state.svg_rgba_image {
+            scene.push(fret_core::SceneOp::ImageRegion {
+                order: fret_core::DrawOrder(1001),
+                rect: Rect::new(Point::new(x0, y0), Size::new(rgba_size, rgba_size)),
+                image: rgba.image,
+                uv: rgba.uv,
+                opacity: 1.0,
+            });
+        }
+
+        if let Some(mask) = state.svg_mask_icon {
+            scene.push(fret_core::SceneOp::MaskImage {
+                order: fret_core::DrawOrder(1001),
+                rect: Rect::new(
+                    Point::new(x0 + rgba_size + gap, y0 + (rgba_size - icon_size)),
+                    Size::new(icon_size, icon_size),
+                ),
+                image: mask.image,
+                uv: mask.uv,
+                color: theme.colors.text_primary,
+                opacity: 1.0,
+            });
+        }
     }
 
     fn window_create_spec(
