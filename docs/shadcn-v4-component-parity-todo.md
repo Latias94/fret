@@ -17,7 +17,7 @@ the same component concepts and compose similar UIs, even if the underlying runt
 
 ## Snapshot (for traceability)
 
-- Fret repo base: `19df1158a3f5c9e41c0759e8d1b42f4e91de18da`
+- Fret repo base: `7c36de7826f26d0059f9f5aaaa926d588d9ca15a`
 - shadcn/ui HEAD: `ccafdaf7c6f6747a24f54e84436b42ec42f01779`
 
 ## Scope and non-goals
