@@ -16,6 +16,7 @@ use crate::ChromeRefinement;
 use crate::Size as ComponentSize;
 use crate::recipes::menu_list::resolve_menu_list_row_chrome;
 use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
+use fret_ui::overlay_placement;
 
 #[derive(Debug, Clone)]
 pub struct ContextMenuStyle {
@@ -33,6 +34,7 @@ pub struct ContextMenuStyle {
     pub padding_y: Px,
     pub row_height: Px,
     pub separator_height: Px,
+    pub window_margin: Px,
 }
 
 impl Default for ContextMenuStyle {
@@ -86,6 +88,7 @@ impl Default for ContextMenuStyle {
             padding_y: Px(8.0),
             row_height: Px(22.0),
             separator_height: Px(10.0),
+            window_margin: Px(8.0),
         }
     }
 }
@@ -201,6 +204,9 @@ impl ContextMenu {
         self.style.text_style = rows.text_style;
         self.style.row_height = rows.row_height;
         self.style.separator_height = rows.separator_height;
+        self.style.window_margin = theme
+            .metric_by_key("component.context_menu.window_margin")
+            .unwrap_or(Px(8.0));
     }
 
     fn cleanup(&mut self, services: &mut dyn fret_core::UiServices) {
@@ -402,11 +408,15 @@ impl ContextMenu {
         let mut depth = 0usize;
         let mut items: &[MenuItem] = &request.menu.items;
 
-        let mut next_bounds = self.compute_root_panel_bounds(request.position, cx.bounds.size);
+        let outer = overlay_placement::inset_rect(
+            cx.bounds,
+            Edges::all(Px(self.style.window_margin.0.max(0.0))),
+        );
+        let mut next_anchor = self.compute_root_panel_anchor(request.position);
 
         loop {
-            let panel = self.build_panel(cx, items, request, constraints, next_bounds, depth);
-            next_bounds = self.compute_next_submenu_bounds(cx.bounds.size, &panel, depth);
+            let panel = self.build_panel(cx, items, request, constraints, outer, next_anchor, depth);
+            next_anchor = self.compute_next_submenu_anchor(&panel, depth);
             self.panels.push(panel);
 
             if depth >= self.open_path.len() {
@@ -428,10 +438,10 @@ impl ContextMenu {
         self.selection.truncate(self.panels.len());
     }
 
-    fn compute_root_panel_bounds(&self, position: Point, screen: Size) -> Rect {
+    fn compute_root_panel_anchor(&self, position: Point) -> Rect {
         let x = Px(position.x.0 + 2.0);
         let y = Px(position.y.0 + 2.0);
-        Rect::new(Point::new(x, y), screen)
+        Rect::new(Point::new(x, y), Size::new(Px(0.0), Px(0.0)))
     }
 
     fn build_panel<H: UiHost>(
@@ -440,6 +450,7 @@ impl ContextMenu {
         items: &[MenuItem],
         request: &ContextMenuRequest,
         constraints: TextConstraints,
+        outer: Rect,
         anchor: Rect,
         depth: usize,
     ) -> PreparedPanel {
@@ -570,46 +581,45 @@ impl ContextMenu {
         let panel_h =
             Px(rows.iter().map(|r| r.height.0).sum::<f32>() + self.style.padding_y.0 * 2.0);
 
-        let mut x = anchor
-            .origin
-            .x
-            .0
-            .min((cx.bounds.size.width.0 - panel_w.0).max(0.0));
-        let mut y = anchor
-            .origin
-            .y
-            .0
-            .min((cx.bounds.size.height.0 - panel_h.0).max(0.0));
-        x = x.max(0.0);
-        y = y.max(0.0);
+        let (side, side_offset) = if depth == 0 {
+            (overlay_placement::Side::Bottom, Px(0.0))
+        } else {
+            (overlay_placement::Side::Right, Px(6.0))
+        };
+
+        let bounds = overlay_placement::anchored_panel_bounds(
+            outer,
+            anchor,
+            Size::new(panel_w, panel_h),
+            side_offset,
+            side,
+            overlay_placement::Align::Start,
+        );
 
         PreparedPanel {
-            bounds: Rect::new(Point::new(Px(x), Px(y)), Size::new(panel_w, panel_h)),
+            bounds,
             rows,
         }
     }
 
-    fn compute_next_submenu_bounds(
-        &self,
-        screen: Size,
-        panel: &PreparedPanel,
-        depth: usize,
-    ) -> Rect {
+    fn compute_next_submenu_anchor(&self, panel: &PreparedPanel, depth: usize) -> Rect {
         let Some(selected_raw) = self.selection_raw(depth) else {
-            return Rect::new(panel.bounds.origin, screen);
+            return Rect::new(panel.bounds.origin, Size::new(Px(0.0), Px(0.0)));
         };
 
         let mut y = panel.bounds.origin.y.0 + self.style.padding_y.0;
         for row in &panel.rows {
             if row.raw_index == selected_raw {
-                break;
+                let h = row.height.0.max(0.0);
+                return Rect::new(
+                    Point::new(panel.bounds.origin.x, Px(y)),
+                    Size::new(panel.bounds.size.width, Px(h)),
+                );
             }
             y += row.height.0;
         }
 
-        let gap = 6.0;
-        let right_x = panel.bounds.origin.x.0 + panel.bounds.size.width.0 + gap;
-        Rect::new(Point::new(Px(right_x), Px(y)), screen)
+        Rect::new(panel.bounds.origin, Size::new(Px(0.0), Px(0.0)))
     }
 
     fn menu_bar_bounds(menu_bar: &MenuBarContextMenu) -> Option<Rect> {

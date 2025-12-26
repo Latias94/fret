@@ -171,5 +171,17 @@ mod tests {
         assert_eq!(inset.origin, Point::new(Px(8.0), Px(8.0)));
         assert_eq!(inset.size, Size::new(Px(84.0), Px(34.0)));
     }
-}
 
+    #[test]
+    fn flips_from_right_to_left_when_right_overflows() {
+        let outer = r(0.0, 0.0, 200.0, 200.0);
+        let anchor = r(190.0, 10.0, 10.0, 20.0);
+        let content = Size::new(Px(120.0), Px(40.0));
+
+        let placed = anchored_panel_bounds(outer, anchor, content, Px(6.0), Side::Right, Align::Start);
+        assert!(
+            placed.origin.x.0 + placed.size.width.0 <= anchor.origin.x.0,
+            "expected right placement to flip left when overflowing"
+        );
+    }
+}

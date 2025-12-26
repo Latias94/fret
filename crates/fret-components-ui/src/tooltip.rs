@@ -6,6 +6,7 @@ use fret_core::{
 };
 use fret_runtime::Model;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
+use fret_ui::overlay_placement;
 
 #[derive(Debug, Clone)]
 pub struct TooltipRequest {
@@ -120,6 +121,7 @@ pub struct TooltipStyle {
     pub padding_y: Px,
     pub max_width: Px,
     pub offset: Px,
+    pub window_margin: Px,
 }
 
 impl Default for TooltipStyle {
@@ -155,6 +157,7 @@ impl Default for TooltipStyle {
             padding_y: Px(8.0),
             max_width: Px(320.0),
             offset: Px(8.0),
+            window_margin: Px(8.0),
         }
     }
 }
@@ -188,6 +191,9 @@ impl TooltipOverlay {
         self.style.text_color = theme.colors.text_primary;
         self.style.padding_x = theme.metrics.padding_sm;
         self.style.padding_y = theme.metrics.padding_sm;
+        self.style.window_margin = theme
+            .metric_by_key("component.tooltip.window_margin")
+            .unwrap_or(Px(8.0));
     }
 
     fn cleanup(&mut self, services: &mut dyn fret_core::UiServices) {
@@ -235,24 +241,23 @@ impl TooltipOverlay {
         Some(metrics)
     }
 
-    fn compute_bounds(&self, request: &TooltipRequest, screen: Size, content: Size) -> Rect {
+    fn compute_bounds(&self, request: &TooltipRequest, outer: Rect, content: Size) -> Rect {
         let pad_x = self.style.padding_x.0.max(0.0);
         let pad_y = self.style.padding_y.0.max(0.0);
         let w = (content.width.0 + pad_x * 2.0).max(0.0);
         let h = (content.height.0 + pad_y * 2.0).max(0.0);
 
-        let mut x = request.anchor.origin.x.0;
-        let mut y = request.anchor.origin.y.0 + request.anchor.size.height.0 + self.style.offset.0;
+        let margin = Px(self.style.window_margin.0.max(0.0));
+        let inset = overlay_placement::inset_rect(outer, Edges::all(margin));
 
-        // If it doesn't fit below, try above.
-        if y + h > screen.height.0 {
-            y = request.anchor.origin.y.0 - h - self.style.offset.0;
-        }
-
-        x = x.clamp(0.0, (screen.width.0 - w).max(0.0));
-        y = y.clamp(0.0, (screen.height.0 - h).max(0.0));
-
-        Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
+        overlay_placement::anchored_panel_bounds(
+            inset,
+            request.anchor,
+            Size::new(Px(w), Px(h)),
+            self.style.offset,
+            overlay_placement::Side::Bottom,
+            overlay_placement::Align::Center,
+        )
     }
 }
 
@@ -333,7 +338,7 @@ impl<H: UiHost> Widget<H> for TooltipOverlay {
             return;
         };
 
-        let bubble = self.compute_bounds(&request, cx.bounds.size, metrics.size);
+        let bubble = self.compute_bounds(&request, cx.bounds, metrics.size);
         if let Some(shadow) = self.style.shadow {
             fret_ui::paint::paint_shadow(cx.scene, DrawOrder(12_000), bubble, shadow);
         }
@@ -495,5 +500,58 @@ mod tests {
             .global::<TooltipService>()
             .expect("tooltip service exists");
         assert!(svc.serial_model().is_some());
+    }
+
+    #[test]
+    fn tooltip_bounds_flip_to_top_when_bottom_overflows() {
+        let overlay = TooltipOverlay::new();
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(100.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(10.0), Px(90.0)),
+            Size::new(Px(40.0), Px(10.0)),
+        );
+        let request = TooltipRequest {
+            owner: NodeId::default(),
+            anchor,
+            text: Arc::from("hi"),
+        };
+        let content = Size::new(Px(120.0), Px(40.0));
+        let bubble = overlay.compute_bounds(&request, outer, content);
+
+        assert!(
+            bubble.origin.y.0 + bubble.size.height.0 <= anchor.origin.y.0,
+            "expected tooltip to flip above when bottom overflows"
+        );
+    }
+
+    #[test]
+    fn tooltip_bounds_respect_window_margin() {
+        let mut overlay = TooltipOverlay::new();
+        overlay.style.window_margin = Px(8.0);
+        overlay.style.padding_x = Px(0.0);
+        overlay.style.padding_y = Px(0.0);
+        overlay.style.offset = Px(0.0);
+
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(50.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(10.0), Px(10.0)),
+        );
+        let request = TooltipRequest {
+            owner: NodeId::default(),
+            anchor,
+            text: Arc::from("hi"),
+        };
+        let bubble = overlay.compute_bounds(&request, outer, Size::new(Px(80.0), Px(20.0)));
+        assert!(
+            bubble.origin.x.0 >= 8.0 && bubble.origin.y.0 >= 8.0,
+            "expected tooltip to clamp within the inset viewport"
+        );
     }
 }
