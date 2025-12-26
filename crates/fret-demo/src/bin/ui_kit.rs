@@ -8,8 +8,8 @@ use fret_components_shadcn::{
     AccordionItem as ShadcnAccordionItem, AccordionTrigger as ShadcnAccordionTrigger,
     AspectRatio as ShadcnAspectRatio, Avatar as ShadcnAvatar,
     AvatarFallback as ShadcnAvatarFallback, AvatarImage as ShadcnAvatarImage,
-    Button as ShadcnButton, ButtonGroup as ShadcnButtonGroup,
-    ButtonGroupItem as ShadcnButtonGroupItem,
+    Breadcrumb as ShadcnBreadcrumb, BreadcrumbItem as ShadcnBreadcrumbItem, Button as ShadcnButton,
+    ButtonGroup as ShadcnButtonGroup, ButtonGroupItem as ShadcnButtonGroupItem,
     ButtonGroupOrientation as ShadcnButtonGroupOrientation, ButtonSize as ShadcnButtonSize,
     ButtonVariant as ShadcnButtonVariant, Collapsible as ShadcnCollapsible,
     CollapsibleContent as ShadcnCollapsibleContent, CollapsibleTrigger as ShadcnCollapsibleTrigger,
@@ -1307,6 +1307,19 @@ impl WinitDriver for UiKitDriver {
 		                                    vec![cx.text_props(p)]
 		                                },
 		                            ),
+                            cx.text("shadcn/ui v4 Breadcrumb (prototype)"),
+                            ShadcnBreadcrumb::new()
+                                .item(
+                                    ShadcnBreadcrumbItem::new("Home")
+                                        .on_click("ui_kit.breadcrumb.home"),
+                                )
+                                .item(
+                                    ShadcnBreadcrumbItem::new("Components")
+                                        .on_click("ui_kit.breadcrumb.components"),
+                                )
+                                .item(ShadcnBreadcrumbItem::ellipsis())
+                                .item(ShadcnBreadcrumbItem::new("Breadcrumb"))
+                                .into_element(cx),
 	                            cx.text("Absolute badge (position/inset)"),
 	                            cx.container(
 	                                fret_ui_app::element::ContainerProps {

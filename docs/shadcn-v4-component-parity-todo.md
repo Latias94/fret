@@ -85,7 +85,7 @@ Status legend:
 | Aspect Ratio | `ui/aspect-ratio.tsx` | `fret_components_shadcn::AspectRatio` | ✅ | Declarative helper over ADR 0057 aspect ratio semantics. |
 | Avatar | `ui/avatar.tsx` | `fret_components_shadcn::{Avatar, AvatarImage, AvatarFallback}` | ✅ | Declarative composition: clipped rounded root + image/fallback layers. |
 | Badge | `ui/badge.tsx` | `fret_components_shadcn::Badge` | ✅ | First-pass composition helper; verify variants. |
-| Breadcrumb | `ui/breadcrumb.tsx` |  | ❌ | Needs link-like text + separators. |
+| Breadcrumb | `ui/breadcrumb.tsx` | `fret_components_shadcn::{Breadcrumb, BreadcrumbItem}` | ✅ | Builder renders shadcn-style link/page + separators + ellipsis. |
 | Button | `ui/button.tsx` | `fret_components_shadcn::Button` | ✅ | Wrapper exists; verify hover/active/disabled parity. |
 | Button Group | `ui/button-group.tsx` | `fret_components_shadcn::{ButtonGroup, ButtonGroupItem}` | ✅ | Segmented buttons (radius merge + border collapse) with keyboard navigation. |
 | Calendar | `ui/calendar.tsx` |  | ❌ | Likely needs date model + navigation + selection. |
