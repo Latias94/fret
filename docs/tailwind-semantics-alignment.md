@@ -111,9 +111,14 @@ This table is intentionally “semantic”, not a 1:1 class inventory.
 
 - `p-*`, `px-*`, `py-*` → `ChromeRefinement` helpers (`p_*`, `px_*`, `py_*`)
 - `pt/pr/pb/pl-*` → `ChromeRefinement::{pt,pr,pb,pl}`
-  - Current policy: many surfaces interpret padding as symmetric `x/y` values.
-  - Recommendation: treat any single-edge padding refinement as setting the corresponding axis
-    (`pr` behaves like “set px” unless the surface supports per-edge).
+  - **Surface/control chrome**: padding is interpreted as symmetric `padding_x/padding_y` (axis),
+    so a single-edge refinement acts as axis shorthand (`pr-*` behaves like `px-*`, `pb-*` like
+    `py-*`) to avoid no-ops.
+  - **Inputs**: padding is truly per-edge (Tailwind-like), because inputs frequently reserve space
+    for leading/trailing icons.
+  - Constraint: symmetric surfaces/controls cannot represent different values for both edges of an
+    axis (e.g. `pl-*` and `pr-*` with different values). The resolver uses a deterministic
+    preference and the other edge becomes a no-op; prefer `px/py` for unambiguous intent.
 - `gap-*` → container layout (`FlexProps.gap`, `GridProps.gap`) via component-layer helpers
 - `m-*`, `mx-*`, `my-*`, `mt/mr/mb/ml-*` → `LayoutRefinement` (`m/mx/my/mt/mr/mb/ml`)
 
@@ -127,9 +132,8 @@ This table is intentionally “semantic”, not a 1:1 class inventory.
 
 Open decision:
 
-- The runtime default for `flex_shrink` is currently conservative (explicitly set by recipes).
-  If we want closer DOM parity, consider defaulting flex items to `shrink=1` and require
-  `flex_shrink_0` for fixed items (gpui-component patterns often assume this).
+- The runtime default for `flex_shrink` should match DOM/Tailwind expectations (`shrink=1`).
+  Fixed items must opt out via `flex_shrink_0` (and often `min_w_0` for text rows).
 
 ### Position / inset
 
@@ -155,4 +159,3 @@ Open decision:
 - ADR 0062: Tailwind Layout Primitives: `docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md`
 - Tailwind primitive parity TODO: `docs/tailwind-primitive-parity-todo.md`
 - shadcn parity TODO: `docs/shadcn-v4-component-parity-todo.md`
-

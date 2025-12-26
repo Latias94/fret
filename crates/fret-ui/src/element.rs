@@ -113,12 +113,25 @@ impl Default for SizeStyle {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct FlexItemStyle {
     pub grow: f32,
     pub shrink: f32,
     pub basis: Length,
     pub align_self: Option<CrossAlign>,
+}
+
+impl Default for FlexItemStyle {
+    fn default() -> Self {
+        Self {
+            grow: 0.0,
+            // Tailwind/DOM default is `flex-shrink: 1`. Recipes should opt out via
+            // `LayoutRefinement::flex_shrink_0()` when needed.
+            shrink: 1.0,
+            basis: Length::Auto,
+            align_self: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]
