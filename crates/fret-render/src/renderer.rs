@@ -1,7 +1,7 @@
 use bytemuck::{Pod, Zeroable};
 use fret_core::{
     geometry::{Corners, Edges, Rect},
-    scene::{Color, Scene, SceneOp},
+    scene::{Color, Scene, SceneOp, UvRect},
 };
 use lyon::tessellation::{
     BuffersBuilder, FillOptions, FillTessellator, FillVertex, StrokeOptions, StrokeTessellator,
@@ -13,7 +13,9 @@ use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
 use crate::images::{ImageColorSpace, ImageDescriptor, ImageRegistry};
-use crate::svg::{SMOOTH_SVG_SCALE_FACTOR, SvgRenderer, upload_alpha_mask, upload_rgba_image};
+use crate::svg::{
+    SMOOTH_SVG_SCALE_FACTOR, SvgAlphaMask, SvgRenderer, upload_alpha_mask, upload_rgba_image,
+};
 use crate::targets::{RenderTargetDescriptor, RenderTargetRegistry};
 use crate::text::TextSystem;
 
@@ -86,6 +88,9 @@ enum SvgRasterKind {
     Rgba,
 }
 
+const SVG_MASK_ATLAS_PAGE_SIZE_PX: u32 = 1024;
+const SVG_MASK_ATLAS_PADDING_PX: u32 = 1;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct SvgRasterKey {
     svg: fret_core::SvgId,
@@ -96,12 +101,64 @@ struct SvgRasterKey {
     fit: fret_core::SvgFit,
 }
 
+enum SvgRasterStorage {
+    Standalone { _texture: wgpu::Texture },
+    MaskAtlas { page_index: usize },
+}
+
+struct SvgMaskAtlasPage {
+    image: fret_core::ImageId,
+    size_px: (u32, u32),
+    cursor_x: u32,
+    cursor_y: u32,
+    row_h: u32,
+    entries: usize,
+    last_used_epoch: u64,
+    _texture: wgpu::Texture,
+}
+
 struct SvgRasterEntry {
     image: fret_core::ImageId,
+    uv: UvRect,
     size_px: (u32, u32),
     approx_bytes: u64,
     last_used_epoch: u64,
-    _texture: wgpu::Texture,
+    storage: SvgRasterStorage,
+}
+
+impl SvgMaskAtlasPage {
+    fn bytes(&self) -> u64 {
+        u64::from(self.size_px.0).saturating_mul(u64::from(self.size_px.1))
+    }
+
+    fn try_alloc(&mut self, size_px: (u32, u32)) -> Option<(u32, u32)> {
+        let (w, h) = size_px;
+        if w == 0 || h == 0 {
+            return None;
+        }
+        let (page_w, page_h) = self.size_px;
+        if w > page_w || h > page_h {
+            return None;
+        }
+
+        let mut x = self.cursor_x;
+        let mut y = self.cursor_y;
+        let mut row_h = self.row_h;
+
+        if x.saturating_add(w) > page_w {
+            x = 0;
+            y = y.saturating_add(row_h);
+            row_h = 0;
+        }
+        if y.saturating_add(h) > page_h {
+            return None;
+        }
+
+        self.cursor_x = x.saturating_add(w);
+        self.cursor_y = y;
+        self.row_h = row_h.max(h);
+        Some((x, y))
+    }
 }
 
 impl ScissorRect {
@@ -113,6 +170,64 @@ impl ScissorRect {
             h: height,
         }
     }
+}
+
+fn write_r8_texture_region(
+    queue: &wgpu::Queue,
+    texture: &wgpu::Texture,
+    origin: (u32, u32),
+    size_px: (u32, u32),
+    data: &[u8],
+) {
+    let (w, h) = size_px;
+    debug_assert_eq!(data.len(), (w as usize) * (h as usize));
+    if w == 0 || h == 0 {
+        return;
+    }
+
+    let bytes_per_row = w;
+    let aligned_bytes_per_row = bytes_per_row.div_ceil(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
+        * wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+    let aligned_bytes_per_row = aligned_bytes_per_row.max(bytes_per_row);
+
+    let mut owned: Vec<u8> = Vec::new();
+    let bytes: &[u8] = if aligned_bytes_per_row == bytes_per_row {
+        data
+    } else {
+        owned.resize((aligned_bytes_per_row * h) as usize, 0);
+        for row in 0..h as usize {
+            let src0 = row * w as usize;
+            let src1 = src0 + w as usize;
+            let dst0 = row * aligned_bytes_per_row as usize;
+            let dst1 = dst0 + w as usize;
+            owned[dst0..dst1].copy_from_slice(&data[src0..src1]);
+        }
+        &owned
+    };
+
+    queue.write_texture(
+        wgpu::TexelCopyTextureInfo {
+            texture,
+            mip_level: 0,
+            origin: wgpu::Origin3d {
+                x: origin.0,
+                y: origin.1,
+                z: 0,
+            },
+            aspect: wgpu::TextureAspect::All,
+        },
+        bytes,
+        wgpu::TexelCopyBufferLayout {
+            offset: 0,
+            bytes_per_row: Some(aligned_bytes_per_row),
+            rows_per_image: Some(h),
+        },
+        wgpu::Extent3d {
+            width: w,
+            height: h,
+            depth_or_array_layers: 1,
+        },
+    );
 }
 
 fn color_to_linear_rgba_premul(color: Color) -> [f32; 4] {
@@ -681,6 +796,8 @@ pub struct Renderer {
     svgs: SlotMap<fret_core::SvgId, Arc<[u8]>>,
     svg_hash_index: HashMap<u64, Vec<fret_core::SvgId>>,
     svg_rasters: HashMap<SvgRasterKey, SvgRasterEntry>,
+    svg_mask_atlas_pages: Vec<Option<SvgMaskAtlasPage>>,
+    svg_mask_atlas_free: Vec<usize>,
     svg_raster_bytes: u64,
     svg_raster_budget_bytes: u64,
     svg_raster_epoch: u64,
@@ -853,34 +970,254 @@ impl Renderer {
         let cur_epoch = self.svg_raster_epoch;
 
         while self.svg_raster_bytes > self.svg_raster_budget_bytes {
-            let mut victim: Option<(SvgRasterKey, u64)> = None;
-            for (k, v) in &self.svg_rasters {
-                if v.last_used_epoch == cur_epoch {
+            let mut victim_atlas_page: Option<(usize, u64)> = None;
+            for (idx, page) in self.svg_mask_atlas_pages.iter().enumerate() {
+                let Some(page) = page.as_ref() else {
+                    continue;
+                };
+                if page.last_used_epoch == cur_epoch {
                     continue;
                 }
-                match victim {
-                    None => victim = Some((*k, v.last_used_epoch)),
+                match victim_atlas_page {
+                    None => victim_atlas_page = Some((idx, page.last_used_epoch)),
                     Some((_, best_epoch)) => {
-                        if v.last_used_epoch < best_epoch {
-                            victim = Some((*k, v.last_used_epoch));
+                        if page.last_used_epoch < best_epoch {
+                            victim_atlas_page = Some((idx, page.last_used_epoch));
                         }
                     }
                 }
             }
 
-            let Some((victim_key, _)) = victim else {
+            let mut victim_standalone: Option<(SvgRasterKey, u64)> = None;
+            for (k, v) in &self.svg_rasters {
+                if v.last_used_epoch == cur_epoch {
+                    continue;
+                }
+                if !matches!(&v.storage, SvgRasterStorage::Standalone { .. }) {
+                    continue;
+                }
+                match victim_standalone {
+                    None => victim_standalone = Some((*k, v.last_used_epoch)),
+                    Some((_, best_epoch)) => {
+                        if v.last_used_epoch < best_epoch {
+                            victim_standalone = Some((*k, v.last_used_epoch));
+                        }
+                    }
+                }
+            }
+
+            enum Victim {
+                AtlasPage(usize),
+                Standalone(SvgRasterKey),
+            }
+
+            let victim = match (victim_atlas_page, victim_standalone) {
+                (None, None) => None,
+                (Some((index, _)), None) => Some(Victim::AtlasPage(index)),
+                (None, Some((key, _))) => Some(Victim::Standalone(key)),
+                (Some((page_idx, page_epoch)), Some((entry_key, entry_epoch))) => {
+                    if page_epoch <= entry_epoch {
+                        Some(Victim::AtlasPage(page_idx))
+                    } else {
+                        Some(Victim::Standalone(entry_key))
+                    }
+                }
+            };
+
+            let Some(victim) = victim else {
                 // Cache is over budget but all entries were used this frame. Keep correctness and
                 // allow a temporary overshoot.
                 break;
             };
 
-            if let Some(entry) = self.svg_rasters.remove(&victim_key) {
+            match victim {
+                Victim::AtlasPage(index) => {
+                    self.evict_svg_mask_atlas_page(index);
+                }
+                Victim::Standalone(key) => {
+                    if let Some(entry) = self.svg_rasters.remove(&key) {
+                        self.drop_svg_raster_entry(entry);
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    fn drop_svg_raster_entry(&mut self, entry: SvgRasterEntry) {
+        match entry.storage {
+            SvgRasterStorage::Standalone { .. } => {
                 self.svg_raster_bytes = self.svg_raster_bytes.saturating_sub(entry.approx_bytes);
                 let _ = self.unregister_image(entry.image);
-            } else {
+            }
+            SvgRasterStorage::MaskAtlas { page_index } => {
+                let Some(page) = self
+                    .svg_mask_atlas_pages
+                    .get_mut(page_index)
+                    .and_then(|p| p.as_mut())
+                else {
+                    return;
+                };
+                page.entries = page.entries.saturating_sub(1);
+                if page.entries == 0 {
+                    self.evict_svg_mask_atlas_page(page_index);
+                }
+            }
+        }
+    }
+
+    fn ensure_svg_mask_atlas_page(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) -> usize {
+        let size_px = (SVG_MASK_ATLAS_PAGE_SIZE_PX, SVG_MASK_ATLAS_PAGE_SIZE_PX);
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("fret svg mask atlas"),
+            size: wgpu::Extent3d {
+                width: size_px.0,
+                height: size_px.1,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::R8Unorm,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let image = self.register_image(ImageDescriptor {
+            view: view.clone(),
+            size: size_px,
+            format: wgpu::TextureFormat::R8Unorm,
+            color_space: ImageColorSpace::Linear,
+        });
+
+        let zeros = vec![0u8; (size_px.0 as usize) * (size_px.1 as usize)];
+        write_r8_texture_region(queue, &texture, (0, 0), size_px, &zeros);
+
+        let page = SvgMaskAtlasPage {
+            image,
+            size_px,
+            cursor_x: 0,
+            cursor_y: 0,
+            row_h: 0,
+            entries: 0,
+            last_used_epoch: self.svg_raster_epoch,
+            _texture: texture,
+        };
+
+        let idx = self.svg_mask_atlas_free.pop().unwrap_or_else(|| {
+            self.svg_mask_atlas_pages.push(None);
+            self.svg_mask_atlas_pages.len() - 1
+        });
+        self.svg_mask_atlas_pages[idx] = Some(page);
+
+        self.svg_raster_bytes = self
+            .svg_raster_bytes
+            .saturating_add(u64::from(size_px.0).saturating_mul(u64::from(size_px.1)));
+        idx
+    }
+
+    fn insert_svg_alpha_mask_into_atlas(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        mask: &SvgAlphaMask,
+    ) -> Option<(fret_core::ImageId, UvRect, (u32, u32), usize)> {
+        let (w, h) = mask.size_px;
+        if w == 0 || h == 0 {
+            return None;
+        }
+
+        let pad = SVG_MASK_ATLAS_PADDING_PX;
+        let w_pad = w.saturating_add(pad.saturating_mul(2));
+        let h_pad = h.saturating_add(pad.saturating_mul(2));
+        if w_pad == 0
+            || h_pad == 0
+            || w_pad > SVG_MASK_ATLAS_PAGE_SIZE_PX
+            || h_pad > SVG_MASK_ATLAS_PAGE_SIZE_PX
+        {
+            return None;
+        }
+
+        let mut alloc: Option<(usize, u32, u32)> = None;
+        for (idx, page) in self.svg_mask_atlas_pages.iter_mut().enumerate() {
+            let Some(page) = page.as_mut() else {
+                continue;
+            };
+            if let Some((x, y)) = page.try_alloc((w_pad, h_pad)) {
+                alloc = Some((idx, x, y));
                 break;
             }
         }
+        if alloc.is_none() {
+            let page_index = self.ensure_svg_mask_atlas_page(device, queue);
+            let page = self.svg_mask_atlas_pages[page_index]
+                .as_mut()
+                .expect("atlas page exists");
+            let (x, y) = page.try_alloc((w_pad, h_pad))?;
+            alloc = Some((page_index, x, y));
+        }
+
+        let (page_index, x, y) = alloc?;
+        let page = self.svg_mask_atlas_pages[page_index]
+            .as_mut()
+            .expect("atlas page exists");
+
+        let mut padded = vec![0u8; (w_pad as usize) * (h_pad as usize)];
+        let max_x = w.saturating_sub(1);
+        let max_y = h.saturating_sub(1);
+        for yy in 0..h_pad {
+            let src_y = yy.saturating_sub(pad).min(max_y);
+            for xx in 0..w_pad {
+                let src_x = xx.saturating_sub(pad).min(max_x);
+                let dst = (yy as usize) * (w_pad as usize) + (xx as usize);
+                let src = (src_y as usize) * (w as usize) + (src_x as usize);
+                padded[dst] = mask.alpha[src];
+            }
+        }
+
+        write_r8_texture_region(queue, &page._texture, (x, y), (w_pad, h_pad), &padded);
+
+        let page_w = page.size_px.0 as f32;
+        let page_h = page.size_px.1 as f32;
+        let u0 = (x + pad) as f32 / page_w;
+        let v0 = (y + pad) as f32 / page_h;
+        let u1 = (x + pad + w) as f32 / page_w;
+        let v1 = (y + pad + h) as f32 / page_h;
+
+        page.entries += 1;
+        page.last_used_epoch = self.svg_raster_epoch;
+
+        Some((page.image, UvRect { u0, v0, u1, v1 }, (w, h), page_index))
+    }
+
+    fn evict_svg_mask_atlas_page(&mut self, page_index: usize) {
+        let Some(page) = self
+            .svg_mask_atlas_pages
+            .get_mut(page_index)
+            .and_then(|p| p.take())
+        else {
+            return;
+        };
+
+        let mut keys_to_remove: Vec<SvgRasterKey> = Vec::new();
+        for (k, v) in &self.svg_rasters {
+            let is_page = match &v.storage {
+                SvgRasterStorage::MaskAtlas { page_index: idx } => *idx == page_index,
+                SvgRasterStorage::Standalone { .. } => false,
+            };
+            if is_page {
+                keys_to_remove.push(*k);
+            }
+        }
+        for k in keys_to_remove {
+            let _ = self.svg_rasters.remove(&k);
+        }
+
+        self.svg_raster_bytes = self.svg_raster_bytes.saturating_sub(page.bytes());
+        let _ = self.unregister_image(page.image);
+
+        self.svg_mask_atlas_free.push(page_index);
     }
 
     fn ensure_svg_raster(
@@ -894,28 +1231,66 @@ impl Renderer {
         fit: fret_core::SvgFit,
     ) -> Option<(fret_core::ImageId, fret_core::UvRect, (u32, u32))> {
         let key = Self::svg_raster_key(svg, rect, scale_factor, kind, fit);
-        if let Some(e) = self.svg_rasters.get_mut(&key) {
-            e.last_used_epoch = self.svg_raster_epoch;
-            return Some((e.image, fret_core::UvRect::FULL, e.size_px));
+        if self.svg_rasters.contains_key(&key) {
+            let (image, uv, size_px, page_index) = {
+                let e = self.svg_rasters.get_mut(&key)?;
+                e.last_used_epoch = self.svg_raster_epoch;
+                let page_index = match &e.storage {
+                    SvgRasterStorage::MaskAtlas { page_index } => Some(*page_index),
+                    SvgRasterStorage::Standalone { .. } => None,
+                };
+                (e.image, e.uv, e.size_px, page_index)
+            };
+            if let Some(page_index) = page_index {
+                if let Some(Some(page)) = self.svg_mask_atlas_pages.get_mut(page_index) {
+                    page.last_used_epoch = self.svg_raster_epoch;
+                }
+            }
+            return Some((image, uv, size_px));
         }
 
         let bytes = self.svgs.get(svg)?;
         let target_box_px = (key.target_w, key.target_h);
 
-        let (texture, view, size_px, image_format, color_space) = match kind {
+        let (image, uv, size_px, approx_bytes, storage) = match kind {
             SvgRasterKind::AlphaMask => {
                 let mask = self
                     .svg_renderer
                     .render_alpha_mask_fit_mode(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR, fit)
                     .ok()?;
-                let uploaded = upload_alpha_mask(device, queue, &mask);
-                (
-                    uploaded.texture,
-                    uploaded.view,
-                    uploaded.size_px,
-                    wgpu::TextureFormat::R8Unorm,
-                    ImageColorSpace::Linear,
-                )
+
+                if let Some((image, uv, size_px, page_index)) =
+                    self.insert_svg_alpha_mask_into_atlas(device, queue, &mask)
+                {
+                    (
+                        image,
+                        uv,
+                        size_px,
+                        0,
+                        SvgRasterStorage::MaskAtlas {
+                            page_index: page_index,
+                        },
+                    )
+                } else {
+                    let uploaded = upload_alpha_mask(device, queue, &mask);
+                    let image = self.register_image(ImageDescriptor {
+                        view: uploaded.view.clone(),
+                        size: uploaded.size_px,
+                        format: wgpu::TextureFormat::R8Unorm,
+                        color_space: ImageColorSpace::Linear,
+                    });
+                    let approx_bytes =
+                        u64::from(uploaded.size_px.0).saturating_mul(u64::from(uploaded.size_px.1));
+                    (
+                        image,
+                        UvRect::FULL,
+                        uploaded.size_px,
+                        approx_bytes,
+                        SvgRasterStorage::Standalone {
+                            _texture: uploaded.texture,
+                        },
+                    )
+                }
             }
             SvgRasterKind::Rgba => {
                 let rgba = self
@@ -923,43 +1298,41 @@ impl Renderer {
                     .render_rgba_fit_mode(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR, fit)
                     .ok()?;
                 let uploaded = upload_rgba_image(device, queue, &rgba);
+                let image = self.register_image(ImageDescriptor {
+                    view: uploaded.view.clone(),
+                    size: uploaded.size_px,
+                    format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                    color_space: ImageColorSpace::Srgb,
+                });
+                let approx_bytes = u64::from(uploaded.size_px.0)
+                    .saturating_mul(u64::from(uploaded.size_px.1))
+                    .saturating_mul(4);
                 (
-                    uploaded.texture,
-                    uploaded.view,
+                    image,
+                    UvRect::FULL,
                     uploaded.size_px,
-                    wgpu::TextureFormat::Rgba8UnormSrgb,
-                    ImageColorSpace::Srgb,
+                    approx_bytes,
+                    SvgRasterStorage::Standalone {
+                        _texture: uploaded.texture,
+                    },
                 )
             }
-        };
-
-        let image = self.register_image(ImageDescriptor {
-            view: view.clone(),
-            size: size_px,
-            format: image_format,
-            color_space,
-        });
-
-        let approx_bytes = match kind {
-            SvgRasterKind::AlphaMask => u64::from(size_px.0).saturating_mul(u64::from(size_px.1)),
-            SvgRasterKind::Rgba => u64::from(size_px.0)
-                .saturating_mul(u64::from(size_px.1))
-                .saturating_mul(4),
         };
 
         self.svg_rasters.insert(
             key,
             SvgRasterEntry {
                 image,
+                uv,
                 size_px,
                 approx_bytes,
                 last_used_epoch: self.svg_raster_epoch,
-                _texture: texture,
+                storage,
             },
         );
         self.svg_raster_bytes = self.svg_raster_bytes.saturating_add(approx_bytes);
 
-        Some((image, fret_core::UvRect::FULL, size_px))
+        Some((image, uv, size_px))
     }
 
     fn ensure_path_intermediate(
@@ -1216,6 +1589,8 @@ impl Renderer {
             svgs: SlotMap::with_key(),
             svg_hash_index: HashMap::new(),
             svg_rasters: HashMap::new(),
+            svg_mask_atlas_pages: Vec::new(),
+            svg_mask_atlas_free: Vec::new(),
             svg_raster_bytes: 0,
             svg_raster_budget_bytes: 64 * 1024 * 1024,
             svg_raster_epoch: 0,
@@ -2942,7 +3317,7 @@ impl Renderer {
                     let (x0, y0, x1, y1) =
                         svg_draw_rect_px(x, y, w, h, entry.size_px, SMOOTH_SVG_SCALE_FACTOR, *fit);
 
-                    let (u0, v0, u1, v1) = (0.0, 0.0, 1.0, 1.0);
+                    let (u0, v0, u1, v1) = (entry.uv.u0, entry.uv.v0, entry.uv.u1, entry.uv.v1);
                     text_vertices.extend_from_slice(&[
                         TextVertex {
                             pos_px: [x0, y0],
@@ -3445,7 +3820,7 @@ impl fret_core::SvgService for Renderer {
             }
         }
 
-        // Drop any cached rasterizations for this SVG and unregister their images.
+        // Drop any cached rasterizations for this SVG.
         let mut keys_to_remove: Vec<SvgRasterKey> = Vec::new();
         for k in self.svg_rasters.keys() {
             if k.svg == svg {
@@ -3454,8 +3829,7 @@ impl fret_core::SvgService for Renderer {
         }
         for k in keys_to_remove {
             if let Some(entry) = self.svg_rasters.remove(&k) {
-                self.svg_raster_bytes = self.svg_raster_bytes.saturating_sub(entry.approx_bytes);
-                let _ = self.unregister_image(entry.image);
+                self.drop_svg_raster_entry(entry);
             }
         }
 
