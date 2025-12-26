@@ -76,13 +76,19 @@ pub fn resolve_control_chrome(
     ResolvedControlChrome {
         padding_x: resolve_metric(
             theme,
-            style.padding.as_ref().and_then(|p| p.left.as_ref()),
+            style
+                .padding
+                .as_ref()
+                .and_then(|p| p.left.as_ref().or(p.right.as_ref())),
             keys.padding_x,
             fallback.padding_x,
         ),
         padding_y: resolve_metric(
             theme,
-            style.padding.as_ref().and_then(|p| p.top.as_ref()),
+            style
+                .padding
+                .as_ref()
+                .and_then(|p| p.top.as_ref().or(p.bottom.as_ref())),
             keys.padding_y,
             fallback.padding_y,
         ),

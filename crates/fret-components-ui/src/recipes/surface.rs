@@ -51,10 +51,13 @@ pub fn resolve_surface_chrome(
         fallback: ColorFallback::ThemePanelBorder,
     };
 
+    // Note: surface chrome is interpreted as symmetric `padding_x/padding_y`. To avoid Tailwind
+    // per-edge no-ops, accept either edge as a shorthand for the axis (e.g. `pr-*` behaves like
+    // setting `px-*` for surfaces).
     let padding_x = style
         .padding
         .as_ref()
-        .and_then(|p| p.left.as_ref())
+        .and_then(|p| p.left.as_ref().or(p.right.as_ref()))
         .map(|m| m.resolve(theme))
         .or_else(|| keys.padding_x.and_then(|k| theme.metric_by_key(k)))
         .or_else(|| theme.metric_by_key("component.surface.padding_x"))
@@ -62,7 +65,7 @@ pub fn resolve_surface_chrome(
     let padding_y = style
         .padding
         .as_ref()
-        .and_then(|p| p.top.as_ref())
+        .and_then(|p| p.top.as_ref().or(p.bottom.as_ref()))
         .map(|m| m.resolve(theme))
         .or_else(|| keys.padding_y.and_then(|k| theme.metric_by_key(k)))
         .or_else(|| theme.metric_by_key("component.surface.padding_y"))

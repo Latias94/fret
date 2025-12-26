@@ -65,20 +65,20 @@ pub fn resolve_input_chrome(
     // 3) shared input-family token keys
     // 4) size/baseline theme fallbacks
 
-    let padding_x = style
-        .padding
-        .as_ref()
-        .and_then(|p| p.left.as_ref())
-        .map(|m| m.resolve(theme))
-        .or_else(|| keys.padding_x.and_then(|k| theme.metric_by_key(k)))
+    // `ChromeRefinement` supports per-edge padding (`pt/pr/pb/pl`). Inputs honor that directly,
+    // while falling back to component tokens / size defaults for any edge not explicitly set.
+    //
+    // Note: we intentionally do *not* treat a single-edge refinement (e.g. `pr-*`) as setting the
+    // entire axis: in Tailwind, `pr-*` only affects the right edge, and inputs frequently use this
+    // to reserve space for trailing icons.
+    let padding_x = keys
+        .padding_x
+        .and_then(|k| theme.metric_by_key(k))
         .or_else(|| theme.metric_by_key("component.input.padding_x"))
         .unwrap_or_else(|| size.input_px(theme));
-    let padding_y = style
-        .padding
-        .as_ref()
-        .and_then(|p| p.top.as_ref())
-        .map(|m| m.resolve(theme))
-        .or_else(|| keys.padding_y.and_then(|k| theme.metric_by_key(k)))
+    let padding_y = keys
+        .padding_y
+        .and_then(|k| theme.metric_by_key(k))
         .or_else(|| theme.metric_by_key("component.input.padding_y"))
         .unwrap_or_else(|| size.input_py(theme));
     let min_height = style
@@ -140,12 +140,37 @@ pub fn resolve_input_chrome(
         .or_else(|| theme.color_by_key("component.input.selection"))
         .unwrap_or(theme.colors.selection_background);
 
+    let padding_top = style
+        .padding
+        .as_ref()
+        .and_then(|p| p.top.as_ref())
+        .map(|m| m.resolve(theme))
+        .unwrap_or(padding_y);
+    let padding_bottom = style
+        .padding
+        .as_ref()
+        .and_then(|p| p.bottom.as_ref())
+        .map(|m| m.resolve(theme))
+        .unwrap_or(padding_y);
+    let padding_left = style
+        .padding
+        .as_ref()
+        .and_then(|p| p.left.as_ref())
+        .map(|m| m.resolve(theme))
+        .unwrap_or(padding_x);
+    let padding_right = style
+        .padding
+        .as_ref()
+        .and_then(|p| p.right.as_ref())
+        .map(|m| m.resolve(theme))
+        .unwrap_or(padding_x);
+
     ResolvedInputChrome {
         padding: Edges {
-            top: Px(padding_y.0.max(0.0)),
-            right: Px(padding_x.0.max(0.0)),
-            bottom: Px(padding_y.0.max(0.0)),
-            left: Px(padding_x.0.max(0.0)),
+            top: Px(padding_top.0.max(0.0)),
+            right: Px(padding_right.0.max(0.0)),
+            bottom: Px(padding_bottom.0.max(0.0)),
+            left: Px(padding_left.0.max(0.0)),
         },
         min_height: Px(min_height.0.max(0.0)),
         radius: Px(radius.0.max(0.0)),
