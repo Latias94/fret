@@ -697,6 +697,15 @@ struct SceneEncodingCacheKey {
 }
 
 impl Renderer {
+    pub fn svg_raster_budget_bytes(&self) -> u64 {
+        self.svg_raster_budget_bytes
+    }
+
+    pub fn set_svg_raster_budget_bytes(&mut self, bytes: u64) {
+        // Keep a small non-zero floor so callers can't accidentally force unbounded thrash.
+        self.svg_raster_budget_bytes = bytes.max(1024);
+    }
+
     fn svg_target_box_px(rect: Rect, scale_factor: f32) -> (u32, u32) {
         let w = (rect.size.width.0 * scale_factor).ceil().max(1.0);
         let h = (rect.size.height.0 * scale_factor).ceil().max(1.0);
