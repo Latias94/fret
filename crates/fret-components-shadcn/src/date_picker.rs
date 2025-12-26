@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, CursorIcon, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
-    SemanticsRole, Size, TextConstraints, TextOverflow, TextStyle, TextWrap,
+    Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect,
+    SceneOp, SemanticsRole, Size, TextConstraints, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::{CommandId, Model};
 use fret_ui::focus_visible::is_focus_visible;
@@ -341,6 +341,60 @@ impl<H: UiHost> Widget<H> for DatePicker {
                 }
                 _ => {}
             },
+            Event::KeyDown {
+                key,
+                modifiers,
+                repeat,
+            } => {
+                if *repeat {
+                    return;
+                }
+                if modifiers.ctrl || modifiers.meta || modifiers.alt {
+                    return;
+                }
+                if cx.focus != Some(cx.node) {
+                    return;
+                }
+                if !matches!(key, KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space) {
+                    return;
+                }
+                if !self.pressed {
+                    self.pressed = true;
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                }
+                cx.stop_propagation();
+            }
+            Event::KeyUp { key, modifiers } => {
+                if modifiers.ctrl || modifiers.meta || modifiers.alt {
+                    return;
+                }
+                if cx.focus != Some(cx.node) {
+                    return;
+                }
+                if !matches!(key, KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space) {
+                    return;
+                }
+
+                let was_pressed = std::mem::take(&mut self.pressed);
+                if !was_pressed {
+                    return;
+                }
+
+                if self.is_open(cx.app, window, cx.node) {
+                    cx.dispatch_command(CommandId::from("popover_surface.close"));
+                } else {
+                    open_popover_surface(
+                        cx,
+                        window,
+                        PopoverSurfaceRequest::new(cx.node, self.last_bounds, self.content_node),
+                    );
+                }
+
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                cx.stop_propagation();
+            }
             _ => {}
         }
     }
@@ -425,5 +479,230 @@ impl<H: UiHost> Widget<H> for DatePicker {
         }
         self.prepared_scale_factor_bits = None;
         self.prepared_theme_revision = None;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_host::TestHost;
+    use fret_components_ui::{PopoverSurfaceRequest, PopoverSurfaceService};
+    use fret_core::{
+        AppWindowId, Modifiers, MouseButton, NodeId, PathCommand, PathConstraints, PathId,
+        PathMetrics, PathService, PathStyle, Point, Px, Rect, Size, SvgId, SvgService, TextBlobId,
+        TextConstraints, TextMetrics, TextService, TextStyle,
+    };
+    use fret_runtime::{Effect, InputContext, Platform};
+    use fret_ui::widget::EventCx;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            false
+        }
+    }
+
+    #[test]
+    fn keyboard_activation_opens_and_toggles_close() {
+        let mut host = TestHost::default();
+        let window = AppWindowId::default();
+
+        let model = host.models_mut().insert(None::<Date>);
+        let content_node = NodeId::default();
+        let mut picker = DatePicker::new(model, content_node);
+        picker.last_bounds = Rect::new(
+            Point::new(Px(10.0), Px(10.0)),
+            Size::new(Px(120.0), Px(32.0)),
+        );
+
+        let node = NodeId::default();
+        let mut services = FakeServices::default();
+        {
+            let mut cx = EventCx {
+                app: &mut host,
+                services: &mut services,
+                node,
+                window: Some(window),
+                input_ctx: InputContext {
+                    platform: Platform::Linux,
+                    caps: fret_core::PlatformCapabilities::default(),
+                    ui_has_modal: false,
+                    focus_is_text_input: false,
+                },
+                children: &[],
+                focus: Some(node),
+                captured: None,
+                bounds: picker.last_bounds,
+                invalidations: Vec::new(),
+                requested_focus: None,
+                requested_capture: None,
+                requested_cursor: None,
+                stop_propagation: false,
+            };
+
+            picker.event(
+                &mut cx,
+                &Event::KeyDown {
+                    key: fret_core::KeyCode::Space,
+                    modifiers: Modifiers::default(),
+                    repeat: false,
+                },
+            );
+            picker.event(
+                &mut cx,
+                &Event::KeyUp {
+                    key: fret_core::KeyCode::Space,
+                    modifiers: Modifiers::default(),
+                },
+            );
+        }
+
+        let requested = host
+            .global::<PopoverSurfaceService>()
+            .and_then(|s| s.request(window))
+            .is_some();
+        assert!(requested, "expected popover surface request to be set");
+
+        let dispatched_open = host.effects().iter().any(|e| {
+            matches!(
+                e,
+                Effect::Command { window: Some(w), command }
+                    if *w == window && command.as_str() == "popover_surface.open"
+            )
+        });
+        assert!(
+            dispatched_open,
+            "expected popover_surface.open command to dispatch"
+        );
+
+        // Mark it as open (owner=node), then activation should dispatch close.
+        host.with_global_mut(PopoverSurfaceService::default, |service, _app| {
+            service.set_request(
+                window,
+                PopoverSurfaceRequest::new(node, picker.last_bounds, content_node),
+            );
+        });
+
+        {
+            let mut cx = EventCx {
+                app: &mut host,
+                services: &mut services,
+                node,
+                window: Some(window),
+                input_ctx: InputContext {
+                    platform: Platform::Linux,
+                    caps: fret_core::PlatformCapabilities::default(),
+                    ui_has_modal: false,
+                    focus_is_text_input: false,
+                },
+                children: &[],
+                focus: Some(node),
+                captured: None,
+                bounds: picker.last_bounds,
+                invalidations: Vec::new(),
+                requested_focus: None,
+                requested_capture: None,
+                requested_cursor: None,
+                stop_propagation: false,
+            };
+            picker.event(
+                &mut cx,
+                &Event::KeyDown {
+                    key: fret_core::KeyCode::Space,
+                    modifiers: Modifiers::default(),
+                    repeat: false,
+                },
+            );
+            picker.event(
+                &mut cx,
+                &Event::KeyUp {
+                    key: fret_core::KeyCode::Space,
+                    modifiers: Modifiers::default(),
+                },
+            );
+        }
+
+        let dispatched_close = host.effects().iter().any(|e| {
+            matches!(
+                e,
+                Effect::Command { window: Some(w), command }
+                    if *w == window && command.as_str() == "popover_surface.close"
+            )
+        });
+        assert!(
+            dispatched_close,
+            "expected popover_surface.close command to dispatch"
+        );
+
+        // Pointer input remains supported (smoke).
+        {
+            let mut cx = EventCx {
+                app: &mut host,
+                services: &mut services,
+                node,
+                window: Some(window),
+                input_ctx: InputContext {
+                    platform: Platform::Linux,
+                    caps: fret_core::PlatformCapabilities::default(),
+                    ui_has_modal: false,
+                    focus_is_text_input: false,
+                },
+                children: &[],
+                focus: Some(node),
+                captured: None,
+                bounds: picker.last_bounds,
+                invalidations: Vec::new(),
+                requested_focus: None,
+                requested_capture: None,
+                requested_cursor: None,
+                stop_propagation: false,
+            };
+            picker.event(
+                &mut cx,
+                &Event::Pointer(fret_core::PointerEvent::Down {
+                    position: Point::new(Px(12.0), Px(12.0)),
+                    button: MouseButton::Left,
+                    modifiers: Modifiers::default(),
+                }),
+            );
+        }
     }
 }

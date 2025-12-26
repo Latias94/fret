@@ -768,8 +768,8 @@ mod tests {
     use super::*;
     use fret_core::{
         MouseButton, NodeId, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
-        PathStyle, Point, Px, Rect, Size, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService, TextStyle,
+        PathStyle, Point, Px, Rect, Size, SvgId, SvgService, TextBlobId, TextConstraints,
+        TextMetrics, TextService, TextStyle,
     };
     use fret_runtime::{CommandId, Effect, InputContext, Platform};
     use fret_ui::{Theme, widget::EventCx};
@@ -902,11 +902,13 @@ mod tests {
             }),
         );
 
-        let dispatched = host.effects().iter().any(|e| matches!(
-            e,
-            Effect::Command { window: Some(w), command }
-                if *w == window && command.as_str() == "popover_surface.close"
-        ));
+        let dispatched = host.effects().iter().any(|e| {
+            matches!(
+                e,
+                Effect::Command { window: Some(w), command }
+                    if *w == window && command.as_str() == "popover_surface.close"
+            )
+        });
         assert!(
             dispatched,
             "expected on_select to dispatch popover_surface.close"

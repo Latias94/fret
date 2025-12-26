@@ -409,6 +409,7 @@ impl WindowOverlays {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::PopoverSurfaceRequest;
     use fret_app::App;
     use fret_core::{
         PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, Px, Rect, Scene,
@@ -528,6 +529,96 @@ mod tests {
             ),
             &mut scene,
             1.0,
+        );
+    }
+
+    #[test]
+    fn popover_surface_open_focuses_first_focusable_descendant_and_close_restores_focus() {
+        let mut host = App::new();
+        let mut services = FakeServices::default();
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        ui.set_root(root);
+
+        let mut overlays = WindowOverlays::install(&mut ui);
+
+        let prev_focus = ui.create_node(Focusable);
+        ui.add_child(root, prev_focus);
+        ui.set_focus(Some(prev_focus));
+
+        let surface_root = overlays.popover_surface_node();
+        let content_root = ui.create_node(fret_ui::primitives::Column::new());
+        ui.add_child(surface_root, content_root);
+
+        let focus_target = ui.create_node(Focusable);
+        ui.add_child(content_root, focus_target);
+
+        host.with_global_mut(PopoverSurfaceService::default, |service, _app| {
+            service.set_request(
+                window,
+                PopoverSurfaceRequest::new(
+                    prev_focus,
+                    Rect::new(
+                        Point::new(Px(10.0), Px(10.0)),
+                        Size::new(Px(20.0), Px(20.0)),
+                    ),
+                    content_root,
+                ),
+            );
+        });
+
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut services,
+            window,
+            &CommandId::from("popover_surface.open"),
+        );
+        assert!(handled);
+        assert_eq!(ui.focus(), Some(focus_target));
+
+        let mut scene = Scene::default();
+        ui.layout_all(
+            &mut host,
+            &mut services,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(800.0), Px(600.0)),
+            ),
+            1.0,
+        );
+        ui.paint_all(
+            &mut host,
+            &mut services,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(800.0), Px(600.0)),
+            ),
+            &mut scene,
+            1.0,
+        );
+
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut services,
+            window,
+            &CommandId::from("popover_surface.close"),
+        );
+        assert!(handled);
+        assert_eq!(ui.focus(), Some(prev_focus));
+
+        let still_open = host
+            .global::<PopoverSurfaceService>()
+            .and_then(|s| s.request(window))
+            .is_some();
+        assert!(
+            !still_open,
+            "expected popover surface request to be cleared"
         );
     }
 }
