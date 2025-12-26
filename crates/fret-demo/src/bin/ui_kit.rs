@@ -13,10 +13,12 @@ use fret_components_shadcn::{
     ButtonGroupOrientation as ShadcnButtonGroupOrientation, ButtonSize as ShadcnButtonSize,
     ButtonVariant as ShadcnButtonVariant, Collapsible as ShadcnCollapsible,
     CollapsibleContent as ShadcnCollapsibleContent, CollapsibleTrigger as ShadcnCollapsibleTrigger,
-    InputGroup as ShadcnInputGroup, RadioGroup as ShadcnRadioGroup,
-    RadioGroupItem as ShadcnRadioGroupItem, Skeleton as ShadcnSkeleton, Spinner as ShadcnSpinner,
-    ToggleGroup as ShadcnToggleGroup, ToggleGroupItem as ShadcnToggleGroupItem,
-    ToggleSize as ShadcnToggleSize, ToggleVariant as ShadcnToggleVariant,
+    HoverCard as ShadcnHoverCard, HoverCardContent as ShadcnHoverCardContent,
+    HoverCardTrigger as ShadcnHoverCardTrigger, InputGroup as ShadcnInputGroup,
+    RadioGroup as ShadcnRadioGroup, RadioGroupItem as ShadcnRadioGroupItem,
+    Skeleton as ShadcnSkeleton, Spinner as ShadcnSpinner, ToggleGroup as ShadcnToggleGroup,
+    ToggleGroupItem as ShadcnToggleGroupItem, ToggleSize as ShadcnToggleSize,
+    ToggleVariant as ShadcnToggleVariant,
 };
 use fret_components_ui::{
     ChromeRefinement, ContextMenuService, DialogAction, DialogRequest, DialogService,
@@ -1353,6 +1355,43 @@ impl WinitDriver for UiKitDriver {
                                     ]
                                 },
                             ),
+                            cx.text("shadcn/ui v4 HoverCard (prototype)"),
+                            {
+                                let trigger = cx.container(
+                                    fret_ui_app::element::ContainerProps {
+                                        padding_x: Px(12.0),
+                                        padding_y: Px(8.0),
+                                        background: Some(theme_snapshot.colors.panel_background),
+                                        border: fret_core::Edges::all(Px(1.0)),
+                                        border_color: Some(theme_snapshot.colors.panel_border),
+                                        corner_radii: fret_core::Corners::all(Px(8.0)),
+                                        ..Default::default()
+                                    },
+                                    |cx| vec![cx.text("Hover me")],
+                                );
+
+                                let content = ShadcnHoverCardContent::new(vec![
+                                    cx.text("This is hover card content."),
+                                    cx.text("It is anchored to the trigger."),
+                                    ShadcnSkeleton::new()
+                                        .secondary()
+                                        .refine_layout(
+                                            fret_components_ui::LayoutRefinement::default()
+                                                .w_full()
+                                                .h_px(fret_components_ui::MetricRef::Px(Px(10.0))),
+                                        )
+                                        .into_element(cx),
+                                ])
+                                .into_element(cx);
+
+                                ShadcnHoverCard::new(
+                                    ShadcnHoverCardTrigger::new(trigger).into_element(cx),
+                                    content,
+                                )
+                                .open_delay_frames(8)
+                                .close_delay_frames(8)
+                                .into_element(cx)
+                            },
                             cx.text("shadcn/ui v4 Spinner (prototype)"),
                             cx.row(
                                 fret_ui_app::element::RowProps {

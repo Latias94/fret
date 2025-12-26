@@ -1213,6 +1213,37 @@ impl<H: UiHost> UiTree<H> {
                     self.mark_invalidation(node, Invalidation::Paint);
                 }
             }
+
+            let hovered_hover_card: Option<crate::elements::GlobalElementId> =
+                declarative::with_window_frame(app, window, |window_frame| {
+                    let Some(window_frame) = window_frame else {
+                        return None;
+                    };
+                    let mut node = hit;
+                    while let Some(id) = node {
+                        if let Some(record) = window_frame.instances.get(&id)
+                            && matches!(record.instance, declarative::ElementInstance::HoverCard(_))
+                        {
+                            return Some(record.element);
+                        }
+                        node = self.nodes.get(id).and_then(|n| n.parent);
+                    }
+                    None
+                });
+
+            let (prev_node, next_node) =
+                crate::elements::update_hovered_hover_card(app, window, hovered_hover_card);
+            if prev_node.is_some() || next_node.is_some() {
+                needs_redraw = true;
+                if let Some(node) = prev_node {
+                    self.mark_invalidation(node, Invalidation::Layout);
+                    self.mark_invalidation(node, Invalidation::Paint);
+                }
+                if let Some(node) = next_node {
+                    self.mark_invalidation(node, Invalidation::Layout);
+                    self.mark_invalidation(node, Invalidation::Paint);
+                }
+            }
         }
 
         let target = if let Some(captured) = captured {

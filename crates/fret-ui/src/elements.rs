@@ -8,9 +8,9 @@ use std::{
 
 use crate::UiHost;
 use crate::element::{
-    AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, ImageProps,
-    LayoutStyle, PressableProps, PressableState, RowProps, ScrollProps, SpacerProps, SpinnerProps,
-    StackProps, TextInputProps, TextProps, VirtualListProps, VirtualListState,
+    AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverCardProps,
+    ImageProps, LayoutStyle, PressableProps, PressableState, RowProps, ScrollProps, SpacerProps,
+    SpinnerProps, StackProps, TextInputProps, TextProps, VirtualListProps, VirtualListState,
 };
 use crate::widget::Invalidation;
 use fret_runtime::{Model, ModelId};
@@ -60,6 +60,7 @@ pub struct WindowElementState {
     nodes: HashMap<GlobalElementId, NodeEntry>,
     hovered_pressable: Option<GlobalElementId>,
     pressed_pressable: Option<GlobalElementId>,
+    hovered_hover_card: Option<GlobalElementId>,
 }
 
 #[derive(Debug)]
@@ -410,6 +411,19 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
     }
 
     #[track_caller]
+    pub fn hover_card(
+        &mut self,
+        props: HoverCardProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::HoverCard(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn scroll(
         &mut self,
         props: ScrollProps,
@@ -648,6 +662,23 @@ pub(crate) fn update_hovered_pressable<H: UiHost>(
     })
 }
 
+pub(crate) fn update_hovered_hover_card<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    next: Option<GlobalElementId>,
+) -> (Option<NodeId>, Option<NodeId>) {
+    with_window_state(app, window, |st| {
+        let prev = st.hovered_hover_card;
+        if prev == next {
+            return (None, None);
+        }
+        let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
+        let next_node = next.and_then(|id| st.node_entry(id).map(|e| e.node));
+        st.hovered_hover_card = next;
+        (prev_node, next_node)
+    })
+}
+
 pub(crate) fn set_pressed_pressable<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
@@ -670,6 +701,14 @@ pub(crate) fn is_hovered_pressable<H: UiHost>(
     element: GlobalElementId,
 ) -> bool {
     with_window_state(app, window, |st| st.hovered_pressable == Some(element))
+}
+
+pub(crate) fn is_hovered_hover_card<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> bool {
+    with_window_state(app, window, |st| st.hovered_hover_card == Some(element))
 }
 
 pub(crate) fn is_pressed_pressable<H: UiHost>(

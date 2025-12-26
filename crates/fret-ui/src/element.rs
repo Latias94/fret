@@ -36,6 +36,7 @@ pub enum ElementKind {
     Grid(GridProps),
     Image(ImageProps),
     Spinner(SpinnerProps),
+    HoverCard(HoverCardProps),
     Scroll(ScrollProps),
 }
 
@@ -413,6 +414,45 @@ impl Default for SpinnerProps {
             color: None,
             dot_count: 12,
             speed: 0.2,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum HoverCardAlign {
+    Start,
+    #[default]
+    Center,
+    End,
+}
+
+/// A hover-driven floating surface primitive (shadcn-style hover card).
+///
+/// This element is intended to have exactly two children:
+/// - child 0: trigger
+/// - child 1: content
+///
+/// Layout: the trigger participates in normal flow; the content is laid out and painted as an
+/// absolute-positioned floating surface anchored to the trigger.
+#[derive(Debug, Clone, Copy)]
+pub struct HoverCardProps {
+    pub layout: LayoutStyle,
+    pub align: HoverCardAlign,
+    pub side_offset: Px,
+    /// Open delay expressed in frames (best-effort; driven by animation frames).
+    pub open_delay_frames: u32,
+    /// Close delay expressed in frames (best-effort; driven by animation frames).
+    pub close_delay_frames: u32,
+}
+
+impl Default for HoverCardProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            align: HoverCardAlign::Center,
+            side_offset: Px(4.0),
+            open_delay_frames: 0,
+            close_delay_frames: 0,
         }
     }
 }

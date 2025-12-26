@@ -1,15 +1,17 @@
 use crate::UiHost;
 use crate::element::{
-    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
-    Overflow, PressableProps, SpacerProps, SpinnerProps, StackProps, TextProps,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, HoverCardAlign, HoverCardProps,
+    LayoutStyle, Length, MainAlign, Overflow, PressableProps, SpacerProps, SpinnerProps,
+    StackProps, TextProps,
 };
 use crate::elements::{ElementCx, GlobalElementId, NodeEntry};
 use crate::primitives::BoundTextInput;
 use crate::tree::UiTree;
 use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget};
 use fret_core::{
-    AppWindowId, Color, CursorIcon, DrawOrder, Edges, Event, FontId, MouseButton, NodeId, Point,
-    Px, Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle,
+    AppWindowId, Color, CursorIcon, DrawOrder, Edges, Event, FontId, FrameId, MouseButton, NodeId,
+    Point, Px, Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow,
+    TextStyle,
 };
 use fret_runtime::Effect;
 use std::collections::HashMap;
@@ -175,6 +177,7 @@ pub(crate) enum ElementInstance {
     Grid(crate::element::GridProps),
     Image(crate::element::ImageProps),
     Spinner(SpinnerProps),
+    HoverCard(HoverCardProps),
     Scroll(crate::element::ScrollProps),
 }
 
@@ -212,6 +215,7 @@ fn layout_style_for_node<H: UiHost>(app: &mut H, window: AppWindowId, node: Node
             ElementInstance::Grid(p) => p.layout,
             ElementInstance::Image(p) => p.layout,
             ElementInstance::Spinner(p) => p.layout,
+            ElementInstance::HoverCard(p) => p.layout,
             ElementInstance::Scroll(p) => p.layout,
         })
         .unwrap_or_default()
@@ -394,6 +398,13 @@ struct TextCache {
     last_theme_revision: Option<u64>,
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+struct HoverCardOpenState {
+    open: bool,
+    hover_start: Option<FrameId>,
+    leave_start: Option<FrameId>,
+}
+
 struct ElementHostWidget {
     element: GlobalElementId,
     text_cache: TextCache,
@@ -404,6 +415,7 @@ struct ElementHostWidget {
     clips_hit_test: bool,
     scrollbar_hit_rect: Option<Rect>,
     text_input: Option<BoundTextInput>,
+    hover_card_open: bool,
 }
 
 impl ElementHostWidget {
@@ -876,6 +888,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 // Flex/Grid are layout containers; they do not imply semantics beyond their children.
             }
             ElementInstance::Image(_)
+            | ElementInstance::HoverCard(_)
             | ElementInstance::Spinner(_)
             | ElementInstance::Scroll(_) => {
                 cx.set_role(SemanticsRole::Generic);
@@ -924,6 +937,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::Grid(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::TextInput(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Scroll(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::HoverCard(p) => matches!(p.layout.overflow, Overflow::Clip),
             // These primitives are always hit-test clipped by their own bounds (they are not
             // intended as overflow-visible containers).
             ElementInstance::VirtualList(_)
@@ -1553,6 +1567,106 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     clamp_to_constraints(Size::new(Px(16.0), Px(16.0)), props.layout, cx.available);
                 desired
             }
+            ElementInstance::HoverCard(props) => {
+                let hovered =
+                    crate::elements::is_hovered_hover_card(&mut *cx.app, window, self.element);
+
+                let frame = cx.app.frame_id();
+                let open_delay = props.open_delay_frames as u64;
+                let close_delay = props.close_delay_frames as u64;
+
+                let open = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    HoverCardOpenState::default,
+                    |state| {
+                        if hovered {
+                            state.leave_start = None;
+                            if !state.open {
+                                let start = state.hover_start.get_or_insert(frame);
+                                let elapsed = frame.0.saturating_sub(start.0);
+                                if elapsed >= open_delay {
+                                    state.open = true;
+                                    state.hover_start = None;
+                                }
+                            }
+                        } else {
+                            state.hover_start = None;
+                            if state.open {
+                                let start = state.leave_start.get_or_insert(frame);
+                                let elapsed = frame.0.saturating_sub(start.0);
+                                if elapsed >= close_delay {
+                                    state.open = false;
+                                    state.leave_start = None;
+                                }
+                            } else {
+                                state.leave_start = None;
+                            }
+                        }
+                        state.open
+                    },
+                );
+                self.hover_card_open = open;
+
+                if let Some(window) = cx.window
+                    && ((hovered && !open && open_delay > 0)
+                        || (!hovered && open && close_delay > 0))
+                {
+                    cx.app.push_effect(Effect::RequestAnimationFrame(window));
+                    cx.app.push_effect(Effect::UiInvalidateLayout { window });
+                    cx.app.request_redraw(window);
+                }
+
+                let Some(&trigger) = cx.children.first() else {
+                    self.hover_card_open = false;
+                    return Size::new(Px(0.0), Px(0.0));
+                };
+
+                let trigger_probe =
+                    Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(1.0e9)));
+                let trigger_size = cx.layout_in(trigger, trigger_probe);
+                let trigger_bounds = Rect::new(cx.bounds.origin, trigger_size);
+                let _ = cx.layout_in(trigger, trigger_bounds);
+
+                if let Some(&content) = cx.children.get(1) {
+                    if open {
+                        let probe = Rect::new(
+                            fret_core::Point::new(Px(0.0), Px(0.0)),
+                            Size::new(Px(1.0e9), Px(1.0e9)),
+                        );
+                        let content_size = cx.layout_in(content, probe);
+
+                        let x = match props.align {
+                            HoverCardAlign::Start => trigger_bounds.origin.x.0,
+                            HoverCardAlign::Center => {
+                                trigger_bounds.origin.x.0
+                                    + (trigger_bounds.size.width.0 - content_size.width.0) * 0.5
+                            }
+                            HoverCardAlign::End => {
+                                trigger_bounds.origin.x.0
+                                    + (trigger_bounds.size.width.0 - content_size.width.0)
+                            }
+                        };
+                        let y = trigger_bounds.origin.y.0
+                            + trigger_bounds.size.height.0
+                            + props.side_offset.0;
+
+                        let bounds = Rect::new(
+                            fret_core::Point::new(Px(x), Px(y)),
+                            Size::new(content_size.width, content_size.height),
+                        );
+                        let _ = cx.layout_in(content, bounds);
+                    } else {
+                        let _ = cx.layout_in(
+                            content,
+                            Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
+                        );
+                    }
+                }
+
+                clamp_to_constraints(trigger_size, props.layout, cx.available)
+            }
             ElementInstance::Scroll(props) => {
                 let probe_bounds =
                     Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(1.0e9)));
@@ -1874,6 +1988,28 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     });
                 }
             }
+            ElementInstance::HoverCard(props) => {
+                let clip = matches!(props.layout.overflow, Overflow::Clip);
+                if clip {
+                    cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
+                }
+
+                if let Some(&trigger) = cx.children.first() {
+                    let bounds = cx.child_bounds(trigger).unwrap_or(cx.bounds);
+                    cx.paint(trigger, bounds);
+                }
+
+                if self.hover_card_open
+                    && let Some(&content) = cx.children.get(1)
+                {
+                    let bounds = cx.child_bounds(content).unwrap_or(cx.bounds);
+                    cx.paint(content, bounds);
+                }
+
+                if clip {
+                    cx.scene.push(SceneOp::PopClip);
+                }
+            }
             ElementInstance::Scroll(props) => {
                 let clip = matches!(props.layout.overflow, Overflow::Clip);
                 if clip {
@@ -1997,6 +2133,7 @@ pub fn render_root<H: UiHost>(
                     clips_hit_test: true,
                     scrollbar_hit_rect: None,
                     text_input: None,
+                    hover_card_open: false,
                 });
                 window_state.set_node_entry(
                     root_id,
@@ -2092,6 +2229,7 @@ fn mount_element<H: UiHost>(
                 clips_hit_test: true,
                 scrollbar_hit_rect: None,
                 text_input: None,
+                hover_card_open: false,
             });
             window_state.set_node_entry(
                 id,
@@ -2145,6 +2283,7 @@ fn mount_element<H: UiHost>(
         ElementKind::Grid(p) => ElementInstance::Grid(p),
         ElementKind::Image(p) => ElementInstance::Image(p),
         ElementKind::Spinner(p) => ElementInstance::Spinner(p),
+        ElementKind::HoverCard(p) => ElementInstance::HoverCard(p),
         ElementKind::Scroll(p) => ElementInstance::Scroll(p),
     };
 

@@ -103,7 +103,7 @@ Status legend:
 | Empty | `ui/empty.tsx` | `fret_components_shadcn::Empty` | ✅ | First-pass composition helper; add icon/action slots later. |
 | Field | `ui/field.tsx` |  | ❌ | Needs label/control/help-text composition patterns. |
 | Form | `ui/form.tsx` |  | ❌ | Likely a higher-level “form framework” decision in Fret. |
-| Hover Card | `ui/hover-card.tsx` |  | ❌ | Can likely map to tooltip/popover hybrid. |
+| Hover Card | `ui/hover-card.tsx` | `fret_components_shadcn::{HoverCard, HoverCardTrigger, HoverCardContent}` | ✅ | Declarative hover primitive (no open/close animations yet). |
 | Input | `ui/input.tsx` | `fret_components_shadcn::Input` | ✅ | Currently maps to `TextField`; use `InputGroup` for icon-slot patterns. |
 | Input Group | `ui/input-group.tsx` | `fret_components_shadcn::InputGroup` | ✅ | Leading/trailing icon slots + sizing tokens; first-pass parity. |
 | Input OTP | `ui/input-otp.tsx` |  | ❌ | Needs multi-cell input + paste semantics. |
