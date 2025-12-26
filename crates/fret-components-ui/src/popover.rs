@@ -15,6 +15,7 @@ use crate::ChromeRefinement;
 use crate::Size as ComponentSize;
 use crate::recipes::menu_list::resolve_menu_list_row_chrome;
 use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
+use fret_ui::overlay_placement;
 
 #[derive(Debug, Clone)]
 pub struct PopoverItem {
@@ -328,34 +329,14 @@ impl Popover {
             Px((request.items.len() as f32) * self.style.row_height.0
                 + self.style.padding_y.0 * 2.0);
 
-        // Anchor below unless it doesn't fit.
-        let gap = self.style.gap.0.max(0.0);
-        let mut x = request.anchor.origin.x.0;
-        let below_y = request.anchor.origin.y.0 + request.anchor.size.height.0 + gap;
-        let above_y = request.anchor.origin.y.0 - panel_h.0 - gap;
-
-        let bottom = cx.bounds.origin.y.0 + cx.bounds.size.height.0;
-        let top = cx.bounds.origin.y.0;
-        let mut y = if below_y + panel_h.0 <= bottom {
-            below_y
-        } else if above_y >= top {
-            above_y
-        } else {
-            below_y
-        };
-
-        // Clamp to window bounds.
-        let right = cx.bounds.origin.x.0 + cx.bounds.size.width.0;
-        x = x.clamp(
-            cx.bounds.origin.x.0,
-            (right - panel_w.0).max(cx.bounds.origin.x.0),
+        self.panel_bounds = overlay_placement::anchored_panel_bounds(
+            cx.bounds,
+            request.anchor,
+            Size::new(panel_w, panel_h),
+            self.style.gap,
+            overlay_placement::Side::Bottom,
+            overlay_placement::Align::Start,
         );
-        y = y.clamp(
-            cx.bounds.origin.y.0,
-            (bottom - panel_h.0).max(cx.bounds.origin.y.0),
-        );
-
-        self.panel_bounds = Rect::new(Point::new(Px(x), Px(y)), Size::new(panel_w, panel_h));
 
         // Place rows.
         let mut row_y = self.panel_bounds.origin.y.0 + self.style.padding_y.0;

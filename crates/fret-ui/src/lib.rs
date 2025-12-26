@@ -7,6 +7,7 @@ pub mod host;
 #[cfg(feature = "legacy-widgets")]
 pub mod legacy_widgets;
 pub mod menu_overlay;
+pub mod overlay_placement;
 pub mod paint;
 pub mod primitives;
 pub mod resize_handle;

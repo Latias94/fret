@@ -10,6 +10,7 @@ use fret_ui::{
     Theme, UiHost,
     widget::{EventCx, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
+use fret_ui::overlay_placement;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PopoverSurfaceSide {
@@ -232,85 +233,6 @@ impl PopoverSurfaceOverlay {
     }
 }
 
-fn opposite_side(side: PopoverSurfaceSide) -> PopoverSurfaceSide {
-    match side {
-        PopoverSurfaceSide::Top => PopoverSurfaceSide::Bottom,
-        PopoverSurfaceSide::Bottom => PopoverSurfaceSide::Top,
-        PopoverSurfaceSide::Left => PopoverSurfaceSide::Right,
-        PopoverSurfaceSide::Right => PopoverSurfaceSide::Left,
-    }
-}
-
-fn clamp_rect_to_outer(outer: Rect, mut rect: Rect) -> Rect {
-    let max_x = (outer.origin.x.0 + outer.size.width.0 - rect.size.width.0).max(outer.origin.x.0);
-    let max_y = (outer.origin.y.0 + outer.size.height.0 - rect.size.height.0).max(outer.origin.y.0);
-    rect.origin.x = Px(rect.origin.x.0.clamp(outer.origin.x.0, max_x));
-    rect.origin.y = Px(rect.origin.y.0.clamp(outer.origin.y.0, max_y));
-    rect
-}
-
-fn anchored_origin(
-    anchor: Rect,
-    content: Size,
-    side_offset: Px,
-    side: PopoverSurfaceSide,
-    align: PopoverSurfaceAlign,
-) -> Point {
-    let ax0 = anchor.origin.x.0;
-    let ay0 = anchor.origin.y.0;
-    let ax1 = anchor.origin.x.0 + anchor.size.width.0;
-    let ay1 = anchor.origin.y.0 + anchor.size.height.0;
-
-    let cw = content.width.0;
-    let ch = content.height.0;
-
-    match side {
-        PopoverSurfaceSide::Bottom | PopoverSurfaceSide::Top => {
-            let x = match align {
-                PopoverSurfaceAlign::Start => ax0,
-                PopoverSurfaceAlign::Center => ax0 + (anchor.size.width.0 - cw) * 0.5,
-                PopoverSurfaceAlign::End => ax1 - cw,
-            };
-            let y = match side {
-                PopoverSurfaceSide::Bottom => ay1 + side_offset.0,
-                PopoverSurfaceSide::Top => ay0 - side_offset.0 - ch,
-                _ => unreachable!(),
-            };
-            Point::new(Px(x), Px(y))
-        }
-        PopoverSurfaceSide::Left | PopoverSurfaceSide::Right => {
-            let y = match align {
-                PopoverSurfaceAlign::Start => ay0,
-                PopoverSurfaceAlign::Center => ay0 + (anchor.size.height.0 - ch) * 0.5,
-                PopoverSurfaceAlign::End => ay1 - ch,
-            };
-            let x = match side {
-                PopoverSurfaceSide::Right => ax1 + side_offset.0,
-                PopoverSurfaceSide::Left => ax0 - side_offset.0 - cw,
-                _ => unreachable!(),
-            };
-            Point::new(Px(x), Px(y))
-        }
-    }
-}
-
-fn side_fits_without_clamp(outer: Rect, rect: Rect, side: PopoverSurfaceSide) -> bool {
-    let ox0 = outer.origin.x.0;
-    let oy0 = outer.origin.y.0;
-    let ox1 = outer.origin.x.0 + outer.size.width.0;
-    let oy1 = outer.origin.y.0 + outer.size.height.0;
-
-    let rx0 = rect.origin.x.0;
-    let ry0 = rect.origin.y.0;
-    let rx1 = rect.origin.x.0 + rect.size.width.0;
-    let ry1 = rect.origin.y.0 + rect.size.height.0;
-
-    match side {
-        PopoverSurfaceSide::Top | PopoverSurfaceSide::Bottom => ry0 >= oy0 && ry1 <= oy1,
-        PopoverSurfaceSide::Left | PopoverSurfaceSide::Right => rx0 >= ox0 && rx1 <= ox1,
-    }
-}
-
 fn compute_anchored_panel_bounds(
     outer: Rect,
     anchor: Rect,
@@ -319,21 +241,23 @@ fn compute_anchored_panel_bounds(
     preferred_side: PopoverSurfaceSide,
     align: PopoverSurfaceAlign,
 ) -> Rect {
-    let preferred_origin = anchored_origin(anchor, content, side_offset, preferred_side, align);
-    let preferred = Rect::new(preferred_origin, content);
-    if side_fits_without_clamp(outer, preferred, preferred_side) {
-        return clamp_rect_to_outer(outer, preferred);
-    }
-
-    let flipped_side = opposite_side(preferred_side);
-    let flipped_origin = anchored_origin(anchor, content, side_offset, flipped_side, align);
-    let flipped = Rect::new(flipped_origin, content);
-    if side_fits_without_clamp(outer, flipped, flipped_side) {
-        return clamp_rect_to_outer(outer, flipped);
-    }
-
-    // Neither side fits; clamp the preferred placement.
-    clamp_rect_to_outer(outer, preferred)
+    overlay_placement::anchored_panel_bounds(
+        outer,
+        anchor,
+        content,
+        side_offset,
+        match preferred_side {
+            PopoverSurfaceSide::Top => overlay_placement::Side::Top,
+            PopoverSurfaceSide::Bottom => overlay_placement::Side::Bottom,
+            PopoverSurfaceSide::Left => overlay_placement::Side::Left,
+            PopoverSurfaceSide::Right => overlay_placement::Side::Right,
+        },
+        match align {
+            PopoverSurfaceAlign::Start => overlay_placement::Align::Start,
+            PopoverSurfaceAlign::Center => overlay_placement::Align::Center,
+            PopoverSurfaceAlign::End => overlay_placement::Align::End,
+        },
+    )
 }
 
 impl Default for PopoverSurfaceOverlay {
