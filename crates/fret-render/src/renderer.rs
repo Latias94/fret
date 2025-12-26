@@ -98,6 +98,8 @@ struct SvgRasterKey {
 struct SvgRasterEntry {
     image: fret_core::ImageId,
     size_px: (u32, u32),
+    approx_bytes: u64,
+    last_used_epoch: u64,
     _texture: wgpu::Texture,
 }
 
@@ -628,6 +630,9 @@ pub struct Renderer {
     svgs: SlotMap<fret_core::SvgId, Arc<[u8]>>,
     svg_hash_index: HashMap<u64, Vec<fret_core::SvgId>>,
     svg_rasters: HashMap<SvgRasterKey, SvgRasterEntry>,
+    svg_raster_bytes: u64,
+    svg_raster_budget_bytes: u64,
+    svg_raster_epoch: u64,
 
     render_targets: RenderTargetRegistry,
     images: ImageRegistry,
@@ -746,6 +751,52 @@ impl Renderer {
                 _ => {}
             }
         }
+
+        self.prune_svg_rasters();
+    }
+
+    fn bump_svg_raster_epoch(&mut self) -> u64 {
+        self.svg_raster_epoch = self.svg_raster_epoch.wrapping_add(1);
+        self.svg_raster_epoch
+    }
+
+    fn prune_svg_rasters(&mut self) {
+        if self.svg_raster_bytes <= self.svg_raster_budget_bytes {
+            return;
+        }
+
+        // Best-effort eviction: never evict entries used in the current frame.
+        let cur_epoch = self.svg_raster_epoch;
+
+        while self.svg_raster_bytes > self.svg_raster_budget_bytes {
+            let mut victim: Option<(SvgRasterKey, u64)> = None;
+            for (k, v) in &self.svg_rasters {
+                if v.last_used_epoch == cur_epoch {
+                    continue;
+                }
+                match victim {
+                    None => victim = Some((*k, v.last_used_epoch)),
+                    Some((_, best_epoch)) => {
+                        if v.last_used_epoch < best_epoch {
+                            victim = Some((*k, v.last_used_epoch));
+                        }
+                    }
+                }
+            }
+
+            let Some((victim_key, _)) = victim else {
+                // Cache is over budget but all entries were used this frame. Keep correctness and
+                // allow a temporary overshoot.
+                break;
+            };
+
+            if let Some(entry) = self.svg_rasters.remove(&victim_key) {
+                self.svg_raster_bytes = self.svg_raster_bytes.saturating_sub(entry.approx_bytes);
+                let _ = self.unregister_image(entry.image);
+            } else {
+                break;
+            }
+        }
     }
 
     fn ensure_svg_raster(
@@ -758,7 +809,8 @@ impl Renderer {
         kind: SvgRasterKind,
     ) -> Option<(fret_core::ImageId, fret_core::UvRect, (u32, u32))> {
         let key = Self::svg_raster_key(svg, rect, scale_factor, kind);
-        if let Some(e) = self.svg_rasters.get(&key) {
+        if let Some(e) = self.svg_rasters.get_mut(&key) {
+            e.last_used_epoch = self.svg_raster_epoch;
             return Some((e.image, fret_core::UvRect::FULL, e.size_px));
         }
 
@@ -803,14 +855,24 @@ impl Renderer {
             color_space,
         });
 
+        let approx_bytes = match kind {
+            SvgRasterKind::AlphaMask => u64::from(size_px.0).saturating_mul(u64::from(size_px.1)),
+            SvgRasterKind::Rgba => u64::from(size_px.0)
+                .saturating_mul(u64::from(size_px.1))
+                .saturating_mul(4),
+        };
+
         self.svg_rasters.insert(
             key,
             SvgRasterEntry {
                 image,
                 size_px,
+                approx_bytes,
+                last_used_epoch: self.svg_raster_epoch,
                 _texture: texture,
             },
         );
+        self.svg_raster_bytes = self.svg_raster_bytes.saturating_add(approx_bytes);
 
         Some((image, fret_core::UvRect::FULL, size_px))
     }
@@ -1059,6 +1121,9 @@ impl Renderer {
             svgs: SlotMap::with_key(),
             svg_hash_index: HashMap::new(),
             svg_rasters: HashMap::new(),
+            svg_raster_bytes: 0,
+            svg_raster_budget_bytes: 64 * 1024 * 1024,
+            svg_raster_epoch: 0,
             render_targets: RenderTargetRegistry::default(),
             images: ImageRegistry::default(),
             viewport_bind_groups: HashMap::new(),
@@ -1830,6 +1895,7 @@ impl Renderer {
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
 
         self.text_system.flush_uploads(queue);
+        self.bump_svg_raster_epoch();
         self.prepare_svg_ops(device, queue, scene, scale_factor);
 
         let key = SceneEncodingCacheKey {
@@ -3234,6 +3300,7 @@ impl fret_core::SvgService for Renderer {
         }
         for k in keys_to_remove {
             if let Some(entry) = self.svg_rasters.remove(&k) {
+                self.svg_raster_bytes = self.svg_raster_bytes.saturating_sub(entry.approx_bytes);
                 let _ = self.unregister_image(entry.image);
             }
         }
