@@ -57,6 +57,13 @@ definitions live in `docs/mvp/reference-plan.md`.
   - in progress: schema-based retained `VirtualList` moved under `fret-ui::legacy_widgets`
   - in progress: `fret-ui-app` no longer re-exports legacy `VirtualList*` at the crate root (must use `fret_ui_app::legacy_widgets::VirtualList`)
   - in progress: remove component-level helpers that produce legacy `VirtualListStyle` (components should prefer declarative composition)
+- MVP 60: rounded clipping / `overflow-hidden` semantics (shadcn-critical)
+  - extend the `SceneOp` contract with a rounded-rect clip (ADR 0063)
+  - wire declarative `Overflow::Clip` to produce rounded clips when corner radii exist (avoid “rounded corners but content bleeds”)
+  - keep hit-test semantics consistent with paint clipping for overflow-hidden content
+- MVP 61: declarative layout performance hardening (Taffy integration)
+  - cache/reuse the Taffy tree and node ids across frames (avoid rebuild + allocation churn)
+  - avoid double layout of children (`layout_in` during measure + final `layout_in`) where possible
 
 ## ADR Notes
 

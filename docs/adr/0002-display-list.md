@@ -36,7 +36,8 @@ batching adjacent operations). See `docs/adr/0009-renderer-ordering-and-batching
 ### Clipping
 
 - `PushClipRect/PopClip` define a rectangular clip stack.
-- Initial implementation may use scissor rectangles; future shaders can implement soft clip if needed.
+- `PushClipRRect/PopClip` extend the stack with rounded clipping (ADR 0063).
+- Rect clips may map to scissor rectangles (fast); rounded clips require soft/AA clip behavior.
 
 ### Minimal primitives (current direction)
 
