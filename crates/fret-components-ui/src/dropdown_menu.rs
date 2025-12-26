@@ -263,7 +263,7 @@ impl<H: UiHost> Widget<H> for DropdownMenuButton {
                     return;
                 }
                 match key {
-                    KeyCode::Enter | KeyCode::Space => {
+                    KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
                         self.open_menu(cx);
                         cx.stop_propagation();
                     }

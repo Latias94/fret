@@ -373,6 +373,10 @@ impl Popover {
         self.rows.iter().position(|r| r.enabled)
     }
 
+    fn last_enabled_row(&self) -> Option<usize> {
+        self.rows.iter().rposition(|r| r.enabled)
+    }
+
     fn next_enabled_row(&self, start: usize, dir: i32) -> Option<usize> {
         let len = self.rows.len();
         if len == 0 {
@@ -460,7 +464,7 @@ impl<H: UiHost> Widget<H> for Popover {
             }
             Event::KeyDown { key, .. } => match key {
                 KeyCode::Escape => self.close_popover(cx),
-                KeyCode::Enter => {
+                KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
                     if let Some(i) = self.hover_row.or(request.selected) {
                         self.activate_row(cx, window, &request, i);
                     }
@@ -488,6 +492,20 @@ impl<H: UiHost> Widget<H> for Popover {
                     }
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
+                }
+                KeyCode::Home => {
+                    if let Some(i) = self.first_enabled_row() {
+                        self.hover_row = Some(i);
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                    }
+                }
+                KeyCode::End => {
+                    if let Some(i) = self.last_enabled_row() {
+                        self.hover_row = Some(i);
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                    }
                 }
                 _ => {}
             },

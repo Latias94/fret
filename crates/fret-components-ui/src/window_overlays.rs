@@ -900,7 +900,7 @@ mod tests {
     }
 
     #[test]
-    fn context_menu_arrow_keys_skip_disabled_and_enter_activates() {
+    fn context_menu_arrow_keys_skip_disabled_and_space_activates() {
         let mut host = App::new();
         let mut services = FakeServices::default();
 
@@ -981,7 +981,147 @@ mod tests {
             &mut host,
             &mut services,
             &Event::KeyDown {
-                key: KeyCode::Enter,
+                key: KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let app_commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
+        assert_eq!(app_commands, vec![cmd_b]);
+        assert_eq!(ui.focus(), Some(trigger));
+    }
+
+    #[test]
+    fn context_menu_home_end_select_first_and_last_enabled() {
+        let mut host = App::new();
+        let mut services = FakeServices::default();
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        ui.set_root(root);
+
+        let mut overlays = WindowOverlays::install(&mut ui);
+
+        let trigger = ui.create_node(Focusable);
+        ui.add_child(root, trigger);
+        ui.set_focus(Some(trigger));
+
+        let cmd_a = CommandId::from("test.menu.a");
+        let cmd_b = CommandId::from("test.menu.b");
+        let cmd_c = CommandId::from("test.menu.c");
+
+        host.commands_mut().register(
+            cmd_a.clone(),
+            CommandMeta::new("B").with_when(WhenExpr::parse("false").unwrap()),
+        );
+
+        let menu = Menu {
+            title: "Menu".into(),
+            items: vec![
+                MenuItem::Command {
+                    command: cmd_a.clone(),
+                    when: None,
+                },
+                MenuItem::Command {
+                    command: cmd_b.clone(),
+                    when: None,
+                },
+                MenuItem::Command {
+                    command: cmd_c.clone(),
+                    when: None,
+                },
+            ],
+        };
+
+        host.with_global_mut(ContextMenuService::default, |service, _app| {
+            service.set_request(
+                window,
+                ContextMenuRequest {
+                    position: Point::new(Px(10.0), Px(10.0)),
+                    menu: menu.clone(),
+                    input_ctx: Default::default(),
+                    menu_bar: None,
+                },
+            );
+        });
+
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut services,
+            window,
+            &CommandId::from("context_menu.open"),
+        );
+        assert!(handled);
+        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+
+        run_frame(&mut ui, &mut host, &mut services);
+
+        ui.dispatch_event(
+            &mut host,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::End,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut host,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let app_commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
+        assert_eq!(app_commands, vec![cmd_c.clone()]);
+        assert_eq!(ui.focus(), Some(trigger));
+
+        host.with_global_mut(ContextMenuService::default, |service, _app| {
+            service.set_request(
+                window,
+                ContextMenuRequest {
+                    position: Point::new(Px(10.0), Px(10.0)),
+                    menu,
+                    input_ctx: Default::default(),
+                    menu_bar: None,
+                },
+            );
+        });
+
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut services,
+            window,
+            &CommandId::from("context_menu.open"),
+        );
+        assert!(handled);
+        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+
+        run_frame(&mut ui, &mut host, &mut services);
+
+        ui.dispatch_event(
+            &mut host,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Home,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut host,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Space,
                 modifiers: Modifiers::default(),
                 repeat: false,
             },

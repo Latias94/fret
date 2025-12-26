@@ -282,7 +282,7 @@ impl<H: UiHost> Widget<H> for Select {
                     return;
                 }
                 match key {
-                    KeyCode::Enter | KeyCode::Space => {
+                    KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
                         self.toggle_popover(cx);
                         cx.stop_propagation();
                     }

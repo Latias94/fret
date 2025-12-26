@@ -664,7 +664,7 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                     KeyCode::Escape => {
                         self.close_menu(cx, window);
                     }
-                    KeyCode::Enter => {
+                    KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
                         let depth = self.current_depth();
                         let Some(raw) = self.selection_raw(depth) else {
                             return;
@@ -680,6 +680,36 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         {
                             self.activate_command(cx, window, cmd.clone());
                         }
+                    }
+                    KeyCode::Home | KeyCode::End => {
+                        let depth = self.current_depth();
+                        let Some(panel) = self.panels.get(depth) else {
+                            return;
+                        };
+                        let selectable: Vec<usize> = panel
+                            .rows
+                            .iter()
+                            .filter(|r| {
+                                r.enabled
+                                    && matches!(
+                                        r.kind,
+                                        PreparedRowKind::Command(_) | PreparedRowKind::Submenu
+                                    )
+                            })
+                            .map(|r| r.raw_index)
+                            .collect();
+                        if selectable.is_empty() {
+                            return;
+                        }
+                        let next = match key {
+                            KeyCode::Home => selectable[0],
+                            KeyCode::End => selectable[selectable.len() - 1],
+                            _ => selectable[0],
+                        };
+                        self.set_selection_raw(depth, Some(next));
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
                     }
                     KeyCode::ArrowDown | KeyCode::ArrowUp => {
                         let depth = self.current_depth();
