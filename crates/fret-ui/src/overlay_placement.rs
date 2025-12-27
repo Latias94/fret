@@ -48,7 +48,24 @@ pub fn anchored_panel_bounds(
         return clamp_rect_to_outer(outer, flipped);
     }
 
-    clamp_rect_to_outer(outer, preferred)
+    // Neither side fits cleanly on the main axis. Choose the candidate that minimizes main-axis
+    // overflow, breaking ties by total overflow, then clamp into `outer`.
+    let preferred_overflow = overflow_amount(outer, preferred);
+    let flipped_overflow = overflow_amount(outer, flipped);
+
+    let preferred_main = main_axis_overflow(preferred_overflow, preferred_side);
+    let flipped_main = main_axis_overflow(flipped_overflow, flipped_side);
+
+    let preferred_total = total_overflow(preferred_overflow);
+    let flipped_total = total_overflow(flipped_overflow);
+
+    let chosen = if (flipped_main, flipped_total) < (preferred_main, preferred_total) {
+        flipped
+    } else {
+        preferred
+    };
+
+    clamp_rect_to_outer(outer, chosen)
 }
 
 fn opposite_side(side: Side) -> Side {
@@ -107,6 +124,44 @@ fn side_fits_without_clamp(outer: Rect, inner: Rect, side: Side) -> bool {
         Side::Left => inner.origin.x.0 >= outer.origin.x.0,
         Side::Right => inner.origin.x.0 + inner.size.width.0 <= outer.origin.x.0 + outer.size.width.0,
     }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct Overflow {
+    left: f32,
+    right: f32,
+    top: f32,
+    bottom: f32,
+}
+
+fn overflow_amount(outer: Rect, inner: Rect) -> Overflow {
+    let outer_left = outer.origin.x.0;
+    let outer_top = outer.origin.y.0;
+    let outer_right = outer_left + outer.size.width.0;
+    let outer_bottom = outer_top + outer.size.height.0;
+
+    let inner_left = inner.origin.x.0;
+    let inner_top = inner.origin.y.0;
+    let inner_right = inner_left + inner.size.width.0;
+    let inner_bottom = inner_top + inner.size.height.0;
+
+    Overflow {
+        left: (outer_left - inner_left).max(0.0),
+        right: (inner_right - outer_right).max(0.0),
+        top: (outer_top - inner_top).max(0.0),
+        bottom: (inner_bottom - outer_bottom).max(0.0),
+    }
+}
+
+fn main_axis_overflow(o: Overflow, side: Side) -> f32 {
+    match side {
+        Side::Top | Side::Bottom => o.top.max(o.bottom),
+        Side::Left | Side::Right => o.left.max(o.right),
+    }
+}
+
+fn total_overflow(o: Overflow) -> f32 {
+    o.left + o.right + o.top + o.bottom
 }
 
 fn clamp_rect_to_outer(outer: Rect, inner: Rect) -> Rect {
@@ -183,5 +238,21 @@ mod tests {
             placed.origin.x.0 + placed.size.width.0 <= anchor.origin.x.0,
             "expected right placement to flip left when overflowing"
         );
+    }
+
+    #[test]
+    fn chooses_side_with_less_main_axis_overflow_when_neither_fits() {
+        // Both bottom and top overflow, but bottom overflows less on the main axis.
+        let outer = r(0.0, 0.0, 200.0, 200.0);
+        let anchor = r(10.0, 5.0, 40.0, 10.0);
+        let content = Size::new(Px(120.0), Px(180.0));
+
+        let placed = anchored_panel_bounds(outer, anchor, content, Px(8.0), Side::Bottom, Align::Start);
+        // With less main-axis overflow on bottom, the clamped rect should end up below (as much as possible).
+        assert!(
+            placed.origin.y.0 >= anchor.origin.y.0,
+            "expected placement to prefer bottom when it overflows less than top"
+        );
+        assert!(outer.contains(placed.origin));
     }
 }
