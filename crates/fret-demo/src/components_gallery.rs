@@ -5,7 +5,7 @@ use fret_components_icons::IconRegistry;
 use fret_components_ui::tree::{TreeItem, TreeState, TreeViewHandles, create_tree_view};
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, KeyCode, PlatformCapabilities, Px, Rect,
-    Scene, SceneOp, SemanticsRole, Size, UiServices,
+    Scene, SceneOp, Size, UiServices,
 };
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui::declarative;
