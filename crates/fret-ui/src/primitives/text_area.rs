@@ -606,6 +606,9 @@ impl<H: UiHost> Widget<H> for TextArea {
 
     fn semantics(&mut self, cx: &mut crate::widget::SemanticsCx<'_, H>) {
         cx.set_role(SemanticsRole::TextField);
+        cx.set_focusable(true);
+        cx.set_value_editable(true);
+        cx.set_value(self.text().to_string());
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
@@ -730,6 +733,38 @@ impl<H: UiHost> Widget<H> for TextArea {
                 if *button == MouseButton::Left && cx.captured == Some(cx.node) {
                     self.dragging_thumb = false;
                     cx.release_pointer_capture();
+                }
+            }
+            Event::KeyDown { key, modifiers, .. } => {
+                if cx.focus != Some(cx.node) {
+                    return;
+                }
+                if self.preedit.is_empty() {
+                    return;
+                }
+                if modifiers.ctrl || modifiers.alt || modifiers.meta {
+                    return;
+                }
+
+                // During IME composition (preedit), reserve common navigation/IME keys for the
+                // platform IME path (ADR 0012).
+                if matches!(
+                    key,
+                    fret_core::KeyCode::Tab
+                        | fret_core::KeyCode::Enter
+                        | fret_core::KeyCode::Escape
+                        | fret_core::KeyCode::ArrowUp
+                        | fret_core::KeyCode::ArrowDown
+                        | fret_core::KeyCode::ArrowLeft
+                        | fret_core::KeyCode::ArrowRight
+                        | fret_core::KeyCode::Backspace
+                        | fret_core::KeyCode::Delete
+                        | fret_core::KeyCode::Home
+                        | fret_core::KeyCode::End
+                        | fret_core::KeyCode::PageUp
+                        | fret_core::KeyCode::PageDown
+                ) {
+                    cx.stop_propagation();
                 }
             }
             Event::TextInput(text) => {

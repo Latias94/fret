@@ -33,6 +33,23 @@ struct PendingShortcut {
     capture_next_text_input_key: Option<KeyCode>,
 }
 
+struct PointerDownOutsideParams<'a> {
+    input_ctx: &'a InputContext,
+    active_layer_roots: &'a [NodeId],
+    base_root: NodeId,
+    hit: Option<NodeId>,
+    event: &'a Event,
+}
+
+struct KeydownShortcutParams<'a> {
+    input_ctx: &'a InputContext,
+    barrier_root: Option<NodeId>,
+    focus_is_text_input: bool,
+    key: KeyCode,
+    modifiers: fret_core::Modifiers,
+    repeat: bool,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct InvalidationFlags {
     pub layout: bool,
@@ -144,6 +161,7 @@ struct UiLayer {
     visible: bool,
     blocks_underlay_input: bool,
     hit_testable: bool,
+    wants_pointer_down_outside_events: bool,
     wants_pointer_move_events: bool,
     wants_timer_events: bool,
 }
@@ -199,6 +217,7 @@ pub struct UiDebugLayerInfo {
     pub visible: bool,
     pub blocks_underlay_input: bool,
     pub hit_testable: bool,
+    pub wants_pointer_down_outside_events: bool,
     pub wants_pointer_move_events: bool,
     pub wants_timer_events: bool,
 }
@@ -305,6 +324,7 @@ pub struct UiTree<H: UiHost> {
     captured: Option<NodeId>,
     last_internal_drag_target: Option<NodeId>,
     window: Option<AppWindowId>,
+    ime_allowed: bool,
     suppress_text_input_until_key_up: Option<KeyCode>,
     pending_shortcut: PendingShortcut,
     replaying_pending_shortcut: bool,
@@ -334,6 +354,7 @@ impl<H: UiHost> Default for UiTree<H> {
             captured: None,
             last_internal_drag_target: None,
             window: None,
+            ime_allowed: false,
             suppress_text_input_until_key_up: None,
             pending_shortcut: PendingShortcut::default(),
             replaying_pending_shortcut: false,
@@ -351,6 +372,156 @@ impl<H: UiHost> Default for UiTree<H> {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn should_defer_keydown_shortcut_matching_to_text_input(
+        key: KeyCode,
+        modifiers: fret_core::Modifiers,
+        focus_is_text_input: bool,
+    ) -> bool {
+        if !focus_is_text_input {
+            return false;
+        }
+        if modifiers.ctrl || modifiers.alt || modifiers.meta {
+            return false;
+        }
+        matches!(
+            key,
+            KeyCode::Tab
+                | KeyCode::Enter
+                | KeyCode::Escape
+                | KeyCode::ArrowUp
+                | KeyCode::ArrowDown
+                | KeyCode::ArrowLeft
+                | KeyCode::ArrowRight
+                | KeyCode::Backspace
+                | KeyCode::Delete
+                | KeyCode::Home
+                | KeyCode::End
+                | KeyCode::PageUp
+                | KeyCode::PageDown
+        )
+    }
+
+    fn handle_keydown_shortcuts(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        params: KeydownShortcutParams<'_>,
+    ) -> bool {
+        if self.replaying_pending_shortcut {
+            // Pending shortcut replay bypasses shortcut matching and sequence state.
+            return false;
+        }
+
+        if params.repeat {
+            // Allow key-repeat only for explicitly repeatable commands (e.g. text editing).
+            if let Some(service) = app.global::<KeymapService>() {
+                let chord = KeyChord::new(params.key, params.modifiers);
+                if let Some(command) = service.keymap.resolve(params.input_ctx, chord)
+                    && app
+                        .commands()
+                        .get(command.clone())
+                        .is_some_and(|m| m.repeatable)
+                {
+                    self.suppress_text_input_until_key_up = Some(params.key);
+                    app.push_effect(Effect::Command {
+                        window: self.window,
+                        command,
+                    });
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        let Some(service) = app.global::<KeymapService>() else {
+            return false;
+        };
+
+        let chord = KeyChord::new(params.key, params.modifiers);
+
+        if !self.pending_shortcut.keystrokes.is_empty() {
+            self.pending_shortcut
+                .keystrokes
+                .push(CapturedKeystroke { chord, text: None });
+
+            let sequence: Vec<KeyChord> = self
+                .pending_shortcut
+                .keystrokes
+                .iter()
+                .map(|s| s.chord)
+                .collect();
+            let matched = service.keymap.match_sequence(params.input_ctx, &sequence);
+
+            if matched.has_continuation {
+                self.pending_shortcut.fallback = matched.exact.and_then(|c| c);
+                self.pending_shortcut.focus = self.focus;
+                self.pending_shortcut.barrier_root = params.barrier_root;
+                self.pending_shortcut.capture_next_text_input_key = (params.focus_is_text_input
+                    && !params.modifiers.ctrl
+                    && !params.modifiers.meta)
+                    .then_some(params.key);
+                self.suppress_text_input_until_key_up = Some(params.key);
+                self.schedule_pending_shortcut_timeout(app);
+                return true;
+            }
+
+            if let Some(Some(command)) = matched.exact {
+                self.clear_pending_shortcut(app);
+                self.suppress_text_input_until_key_up = Some(params.key);
+                app.push_effect(Effect::Command {
+                    window: self.window,
+                    command,
+                });
+                return true;
+            }
+
+            let pending = std::mem::take(&mut self.pending_shortcut);
+            if let Some(token) = pending.timer {
+                app.push_effect(Effect::CancelTimer { token });
+            }
+            self.replay_captured_keystrokes(app, services, params.input_ctx, pending.keystrokes);
+            return true;
+        }
+
+        let matched = service
+            .keymap
+            .match_sequence(params.input_ctx, std::slice::from_ref(&chord));
+        if matched.has_continuation {
+            self.pending_shortcut.keystrokes = vec![CapturedKeystroke { chord, text: None }];
+            self.pending_shortcut.focus = self.focus;
+            self.pending_shortcut.barrier_root = params.barrier_root;
+            self.pending_shortcut.fallback = matched.exact.and_then(|c| c);
+            self.pending_shortcut.capture_next_text_input_key =
+                (params.focus_is_text_input && !params.modifiers.ctrl && !params.modifiers.meta)
+                    .then_some(params.key);
+            self.suppress_text_input_until_key_up = Some(params.key);
+            self.schedule_pending_shortcut_timeout(app);
+            return true;
+        }
+
+        if let Some(command) = service.keymap.resolve(params.input_ctx, chord) {
+            self.suppress_text_input_until_key_up = Some(params.key);
+            app.push_effect(Effect::Command {
+                window: self.window,
+                command,
+            });
+            return true;
+        }
+
+        false
+    }
+
+    fn set_ime_allowed(&mut self, app: &mut H, enabled: bool) {
+        if self.ime_allowed == enabled {
+            return;
+        }
+        self.ime_allowed = enabled;
+        let Some(window) = self.window else {
+            return;
+        };
+        app.push_effect(Effect::ImeAllow { window, enabled });
+    }
+
     fn enforce_modal_barrier_scope(&mut self, active_roots: &[NodeId]) {
         if self
             .focus
@@ -549,6 +720,7 @@ impl<H: UiHost> UiTree<H> {
                     visible: layer.visible,
                     blocks_underlay_input: layer.blocks_underlay_input,
                     hit_testable: layer.hit_testable,
+                    wants_pointer_down_outside_events: layer.wants_pointer_down_outside_events,
                     wants_pointer_move_events: layer.wants_pointer_move_events,
                     wants_timer_events: layer.wants_timer_events,
                 })
@@ -661,6 +833,7 @@ impl<H: UiHost> UiTree<H> {
             visible: true,
             blocks_underlay_input: false,
             hit_testable: true,
+            wants_pointer_down_outside_events: false,
             wants_pointer_move_events: false,
             wants_timer_events: false,
         });
@@ -685,6 +858,7 @@ impl<H: UiHost> UiTree<H> {
             visible: true,
             blocks_underlay_input,
             hit_testable,
+            wants_pointer_down_outside_events: false,
             wants_pointer_move_events: false,
             wants_timer_events: false,
         });
@@ -762,6 +936,13 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
         l.wants_pointer_move_events = wants;
+    }
+
+    pub fn set_layer_wants_pointer_down_outside_events(&mut self, layer: UiLayerId, wants: bool) {
+        let Some(l) = self.layers.get_mut(layer) else {
+            return;
+        };
+        l.wants_pointer_down_outside_events = wants;
     }
 
     pub fn set_layer_wants_timer_events(&mut self, layer: UiLayerId, wants: bool) {
@@ -1003,7 +1184,23 @@ impl<H: UiHost> UiTree<H> {
 
         let (active_layers, barrier_root) = self.active_input_layers();
         self.enforce_modal_barrier_scope(&active_layers);
+
+        if self
+            .captured
+            .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
+        {
+            self.captured = None;
+        }
+        if self
+            .focus
+            .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
+        {
+            self.focus = None;
+        }
+
         let focus_is_text_input = self.focus_is_text_input();
+        self.set_ime_allowed(app, focus_is_text_input);
+
         let caps = app
             .global::<PlatformCapabilities>()
             .cloned()
@@ -1014,6 +1211,22 @@ impl<H: UiHost> UiTree<H> {
             ui_has_modal: barrier_root.is_some(),
             focus_is_text_input,
         };
+
+        // ADR 0012: when a text input is focused, reserve common IME/navigation keys for the
+        // text/IME path first, and only fall back to shortcut matching if the widget doesn't
+        // consume the event.
+        let defer_keydown_shortcuts_until_after_dispatch = !self.replaying_pending_shortcut
+            && self.focus.is_some()
+            && match event {
+                Event::KeyDown { key, modifiers, .. } => {
+                    Self::should_defer_keydown_shortcut_matching_to_text_input(
+                        *key,
+                        *modifiers,
+                        focus_is_text_input,
+                    )
+                }
+                _ => false,
+            };
 
         if let Some(window) = self.window {
             let changed = crate::focus_visible::update_for_event(app, window, event);
@@ -1099,117 +1312,28 @@ impl<H: UiHost> UiTree<H> {
         let mut needs_redraw = false;
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
         let services_ptr: *mut dyn UiServices = services;
+        let mut stop_propagation_requested = false;
 
         if let Event::KeyDown {
             key,
             modifiers,
             repeat,
         } = event
+            && !defer_keydown_shortcuts_until_after_dispatch
+            && self.handle_keydown_shortcuts(
+                app,
+                services,
+                KeydownShortcutParams {
+                    input_ctx: &input_ctx,
+                    barrier_root,
+                    focus_is_text_input,
+                    key: *key,
+                    modifiers: *modifiers,
+                    repeat: *repeat,
+                },
+            )
         {
-            if self.replaying_pending_shortcut {
-                // Pending shortcut replay bypasses shortcut matching and sequence state.
-            } else if *repeat {
-                // Allow key-repeat only for explicitly repeatable commands (e.g. text editing).
-                if let Some(service) = app.global::<KeymapService>() {
-                    let chord = KeyChord::new(*key, *modifiers);
-                    if let Some(command) = service.keymap.resolve(&input_ctx, chord)
-                        && app
-                            .commands()
-                            .get(command.clone())
-                            .is_some_and(|m| m.repeatable)
-                    {
-                        self.suppress_text_input_until_key_up = Some(*key);
-                        app.push_effect(Effect::Command {
-                            window: self.window,
-                            command,
-                        });
-                        return;
-                    }
-                }
-            } else if let Some(service) = app.global::<KeymapService>() {
-                let chord = KeyChord::new(*key, *modifiers);
-
-                if !self.pending_shortcut.keystrokes.is_empty() {
-                    self.pending_shortcut
-                        .keystrokes
-                        .push(CapturedKeystroke { chord, text: None });
-
-                    let sequence: Vec<KeyChord> = self
-                        .pending_shortcut
-                        .keystrokes
-                        .iter()
-                        .map(|s| s.chord)
-                        .collect();
-                    let matched = service.keymap.match_sequence(&input_ctx, &sequence);
-
-                    if matched.has_continuation {
-                        self.pending_shortcut.fallback = matched.exact.and_then(|c| c);
-                        self.pending_shortcut.focus = self.focus;
-                        self.pending_shortcut.barrier_root = barrier_root;
-                        self.pending_shortcut.capture_next_text_input_key =
-                            (focus_is_text_input && !modifiers.ctrl && !modifiers.meta)
-                                .then_some(*key);
-                        self.suppress_text_input_until_key_up = Some(*key);
-                        self.schedule_pending_shortcut_timeout(app);
-                        return;
-                    }
-
-                    if let Some(Some(command)) = matched.exact {
-                        self.clear_pending_shortcut(app);
-                        self.suppress_text_input_until_key_up = Some(*key);
-                        app.push_effect(Effect::Command {
-                            window: self.window,
-                            command,
-                        });
-                        return;
-                    }
-
-                    let pending = std::mem::take(&mut self.pending_shortcut);
-                    if let Some(token) = pending.timer {
-                        app.push_effect(Effect::CancelTimer { token });
-                    }
-                    self.replay_captured_keystrokes(app, services, &input_ctx, pending.keystrokes);
-                    return;
-                }
-
-                let matched = service
-                    .keymap
-                    .match_sequence(&input_ctx, std::slice::from_ref(&chord));
-                if matched.has_continuation {
-                    self.pending_shortcut.keystrokes =
-                        vec![CapturedKeystroke { chord, text: None }];
-                    self.pending_shortcut.focus = self.focus;
-                    self.pending_shortcut.barrier_root = barrier_root;
-                    self.pending_shortcut.fallback = matched.exact.and_then(|c| c);
-                    self.pending_shortcut.capture_next_text_input_key =
-                        (focus_is_text_input && !modifiers.ctrl && !modifiers.meta).then_some(*key);
-                    self.suppress_text_input_until_key_up = Some(*key);
-                    self.schedule_pending_shortcut_timeout(app);
-                    return;
-                }
-
-                if let Some(command) = service.keymap.resolve(&input_ctx, chord) {
-                    self.suppress_text_input_until_key_up = Some(*key);
-                    app.push_effect(Effect::Command {
-                        window: self.window,
-                        command,
-                    });
-                    return;
-                }
-            }
-        }
-
-        if self
-            .captured
-            .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
-        {
-            self.captured = None;
-        }
-        if self
-            .focus
-            .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
-        {
-            self.focus = None;
+            return;
         }
 
         let default_root = barrier_root.unwrap_or(base_root);
@@ -1243,6 +1367,20 @@ impl<H: UiHost> UiTree<H> {
             && let Some(pos) = event_position(event)
         {
             let hit = self.hit_test_layers(&active_layers, pos);
+
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) && captured.is_none() {
+                self.dispatch_pointer_down_outside(
+                    app,
+                    services,
+                    PointerDownOutsideParams {
+                        input_ctx: &input_ctx,
+                        active_layer_roots: &active_layers,
+                        base_root,
+                        hit,
+                        event,
+                    },
+                );
+            }
             let hovered_pressable: Option<crate::elements::GlobalElementId> =
                 declarative::with_window_frame(app, window, |window_frame| {
                     let window_frame = window_frame?;
@@ -1276,7 +1414,10 @@ impl<H: UiHost> UiTree<H> {
                     let mut node = hit;
                     while let Some(id) = node {
                         if let Some(record) = window_frame.instances.get(&id)
-                            && matches!(record.instance, declarative::ElementInstance::HoverRegion(_))
+                            && matches!(
+                                record.instance,
+                                declarative::ElementInstance::HoverRegion(_)
+                            )
                         {
                             return Some(record.element);
                         }
@@ -1405,6 +1546,10 @@ impl<H: UiHost> UiTree<H> {
                 cursor_choice = requested_cursor;
             }
 
+            if stop_propagation {
+                stop_propagation_requested = true;
+            }
+
             if self.captured.is_some() || stop_propagation {
                 break;
             }
@@ -1413,6 +1558,39 @@ impl<H: UiHost> UiTree<H> {
                 Some(parent) => parent,
                 None => break,
             };
+        }
+
+        if defer_keydown_shortcuts_until_after_dispatch
+            && !stop_propagation_requested
+            && let Event::KeyDown {
+                key,
+                modifiers,
+                repeat,
+            } = event
+        {
+            let focus_is_text_input = self.focus_is_text_input();
+            let input_ctx_for_shortcuts = InputContext {
+                focus_is_text_input,
+                ..input_ctx.clone()
+            };
+
+            if self.handle_keydown_shortcuts(
+                app,
+                services,
+                KeydownShortcutParams {
+                    input_ctx: &input_ctx_for_shortcuts,
+                    barrier_root,
+                    focus_is_text_input,
+                    key: *key,
+                    modifiers: *modifiers,
+                    repeat: *repeat,
+                },
+            ) {
+                if needs_redraw && let Some(window) = self.window {
+                    app.request_redraw(window);
+                }
+                return;
+            }
         }
 
         if input_ctx.caps.ui.cursor_icons
@@ -1438,6 +1616,118 @@ impl<H: UiHost> UiTree<H> {
                 let _ =
                     self.dispatch_event_to_node_chain(app, services, &input_ctx, layer.root, event);
             }
+        }
+
+        // Keep IME enable/disable tightly coupled to focus changes caused by the event itself.
+        let focus_is_text_input = self.focus_is_text_input();
+        self.set_ime_allowed(app, focus_is_text_input);
+    }
+
+    fn dispatch_pointer_down_outside(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        params: PointerDownOutsideParams<'_>,
+    ) {
+        let hit_root = params.hit.and_then(|n| self.node_root(n));
+
+        // Only the topmost "dismissable" non-modal overlay should observe outside presses.
+        // This mirrors Radix-style DismissableLayer semantics while staying click-through:
+        // the observer pass must not block the underlying hit-tested dispatch.
+        let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+        for layer_id in layers.into_iter().rev() {
+            let Some(layer) = self.layers.get(layer_id) else {
+                continue;
+            };
+            if !layer.visible {
+                continue;
+            }
+            if layer.root == params.base_root {
+                continue;
+            }
+            if layer.blocks_underlay_input {
+                continue;
+            }
+            if !params.active_layer_roots.contains(&layer.root) {
+                continue;
+            }
+
+            // If the pointer event is inside this layer, it will be handled by the normal hit-test
+            // dispatch. Do not dismiss anything under it.
+            if hit_root == Some(layer.root) {
+                break;
+            }
+
+            if !layer.wants_pointer_down_outside_events {
+                continue;
+            }
+
+            self.dispatch_event_to_node_chain_observer(
+                app,
+                services,
+                params.input_ctx,
+                layer.root,
+                params.event,
+            );
+            break;
+        }
+    }
+
+    fn dispatch_event_to_node_chain_observer(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        input_ctx: &InputContext,
+        start: NodeId,
+        event: &Event,
+    ) {
+        let services_ptr: *mut dyn UiServices = services;
+
+        let mut node_id = start;
+        loop {
+            let (invalidations, parent) = self.with_widget_mut(node_id, |widget, tree| {
+                let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                let children: Vec<NodeId> = tree
+                    .nodes
+                    .get(node_id)
+                    .map(|n| n.children.clone())
+                    .unwrap_or_default();
+                let bounds = tree
+                    .nodes
+                    .get(node_id)
+                    .map(|n| n.bounds)
+                    .unwrap_or_default();
+                let mut cx = EventCx {
+                    app,
+                    services: unsafe { &mut *services_ptr },
+                    node: node_id,
+                    window: tree.window,
+                    input_ctx: input_ctx.clone(),
+                    children: &children,
+                    focus: tree.focus,
+                    captured: tree.captured,
+                    bounds,
+                    invalidations: Vec::new(),
+                    requested_focus: None,
+                    requested_capture: None,
+                    requested_cursor: None,
+                    stop_propagation: false,
+                };
+                widget.event(&mut cx, event);
+
+                // Observer dispatch must not mutate routing state (capture/focus/propagation). It
+                // exists to allow click-through outside-press policies, not to intercept input.
+                (cx.invalidations, parent)
+            });
+
+            for (id, inv) in invalidations {
+                self.mark_invalidation(id, inv);
+            }
+
+            node_id = match parent {
+                Some(parent) => parent,
+                None => break,
+            };
         }
     }
 
@@ -1568,7 +1858,32 @@ impl<H: UiHost> UiTree<H> {
             return false;
         };
 
-        let scope_root = barrier_root.unwrap_or(base_root);
+        let _ = base_root;
+        self.focus_traverse_in_roots(app, active_layers, forward, barrier_root)
+    }
+
+    /// Focus traversal mechanism used by both the runtime default and component-owned focus scopes.
+    ///
+    /// Notes:
+    /// - `roots` are treated as candidates; only focusables that are in the current active input layers
+    ///   (modal-aware) and intersect the modal scope bounds are included.
+    /// - This is intentionally conservative until we formalize a scroll-into-view contract (ADR 0068).
+    pub fn focus_traverse_in_roots(
+        &mut self,
+        app: &mut H,
+        roots: &[NodeId],
+        forward: bool,
+        scope_root: Option<NodeId>,
+    ) -> bool {
+        let Some(base_root) = self
+            .base_layer
+            .and_then(|id| self.layers.get(id).map(|l| l.root))
+        else {
+            return true;
+        };
+        let (active_layers, barrier_root) = self.active_input_layers();
+
+        let scope_root = scope_root.or(barrier_root).unwrap_or(base_root);
         let scope_bounds = self
             .nodes
             .get(scope_root)
@@ -1576,7 +1891,9 @@ impl<H: UiHost> UiTree<H> {
             .unwrap_or_default();
 
         let mut focusables: Vec<NodeId> = Vec::new();
-        self.collect_focusables(scope_root, active_layers, scope_bounds, &mut focusables);
+        for &root in roots {
+            self.collect_focusables(root, &active_layers, scope_bounds, &mut focusables);
+        }
         if focusables.is_empty() {
             return true;
         }
@@ -2252,6 +2569,7 @@ impl<H: UiHost> UiTree<H> {
                 let bounds = node.bounds;
                 let children = node.children.as_slice();
                 let is_text_input = node.widget.as_ref().is_some_and(|w| w.is_text_input());
+                let is_focusable = node.widget.as_ref().is_some_and(|w| w.is_focusable());
 
                 let mut role = if Some(id) == base_root {
                     SemanticsRole::Window
@@ -2268,6 +2586,14 @@ impl<H: UiHost> UiTree<H> {
                     focused: focus == Some(id),
                     captured: captured == Some(id),
                     ..fret_core::SemanticsFlags::default()
+                };
+
+                let mut label: Option<String> = None;
+                let mut value: Option<String> = None;
+                let mut actions = fret_core::SemanticsActions {
+                    focus: is_focusable || is_text_input,
+                    invoke: false,
+                    set_value: is_text_input,
                 };
 
                 // Preserve a stable-ish order: visit children in declared order.
@@ -2287,6 +2613,9 @@ impl<H: UiHost> UiTree<H> {
                         captured,
                         role: &mut role,
                         flags: &mut flags,
+                        label: &mut label,
+                        value: &mut value,
+                        actions: &mut actions,
                     };
                     widget.semantics(&mut cx);
                 }
@@ -2297,6 +2626,9 @@ impl<H: UiHost> UiTree<H> {
                     role,
                     bounds,
                     flags,
+                    label,
+                    value,
+                    actions,
                 });
             }
         }
@@ -2318,7 +2650,7 @@ impl<H: UiHost> UiTree<H> {
         layer_roots.contains(&node_root)
     }
 
-    fn node_layer(&self, node: NodeId) -> Option<UiLayerId> {
+    pub fn node_layer(&self, node: NodeId) -> Option<UiLayerId> {
         let root = self.node_root(node)?;
         self.root_to_layer.get(&root).copied()
     }
@@ -2680,6 +3012,75 @@ mod tests {
     }
 
     #[test]
+    fn outside_press_observer_must_not_capture_pointer_or_break_click_through() {
+        struct CaptureOnPointerDownOutside;
+
+        impl<H: UiHost> Widget<H> for CaptureOnPointerDownOutside {
+            fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+                false
+            }
+
+            fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+                if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                    cx.capture_pointer(cx.node);
+                }
+            }
+        }
+
+        let window = AppWindowId::default();
+
+        let mut app = crate::test_host::TestHost::new();
+        let clicks = app.models_mut().insert(0u32);
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let base = ui.create_node(ClickCounter { clicks });
+        ui.set_root(base);
+
+        let overlay = ui.create_node(CaptureOnPointerDownOutside);
+        let layer = ui.push_overlay_root_ex(overlay, false, true);
+        ui.set_layer_wants_pointer_down_outside_events(layer, true);
+
+        let mut services = FakeUiServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        let value = app.models().get(clicks).copied().unwrap_or(0);
+        assert_eq!(
+            value, 1,
+            "expected click-through dispatch to reach underlay"
+        );
+        assert_eq!(
+            ui.captured(),
+            None,
+            "observer pass must not capture pointer"
+        );
+    }
+
+    #[test]
     fn paint_cache_replays_ops_when_node_translates() {
         let mut app = crate::test_host::TestHost::new();
 
@@ -2802,7 +3203,10 @@ mod tests {
         ui.set_root(root);
 
         let mut services = FakeUiServices;
-        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(100.0)));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
         ui.layout_in(&mut app, &mut services, root, bounds, 1.0);
 
         ui.dispatch_event(
@@ -2822,6 +3226,65 @@ mod tests {
 
         assert_eq!(ui.focus(), None);
         assert_eq!(ui.captured(), None);
+    }
+
+    #[test]
+    fn focus_traversal_includes_roots_above_modal_barrier() {
+        #[derive(Default)]
+        struct Focusable;
+
+        impl<H: UiHost> Widget<H> for Focusable {
+            fn is_focusable(&self) -> bool {
+                true
+            }
+
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                cx.available
+            }
+        }
+
+        let mut app = crate::test_host::TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let base_root = ui.create_node(TestStack);
+        let underlay_focusable = ui.create_node(Focusable);
+        ui.add_child(base_root, underlay_focusable);
+        ui.set_root(base_root);
+
+        let modal_root = ui.create_node(TestStack);
+        let modal_focusable = ui.create_node(Focusable);
+        ui.add_child(modal_root, modal_focusable);
+        ui.push_overlay_root(modal_root, true);
+
+        // Simulate a nested "portal" overlay that lives above the modal barrier (e.g. combobox popover
+        // inside a dialog).
+        let popup_root = ui.create_node(TestStack);
+        let popup_focusable = ui.create_node(Focusable);
+        ui.add_child(popup_root, popup_focusable);
+        ui.push_overlay_root(popup_root, false);
+
+        let mut services = FakeUiServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Under a modal barrier, traversal must not reach underlay focusables.
+        ui.set_focus(Some(modal_focusable));
+        let _ = ui.dispatch_command(&mut app, &mut services, &CommandId::from("focus.next"));
+        assert_eq!(ui.focus(), Some(popup_focusable));
+
+        let _ = ui.dispatch_command(&mut app, &mut services, &CommandId::from("focus.next"));
+        assert_eq!(ui.focus(), Some(modal_focusable));
+
+        // Reverse direction should also wrap within the active layers set.
+        let _ = ui.dispatch_command(&mut app, &mut services, &CommandId::from("focus.previous"));
+        assert_eq!(ui.focus(), Some(popup_focusable));
     }
 
     #[test]
