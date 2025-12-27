@@ -66,6 +66,7 @@ definitions live in `docs/mvp/reference-plan.md`.
   - treat APG as the keyboard/focus baseline for composite widgets (menus/listbox/combobox/tree)
   - align dismissal/focus/portal outcomes with Radix UI Primitives (without a DOM runtime)
   - implement deterministic anchored positioning + collision avoidance (Floating-like flip/shift/size/arrow)
+  - converge HoverCard-style anchored panels onto the shared placement contract (flip + window margin)
   - reference stack: `docs/reference-stack-ui-behavior.md`
 - MVP 63: unify scroll ergonomics around a single handle model (GPUI-like)
   - define a `ScrollHandle`-style substrate: offset, scroll-to, scroll-into-view, scrollbar behavior

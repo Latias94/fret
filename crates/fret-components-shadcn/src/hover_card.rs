@@ -32,6 +32,7 @@ pub struct HoverCard {
     content: AnyElement,
     props: HoverCardProps,
     layout: LayoutRefinement,
+    window_margin_override: Option<Px>,
 }
 
 impl HoverCard {
@@ -41,6 +42,7 @@ impl HoverCard {
             content,
             props: HoverCardProps::default(),
             layout: LayoutRefinement::default(),
+            window_margin_override: None,
         }
     }
 
@@ -64,6 +66,11 @@ impl HoverCard {
         self
     }
 
+    pub fn window_margin(mut self, margin: Px) -> Self {
+        self.window_margin_override = Some(margin);
+        self
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
@@ -74,6 +81,10 @@ impl HoverCard {
 
         let mut props = self.props;
         props.layout = decl_style::layout_style(&theme, self.layout);
+        props.window_margin = self.window_margin_override.unwrap_or_else(|| {
+            theme.metric_by_key("component.hover_card.window_margin")
+                .unwrap_or(props.window_margin)
+        });
 
         let trigger = self.trigger;
         let content = self.content;

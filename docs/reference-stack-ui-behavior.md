@@ -94,6 +94,12 @@ Non-goal:
 
 - do not ship shadcn/Radix-like *policy* surfaces (Popover/Dialog/Menu/Toast) in runtime.
 
+Note:
+
+- `HoverCard` is currently implemented as a small declarative primitive to exercise “anchored panel +
+  overflow: visible hit-testing” semantics; longer-term it may be re-expressed on top of overlay
+  services once placement + dismissal contracts are fully locked (MVP 62).
+
 ### `crates/fret-components-ui` (infrastructure)
 
 Owns reusable typed authoring ergonomics:
@@ -117,4 +123,3 @@ Owns shadcn v4 naming + variants + composition recipes:
 - cmdk: `repo-ref/cmdk`
 - Floating UI: `repo-ref/floating-ui`
 - gpui-component (Rust ergonomics + structure): `repo-ref/gpui-component`
-

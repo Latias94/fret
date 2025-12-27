@@ -477,6 +477,8 @@ pub struct HoverCardProps {
     pub layout: LayoutStyle,
     pub align: HoverCardAlign,
     pub side_offset: Px,
+    /// Minimum inset from the root/window bounds when clamping or flipping.
+    pub window_margin: Px,
     /// Open delay expressed in frames (best-effort; driven by animation frames).
     pub open_delay_frames: u32,
     /// Close delay expressed in frames (best-effort; driven by animation frames).
@@ -489,6 +491,7 @@ impl Default for HoverCardProps {
             layout: LayoutStyle::default(),
             align: HoverCardAlign::Center,
             side_offset: Px(4.0),
+            window_margin: Px(8.0),
             open_delay_frames: 0,
             close_delay_frames: 0,
         }

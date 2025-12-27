@@ -1828,24 +1828,28 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         );
                         let content_size = cx.layout_in(content, probe);
 
-                        let x = match props.align {
-                            HoverCardAlign::Start => trigger_bounds.origin.x.0,
-                            HoverCardAlign::Center => {
-                                trigger_bounds.origin.x.0
-                                    + (trigger_bounds.size.width.0 - content_size.width.0) * 0.5
-                            }
-                            HoverCardAlign::End => {
-                                trigger_bounds.origin.x.0
-                                    + (trigger_bounds.size.width.0 - content_size.width.0)
-                            }
-                        };
-                        let y = trigger_bounds.origin.y.0
-                            + trigger_bounds.size.height.0
-                            + props.side_offset.0;
+                        let outer = crate::elements::root_bounds_for_element(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                        )
+                        .unwrap_or_else(|| Rect::new(Point::new(Px(0.0), Px(0.0)), cx.available));
+                        let margin = Px(props.window_margin.0.max(0.0));
+                        let outer = crate::overlay_placement::inset_rect(outer, Edges::all(margin));
 
-                        let bounds = Rect::new(
-                            fret_core::Point::new(Px(x), Px(y)),
-                            Size::new(content_size.width, content_size.height),
+                        let align = match props.align {
+                            HoverCardAlign::Start => crate::overlay_placement::Align::Start,
+                            HoverCardAlign::Center => crate::overlay_placement::Align::Center,
+                            HoverCardAlign::End => crate::overlay_placement::Align::End,
+                        };
+
+                        let bounds = crate::overlay_placement::anchored_panel_bounds(
+                            outer,
+                            trigger_bounds,
+                            content_size,
+                            props.side_offset,
+                            crate::overlay_placement::Side::Bottom,
+                            align,
                         );
                         let _ = cx.layout_in(content, bounds);
                     } else {
@@ -2377,6 +2381,9 @@ pub fn render_root<H: UiHost>(
             ));
         }
         ui.set_children(root_node, mounted_children);
+
+        // Record the root's coordinate space for placement/collision logic (e.g. HoverCard).
+        window_state.set_root_bounds(root_id, bounds);
 
         // Sweep nodes that are not seen for `gc_lag_frames`.
         let mut stale_nodes: Vec<NodeId> = Vec::new();

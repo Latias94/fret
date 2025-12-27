@@ -58,6 +58,7 @@ pub struct WindowElementState {
     cur_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
     observed_models: HashMap<GlobalElementId, Vec<(ModelId, Invalidation)>>,
     nodes: HashMap<GlobalElementId, NodeEntry>,
+    root_bounds: HashMap<GlobalElementId, Rect>,
     hovered_pressable: Option<GlobalElementId>,
     pressed_pressable: Option<GlobalElementId>,
     hovered_hover_card: Option<GlobalElementId>,
@@ -104,6 +105,14 @@ impl WindowElementState {
 
     pub(crate) fn retain_nodes(&mut self, f: impl FnMut(&GlobalElementId, &mut NodeEntry) -> bool) {
         self.nodes.retain(f);
+    }
+
+    pub(crate) fn set_root_bounds(&mut self, root: GlobalElementId, bounds: Rect) {
+        self.root_bounds.insert(root, bounds);
+    }
+
+    pub(crate) fn root_bounds(&self, root: GlobalElementId) -> Option<Rect> {
+        self.root_bounds.get(&root).copied()
     }
 }
 
@@ -752,6 +761,18 @@ pub fn with_element_cx<H: UiHost, R>(
     app.with_global_mut(ElementRuntime::new, |runtime, app| {
         let mut cx = ElementCx::new_for_root_name(app, runtime, window, bounds, root_name);
         f(&mut cx)
+    })
+}
+
+pub fn root_bounds_for_element<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> Option<Rect> {
+    app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+        let state = runtime.for_window_mut(window);
+        let root = state.node_entry(element).map(|e| e.root)?;
+        state.root_bounds(root)
     })
 }
 
