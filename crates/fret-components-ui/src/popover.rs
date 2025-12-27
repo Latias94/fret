@@ -1224,3 +1224,125 @@ impl<H: UiHost> Widget<H> for Popover {
         cx.scene.push(SceneOp::PopClip);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
+        Point, Px, Rect, Scene, SceneOp, Size, TextService,
+    };
+    use fret_ui::UiTree;
+
+    #[derive(Default)]
+    struct FakeServices(());
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: fret_core::TextStyle,
+            _constraints: fret_core::TextConstraints,
+        ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                fret_core::TextMetrics {
+                    size: Size::new(Px(80.0), Px(12.0)),
+                    baseline: Px(10.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            false
+        }
+    }
+
+    fn clip_rect(scene: &Scene) -> Option<Rect> {
+        scene.ops().iter().find_map(|op| match op {
+            SceneOp::PushClipRRect { rect, .. } => Some(*rect),
+            _ => None,
+        })
+    }
+
+    #[test]
+    fn popover_flips_to_top_near_bottom_and_does_not_overflow() {
+        let mut host = App::new();
+        let mut services = FakeServices::default();
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let popover = ui.create_node(Popover::new());
+        ui.set_root(popover);
+
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(200.0)),
+        );
+
+        let anchor = Rect::new(
+            Point::new(Px(10.0), Px(190.0)),
+            Size::new(Px(40.0), Px(10.0)),
+        );
+
+        let items: Vec<PopoverItem> = (0..32)
+            .map(|i| PopoverItem::new(format!("Item {i}")))
+            .collect();
+
+        host.with_global_mut(PopoverService::default, |service, _app| {
+            service.set_request(
+                window,
+                PopoverRequest {
+                    owner: popover,
+                    anchor,
+                    items,
+                    selected: None,
+                    request_focus: true,
+                },
+            );
+        });
+
+        ui.layout_all(&mut host, &mut services, outer, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut host, &mut services, outer, &mut scene, 1.0);
+
+        let Some(bounds) = clip_rect(&scene) else {
+            panic!("expected a popover clip rect to be emitted");
+        };
+
+        // Must stay within the window.
+        assert!(bounds.origin.x.0 >= 0.0);
+        assert!(bounds.origin.y.0 >= 0.0);
+        assert!(bounds.origin.x.0 + bounds.size.width.0 <= 200.0);
+        assert!(bounds.origin.y.0 + bounds.size.height.0 <= 200.0);
+
+        // Near the bottom edge, prefer flipping above the anchor rather than overflowing below.
+        assert!(bounds.origin.y.0 + bounds.size.height.0 <= anchor.origin.y.0);
+    }
+}
