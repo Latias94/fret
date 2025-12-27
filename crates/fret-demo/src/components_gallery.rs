@@ -9,9 +9,7 @@ use fret_core::{
 };
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui::declarative;
-use fret_ui::element::{
-    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-};
+use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign};
 use fret_ui::{Invalidation, LayoutCx, PaintCx, Theme, UiHost, UiTree, Widget};
 use std::sync::Arc;
 use winit::event_loop::EventLoop;

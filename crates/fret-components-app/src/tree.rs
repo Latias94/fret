@@ -51,4 +51,3 @@ impl<H: UiHost> TreeRowRenderer<H> for AppTreeRowRenderer {
         out
     }
 }
-
