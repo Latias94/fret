@@ -29,4 +29,6 @@ upstream SVG filename stem).
 ## Maintenance
 
 - Update the curated list in `icon-list.txt`.
-- Sync SVGs from upstream Lucide into `assets/icons`: `pwsh tools/sync_icons.ps1 -Pack lucide`
+- Sync SVGs from upstream Lucide into `assets/icons`:
+  - Windows: `pwsh tools/sync_icons.ps1 -Pack lucide -Clean`
+  - macOS/Linux: `python3 tools/sync_icons.py --pack lucide --clean`

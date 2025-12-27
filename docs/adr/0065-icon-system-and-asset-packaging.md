@@ -133,4 +133,6 @@ No component code holds `ImageId` or manages raster caches directly.
 ## In-repo maintenance (Lucide)
 
 - Curated list: `crates/fret-icons-lucide/icon-list.txt`
-- Sync vendored SVGs from `repo-ref`: `pwsh tools/sync_icons.ps1 -Pack lucide`
+- Sync vendored SVGs from `repo-ref`:
+  - Windows: `pwsh tools/sync_icons.ps1 -Pack lucide -Clean`
+  - macOS/Linux: `python3 tools/sync_icons.py --pack lucide --clean`
