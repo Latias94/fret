@@ -79,7 +79,7 @@ It complements (but does not replace) ADRs:
 - **Add a repeatable IME regression checklist to the demo**
   - Goal: a short "manual test script" that can later be automated (Windows Japanese IME, caret placement, commit/cancel).
   - ADRs: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0071-text-input-multiline-composition-contract.md`
-  - Code: `crates/fret-demo/src/main.rs` or `crates/fret-demo/src/ui_kit.rs` (choose a stable harness location).
+  - Code: `crates/fret-demo/src/components_gallery.rs` or `crates/fret-demo/src/ui_kit.rs` (choose a stable harness location).
 
 - **Prefer `cargo nextest` for workspace tests**
   - Goal: make it easy to run conformance tests consistently.

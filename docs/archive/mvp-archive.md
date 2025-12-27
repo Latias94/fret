@@ -33,7 +33,7 @@ Code anchors:
 - Effects/models: `crates/fret-app/src/app.rs`
 - Runner scheduling: `crates/fret-runner-winit-wgpu/src/runner.rs`
 - Dock identity/persistence ops: `crates/fret-core/src/panels.rs`, `crates/fret-core/src/dock_layout.rs`, `crates/fret-core/src/dock_op.rs`
-- Demo persistence: `crates/fret-demo/src/main.rs`
+- Demo persistence: implemented in `crates/fret-demo` (entrypoints evolve; search for `.fret/` usage).
 - Declarative elements skeleton: `crates/fret-ui/src/elements.rs`
 - Declarative demo widget: `crates/fret-demo/src/elements_mvp2.rs`
 - IME plumbing + cursor-area effects: `crates/fret-runner-winit-wgpu/src/runner.rs`
@@ -44,7 +44,7 @@ Code anchors:
 - Keymap/when parsing + resolver: `crates/fret-app/src/keymap.rs`, `crates/fret-app/src/when_expr.rs`
 - KeyDown → Command resolution (window-scoped): `crates/fret-ui/src/tree.rs`
 - Command dispatch (effects → runner → driver → UiTree): `crates/fret-runner-winit-wgpu/src/runner.rs`
-- Demo command/keymap wiring: `crates/fret-demo/src/main.rs`
+- Demo command/keymap wiring: prototype lived in `crates/fret-demo` (entrypoints evolve; search for keymap loading).
 - Sample keymap file: `docs/examples/keymap.json`
 
 ## MVP 0 — Runner Scheduling Skeleton (Event-Driven + IDs)
