@@ -290,15 +290,26 @@ fn clamp_corner_radii_for_rect(rect_w: f32, rect_h: f32, corner_radii: [f32; 4])
     }
 
     corner_radii.map(|r| {
-        if !r.is_finite() || r <= 0.0 {
-            0.0
-        } else if max_radius == 0.0 {
+        if !r.is_finite() || r <= 0.0 || max_radius == 0.0 {
             0.0
         } else {
             r.min(max_radius)
         }
     })
 }
+
+struct SvgRasterGpu<'a> {
+    device: &'a wgpu::Device,
+    queue: &'a wgpu::Queue,
+}
+
+type SvgMaskAtlasInsert = (
+    fret_core::ImageId,
+    UvRect,
+    (u32, u32),
+    usize,
+    etagere::AllocId,
+);
 
 fn edges_to_vec4(e: Edges) -> [f32; 4] {
     [e.left.0, e.top.0, e.right.0, e.bottom.0]
@@ -1119,12 +1130,12 @@ impl Renderer {
         scene: &Scene,
         scale_factor: f32,
     ) {
+        let gpu = SvgRasterGpu { device, queue };
         for op in scene.ops() {
             match op {
                 SceneOp::SvgMaskIcon { rect, svg, fit, .. } => {
                     let _ = self.ensure_svg_raster(
-                        device,
-                        queue,
+                        &gpu,
                         *svg,
                         *rect,
                         scale_factor,
@@ -1134,8 +1145,7 @@ impl Renderer {
                 }
                 SceneOp::SvgImage { rect, svg, fit, .. } => {
                     let _ = self.ensure_svg_raster(
-                        device,
-                        queue,
+                        &gpu,
                         *svg,
                         *rect,
                         scale_factor,
@@ -1278,13 +1288,7 @@ impl Renderer {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         mask: &SvgAlphaMask,
-    ) -> Option<(
-        fret_core::ImageId,
-        UvRect,
-        (u32, u32),
-        usize,
-        etagere::AllocId,
-    )> {
+    ) -> Option<SvgMaskAtlasInsert> {
         let (w, h) = mask.size_px;
         if w == 0 || h == 0 {
             return None;
@@ -1402,8 +1406,7 @@ impl Renderer {
 
     fn ensure_svg_raster(
         &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        gpu: &SvgRasterGpu<'_>,
         svg: fret_core::SvgId,
         rect: Rect,
         scale_factor: f32,
@@ -1424,10 +1427,10 @@ impl Renderer {
                 };
                 (e.image, e.uv, e.size_px, page_index)
             };
-            if let Some(page_index) = page_index {
-                if let Some(Some(page)) = self.svg_mask_atlas_pages.get_mut(page_index) {
-                    page.last_used_epoch = self.svg_raster_epoch;
-                }
+            if let Some(page_index) = page_index
+                && let Some(Some(page)) = self.svg_mask_atlas_pages.get_mut(page_index)
+            {
+                page.last_used_epoch = self.svg_raster_epoch;
             }
             return Some((image, uv, size_px));
         }
@@ -1453,7 +1456,7 @@ impl Renderer {
 
                 let t_insert = Instant::now();
                 if let Some((image, uv, size_px, page_index, alloc_id)) =
-                    self.insert_svg_alpha_mask_into_atlas(device, queue, &mask)
+                    self.insert_svg_alpha_mask_into_atlas(gpu.device, gpu.queue, &mask)
                 {
                     if self.svg_perf_enabled {
                         self.svg_perf.alpha_atlas_inserts =
@@ -1475,7 +1478,7 @@ impl Renderer {
                         self.svg_perf.alpha_atlas_write += t_insert.elapsed();
                     }
                     let t_upload = Instant::now();
-                    let uploaded = upload_alpha_mask(device, queue, &mask);
+                    let uploaded = upload_alpha_mask(gpu.device, gpu.queue, &mask);
                     if self.svg_perf_enabled {
                         self.svg_perf.alpha_standalone_uploads =
                             self.svg_perf.alpha_standalone_uploads.saturating_add(1);
@@ -1512,7 +1515,7 @@ impl Renderer {
                     self.svg_perf.rgba_raster += t_raster.elapsed();
                 }
                 let t_upload = Instant::now();
-                let uploaded = upload_rgba_image(device, queue, &rgba);
+                let uploaded = upload_rgba_image(gpu.device, gpu.queue, &rgba);
                 if self.svg_perf_enabled {
                     self.svg_perf.rgba_uploads = self.svg_perf.rgba_uploads.saturating_add(1);
                     self.svg_perf.rgba_upload += t_upload.elapsed();
@@ -1639,7 +1642,7 @@ impl Renderer {
     pub fn new(adapter: &wgpu::Adapter, device: &wgpu::Device) -> Self {
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
         // wgpu requires uniform dynamic offsets to be aligned to 256 bytes.
-        let uniform_stride = ((uniform_size + 255) / 256) * 256;
+        let uniform_stride = uniform_size.div_ceil(256) * 256;
         let uniform_capacity = 256usize;
 
         let uniform_bind_group_layout =
@@ -2697,7 +2700,7 @@ impl Renderer {
         self.instance_buffer_index = (self.instance_buffer_index + 1) % self.instance_buffers.len();
         let instance_buffer = &self.instance_buffers[instance_buffer_index];
         if !instances.is_empty() {
-            queue.write_buffer(instance_buffer, 0, bytemuck::cast_slice(&instances));
+            queue.write_buffer(instance_buffer, 0, bytemuck::cast_slice(instances));
         }
 
         let viewport_vertex_buffer_index = self.viewport_vertex_buffer_index;
@@ -2708,7 +2711,7 @@ impl Renderer {
             queue.write_buffer(
                 viewport_vertex_buffer,
                 0,
-                bytemuck::cast_slice(&viewport_vertices),
+                bytemuck::cast_slice(viewport_vertices),
             );
         }
 
@@ -2717,7 +2720,7 @@ impl Renderer {
             (self.text_vertex_buffer_index + 1) % self.text_vertex_buffers.len();
         let text_vertex_buffer = &self.text_vertex_buffers[text_vertex_buffer_index];
         if !text_vertices.is_empty() {
-            queue.write_buffer(text_vertex_buffer, 0, bytemuck::cast_slice(&text_vertices));
+            queue.write_buffer(text_vertex_buffer, 0, bytemuck::cast_slice(text_vertices));
         }
 
         let path_vertex_buffer_index = self.path_vertex_buffer_index;
@@ -4190,10 +4193,10 @@ impl fret_core::PathService for Renderer {
             return;
         };
 
-        if let Some(entry) = self.path_cache.get_mut(&cache_key) {
-            if entry.refs > 0 {
-                entry.refs -= 1;
-            }
+        if let Some(entry) = self.path_cache.get_mut(&cache_key)
+            && entry.refs > 0
+        {
+            entry.refs -= 1;
         }
 
         self.prune_path_cache();

@@ -5,12 +5,6 @@ edition.workspace = true
 
 [features]
 default = []
-# Retained widget primitives (temporary compatibility layer).
-#
-# The long-term direction is declarative-first authoring (ADR 0028/0039) with Tailwind-like
-# primitives mapped into `LayoutStyle` (ADR 0057/0062). Retained widgets will be removed once the
-# component ecosystem is fully migrated.
-retained-widgets = []
 
 [dependencies]
 fret-core = { path = "../fret-core" }

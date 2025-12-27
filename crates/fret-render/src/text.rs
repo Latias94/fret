@@ -345,10 +345,11 @@ impl TextSystem {
 
         let mut attrs = Attrs::new().family(Family::SansSerif);
         attrs = attrs.weight(Weight(style.weight.0));
-        if let Some(letter_spacing_em) = style.letter_spacing_em {
-            if letter_spacing_em != 0.0 && letter_spacing_em.is_finite() {
-                attrs = attrs.letter_spacing(letter_spacing_em);
-            }
+        if let Some(letter_spacing_em) = style.letter_spacing_em
+            && letter_spacing_em != 0.0
+            && letter_spacing_em.is_finite()
+        {
+            attrs = attrs.letter_spacing(letter_spacing_em);
         }
         if let Some(line_height) = style.line_height {
             let line_height_px = (line_height.0 * scale).max(font_size_px);
@@ -497,10 +498,11 @@ impl TextSystem {
 
         let mut attrs = Attrs::new().family(Family::SansSerif);
         attrs = attrs.weight(Weight(style.weight.0));
-        if let Some(letter_spacing_em) = style.letter_spacing_em {
-            if letter_spacing_em != 0.0 && letter_spacing_em.is_finite() {
-                attrs = attrs.letter_spacing(letter_spacing_em);
-            }
+        if let Some(letter_spacing_em) = style.letter_spacing_em
+            && letter_spacing_em != 0.0
+            && letter_spacing_em.is_finite()
+        {
+            attrs = attrs.letter_spacing(letter_spacing_em);
         }
         if let Some(line_height) = style.line_height {
             let line_height_px = (line_height.0 * scale).max(font_size_px);
@@ -739,8 +741,8 @@ fn layout_text(
             let mut kept: Vec<cosmic_text::LayoutGlyph> = line
                 .glyphs
                 .iter()
+                .filter(|&g| g.end <= cut_end)
                 .cloned()
-                .filter(|g| g.end <= cut_end)
                 .collect();
 
             let ellipsis_start_x = (max_w - ellipsis_w).max(0.0);
@@ -980,6 +982,42 @@ fn hit_test_point_from_lines(lines: &[TextLine], point: Point) -> Option<HitTest
     Some(HitTestResult { index, affinity })
 }
 
+fn selection_rects_from_lines(lines: &[TextLine], range: (usize, usize), out: &mut Vec<Rect>) {
+    out.clear();
+    if lines.is_empty() {
+        return;
+    }
+
+    let (a, b) = (range.0.min(range.1), range.0.max(range.1));
+    if a == b {
+        return;
+    }
+
+    for line in lines {
+        let start = a.max(line.start);
+        let end = b.min(line.end);
+        if start >= end {
+            continue;
+        }
+
+        let x0 = if start <= line.start {
+            Px(0.0)
+        } else {
+            caret_x_from_stops(&line.caret_stops, start)
+        };
+        let x1 = if end >= line.end {
+            line.width
+        } else {
+            caret_x_from_stops(&line.caret_stops, end)
+        };
+
+        out.push(Rect::new(
+            Point::new(x0, line.y_top),
+            Size::new(Px((x1.0 - x0.0).max(0.0)), line.height),
+        ));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{TextBlobKey, layout_text};
@@ -1043,41 +1081,5 @@ mod tests {
         assert_eq!(layout.lines.len(), 1);
         assert!(layout.local_ends[0] < text.len());
         assert!(layout.lines[0].w <= 80.0 + 0.01);
-    }
-}
-
-fn selection_rects_from_lines(lines: &[TextLine], range: (usize, usize), out: &mut Vec<Rect>) {
-    out.clear();
-    if lines.is_empty() {
-        return;
-    }
-
-    let (a, b) = (range.0.min(range.1), range.0.max(range.1));
-    if a == b {
-        return;
-    }
-
-    for line in lines {
-        let start = a.max(line.start);
-        let end = b.min(line.end);
-        if start >= end {
-            continue;
-        }
-
-        let x0 = if start <= line.start {
-            Px(0.0)
-        } else {
-            caret_x_from_stops(&line.caret_stops, start)
-        };
-        let x1 = if end >= line.end {
-            line.width
-        } else {
-            caret_x_from_stops(&line.caret_stops, end)
-        };
-
-        out.push(Rect::new(
-            Point::new(x0, line.y_top),
-            Size::new(Px((x1.0 - x0.0).max(0.0)), line.height),
-        ));
     }
 }

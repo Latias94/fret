@@ -9,9 +9,9 @@ pub use fret_ui::declarative;
 pub use fret_ui::dock;
 pub use fret_ui::element;
 pub use fret_ui::elements;
-pub use fret_ui::primitives;
 pub use fret_ui::theme;
 pub use fret_ui::tree;
+pub use fret_ui_widgets::primitives;
 
 pub use fret_ui::{
     DockManager, DockPanel, DockPanelContentService, DockSpace, GlobalElementId, Invalidation,
@@ -19,7 +19,7 @@ pub use fret_ui::{
     UiDebugLayerInfo, UiHost, UiLayerId, ViewportPanel,
 };
 
-pub use fret_ui::primitives::{
+pub use fret_ui_widgets::primitives::{
     BoundTextArea, BoundTextInput, Clip, Column, Image, Path, ResizableSplit, Row, Scroll, Split,
     Stack, Text, TextArea, TextAreaStyle, TextInput, TextInputStyle,
 };

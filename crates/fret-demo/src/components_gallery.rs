@@ -66,17 +66,16 @@ impl ComponentsGalleryDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> ComponentsGalleryWindowState {
         let items = app.models_mut().insert(Self::sample_tree_items());
 
-        let mut initial_state = TreeState::default();
-        initial_state.selected = Some(1);
-        initial_state.expanded.insert(1);
-        initial_state.expanded.insert(10);
-        initial_state.expanded.insert(20);
+        let initial_state = TreeState {
+            selected: Some(1),
+            expanded: [1, 10, 20].into_iter().collect(),
+        };
         let state = app.models_mut().insert(initial_state);
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(fret_ui_widgets::primitives::Stack::new());
         ui.set_root(root);
 
         let background = ui.create_node(WindowBackground);
@@ -216,11 +215,8 @@ impl WinitDriver for ComponentsGalleryDriver {
             return;
         }
 
-        match command.as_str() {
-            "gallery.close" => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            }
-            _ => {}
+        if command.as_str() == "gallery.close" {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
         }
     }
 
@@ -386,7 +382,7 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let driver = ComponentsGalleryDriver::default();
+    let driver = ComponentsGalleryDriver;
     let mut runner = WinitRunner::new(config, app, driver);
     event_loop.run_app(&mut runner)?;
     Ok(())

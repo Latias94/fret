@@ -1,5 +1,5 @@
 [package]
-name = "fret-components-ui"
+name = "fret-ui-widgets"
 version.workspace = true
 edition.workspace = true
 
@@ -7,9 +7,5 @@ edition.workspace = true
 fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }
 fret-ui = { path = "../fret-ui" }
-fret-ui-widgets = { path = "../fret-ui-widgets" }
-fret-components-icons = { path = "../fret-components-icons" }
 tracing.workspace = true
 
-[dev-dependencies]
-fret-app = { path = "../fret-app" }

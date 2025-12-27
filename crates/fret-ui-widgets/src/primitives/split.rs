@@ -1,8 +1,5 @@
-use crate::{
-    UiHost,
-    widget::{LayoutCx, PaintCx, Widget},
-};
 use fret_core::{Axis, Point, Px, Rect, Size};
+use fret_ui::{LayoutCx, PaintCx, UiHost, Widget};
 
 pub struct Split {
     pub axis: Axis,

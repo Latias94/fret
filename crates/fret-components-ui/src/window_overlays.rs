@@ -392,6 +392,7 @@ mod tests {
     use super::*;
     use crate::ContextMenuRequest;
     use crate::PopoverSurfaceRequest;
+    use crate::combobox::Combobox;
     use crate::select::{Select, SelectOption};
     use crate::{PopoverItem, PopoverRequest};
     use fret_app::App;
@@ -784,6 +785,95 @@ mod tests {
             .expect("C item semantics node");
         assert!(c.flags.disabled);
         assert!(!c.flags.selected);
+    }
+
+    #[test]
+    fn combobox_semantics_role_and_expanded_follow_popover() {
+        let mut host = App::new();
+        let mut services = FakeServices::default();
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(TestContainer);
+        ui.set_root(root);
+
+        let items = host
+            .models_mut()
+            .insert(vec!["Apple".to_string(), "Banana".to_string()]);
+        let selection = host.models_mut().insert::<Option<usize>>(None);
+        let query = host.models_mut().insert("ap".to_string());
+
+        let combobox = ui.create_node(Combobox::new(items, selection, query));
+        ui.add_child(root, combobox);
+        ui.set_focus(Some(combobox));
+
+        let mut overlays = WindowOverlays::install(&mut ui);
+        run_frame(&mut ui, &mut host, &mut services);
+
+        // Open popover explicitly to focus this test on semantics wiring.
+        let anchor = ui
+            .debug_node_bounds(combobox)
+            .expect("expected combobox bounds");
+        host.with_global_mut(PopoverService::default, |service, _app| {
+            service.set_request(
+                window,
+                PopoverRequest {
+                    owner: combobox,
+                    anchor,
+                    items: vec![PopoverItem::new("Apple")],
+                    selected: Some(0),
+                    request_focus: false,
+                },
+            );
+        });
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut services,
+            window,
+            &CommandId::from("popover.open"),
+        );
+        assert!(handled);
+        run_frame(&mut ui, &mut host, &mut services);
+
+        ui.request_semantics_snapshot();
+        run_frame(&mut ui, &mut host, &mut services);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == combobox)
+            .expect("combobox semantics node");
+        assert_eq!(node.role, SemanticsRole::ComboBox);
+        assert_eq!(node.value.as_deref(), Some("ap"));
+        assert!(node.flags.expanded);
+
+        // Close explicitly.
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut services,
+            window,
+            &CommandId::from("popover.close"),
+        );
+        assert!(handled);
+        run_frame(&mut ui, &mut host, &mut services);
+
+        ui.request_semantics_snapshot();
+        run_frame(&mut ui, &mut host, &mut services);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == combobox)
+            .expect("combobox semantics node");
+        assert_eq!(node.role, SemanticsRole::ComboBox);
+        assert_eq!(node.value.as_deref(), Some("ap"));
+        assert!(!node.flags.expanded);
     }
 
     #[test]

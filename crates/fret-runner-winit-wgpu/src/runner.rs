@@ -1997,11 +1997,10 @@ impl<D: WinitDriver> WinitRunner<D> {
                 return false;
             };
             let scale_factor = state.window.scale_factor();
-            let next_phys = match pos {
+            match pos {
                 Position::Physical(p) => p,
                 Position::Logical(p) => p.to_physical::<i32>(scale_factor),
-            };
-            next_phys
+            }
         };
 
         // Avoid spamming redundant position updates (helps reduce stutter on high-frequency
@@ -2256,10 +2255,10 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
             return;
         };
 
-        if let Some(state) = self.windows.get_mut(app_window) {
-            if let Some(a11y) = state.accessibility.as_mut() {
-                a11y.process_event(&state.window, &event);
-            }
+        if let Some(state) = self.windows.get_mut(app_window)
+            && let Some(a11y) = state.accessibility.as_mut()
+        {
+            a11y.process_event(&state.window, &event);
         }
 
         match event {

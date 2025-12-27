@@ -1,8 +1,5 @@
-use crate::{
-    UiHost,
-    widget::{LayoutCx, PaintCx, Widget},
-};
 use fret_core::{Point, Px, Rect, Size};
+use fret_ui::{LayoutCx, PaintCx, UiHost, Widget};
 
 pub struct Column {
     pub spacing: Px,

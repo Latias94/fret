@@ -522,8 +522,8 @@ mod tests {
         PathService, PathStyle, Point, PointerEvent, Px, Rect, Scene, SceneOp, Size, TextBlobId,
         TextConstraints, TextMetrics, TextService, TextStyle,
     };
-    use fret_ui::primitives::{Column, Scroll};
     use fret_ui::{EventCx, LayoutCx, PaintCx, UiHost, UiTree, Widget};
+    use fret_ui_widgets::primitives::{Column, Scroll};
 
     #[derive(Default)]
     struct FakeText;

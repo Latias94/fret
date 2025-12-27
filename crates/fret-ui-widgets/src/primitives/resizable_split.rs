@@ -1,9 +1,6 @@
-use crate::{
-    ResizeHandle, UiHost,
-    widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget},
-};
 use fret_core::{Axis, DrawOrder, Event, MouseButton, Point, Px, Rect, Size};
 use fret_runtime::Model;
+use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, ResizeHandle, UiHost, Widget};
 
 #[derive(Debug, Clone, Copy)]
 struct DragState {

@@ -3,8 +3,8 @@ use std::sync::Arc;
 use fret_core::{CursorIcon, Event, KeyCode, MouseButton, Point, Px, Rect, Size};
 use fret_runtime::Model;
 use fret_ui::UiHost;
-use fret_ui::primitives::Column;
 use fret_ui::widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget};
+use fret_ui_widgets::primitives::Column;
 
 /// shadcn/ui `Accordion` root.
 ///

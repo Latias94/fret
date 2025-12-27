@@ -1,3 +1,7 @@
+//! Multiline text area widget (retained) providing IME/caret/selection engine behavior.
+//!
+//! This lives in the runtime crate because it needs platform hooks and hard-to-change editing
+//! semantics (ADR 0012 / ADR 0071).
 use fret_core::{
     CaretAffinity, Color, Corners, DrawOrder, Edges, Event, ImeEvent, MouseButton, Px, Rect,
     SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,

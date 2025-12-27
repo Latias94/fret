@@ -25,16 +25,16 @@ impl Default for ResolvedScrollAreaStyle {
 
 /// A shadcn-inspired scroll area primitive.
 ///
-/// This widget delegates scrolling behavior to `fret_ui::primitives::Scroll`, but provides a stable
+/// This widget delegates scrolling behavior to `fret_ui_widgets::primitives::Scroll`, but provides a stable
 /// component-level styling surface (tokens + optional chrome).
 ///
 /// Performance notes:
 /// - `ScrollArea` does not virtualize its children. For large/unknown-length lists, prefer
-///   `fret_ui::primitives::VirtualList` (or a future `components-ui` list wrapper) to avoid O(N)
+///   `fret_ui_widgets::primitives::VirtualList` (or a future `components-ui` list wrapper) to avoid O(N)
 ///   layout work
 ///   during scrolling.
 pub struct ScrollArea {
-    inner: fret_ui::primitives::Scroll,
+    inner: fret_ui_widgets::primitives::Scroll,
     style: ChromeRefinement,
     last_theme_revision: Option<u64>,
     resolved: ResolvedScrollAreaStyle,
@@ -44,7 +44,7 @@ pub struct ScrollArea {
 impl ScrollArea {
     pub fn new() -> Self {
         Self {
-            inner: fret_ui::primitives::Scroll::new().overlay_scrollbar(true),
+            inner: fret_ui_widgets::primitives::Scroll::new().overlay_scrollbar(true),
             style: ChromeRefinement::default(),
             last_theme_revision: None,
             resolved: ResolvedScrollAreaStyle::default(),
@@ -121,13 +121,13 @@ impl<H: UiHost> Widget<H> for ScrollArea {
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
-        <fret_ui::primitives::Scroll as Widget<H>>::event(&mut self.inner, cx, event);
+        <fret_ui_widgets::primitives::Scroll as Widget<H>>::event(&mut self.inner, cx, event);
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
-        <fret_ui::primitives::Scroll as Widget<H>>::layout(&mut self.inner, cx)
+        <fret_ui_widgets::primitives::Scroll as Widget<H>>::layout(&mut self.inner, cx)
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
@@ -145,7 +145,7 @@ impl<H: UiHost> Widget<H> for ScrollArea {
             });
         }
 
-        <fret_ui::primitives::Scroll as Widget<H>>::paint(&mut self.inner, cx);
+        <fret_ui_widgets::primitives::Scroll as Widget<H>>::paint(&mut self.inner, cx);
 
         if self.resolved.border_width.0 > 0.0 && self.resolved.border_color.a > 0.0 {
             cx.scene.push(SceneOp::Quad {

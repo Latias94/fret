@@ -1124,6 +1124,7 @@ dependencies = [
  "fret-app",
  "fret-core",
  "fret-ui",
+ "fret-ui-widgets",
 ]
 
 [[package]]
@@ -1165,6 +1166,7 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-widgets",
 ]
 
 [[package]]
@@ -1176,6 +1178,7 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-widgets",
  "tracing",
 ]
 
@@ -1202,6 +1205,7 @@ dependencies = [
  "fret-runner-winit-wgpu",
  "fret-ui",
  "fret-ui-app",
+ "fret-ui-widgets",
  "tracing",
  "tracing-subscriber",
  "winit",
@@ -1302,6 +1306,17 @@ dependencies = [
  "fret-app",
  "fret-core",
  "fret-ui",
+ "fret-ui-widgets",
+]
+
+[[package]]
+name = "fret-ui-widgets"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+ "tracing",
 ]
 
 [[package]]

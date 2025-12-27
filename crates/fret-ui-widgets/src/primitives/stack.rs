@@ -1,24 +1,21 @@
-use crate::{
-    UiHost,
-    widget::{LayoutCx, PaintCx, Widget},
-};
-use fret_core::{SceneOp, Size};
+use fret_core::Size;
+use fret_ui::{LayoutCx, PaintCx, UiHost, Widget};
 
-pub struct Clip;
+pub struct Stack;
 
-impl Clip {
+impl Stack {
     pub fn new() -> Self {
         Self
     }
 }
 
-impl Default for Clip {
+impl Default for Stack {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<H: UiHost> Widget<H> for Clip {
+impl<H: UiHost> Widget<H> for Stack {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         for &child in cx.children {
             let _ = cx.layout_in(child, cx.bounds);
@@ -27,7 +24,6 @@ impl<H: UiHost> Widget<H> for Clip {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
         for &child in cx.children {
             if let Some(bounds) = cx.child_bounds(child) {
                 cx.paint(child, bounds);
@@ -35,6 +31,5 @@ impl<H: UiHost> Widget<H> for Clip {
                 cx.paint(child, cx.bounds);
             }
         }
-        cx.scene.push(SceneOp::PopClip);
     }
 }

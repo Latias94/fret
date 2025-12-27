@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Event, KeyCode, Modifiers, Px, TextStyle};
+use fret_core::{Event, KeyCode, Modifiers, Px, SemanticsRole, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::BoundTextInput;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
@@ -416,5 +416,15 @@ impl<H: UiHost> Widget<H> for Combobox {
 
     fn semantics(&mut self, cx: &mut fret_ui::widget::SemanticsCx<'_, H>) {
         self.input.semantics(cx);
+        cx.set_role(SemanticsRole::ComboBox);
+        if let Some(window) = cx.window
+            && cx
+                .app
+                .global::<PopoverService>()
+                .and_then(|s| s.request(window))
+                .is_some_and(|(_, req)| req.owner == cx.node)
+        {
+            cx.set_expanded(true);
+        }
     }
 }

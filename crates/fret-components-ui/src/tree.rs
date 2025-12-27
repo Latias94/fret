@@ -377,7 +377,7 @@ pub fn create_tree_view<H: UiHost>(
     let tree_root = ui.create_node(TreeView::new(items, state));
     ui.add_child(parent, tree_root);
 
-    let list_mount = ui.create_node(fret_ui::primitives::Stack::new());
+    let list_mount = ui.create_node(fret_ui_widgets::primitives::Stack::new());
     ui.add_child(tree_root, list_mount);
 
     TreeViewHandles {

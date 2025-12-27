@@ -3,7 +3,8 @@ use fret_core::{
     TextOverflow, TextStyle, TextWrap,
 };
 
-use crate::{LayoutCx, PaintCx, UiHost, Widget};
+use fret_ui::widget::SemanticsCx;
+use fret_ui::{LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 #[derive(Debug, Clone)]
 pub struct Text {
@@ -52,7 +53,7 @@ impl Text {
         self
     }
 
-    fn sync_from_theme(&mut self, theme: &crate::Theme) {
+    fn sync_from_theme(&mut self, theme: &Theme) {
         if !self.use_theme_defaults {
             return;
         }
@@ -84,7 +85,7 @@ impl<H: UiHost> Widget<H> for Text {
         self.prepared_scale_factor_bits = None;
     }
 
-    fn semantics(&mut self, cx: &mut crate::widget::SemanticsCx<'_, H>) {
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         cx.set_role(SemanticsRole::Text);
     }
 

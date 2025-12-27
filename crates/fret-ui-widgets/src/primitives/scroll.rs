@@ -1,11 +1,8 @@
-use crate::{
-    UiHost,
-    widget::{EventCx, Invalidation, LayoutCx, PaintCx, Widget},
-};
 use fret_core::{
     Color, Corners, CursorIcon, DrawOrder, Edges, Event, MouseButton, Point, PointerEvent, Px,
     Rect, SceneOp, Size,
 };
+use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScrollbarGutter {

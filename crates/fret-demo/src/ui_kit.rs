@@ -6,8 +6,8 @@ use fret_core::{
     SceneOp, Size, UiServices,
 };
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
-use fret_ui::primitives::{Column, Scroll, Stack, Text};
 use fret_ui::{Invalidation, LayoutCx, PaintCx, UiTree, Widget};
+use fret_ui_widgets::primitives::{Column, Scroll, Stack, Text};
 use std::sync::Arc;
 use std::time::Duration;
 use winit::event_loop::EventLoop;
@@ -516,7 +516,7 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let driver = UiKitDriver::default();
+    let driver = UiKitDriver;
     let mut runner = WinitRunner::new(config, app, driver);
     event_loop.run_app(&mut runner)?;
     Ok(())

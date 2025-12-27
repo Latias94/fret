@@ -3,8 +3,8 @@ use std::sync::Arc;
 use fret_core::UiServices;
 use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Px, Size};
 use fret_runtime::{CommandId, Model};
-use fret_ui::primitives::{Column, Stack};
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, UiTree, Widget};
+use fret_ui_widgets::primitives::{Column, Stack};
 
 use crate::Size as ComponentSize;
 use crate::command::{CommandItem, visible_item_ids};

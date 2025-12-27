@@ -9,3 +9,7 @@ pub mod core {
 pub mod ui {
     pub use fret_ui::*;
 }
+
+pub mod ui_widgets {
+    pub use fret_ui_widgets::*;
+}

@@ -1,6 +1,7 @@
 use fret_core::{Color, DrawOrder, Event, ImageId, SceneOp, SemanticsRole, Size, UvRect};
 
-use crate::{LayoutCx, PaintCx, UiHost, Widget};
+use fret_ui::widget::SemanticsCx;
+use fret_ui::{EventCx, LayoutCx, PaintCx, UiHost, Widget};
 
 pub struct MaskImage {
     image: ImageId,
@@ -53,11 +54,11 @@ impl MaskImage {
 }
 
 impl<H: UiHost> Widget<H> for MaskImage {
-    fn semantics(&mut self, cx: &mut crate::widget::SemanticsCx<'_, H>) {
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         cx.set_role(SemanticsRole::Generic);
     }
 
-    fn event(&mut self, _cx: &mut crate::EventCx<'_, H>, _event: &Event) {}
+    fn event(&mut self, _cx: &mut EventCx<'_, H>, _event: &Event) {}
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let desired = self.desired_size.unwrap_or(cx.available);

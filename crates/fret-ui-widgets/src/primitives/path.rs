@@ -3,7 +3,7 @@ use fret_core::{
     Size,
 };
 
-use crate::{LayoutCx, PaintCx, UiHost, Widget};
+use fret_ui::{LayoutCx, PaintCx, UiHost, Widget};
 
 #[derive(Debug, Clone)]
 pub struct Path {

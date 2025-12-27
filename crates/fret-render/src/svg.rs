@@ -211,6 +211,12 @@ impl SvgRenderer {
     }
 }
 
+impl Default for SvgRenderer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub fn upload_alpha_mask(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
