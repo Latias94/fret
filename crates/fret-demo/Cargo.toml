@@ -5,20 +5,16 @@ edition.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-bytemuck.workspace = true
-fret-components-ui = { path = "../fret-components-ui" }
-fret-components-shadcn = { path = "../fret-components-shadcn" }
 fret-components-icons = { path = "../fret-components-icons" }
+fret-components-app = { path = "../fret-components-app" }
+fret-components-shadcn = { path = "../fret-components-shadcn" }
+fret-components-ui = { path = "../fret-components-ui" }
 fret-icons-lucide = { path = "../fret-icons-lucide" }
-fret-app = { path = "../fret-app" }
 fret-core = { path = "../fret-core" }
-fret-editor = { path = "../fret-editor" }
-fret-render = { path = "../fret-render" }
 fret-runner-winit-wgpu = { path = "../fret-runner-winit-wgpu" }
+fret-app = { path = "../fret-app" }
 fret-ui-app = { path = "../fret-ui-app" }
-serde_json.workspace = true
-serde.workspace = true
+fret-ui = { path = "../fret-ui", features = ["retained-widgets"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
-wgpu.workspace = true
 winit.workspace = true
