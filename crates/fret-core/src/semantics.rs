@@ -6,8 +6,15 @@ pub enum SemanticsRole {
     Generic,
     Window,
     Panel,
+    Dialog,
+    Alert,
     Button,
+    Checkbox,
+    Switch,
+    Slider,
+    ComboBox,
     Tab,
+    MenuBar,
     Menu,
     MenuItem,
     Text,
@@ -19,12 +26,21 @@ pub enum SemanticsRole {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct SemanticsActions {
+    pub focus: bool,
+    pub invoke: bool,
+    pub set_value: bool,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct SemanticsFlags {
     pub focused: bool,
     pub captured: bool,
     pub disabled: bool,
     pub selected: bool,
     pub expanded: bool,
+    /// Tri-state checked state (None = not checkable / unknown).
+    pub checked: Option<bool>,
 }
 
 #[derive(Debug, Clone)]
@@ -34,6 +50,12 @@ pub struct SemanticsNode {
     pub role: SemanticsRole,
     pub bounds: Rect,
     pub flags: SemanticsFlags,
+    /// Human-readable name/label for assistive technologies.
+    pub label: Option<String>,
+    /// Value text, typically for text fields and sliders.
+    pub value: Option<String>,
+    /// Supported actions for assistive technologies and automation.
+    pub actions: SemanticsActions,
 }
 
 #[derive(Debug, Clone)]

@@ -38,7 +38,8 @@ pub use input::{MouseButtons, ViewportInputEvent, ViewportInputKind};
 pub use panels::{PanelKey, PanelKind};
 pub use scene::{Color, DrawOrder, Scene, SceneOp, SceneRecording, UvRect};
 pub use semantics::{
-    SemanticsFlags, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot,
+    SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole, SemanticsRoot,
+    SemanticsSnapshot,
 };
 pub use services::UiServices;
 pub use svg::{SvgFit, SvgService};
