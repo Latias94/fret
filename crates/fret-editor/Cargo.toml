@@ -7,6 +7,6 @@ edition.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 fret-core = { path = "../fret-core" }
-fret-ui = { path = "../fret-ui", features = ["legacy-widgets"] }
+fret-ui = { path = "../fret-ui", features = ["retained-widgets"] }
 tracing.workspace = true
 uuid.workspace = true

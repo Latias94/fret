@@ -9,6 +9,6 @@ fret-core = { path = "../fret-core" }
 fret-ui = { path = "../fret-ui" }
 fret-ui-app = { path = "../fret-ui-app" }
 fret-components-ui = { path = "../fret-components-ui" }
+fret-runtime = { path = "../fret-runtime" }
 anyhow.workspace = true
 tracing.workspace = true
-
