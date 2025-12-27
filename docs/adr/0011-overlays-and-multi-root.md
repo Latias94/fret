@@ -63,6 +63,19 @@ The contract is:
 To support anchored positioning (menus near a button, IME near caret), the UI runtime must provide a way to compute
 window-space bounds for an element/node after layout (see ADR 0012 / ADR 0028).
 
+#### Why overlays are not "just absolute positioning"
+
+In DOM/CSS systems, many "floating" surfaces are implemented by mixing `position: absolute/fixed`
+with portals and `z-index`. In Fret we intentionally separate these concerns:
+
+- Docking layouts commonly introduce **clipping and scroll containers**; a popover that must extend
+  beyond a dock panel cannot be reliably implemented by `absolute` positioning inside that panel.
+- Fret does not provide a global element-level `z-index` (ADR 0062). Cross-container stacking must
+  be expressed via explicit overlay roots and their deterministic window-scoped ordering.
+- Therefore, menus/popovers/tooltips/drag previews that need to escape local clipping should be
+  treated as **overlay roots** (portal), while `absolute` positioning remains a local layout tool
+  for in-tree decoration.
+
 ### 3) Rendering order matches root order
 
 The display list is built so that overlay roots paint after base roots, preserving expected composition.

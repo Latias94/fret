@@ -59,6 +59,8 @@ Radix outcomes:
 - Uninstalls using `UiTree::remove_layer(...)`.
 - Determines whether the root blocks underlay input (`blocks_underlay_input`) and whether it is
   pointer-transparent (tooltip-like).
+- Records and restores previous focus on close (focus restore is policy-owned, but relies on runtime focus primitives).
+- May set an explicit initial focus target on open (e.g. first focusable descendant for command palette).
 
 Invariants:
 
@@ -85,6 +87,20 @@ Note:
 - “Pointer down outside” should be modeled as an explicit event delivered to the overlay policy
   (not as ad-hoc widget checks).
 
+#### Docking / drag / viewport interaction notes
+
+Editor-grade docking and embedded viewports introduce additional interaction sources (dock drags,
+splitter drags, viewport tool capture). Overlay policies must remain compatible with those:
+
+- Overlay roots should not opportunistically steal pointer capture from an active drag session that
+  is owned by docking or viewport tools; instead, policies should react to explicit outside-press
+  events and the active layer stack.
+- Modal barriers (`blocks_underlay_input = true`) are allowed to block docking and viewport input
+  by design, but this must be a deliberate component decision (e.g. dialogs/sheets), not an
+  accidental outcome of implementing popovers via in-tree positioning.
+- Non-modal overlays (menus/popovers) should define clear precedence rules with docking drags
+  (e.g. close on drag start, or suspend dismissal during drags) in the component layer.
+
 #### 2.3 Focus scope (FocusScope outcomes)
 
 Modal surfaces:
@@ -100,6 +116,7 @@ Non-modal surfaces:
 Runtime dependencies:
 
 - focus/capture primitives and focus-visible detection (ADR 0020, ADR 0061),
+- focus traversal baseline (`focus.next` / `focus.previous`) within the active modal scope (ADR 0068),
 - modal barrier focus constraints (Gate C in ADR 0066).
 
 #### 2.4 Presence (mount/unmount and transitions)
@@ -130,5 +147,6 @@ Invariants:
 - Runtime boundary and gates: `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - Multi-root overlays: `docs/adr/0011-overlays-and-multi-root.md`
 - Overlay placement solver: `docs/adr/0064-overlay-placement-contract.md`
+- Non-modal outside press (click-through): `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
 - Authoritative behavior target: Radix UI Primitives (`repo-ref/primitives`) via shadcn/ui (`repo-ref/ui`)
 - Modal barrier conceptual model: Flutter `ModalBarrier` / WPF-style overlay barrier

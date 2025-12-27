@@ -22,7 +22,7 @@ definitions live in `docs/mvp/reference-plan.md`.
 - MVP 50: composable declarative virtualized list contract
   - keyed row identity (`virtual_list_keyed`)
   - `scroll_to_index` support to keep selection visible
-  - TanStack Virtual alignment: `VirtualItem` output + `rangeExtractor` hook + `scrollMargin`/`gap` vocabulary (ADR 0047)
+  - TanStack Virtual alignment: `VirtualItem` output + `rangeExtractor` hook + `scrollMargin`/`gap` vocabulary (ADR 0070)
   - migrated a real surface (command palette list) to composable rows
 - MVP 52: declarative sizing semantics + `Flex` container (ADR 0057)
   - “fit-content by default, fill only when requested” is the stable mental model
@@ -60,13 +60,14 @@ definitions live in `docs/mvp/reference-plan.md`.
   - treat schema-based `VirtualListRow` as legacy during migration, then remove.
   - keep `fret-components-ui` free of schema-based retained list widgets (prefer declarative composition)
   - compatibility: any retained/widget-based list path must live behind `fret-ui`’s `retained-widgets` feature (`fret_ui::primitives`)
-  - landed: TanStack vocabulary alignment + stable item keys contract (ADR 0047)
+  - landed: TanStack vocabulary alignment + stable item keys contract (ADR 0070)
 - MVP 61: declarative layout performance hardening (Taffy integration)
   - cache/reuse the Taffy tree and node ids across frames (avoid rebuild + allocation churn)
   - avoid double layout of children (`layout_in` during measure + final `layout_in`) where possible
 - MVP 62: overlay behavior + placement contract (APG/Radix/Floating UI alignment)
   - treat APG as the keyboard/focus baseline for composite widgets (menus/listbox/combobox/tree)
   - align dismissal/focus/portal outcomes with Radix UI Primitives (without a DOM runtime; ADR 0067)
+  - lock modal-aware Tab traversal baseline (`focus.next`/`focus.previous`) to keep overlay focus policies consistent (ADR 0068)
   - implement deterministic anchored positioning + collision avoidance (Floating-like flip/shift/size/offset; arrow is P1 per ADR 0066)
   - converge HoverCard-style anchored panels onto the shared placement contract (flip + window margin)
   - support scrollable menus/panels via a sized placement helper (clamp to available space; component handles internal scrolling)

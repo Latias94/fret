@@ -14,6 +14,7 @@ contracts early to avoid large rewrites later.
 6. `docs/mvp.md` — short-horizon MVP overview (what to implement next). Expanded plan lives in `docs/mvp/active-plan.md`.
    - Completed stages archive: `docs/mvp-archive.md`
 7. `docs/known-issues.md` — common diagnostics and current platform limitations.
+8. `docs/todo-tracker.md` — review-driven TODO list (action items linked back to ADRs).
 8. ADR deep dives (pick by subsystem):
    - UI execution model: `docs/adr/0028-declarative-elements-and-element-state.md`
    - Component authoring: `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`

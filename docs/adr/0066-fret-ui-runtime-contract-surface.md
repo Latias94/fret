@@ -74,13 +74,14 @@ This is the minimum contract set `fret-components-ui` can depend on long-term.
 | --- | --- | --- | --- | --- |
 | Input routing + hit testing | deterministic event routing, hit testing, pointer transparency | same inputs → same hit results and routing, including across overlay roots | APG (outcomes), internal determinism requirement | ADR 0005, ADR 0020, `docs/reference-stack-ui-behavior.md` |
 | Hover tracking + geometry queries | `HoverRegion` + `elements::bounds_for_element` | hover signals are deterministic; last-frame bounds are stable enough for anchored overlay policies | APG (pointer outcomes), Floating UI (anchored placement vocabulary) | ADR 0066, `docs/reference-stack-ui-behavior.md` |
-| Focus + capture + focus-visible | focus/capture primitives and focus-visible detection | background cannot steal focus under modal barrier; focus/capture routing deterministic | APG (outcomes), Radix (policy target at component layer) | ADR 0020, ADR 0061 |
+| Focus + capture + focus-visible + traversal | focus/capture primitives and focus-visible detection + `focus.next`/`focus.previous` | background cannot steal focus under modal barrier; focus/capture/traversal routing deterministic | APG (outcomes), Radix (policy target at component layer) | ADR 0020, ADR 0061, ADR 0068 |
 | Multi-root layers substrate | overlay roots, barrier installation, deterministic root ordering | hit testing + rendering order match root stack; barrier enforces inert background | Radix (policy target), Flutter/WPF-style overlay barrier model | ADR 0011 |
+| Non-modal outside press observer | opt-in outside-press dispatch for topmost non-modal overlay | click-through dismissal without modal barrier; does not break normal hit-tested routing | Radix DismissableLayer (outcomes) | ADR 0069 |
 | Placement solver | pure placement algorithm API | deterministic placement for same inputs; no component policy in runtime | Floating UI | ADR 0064 |
 | Declarative authoring | element tree + keyed state + model observation | stable IDs, predictable reuse, testable state reuse | GPUI-style authoring model | ADR 0028, ADR 0039, ADR 0051 |
 | Layout vocabulary | `LayoutStyle` + Flex/Grid semantics (Taffy-backed) | CSS/Tailwind-like defaults; no per-component hidden defaults in runtime | CSS + Tailwind semantics, Taffy engine | ADR 0057, ADR 0062, ADR 0035 |
 | Scroll contract | scroll handles + strategies | scroll-to behavior is deterministic; components can build scrollbars/policies | GPUI handle patterns | ADR 0042 |
-| Virtualization contract | variable-size metrics + visible range computation + scroll-to-item | supports measured heights, stable keys, overscan; deterministic | TanStack Virtual (primary), GPUI (engineering ref) | ADR 0042, ADR 0047 |
+| Virtualization contract | variable-size metrics + visible range computation + scroll-to-item | supports measured heights, stable keys, overscan; deterministic | TanStack Virtual (primary), GPUI (engineering ref) | ADR 0070 |
 | Text input/IME engine contract | IME plumbing hooks, editing engine state/commands, caret geometry | caret/selection geometry query stable; IME preedit/commit deterministic | platform IME + APG text expectations | ADR 0012, ADR 0044, ADR 0045, ADR 0046 |
 | Semantics tree | semantics tree mechanism + overlay root semantics boundaries | modal barrier hides/inerts background semantics; deterministic snapshot | WAI-ARIA + platform bridges | ADR 0033 |
 
@@ -96,6 +97,7 @@ The runtime provides **overlay mechanisms**, not overlay policies.
 - per-window **root stack**: 1 base root + 0..N overlay roots with a deterministic order,
 - a **barrier root** mechanism (“modal barrier”) that can make background roots inert,
 - deterministic hit testing and event routing across roots,
+- an **outside press observer pass** for the topmost opt-in non-modal overlay (click-through),
 - optional pointer transparency for overlay content (e.g. tooltip-like overlays),
 - semantics snapshot boundaries across roots (a11y-friendly multi-root).
 

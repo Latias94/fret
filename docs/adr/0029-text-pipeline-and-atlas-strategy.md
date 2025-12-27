@@ -129,3 +129,47 @@ Invalidation must be explicit and compatible with the effects flush loop (ADR 00
    - how do we map OS font discovery to stable `FontId` and caching?
 5) **Shader contracts**:
    - what parameters become part of the glyph sampling shader interface (gamma ratios, contrast factors)?
+
+## Implementation guidance: default font stack and fallbacks (P0 lock-in)
+
+Rust GUI libraries frequently fail IME and international text correctness not because IME events
+are missing, but because the default font does not cover the intermediate/provisional glyphs used
+by IME composition (fullwidth Latin, kana) or because fallback behavior is inconsistent.
+
+Fret locks the following baseline to avoid "tofu during composition" and non-deterministic glyph
+selection across machines:
+
+### Default font stack
+
+- `TextStyle.font` (or its higher-level theme token) must resolve to a concrete *family preference*
+  rather than an "empty default" (e.g. `FontId::default()` without semantics).
+- Each platform provides a "system UI font" alias (implementation-defined) used as the default.
+- A configurable ordered list of fallback families is supported at the theme/settings layer:
+  - recommended categories: UI fallback, CJK fallback, emoji/color fallback.
+
+### Fallback resolution behavior
+
+Baseline behavior (P0):
+
+1) Resolve the requested primary font family.
+2) If the primary cannot be loaded, fall back to the framework's default font stack.
+3) During shaping/rasterization, if a glyph is missing:
+   - attempt per-style configured fallback list first,
+   - then attempt the framework default fallback stack,
+   - only then emit tofu/missing-glyph.
+
+### Caching invariants
+
+To keep text output deterministic and avoid stale cache bugs:
+
+- The fallback list (style-level and framework default stack) must participate in the text cache key
+  used to produce and reuse `TextBlobId`.
+- Any change in font discovery, user font loading, or configured fallbacks must invalidate the
+  relevant cached text blobs (directly or via a text-system revision key).
+
+### Conformance smoke tests (recommended)
+
+Add at least one integration/demo harness that renders and measures:
+
+- ASCII + fullwidth Latin (IME provisional), hiragana/katakana, common kanji, and emoji.
+- A preedit sequence that includes fullwidth Latin + kana before commit (Windows Japanese IME).

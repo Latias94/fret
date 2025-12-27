@@ -39,11 +39,19 @@ batching adjacent operations). See `docs/adr/0009-renderer-ordering-and-batching
 - `PushClipRRect/PopClip` extend the stack with rounded clipping (ADR 0063).
 - Rect clips may map to scissor rectangles (fast); rounded clips require soft/AA clip behavior.
 
-### Minimal primitives (current direction)
+### Primitives (current surface area)
 
-- `Quad` (rounded corners via SDF; borders optional)
-- `Image` (atlas-based)
-- `Text` (shaped runs + glyph atlas)
+The scene contract has grown beyond the initial “Quad/Image/Text/Viewport” set as higher-level UI
+needs became concrete (icons, vector paths).
+
+Current `SceneOp` primitives include:
+
+- `Quad` (rounded corners; borders optional, ADR 0030)
+- `Image` / `ImageRegion`
+- `MaskImage` (alpha mask + tint)
+- `SvgMaskIcon` / `SvgImage` (ADR 0065)
+- `Text`
+- `Path` (prepared vector path; see `fret-core::vector_path`)
 - `ViewportSurface` (embed engine render targets)
 
 ## Consequences
@@ -54,4 +62,5 @@ batching adjacent operations). See `docs/adr/0009-renderer-ordering-and-batching
 ## Future Work
 
 - Define text shaping ownership (what lives in `fret-core` vs `fret-render`).
-- Decide whether to add vector paths (triangulation vs texture atlas vs GPU raster).
+- Formalize the vector path contract (fill/stroke semantics, AA expectations, caching keys, and
+  transform interaction) now that `PathService` + `SceneOp::Path` exist.

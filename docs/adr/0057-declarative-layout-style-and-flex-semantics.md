@@ -1,6 +1,6 @@
 # ADR 0057: Declarative Layout Style and Flex Semantics (Taffy-Backed, Tailwind-Friendly)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 

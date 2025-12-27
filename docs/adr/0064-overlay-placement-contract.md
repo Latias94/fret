@@ -41,6 +41,20 @@ We define an **anchored panel placement** contract implemented by a pure functio
 
 - `Rect`: final panel bounds.
 
+### Coordinate space and docking/multi-window notes
+
+This contract is intentionally independent from docking and multi-view layout; compatibility is
+achieved by choosing correct inputs:
+
+- `outer` and `anchor` must be expressed in the **same window-space coordinate system**.
+- For window-scoped overlays (menus/popovers/tooltips) that must escape panel clipping, `outer`
+  should be the window bounds and `anchor` should be obtained via a cross-frame geometry query
+  (e.g. `elements::bounds_for_element`, or an equivalent retained-widget hook).
+- For non-portaled anchored panels (rare, local-only), `outer` should be the render root bounds,
+  and the caller must accept that clipping/scrolling in the subtree may constrain visibility.
+- Overlays are **per-window**: do not attempt to place a panel using an anchor from a different
+  OS window (tear-off docking). Recompute `outer`/`anchor` for the target window.
+
 ### Algorithm (deterministic subset)
 
 This contract implements a small, deterministic subset inspired by Floating UI:
@@ -60,6 +74,9 @@ Notes:
   rect size* to the available space on the chosen side (`anchored_panel_bounds_sized`). This is
   intentionally not full “size middleware”: it only provides a viewport rect; the component is
   responsible for internal scrolling behavior.
+  - When neither the preferred side nor the flipped side can fit the desired size without
+    main-axis clamping, the sized helper prefers the side with **more available main-axis space**
+    ("best fit"), breaking ties with the same overflow heuristic as the unsized solver.
 
 ## Consequences
 

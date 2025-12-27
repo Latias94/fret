@@ -69,6 +69,22 @@ Instead:
 If a global z-index becomes necessary later, it must be introduced in a dedicated ADR with clear
 constraints and testable determinism rules.
 
+### 3.1) Interaction with docking, overlays, and multi-view (non-DOM constraints)
+
+Because Fret targets editor-grade docking and multi-window workflows, Tailwind-like primitives must
+compose without relying on DOM/CSS assumptions:
+
+- `position: absolute` (and inset offsets) is intended for **local decoration inside a layout
+  subtree** (e.g. badges, icons, and affordances within a control). It does **not** replace overlay
+  systems for menus/popovers/tooltips.
+- Docked panels frequently apply clipping (for scroll regions, rounded corners, and viewport
+  surfaces). A "floating" surface that must escape panel clipping should be **portaled to an overlay
+  root** (ADR 0011 / ADR 0067), not positioned with `absolute` inside the panel subtree.
+- There is no global `z-index`, so cross-panel / cross-container stacking must be expressed via
+  **overlay roots** (window-scoped) and their deterministic ordering, not element-level reordering.
+- Overlays are **window-scoped**. Multi-window docking (tear-off) requires re-installing overlay
+  layers per window; overlay surfaces do not float across OS windows.
+
 ### 4) Grid and virtualization remain separate
 
 Grid is not a substitute for virtualization (ADR 0042). Large tables/lists remain virtualized:

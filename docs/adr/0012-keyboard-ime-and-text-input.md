@@ -45,6 +45,43 @@ Locked P0 behavior:
 - If a `KeyDown` is resolved to a command binding (keymap hit), any subsequent `TextInput` emitted for the same keystroke
   must be suppressed so shortcuts do not insert characters into focused text fields.
 
+### 2.1) IME keystroke arbitration (preedit-first)
+
+IME composition introduces a second consumer of keystrokes: the platform input method. To avoid
+common failures (e.g. Tab/Enter/Escape being "stolen" by focus traversal or global shortcuts while
+the IME is active), the framework defines a deterministic arbitration rule.
+
+Definitions:
+
+- "Composing" means the focused text input has an active IME preedit/composition state (preedit
+  string is non-empty and/or the platform reports a marked/active composition range).
+- "Non-printing keys" include navigation and control keys: arrows, Backspace/Delete, Home/End,
+  PageUp/PageDown, Escape, Enter, Tab.
+
+Locked P0 behavior:
+
+1) When the focused widget is a text-editing widget and IME is enabled:
+   - If composing, **IME gets first refusal** on `KeyDown` for:
+     `Tab`, `Enter`, `Escape`, arrows, `Backspace`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`.
+   - The UI runtime (text widget) may still handle these keys if the IME does not consume them,
+     but **global shortcuts and focus traversal must not run first**.
+
+2) Even when not composing, the platform may still require non-printing keys for IME UI (candidate
+   navigation, dismissal). Therefore:
+   - For non-printing keys without `Ctrl/Alt/Meta` modifiers, the platform/IME handler may be
+     consulted before command routing (best-effort, platform dependent).
+   - Keys with `Ctrl/Alt/Meta` are treated as shortcut candidates first (to avoid injecting
+     control characters into text buffers on some platforms).
+
+3) If a command binding is matched for a keystroke and the command is executed, any resulting
+   committed text (`Event::TextInput`) for that same keystroke must be suppressed (see 2.0).
+
+Rationale:
+
+- This matches editor-grade expectations (VSCode/Zed-class behavior) where IME conversion and
+  candidate navigation remain functional even when the host application has rich shortcut layers.
+- It prevents the "Tab is eaten by the app" class of bugs observed in multiple Rust GUI stacks.
+
 ### 3) IME candidate window positioning is an explicit feedback path (cursor area)
 
 Receiving `ImeEvent` is not sufficient for a production-grade editor UX.

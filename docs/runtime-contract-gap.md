@@ -25,7 +25,7 @@ Status legend:
 | --- | --- | --- | --- |
 | Input routing + hit testing | **Done** | `crates/fret-ui/src/tree.rs` | — |
 | Hover tracking + geometry queries | **Done** | `crates/fret-ui/src/elements.rs` (`HoverRegion`, `bounds_for_element`), `crates/fret-ui/src/declarative.rs` (bounds recording) | — |
-| Focus + capture + focus-visible | **Partial** | `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/focus_visible.rs` | Focus/capture is now cleared when a modal barrier is installed, and focus/capture requests are scoped to active roots; remaining work is to lock more APG-level traversal patterns at the component layer. |
+| Focus + capture + focus-visible + traversal | **Done** | `crates/fret-ui/src/tree.rs` (modal scoping + `focus.next`/`focus.previous`), `crates/fret-ui/src/focus_visible.rs` | Component-layer focus trap/restore remains policy (ADR 0067); runtime traversal is conservative until a scroll-into-view contract is formalized (ADR 0068). |
 | Multi-root layers substrate | **Done** | `crates/fret-ui/src/tree.rs` (`push_overlay_root_ex`, `remove_layer`, `active_input_layers`) | — |
 | Placement solver | **Partial** | `crates/fret-ui/src/overlay_placement.rs` | Arrow support is intentionally deferred to P1 (ADR 0066 Gate 3.2). |
 | Declarative authoring | **Done** | `crates/fret-ui/src/element.rs`, `crates/fret-ui/src/elements.rs`, `crates/fret-ui/src/declarative.rs` | — |
@@ -53,4 +53,4 @@ This is how the tasks above map into the existing MVP queue:
 - MVP 63: unify scroll ergonomics (GPUI-like)
   - `ScrollHandle` contract completion and shared scroll-to vocabulary
 - MVP 56 / 50: unify virtualization around composable declarative rows
-  - TanStack Virtual alignment + stable keys (ADR 0047) + shared selection/scroll-to patterns
+  - TanStack Virtual alignment + stable keys (ADR 0070) + shared selection/scroll-to patterns

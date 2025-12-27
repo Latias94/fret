@@ -14,7 +14,14 @@ We also want to avoid hardwiring a specific event loop implementation into UI co
 
 ## Decision
 
-Keep `fret-platform` as the boundary responsible for:
+The desktop implementation is split across:
+
+- `fret-platform`: winit-facing helpers (window registry) and the accessibility bridge
+  (`accesskit_winit`).
+- `fret-runner-winit-wgpu`: the concrete desktop runner that owns the event loop, maps winit events
+  into `fret-core` events, drains `App` effects, and drives presentation via `fret-render`.
+
+Keep the runner boundary responsible for:
 
 - window lifecycle (create/close, mapping OS ids to `AppWindowId`),
 - translating OS events into `fret-core` events,
@@ -25,7 +32,7 @@ Keep `fret-platform` as the boundary responsible for:
 
 - `fret-ui` does not depend on `winit`.
 - `fret-core` does not depend on `wgpu` or `winit`.
-- `fret-demo` is a sample runner; long-term it should shrink to wiring code around `fret-platform`.
+- `fret-demo` is a sample binary; long-term it should shrink to wiring code around the runner boundary.
 
 ## Consequences
 

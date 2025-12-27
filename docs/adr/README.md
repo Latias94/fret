@@ -15,6 +15,56 @@ See `docs/adr/0027-framework-scope-and-responsibilities.md` for the framework vs
 - `Status: Proposed`: under active design; treat as a decision gate before scaling surface area (currently rare; prefer landing decisions as `Accepted` once locked).
 - `Status: Deferred`: intentionally out of framework scope for now.
 
+## Decision Backlog (What Still Needs Locking)
+
+This section tracks "hard-to-change" decisions that are not fully locked yet, even if adjacent ADRs
+exist. The goal is to turn each item into an `Accepted` contract (either by extending an existing
+ADR or adding a new ADR) before scaling feature surface area.
+
+### P0 (Lock before scaling the UI kit)
+
+- **Default font stack + fallback policy v1**
+  - Update: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`
+  - Decide: default font alias (system UI font), configurable fallback lists (UI/CJK/emoji), and missing-glyph behavior (fallback vs tofu).
+  - Implement: `crates/fret-render/src/text.rs`, `crates/fret-core/src/text.rs` (types), `crates/fret-ui/src/theme.rs` (theme/config plumbing).
+
+- **Font discovery + user font loading + stable IDs**
+  - Update: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0014-settings-and-configuration-files.md`
+  - Decide: persistence format (store family + features + fallbacks, never numeric `FontId`), and invalidation/revision semantics when font DB changes.
+  - Implement: `crates/fret-render/src/text.rs`, platform font enumeration hooks (future: `crates/fret-platform`).
+
+- **IME keystroke arbitration (platform-first during composition)**
+  - Update: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`
+  - Decide: when `Tab/Enter/Escape/Arrows/Backspace/...` are reserved for IME/text input vs routed to shortcuts/focus traversal, including modifier rules.
+  - Implement: `crates/fret-runner-winit-wgpu/src/runner.rs` (event mapping), `crates/fret-ui/src/tree.rs` (routing), `crates/fret-ui/src/text_input.rs` (focused widget behavior).
+
+- **Docking keep-alive + early submission + programmatic close without flicker**
+  - Update: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`
+  - Decide: what it means for a dock host to be "kept alive" when collapsed/hidden, and the required ordering constraints for building docking targets.
+  - Decide: the `DockOp` pattern that avoids one-frame "holes" when closing tabs programmatically (ImGui `SetTabItemClosed`-class issue).
+  - Implement: `crates/fret-ui/src/dock.rs`, app integration points applying `DockOp` + invalidation.
+
+- **Docking drag vs overlays vs viewport capture: arbitration matrix**
+  - Add ADR (proposed): `docs/adr/0072-docking-interaction-arbitration-matrix.md`
+  - Decide: drag start/stop precedence, which overlays close/freeze during dock drags, and how modal barriers intentionally block docking/tool input.
+  - Implement: `crates/fret-ui/src/dock.rs`, `crates/fret-components-ui/src/overlay_policy.rs`, `crates/fret-ui/src/tree.rs` (capture + layering).
+
+### P1 (Lock soon; otherwise behavior will drift)
+
+- **Text input semantics for multiline + IME composition ranges**
+  - Add ADR (proposed): `docs/adr/0071-text-input-multiline-composition-contract.md`
+  - Update: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
+  - Decide: exact selection/composition range semantics (byte vs grapheme), and caret-rect reporting requirements for IME candidate placement.
+
+- **Accessibility conformance baseline (Narrator/VoiceOver/AT-SPI)**
+  - Update: `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
+  - Decide: minimum roles/actions/fields required for text fields (value/selection/composition), menus, tabs, and viewports.
+  - Implement: `crates/fret-platform/src/accessibility.rs`, semantics production in `crates/fret-ui/src/tree.rs`.
+
+- **Cross-root focus traversal and focus scopes**
+  - Update: `docs/adr/0068-focus-traversal-and-focus-scopes.md`, `docs/adr/0020-focus-and-command-routing.md`
+  - Decide: traversal order across overlay roots, modal trap semantics, and focus restore rules for nested overlays + docking.
+
 ## Task Jump Table (Fast Navigation)
 
 Use this as the “what should I read first?” map when implementing a subsystem.
@@ -24,7 +74,10 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Tailwind layout vocabulary (margin/position/grid/aspect-ratio)**: `docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md`
 - **Rounded clipping / overflow-hidden**: `docs/adr/0063-rounded-clipping-and-soft-clip-masks.md`
 - **Docking + multi-window tear-off**: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0017-multi-window-display-and-dpi.md`, `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
+- **Docking interaction arbitration (overlays/tools)**: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
+- **Dismissable non-modal overlays (outside press)**: `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
 - **Text input / IME**: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0020-focus-and-command-routing.md`
+- **Multiline text input + IME composition**: `docs/adr/0071-text-input-multiline-composition-contract.md`
 - **Typography (weight/line-height/tracking)**: `docs/adr/0058-typography-v1-textstyle-weight-lineheight-tracking.md`
 - **Text editing commands + selection model**: `docs/adr/0044-text-editing-state-and-commands.md`
 - **Text geometry queries (caret/hit-test, multiline affinity)**: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
@@ -40,7 +93,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Elevation and shadows (no-blur baseline)**: `docs/adr/0060-shadows-and-elevation.md`
 - **Focus rings (outline) and focus-visible**: `docs/adr/0061-focus-rings-and-focus-visible.md`
 - **Component sizing/density (Tailwind-like scales)**: `docs/adr/0056-component-size-and-density-system.md`
-- **Editor-scale performance**: `docs/adr/0042-virtualization-and-large-lists.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`, `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
+- **Editor-scale performance**: `docs/adr/0042-virtualization-and-large-lists.md`, `docs/adr/0070-virtualization-contract.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`, `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
 - **Model observation / reactive invalidation (GPUI-style)**: `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`, `docs/adr/0031-app-owned-models-and-leasing-updates.md`, `docs/adr/0005-retained-ui-tree.md`
 - **Editor-scale lists contract (keys + data source)**: `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
 
@@ -113,6 +166,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
 - `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
 - `docs/adr/0012-keyboard-ime-and-text-input.md`
+- `docs/adr/0071-text-input-multiline-composition-contract.md`
 - `docs/adr/0018-key-codes-and-shortcuts.md`
 - `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`
 - `docs/adr/0019-scene-state-stack-and-layers.md`
@@ -122,22 +176,26 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0005-retained-ui-tree.md`
 - `docs/adr/0011-overlays-and-multi-root.md`
 - `docs/adr/0013-docking-ops-and-persistence.md`
+- `docs/adr/0072-docking-interaction-arbitration-matrix.md`
 - `docs/adr/0020-focus-and-command-routing.md`
 - `docs/adr/0028-declarative-elements-and-element-state.md`
 - `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
+- `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
 - `docs/adr/0032-style-tokens-and-theme-resolution.md`
 - `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
 - `docs/adr/0056-component-size-and-density-system.md`
 - `docs/adr/0060-shadows-and-elevation.md`
 - `docs/adr/0061-focus-rings-and-focus-visible.md`
+- `docs/adr/0068-focus-traversal-and-focus-scopes.md`
 - `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
 - `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
 - `docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md`
 - `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`
 - `docs/adr/0042-virtualization-and-large-lists.md`
+- `docs/adr/0070-virtualization-contract.md`
 - `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
 - `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
 - `docs/adr/0065-icon-system-and-asset-packaging.md`

@@ -178,6 +178,28 @@ Notes:
 - UX note: drop-zone hit-testing and preview overlays should share the same threshold rules so “what you see”
   matches “what you get” during docking drags.
 
+## Recommended UI Behavior (ImGui-inspired vocabulary)
+
+This ADR defines the *data model and ops* contract. The following UI behaviors are recommended to
+match widely-adopted editor UX (e.g. Dear ImGui docking branch) while staying compatible with Fret's
+app-owned dock graph and multi-root overlay model (ADR 0011):
+
+- **Dock hosts must be kept alive**: do not conditionally omit the dock host widget for a window
+  when the window UI is "collapsed" or temporarily not visible. In ImGui, this is required to keep
+  dockspaces from becoming inactive and undocking all windows. In Fret, the dock graph is app-owned,
+  but the dock host widget is still responsible for stable hit-testing, previews, and tab selection
+  feedback.
+- **Submit docking UI early**: ensure docking host UI (and its overlay roots used for drag previews)
+  is built early in the per-frame submission order, so it can act as a consistent docking target.
+- **Modifier to enable/disable docking during drags**: provide a consistent modifier (commonly
+  Shift) to temporarily invert docking behavior during a drag (disable docking while held, or enable
+  docking while held depending on the user's setting).
+- **Undock whole node affordance**: provide a top-level affordance (e.g. a window menu button or
+  tab bar context action) to undock an entire tab stack/split subtree, not only individual tabs.
+- **Programmatic close without one-frame "hole"**: if a tab/panel is closed by a non-tab UI action
+  (checkbox, command, etc.), emit the corresponding `DockOp` before the tab stops being submitted so
+  the tab bar can update selection and layout without a transient gap/flicker.
+
 ## Future Work
 
 - Finalize the concrete v1 schema field naming and define a strict parser.
