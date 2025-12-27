@@ -100,6 +100,7 @@ pub struct PopoverSurfaceStyle {
     pub border_width: Px,
     pub shadow: Option<fret_ui::element::ShadowStyle>,
     pub side_offset: Px,
+    pub window_margin: Px,
 }
 
 impl Default for PopoverSurfaceStyle {
@@ -112,6 +113,7 @@ impl Default for PopoverSurfaceStyle {
             border_width: Px(1.0),
             shadow: None,
             side_offset: Px(8.0),
+            window_margin: Px(8.0),
         }
     }
 }
@@ -206,6 +208,9 @@ impl PopoverSurfaceOverlay {
         self.style.side_offset = theme
             .metric_by_key("component.popover_surface.side_offset")
             .unwrap_or(Px(8.0));
+        self.style.window_margin = theme
+            .metric_by_key("component.popover_surface.window_margin")
+            .unwrap_or(Px(8.0));
     }
 
     fn compute_panel_bounds(
@@ -214,6 +219,9 @@ impl PopoverSurfaceOverlay {
         request: &PopoverSurfaceRequest,
         content: Size,
     ) -> Rect {
+        let margin = Px(self.style.window_margin.0.max(0.0));
+        let outer = overlay_placement::inset_rect(outer, Edges::all(margin));
+
         compute_anchored_panel_bounds(
             outer,
             request.anchor,
@@ -458,5 +466,32 @@ mod tests {
             PopoverSurfaceAlign::Start,
         );
         assert!(placed.origin.y.0 >= anchor.origin.y.0 + anchor.size.height.0);
+    }
+
+    #[test]
+    fn respects_window_margin_when_clamping() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(10.0), Px(10.0)),
+        );
+        let content = Size::new(Px(190.0), Px(100.0));
+
+        let mut overlay = PopoverSurfaceOverlay::new();
+        overlay.style.window_margin = Px(8.0);
+        overlay.style.side_offset = Px(0.0);
+
+        let request = PopoverSurfaceRequest::new(NodeId::default(), anchor, NodeId::default())
+            .side(PopoverSurfaceSide::Bottom)
+            .align(PopoverSurfaceAlign::Start);
+
+        let placed = overlay.compute_panel_bounds(outer, &request, content);
+        assert!(
+            placed.origin.x.0 >= 8.0 && placed.origin.y.0 >= 8.0,
+            "expected inset clamping to respect window margin"
+        );
     }
 }
