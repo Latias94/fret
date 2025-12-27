@@ -81,6 +81,11 @@ impl HoverCard {
 
         let mut props = self.props;
         props.layout = decl_style::layout_style(&theme, self.layout);
+        if props.side_offset == HoverCardProps::default().side_offset {
+            props.side_offset = theme
+                .metric_by_key("component.hover_card.side_offset")
+                .unwrap_or(props.side_offset);
+        }
         props.window_margin = self.window_margin_override.unwrap_or_else(|| {
             theme.metric_by_key("component.hover_card.window_margin")
                 .unwrap_or(props.window_margin)

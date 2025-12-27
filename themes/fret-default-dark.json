@@ -107,6 +107,9 @@
     "component.ring.width": 2.0,
     "component.ring.offset": 2.0,
 
+    "component.hover_card.window_margin": 8.0,
+    "component.hover_card.side_offset": 8.0,
+
     "component.shadow.sm.offset_x": 0.0,
     "component.shadow.sm.offset_y": 1.0,
     "component.shadow.sm.spread": 0.0,
