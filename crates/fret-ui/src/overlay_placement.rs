@@ -81,38 +81,64 @@ pub fn anchored_panel_bounds_sized(
     preferred_side: Side,
     align: Align,
 ) -> Rect {
-    let preferred_size = clamp_size_for_side(outer, anchor, desired, side_offset, preferred_side);
-    let preferred_origin =
-        anchored_origin(anchor, preferred_size, side_offset, preferred_side, align);
-    let preferred = Rect::new(preferred_origin, preferred_size);
-    if side_fits_without_clamp(outer, preferred, preferred_side) {
-        return clamp_rect_to_outer(outer, preferred);
+    // IMPORTANT: `anchored_panel_bounds_sized` must still follow the same flip/overflow decision
+    // rules as `anchored_panel_bounds` (ADR 0064). In particular, we must decide "fits without
+    // requiring main-axis clamping" based on the *desired* size, not the clamped viewport size.
+    let desired = Size::new(Px(desired.width.0.max(0.0)), Px(desired.height.0.max(0.0)));
+
+    let preferred_unclamped_origin =
+        anchored_origin(anchor, desired, side_offset, preferred_side, align);
+    let preferred_unclamped = Rect::new(preferred_unclamped_origin, desired);
+    if side_fits_without_clamp(outer, preferred_unclamped, preferred_side) {
+        let size = clamp_size_for_side(outer, anchor, desired, side_offset, preferred_side);
+        let origin = anchored_origin(anchor, size, side_offset, preferred_side, align);
+        return clamp_rect_to_outer(outer, Rect::new(origin, size));
     }
 
     let flipped_side = opposite_side(preferred_side);
-    let flipped_size = clamp_size_for_side(outer, anchor, desired, side_offset, flipped_side);
-    let flipped_origin = anchored_origin(anchor, flipped_size, side_offset, flipped_side, align);
-    let flipped = Rect::new(flipped_origin, flipped_size);
-    if side_fits_without_clamp(outer, flipped, flipped_side) {
-        return clamp_rect_to_outer(outer, flipped);
+    let flipped_unclamped_origin =
+        anchored_origin(anchor, desired, side_offset, flipped_side, align);
+    let flipped_unclamped = Rect::new(flipped_unclamped_origin, desired);
+    if side_fits_without_clamp(outer, flipped_unclamped, flipped_side) {
+        let size = clamp_size_for_side(outer, anchor, desired, side_offset, flipped_side);
+        let origin = anchored_origin(anchor, size, side_offset, flipped_side, align);
+        return clamp_rect_to_outer(outer, Rect::new(origin, size));
     }
 
-    let preferred_overflow = overflow_amount(outer, preferred);
-    let flipped_overflow = overflow_amount(outer, flipped);
+    // Neither side fits on the main axis given the desired size, so we will clamp the panel size
+    // to the available space on whichever side we pick.
+    //
+    // Prefer the side with more available main-axis space (Floating UI `flip` best-fit behavior)
+    // so "greedy" content measured with a large probe doesn't get stuck to the preferred side when
+    // the opposite side would yield a significantly larger viewport.
+    let preferred_available = available_main_for_side(outer, anchor, side_offset, preferred_side);
+    let flipped_available = available_main_for_side(outer, anchor, side_offset, flipped_side);
 
-    let preferred_main = main_axis_overflow(preferred_overflow, preferred_side);
-    let flipped_main = main_axis_overflow(flipped_overflow, flipped_side);
-
-    let preferred_total = total_overflow(preferred_overflow);
-    let flipped_total = total_overflow(flipped_overflow);
-
-    let chosen = if (flipped_main, flipped_total) < (preferred_main, preferred_total) {
-        flipped
+    let chosen_side = if flipped_available > preferred_available {
+        flipped_side
+    } else if preferred_available > flipped_available {
+        preferred_side
     } else {
-        preferred
+        // Tie: fall back to the same overflow heuristic as the unsized solver.
+        let preferred_overflow = overflow_amount(outer, preferred_unclamped);
+        let flipped_overflow = overflow_amount(outer, flipped_unclamped);
+
+        let preferred_main = main_axis_overflow(preferred_overflow, preferred_side);
+        let flipped_main = main_axis_overflow(flipped_overflow, flipped_side);
+
+        let preferred_total = total_overflow(preferred_overflow);
+        let flipped_total = total_overflow(flipped_overflow);
+
+        if (flipped_main, flipped_total) < (preferred_main, preferred_total) {
+            flipped_side
+        } else {
+            preferred_side
+        }
     };
 
-    clamp_rect_to_outer(outer, chosen)
+    let size = clamp_size_for_side(outer, anchor, desired, side_offset, chosen_side);
+    let origin = anchored_origin(anchor, size, side_offset, chosen_side, align);
+    clamp_rect_to_outer(outer, Rect::new(origin, size))
 }
 
 fn opposite_side(side: Side) -> Side {
@@ -196,6 +222,17 @@ fn clamp_size_for_side(
     let mut w = desired.width.0.max(0.0).min(max_w);
     let mut h = desired.height.0.max(0.0).min(max_h);
 
+    // Additionally clamp along the chosen side's main axis (Floating-like "available height/width").
+    let available_main = available_main_for_side(outer, anchor, side_offset, side);
+    match side {
+        Side::Top | Side::Bottom => h = h.min(available_main),
+        Side::Left | Side::Right => w = w.min(available_main),
+    }
+
+    Size::new(Px(w), Px(h))
+}
+
+fn available_main_for_side(outer: Rect, anchor: Rect, side_offset: Px, side: Side) -> f32 {
     let outer_left = outer.origin.x.0;
     let outer_top = outer.origin.y.0;
     let outer_right = outer_left + outer.size.width.0.max(0.0);
@@ -208,19 +245,12 @@ fn clamp_size_for_side(
 
     let off = side_offset.0.max(0.0);
 
-    // Additionally clamp along the chosen side's main axis (Floating-like "available height/width").
-    let available_main = match side {
+    match side {
         Side::Top => (anchor_top - off - outer_top).max(0.0),
         Side::Bottom => (outer_bottom - (anchor_bottom + off)).max(0.0),
         Side::Left => (anchor_left - off - outer_left).max(0.0),
         Side::Right => (outer_right - (anchor_right + off)).max(0.0),
-    };
-    match side {
-        Side::Top | Side::Bottom => h = h.min(available_main),
-        Side::Left | Side::Right => w = w.min(available_main),
     }
-
-    Size::new(Px(w), Px(h))
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -358,7 +388,7 @@ mod tests {
     }
 
     #[test]
-    fn sized_variant_clamps_height_to_available_space_below_anchor() {
+    fn sized_variant_prefers_side_with_less_main_axis_overflow() {
         let outer = r(0.0, 0.0, 200.0, 200.0);
         let anchor = r(10.0, 150.0, 40.0, 10.0);
         let desired = Size::new(Px(120.0), Px(180.0));
@@ -373,7 +403,41 @@ mod tests {
         );
 
         // Available space below = 200 - (150 + 10 + 8) = 32
-        assert_eq!(placed.size.height, Px(32.0));
+        // Available space above = 150 - 8 = 142
+        // Neither side fits the desired height (180), so the solver should prefer the side with
+        // less main-axis overflow (top in this case) and then clamp to the available space.
+        assert_eq!(placed.size.height, Px(142.0));
+        assert!(
+            placed.origin.y.0 + placed.size.height.0 <= anchor.origin.y.0,
+            "expected placement to be above the anchor"
+        );
+        assert!(outer.contains(placed.origin));
+    }
+
+    #[test]
+    fn sized_variant_prefers_side_with_more_available_space_for_oversized_content() {
+        let outer = r(0.0, 0.0, 200.0, 200.0);
+        let anchor = r(10.0, 150.0, 40.0, 10.0);
+        // Simulate a "greedy" widget measured with an unconstrained probe.
+        let desired = Size::new(Px(120.0), Px(1.0e9));
+
+        let placed = anchored_panel_bounds_sized(
+            outer,
+            anchor,
+            desired,
+            Px(8.0),
+            Side::Bottom,
+            Align::Start,
+        );
+
+        // Available space below = 200 - (150 + 10 + 8) = 32
+        // Available space above = 150 - 8 = 142
+        // We should choose the side with more available space (top) and clamp to it.
+        assert_eq!(placed.size.height, Px(142.0));
+        assert!(
+            placed.origin.y.0 + placed.size.height.0 <= anchor.origin.y.0,
+            "expected placement to be above the anchor"
+        );
         assert!(outer.contains(placed.origin));
     }
 }

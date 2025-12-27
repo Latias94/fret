@@ -18,7 +18,7 @@ pub mod text_input;
 mod text_input_style;
 pub mod theme;
 pub mod tree;
-mod virtual_list;
+pub mod virtual_list;
 pub mod widget;
 
 pub use dock::{DockManager, DockPanel, DockPanelContentService, DockSpace, ViewportPanel};

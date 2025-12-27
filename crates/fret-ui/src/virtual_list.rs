@@ -1,5 +1,7 @@
 use fret_core::Px;
 
+use crate::scroll::ScrollStrategy;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct VirtualItem {
     pub key: crate::ItemKey,
@@ -28,7 +30,7 @@ pub fn default_range_extractor(range: VirtualRange) -> Vec<usize> {
 }
 
 #[derive(Debug, Default, Clone)]
-pub(crate) struct VirtualListMetrics {
+pub struct VirtualListMetrics {
     estimate: Px,
     gap: Px,
     scroll_margin: Px,
@@ -169,6 +171,86 @@ impl VirtualListMetrics {
         Px(offset_y.0.min(max_offset.0))
     }
 
+    /// Computes the visible item range for a vertical viewport.
+    ///
+    /// `offset_y` is the current scroll offset, clamped by the caller as needed.
+    ///
+    /// Returns a [`VirtualRange`] with **inclusive** indices (`start_index..=end_index`).
+    pub fn visible_range(
+        &self,
+        offset_y: Px,
+        viewport_h: Px,
+        overscan: usize,
+    ) -> Option<VirtualRange> {
+        let viewport_h = Px(viewport_h.0.max(0.0));
+        let count = self.heights.len();
+        if viewport_h.0 <= 0.0 || count == 0 {
+            return None;
+        }
+
+        let start = self.index_for_offset(offset_y).min(count.saturating_sub(1));
+        let end_exclusive = self
+            .end_index_for_offset(Px(offset_y.0 + viewport_h.0))
+            .min(count);
+        if end_exclusive == 0 {
+            return None;
+        }
+        let end = end_exclusive.saturating_sub(1);
+        if start > end {
+            return None;
+        }
+
+        Some(VirtualRange {
+            start_index: start,
+            end_index: end,
+            overscan,
+            count,
+        })
+    }
+
+    pub fn scroll_offset_for_item(
+        &self,
+        index: usize,
+        viewport_h: Px,
+        current_offset_y: Px,
+        strategy: ScrollStrategy,
+    ) -> Px {
+        let viewport_h = Px(viewport_h.0.max(0.0));
+        if viewport_h.0 <= 0.0 {
+            return current_offset_y;
+        }
+
+        let count = self.heights.len();
+        if count == 0 {
+            return current_offset_y;
+        }
+        let index = index.min(count.saturating_sub(1));
+
+        let item_top = self.offset_for_index(index);
+        let item_bottom = self.end_for_index(index);
+
+        let view_top = current_offset_y;
+        let view_bottom = Px(current_offset_y.0 + viewport_h.0);
+
+        match strategy {
+            ScrollStrategy::Start => item_top,
+            ScrollStrategy::End => Px(item_bottom.0 - viewport_h.0),
+            ScrollStrategy::Center => {
+                let item_center = 0.5 * (item_top.0 + item_bottom.0);
+                Px(item_center - 0.5 * viewport_h.0)
+            }
+            ScrollStrategy::Nearest => {
+                if item_top.0 < view_top.0 {
+                    item_top
+                } else if item_bottom.0 > view_bottom.0 {
+                    Px(item_bottom.0 - viewport_h.0)
+                } else {
+                    current_offset_y
+                }
+            }
+        }
+    }
+
     pub fn rebuild_from_heights(
         &mut self,
         heights: Vec<Px>,
@@ -281,5 +363,50 @@ mod tests {
         assert_eq!(metrics.index_for_offset(Px(60.0)), 6);
         assert_eq!(metrics.end_index_for_offset(Px(50.0)), 5);
         assert_eq!(metrics.end_index_for_offset(Px(50.1)), 6);
+    }
+
+    #[test]
+    fn visible_range_is_inclusive_and_clamped() {
+        let mut metrics = VirtualListMetrics::default();
+        metrics.ensure(10, Px(10.0), Px(0.0), Px(0.0));
+
+        let r0 = metrics.visible_range(Px(0.0), Px(25.0), 0).expect("range");
+        assert_eq!(r0.start_index, 0);
+        assert_eq!(r0.end_index, 2);
+        assert_eq!(r0.count, 10);
+
+        let r1 = metrics.visible_range(Px(50.0), Px(20.0), 0).expect("range");
+        assert_eq!(r1.start_index, 5);
+        assert_eq!(r1.end_index, 6);
+
+        assert!(metrics.visible_range(Px(0.0), Px(0.0), 0).is_none());
+
+        let mut empty = VirtualListMetrics::default();
+        empty.ensure(0, Px(10.0), Px(0.0), Px(0.0));
+        assert!(empty.visible_range(Px(0.0), Px(10.0), 0).is_none());
+    }
+
+    #[test]
+    fn scroll_offset_for_item_matches_nearest_semantics() {
+        let mut metrics = VirtualListMetrics::default();
+        metrics.ensure(10, Px(10.0), Px(0.0), Px(0.0));
+
+        // Item fully visible -> keep current offset.
+        assert_eq!(
+            metrics.scroll_offset_for_item(2, Px(50.0), Px(0.0), ScrollStrategy::Nearest),
+            Px(0.0)
+        );
+
+        // Item above -> align to start.
+        assert_eq!(
+            metrics.scroll_offset_for_item(0, Px(20.0), Px(50.0), ScrollStrategy::Nearest),
+            Px(0.0)
+        );
+
+        // Item below -> align to end.
+        assert_eq!(
+            metrics.scroll_offset_for_item(9, Px(20.0), Px(0.0), ScrollStrategy::Nearest),
+            Px(80.0)
+        );
     }
 }

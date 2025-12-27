@@ -8,9 +8,8 @@ use crate::elements::{ElementCx, GlobalElementId, NodeEntry};
 use crate::tree::UiTree;
 use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget};
 use fret_core::{
-    AppWindowId, Color, CursorIcon, DrawOrder, Edges, Event, FontId, MouseButton, NodeId,
-    Point, Px, Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow,
-    TextStyle,
+    AppWindowId, Color, CursorIcon, DrawOrder, Edges, Event, FontId, MouseButton, NodeId, Point,
+    Px, Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle,
 };
 use fret_runtime::Effect;
 use std::collections::HashMap;
@@ -568,10 +567,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                 crate::element::ScrollState::default,
                                 |state| {
                                     let prev = state.scroll_handle.offset();
-                                    state.scroll_handle.set_offset(Point::new(
-                                        prev.x,
-                                        Px(prev.y.0 - delta.y.0),
-                                    ));
+                                    state
+                                        .scroll_handle
+                                        .set_offset(Point::new(prev.x, Px(prev.y.0 - delta.y.0)));
                                 },
                             );
                         }
@@ -600,7 +598,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             self.element,
                             crate::element::ScrollState::default,
                             |state| {
-                                let handle = external_handle.as_ref().unwrap_or(&state.scroll_handle);
+                                let handle =
+                                    external_handle.as_ref().unwrap_or(&state.scroll_handle);
                                 let viewport_h = Px(handle.viewport_size().height.0.max(0.0));
                                 let content_h = Px(handle.content_size().height.0.max(0.0));
                                 let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
@@ -690,7 +689,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             self.element,
                             crate::element::ScrollState::default,
                             |state| {
-                                let handle = external_handle.as_ref().unwrap_or(&state.scroll_handle);
+                                let handle =
+                                    external_handle.as_ref().unwrap_or(&state.scroll_handle);
                                 let viewport_h = Px(handle.viewport_size().height.0.max(0.0));
                                 let content_h = Px(handle.content_size().height.0.max(0.0));
                                 let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
@@ -732,8 +732,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                         let thumb_top = (click_y - thumb.size.height.0 * 0.5)
                                             .clamp(0.0, max_thumb_y);
                                         let t = thumb_top / max_thumb_y;
-                                        let next =
-                                            Px((max_offset.0 * t).clamp(0.0, max_offset.0));
+                                        let next = Px((max_offset.0 * t).clamp(0.0, max_offset.0));
                                         let prev = handle.offset();
                                         handle.set_offset(Point::new(prev.x, next));
                                     }
@@ -921,8 +920,16 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 input.semantics(cx);
             }
             ElementInstance::Pressable(props) => {
-                cx.set_role(SemanticsRole::Button);
+                cx.set_role(props.a11y.role.unwrap_or(SemanticsRole::Button));
+                if let Some(label) = props.a11y.label.as_ref() {
+                    cx.set_label(label.as_ref().to_string());
+                }
+                if props.a11y.selected {
+                    cx.set_selected(true);
+                }
                 cx.set_disabled(!props.enabled);
+                cx.set_focusable(props.enabled);
+                cx.set_invokable(props.enabled && props.on_click.is_some());
             }
             ElementInstance::VirtualList(_) => {
                 cx.set_role(SemanticsRole::List);
@@ -1223,30 +1230,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     && props.len > 0
                     && let Some((index, strategy)) = props.scroll_handle.deferred_scroll_to_item()
                 {
-                    let index = index.min(props.len.saturating_sub(1));
-                    let item_top = metrics.offset_for_index(index);
-                    let item_bottom = metrics.end_for_index(index);
-
-                    let view_top = offset_y;
-                    let view_bottom = Px(offset_y.0 + viewport_h.0);
-
-                    offset_y = match strategy {
-                        crate::scroll::ScrollStrategy::Start => item_top,
-                        crate::scroll::ScrollStrategy::End => Px(item_bottom.0 - viewport_h.0),
-                        crate::scroll::ScrollStrategy::Center => {
-                            let item_center = 0.5 * (item_top.0 + item_bottom.0);
-                            Px(item_center - 0.5 * viewport_h.0)
-                        }
-                        crate::scroll::ScrollStrategy::Nearest => {
-                            if item_top.0 < view_top.0 {
-                                item_top
-                            } else if item_bottom.0 > view_bottom.0 {
-                                Px(item_bottom.0 - viewport_h.0)
-                            } else {
-                                offset_y
-                            }
-                        }
-                    };
+                    offset_y =
+                        metrics.scroll_offset_for_item(index, viewport_h, offset_y, strategy);
                     props.scroll_handle.clear_deferred_scroll_to_item();
                 }
 
@@ -3209,9 +3194,9 @@ mod tests {
             mut ids: Option<&mut Vec<(u64, crate::elements::GlobalElementId)>>,
             scroll_handle: &crate::scroll::VirtualListScrollHandle,
         ) -> AnyElement {
-            let items_revision = items.iter().fold(0u64, |acc, k| {
-                acc.wrapping_mul(1_000_003).wrapping_add(*k)
-            });
+            let items_revision = items
+                .iter()
+                .fold(0u64, |acc, k| acc.wrapping_mul(1_000_003).wrapping_add(*k));
             let mut options = crate::element::VirtualListOptions::new(Px(10.0), 0);
             options.items_revision = items_revision;
 
@@ -3300,17 +3285,21 @@ mod tests {
         let mut text = FakeTextService::default();
 
         fn build_root(cx: &mut ElementCx<'_, TestHost>) -> Vec<AnyElement> {
-            vec![cx.hover_region(crate::element::HoverRegionProps::default(), |cx, hovered| {
-                let trigger = cx.pressable(crate::element::PressableProps::default(), |cx, _state| {
-                    vec![cx.text("trigger")]
-                });
+            vec![cx.hover_region(
+                crate::element::HoverRegionProps::default(),
+                |cx, hovered| {
+                    let trigger = cx
+                        .pressable(crate::element::PressableProps::default(), |cx, _state| {
+                            vec![cx.text("trigger")]
+                        });
 
-                let mut children = vec![trigger];
-                if hovered {
-                    children.push(cx.text("hovered"));
-                }
-                children
-            })]
+                    let mut children = vec![trigger];
+                    if hovered {
+                        children.push(cx.text("hovered"));
+                    }
+                    children
+                },
+            )]
         }
 
         // Frame 0: not hovered yet, so only the trigger is present.

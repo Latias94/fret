@@ -1,10 +1,12 @@
 use crate::UiHost;
 use crate::elements::{ElementCx, GlobalElementId};
 use fret_core::{
-    Color, Corners, Edges, ImageId, Px, SvgFit, TextOverflow, TextStyle, TextWrap, UvRect,
+    Color, Corners, Edges, ImageId, Px, SemanticsRole, SvgFit, TextOverflow, TextStyle, TextWrap,
+    UvRect,
 };
 use fret_runtime::{CommandId, Model};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::{SvgSource, TextInputStyle};
 
@@ -230,6 +232,7 @@ pub struct PressableProps {
     pub enabled: bool,
     pub on_click: Option<CommandId>,
     pub focus_ring: Option<RingStyle>,
+    pub a11y: PressableA11y,
 }
 
 impl Default for PressableProps {
@@ -239,8 +242,16 @@ impl Default for PressableProps {
             enabled: true,
             on_click: None,
             focus_ring: None,
+            a11y: PressableA11y::default(),
         }
     }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct PressableA11y {
+    pub role: Option<SemanticsRole>,
+    pub label: Option<Arc<str>>,
+    pub selected: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default)]

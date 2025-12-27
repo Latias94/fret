@@ -197,11 +197,34 @@ pub struct SemanticsCx<'a, H: UiHost> {
     pub captured: Option<NodeId>,
     pub(crate) role: &'a mut SemanticsRole,
     pub(crate) flags: &'a mut SemanticsFlags,
+    pub(crate) label: &'a mut Option<String>,
+    pub(crate) value: &'a mut Option<String>,
+    pub(crate) actions: &'a mut fret_core::SemanticsActions,
 }
 
 impl<'a, H: UiHost> SemanticsCx<'a, H> {
     pub fn set_role(&mut self, role: SemanticsRole) {
         *self.role = role;
+    }
+
+    pub fn set_label(&mut self, label: impl Into<String>) {
+        *self.label = Some(label.into());
+    }
+
+    pub fn set_value(&mut self, value: impl Into<String>) {
+        *self.value = Some(value.into());
+    }
+
+    pub fn set_focusable(&mut self, focusable: bool) {
+        self.actions.focus = focusable;
+    }
+
+    pub fn set_invokable(&mut self, invokable: bool) {
+        self.actions.invoke = invokable;
+    }
+
+    pub fn set_value_editable(&mut self, editable: bool) {
+        self.actions.set_value = editable;
     }
 
     pub fn set_disabled(&mut self, disabled: bool) {
@@ -214,6 +237,10 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
 
     pub fn set_expanded(&mut self, expanded: bool) {
         self.flags.expanded = expanded;
+    }
+
+    pub fn set_checked(&mut self, checked: Option<bool>) {
+        self.flags.checked = checked;
     }
 }
 

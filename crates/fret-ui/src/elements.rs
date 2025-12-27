@@ -11,8 +11,8 @@ use crate::UiHost;
 use crate::element::{
     AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverRegionProps,
     ImageProps, LayoutStyle, PressableProps, PressableState, RowProps, ScrollProps, SpacerProps,
-    SpinnerProps, StackProps, SvgIconProps, TextInputProps, TextProps, VirtualListProps,
-    VirtualListOptions, VirtualListState,
+    SpinnerProps, StackProps, SvgIconProps, TextInputProps, TextProps, VirtualListOptions,
+    VirtualListProps, VirtualListState,
 };
 use crate::widget::Invalidation;
 use fret_runtime::{Model, ModelId};
@@ -567,16 +567,22 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
                     state.metrics.gap(),
                     state.metrics.scroll_margin(),
                 );
-                let cfg = (options.estimate_row_height, options.gap, options.scroll_margin);
+                let cfg = (
+                    options.estimate_row_height,
+                    options.gap,
+                    options.scroll_margin,
+                );
 
-                state
-                    .metrics
-                    .ensure(len, options.estimate_row_height, options.gap, options.scroll_margin);
+                state.metrics.ensure(
+                    len,
+                    options.estimate_row_height,
+                    options.gap,
+                    options.scroll_margin,
+                );
 
-                let needs_rebuild =
-                    state.items_revision != options.items_revision
-                        || state.keys.len() != len
-                        || prev_cfg != cfg;
+                let needs_rebuild = state.items_revision != options.items_revision
+                    || state.keys.len() != len
+                    || prev_cfg != cfg;
 
                 if needs_rebuild {
                     state.items_revision = options.items_revision;
@@ -612,32 +618,9 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
                     .metrics
                     .clamp_offset(scroll_handle.offset().y, viewport_h);
 
-                if viewport_h.0 <= 0.0 || len == 0 {
-                    return None;
-                }
-
-                let start = state
+                state
                     .metrics
-                    .index_for_offset(offset_y)
-                    .min(len.saturating_sub(1));
-                let end_exclusive = state
-                    .metrics
-                    .end_index_for_offset(Px(offset_y.0 + viewport_h.0))
-                    .min(len);
-                if end_exclusive == 0 {
-                    return None;
-                }
-                let end = end_exclusive.saturating_sub(1);
-                if start > end {
-                    return None;
-                }
-
-                Some(crate::virtual_list::VirtualRange {
-                    start_index: start,
-                    end_index: end,
-                    overscan: options.overscan,
-                    count: len,
-                })
+                    .visible_range(offset_y, viewport_h, options.overscan)
             });
 
             let mut indices = range
