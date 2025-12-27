@@ -15,7 +15,7 @@ composition and shadcn-style component parity.
 
 ## Snapshot (for traceability)
 
-- Fret repo HEAD: `8ab950a3bcc3385ab2b9d41c21beda2e6685450f`
+- Fret repo HEAD: `dc779d21b093016e4bd944d7d920f0e2d196e1a5`
 - gpui-component HEAD: `fceaa5c907458c445e3be4909aa19136e8b12f32`
 - shadcn/ui HEAD: `ccafdaf7c6f6747a24f54e84436b42ec42f01779`
 - tailwindcss HEAD: `1628713453e622dfaba4880a0b63495b857a3cc5`
