@@ -106,6 +106,7 @@ pub struct ContextMenu {
     hover_panel: Option<usize>,
     hover_row: Option<usize>,
     panels: Vec<PreparedPanel>,
+    scroll_offsets: Vec<Px>,
     typeahead: String,
     typeahead_last: Option<Instant>,
 }
@@ -114,6 +115,8 @@ pub struct ContextMenu {
 struct PreparedPanel {
     bounds: Rect,
     rows: Vec<PreparedRow>,
+    scroll_offset_y: Px,
+    max_scroll_offset_y: Px,
 }
 
 #[derive(Debug)]
@@ -150,6 +153,7 @@ impl ContextMenu {
             hover_panel: None,
             hover_row: None,
             panels: Vec::new(),
+            scroll_offsets: Vec::new(),
             typeahead: String::new(),
             typeahead_last: None,
         }
@@ -386,6 +390,7 @@ impl ContextMenu {
             self.selection.clear();
             self.hover_panel = None;
             self.hover_row = None;
+            self.scroll_offsets.clear();
             self.clear_typeahead();
             self.last_serial = Some(serial);
         }
@@ -430,6 +435,20 @@ impl ContextMenu {
             };
             items = sub;
             depth += 1;
+        }
+
+        // Keep per-panel scroll offsets aligned with the open path.
+        if self.scroll_offsets.len() < self.panels.len() {
+            self.scroll_offsets.resize(self.panels.len(), Px(0.0));
+        }
+        self.scroll_offsets.truncate(self.panels.len());
+
+        // Clamp offsets to their per-panel limits (and keep panels in sync).
+        for (i, panel) in self.panels.iter_mut().enumerate() {
+            let max = panel.max_scroll_offset_y.0.max(0.0);
+            let clamped = Px(self.scroll_offsets[i].0.max(0.0).min(max));
+            self.scroll_offsets[i] = clamped;
+            panel.scroll_offset_y = clamped;
         }
 
         if self.selection.len() < self.panels.len() {
@@ -577,9 +596,9 @@ impl ContextMenu {
             self.set_selection_raw(depth, first);
         }
 
+        let content_height = Px(rows.iter().map(|r| r.height.0).sum::<f32>());
         let panel_w = Px(max_content_w.0 + self.style.padding_x.0 * 2.0);
-        let panel_h =
-            Px(rows.iter().map(|r| r.height.0).sum::<f32>() + self.style.padding_y.0 * 2.0);
+        let panel_h = Px(content_height.0 + self.style.padding_y.0 * 2.0);
 
         let (side, side_offset) = if depth == 0 {
             (overlay_placement::Side::Bottom, Px(0.0))
@@ -587,7 +606,7 @@ impl ContextMenu {
             (overlay_placement::Side::Right, Px(6.0))
         };
 
-        let bounds = overlay_placement::anchored_panel_bounds(
+        let bounds = overlay_placement::anchored_panel_bounds_sized(
             outer,
             anchor,
             Size::new(panel_w, panel_h),
@@ -596,9 +615,45 @@ impl ContextMenu {
             overlay_placement::Align::Start,
         );
 
+        let viewport_h = Px((bounds.size.height.0 - self.style.padding_y.0 * 2.0).max(0.0));
+        let max_scroll_offset_y = Px((content_height.0 - viewport_h.0).max(0.0));
+
+        let mut scroll_offset_y = self.scroll_offsets.get(depth).copied().unwrap_or(Px(0.0));
+        scroll_offset_y = Px(scroll_offset_y.0.max(0.0).min(max_scroll_offset_y.0));
+
+        // Keep the selected row visible when navigating via keyboard.
+        if let Some(selected_raw) = self.selection_raw(depth) {
+            let mut y = 0.0f32;
+            for row in &rows {
+                let h = row.height.0.max(0.0);
+                if row.raw_index == selected_raw {
+                    let top = y;
+                    let bottom = y + h;
+                    let view_top = scroll_offset_y.0;
+                    let view_bottom = scroll_offset_y.0 + viewport_h.0;
+                    if top < view_top {
+                        scroll_offset_y = Px(top);
+                    } else if bottom > view_bottom {
+                        scroll_offset_y = Px((bottom - viewport_h.0).max(0.0));
+                    }
+                    scroll_offset_y =
+                        Px(scroll_offset_y.0.max(0.0).min(max_scroll_offset_y.0));
+                    break;
+                }
+                y += h;
+            }
+        }
+
+        if self.scroll_offsets.len() <= depth {
+            self.scroll_offsets.resize(depth + 1, Px(0.0));
+        }
+        self.scroll_offsets[depth] = scroll_offset_y;
+
         PreparedPanel {
             bounds,
             rows,
+            scroll_offset_y,
+            max_scroll_offset_y,
         }
     }
 
@@ -607,7 +662,7 @@ impl ContextMenu {
             return Rect::new(panel.bounds.origin, Size::new(Px(0.0), Px(0.0)));
         };
 
-        let mut y = panel.bounds.origin.y.0 + self.style.padding_y.0;
+        let mut y = panel.bounds.origin.y.0 + self.style.padding_y.0 - panel.scroll_offset_y.0;
         for row in &panel.rows {
             if row.raw_index == selected_raw {
                 let h = row.height.0.max(0.0);
@@ -686,10 +741,15 @@ impl ContextMenu {
                 continue;
             }
             let local_y = Px(point.y.0 - panel.bounds.origin.y.0);
+            let content_y = Px(local_y.0 - self.style.padding_y.0 + panel.scroll_offset_y.0);
+            if content_y.0 < 0.0 {
+                return None;
+            }
+
             let mut y = self.style.padding_y.0;
             for (row_index, row) in panel.rows.iter().enumerate() {
                 let h = row.height.0;
-                if local_y.0 >= y && local_y.0 < y + h {
+                if content_y.0 >= y && content_y.0 < y + h {
                     return Some((panel_index, row_index));
                 }
                 y += h;
@@ -1009,6 +1069,34 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         cx.stop_propagation();
                     }
                 }
+                fret_core::PointerEvent::Wheel { position, delta, .. } => {
+                    let Some((panel, _row)) = self.hit_test(*position) else {
+                        return;
+                    };
+                    let Some(p) = self.panels.get(panel) else {
+                        return;
+                    };
+                    if p.max_scroll_offset_y.0 <= 0.0 {
+                        return;
+                    }
+                    if self.scroll_offsets.len() <= panel {
+                        self.scroll_offsets.resize(panel + 1, Px(0.0));
+                    }
+                    let next = Px(
+                        (self.scroll_offsets[panel].0 - delta.y.0)
+                            .max(0.0)
+                            .min(p.max_scroll_offset_y.0),
+                    );
+                    if next != self.scroll_offsets[panel] {
+                        self.scroll_offsets[panel] = next;
+                        if let Some(p) = self.panels.get_mut(panel) {
+                            p.scroll_offset_y = next;
+                        }
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                    }
+                    cx.stop_propagation();
+                }
                 fret_core::PointerEvent::Down {
                     position, button, ..
                 } => {
@@ -1090,12 +1178,29 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                 corner_radii: self.style.corner_radii,
             });
 
-            let mut y = panel.bounds.origin.y.0 + self.style.padding_y.0;
+            cx.scene.push(SceneOp::PushClipRRect {
+                rect: panel.bounds,
+                corner_radii: self.style.corner_radii,
+            });
+
+            let panel_top = panel.bounds.origin.y.0 + self.style.padding_y.0;
+            let panel_bottom =
+                panel.bounds.origin.y.0 + panel.bounds.size.height.0 - self.style.padding_y.0;
+
+            let mut y = panel.bounds.origin.y.0 + self.style.padding_y.0 - panel.scroll_offset_y.0;
             for row in &panel.rows {
                 let row_rect = Rect::new(
                     Point::new(panel.bounds.origin.x, Px(y)),
                     Size::new(panel.bounds.size.width, row.height),
                 );
+                let h = row.height.0.max(0.0);
+                if y + h < panel_top {
+                    y += h;
+                    continue;
+                }
+                if y > panel_bottom {
+                    break;
+                }
 
                 let selected = self
                     .selection_raw(panel_index)
@@ -1189,8 +1294,10 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                     });
                 }
 
-                y += row.height.0;
+                y += h;
             }
+
+            cx.scene.push(SceneOp::PopClip);
         }
     }
 }

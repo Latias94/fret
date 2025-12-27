@@ -67,6 +67,7 @@ definitions live in `docs/mvp/reference-plan.md`.
   - align dismissal/focus/portal outcomes with Radix UI Primitives (without a DOM runtime)
   - implement deterministic anchored positioning + collision avoidance (Floating-like flip/shift/size/arrow)
   - converge HoverCard-style anchored panels onto the shared placement contract (flip + window margin)
+  - support scrollable menus/panels via a sized placement helper (clamp to available space; component handles internal scrolling)
   - reference stack: `docs/reference-stack-ui-behavior.md`
 - MVP 63: unify scroll ergonomics around a single handle model (GPUI-like)
   - define a `ScrollHandle`-style substrate: offset, scroll-to, scroll-into-view, scrollbar behavior

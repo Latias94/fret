@@ -56,6 +56,10 @@ Notes:
 - “Shift” is represented by clamping on the cross axis (and on the main axis if unavoidable).
 - “Size” and “arrow” are not part of this contract yet; they will be added as follow-up extensions
   only if demanded by shadcn/Radix parity.
+- For scrollable content, the runtime also provides a convenience helper that clamps the *panel
+  rect size* to the available space on the chosen side (`anchored_panel_bounds_sized`). This is
+  intentionally not full “size middleware”: it only provides a viewport rect; the component is
+  responsible for internal scrolling behavior.
 
 ## Consequences
 
