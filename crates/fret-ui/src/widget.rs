@@ -1,9 +1,9 @@
-use crate::{ContextMenuRequest, ContextMenuService, Theme, UiHost};
+use crate::{Theme, UiHost};
 use fret_core::{
     AppWindowId, Corners, Event, NodeId, Point, Rect, Scene, SemanticsFlags, SemanticsRole, Size,
     UiServices,
 };
-use fret_runtime::{CommandId, Effect, InputContext, Menu, Model, ModelId};
+use fret_runtime::{CommandId, Effect, InputContext, Model, ModelId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Invalidation {
@@ -47,36 +47,6 @@ impl<'a, H: UiHost> EventCx<'a, H> {
             window: self.window,
             command,
         });
-    }
-
-    pub fn open_context_menu_request(&mut self, request: ContextMenuRequest) -> bool {
-        let Some(window) = self.window else {
-            return false;
-        };
-
-        self.app
-            .with_global_mut(ContextMenuService::default, |service, _app| {
-                service.set_request(window, request);
-            });
-        self.dispatch_command(CommandId::from("context_menu.open"));
-        self.request_redraw();
-        true
-    }
-
-    pub fn open_context_menu(&mut self, position: Point, menu: Menu) -> bool {
-        let inv_ctx = InputContext {
-            platform: self.input_ctx.platform,
-            caps: self.input_ctx.caps.clone(),
-            ui_has_modal: self.input_ctx.ui_has_modal,
-            focus_is_text_input: self.input_ctx.focus_is_text_input,
-        };
-
-        self.open_context_menu_request(ContextMenuRequest {
-            position,
-            menu,
-            input_ctx: inv_ctx,
-            menu_bar: None,
-        })
     }
 
     pub fn request_focus(&mut self, node: NodeId) {

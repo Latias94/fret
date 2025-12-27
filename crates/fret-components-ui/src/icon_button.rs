@@ -1,19 +1,13 @@
-use fret_components_icons::{IconGlyph, IconId, IconRegistry};
+use fret_components_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
 use fret_core::{
-    Color, Corners, CursorIcon, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
-    SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
+    Color, Corners, CursorIcon, DrawOrder, Edges, Event, MouseButton, Px, Rect, SceneOp,
+    SemanticsRole, Size, SvgFit,
 };
 use fret_runtime::CommandId;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 use crate::style::{ColorFallback, MetricFallback, component_color, component_metric};
 use crate::{Sizable, Size as ComponentSize};
-
-#[derive(Debug, Clone)]
-struct PreparedText {
-    blob: fret_core::TextBlobId,
-    metrics: TextMetrics,
-}
 
 #[derive(Debug, Clone)]
 struct ResolvedIconButtonStyle {
@@ -64,10 +58,6 @@ pub struct IconButton {
     pressed: bool,
     last_bounds: Rect,
     last_theme_revision: Option<u64>,
-    prepared: Option<PreparedText>,
-    prepared_scale_bits: Option<u32>,
-    prepared_theme_revision: Option<u64>,
-    prepared_icon_key: Option<String>,
     resolved: ResolvedIconButtonStyle,
 }
 
@@ -82,10 +72,6 @@ impl IconButton {
             pressed: false,
             last_bounds: Rect::default(),
             last_theme_revision: None,
-            prepared: None,
-            prepared_scale_bits: None,
-            prepared_theme_revision: None,
-            prepared_icon_key: None,
             resolved: ResolvedIconButtonStyle::default(),
         }
     }
@@ -169,16 +155,6 @@ impl IconButton {
             fg_disabled,
         };
     }
-
-    fn icon_glyph<H: UiHost>(&self, app: &mut H) -> IconGlyph {
-        app.with_global_mut(IconRegistry::default, |icons, _app| {
-            icons.ensure_builtin_glyphs();
-            icons
-                .glyph(&self.icon)
-                .cloned()
-                .unwrap_or_else(|| IconGlyph::new("?"))
-        })
-    }
 }
 
 impl Sizable for IconButton {
@@ -188,15 +164,6 @@ impl Sizable for IconButton {
 }
 
 impl<H: UiHost> Widget<H> for IconButton {
-    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
-        if let Some(p) = self.prepared.take() {
-            services.text().release(p.blob);
-        }
-        self.prepared_scale_bits = None;
-        self.prepared_theme_revision = None;
-        self.prepared_icon_key = None;
-    }
-
     fn is_focusable(&self) -> bool {
         true
     }
@@ -213,6 +180,7 @@ impl<H: UiHost> Widget<H> for IconButton {
         let Event::Pointer(pe) = event else {
             return;
         };
+
         match pe {
             fret_core::PointerEvent::Move { position, .. } => {
                 let hovered = self.last_bounds.contains(*position);
@@ -239,31 +207,21 @@ impl<H: UiHost> Widget<H> for IconButton {
                 cx.request_focus(cx.node);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
-                cx.stop_propagation();
             }
-            fret_core::PointerEvent::Up {
-                position, button, ..
-            } => {
-                if *button != MouseButton::Left {
+            fret_core::PointerEvent::Up { button, .. } => {
+                if *button != MouseButton::Left || self.disabled {
                     return;
                 }
-
                 let was_pressed = self.pressed;
                 self.pressed = false;
                 cx.release_pointer_capture();
-
-                let hovered = self.last_bounds.contains(*position);
-                self.hovered = hovered;
-
-                if was_pressed && hovered && !self.disabled {
+                if was_pressed {
                     if let Some(cmd) = self.command.clone() {
                         cx.dispatch_command(cmd);
                     }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
                 }
-
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                cx.stop_propagation();
             }
             _ => {}
         }
@@ -271,17 +229,11 @@ impl<H: UiHost> Widget<H> for IconButton {
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.sync_style_from_theme(cx.theme());
-        self.last_bounds = cx.bounds;
-
-        let size = self.resolved.size.0.max(0.0);
-        let w = size.min(cx.available.width.0);
-        let h = size.min(cx.available.height.0);
-        Size::new(Px(w), Px(h))
+        Size::new(self.resolved.size, self.resolved.size)
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.sync_style_from_theme(cx.theme());
-        self.last_bounds = cx.bounds;
 
         let bg = if self.disabled {
             self.resolved.bg
@@ -293,7 +245,7 @@ impl<H: UiHost> Widget<H> for IconButton {
             self.resolved.bg
         };
 
-        let border_w = Px(self.resolved.border_width.0.max(0.0));
+        let border_w = self.resolved.border_width;
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: cx.bounds,
@@ -303,68 +255,43 @@ impl<H: UiHost> Widget<H> for IconButton {
             corner_radii: Corners::all(self.resolved.radius),
         });
 
-        let scale_bits = cx.scale_factor.to_bits();
-        let theme_rev = cx.theme().revision();
-        let icon_glyph = self.icon_glyph(cx.app);
-        let icon_key = format!(
-            "{}|{}|{}|{:?}",
-            self.icon.as_str(),
-            icon_glyph.text.as_ref(),
-            icon_glyph.size.0,
-            icon_glyph.font
-        );
-
-        let needs_prepare = self.prepared.is_none()
-            || self.prepared_scale_bits != Some(scale_bits)
-            || self.prepared_theme_revision != Some(theme_rev)
-            || self.prepared_icon_key.as_deref() != Some(icon_key.as_str());
-
-        if needs_prepare {
-            if let Some(p) = self.prepared.take() {
-                cx.services.text().release(p.blob);
-            }
-            let style = TextStyle {
-                font: icon_glyph.font,
-                size: icon_glyph.size,
-                ..Default::default()
-            };
-            let constraints = TextConstraints {
-                max_width: None,
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                scale_factor: cx.scale_factor,
-            };
-            let (blob, metrics) =
-                cx.services
-                    .text()
-                    .prepare(icon_glyph.text.as_ref(), style, constraints);
-            self.prepared = Some(PreparedText { blob, metrics });
-            self.prepared_scale_bits = Some(scale_bits);
-            self.prepared_theme_revision = Some(theme_rev);
-            self.prepared_icon_key = Some(icon_key);
-        }
-
-        let Some(prepared) = self.prepared.as_ref() else {
-            return;
-        };
-
-        let text_x = cx.bounds.origin.x.0
-            + ((cx.bounds.size.width.0 - prepared.metrics.size.width.0) * 0.5).max(0.0);
-        let text_top = cx.bounds.origin.y.0
-            + ((cx.bounds.size.height.0 - prepared.metrics.size.height.0) * 0.5).max(0.0);
-        let text_y = text_top + prepared.metrics.baseline.0;
-
         let color = if self.disabled {
             self.resolved.fg_disabled
         } else {
             self.resolved.fg
         };
 
-        cx.scene.push(SceneOp::Text {
+        let resolved = cx
+            .app
+            .with_global_mut(IconRegistry::default, |icons, _app| {
+                icons.resolve_svg_owned(&self.icon)
+            });
+
+        let svg_id = match resolved {
+            Some(ResolvedSvgOwned::Static(bytes)) => cx.services.svg().register_svg(bytes),
+            Some(ResolvedSvgOwned::Bytes(bytes)) => cx.services.svg().register_svg(bytes.as_ref()),
+            None => cx.services.svg().register_svg(MISSING_ICON_SVG),
+        };
+
+        let icon_px = Px((self.resolved.size.0 * 0.5).max(0.0));
+        let icon_px = Px(icon_px
+            .0
+            .min(cx.bounds.size.width.0)
+            .min(cx.bounds.size.height.0));
+        let x = cx.bounds.origin.x.0 + ((cx.bounds.size.width.0 - icon_px.0) * 0.5).max(0.0);
+        let y = cx.bounds.origin.y.0 + ((cx.bounds.size.height.0 - icon_px.0) * 0.5).max(0.0);
+        let rect = Rect::new(
+            fret_core::Point::new(Px(x), Px(y)),
+            Size::new(icon_px, icon_px),
+        );
+
+        cx.scene.push(SceneOp::SvgMaskIcon {
             order: DrawOrder(1),
-            origin: Point::new(Px(text_x), Px(text_y)),
-            text: prepared.blob,
+            rect,
+            svg: svg_id,
+            fit: SvgFit::Contain,
             color,
+            opacity: 1.0,
         });
 
         if cx.focus == Some(cx.node) && fret_ui::focus_visible::is_focus_visible(cx.app, cx.window)
@@ -374,7 +301,7 @@ impl<H: UiHost> Widget<H> for IconButton {
             let w = (cx.bounds.size.width.0 - inset.0 * 2.0).max(0.0);
             let h = (cx.bounds.size.height.0 - inset.0 * 2.0).max(0.0);
             let rect = Rect::new(
-                Point::new(
+                fret_core::Point::new(
                     Px(cx.bounds.origin.x.0 + inset.0),
                     Px(cx.bounds.origin.y.0 + inset.0),
                 ),

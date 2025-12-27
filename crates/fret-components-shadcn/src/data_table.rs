@@ -8,6 +8,7 @@ use fret_runtime::CommandId;
 use fret_ui::element::{
     AnyElement, ColumnProps, GridProps, LayoutStyle, Length, MainAlign, Overflow,
 };
+use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementCx, Theme, UiHost};
 
 use crate::table::{TableCell, TableHead, TableRow};
@@ -101,7 +102,8 @@ impl DataTable {
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementCx<'_, H>,
-        mut key_at: impl FnMut(usize) -> u64,
+        items_revision: u64,
+        key_at: impl FnMut(usize) -> u64,
         mut row_state_at: impl FnMut(usize) -> DataTableRowState,
         mut cells_at: impl FnMut(&mut ElementCx<'_, H>, usize) -> Vec<AnyElement>,
     ) -> AnyElement {
@@ -151,57 +153,56 @@ impl DataTable {
 
                 let header_theme = theme.clone();
                 cx.container(props, move |cx| {
-                    let mut grid = GridProps::default();
-                    grid.cols = cols;
-                    grid.gap = Px(0.0);
-                    grid.padding = Edges::all(Px(0.0));
-                    grid.justify = MainAlign::Start;
-                    grid.layout = decl_style::layout_style(
-                        &header_theme,
-                        LayoutRefinement::default().w_full(),
-                    );
+                    let grid = GridProps {
+                        cols,
+                        gap: Px(0.0),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        layout: decl_style::layout_style(
+                            &header_theme,
+                            LayoutRefinement::default().w_full(),
+                        ),
+                        ..Default::default()
+                    };
 
                     let header_cells = header_cells.clone();
                     vec![cx.grid(grid, move |_cx| header_cells)]
                 })
             };
 
-            let body = cx.virtual_list_with_layout(
+            let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+            let mut options = fret_ui::element::VirtualListOptions::new(row_height, overscan);
+            options.items_revision = items_revision;
+            let body = cx.virtual_list_keyed_with_layout(
                 list_layout_style(),
                 rows,
-                row_height,
-                overscan,
-                None,
-                move |cx, range| {
-                    range
-                        .map(|i| {
-                            let key = key_at(i);
-                            cx.keyed(key, |cx| {
-                                let state = row_state_at(i);
-                                let is_last = i + 1 == rows;
-                                let cells = cells_at(cx, i)
-                                    .into_iter()
-                                    .map(|c| TableCell::new(c).into_element(cx))
-                                    .collect::<Vec<_>>();
+                options,
+                &scroll_handle,
+                key_at,
+                move |cx, i| {
+                    let state = row_state_at(i);
+                    let is_last = i + 1 == rows;
+                    let cells = cells_at(cx, i)
+                        .into_iter()
+                        .map(|c| TableCell::new(c).into_element(cx))
+                        .collect::<Vec<_>>();
 
-                                TableRow::new(cols, cells)
-                                    .selected(state.selected)
-                                    .enabled(state.enabled)
-                                    .border_bottom(!is_last)
-                                    .on_click_opt(state.on_click)
-                                    .into_element(cx)
-                            })
-                        })
-                        .collect()
+                    TableRow::new(cols, cells)
+                        .selected(state.selected)
+                        .enabled(state.enabled)
+                        .border_bottom(!is_last)
+                        .on_click_opt(state.on_click)
+                        .into_element(cx)
                 },
             );
 
-            let mut col = ColumnProps::default();
-            col.layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
-            col.gap = Px(0.0);
-            col.padding = Edges::all(Px(0.0));
-            col.align = fret_ui::element::CrossAlign::Stretch;
-            col.justify = MainAlign::Start;
+            let col = ColumnProps {
+                layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
+                gap: Px(0.0),
+                padding: Edges::all(Px(0.0)),
+                align: fret_ui::element::CrossAlign::Stretch,
+                justify: MainAlign::Start,
+            };
 
             vec![cx.column(col, move |_cx| vec![header_row, body])]
         })

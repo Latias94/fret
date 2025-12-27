@@ -6,16 +6,11 @@ use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, TextProps};
 use fret_ui::{ElementCx, Theme, UiHost};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AlertVariant {
+    #[default]
     Default,
     Destructive,
-}
-
-impl Default for AlertVariant {
-    fn default() -> Self {
-        Self::Default
-    }
 }
 
 #[derive(Debug, Clone)]

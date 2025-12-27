@@ -6,6 +6,7 @@ use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, LayoutStyle, PressableProps, TextProps,
 };
+use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
 
 use super::stack;
@@ -38,6 +39,7 @@ struct CommandRowsState {
     last_items_revision: Option<u64>,
     last_query_revision: Option<u64>,
     rows: Vec<Row>,
+    scroll: VirtualListScrollHandle,
 }
 
 fn fnv1a_64(bytes: &[u8]) -> u64 {
@@ -193,13 +195,13 @@ pub fn command_palette_list<H: UiHost>(
     let items_value = cx.app.models().get(items).cloned().unwrap_or_default();
     let query_value = cx.app.models().get(query).cloned().unwrap_or_default();
 
-    let rows = cx.with_state(CommandRowsState::default, |st| {
+    let (rows, scroll) = cx.with_state(CommandRowsState::default, |st| {
         if st.last_items_revision != items_rev || st.last_query_revision != query_rev {
             st.last_items_revision = items_rev;
             st.last_query_revision = query_rev;
             st.rows = rebuild_rows(items_value, query_value);
         }
-        st.rows.clone()
+        (st.rows.clone(), st.scroll.clone())
     });
 
     let selected = cx.app.models().get(selection).cloned().unwrap_or(None);
@@ -209,6 +211,10 @@ pub fn command_palette_list<H: UiHost>(
             _ => false,
         })
     });
+
+    if let Some(idx) = scroll_to_index {
+        scroll.scroll_to_item(idx, ScrollStrategy::Nearest);
+    }
 
     let theme = Theme::global(&*cx.app).clone();
     let (list_bg, border, row_hover, row_active) = resolve_list_colors(&theme);
@@ -263,11 +269,16 @@ pub fn command_palette_list<H: UiHost>(
             ..Default::default()
         },
         |cx| {
+            let items_revision = rows.iter().fold(0u64, |acc, r| {
+                acc.wrapping_mul(1_000_003).wrapping_add(r.key)
+            });
+            let mut options = fret_ui::element::VirtualListOptions::new(row_h, 2);
+            options.items_revision = items_revision;
+
             vec![cx.virtual_list_keyed(
                 rows.len(),
-                row_h,
-                2,
-                scroll_to_index,
+                options,
+                &scroll,
                 |i| rows.get(i).map(|r| r.key).unwrap_or_default(),
                 |cx, i| {
                     let Some(row) = rows.get(i) else {
@@ -315,9 +326,7 @@ pub fn command_palette_list<H: UiHost>(
                                     ..Default::default()
                                 },
                                 |cx, st| {
-                                    let bg = if is_selected {
-                                        Some(row_active)
-                                    } else if st.pressed {
+                                    let bg = if is_selected || st.pressed {
                                         Some(row_active)
                                     } else if st.hovered {
                                         Some(row_hover)
@@ -402,7 +411,7 @@ pub fn command_palette_list<H: UiHost>(
                                                                 ..Default::default()
                                                             },
                                                             muted_fg,
-                                                            row_shortcut_layout.clone(),
+                                                            row_shortcut_layout,
                                                         ));
                                                     }
 

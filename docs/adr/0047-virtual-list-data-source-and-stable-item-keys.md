@@ -1,6 +1,6 @@
 # ADR 0047: Virtual List Data Source and Stable Item Keys
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -39,10 +39,16 @@ Requirements:
 - The key must be **stable across frames** and across reorder/filter operations.
 - Keys must be cheap to compare and hash (editor lists can be huge).
 
-Baseline recommendation:
+Runtime contract:
 
-- Use `u64`-like IDs for editor data (ECS entity ids, asset ids, etc.).
-- Keep the contract generic over a `Key: Copy + Eq + Hash` so apps can plug in their own IDs.
+- `crates/fret-ui` uses **`u64`** as its stable `ItemKey` type for virtualization caches and APIs.
+- Component-layer code maps its own stable identity types (entity IDs, asset IDs, etc.) into `u64`.
+
+Rationale:
+
+- keeps the runtime substrate minimal (no generic-key plumbing through public runtime APIs),
+- matches the dominant “editor ID” pattern (entity/asset IDs are typically u64-like already),
+- stays cheap to hash/compare for large datasets.
 
 ### 2) Virtualization is driven by a data source / delegate contract
 
@@ -82,6 +88,18 @@ Notes:
   implicitly “shift identity” when indices change; identity is defined by `key(index)`.
 - `index_of_key` may be O(n) for small lists, but large lists should provide an indexed lookup.
 
+### 2.1) Key mapping changes must be signaled: `items_revision`
+
+To avoid O(n) key scanning on every frame while still supporting stable-keyed measurement caches,
+virtualized surfaces must provide an **`items_revision: u64`** that changes whenever the
+`key(index) -> ItemKey` mapping changes for any index.
+
+Typical sources for `items_revision`:
+
+- the underlying list model revision (`Model<Vec<...>>::revision(...)`),
+- a stable “data version” counter in the view model,
+- for small ephemeral lists (e.g. command palette), a cheap hash of keys.
+
 ### 3) Selection and focus are key-based (index is a view detail)
 
 Editor selection and focus must survive:
@@ -110,6 +128,16 @@ To align with ADR 0042 (future variable-height items), the data source contract 
 - a two-phase “estimate → measure visible → update cache → relayout if needed” loop.
 
 For MVP 13, we can ship **fixed row height** only, but we must not paint ourselves into a corner.
+
+### 5) TanStack Virtual vocabulary alignment
+
+Fret’s runtime virtualization vocabulary aligns with TanStack Virtual (see `repo-ref/virtual`):
+
+- `VirtualItem { key, index, start, end, size }` (vertical axis in P0)
+- `gap` between items
+- `scrollMargin` (origin shift for headers/multiple virtualizers in one scroll surface)
+- `rangeExtractor` remains a **component-layer policy hook**, but the runtime must expose a
+  visible-range output that can feed it.
 
 ## Consequences
 

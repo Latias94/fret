@@ -124,17 +124,16 @@ impl<H: UiHost> Widget<H> for CommandPaletteOverlay {
                     cx.stop_propagation();
                 }
             }
-            Event::Pointer(pe) => match pe {
-                fret_core::PointerEvent::Down {
-                    position, button, ..
-                } => {
-                    if *button == MouseButton::Left && !self.panel_bounds.contains(*position) {
-                        cx.dispatch_command(self.close_command.clone());
-                        cx.stop_propagation();
-                    }
+            Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button,
+                ..
+            }) => {
+                if *button == MouseButton::Left && !self.panel_bounds.contains(*position) {
+                    cx.dispatch_command(self.close_command.clone());
+                    cx.stop_propagation();
                 }
-                _ => {}
-            },
+            }
             _ => {}
         }
     }

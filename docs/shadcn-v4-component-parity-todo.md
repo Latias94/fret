@@ -1,4 +1,4 @@
----
+﻿---
 title: shadcn/ui v4 Component Parity TODO (fret-components-shadcn alignment)
 ---
 
@@ -105,7 +105,7 @@ Status legend:
 | Empty | `ui/empty.tsx` | `fret_components_shadcn::Empty` | ✅ | First-pass composition helper; add icon/action slots later. |
 | Field | `ui/field.tsx` | `fret_components_shadcn::Field*` | ✅ | First pass: declarative composition helpers (no HTML `for`/aria wiring yet). |
 | Form | `ui/form.tsx` |  | — | Non-goal (v1); likely a higher-level “form framework” decision in Fret. |
-| Hover Card | `ui/hover-card.tsx` | `fret_components_shadcn::{HoverCard, HoverCardTrigger, HoverCardContent}` | ✅ | Declarative hover primitive (no open/close animations yet); anchored placement uses the shared flip+clamp solver within the render root bounds (`component.hover_card.window_margin`). |
+| Hover Card | `ui/hover-card.tsx` | `fret_components_shadcn::{HoverCard, HoverCardTrigger, HoverCardContent}` | ? | Component-layer hover policy built on runtime substrate (`HoverRegion` + cross-frame geometry + placement solver); no `HoverCard*` types in `fret-ui`. |
 | Input | `ui/input.tsx` | `fret_components_shadcn::Input` | ✅ | Currently maps to `TextField`; use `InputGroup` for icon-slot patterns. |
 | Input Group | `ui/input-group.tsx` | `fret_components_shadcn::InputGroup` | ✅ | Leading/trailing icon slots + sizing tokens; first-pass parity. |
 | Input OTP | `ui/input-otp.tsx` | `fret_components_shadcn::InputOTP` | ✅ | Retained widget: multi-slot input + paste fill + per-slot focus ring. |

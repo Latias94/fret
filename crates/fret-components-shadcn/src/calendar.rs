@@ -329,7 +329,7 @@ impl Calendar {
                     continue;
                 }
 
-                let day_index = i as i32 - first_weekday + 1;
+                let day_index = i - first_weekday + 1;
                 if day_index >= 1 && day_index <= month_days {
                     return Some(HitTarget::Day(
                         Date::new(self.view_year, self.view_month, day_index as u8),
@@ -459,8 +459,10 @@ impl<H: UiHost> Widget<H> for Calendar {
                     let hit = self.hit_test(&theme, *position);
                     self.hovered = hit;
 
-                    if pressed.is_some() && pressed == hit {
-                        match pressed.expect("pressed exists") {
+                    if let Some(pressed) = pressed
+                        && Some(pressed) == hit
+                    {
+                        match pressed {
                             HitTarget::Prev => {
                                 self.prev_month();
                                 cx.invalidate_self(Invalidation::Layout);
@@ -678,7 +680,7 @@ impl<H: UiHost> Widget<H> for Calendar {
                 let y = Px(grid_origin.y.0 + (row as f32) * (cell.0 + gap.0));
                 let rect = Rect::new(Point::new(x, y), Size::new(cell, cell));
 
-                let day_index = i as i32 - first_weekday + 1;
+                let day_index = i - first_weekday + 1;
                 let (date, in_month) = if day_index >= 1 && day_index <= month_days {
                     (
                         Date::new(self.view_year, self.view_month, day_index as u8),
@@ -789,7 +791,7 @@ mod tests {
     }
 
     #[derive(Default)]
-    struct FakeServices;
+    struct FakeServices(());
 
     impl TextService for FakeServices {
         fn prepare(

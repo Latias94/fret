@@ -10,16 +10,11 @@ use fret_ui::{ElementCx, Theme, UiHost};
 
 use crate::label::label as shadcn_label;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FieldOrientation {
+    #[default]
     Vertical,
     Horizontal,
-}
-
-impl Default for FieldOrientation {
-    fn default() -> Self {
-        Self::Vertical
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -55,16 +50,11 @@ pub fn field_set<H: UiHost>(
     FieldSet::new(f(cx)).into_element(cx)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FieldLegendVariant {
+    #[default]
     Legend,
     Label,
-}
-
-impl Default for FieldLegendVariant {
-    fn default() -> Self {
-        Self::Legend
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -419,6 +409,12 @@ impl FieldSeparator {
                 children
             },
         )
+    }
+}
+
+impl Default for FieldSeparator {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

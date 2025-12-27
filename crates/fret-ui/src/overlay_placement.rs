@@ -82,7 +82,8 @@ pub fn anchored_panel_bounds_sized(
     align: Align,
 ) -> Rect {
     let preferred_size = clamp_size_for_side(outer, anchor, desired, side_offset, preferred_side);
-    let preferred_origin = anchored_origin(anchor, preferred_size, side_offset, preferred_side, align);
+    let preferred_origin =
+        anchored_origin(anchor, preferred_size, side_offset, preferred_side, align);
     let preferred = Rect::new(preferred_origin, preferred_size);
     if side_fits_without_clamp(outer, preferred, preferred_side) {
         return clamp_rect_to_outer(outer, preferred);
@@ -123,7 +124,13 @@ fn opposite_side(side: Side) -> Side {
     }
 }
 
-fn anchored_origin(anchor: Rect, content: Size, side_offset: Px, side: Side, align: Align) -> Point {
+fn anchored_origin(
+    anchor: Rect,
+    content: Size,
+    side_offset: Px,
+    side: Side,
+    align: Align,
+) -> Point {
     let w = content.width.0.max(0.0);
     let h = content.height.0.max(0.0);
     let off = side_offset.0.max(0.0);
@@ -166,13 +173,23 @@ fn anchored_origin(anchor: Rect, content: Size, side_offset: Px, side: Side, ali
 fn side_fits_without_clamp(outer: Rect, inner: Rect, side: Side) -> bool {
     match side {
         Side::Top => inner.origin.y.0 >= outer.origin.y.0,
-        Side::Bottom => inner.origin.y.0 + inner.size.height.0 <= outer.origin.y.0 + outer.size.height.0,
+        Side::Bottom => {
+            inner.origin.y.0 + inner.size.height.0 <= outer.origin.y.0 + outer.size.height.0
+        }
         Side::Left => inner.origin.x.0 >= outer.origin.x.0,
-        Side::Right => inner.origin.x.0 + inner.size.width.0 <= outer.origin.x.0 + outer.size.width.0,
+        Side::Right => {
+            inner.origin.x.0 + inner.size.width.0 <= outer.origin.x.0 + outer.size.width.0
+        }
     }
 }
 
-fn clamp_size_for_side(outer: Rect, anchor: Rect, desired: Size, side_offset: Px, side: Side) -> Size {
+fn clamp_size_for_side(
+    outer: Rect,
+    anchor: Rect,
+    desired: Size,
+    side_offset: Px,
+    side: Side,
+) -> Size {
     let max_w = outer.size.width.0.max(0.0);
     let max_h = outer.size.height.0.max(0.0);
 
@@ -284,7 +301,8 @@ mod tests {
         let anchor = r(10.0, 10.0, 40.0, 10.0);
         let content = Size::new(Px(120.0), Px(80.0));
 
-        let placed = anchored_panel_bounds(outer, anchor, content, Px(8.0), Side::Bottom, Align::Start);
+        let placed =
+            anchored_panel_bounds(outer, anchor, content, Px(8.0), Side::Bottom, Align::Start);
         assert!(placed.origin.y.0 >= anchor.origin.y.0 + anchor.size.height.0);
     }
 
@@ -294,7 +312,8 @@ mod tests {
         let anchor = r(10.0, 190.0, 40.0, 10.0);
         let content = Size::new(Px(120.0), Px(80.0));
 
-        let placed = anchored_panel_bounds(outer, anchor, content, Px(8.0), Side::Bottom, Align::Start);
+        let placed =
+            anchored_panel_bounds(outer, anchor, content, Px(8.0), Side::Bottom, Align::Start);
         assert!(placed.origin.y.0 + placed.size.height.0 <= anchor.origin.y.0);
         assert!(outer.contains(placed.origin));
     }
@@ -313,7 +332,8 @@ mod tests {
         let anchor = r(190.0, 10.0, 10.0, 20.0);
         let content = Size::new(Px(120.0), Px(40.0));
 
-        let placed = anchored_panel_bounds(outer, anchor, content, Px(6.0), Side::Right, Align::Start);
+        let placed =
+            anchored_panel_bounds(outer, anchor, content, Px(6.0), Side::Right, Align::Start);
         assert!(
             placed.origin.x.0 + placed.size.width.0 <= anchor.origin.x.0,
             "expected right placement to flip left when overflowing"
@@ -327,7 +347,8 @@ mod tests {
         let anchor = r(10.0, 5.0, 40.0, 10.0);
         let content = Size::new(Px(120.0), Px(180.0));
 
-        let placed = anchored_panel_bounds(outer, anchor, content, Px(8.0), Side::Bottom, Align::Start);
+        let placed =
+            anchored_panel_bounds(outer, anchor, content, Px(8.0), Side::Bottom, Align::Start);
         // With less main-axis overflow on bottom, the clamped rect should end up below (as much as possible).
         assert!(
             placed.origin.y.0 >= anchor.origin.y.0,
@@ -342,7 +363,14 @@ mod tests {
         let anchor = r(10.0, 150.0, 40.0, 10.0);
         let desired = Size::new(Px(120.0), Px(180.0));
 
-        let placed = anchored_panel_bounds_sized(outer, anchor, desired, Px(8.0), Side::Bottom, Align::Start);
+        let placed = anchored_panel_bounds_sized(
+            outer,
+            anchor,
+            desired,
+            Px(8.0),
+            Side::Bottom,
+            Align::Start,
+        );
 
         // Available space below = 200 - (150 + 10 + 8) = 32
         assert_eq!(placed.size.height, Px(32.0));

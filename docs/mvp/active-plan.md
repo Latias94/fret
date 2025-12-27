@@ -10,16 +10,19 @@ definitions live in `docs/mvp/reference-plan.md`.
 - Overview: `docs/mvp.md`
 - Roadmap (long horizon): `docs/roadmap.md`
 - Reference plan (historical): `docs/mvp/reference-plan.md`
+- Runtime contract gap list: `docs/runtime-contract-gap.md`
 - Known issues / paper cuts: `docs/known-issues.md`
 
 ## Current Status (High-Signal)
 
 - MVP 0–48: foundational contracts + demo/editor prototypes (see `docs/mvp/reference-plan.md`).
+- Contract note: the `fret-ui` runtime contract surface is locked by ADR 0066. New runtime public APIs must name an authoritative reference and land with tests before broadening usage.
 - MVP 49: declarative authoring is a usable end-to-end path (ADR 0028 / ADR 0039).
   - Execution contract: `render_root(...)` is called **every frame** before layout/paint.
 - MVP 50: composable declarative virtualized list contract
   - keyed row identity (`virtual_list_keyed`)
   - `scroll_to_index` support to keep selection visible
+  - TanStack Virtual alignment: `VirtualItem` output + `rangeExtractor` hook + `scrollMargin`/`gap` vocabulary (ADR 0047)
   - migrated a real surface (command palette list) to composable rows
 - MVP 52: declarative sizing semantics + `Flex` container (ADR 0057)
   - “fit-content by default, fill only when requested” is the stable mental model
@@ -56,16 +59,15 @@ definitions live in `docs/mvp/reference-plan.md`.
   - converge on “framework owns virtualization, components own selection/keyboard/menu policies”
   - treat schema-based `VirtualListRow` as legacy during migration, then remove.
   - keep `fret-components-ui` free of schema-based retained list widgets (prefer declarative composition)
-  - in progress: schema-based retained `VirtualList` moved under `fret-ui::legacy_widgets`
-  - in progress: `fret-ui-app` no longer re-exports legacy `VirtualList*` at the crate root (must use `fret_ui_app::legacy_widgets::VirtualList`)
-  - in progress: remove component-level helpers that produce legacy `VirtualListStyle` (components should prefer declarative composition)
+  - compatibility: any retained/widget-based list path must live behind `fret-ui`’s `retained-widgets` feature (`fret_ui::primitives`)
+  - landed: TanStack vocabulary alignment + stable item keys contract (ADR 0047)
 - MVP 61: declarative layout performance hardening (Taffy integration)
   - cache/reuse the Taffy tree and node ids across frames (avoid rebuild + allocation churn)
   - avoid double layout of children (`layout_in` during measure + final `layout_in`) where possible
 - MVP 62: overlay behavior + placement contract (APG/Radix/Floating UI alignment)
   - treat APG as the keyboard/focus baseline for composite widgets (menus/listbox/combobox/tree)
-  - align dismissal/focus/portal outcomes with Radix UI Primitives (without a DOM runtime)
-  - implement deterministic anchored positioning + collision avoidance (Floating-like flip/shift/size/arrow)
+  - align dismissal/focus/portal outcomes with Radix UI Primitives (without a DOM runtime; ADR 0067)
+  - implement deterministic anchored positioning + collision avoidance (Floating-like flip/shift/size/offset; arrow is P1 per ADR 0066)
   - converge HoverCard-style anchored panels onto the shared placement contract (flip + window margin)
   - support scrollable menus/panels via a sized placement helper (clamp to available space; component handles internal scrolling)
   - reference stack: `docs/reference-stack-ui-behavior.md`

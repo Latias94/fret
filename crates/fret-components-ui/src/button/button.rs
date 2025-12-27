@@ -402,10 +402,12 @@ impl<H: UiHost> Widget<H> for Button {
                 let hovered = self.last_bounds.contains(*position);
                 self.hovered = hovered;
 
-                if was_pressed && hovered && !self.disabled {
-                    if let Some(cmd) = self.command.clone() {
-                        cx.dispatch_command(cmd);
-                    }
+                if was_pressed
+                    && hovered
+                    && !self.disabled
+                    && let Some(cmd) = self.command.clone()
+                {
+                    cx.dispatch_command(cmd);
                 }
 
                 cx.invalidate_self(Invalidation::Paint);

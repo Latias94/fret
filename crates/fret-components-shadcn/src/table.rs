@@ -239,14 +239,16 @@ impl TableRow {
         let border_bottom = self.border_bottom;
         let children = self.children;
 
-        let mut pressable = PressableProps::default();
-        pressable.enabled = enabled;
-        pressable.on_click = on_click;
-        {
+        let pressable_layout = {
             let theme = Theme::global(&*cx.app);
-            pressable.layout =
-                decl_style::layout_style(theme, LayoutRefinement::default().w_full());
-        }
+            decl_style::layout_style(theme, LayoutRefinement::default().w_full())
+        };
+        let pressable = PressableProps {
+            enabled,
+            on_click,
+            layout: pressable_layout,
+            ..Default::default()
+        };
 
         cx.pressable(pressable, move |cx, state| {
             let theme = Theme::global(&*cx.app).clone();
@@ -283,14 +285,15 @@ impl TableRow {
 
             let row_children = children.clone();
             vec![cx.container(props, move |cx| {
-                let mut grid = GridProps::default();
-                grid.cols = cols;
-                grid.gap = fret_core::Px(0.0);
-                grid.padding = fret_core::geometry::Edges::all(fret_core::Px(0.0));
-                grid.justify = MainAlign::Start;
-                grid.align = CrossAlign::Stretch;
-                grid.layout =
-                    decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+                let grid = GridProps {
+                    cols,
+                    gap: fret_core::Px(0.0),
+                    padding: fret_core::geometry::Edges::all(fret_core::Px(0.0)),
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Stretch,
+                    layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
+                    ..Default::default()
+                };
 
                 let cells = row_children.clone();
                 vec![cx.grid(grid, move |_cx| cells)]

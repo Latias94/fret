@@ -6,3 +6,5 @@
 /.codanna
 /.fastembed_cache
 /.codannaignore
+.idea/
+tools/_clippy*.txt

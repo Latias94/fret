@@ -5,8 +5,8 @@ use fret_core::{
     TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
-use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 use fret_ui::overlay_placement;
+use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 #[derive(Debug, Clone)]
 pub struct TooltipRequest {
@@ -384,26 +384,23 @@ impl<H: UiHost> Widget<H> for TooltipArea {
             return;
         };
 
-        match pe {
-            fret_core::PointerEvent::Move { position, .. } => {
-                if !cx.bounds.contains(*position) {
-                    return;
-                }
-
-                cx.app
-                    .with_global_mut(TooltipService::default, |service, app| {
-                        service.set_request(
-                            app,
-                            window,
-                            TooltipRequest {
-                                owner: cx.node,
-                                anchor: cx.bounds,
-                                text: self.text.clone(),
-                            },
-                        );
-                    });
+        if let fret_core::PointerEvent::Move { position, .. } = pe {
+            if !cx.bounds.contains(*position) {
+                return;
             }
-            _ => {}
+
+            cx.app
+                .with_global_mut(TooltipService::default, |service, app| {
+                    service.set_request(
+                        app,
+                        window,
+                        TooltipRequest {
+                            owner: cx.node,
+                            anchor: cx.bounds,
+                            text: self.text.clone(),
+                        },
+                    );
+                });
         }
     }
 
@@ -485,7 +482,7 @@ mod tests {
         let root = ui.create_node(TooltipOverlay::new());
         ui.set_root(root);
 
-        let mut text = FakeTextService::default();
+        let mut text = FakeTextService;
         ui.layout_all(
             &mut app,
             &mut text,
@@ -535,14 +532,8 @@ mod tests {
         overlay.style.padding_y = Px(0.0);
         overlay.style.offset = Px(0.0);
 
-        let outer = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(100.0), Px(50.0)),
-        );
-        let anchor = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(10.0), Px(10.0)),
-        );
+        let outer = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(50.0)));
+        let anchor = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
         let request = TooltipRequest {
             owner: NodeId::default(),
             anchor,

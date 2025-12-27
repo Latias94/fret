@@ -1,7 +1,7 @@
 use fret_core::{FontId, Px, TextStyle};
 use fret_runtime::CommandId;
 use fret_runtime::Model;
-use fret_ui::primitives::{BoundTextInput, TextInputStyle};
+use fret_ui::{BoundTextInput, TextInputStyle};
 use fret_ui::{Theme, UiHost, Widget};
 
 use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};

@@ -6,11 +6,13 @@ use std::{
     panic::Location,
 };
 
+use crate::SvgSource;
 use crate::UiHost;
 use crate::element::{
-    AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverCardProps,
+    AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverRegionProps,
     ImageProps, LayoutStyle, PressableProps, PressableState, RowProps, ScrollProps, SpacerProps,
-    SpinnerProps, StackProps, TextInputProps, TextProps, VirtualListProps, VirtualListState,
+    SpinnerProps, StackProps, SvgIconProps, TextInputProps, TextProps, VirtualListProps,
+    VirtualListOptions, VirtualListState,
 };
 use crate::widget::Invalidation;
 use fret_runtime::{Model, ModelId};
@@ -59,9 +61,11 @@ pub struct WindowElementState {
     observed_models: HashMap<GlobalElementId, Vec<(ModelId, Invalidation)>>,
     nodes: HashMap<GlobalElementId, NodeEntry>,
     root_bounds: HashMap<GlobalElementId, Rect>,
+    prev_bounds: HashMap<GlobalElementId, Rect>,
+    cur_bounds: HashMap<GlobalElementId, Rect>,
     hovered_pressable: Option<GlobalElementId>,
     pressed_pressable: Option<GlobalElementId>,
-    hovered_hover_card: Option<GlobalElementId>,
+    hovered_hover_region: Option<GlobalElementId>,
 }
 
 #[derive(Debug)]
@@ -93,6 +97,9 @@ impl WindowElementState {
         );
         self.cur_unkeyed_fingerprints.clear();
         self.observed_models.clear();
+
+        std::mem::swap(&mut self.prev_bounds, &mut self.cur_bounds);
+        self.cur_bounds.clear();
     }
 
     pub(crate) fn node_entry(&self, id: GlobalElementId) -> Option<NodeEntry> {
@@ -113,6 +120,14 @@ impl WindowElementState {
 
     pub(crate) fn root_bounds(&self, root: GlobalElementId) -> Option<Rect> {
         self.root_bounds.get(&root).copied()
+    }
+
+    pub(crate) fn record_bounds(&mut self, element: GlobalElementId, bounds: Rect) {
+        self.cur_bounds.insert(element, bounds);
+    }
+
+    pub(crate) fn last_bounds(&self, element: GlobalElementId) -> Option<Rect> {
+        self.prev_bounds.get(&element).copied()
     }
 }
 
@@ -407,6 +422,19 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
     }
 
     #[track_caller]
+    pub fn svg_icon(&mut self, svg: SvgSource) -> AnyElement {
+        self.svg_icon_props(SvgIconProps::new(svg))
+    }
+
+    #[track_caller]
+    pub fn svg_icon_props(&mut self, props: SvgIconProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::SvgIcon(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
     pub fn spinner(&mut self) -> AnyElement {
         self.spinner_props(SpinnerProps::default())
     }
@@ -420,15 +448,16 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
     }
 
     #[track_caller]
-    pub fn hover_card(
+    pub fn hover_region(
         &mut self,
-        props: HoverCardProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+        props: HoverRegionProps,
+        f: impl FnOnce(&mut Self, bool) -> Vec<AnyElement>,
     ) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
-            AnyElement::new(id, ElementKind::HoverCard(props), children)
+            let hovered = cx.window_state.hovered_hover_region == Some(id);
+            let children = f(cx, hovered);
+            AnyElement::new(id, ElementKind::HoverRegion(props), children)
         })
     }
 
@@ -449,17 +478,28 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
     pub fn virtual_list(
         &mut self,
         len: usize,
-        row_height: Px,
-        overscan: usize,
-        scroll_to_index: Option<usize>,
-        f: impl FnOnce(&mut Self, std::ops::Range<usize>) -> Vec<AnyElement>,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        f: impl FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> Vec<AnyElement>,
     ) -> AnyElement {
-        self.virtual_list_with_layout(
+        self.virtual_list_with_layout(LayoutStyle::default(), len, options, scroll_handle, f)
+    }
+
+    #[track_caller]
+    pub fn virtual_list_ex(
+        &mut self,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        range_extractor: impl FnOnce(crate::virtual_list::VirtualRange) -> Vec<usize>,
+        f: impl FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.virtual_list_with_layout_ex(
             LayoutStyle::default(),
             len,
-            row_height,
-            overscan,
-            scroll_to_index,
+            options,
+            scroll_handle,
+            range_extractor,
             f,
         )
     }
@@ -469,76 +509,173 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
         &mut self,
         layout: LayoutStyle,
         len: usize,
-        row_height: Px,
-        overscan: usize,
-        scroll_to_index: Option<usize>,
-        f: impl FnOnce(&mut Self, std::ops::Range<usize>) -> Vec<AnyElement>,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        f: impl FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.virtual_list_with_layout_ex(
+            layout,
+            len,
+            options,
+            scroll_handle,
+            crate::virtual_list::default_range_extractor,
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn virtual_list_with_layout_ex(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        range_extractor: impl FnOnce(crate::virtual_list::VirtualRange) -> Vec<usize>,
+        f: impl FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.virtual_list_with_layout_and_keys(
+            layout,
+            len,
+            options,
+            scroll_handle,
+            |i| i as crate::ItemKey,
+            range_extractor,
+            f,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn virtual_list_with_layout_and_keys(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        mut item_key_at: impl FnMut(usize) -> crate::ItemKey,
+        range_extractor: impl FnOnce(crate::virtual_list::VirtualRange) -> Vec<usize>,
+        f: impl FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> Vec<AnyElement>,
     ) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
 
-            let (offset_y, viewport_h) = cx.with_state(VirtualListState::default, |state| {
-                (
-                    Px(state.offset_y.0.max(0.0)),
-                    Px(state.viewport_h.0.max(0.0)),
-                )
-            });
+            let scroll_handle = scroll_handle.clone();
+            scroll_handle.set_items_count(len);
 
-            let content_h = Px(row_height.0.max(0.0) * len as f32);
-            let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
-            let mut offset_y = Px(offset_y.0.min(max_offset.0));
+            let range = cx.with_state(VirtualListState::default, |state| {
+                let prev_cfg = (
+                    state.metrics.estimate(),
+                    state.metrics.gap(),
+                    state.metrics.scroll_margin(),
+                );
+                let cfg = (options.estimate_row_height, options.gap, options.scroll_margin);
 
-            if let Some(target) = scroll_to_index {
-                if viewport_h.0 > 0.0 && row_height.0 > 0.0 && len > 0 {
-                    let target = target.min(len.saturating_sub(1));
-                    let row_top = row_height.0 * target as f32;
-                    let row_bottom = row_top + row_height.0;
-                    let view_top = offset_y.0;
-                    let view_bottom = offset_y.0 + viewport_h.0;
+                state
+                    .metrics
+                    .ensure(len, options.estimate_row_height, options.gap, options.scroll_margin);
 
-                    if row_top < view_top {
-                        offset_y = Px(row_top);
-                    } else if row_bottom > view_bottom {
-                        offset_y = Px(row_bottom - viewport_h.0);
+                let needs_rebuild =
+                    state.items_revision != options.items_revision
+                        || state.keys.len() != len
+                        || prev_cfg != cfg;
+
+                if needs_rebuild {
+                    state.items_revision = options.items_revision;
+                    state.keys.clear();
+                    state.keys.reserve(len);
+
+                    let mut heights = Vec::with_capacity(len);
+                    let mut measured = Vec::with_capacity(len);
+
+                    for i in 0..len {
+                        let key = item_key_at(i);
+                        state.keys.push(key);
+                        if let Some(h) = state.size_cache.get(&key).copied() {
+                            heights.push(h);
+                            measured.push(true);
+                        } else {
+                            heights.push(options.estimate_row_height);
+                            measured.push(false);
+                        }
                     }
 
-                    offset_y = Px(offset_y.0.max(0.0).min(max_offset.0));
+                    state.metrics.rebuild_from_heights(
+                        heights,
+                        measured,
+                        options.estimate_row_height,
+                        options.gap,
+                        options.scroll_margin,
+                    );
                 }
-            }
 
-            // Persist the computed offset so the mounted list scrolls immediately when the
-            // authoring layer requests `scroll_to_index`.
-            cx.with_state(VirtualListState::default, |state| {
-                if state.offset_y != offset_y {
-                    state.offset_y = offset_y;
+                let viewport_h = Px(state.viewport_h.0.max(0.0));
+                let offset_y = state
+                    .metrics
+                    .clamp_offset(scroll_handle.offset().y, viewport_h);
+
+                if viewport_h.0 <= 0.0 || len == 0 {
+                    return None;
                 }
+
+                let start = state
+                    .metrics
+                    .index_for_offset(offset_y)
+                    .min(len.saturating_sub(1));
+                let end_exclusive = state
+                    .metrics
+                    .end_index_for_offset(Px(offset_y.0 + viewport_h.0))
+                    .min(len);
+                if end_exclusive == 0 {
+                    return None;
+                }
+                let end = end_exclusive.saturating_sub(1);
+                if start > end {
+                    return None;
+                }
+
+                Some(crate::virtual_list::VirtualRange {
+                    start_index: start,
+                    end_index: end,
+                    overscan: options.overscan,
+                    count: len,
+                })
             });
 
-            let (mut start, mut end) = if viewport_h.0 <= 0.0 || row_height.0 <= 0.0 || len == 0 {
-                (0usize, 0usize)
-            } else {
-                let start = (offset_y.0 / row_height.0).floor() as isize;
-                let end = ((offset_y.0 + viewport_h.0) / row_height.0).ceil() as isize;
-                let start = start.max(0) as usize;
-                let end = end.max(start as isize) as usize;
-                (start, end.min(len))
-            };
+            let mut indices = range
+                .map(range_extractor)
+                .unwrap_or_default()
+                .into_iter()
+                .filter(|&idx| idx < len)
+                .collect::<Vec<_>>();
+            indices.sort_unstable();
+            indices.dedup();
 
-            let o = overscan.min(len);
-            start = start.saturating_sub(o);
-            end = (end + o).min(len);
+            let visible_items = cx.with_state(VirtualListState::default, |state| {
+                indices
+                    .iter()
+                    .map(|&idx| {
+                        let key = state
+                            .keys
+                            .get(idx)
+                            .copied()
+                            .unwrap_or(idx as crate::ItemKey);
+                        state.metrics.virtual_item(idx, key)
+                    })
+                    .collect::<Vec<_>>()
+            });
 
-            let children = f(cx, start..end);
+            let children = f(cx, &visible_items);
             AnyElement::new(
                 id,
                 ElementKind::VirtualList(VirtualListProps {
                     layout,
                     len,
-                    row_height,
-                    overscan,
-                    scroll_to_index,
-                    visible_start: start,
-                    visible_end: end,
+                    items_revision: options.items_revision,
+                    estimate_row_height: options.estimate_row_height,
+                    overscan: options.overscan,
+                    scroll_margin: options.scroll_margin,
+                    gap: options.gap,
+                    scroll_handle,
+                    visible_items,
                 }),
                 children,
             )
@@ -577,23 +714,93 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
     /// Prefer this over index-identity list rendering for any dynamic collection that can reorder,
     /// so element-local state (caret/selection/scroll) does not “stick to positions”.
     #[track_caller]
-    pub fn virtual_list_keyed<K: Hash>(
+    pub fn virtual_list_keyed(
         &mut self,
         len: usize,
-        row_height: Px,
-        overscan: usize,
-        scroll_to_index: Option<usize>,
-        mut key_at: impl FnMut(usize) -> K,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl FnMut(usize) -> crate::ItemKey,
+        row: impl FnMut(&mut Self, usize) -> AnyElement,
+    ) -> AnyElement {
+        self.virtual_list_keyed_with_layout(
+            LayoutStyle::default(),
+            len,
+            options,
+            scroll_handle,
+            key_at,
+            row,
+        )
+    }
+
+    #[track_caller]
+    pub fn virtual_list_keyed_ex(
+        &mut self,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl FnMut(usize) -> crate::ItemKey,
+        range_extractor: impl FnOnce(crate::virtual_list::VirtualRange) -> Vec<usize>,
+        row: impl FnMut(&mut Self, usize) -> AnyElement,
+    ) -> AnyElement {
+        self.virtual_list_keyed_with_layout_ex(
+            LayoutStyle::default(),
+            len,
+            options,
+            scroll_handle,
+            key_at,
+            range_extractor,
+            row,
+        )
+    }
+
+    #[track_caller]
+    pub fn virtual_list_keyed_with_layout(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl FnMut(usize) -> crate::ItemKey,
+        row: impl FnMut(&mut Self, usize) -> AnyElement,
+    ) -> AnyElement {
+        self.virtual_list_keyed_with_layout_ex(
+            layout,
+            len,
+            options,
+            scroll_handle,
+            key_at,
+            crate::virtual_list::default_range_extractor,
+            row,
+        )
+    }
+
+    #[track_caller]
+    #[allow(clippy::too_many_arguments)]
+    pub fn virtual_list_keyed_with_layout_ex(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl FnMut(usize) -> crate::ItemKey,
+        range_extractor: impl FnOnce(crate::virtual_list::VirtualRange) -> Vec<usize>,
         mut row: impl FnMut(&mut Self, usize) -> AnyElement,
     ) -> AnyElement {
-        self.virtual_list(len, row_height, overscan, scroll_to_index, |cx, range| {
-            range
-                .map(|i| {
-                    let key = key_at(i);
-                    cx.keyed(key, |cx| row(cx, i))
-                })
-                .collect()
-        })
+        self.virtual_list_with_layout_and_keys(
+            layout,
+            len,
+            options,
+            scroll_handle,
+            key_at,
+            range_extractor,
+            |cx, items| {
+                items
+                    .iter()
+                    .copied()
+                    .map(|item| cx.keyed(item.key, |cx| row(cx, item.index)))
+                    .collect()
+            },
+        )
     }
 }
 
@@ -671,19 +878,19 @@ pub(crate) fn update_hovered_pressable<H: UiHost>(
     })
 }
 
-pub(crate) fn update_hovered_hover_card<H: UiHost>(
+pub(crate) fn update_hovered_hover_region<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
     next: Option<GlobalElementId>,
 ) -> (Option<NodeId>, Option<NodeId>) {
     with_window_state(app, window, |st| {
-        let prev = st.hovered_hover_card;
+        let prev = st.hovered_hover_region;
         if prev == next {
             return (None, None);
         }
         let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
         let next_node = next.and_then(|id| st.node_entry(id).map(|e| e.node));
-        st.hovered_hover_card = next;
+        st.hovered_hover_region = next;
         (prev_node, next_node)
     })
 }
@@ -710,14 +917,6 @@ pub(crate) fn is_hovered_pressable<H: UiHost>(
     element: GlobalElementId,
 ) -> bool {
     with_window_state(app, window, |st| st.hovered_pressable == Some(element))
-}
-
-pub(crate) fn is_hovered_hover_card<H: UiHost>(
-    app: &mut H,
-    window: AppWindowId,
-    element: GlobalElementId,
-) -> bool {
-    with_window_state(app, window, |st| st.hovered_hover_card == Some(element))
 }
 
 pub(crate) fn is_pressed_pressable<H: UiHost>(
@@ -774,6 +973,27 @@ pub fn root_bounds_for_element<H: UiHost>(
         let root = state.node_entry(element).map(|e| e.root)?;
         state.root_bounds(root)
     })
+}
+
+/// Returns the last frame's bounds for a declarative element, if available.
+///
+/// This is a cross-frame geometry query intended for component-layer policies (e.g. anchored
+/// overlays) that need a stable anchor rect. The value is updated during layout.
+pub fn bounds_for_element<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> Option<Rect> {
+    with_window_state(app, window, |st| st.last_bounds(element))
+}
+
+pub(crate) fn record_bounds_for_element<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+    bounds: Rect,
+) {
+    with_window_state(app, window, |st| st.record_bounds(element, bounds));
 }
 
 fn derive_child_id(parent: GlobalElementId, callsite: u64, child_salt: u64) -> GlobalElementId {

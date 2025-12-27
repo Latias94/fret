@@ -49,7 +49,7 @@ use fret_app::{
     Keymap, KeymapFileV1, KeymapService, Model, WhenExpr, WindowRequest,
     keymap::{BindingV1, KeySpecV1},
 };
-use fret_components_icons::IconId;
+use fret_components_icons::{IconId, IconRegistry, ids};
 use fret_components_ui::PopoverService;
 use fret_components_ui::{
     ChromeRefinement, Size as ComponentSize,
@@ -3905,9 +3905,9 @@ impl WinitDriver for DemoDriver {
                 .py_1(),
         ));
         let ui_kit_icons_row = ui.create_node(fret_ui_app::Row::new().with_spacing(Px(10.0)));
-        let ui_kit_icon_play = ui.create_node(IconButton::new(IconId::new("play")));
-        let ui_kit_icon_settings = ui.create_node(IconButton::new(IconId::new("settings")));
-        let ui_kit_icon_close = ui.create_node(IconButton::new(IconId::new("close")));
+        let ui_kit_icon_play = ui.create_node(IconButton::new(ids::ui::PLAY));
+        let ui_kit_icon_settings = ui.create_node(IconButton::new(ids::ui::SETTINGS));
+        let ui_kit_icon_close = ui.create_node(IconButton::new(ids::ui::CLOSE));
         ui.add_child(ui_kit_icons_row, ui_kit_icon_play);
         ui.add_child(ui_kit_icons_row, ui_kit_icon_settings);
         ui.add_child(ui_kit_icons_row, ui_kit_icon_close);
@@ -6617,6 +6617,9 @@ fn main() -> anyhow::Result<()> {
     }
 
     let mut app = App::new();
+    app.with_global_mut(IconRegistry::default, |icons, _app| {
+        fret_icons_lucide::register_icons(icons);
+    });
     let mut caps = PlatformCapabilities::default();
     if std::env::var_os("FRET_FORCE_SINGLE_WINDOW").is_some() {
         caps.ui.multi_window = false;

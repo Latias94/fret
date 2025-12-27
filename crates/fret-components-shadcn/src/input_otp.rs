@@ -7,17 +7,12 @@ use fret_ui::{
     EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget, widget::SemanticsCx,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum InputOtpPattern {
     Digits,
+    #[default]
     DigitsAndChars,
     Any,
-}
-
-impl Default for InputOtpPattern {
-    fn default() -> Self {
-        Self::DigitsAndChars
-    }
 }
 
 impl InputOtpPattern {
@@ -453,10 +448,10 @@ impl<H: UiHost> Widget<H> for InputOTP {
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
 
-                    if next.chars().count() >= self.max_length {
-                        if let Some(cmd) = self.on_complete.clone() {
-                            cx.dispatch_command(cmd);
-                        }
+                    if next.chars().count() >= self.max_length
+                        && let Some(cmd) = self.on_complete.clone()
+                    {
+                        cx.dispatch_command(cmd);
                     }
                 }
             }
@@ -670,7 +665,7 @@ impl<H: UiHost> Widget<H> for InputOTP {
                         if i < len {
                             let ch = chars[i];
                             let needs_prepare =
-                                self.prepared[i].as_ref().map_or(true, |p| p.ch != ch);
+                                self.prepared[i].as_ref().is_none_or(|p| p.ch != ch);
                             if needs_prepare {
                                 if let Some(prev) = self.prepared[i].take() {
                                     cx.services.text().release(prev.blob);

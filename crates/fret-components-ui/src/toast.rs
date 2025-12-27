@@ -473,7 +473,6 @@ impl<H: UiHost> Widget<H> for ToastOverlay {
                     let _ = svc.dismiss(app, window, id);
                 });
                 cx.stop_propagation();
-                return;
             }
 
             if let Some((_id, command)) = self.hit_test_action(*position) {
@@ -484,7 +483,6 @@ impl<H: UiHost> Widget<H> for ToastOverlay {
                 }
                 cx.dispatch_command(command);
                 cx.stop_propagation();
-                return;
             }
         }
     }
@@ -753,9 +751,31 @@ impl<H: UiHost> Widget<H> for ToastOverlay {
 mod tests {
     use super::*;
     use fret_app::App;
+    use fret_ui::{
+        UiHost,
+        widget::{LayoutCx, PaintCx, Widget},
+    };
 
     #[derive(Default)]
     struct FakeTextService;
+
+    #[derive(Debug, Default)]
+    struct TestContainer;
+
+    impl<H: UiHost> Widget<H> for TestContainer {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            for &child in cx.children {
+                cx.layout_in(child, cx.bounds);
+            }
+            cx.available
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            for &child in cx.children {
+                cx.paint(child, cx.bounds);
+            }
+        }
+    }
 
     impl fret_core::TextService for FakeTextService {
         fn prepare(
@@ -810,7 +830,7 @@ mod tests {
         let mut ui: fret_ui::UiTree<App> = fret_ui::UiTree::new();
         ui.set_window(window);
 
-        let base = ui.create_node(fret_ui::primitives::Stack::new());
+        let base = ui.create_node(TestContainer);
         ui.set_root(base);
 
         let toast_node = ui.create_node(ToastOverlay::new());
@@ -823,7 +843,7 @@ mod tests {
                 .expect("toast should schedule a timer")
         });
 
-        let mut text = FakeTextService::default();
+        let mut text = FakeTextService;
         ui.layout_all(
             &mut app,
             &mut text,

@@ -1,24 +1,12 @@
-use fret_components_icons::{IconGlyph, IconId, IconRegistry};
+use fret_components_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
 use fret_components_ui::recipes::input::{
     InputTokenKeys, default_text_input_style, resolve_input_chrome,
 };
 use fret_components_ui::{ChromeRefinement, MetricRef, Size as ComponentSize, Space};
-use fret_core::{
-    Color, DrawOrder, Event, Point, Px, Rect, SceneOp, Size, TextConstraints, TextMetrics,
-    TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Color, DrawOrder, Event, Px, Rect, SceneOp, Size, SvgFit};
 use fret_runtime::Model;
-use fret_ui::primitives::{BoundTextInput, TextInputStyle};
+use fret_ui::{BoundTextInput, TextInputStyle};
 use fret_ui::{EventCx, LayoutCx, PaintCx, Theme, UiHost, Widget};
-
-#[derive(Debug, Clone)]
-struct PreparedIcon {
-    icon: IconId,
-    blob: fret_core::TextBlobId,
-    metrics: TextMetrics,
-    scale_factor_bits: u32,
-    theme_revision: u64,
-}
 
 pub struct InputGroup {
     inner: BoundTextInput,
@@ -32,8 +20,6 @@ pub struct InputGroup {
     icon_gap: Px,
     icon_inset_left: Px,
     icon_inset_right: Px,
-    prepared_leading: Option<PreparedIcon>,
-    prepared_trailing: Option<PreparedIcon>,
     last_theme_revision: Option<u64>,
 }
 
@@ -51,8 +37,6 @@ impl InputGroup {
             icon_gap: Px(8.0),
             icon_inset_left: Px(0.0),
             icon_inset_right: Px(0.0),
-            prepared_leading: None,
-            prepared_trailing: None,
             last_theme_revision: None,
         }
     }
@@ -127,7 +111,7 @@ impl InputGroup {
         };
 
         self.inner.set_chrome_style(chrome);
-        self.inner.set_text_style(TextStyle {
+        self.inner.set_text_style(fret_core::TextStyle {
             size: resolved.text_px,
             ..Default::default()
         });
@@ -139,85 +123,28 @@ impl InputGroup {
         self.icon_inset_right = base_right;
     }
 
-    fn prepare_icon<H: UiHost>(
-        &mut self,
-        cx: &mut LayoutCx<'_, H>,
-        which: IconSlot,
+    fn register_icon_svg<H: UiHost>(
+        &self,
+        cx: &mut PaintCx<'_, H>,
         icon: &IconId,
-    ) {
-        let theme_rev = cx.theme().revision();
-        let scale_bits = cx.scale_factor.to_bits();
-
-        let slot_ref = match which {
-            IconSlot::Leading => &mut self.prepared_leading,
-            IconSlot::Trailing => &mut self.prepared_trailing,
-        };
-
-        if let Some(p) = slot_ref.as_ref()
-            && p.theme_revision == theme_rev
-            && p.scale_factor_bits == scale_bits
-            && &p.icon == icon
-        {
-            return;
-        }
-
-        if let Some(p) = slot_ref.take() {
-            cx.services.text().release(p.blob);
-        }
-
-        let glyph: IconGlyph = cx
+    ) -> fret_core::SvgId {
+        let resolved = cx
             .app
             .with_global_mut(IconRegistry::default, |icons, _app| {
-                icons.ensure_builtin_glyphs();
-                icons
-                    .glyph(icon)
-                    .cloned()
-                    .unwrap_or_else(|| IconGlyph::new("?"))
+                icons.resolve_svg_owned(icon)
             });
 
-        let size = self.icon_size;
-        let constraints = TextConstraints {
-            max_width: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            scale_factor: cx.scale_factor,
-        };
-        let style = TextStyle {
-            font: glyph.font,
-            size,
-            line_height: Some(size),
-            ..Default::default()
-        };
-        let (blob, metrics) = cx
-            .services
-            .text()
-            .prepare(glyph.text.as_ref(), style, constraints);
-
-        *slot_ref = Some(PreparedIcon {
-            icon: icon.clone(),
-            blob,
-            metrics,
-            scale_factor_bits: scale_bits,
-            theme_revision: theme_rev,
-        });
+        match resolved {
+            Some(ResolvedSvgOwned::Static(bytes)) => cx.services.svg().register_svg(bytes),
+            Some(ResolvedSvgOwned::Bytes(bytes)) => cx.services.svg().register_svg(bytes.as_ref()),
+            None => cx.services.svg().register_svg(MISSING_ICON_SVG),
+        }
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum IconSlot {
-    Leading,
-    Trailing,
 }
 
 impl<H: UiHost> Widget<H> for InputGroup {
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         self.inner.cleanup_resources(services);
-        if let Some(p) = self.prepared_leading.take() {
-            services.text().release(p.blob);
-        }
-        if let Some(p) = self.prepared_trailing.take() {
-            services.text().release(p.blob);
-        }
     }
 
     fn is_focusable(&self) -> bool {
@@ -228,11 +155,11 @@ impl<H: UiHost> Widget<H> for InputGroup {
         !self.disabled
     }
 
-    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+    fn hit_test(&self, _bounds: Rect, _position: fret_core::Point) -> bool {
         !self.disabled
     }
 
-    fn hit_test_children(&self, _bounds: Rect, _position: Point) -> bool {
+    fn hit_test_children(&self, _bounds: Rect, _position: fret_core::Point) -> bool {
         !self.disabled
     }
 
@@ -249,74 +176,61 @@ impl<H: UiHost> Widget<H> for InputGroup {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.sync_chrome(cx.theme());
 
-        if let Some(icon) = self.leading_icon.clone() {
-            self.prepare_icon(cx, IconSlot::Leading, &icon);
-        }
-        if let Some(icon) = self.trailing_icon.clone() {
-            self.prepare_icon(cx, IconSlot::Trailing, &icon);
-        }
-
         let inner = self.inner.layout(cx);
         let min_h = self.min_height.0.max(0.0);
-        let h = inner.height.0.max(min_h).min(cx.available.height.0);
+        let h = inner.height.0.max(min_h);
         Size::new(inner.width, Px(h))
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.sync_chrome(cx.theme());
-
         self.inner.paint(cx);
 
         let theme = cx.theme();
-        let mut icon_color = theme
-            .color_by_key("muted.foreground")
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or(theme.colors.text_muted);
-        if self.disabled {
-            icon_color = theme.colors.text_disabled;
-            icon_color.a *= 0.5;
-        }
+        let icon_color = if self.disabled {
+            theme.colors.text_disabled
+        } else {
+            theme
+                .color_by_key("muted-foreground")
+                .unwrap_or(theme.colors.text_muted)
+        };
 
-        let icon_size = self.icon_size.0.max(0.0);
-        if icon_size <= 0.0 {
-            return;
-        }
+        let y =
+            cx.bounds.origin.y.0 + ((cx.bounds.size.height.0 - self.icon_size.0) * 0.5).max(0.0);
 
-        let bounds = cx.bounds;
-        let center_y = bounds.origin.y.0 + (bounds.size.height.0 - icon_size) * 0.5;
-
-        if let Some(icon) = self.leading_icon.as_ref()
-            && let Some(p) = self.prepared_leading.as_ref().filter(|p| &p.icon == icon)
-        {
-            let x = bounds.origin.x.0 + self.icon_inset_left.0.max(0.0);
-            let top = center_y + ((icon_size - p.metrics.size.height.0) * 0.5).max(0.0);
-            let y = top + p.metrics.baseline.0;
-            cx.scene.push(SceneOp::Text {
+        if let Some(icon) = self.leading_icon.clone() {
+            let svg = self.register_icon_svg(cx, &icon);
+            let x = cx.bounds.origin.x.0 + self.icon_inset_left.0;
+            let rect = Rect::new(
+                fret_core::Point::new(Px(x), Px(y)),
+                Size::new(self.icon_size, self.icon_size),
+            );
+            cx.scene.push(SceneOp::SvgMaskIcon {
                 order: DrawOrder(10),
-                origin: Point::new(Px(x), Px(y)),
-                text: p.blob,
+                rect,
+                svg,
+                fit: SvgFit::Contain,
                 color: icon_color,
+                opacity: 1.0,
             });
         }
 
-        if let Some(icon) = self.trailing_icon.as_ref()
-            && let Some(p) = self.prepared_trailing.as_ref().filter(|p| &p.icon == icon)
-        {
-            let right = bounds.origin.x.0 + bounds.size.width.0;
-            let x = right - self.icon_inset_right.0.max(0.0) - icon_size;
-            let top = center_y + ((icon_size - p.metrics.size.height.0) * 0.5).max(0.0);
-            let y = top + p.metrics.baseline.0;
-            cx.scene.push(SceneOp::Text {
+        if let Some(icon) = self.trailing_icon.clone() {
+            let svg = self.register_icon_svg(cx, &icon);
+            let x = cx.bounds.origin.x.0
+                + (cx.bounds.size.width.0 - self.icon_inset_right.0 - self.icon_size.0).max(0.0);
+            let rect = Rect::new(
+                fret_core::Point::new(Px(x), Px(y)),
+                Size::new(self.icon_size, self.icon_size),
+            );
+            cx.scene.push(SceneOp::SvgMaskIcon {
                 order: DrawOrder(10),
-                origin: Point::new(Px(x), Px(y)),
-                text: p.blob,
+                rect,
+                svg,
+                fit: SvgFit::Contain,
                 color: icon_color,
+                opacity: 1.0,
             });
         }
-    }
-
-    fn semantics(&mut self, cx: &mut fret_ui::widget::SemanticsCx<'_, H>) {
-        self.inner.semantics(cx);
-        cx.set_disabled(self.disabled);
     }
 }

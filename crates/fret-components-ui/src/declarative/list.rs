@@ -2,6 +2,7 @@ use fret_core::{Color, Corners, Edges, Px};
 use fret_runtime::CommandId;
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ContainerProps, PressableProps, SpacerProps};
+use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
 
 use crate::declarative::stack;
@@ -49,15 +50,17 @@ fn resolve_row_padding_y(theme: &Theme) -> Px {
 ///
 /// This intentionally avoids a fixed row schema (`VirtualListRow { text/secondary/trailing... }`)
 /// so higher-level shadcn-like components can be built in the component layer via composition.
-pub fn list_virtualized<H: UiHost, K: std::hash::Hash>(
+#[allow(clippy::too_many_arguments)]
+pub fn list_virtualized<H: UiHost>(
     cx: &mut ElementCx<'_, H>,
     selection: Option<Model<Option<usize>>>,
     size: Size,
     row_height: Option<Px>,
     len: usize,
     overscan: usize,
-    scroll_to_index: Option<usize>,
-    key_at: impl FnMut(usize) -> K,
+    scroll_handle: &VirtualListScrollHandle,
+    items_revision: u64,
+    key_at: impl FnMut(usize) -> u64,
     on_select: impl Fn(usize) -> Option<CommandId>,
     mut row_contents: impl FnMut(&mut ElementCx<'_, H>, usize) -> Vec<AnyElement>,
 ) -> AnyElement {
@@ -68,7 +71,9 @@ pub fn list_virtualized<H: UiHost, K: std::hash::Hash>(
         })
         .unwrap_or(None);
 
-    let scroll_to_index = scroll_to_index.or(selected);
+    if let Some(selected) = selected {
+        scroll_handle.scroll_to_item(selected, ScrollStrategy::Nearest);
+    }
 
     let theme = Theme::global(&*cx.app);
     let (list_bg, border, row_hover, row_active) = resolve_list_colors(theme);
@@ -77,6 +82,9 @@ pub fn list_virtualized<H: UiHost, K: std::hash::Hash>(
     let row_h = row_height.unwrap_or_else(|| resolve_row_height(theme, size));
     let row_px = resolve_row_padding_x(theme);
     let row_py = resolve_row_padding_y(theme);
+
+    let mut options = fret_ui::element::VirtualListOptions::new(row_h, overscan);
+    options.items_revision = items_revision;
 
     cx.container(
         ContainerProps {
@@ -88,7 +96,7 @@ pub fn list_virtualized<H: UiHost, K: std::hash::Hash>(
         },
         |cx| {
             vec![
-                cx.virtual_list_keyed(len, row_h, overscan, scroll_to_index, key_at, |cx, i| {
+                cx.virtual_list_keyed(len, options, scroll_handle, key_at, |cx, i| {
                     let cmd = on_select(i);
                     let enabled = cmd.is_some();
 
@@ -100,9 +108,7 @@ pub fn list_virtualized<H: UiHost, K: std::hash::Hash>(
                         },
                         |cx, st| {
                             let is_selected = selected == Some(i);
-                            let bg = if is_selected {
-                                Some(row_active)
-                            } else if enabled && st.pressed {
+                            let bg = if is_selected || (enabled && st.pressed) {
                                 Some(row_active)
                             } else if enabled && st.hovered {
                                 Some(row_hover)
@@ -146,6 +152,9 @@ pub fn list_from_strings<H: UiHost>(
     cx.observe_model(items, Invalidation::Layout);
     let values = cx.app.models().get(items).cloned().unwrap_or_default();
 
+    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+    let items_revision = cx.app.models().revision(items).unwrap_or(0);
+
     list_virtualized(
         cx,
         selection,
@@ -153,8 +162,9 @@ pub fn list_from_strings<H: UiHost>(
         None,
         values.len(),
         2,
-        None,
-        |i| i,
+        &scroll_handle,
+        items_revision,
+        |i| i as u64,
         on_select,
         |cx, i| {
             let label = values.get(i).map(String::as_str).unwrap_or("");

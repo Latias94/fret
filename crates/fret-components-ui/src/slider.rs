@@ -185,12 +185,13 @@ impl Slider {
             return;
         }
         next = next.clamp(min, max);
-        if let Some(step) = self.step {
-            if step.is_finite() && step > 0.0 {
-                let t = (next - min) / step;
-                next = min + t.round() * step;
-                next = next.clamp(min, max);
-            }
+        if let Some(step) = self.step
+            && step.is_finite()
+            && step > 0.0
+        {
+            let t = (next - min) / step;
+            next = min + t.round() * step;
+            next = next.clamp(min, max);
         }
         let _ = app.models_mut().update(self.model, |cur| *cur = next);
     }
@@ -266,8 +267,8 @@ impl<H: UiHost> Widget<H> for Slider {
         self.sync_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
 
-        match event {
-            Event::Pointer(pe) => match pe {
+        if let Event::Pointer(pe) = event {
+            match pe {
                 fret_core::PointerEvent::Move { position, .. } => {
                     let hovered = cx.bounds.contains(*position);
                     if hovered != self.hovered {
@@ -318,8 +319,7 @@ impl<H: UiHost> Widget<H> for Slider {
                     }
                 }
                 _ => {}
-            },
-            _ => {}
+            }
         }
     }
 
@@ -465,7 +465,7 @@ mod tests {
         ui.set_root(slider);
 
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
-        let mut text = FakeText::default();
+        let mut text = FakeText;
 
         ui.layout_all(&mut app, &mut text, bounds, 1.0);
 

@@ -1,15 +1,14 @@
+use crate::BoundTextInput;
 use crate::UiHost;
 use crate::element::{
-    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, HoverCardAlign, HoverCardProps,
-    LayoutStyle, Length, MainAlign, Overflow, PressableProps, SpacerProps, SpinnerProps,
-    StackProps, TextProps,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, HoverRegionProps, LayoutStyle,
+    Length, MainAlign, Overflow, PressableProps, SpacerProps, SpinnerProps, StackProps, TextProps,
 };
 use crate::elements::{ElementCx, GlobalElementId, NodeEntry};
-use crate::primitives::BoundTextInput;
 use crate::tree::UiTree;
 use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget};
 use fret_core::{
-    AppWindowId, Color, CursorIcon, DrawOrder, Edges, Event, FontId, FrameId, MouseButton, NodeId,
+    AppWindowId, Color, CursorIcon, DrawOrder, Edges, Event, FontId, MouseButton, NodeId,
     Point, Px, Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow,
     TextStyle,
 };
@@ -76,8 +75,10 @@ fn paint_children_clipped_if<H: UiHost>(
                 || radii.bottom_right.0 > 0.0
                 || radii.bottom_left.0 > 0.0)
         {
-            cx.scene
-                .push(SceneOp::PushClipRRect { rect: cx.bounds, corner_radii: radii });
+            cx.scene.push(SceneOp::PushClipRRect {
+                rect: cx.bounds,
+                corner_radii: radii,
+            });
         } else {
             cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
         }
@@ -190,8 +191,9 @@ pub(crate) enum ElementInstance {
     Flex(FlexProps),
     Grid(crate::element::GridProps),
     Image(crate::element::ImageProps),
+    SvgIcon(crate::element::SvgIconProps),
     Spinner(SpinnerProps),
-    HoverCard(HoverCardProps),
+    HoverRegion(HoverRegionProps),
     Scroll(crate::element::ScrollProps),
 }
 
@@ -228,8 +230,9 @@ fn layout_style_for_node<H: UiHost>(app: &mut H, window: AppWindowId, node: Node
             ElementInstance::Flex(p) => p.layout,
             ElementInstance::Grid(p) => p.layout,
             ElementInstance::Image(p) => p.layout,
+            ElementInstance::SvgIcon(p) => p.layout,
             ElementInstance::Spinner(p) => p.layout,
-            ElementInstance::HoverCard(p) => p.layout,
+            ElementInstance::HoverRegion(p) => p.layout,
             ElementInstance::Scroll(p) => p.layout,
         })
         .unwrap_or_default()
@@ -360,7 +363,7 @@ fn taffy_rect_lpa_from_margin_edges(
 fn taffy_grid_line(line: crate::element::GridLine) -> TaffyLine<GridPlacement> {
     let start = line
         .start
-        .map(|s| taffy::style_helpers::line::<GridPlacement>(s))
+        .map(taffy::style_helpers::line::<GridPlacement>)
         .unwrap_or(GridPlacement::Auto);
     let end = line
         .span
@@ -421,13 +424,6 @@ struct TextCache {
     last_theme_revision: Option<u64>,
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-struct HoverCardOpenState {
-    open: bool,
-    hover_start: Option<FrameId>,
-    leave_start: Option<FrameId>,
-}
-
 struct ElementHostWidget {
     element: GlobalElementId,
     text_cache: TextCache,
@@ -439,7 +435,6 @@ struct ElementHostWidget {
     clip_hit_test_corner_radii: Option<fret_core::Corners>,
     scrollbar_hit_rect: Option<Rect>,
     text_input: Option<BoundTextInput>,
-    hover_card_open: bool,
 }
 
 impl ElementHostWidget {
@@ -521,13 +516,25 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             self.element,
                             crate::element::VirtualListState::default,
                             |state| {
+                                state.metrics.ensure(
+                                    props.len,
+                                    props.estimate_row_height,
+                                    props.gap,
+                                    props.scroll_margin,
+                                );
                                 let viewport_h = Px(state.viewport_h.0.max(0.0));
-                                let row_h = Px(props.row_height.0.max(0.0));
-                                let content_h = Px(row_h.0 * props.len as f32);
-                                let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
 
-                                let next = Px((state.offset_y.0 - delta.y.0).max(0.0));
-                                state.offset_y = Px(next.0.min(max_offset.0));
+                                let prev = props.scroll_handle.offset();
+                                let offset_y = state.metrics.clamp_offset(prev.y, viewport_h);
+
+                                let next = state
+                                    .metrics
+                                    .clamp_offset(Px(offset_y.0 - delta.y.0), viewport_h);
+                                if (prev.y.0 - next.0).abs() > 0.01 {
+                                    props
+                                        .scroll_handle
+                                        .set_offset(fret_core::Point::new(prev.x, next));
+                                }
                             },
                         );
                         cx.invalidate_self(Invalidation::Layout);
@@ -547,22 +554,27 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 let Event::Pointer(pe) = event else {
                     return;
                 };
+                let external_handle = props.scroll_handle.clone();
                 match pe {
                     fret_core::PointerEvent::Wheel { delta, .. } => {
-                        crate::elements::with_element_state(
-                            &mut *cx.app,
-                            window,
-                            self.element,
-                            crate::element::ScrollState::default,
-                            |state| {
-                                let viewport_h = Px(state.viewport_h.0.max(0.0));
-                                let content_h = Px(state.content_h.0.max(0.0));
-                                let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
-
-                                let next = Px((state.offset_y.0 - delta.y.0).max(0.0));
-                                state.offset_y = Px(next.0.min(max_offset.0));
-                            },
-                        );
+                        if let Some(handle) = external_handle.as_ref() {
+                            let prev = handle.offset();
+                            handle.set_offset(Point::new(prev.x, Px(prev.y.0 - delta.y.0)));
+                        } else {
+                            crate::elements::with_element_state(
+                                &mut *cx.app,
+                                window,
+                                self.element,
+                                crate::element::ScrollState::default,
+                                |state| {
+                                    let prev = state.scroll_handle.offset();
+                                    state.scroll_handle.set_offset(Point::new(
+                                        prev.x,
+                                        Px(prev.y.0 - delta.y.0),
+                                    ));
+                                },
+                            );
+                        }
                         cx.invalidate_self(Invalidation::Layout);
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
@@ -588,8 +600,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             self.element,
                             crate::element::ScrollState::default,
                             |state| {
-                                let viewport_h = Px(state.viewport_h.0.max(0.0));
-                                let content_h = Px(state.content_h.0.max(0.0));
+                                let handle = external_handle.as_ref().unwrap_or(&state.scroll_handle);
+                                let viewport_h = Px(handle.viewport_size().height.0.max(0.0));
+                                let content_h = Px(handle.content_size().height.0.max(0.0));
                                 let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
 
                                 let track =
@@ -620,8 +633,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                                 + delta_y * scale)
                                                 .max(0.0));
                                             let next = Px(next.0.min(max_offset.0));
-                                            if state.offset_y != next {
-                                                state.offset_y = next;
+                                            if (handle.offset().y.0 - next.0).abs() > 0.01 {
+                                                let prev = handle.offset();
+                                                handle.set_offset(Point::new(prev.x, next));
                                                 needs_layout = true;
                                                 needs_paint = true;
                                             }
@@ -676,8 +690,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             self.element,
                             crate::element::ScrollState::default,
                             |state| {
-                                let viewport_h = Px(state.viewport_h.0.max(0.0));
-                                let content_h = Px(state.content_h.0.max(0.0));
+                                let handle = external_handle.as_ref().unwrap_or(&state.scroll_handle);
+                                let viewport_h = Px(handle.viewport_size().height.0.max(0.0));
+                                let content_h = Px(handle.content_size().height.0.max(0.0));
                                 let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
                                 if max_offset.0 <= 0.0 {
                                     return;
@@ -694,7 +709,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                     track,
                                     viewport_h,
                                     content_h,
-                                    state.offset_y,
+                                    handle.offset().y,
                                 ) else {
                                     return;
                                 };
@@ -705,7 +720,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                 if thumb.contains(position) {
                                     state.dragging_thumb = true;
                                     state.drag_start_pointer_y = position.y;
-                                    state.drag_start_offset_y = state.offset_y;
+                                    state.drag_start_offset_y = handle.offset().y;
                                     did_start_drag = true;
                                 } else {
                                     // Page to the click position (center the thumb on the pointer).
@@ -717,8 +732,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                         let thumb_top = (click_y - thumb.size.height.0 * 0.5)
                                             .clamp(0.0, max_thumb_y);
                                         let t = thumb_top / max_thumb_y;
-                                        state.offset_y =
+                                        let next =
                                             Px((max_offset.0 * t).clamp(0.0, max_offset.0));
+                                        let prev = handle.offset();
+                                        handle.set_offset(Point::new(prev.x, next));
                                     }
                                 }
                             },
@@ -798,10 +815,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                 self.element,
                             );
 
-                            if hovered {
-                                if let Some(command) = props.on_click.clone() {
-                                    cx.dispatch_command(command);
-                                }
+                            if hovered && let Some(command) = props.on_click.clone() {
+                                cx.dispatch_command(command);
                             }
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
@@ -916,7 +931,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 // Flex/Grid are layout containers; they do not imply semantics beyond their children.
             }
             ElementInstance::Image(_)
-            | ElementInstance::HoverCard(_)
+            | ElementInstance::HoverRegion(_)
             | ElementInstance::Spinner(_)
             | ElementInstance::Scroll(_) => {
                 cx.set_role(SemanticsRole::Generic);
@@ -930,6 +945,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         let Some(window) = cx.window else {
             return Size::new(Px(0.0), Px(0.0));
         };
+
+        crate::elements::record_bounds_for_element(&mut *cx.app, window, self.element, cx.bounds);
 
         for (model, invalidation) in
             crate::elements::observed_models_for_element(cx.app, window, self.element)
@@ -965,11 +982,12 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::Grid(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::TextInput(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Scroll(p) => matches!(p.layout.overflow, Overflow::Clip),
-            ElementInstance::HoverCard(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::HoverRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             // These primitives are always hit-test clipped by their own bounds (they are not
             // intended as overflow-visible containers).
             ElementInstance::VirtualList(_)
             | ElementInstance::Image(_)
+            | ElementInstance::SvgIcon(_)
             | ElementInstance::Spinner(_)
             | ElementInstance::Text(_) => true,
             ElementInstance::Spacer(_) => true,
@@ -1004,8 +1022,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     Px((cx.available.height.0 - pad_h).max(0.0)),
                 );
 
-                let probe_bounds =
-                    Rect::new(cx.bounds.origin, Size::new(inner_avail.width, Px(1.0e9)));
+                // Probe within the available height budget so measurement passes do not observe an
+                // artificially "infinite" viewport (important for scroll/virtualized children).
+                let probe_bounds = Rect::new(cx.bounds.origin, inner_avail);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
@@ -1046,8 +1065,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 desired
             }
             ElementInstance::Pressable(props) => {
-                let probe_bounds =
-                    Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(1.0e9)));
+                // Probe within the available height budget so measurement passes do not observe an
+                // artificially "infinite" viewport (important for scroll/virtualized children).
+                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
@@ -1068,8 +1088,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 desired
             }
             ElementInstance::Stack(props) => {
-                let probe_bounds =
-                    Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(1.0e9)));
+                // Probe within the available height budget so measurement passes do not observe an
+                // artificially "infinite" viewport (important for scroll/virtualized children).
+                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
@@ -1151,8 +1172,22 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 clamp_to_constraints(desired, props.layout, cx.available)
             }
             ElementInstance::VirtualList(props) => {
-                let row_h = Px(props.row_height.0.max(0.0));
-                let content_h = Px(row_h.0 * props.len as f32);
+                let mut metrics = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::VirtualListState::default,
+                    |state| {
+                        state.metrics.ensure(
+                            props.len,
+                            props.estimate_row_height,
+                            props.gap,
+                            props.scroll_margin,
+                        );
+                        state.metrics.clone()
+                    },
+                );
+                let content_h = metrics.total_height();
 
                 let desired_w = match props.layout.size.width {
                     Length::Px(px) => Px(px.0.max(0.0)),
@@ -1169,71 +1204,132 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     props.layout,
                     cx.available,
                 );
+                let viewport_h = Px(size.height.0.max(0.0));
                 let mut needs_redraw = false;
+
+                props.scroll_handle.set_items_count(props.len);
+
+                let prev_offset = props.scroll_handle.offset();
+                let mut offset_y = metrics.clamp_offset(prev_offset.y, viewport_h);
+
+                // Avoid consuming deferred scroll requests during "probe" layout passes that use
+                // an effectively-unbounded available height (e.g. Stack/Pressable measuring with
+                // `Px(1.0e9)`). Those passes are not the final viewport constraints and would
+                // otherwise clear the request before the real layout happens.
+                let is_probe_layout = cx.available.height.0 >= 1.0e8;
+
+                if !is_probe_layout
+                    && viewport_h.0 > 0.0
+                    && props.len > 0
+                    && let Some((index, strategy)) = props.scroll_handle.deferred_scroll_to_item()
+                {
+                    let index = index.min(props.len.saturating_sub(1));
+                    let item_top = metrics.offset_for_index(index);
+                    let item_bottom = metrics.end_for_index(index);
+
+                    let view_top = offset_y;
+                    let view_bottom = Px(offset_y.0 + viewport_h.0);
+
+                    offset_y = match strategy {
+                        crate::scroll::ScrollStrategy::Start => item_top,
+                        crate::scroll::ScrollStrategy::End => Px(item_bottom.0 - viewport_h.0),
+                        crate::scroll::ScrollStrategy::Center => {
+                            let item_center = 0.5 * (item_top.0 + item_bottom.0);
+                            Px(item_center - 0.5 * viewport_h.0)
+                        }
+                        crate::scroll::ScrollStrategy::Nearest => {
+                            if item_top.0 < view_top.0 {
+                                item_top
+                            } else if item_bottom.0 > view_bottom.0 {
+                                Px(item_bottom.0 - viewport_h.0)
+                            } else {
+                                offset_y
+                            }
+                        }
+                    };
+                    props.scroll_handle.clear_deferred_scroll_to_item();
+                }
+
+                offset_y = metrics.clamp_offset(offset_y, viewport_h);
+
+                if (prev_offset.y.0 - offset_y.0).abs() > 0.01 {
+                    needs_redraw = true;
+                }
+                props
+                    .scroll_handle
+                    .set_offset(fret_core::Point::new(prev_offset.x, offset_y));
+
+                props
+                    .scroll_handle
+                    .set_viewport_size(Size::new(size.width, size.height));
+                props
+                    .scroll_handle
+                    .set_content_size(Size::new(size.width, content_h));
+
+                let mut measured_updates: Vec<(usize, crate::ItemKey, Px)> =
+                    Vec::with_capacity(cx.children.len());
+
+                for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
+                    let idx = item.index;
+                    let key = item.key;
+                    let y = cx.bounds.origin.y.0 + metrics.offset_for_index(idx).0 - offset_y.0;
+                    let origin = fret_core::Point::new(cx.bounds.origin.x, Px(y));
+
+                    let measure_bounds = Rect::new(origin, Size::new(size.width, Px(1.0e9)));
+                    let measured = cx.layout_in(child, measure_bounds);
+                    let measured_h = Px(measured.height.0.max(0.0));
+
+                    measured_updates.push((idx, key, measured_h));
+                    if metrics.set_measured_height(idx, measured_h) {
+                        needs_redraw = true;
+                    }
+
+                    let child_bounds = Rect::new(origin, Size::new(size.width, measured_h));
+                    let _ = cx.layout_in(child, child_bounds);
+                }
+
+                let content_h = metrics.total_height();
+                props
+                    .scroll_handle
+                    .set_viewport_size(Size::new(size.width, viewport_h));
+                props
+                    .scroll_handle
+                    .set_content_size(Size::new(size.width, content_h));
+
+                let prev_offset = props.scroll_handle.offset();
+                let clamped = metrics.clamp_offset(prev_offset.y, viewport_h);
+                if (clamped.0 - prev_offset.y.0).abs() > 0.01 {
+                    needs_redraw = true;
+                }
+                props
+                    .scroll_handle
+                    .set_offset(fret_core::Point::new(prev_offset.x, clamped));
+                offset_y = clamped;
+
                 crate::elements::with_element_state(
                     &mut *cx.app,
                     window,
                     self.element,
                     crate::element::VirtualListState::default,
                     |state| {
-                        let prev_viewport_h = state.viewport_h;
-                        let prev_offset_y = state.offset_y;
-
-                        let viewport_h = Px(size.height.0.max(0.0));
+                        for (idx, key, h) in &measured_updates {
+                            state.size_cache.insert(*key, *h);
+                            if let Some(slot) = state.keys.get_mut(*idx) {
+                                *slot = *key;
+                            }
+                        }
+                        state.offset_y = offset_y;
                         if state.viewport_h != viewport_h {
                             state.viewport_h = viewport_h;
+                            needs_redraw = true;
                         }
-
-                        let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
-                        state.offset_y = Px(state.offset_y.0.max(0.0).min(max_offset.0));
-
-                        if let Some(target) = props.scroll_to_index
-                            && viewport_h.0 > 0.0
-                            && row_h.0 > 0.0
-                            && props.len > 0
-                        {
-                            let target = target.min(props.len.saturating_sub(1));
-                            let row_top = row_h.0 * target as f32;
-                            let row_bottom = row_top + row_h.0;
-                            let view_top = state.offset_y.0;
-                            let view_bottom = state.offset_y.0 + viewport_h.0;
-
-                            if row_top < view_top {
-                                state.offset_y = Px(row_top);
-                            } else if row_bottom > view_bottom {
-                                state.offset_y = Px(row_bottom - viewport_h.0);
-                            }
-
-                            state.offset_y = Px(state.offset_y.0.max(0.0).min(max_offset.0));
-                        }
-
-                        needs_redraw =
-                            state.viewport_h != prev_viewport_h || state.offset_y != prev_offset_y;
+                        state.items_revision = props.items_revision;
+                        state.metrics = metrics;
                     },
                 );
+
                 if needs_redraw && let Some(window) = cx.window {
                     cx.app.request_redraw(window);
-                }
-
-                let offset_y = crate::elements::with_element_state(
-                    &mut *cx.app,
-                    window,
-                    self.element,
-                    crate::element::VirtualListState::default,
-                    |state| state.offset_y,
-                );
-
-                let start = props.visible_start;
-                let row_h = Px(props.row_height.0.max(0.0));
-
-                for (i, &child) in cx.children.iter().enumerate() {
-                    let idx = start + i;
-                    let y = cx.bounds.origin.y.0 + row_h.0 * idx as f32 - offset_y.0;
-                    let child_bounds = Rect::new(
-                        fret_core::Point::new(cx.bounds.origin.x, Px(y)),
-                        Size::new(size.width, row_h),
-                    );
-                    let _ = cx.layout_in(child, child_bounds);
                 }
 
                 size
@@ -1750,117 +1846,36 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 clamp_to_constraints(desired, props.layout, cx.available)
             }
             ElementInstance::Image(props) => {
-                let desired = clamp_to_constraints(cx.available, props.layout, cx.available);
-                desired
+                clamp_to_constraints(cx.available, props.layout, cx.available)
+            }
+            ElementInstance::SvgIcon(props) => {
+                clamp_to_constraints(cx.available, props.layout, cx.available)
             }
             ElementInstance::Spinner(props) => {
-                let desired =
-                    clamp_to_constraints(Size::new(Px(16.0), Px(16.0)), props.layout, cx.available);
-                desired
+                clamp_to_constraints(Size::new(Px(16.0), Px(16.0)), props.layout, cx.available)
             }
-            ElementInstance::HoverCard(props) => {
-                let hovered =
-                    crate::elements::is_hovered_hover_card(&mut *cx.app, window, self.element);
-
-                let frame = cx.app.frame_id();
-                let open_delay = props.open_delay_frames as u64;
-                let close_delay = props.close_delay_frames as u64;
-
-                let open = crate::elements::with_element_state(
-                    &mut *cx.app,
-                    window,
-                    self.element,
-                    HoverCardOpenState::default,
-                    |state| {
-                        if hovered {
-                            state.leave_start = None;
-                            if !state.open {
-                                let start = state.hover_start.get_or_insert(frame);
-                                let elapsed = frame.0.saturating_sub(start.0);
-                                if elapsed >= open_delay {
-                                    state.open = true;
-                                    state.hover_start = None;
-                                }
-                            }
-                        } else {
-                            state.hover_start = None;
-                            if state.open {
-                                let start = state.leave_start.get_or_insert(frame);
-                                let elapsed = frame.0.saturating_sub(start.0);
-                                if elapsed >= close_delay {
-                                    state.open = false;
-                                    state.leave_start = None;
-                                }
-                            } else {
-                                state.leave_start = None;
-                            }
-                        }
-                        state.open
-                    },
-                );
-                self.hover_card_open = open;
-
-                if let Some(window) = cx.window
-                    && ((hovered && !open && open_delay > 0)
-                        || (!hovered && open && close_delay > 0))
-                {
-                    cx.app.push_effect(Effect::RequestAnimationFrame(window));
-                    cx.app.push_effect(Effect::UiInvalidateLayout { window });
-                    cx.app.request_redraw(window);
-                }
-
-                let Some(&trigger) = cx.children.first() else {
-                    self.hover_card_open = false;
-                    return Size::new(Px(0.0), Px(0.0));
-                };
-
-                let trigger_probe =
-                    Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(1.0e9)));
-                let trigger_size = cx.layout_in(trigger, trigger_probe);
-                let trigger_bounds = Rect::new(cx.bounds.origin, trigger_size);
-                let _ = cx.layout_in(trigger, trigger_bounds);
-
-                if let Some(&content) = cx.children.get(1) {
-                    if open {
-                        let probe = Rect::new(
-                            fret_core::Point::new(Px(0.0), Px(0.0)),
-                            Size::new(Px(1.0e9), Px(1.0e9)),
-                        );
-                        let content_size = cx.layout_in(content, probe);
-
-                        let outer = crate::elements::root_bounds_for_element(
-                            &mut *cx.app,
-                            window,
-                            self.element,
-                        )
-                        .unwrap_or_else(|| Rect::new(Point::new(Px(0.0), Px(0.0)), cx.available));
-                        let margin = Px(props.window_margin.0.max(0.0));
-                        let outer = crate::overlay_placement::inset_rect(outer, Edges::all(margin));
-
-                        let align = match props.align {
-                            HoverCardAlign::Start => crate::overlay_placement::Align::Start,
-                            HoverCardAlign::Center => crate::overlay_placement::Align::Center,
-                            HoverCardAlign::End => crate::overlay_placement::Align::End,
-                        };
-
-                        let bounds = crate::overlay_placement::anchored_panel_bounds(
-                            outer,
-                            trigger_bounds,
-                            content_size,
-                            props.side_offset,
-                            crate::overlay_placement::Side::Bottom,
-                            align,
-                        );
-                        let _ = cx.layout_in(content, bounds);
-                    } else {
-                        let _ = cx.layout_in(
-                            content,
-                            Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
-                        );
+            ElementInstance::HoverRegion(props) => {
+                // Probe within the available height budget so measurement passes do not observe an
+                // artificially "infinite" viewport (important for scroll/virtualized children).
+                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let mut max_child = Size::new(Px(0.0), Px(0.0));
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    if layout_style.position == crate::element::PositionStyle::Absolute {
+                        continue;
                     }
+                    let child_size = cx.layout_in(child, probe_bounds);
+                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
 
-                clamp_to_constraints(trigger_size, props.layout, cx.available)
+                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let base = Rect::new(cx.bounds.origin, desired);
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
+                }
+                desired
             }
             ElementInstance::Scroll(props) => {
                 let probe_bounds =
@@ -1878,16 +1893,25 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 let content_h = Px(max_child.height.0.max(0.0));
                 let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
 
+                // Avoid mutating the imperative handle during "probe" layout passes that use an
+                // effectively-unbounded available height (e.g. Stack/Pressable measuring with
+                // `Px(1.0e9)`), otherwise scroll position can be clamped to zero prematurely.
+                let is_probe_layout = cx.available.height.0 >= 1.0e8;
+                let external_handle = props.scroll_handle.clone();
                 let offset_y = crate::elements::with_element_state(
                     &mut *cx.app,
                     window,
                     self.element,
                     crate::element::ScrollState::default,
                     |state| {
-                        state.viewport_h = viewport_h;
-                        state.content_h = content_h;
-                        state.offset_y = Px(state.offset_y.0.max(0.0).min(max_offset.0));
-                        state.offset_y
+                        let handle = external_handle.as_ref().unwrap_or(&state.scroll_handle);
+                        if !is_probe_layout {
+                            handle.set_viewport_size(desired);
+                            handle.set_content_size(Size::new(max_child.width, content_h));
+                            let prev = handle.offset();
+                            handle.set_offset(prev);
+                        }
+                        handle.offset().y
                     },
                 );
 
@@ -1969,17 +1993,33 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 );
             }
             ElementInstance::Stack(props) => {
-                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip), None);
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
             }
             ElementInstance::Flex(props) => {
-                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip), None);
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
             }
             ElementInstance::Grid(props) => {
-                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip), None);
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
             }
             ElementInstance::Spacer(_props) => {}
             ElementInstance::Pressable(props) => {
-                paint_children_clipped_if(cx, matches!(props.layout.overflow, Overflow::Clip), None);
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
 
                 if props.enabled
                     && cx.focus == Some(cx.node)
@@ -2078,20 +2118,27 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::VirtualList(props) => {
                 cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
 
-                let offset_y = crate::elements::with_element_state(
+                let offset_y = props.scroll_handle.offset().y;
+                let metrics = crate::elements::with_element_state(
                     &mut *cx.app,
                     window,
                     self.element,
                     crate::element::VirtualListState::default,
-                    |state| Px(state.offset_y.0.max(0.0)),
+                    |state| {
+                        state.metrics.ensure(
+                            props.len,
+                            props.estimate_row_height,
+                            props.gap,
+                            props.scroll_margin,
+                        );
+                        state.metrics.clone()
+                    },
                 );
 
-                let start = props.visible_start;
-                let row_h = Px(props.row_height.0.max(0.0));
-
-                for (i, &child) in cx.children.iter().enumerate() {
-                    let idx = start + i;
-                    let y = cx.bounds.origin.y.0 + row_h.0 * idx as f32 - offset_y.0;
+                for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
+                    let idx = item.index;
+                    let y = cx.bounds.origin.y.0 + metrics.offset_for_index(idx).0 - offset_y.0;
+                    let row_h = metrics.height_at(idx);
                     let child_bounds = Rect::new(
                         fret_core::Point::new(cx.bounds.origin.x, Px(y)),
                         Size::new(cx.bounds.size.width, row_h),
@@ -2123,6 +2170,22 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     });
                 }
             }
+            ElementInstance::SvgIcon(props) => {
+                let opacity = props.opacity.clamp(0.0, 1.0);
+                if opacity <= 0.0 || props.color.a <= 0.0 {
+                    return;
+                }
+
+                let svg = props.svg.resolve(cx.services);
+                cx.scene.push(SceneOp::SvgMaskIcon {
+                    order: DrawOrder(0),
+                    rect: cx.bounds,
+                    svg,
+                    fit: props.fit,
+                    color: props.color,
+                    opacity,
+                });
+            }
             ElementInstance::Spinner(props) => {
                 let theme = cx.theme();
                 let base = props
@@ -2130,7 +2193,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     .or_else(|| theme.color_by_key("muted-foreground"))
                     .unwrap_or(theme.colors.text_muted);
 
-                let n = (props.dot_count.max(1).min(32)) as usize;
+                let n = props.dot_count.clamp(1, 32) as usize;
 
                 let w = cx.bounds.size.width.0.max(0.0);
                 let h = cx.bounds.size.height.0.max(0.0);
@@ -2188,22 +2251,15 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     });
                 }
             }
-            ElementInstance::HoverCard(props) => {
+            ElementInstance::HoverRegion(props) => {
                 let clip = matches!(props.layout.overflow, Overflow::Clip);
                 if clip {
                     cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
                 }
 
-                if let Some(&trigger) = cx.children.first() {
-                    let bounds = cx.child_bounds(trigger).unwrap_or(cx.bounds);
-                    cx.paint(trigger, bounds);
-                }
-
-                if self.hover_card_open
-                    && let Some(&content) = cx.children.get(1)
-                {
-                    let bounds = cx.child_bounds(content).unwrap_or(cx.bounds);
-                    cx.paint(content, bounds);
+                for &child in cx.children {
+                    let bounds = cx.child_bounds(child).unwrap_or(cx.bounds);
+                    cx.paint(child, bounds);
                 }
 
                 if clip {
@@ -2226,22 +2282,24 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 }
 
                 if props.show_scrollbar {
-                    let (offset_y, viewport_h, content_h, hovered, dragging) =
-                        crate::elements::with_element_state(
-                            &mut *cx.app,
-                            window,
-                            self.element,
-                            crate::element::ScrollState::default,
-                            |state| {
-                                (
-                                    state.offset_y,
-                                    state.viewport_h,
-                                    state.content_h,
-                                    state.hovered_scrollbar,
-                                    state.dragging_thumb,
-                                )
-                            },
-                        );
+                    let external_handle = props.scroll_handle.clone();
+                    let (internal_handle, hovered, dragging) = crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        self.element,
+                        crate::element::ScrollState::default,
+                        |state| {
+                            (
+                                state.scroll_handle.clone(),
+                                state.hovered_scrollbar,
+                                state.dragging_thumb,
+                            )
+                        },
+                    );
+                    let handle = external_handle.as_ref().unwrap_or(&internal_handle);
+                    let offset_y = handle.offset().y;
+                    let viewport_h = handle.viewport_size().height;
+                    let content_h = handle.content_size().height;
                     let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
                     if max_offset.0 > 0.0 {
                         let theme = cx.theme();
@@ -2334,7 +2392,6 @@ pub fn render_root<H: UiHost>(
                     clip_hit_test_corner_radii: None,
                     scrollbar_hit_rect: None,
                     text_input: None,
-                    hover_card_open: false,
                 });
                 window_state.set_node_entry(
                     root_id,
@@ -2382,7 +2439,7 @@ pub fn render_root<H: UiHost>(
         }
         ui.set_children(root_node, mounted_children);
 
-        // Record the root's coordinate space for placement/collision logic (e.g. HoverCard).
+        // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
 
         // Sweep nodes that are not seen for `gc_lag_frames`.
@@ -2434,7 +2491,6 @@ fn mount_element<H: UiHost>(
                 clip_hit_test_corner_radii: None,
                 scrollbar_hit_rect: None,
                 text_input: None,
-                hover_card_open: false,
             });
             window_state.set_node_entry(
                 id,
@@ -2485,8 +2541,9 @@ fn mount_element<H: UiHost>(
         ElementKind::Flex(p) => ElementInstance::Flex(p),
         ElementKind::Grid(p) => ElementInstance::Grid(p),
         ElementKind::Image(p) => ElementInstance::Image(p),
+        ElementKind::SvgIcon(p) => ElementInstance::SvgIcon(p),
         ElementKind::Spinner(p) => ElementInstance::Spinner(p),
-        ElementKind::HoverCard(p) => ElementInstance::HoverCard(p),
+        ElementKind::HoverRegion(p) => ElementInstance::HoverRegion(p),
         ElementKind::Scroll(p) => ElementInstance::Scroll(p),
     };
 
@@ -2533,7 +2590,7 @@ mod tests {
     use fret_runtime::{CommandId, Effect};
 
     #[derive(Default)]
-    struct FakeTextService;
+    struct FakeTextService {}
 
     impl TextService for FakeTextService {
         fn prepare(
@@ -2742,6 +2799,7 @@ mod tests {
         let mut ui: UiTree<TestHost> = UiTree::new();
         let window = AppWindowId::default();
         ui.set_window(window);
+        let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
 
         let bounds = Rect::new(
             fret_core::Point::new(Px(0.0), Px(0.0)),
@@ -2753,10 +2811,20 @@ mod tests {
         fn build_list(
             cx: &mut ElementCx<'_, TestHost>,
             list_element_id: &mut Option<crate::elements::GlobalElementId>,
+            scroll_handle: &crate::scroll::VirtualListScrollHandle,
         ) -> crate::element::AnyElement {
-            let list = cx.virtual_list(100, Px(10.0), 0, None, |cx, range| {
-                range.map(|i| cx.keyed(i, |cx| cx.text("row"))).collect()
-            });
+            let list = cx.virtual_list(
+                100,
+                crate::element::VirtualListOptions::new(Px(10.0), 0),
+                scroll_handle,
+                |cx, items| {
+                    items
+                        .iter()
+                        .copied()
+                        .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
+                        .collect()
+                },
+            );
             *list_element_id = Some(list.id);
             list
         }
@@ -2770,20 +2838,20 @@ mod tests {
             window,
             bounds,
             "mvp50-vlist",
-            |cx| vec![build_list(cx, &mut list_element_id)],
+            |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
         );
         ui.set_root(root);
         ui.layout_all(&mut app, &mut text, bounds, 1.0);
         let list_node = ui.children(root)[0];
         assert_eq!(ui.children(list_node).len(), 0);
-        let state = crate::elements::with_element_state(
+        let viewport_h = crate::elements::with_element_state(
             &mut app,
             window,
             list_element_id.unwrap(),
             crate::element::VirtualListState::default,
-            |s| *s,
+            |s| s.viewport_h,
         );
-        assert_eq!(state.viewport_h, Px(50.0));
+        assert_eq!(viewport_h, Px(50.0));
 
         // Frame 1: the list has recorded its viewport height during layout, so the authoring layer
         // can compute a visible range and mount only the visible children.
@@ -2797,7 +2865,7 @@ mod tests {
             window,
             bounds,
             "mvp50-vlist",
-            |cx| vec![build_list(cx, &mut list_element_id)],
+            |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
         );
         ui.set_root(root);
         ui.layout_all(&mut app, &mut text, bounds, 1.0);
@@ -2819,16 +2887,25 @@ mod tests {
         else {
             panic!("expected VirtualList instance");
         };
-        assert_eq!((props.visible_start, props.visible_end), (0, 5));
+        assert_eq!(
+            props
+                .visible_items
+                .iter()
+                .map(|item| item.index)
+                .collect::<Vec<_>>(),
+            vec![0, 1, 2, 3, 4]
+        );
         assert_eq!(ui.children(list_node).len(), 5);
     }
 
     #[test]
-    fn virtual_list_scroll_to_index_keeps_target_visible() {
+    fn virtual_list_scroll_to_item_keeps_target_visible() {
         let mut app = TestHost::new();
         let mut ui: UiTree<TestHost> = UiTree::new();
         let window = AppWindowId::default();
         ui.set_window(window);
+        let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+        let mut list_element_id: Option<crate::elements::GlobalElementId> = None;
 
         let bounds = Rect::new(
             fret_core::Point::new(Px(0.0), Px(0.0)),
@@ -2845,9 +2922,20 @@ mod tests {
             bounds,
             "mvp50-vlist-scroll-to",
             |cx| {
-                vec![cx.virtual_list(100, Px(10.0), 0, None, |cx, range| {
-                    range.map(|i| cx.keyed(i, |cx| cx.text("row"))).collect()
-                })]
+                let list = cx.virtual_list(
+                    100,
+                    crate::element::VirtualListOptions::new(Px(10.0), 0),
+                    &scroll_handle,
+                    |cx, items| {
+                        items
+                            .iter()
+                            .copied()
+                            .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
+                            .collect()
+                    },
+                );
+                list_element_id = Some(list.id);
+                vec![list]
             },
         );
         ui.set_root(root);
@@ -2856,7 +2944,11 @@ mod tests {
 
         // Frame 1: request scroll-to on a row below the viewport.
         let target = 6usize; // row_top=60, viewport=30 => needs offset ~= 40..60
-        let mut list_element_id: Option<crate::elements::GlobalElementId> = None;
+        scroll_handle.scroll_to_item(target, crate::scroll::ScrollStrategy::Nearest);
+        assert_eq!(
+            scroll_handle.deferred_scroll_to_item(),
+            Some((target, crate::scroll::ScrollStrategy::Nearest))
+        );
         let root = render_root(
             &mut ui,
             &mut app,
@@ -2865,28 +2957,160 @@ mod tests {
             bounds,
             "mvp50-vlist-scroll-to",
             |cx| {
-                let list = cx.virtual_list(100, Px(10.0), 0, Some(target), |cx, range| {
-                    range.map(|i| cx.keyed(i, |cx| cx.text("row"))).collect()
-                });
+                let list = cx.virtual_list(
+                    100,
+                    crate::element::VirtualListOptions::new(Px(10.0), 0),
+                    &scroll_handle,
+                    |cx, items| {
+                        items
+                            .iter()
+                            .copied()
+                            .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
+                            .collect()
+                    },
+                );
                 list_element_id = Some(list.id);
                 vec![list]
             },
         );
         ui.set_root(root);
         ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        assert!(scroll_handle.deferred_scroll_to_item().is_none());
 
         let state = crate::elements::with_element_state(
             &mut app,
             window,
             list_element_id.expect("list element id"),
             crate::element::VirtualListState::default,
-            |s| *s,
+            |s| s.clone(),
+        );
+        assert_eq!(state.viewport_h, Px(30.0));
+        assert!((state.metrics.offset_for_index(target).0 - 60.0).abs() < 0.01);
+        assert!(
+            (state.offset_y.0 - 40.0).abs() < 0.01,
+            "state_offset_y={:?}",
+            state.offset_y
         );
 
         assert!(
-            (state.offset_y.0 - 40.0).abs() < 0.01,
+            (scroll_handle.offset().y.0 - 40.0).abs() < 0.01,
             "offset_y={:?}",
-            state.offset_y
+            scroll_handle.offset().y
+        );
+    }
+
+    #[test]
+    fn virtual_list_scroll_to_item_uses_measured_row_heights() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+        let mut list_element_id: Option<crate::elements::GlobalElementId> = None;
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(30.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        fn row_with_height<H: UiHost>(cx: &mut ElementCx<'_, H>, height: Px) -> AnyElement {
+            let mut style = crate::element::LayoutStyle::default();
+            style.size.height = crate::element::Length::Px(height);
+            cx.container(
+                crate::element::ContainerProps {
+                    layout: style,
+                    ..Default::default()
+                },
+                |_| Vec::new(),
+            )
+        }
+
+        fn build_list<H: UiHost>(
+            cx: &mut ElementCx<'_, H>,
+            list_element_id: &mut Option<crate::elements::GlobalElementId>,
+            scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        ) -> AnyElement {
+            let list = cx.virtual_list(
+                100,
+                crate::element::VirtualListOptions::new(Px(10.0), 0),
+                scroll_handle,
+                |cx, items| {
+                    items
+                        .iter()
+                        .copied()
+                        .map(|item| {
+                            cx.keyed(item.key, |cx| {
+                                if item.index == 0 {
+                                    row_with_height(cx, Px(100.0))
+                                } else {
+                                    row_with_height(cx, Px(10.0))
+                                }
+                            })
+                        })
+                        .collect()
+                },
+            );
+            *list_element_id = Some(list.id);
+            list
+        }
+
+        // Frame 0: establish viewport height.
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp50-vlist-measure",
+            |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        app.advance_frame();
+
+        // Frame 1: ensure row 0 gets mounted and measured.
+        let prev_list_element_id = list_element_id;
+        list_element_id = None;
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp50-vlist-measure",
+            |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        assert_eq!(
+            prev_list_element_id, list_element_id,
+            "virtual list element id should be stable across frames"
+        );
+        app.advance_frame();
+
+        // Frame 2: scroll to item 1; should account for the measured height of item 0.
+        scroll_handle.scroll_to_item(1, crate::scroll::ScrollStrategy::Start);
+        assert_eq!(
+            scroll_handle.deferred_scroll_to_item(),
+            Some((1, crate::scroll::ScrollStrategy::Start))
+        );
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp50-vlist-measure",
+            |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        assert!(
+            (scroll_handle.offset().y.0 - 100.0).abs() < 0.01,
+            "offset_y={:?}",
+            scroll_handle.offset().y
         );
     }
 
@@ -2896,6 +3120,7 @@ mod tests {
         let mut ui: UiTree<TestHost> = UiTree::new();
         let window = AppWindowId::default();
         ui.set_window(window);
+        let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
 
         let bounds = Rect::new(
             fret_core::Point::new(Px(0.0), Px(0.0)),
@@ -2903,10 +3128,22 @@ mod tests {
         );
         let mut text = FakeTextService::default();
 
-        fn build_list<H: UiHost>(cx: &mut ElementCx<'_, H>) -> AnyElement {
-            cx.virtual_list(100, Px(10.0), 0, None, |cx, range| {
-                range.map(|i| cx.keyed(i, |cx| cx.text("row"))).collect()
-            })
+        fn build_list<H: UiHost>(
+            cx: &mut ElementCx<'_, H>,
+            scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        ) -> AnyElement {
+            cx.virtual_list(
+                100,
+                crate::element::VirtualListOptions::new(Px(10.0), 0),
+                scroll_handle,
+                |cx, items| {
+                    items
+                        .iter()
+                        .copied()
+                        .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
+                        .collect()
+                },
+            )
         }
 
         // Frame 0: record viewport height (no visible children yet).
@@ -2917,7 +3154,7 @@ mod tests {
             window,
             bounds,
             "mvp50-vlist-clip",
-            |cx| vec![build_list(cx)],
+            |cx| vec![build_list(cx, &scroll_handle)],
         );
         ui.set_root(root);
         ui.layout_all(&mut app, &mut text, bounds, 1.0);
@@ -2931,7 +3168,7 @@ mod tests {
             window,
             bounds,
             "mvp50-vlist-clip",
-            |cx| vec![build_list(cx)],
+            |cx| vec![build_list(cx, &scroll_handle)],
         );
         ui.set_root(root);
         ui.layout_all(&mut app, &mut text, bounds, 1.0);
@@ -2955,6 +3192,7 @@ mod tests {
         let window = AppWindowId::default();
         ui.set_window(window);
         ui.set_debug_enabled(true);
+        let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
 
         let bounds = Rect::new(
             fret_core::Point::new(Px(0.0), Px(0.0)),
@@ -2969,12 +3207,18 @@ mod tests {
             cx: &mut ElementCx<'_, H>,
             items: &[u64],
             mut ids: Option<&mut Vec<(u64, crate::elements::GlobalElementId)>>,
+            scroll_handle: &crate::scroll::VirtualListScrollHandle,
         ) -> AnyElement {
+            let items_revision = items.iter().fold(0u64, |acc, k| {
+                acc.wrapping_mul(1_000_003).wrapping_add(*k)
+            });
+            let mut options = crate::element::VirtualListOptions::new(Px(10.0), 0);
+            options.items_revision = items_revision;
+
             cx.virtual_list_keyed(
                 items.len(),
-                Px(10.0),
-                0,
-                None,
+                options,
+                scroll_handle,
                 |i| items[i],
                 |cx, i| {
                     let row = cx.text("row");
@@ -2994,7 +3238,7 @@ mod tests {
             window,
             bounds,
             "mvp50-vlist-keyed",
-            |cx| vec![build_list(cx, &items, None)],
+            |cx| vec![build_list(cx, &items, None, &scroll_handle)],
         );
         ui.set_root(root);
         ui.layout_all(&mut app, &mut text, bounds, 1.0);
@@ -3012,7 +3256,7 @@ mod tests {
                 window,
                 bounds,
                 "mvp50-vlist-keyed",
-                |cx| vec![build_list(cx, &items, Some(&mut ids))],
+                |cx| vec![build_list(cx, &items, Some(&mut ids), &scroll_handle)],
             );
             ui.set_root(root);
             ui.layout_all(&mut app, &mut text, bounds, 1.0);
@@ -3039,6 +3283,84 @@ mod tests {
             items.reverse();
             app.advance_frame();
         }
+    }
+
+    #[test]
+    fn hover_region_reports_hovered_even_when_child_is_pressable() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(80.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        fn build_root(cx: &mut ElementCx<'_, TestHost>) -> Vec<AnyElement> {
+            vec![cx.hover_region(crate::element::HoverRegionProps::default(), |cx, hovered| {
+                let trigger = cx.pressable(crate::element::PressableProps::default(), |cx, _state| {
+                    vec![cx.text("trigger")]
+                });
+
+                let mut children = vec![trigger];
+                if hovered {
+                    children.push(cx.text("hovered"));
+                }
+                children
+            })]
+        }
+
+        // Frame 0: not hovered yet, so only the trigger is present.
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "hover-region",
+            build_root,
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let hover_region_node = ui.children(root)[0];
+        assert_eq!(ui.children(hover_region_node).len(), 1);
+        let trigger_node = ui.children(hover_region_node)[0];
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+
+        let pos = fret_core::Point::new(
+            Px(trigger_bounds.origin.x.0 + 2.0),
+            Px(trigger_bounds.origin.y.0 + 2.0),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: pos,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        // Frame 1: hover_region should now observe hovered=true even though the hit node is a Pressable.
+        app.advance_frame();
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "hover-region",
+            build_root,
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let hover_region_node = ui.children(root)[0];
+        assert_eq!(ui.children(hover_region_node).len(), 2);
     }
 
     #[test]
@@ -3366,10 +3688,10 @@ mod tests {
         ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
 
         assert!(
-            !scene
-                .ops()
-                .iter()
-                .any(|op| matches!(op, SceneOp::PushClipRect { .. } | SceneOp::PushClipRRect { .. })),
+            !scene.ops().iter().any(|op| matches!(
+                op,
+                SceneOp::PushClipRect { .. } | SceneOp::PushClipRRect { .. }
+            )),
             "expected no clip ops by default"
         );
     }

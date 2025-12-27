@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::UiServices;
-use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Px, Rect, Size};
+use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Px, Size};
 use fret_runtime::{CommandId, Model};
 use fret_ui::primitives::{Column, Stack};
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, UiTree, Widget};
@@ -137,19 +137,15 @@ impl<H: UiHost> Widget<H> for CommandPalette {
                 KeyCode::ArrowDown => {
                     if self.move_selection(cx, 1) {
                         cx.stop_propagation();
-                        return;
                     }
                 }
                 KeyCode::ArrowUp => {
                     if self.move_selection(cx, -1) {
                         cx.stop_propagation();
-                        return;
                     }
                 }
                 KeyCode::Enter => {
-                    if self.activate_selected(cx) {
-                        return;
-                    }
+                    let _ = self.activate_selected(cx);
                 }
                 _ => {}
             }
@@ -282,7 +278,7 @@ pub fn render_command_palette_list<H: UiHost>(
 ) {
     let bounds = ui
         .debug_node_bounds(handles.list_mount)
-        .unwrap_or(Rect::default());
+        .unwrap_or_default();
 
     let root = fret_ui::declarative::render_root(
         ui,

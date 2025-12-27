@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{LayoutRefinement, MetricRef, Radius, Size as ComponentSize, Space};
 use fret_core::{Color, Corners, Edges, Px};
@@ -9,16 +7,11 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementCx, Theme, UiHost};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PaginationLinkSize {
     Default,
+    #[default]
     Icon,
-}
-
-impl Default for PaginationLinkSize {
-    fn default() -> Self {
-        Self::Icon
-    }
 }
 
 fn alpha(color: Color, a: f32) -> Color {
@@ -227,7 +220,7 @@ impl PaginationLink {
             disabled_fg(&theme)
         };
 
-        let children = Arc::new(self.children);
+        let children = std::rc::Rc::new(self.children);
         let children_for_content = children.clone();
 
         let (layout, padding, inner_gap, inner_wrap) = match self.size {
@@ -368,6 +361,12 @@ impl PaginationPrevious {
     }
 }
 
+impl Default for PaginationPrevious {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct PaginationNext {
     command: Option<CommandId>,
@@ -400,6 +399,12 @@ impl PaginationNext {
             link = link.on_click(command);
         }
         link.into_element(cx)
+    }
+}
+
+impl Default for PaginationNext {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -449,5 +454,11 @@ impl PaginationEllipsis {
                 vec![inner]
             },
         )
+    }
+}
+
+impl Default for PaginationEllipsis {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -1,0 +1,11 @@
+[package]
+name = "fret-icons-radix"
+version.workspace = true
+edition.workspace = true
+
+[features]
+default = ["semantic-ui"]
+semantic-ui = []
+
+[dependencies]
+fret-components-icons = { path = "../fret-components-icons" }

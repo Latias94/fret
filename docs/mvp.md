@@ -5,21 +5,24 @@ This file is intentionally kept **short and actionable**.
 - Full active plan (details, definitions, status notes): `docs/mvp/active-plan.md`
 - Completed stage definitions: `docs/mvp-archive.md`
 - Long-horizon priorities and refactors: `docs/roadmap.md`
+- Runtime contract gap list (ADR 0066 conformance): `docs/runtime-contract-gap.md`
 
 ## What’s Next
 
 Maintain the next MVP items here as a small, high-signal queue. If a task changes a “hard-to-change” contract, update or add an ADR before broadening usage.
 
+- Contract note: the `fret-ui` runtime contract surface is now locked (ADR 0066). New runtime public APIs must name an authoritative reference and land with tests before broadening usage.
+
 - MVP 49 (in progress): Make the declarative component authoring model (ADR 0028 + ADR 0039) the primary, end-to-end usable path (not just a state store): `IntoElement` + `Render`/`RenderOnce` + composition ergonomics, plus a clear `render_root(...)` contract (when it must be called, and what it guarantees).
-- MVP 50 (in progress): Consolidate virtualization around composable, declarative row content (GPUI-style): migrate remaining list-like surfaces off fixed-schema runtime rows (`VirtualListRow { text/secondary/trailing... }`) and retire the legacy path where feasible.
-- MVP 51 (in progress): Tighten the framework/components boundary by moving “standard surfaces” (popover/dialog/menu/tooltip/toast/command palette/menubar) fully into the components layer, keeping `fret-ui` as runtime substrate + performance primitives. `fret-components-ui` remains the reusable infrastructure, while `fret-components-shadcn` becomes the shadcn/ui (v4) aligned naming/taxonomy surface. Legacy retained widgets stay behind `fret-ui`’s `legacy-widgets` feature (`crates/fret-ui/src/legacy_widgets/*`) until removal.
+- MVP 50 (in progress): Consolidate virtualization around composable, declarative row content (GPUI-style). Runtime contract is now TanStack-aligned (ADR 0047); remaining work is migrating surfaces off fixed-schema runtime rows (`VirtualListRow { text/secondary/trailing... }`) and retiring the legacy path where feasible.
+- MVP 51 (in progress): Tighten the framework/components boundary by moving “standard surfaces” (popover/dialog/menu/tooltip/toast/command palette/menubar) fully into the components layer, keeping `fret-ui` as runtime substrate + performance primitives. `fret-components-ui` remains the reusable infrastructure, while `fret-components-shadcn` becomes the shadcn/ui (v4) aligned naming/taxonomy surface. Compatibility retained widgets stay behind `fret-ui`’s `retained-widgets` feature (`crates/fret-ui/src/primitives/*`) until removal.
 - MVP 60 (done): Rounded clipping / `overflow-hidden` semantics (shadcn-critical).
   - Landed: `SceneOp::PushClipRRect` (ADR 0063) + renderer soft clipping (AA) + UI hit-test parity.
 - MVP 61 (next): Declarative layout performance hardening (Taffy integration).
   - Avoid rebuilding a fresh Taffy tree per layout pass; cache and update nodes across frames and eliminate redundant `layout_in(...)` calls during measurement.
 - MVP 62 (next): Overlay behavior + placement contract (APG/Radix/Floating UI alignment).
-  - Lock dismissal/focus rules for popover/menu/tooltip/dialog/sheet (Radix-like outcomes).
-  - Implement stable anchored positioning with flip/shift/size/arrow and deterministic results across windows (Floating-like algorithms).
+  - Lock dismissal/focus/portal rules for popover/menu/tooltip/dialog/sheet (Radix-like outcomes; ADR 0067).
+  - Implement stable anchored positioning with flip/shift/size/offset (P0) and deterministic results across windows (Floating-like algorithms). Arrow is deferred to P1 (ADR 0066).
   - See: `docs/reference-stack-ui-behavior.md`.
 - MVP 63 (next): Unify scroll ergonomics around a single handle model (GPUI-like).
   - Introduce a consistent `ScrollHandle`-style substrate: offset, scroll-to, scrollbar, and scroll-into-view primitives.

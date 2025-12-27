@@ -518,48 +518,48 @@ impl Theme {
 
         // gpui-component compatibility: accept `font.size` / `mono_font.size` when the canonical
         // `metric.font.*` keys are not present.
-        if !cfg.metrics.contains_key("metric.font.size") {
-            if let Some(v) = cfg.metrics.get("font.size").copied() {
-                let px = Px(v);
-                next_metrics.insert("metric.font.size".to_string(), px);
-                next_metrics.insert("font.size".to_string(), px);
-                if self.metrics.font_size != px {
-                    self.metrics.font_size = px;
-                    changed = true;
-                }
+        if !cfg.metrics.contains_key("metric.font.size")
+            && let Some(v) = cfg.metrics.get("font.size").copied()
+        {
+            let px = Px(v);
+            next_metrics.insert("metric.font.size".to_string(), px);
+            next_metrics.insert("font.size".to_string(), px);
+            if self.metrics.font_size != px {
+                self.metrics.font_size = px;
+                changed = true;
             }
         }
-        if !cfg.metrics.contains_key("metric.font.mono_size") {
-            if let Some(v) = cfg.metrics.get("mono_font.size").copied() {
-                let px = Px(v);
-                next_metrics.insert("metric.font.mono_size".to_string(), px);
-                next_metrics.insert("mono_font.size".to_string(), px);
-                if self.metrics.mono_font_size != px {
-                    self.metrics.mono_font_size = px;
-                    changed = true;
-                }
+        if !cfg.metrics.contains_key("metric.font.mono_size")
+            && let Some(v) = cfg.metrics.get("mono_font.size").copied()
+        {
+            let px = Px(v);
+            next_metrics.insert("metric.font.mono_size".to_string(), px);
+            next_metrics.insert("mono_font.size".to_string(), px);
+            if self.metrics.mono_font_size != px {
+                self.metrics.mono_font_size = px;
+                changed = true;
             }
         }
-        if !cfg.metrics.contains_key("metric.font.line_height") {
-            if let Some(v) = cfg.metrics.get("font.line_height").copied() {
-                let px = Px(v);
-                next_metrics.insert("metric.font.line_height".to_string(), px);
-                next_metrics.insert("font.line_height".to_string(), px);
-                if self.metrics.font_line_height != px {
-                    self.metrics.font_line_height = px;
-                    changed = true;
-                }
+        if !cfg.metrics.contains_key("metric.font.line_height")
+            && let Some(v) = cfg.metrics.get("font.line_height").copied()
+        {
+            let px = Px(v);
+            next_metrics.insert("metric.font.line_height".to_string(), px);
+            next_metrics.insert("font.line_height".to_string(), px);
+            if self.metrics.font_line_height != px {
+                self.metrics.font_line_height = px;
+                changed = true;
             }
         }
-        if !cfg.metrics.contains_key("metric.font.mono_line_height") {
-            if let Some(v) = cfg.metrics.get("mono_font.line_height").copied() {
-                let px = Px(v);
-                next_metrics.insert("metric.font.mono_line_height".to_string(), px);
-                next_metrics.insert("mono_font.line_height".to_string(), px);
-                if self.metrics.mono_font_line_height != px {
-                    self.metrics.mono_font_line_height = px;
-                    changed = true;
-                }
+        if !cfg.metrics.contains_key("metric.font.mono_line_height")
+            && let Some(v) = cfg.metrics.get("mono_font.line_height").copied()
+        {
+            let px = Px(v);
+            next_metrics.insert("metric.font.mono_line_height".to_string(), px);
+            next_metrics.insert("mono_font.line_height".to_string(), px);
+            if self.metrics.mono_font_line_height != px {
+                self.metrics.mono_font_line_height = px;
+                changed = true;
             }
         }
 
@@ -698,6 +698,7 @@ fn parse_hex_srgb_to_linear(s: &str) -> Option<Color> {
 mod tests {
     use super::Theme;
     use super::ThemeConfig;
+    use std::collections::HashMap;
 
     #[test]
     fn shadcn_semantic_palette_aliases_exist_on_default_theme() {
@@ -742,17 +743,17 @@ mod tests {
     fn semantic_keys_backfill_typed_baseline_colors_when_missing() {
         let mut theme = Theme::global(&crate::test_host::TestHost::default()).clone();
 
-        let mut cfg = ThemeConfig::default();
-        cfg.name = "Semantic Only".to_string();
-        cfg.colors
-            .insert("background".to_string(), "#000000".to_string());
-        cfg.colors
-            .insert("foreground".to_string(), "#ffffff".to_string());
-        cfg.colors
-            .insert("border".to_string(), "#ff0000".to_string());
-        cfg.colors.insert("ring".to_string(), "#00ff00".to_string());
-        cfg.colors
-            .insert("primary".to_string(), "#0000ff".to_string());
+        let mut colors = HashMap::new();
+        colors.insert("background".to_string(), "#000000".to_string());
+        colors.insert("foreground".to_string(), "#ffffff".to_string());
+        colors.insert("border".to_string(), "#ff0000".to_string());
+        colors.insert("ring".to_string(), "#00ff00".to_string());
+        colors.insert("primary".to_string(), "#0000ff".to_string());
+        let cfg = ThemeConfig {
+            name: "Semantic Only".to_string(),
+            colors,
+            ..Default::default()
+        };
 
         // No `color.*` keys are provided; typed fields should still change.
         theme.apply_config(&cfg);

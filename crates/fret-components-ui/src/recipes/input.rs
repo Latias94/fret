@@ -184,7 +184,7 @@ pub fn resolve_input_chrome(
     }
 }
 
-pub fn default_text_input_style(theme: &Theme) -> fret_ui::primitives::TextInputStyle {
+pub fn default_text_input_style(theme: &Theme) -> fret_ui::TextInputStyle {
     let ring_width = theme
         .metric_by_key("component.ring.width")
         .unwrap_or(Px(2.0));
@@ -198,7 +198,7 @@ pub fn default_text_input_style(theme: &Theme) -> fret_ui::primitives::TextInput
         .color_by_key("ring-offset-background")
         .unwrap_or(theme.colors.surface_background);
 
-    fret_ui::primitives::TextInputStyle {
+    fret_ui::TextInputStyle {
         padding: Edges::all(Px(0.0)),
         background: theme.colors.panel_background,
         border: Edges::all(Px(1.0)),

@@ -22,6 +22,7 @@ pub mod dialog_overlay;
 pub mod dropdown_menu;
 pub mod frame;
 pub mod icon_button;
+pub mod menu_overlay;
 pub mod popover;
 pub mod popover_surface;
 pub mod popover_surface_overlay;
@@ -57,7 +58,7 @@ pub use text_area_field::TextAreaField;
 pub use toast::{ToastAction, ToastKind, ToastOverlay, ToastRequest, ToastService, ToastStyle};
 pub use tooltip::{TooltipArea, TooltipOverlay, TooltipRequest, TooltipService, TooltipStyle};
 
-pub use fret_ui::{
+pub use menu_overlay::{
     ContextMenuRequest, ContextMenuService, MenuBarContextMenu, MenuBarContextMenuEntry,
 };
 

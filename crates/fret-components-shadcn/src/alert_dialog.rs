@@ -22,15 +22,11 @@ pub struct AlertDialogRequest {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum AlertDialogDefaultAction {
+    #[default]
     Action,
     Cancel,
-}
-
-impl Default for AlertDialogDefaultAction {
-    fn default() -> Self {
-        Self::Action
-    }
 }
 
 impl AlertDialogRequest {

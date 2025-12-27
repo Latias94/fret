@@ -1,9 +1,12 @@
 use crate::UiHost;
 use crate::elements::{ElementCx, GlobalElementId};
-use fret_core::{Color, Corners, Edges, ImageId, Px, TextOverflow, TextStyle, TextWrap, UvRect};
+use fret_core::{
+    Color, Corners, Edges, ImageId, Px, SvgFit, TextOverflow, TextStyle, TextWrap, UvRect,
+};
 use fret_runtime::{CommandId, Model};
+use std::collections::HashMap;
 
-use crate::primitives::TextInputStyle;
+use crate::{SvgSource, TextInputStyle};
 
 /// Declarative element tree node (ephemeral per frame), keyed by a stable `GlobalElementId`.
 ///
@@ -35,8 +38,9 @@ pub enum ElementKind {
     Flex(FlexProps),
     Grid(GridProps),
     Image(ImageProps),
+    SvgIcon(SvgIconProps),
     Spinner(SpinnerProps),
-    HoverCard(HoverCardProps),
+    HoverRegion(HoverRegionProps),
     Scroll(ScrollProps),
 }
 
@@ -269,17 +273,9 @@ pub struct RingStyle {
     pub corner_radii: Corners,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct StackProps {
     pub layout: LayoutStyle,
-}
-
-impl Default for StackProps {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle::default(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -319,7 +315,7 @@ impl Default for RowProps {
             gap: Px(0.0),
             padding: Edges::all(Px(0.0)),
             justify: MainAlign::Start,
-            align: CrossAlign::Center,
+            align: CrossAlign::Stretch,
         }
     }
 }
@@ -428,6 +424,32 @@ impl ImageProps {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct SvgIconProps {
+    pub layout: LayoutStyle,
+    pub svg: SvgSource,
+    pub fit: SvgFit,
+    pub color: Color,
+    pub opacity: f32,
+}
+
+impl SvgIconProps {
+    pub fn new(svg: SvgSource) -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            svg,
+            fit: SvgFit::Contain,
+            color: Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            },
+            opacity: 1.0,
+        }
+    }
+}
+
 /// A simple loading spinner primitive.
 ///
 /// This is intentionally low-opinionated and renderer-friendly: it paints a ring of small rounded
@@ -456,46 +478,13 @@ impl Default for SpinnerProps {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub enum HoverCardAlign {
-    Start,
-    #[default]
-    Center,
-    End,
-}
-
-/// A hover-driven floating surface primitive (shadcn-style hover card).
+/// A hover tracking region primitive.
 ///
-/// This element is intended to have exactly two children:
-/// - child 0: trigger
-/// - child 1: content
-///
-/// Layout: the trigger participates in normal flow; the content is laid out and painted as an
-/// absolute-positioned floating surface anchored to the trigger.
-#[derive(Debug, Clone, Copy)]
-pub struct HoverCardProps {
+/// This is a small substrate building block: it provides a `hovered: bool` signal to component
+/// code (via `ElementCx::hover_region(...)`) without imposing click/focus semantics.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct HoverRegionProps {
     pub layout: LayoutStyle,
-    pub align: HoverCardAlign,
-    pub side_offset: Px,
-    /// Minimum inset from the root/window bounds when clamping or flipping.
-    pub window_margin: Px,
-    /// Open delay expressed in frames (best-effort; driven by animation frames).
-    pub open_delay_frames: u32,
-    /// Close delay expressed in frames (best-effort; driven by animation frames).
-    pub close_delay_frames: u32,
-}
-
-impl Default for HoverCardProps {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle::default(),
-            align: HoverCardAlign::Center,
-            side_offset: Px(4.0),
-            window_margin: Px(8.0),
-            open_delay_frames: 0,
-            close_delay_frames: 0,
-        }
-    }
 }
 
 impl TextProps {
@@ -561,52 +550,76 @@ impl Default for GridProps {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct VirtualListProps {
     pub layout: LayoutStyle,
     pub len: usize,
-    pub row_height: Px,
+    pub items_revision: u64,
+    pub estimate_row_height: Px,
     pub overscan: usize,
-    /// If set, adjust the list scroll offset to keep the given row index visible.
-    ///
-    /// This is a low-level virtualization primitive (not a selection model): component-layer code
-    /// can compute the desired row index (e.g. from a selection model) and request that the list
-    /// stays scrolled to it.
-    pub scroll_to_index: Option<usize>,
-    pub visible_start: usize,
-    pub visible_end: usize,
-}
-
-/// Cross-frame element-local state for a virtual list (stored in the element state store).
-#[derive(Debug, Default, Clone, Copy)]
-pub struct VirtualListState {
-    pub offset_y: Px,
-    pub viewport_h: Px,
+    pub scroll_margin: Px,
+    pub gap: Px,
+    pub scroll_handle: crate::scroll::VirtualListScrollHandle,
+    pub visible_items: Vec<crate::virtual_list::VirtualItem>,
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct VirtualListOptions {
+    pub items_revision: u64,
+    pub estimate_row_height: Px,
+    pub overscan: usize,
+    pub scroll_margin: Px,
+    pub gap: Px,
+}
+
+impl VirtualListOptions {
+    pub fn new(estimate_row_height: Px, overscan: usize) -> Self {
+        Self {
+            items_revision: 0,
+            estimate_row_height,
+            overscan,
+            scroll_margin: Px(0.0),
+            gap: Px(0.0),
+        }
+    }
+}
+
+/// Cross-frame element-local state for a virtual list (stored in the element state store).
+#[derive(Debug, Default, Clone)]
+pub struct VirtualListState {
+    pub offset_y: Px,
+    pub viewport_h: Px,
+    pub(crate) metrics: crate::virtual_list::VirtualListMetrics,
+    pub(crate) items_revision: u64,
+    pub(crate) keys: Vec<crate::ItemKey>,
+    pub(crate) size_cache: HashMap<crate::ItemKey, Px>,
+}
+
+#[derive(Debug, Clone)]
 pub struct ScrollProps {
     pub layout: LayoutStyle,
     pub show_scrollbar: bool,
+    pub scroll_handle: Option<crate::scroll::ScrollHandle>,
 }
 
 impl Default for ScrollProps {
     fn default() -> Self {
-        let mut layout = LayoutStyle::default();
-        layout.overflow = Overflow::Clip;
+        let layout = LayoutStyle {
+            overflow: Overflow::Clip,
+            ..Default::default()
+        };
         Self {
             layout,
             show_scrollbar: true,
+            scroll_handle: None,
         }
     }
 }
 
 /// Cross-frame element-local state for scroll containers.
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone)]
 pub struct ScrollState {
-    pub offset_y: Px,
-    pub viewport_h: Px,
-    pub content_h: Px,
+    pub scroll_handle: crate::scroll::ScrollHandle,
     pub dragging_thumb: bool,
     pub drag_start_pointer_y: Px,
     pub drag_start_offset_y: Px,
@@ -633,6 +646,12 @@ impl IntoElement for TextProps {
 impl IntoElement for ImageProps {
     fn into_element(self, id: GlobalElementId) -> AnyElement {
         AnyElement::new(id, ElementKind::Image(self), Vec::new())
+    }
+}
+
+impl IntoElement for SvgIconProps {
+    fn into_element(self, id: GlobalElementId) -> AnyElement {
+        AnyElement::new(id, ElementKind::SvgIcon(self), Vec::new())
     }
 }
 

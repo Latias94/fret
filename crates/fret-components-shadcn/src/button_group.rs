@@ -10,16 +10,11 @@ use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 use crate::button::{ButtonSize, ButtonVariant};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ButtonGroupOrientation {
+    #[default]
     Horizontal,
     Vertical,
-}
-
-impl Default for ButtonGroupOrientation {
-    fn default() -> Self {
-        Self::Horizontal
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -321,10 +316,8 @@ impl ButtonGroup {
             return;
         }
 
-        for p in self.prepared.drain(..) {
-            if let Some(p) = p {
-                cx.services.text().release(p.blob);
-            }
+        for p in self.prepared.drain(..).flatten() {
+            cx.services.text().release(p.blob);
         }
         self.prepared.clear();
 
@@ -363,10 +356,8 @@ impl Default for ButtonGroup {
 
 impl<H: UiHost> Widget<H> for ButtonGroup {
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
-        for p in self.prepared.drain(..) {
-            if let Some(p) = p {
-                services.text().release(p.blob);
-            }
+        for p in self.prepared.drain(..).flatten() {
+            services.text().release(p.blob);
         }
         self.prepared_scale_factor_bits = None;
         self.prepared_theme_revision = None;
@@ -445,13 +436,12 @@ impl<H: UiHost> Widget<H> for ButtonGroup {
                     let hovered = self.item_at(*position);
                     self.hovered_index = hovered.filter(|i| self.is_item_enabled(*i));
 
-                    if pressed.is_some() && pressed == hovered && hovered.is_some() {
-                        let idx = pressed.expect("pressed exists");
-                        if let Some(item) = self.items.get(idx) {
-                            if let Some(cmd) = item.command.clone() {
-                                cx.dispatch_command(cmd);
-                            }
-                        }
+                    if let (Some(idx), Some(hov)) = (pressed, hovered)
+                        && idx == hov
+                        && let Some(item) = self.items.get(idx)
+                        && let Some(cmd) = item.command.clone()
+                    {
+                        cx.dispatch_command(cmd);
                     }
 
                     cx.invalidate_self(Invalidation::Paint);
@@ -522,12 +512,11 @@ impl<H: UiHost> Widget<H> for ButtonGroup {
                     cx.stop_propagation();
                     return;
                 }
-                if let Some(item) = self.items.get(self.active_index) {
-                    if self.is_item_enabled(self.active_index) {
-                        if let Some(cmd) = item.command.clone() {
-                            cx.dispatch_command(cmd);
-                        }
-                    }
+                if let Some(item) = self.items.get(self.active_index)
+                    && self.is_item_enabled(self.active_index)
+                    && let Some(cmd) = item.command.clone()
+                {
+                    cx.dispatch_command(cmd);
                 }
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
@@ -619,9 +608,7 @@ impl<H: UiHost> Widget<H> for ButtonGroup {
 
                 if desired_w > 0.0 && total_w < desired_w {
                     let each = (total_w - gap * (n.saturating_sub(1) as f32)).max(0.0) / (n as f32);
-                    for w in &mut item_ws {
-                        *w = each;
-                    }
+                    item_ws.fill(each);
                 }
 
                 self.item_bounds.clear();
@@ -650,9 +637,7 @@ impl<H: UiHost> Widget<H> for ButtonGroup {
 
                 if desired_h > 0.0 && total_h < desired_h {
                     let each = (total_h - gap * (n.saturating_sub(1) as f32)).max(0.0) / (n as f32);
-                    for h in &mut item_hs {
-                        *h = each;
-                    }
+                    item_hs.fill(each);
                 }
 
                 self.item_bounds.clear();
@@ -791,7 +776,7 @@ impl<H: UiHost> Widget<H> for ButtonGroup {
                 rect,
                 background: bg,
                 border: border_edges,
-                border_color: border_color,
+                border_color,
                 corner_radii,
             });
 

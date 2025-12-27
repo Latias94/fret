@@ -399,7 +399,7 @@ mod tests {
     use fret_runtime::Effect;
 
     #[derive(Default)]
-    struct FakeUiServices;
+    struct FakeUiServices {}
 
     impl TextService for FakeUiServices {
         fn prepare(

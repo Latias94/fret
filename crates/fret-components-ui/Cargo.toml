@@ -6,7 +6,7 @@ edition.workspace = true
 [dependencies]
 fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }
-fret-ui = { path = "../fret-ui" }
+fret-ui = { path = "../fret-ui", features = ["retained-widgets"] }
 fret-components-icons = { path = "../fret-components-icons" }
 tracing.workspace = true
 

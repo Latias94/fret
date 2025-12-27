@@ -1,4 +1,4 @@
-use fret_components_icons::IconId;
+use fret_components_icons::{IconId, ids};
 use fret_core::{Axis, Edges, FontId, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{ContainerProps, FlexProps, Length, SizeStyle, TextInputProps};
@@ -49,7 +49,7 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
         let left_pad = Px((base_px.0 + slot_w.0).max(0.0));
         let right_pad = Px((base_px.0 + slot_w.0).max(0.0));
 
-        let mut chrome = fret_ui::primitives::TextInputStyle::from_theme(theme.snapshot());
+        let mut chrome = fret_ui::TextInputStyle::from_theme(theme.snapshot());
         chrome.padding = Edges {
             top: base_py,
             right: right_pad,
@@ -151,7 +151,7 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
                                     align: Items::Center.to_cross_align(),
                                     wrap: false,
                                 },
-                                |cx| vec![icon::icon(cx, IconId::new("x"))],
+                                |cx| vec![icon::icon(cx, ids::ui::CLOSE)],
                             )]
                         },
                     ));

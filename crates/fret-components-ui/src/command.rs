@@ -72,8 +72,8 @@ pub fn visible_item_ids(items: &[CommandItem], query: &str) -> Vec<Arc<str>> {
     let q = query.trim().to_ascii_lowercase();
     let mut filtered: Vec<CommandItem> = items
         .iter()
-        .cloned()
         .filter(|i| matches_query(i, &q))
+        .cloned()
         .collect();
 
     filtered.sort_by(|a, b| {

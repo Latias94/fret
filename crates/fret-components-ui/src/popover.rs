@@ -8,8 +8,8 @@ use fret_ui::{
     Theme, UiHost,
     widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
-use std::{collections::HashMap, sync::Arc};
 use std::time::{Duration, Instant};
+use std::{collections::HashMap, sync::Arc};
 
 use crate::ChromeRefinement;
 use crate::Size as ComponentSize;
@@ -265,8 +265,8 @@ impl Popover {
     }
 
     fn relayout_rows(&mut self) {
-        let mut row_y = self.panel_bounds.origin.y.0 + self.style.padding_y.0
-            - self.scroll_offset_y.0;
+        let mut row_y =
+            self.panel_bounds.origin.y.0 + self.style.padding_y.0 - self.scroll_offset_y.0;
         for row in &mut self.rows {
             row.bounds = Rect::new(
                 Point::new(self.panel_bounds.origin.x, Px(row_y)),
@@ -296,8 +296,11 @@ impl Popover {
             self.scroll_offset_y = Px((bottom - viewport_h.0).max(0.0));
         }
 
-        self.scroll_offset_y =
-            Px(self.scroll_offset_y.0.max(0.0).min(self.max_scroll_offset_y.0.max(0.0)));
+        self.scroll_offset_y = Px(self
+            .scroll_offset_y
+            .0
+            .max(0.0)
+            .min(self.max_scroll_offset_y.0.max(0.0)));
         self.relayout_rows();
     }
 
@@ -381,7 +384,11 @@ impl Popover {
         let viewport_h =
             Px((self.panel_bounds.size.height.0 - self.style.padding_y.0 * 2.0).max(0.0));
         self.max_scroll_offset_y = Px((content_h.0 - viewport_h.0).max(0.0));
-        self.scroll_offset_y = Px(self.scroll_offset_y.0.max(0.0).min(self.max_scroll_offset_y.0));
+        self.scroll_offset_y = Px(self
+            .scroll_offset_y
+            .0
+            .max(0.0)
+            .min(self.max_scroll_offset_y.0));
 
         // Place rows.
         let mut row_y =
@@ -535,11 +542,9 @@ impl Popover {
         self.typeahead_last = Some(now);
 
         let lower = typed.to_ascii_lowercase();
-        let cycle_same = self.typeahead.len() == 1 && self.typeahead.chars().next() == Some(lower);
+        let cycle_same = self.typeahead.chars().count() == 1 && self.typeahead.starts_with(lower);
 
-        if self.typeahead.is_empty() {
-            self.typeahead.push(lower);
-        } else if !cycle_same {
+        if self.typeahead.is_empty() || !cycle_same {
             self.typeahead.push(lower);
         }
 
@@ -552,10 +557,9 @@ impl Popover {
 
         let find_from = |from: usize| {
             (from..request.items.len()).chain(0..from).find(|&i| {
-                request
-                    .items
-                    .get(i)
-                    .is_some_and(|it| it.enabled && it.label.to_ascii_lowercase().starts_with(query))
+                request.items.get(i).is_some_and(|it| {
+                    it.enabled && it.label.to_ascii_lowercase().starts_with(query)
+                })
             })
         };
 
@@ -617,18 +621,18 @@ impl<H: UiHost> Widget<H> for Popover {
                     cx.request_redraw();
                 }
             }
-            Event::Pointer(fret_core::PointerEvent::Wheel { position, delta, .. }) => {
+            Event::Pointer(fret_core::PointerEvent::Wheel {
+                position, delta, ..
+            }) => {
                 if !self.panel_bounds.contains(*position) {
                     return;
                 }
                 if self.max_scroll_offset_y.0 <= 0.0 {
                     return;
                 }
-                let next = Px(
-                    (self.scroll_offset_y.0 - delta.y.0)
-                        .max(0.0)
-                        .min(self.max_scroll_offset_y.0),
-                );
+                let next = Px((self.scroll_offset_y.0 - delta.y.0)
+                    .max(0.0)
+                    .min(self.max_scroll_offset_y.0));
                 if next != self.scroll_offset_y {
                     self.scroll_offset_y = next;
                     self.relayout_rows();
@@ -660,9 +664,7 @@ impl<H: UiHost> Widget<H> for Popover {
                     self.activate_row(cx, window, &request, i);
                 }
             }
-            Event::KeyDown {
-                key, modifiers, ..
-            } => {
+            Event::KeyDown { key, modifiers, .. } => {
                 if let Some(c) = Self::typeahead_char(*key, modifiers) {
                     if self.handle_typeahead(&request, c) {
                         if let Some(i) = self.hover_row {

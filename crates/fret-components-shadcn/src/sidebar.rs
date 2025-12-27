@@ -7,10 +7,12 @@ use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef
 use fret_core::{Color, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, HoverCardAlign, HoverCardProps, MainAlign, Overflow,
-    PressableProps, RingStyle, ScrollProps, SpacerProps, TextProps,
+    AnyElement, CrossAlign, FlexProps, MainAlign, Overflow, PressableProps, RingStyle, ScrollProps,
+    SpacerProps, TextProps,
 };
 use fret_ui::{ElementCx, Theme, UiHost};
+
+use crate::hover_card::{HoverCard, HoverCardAlign};
 
 fn sidebar_width(theme: &Theme) -> Px {
     theme
@@ -222,12 +224,21 @@ impl SidebarContent {
 
         let children = self.children;
         cx.scroll(props, move |cx| {
-            let mut col = FlexProps::default();
-            col.direction = fret_core::Axis::Vertical;
-            col.gap = decl_style::space(&theme, Space::N2);
-            col.layout.size.width = fret_ui::element::Length::Fill;
-            col.layout.size.height = fret_ui::element::Length::Auto;
-            col.padding = Edges::all(decl_style::space(&theme, Space::N2));
+            let gap = decl_style::space(&theme, Space::N2);
+            let col = FlexProps {
+                direction: fret_core::Axis::Vertical,
+                gap,
+                padding: Edges::all(gap),
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: fret_ui::element::Length::Fill,
+                        height: fret_ui::element::Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
 
             vec![cx.flex(col, move |_cx| children)]
         })
@@ -320,11 +331,19 @@ impl SidebarMenu {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
-        let mut props = FlexProps::default();
-        props.direction = fret_core::Axis::Vertical;
-        props.gap = Px(4.0);
-        props.layout.size.width = fret_ui::element::Length::Fill;
-        props.layout.size.height = fret_ui::element::Length::Auto;
+        let props = FlexProps {
+            direction: fret_core::Axis::Vertical,
+            gap: Px(4.0),
+            layout: fret_ui::element::LayoutStyle {
+                size: fret_ui::element::SizeStyle {
+                    width: fret_ui::element::Length::Fill,
+                    height: fret_ui::element::Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        };
         let children = self.children;
         cx.flex(props, move |_cx| children)
     }
@@ -398,11 +417,12 @@ impl SidebarMenuButton {
         let radius = decl_style::radius(&theme, Radius::Md);
         let ring = sidebar_ring(&theme, radius);
 
-        let mut pressable = PressableProps::default();
-        pressable.enabled = !self.disabled;
-        pressable.on_click = self.on_click.clone();
-        pressable.focus_ring = Some(ring);
-        pressable.layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+        let pressable = PressableProps {
+            enabled: !self.disabled,
+            on_click: self.on_click.clone(),
+            focus_ring: Some(ring),
+            layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
+        };
 
         let label = self.label.clone();
         let icon = self.icon.clone();
@@ -413,9 +433,7 @@ impl SidebarMenuButton {
         cx.pressable(pressable, move |cx, st| {
             let theme = Theme::global(&*cx.app).clone();
 
-            let bg = if active {
-                sidebar_accent(&theme)
-            } else if st.hovered || st.pressed {
+            let bg = if active || st.hovered || st.pressed {
                 sidebar_accent(&theme)
             } else {
                 Color::TRANSPARENT
@@ -449,18 +467,26 @@ impl SidebarMenuButton {
             let inner_gap = decl_style::space(&theme, Space::N2);
 
             vec![cx.container(props, move |cx| {
-                let mut row = FlexProps::default();
-                row.direction = fret_core::Axis::Horizontal;
-                row.gap = inner_gap;
-                row.align = CrossAlign::Center;
-                row.justify = MainAlign::Start;
-                row.layout.size.width = fret_ui::element::Length::Fill;
-                row.layout.size.height = fret_ui::element::Length::Fill;
-                row.padding = Edges {
-                    top: Px(0.0),
-                    right: inner_gap,
-                    bottom: Px(0.0),
-                    left: inner_gap,
+                let row = FlexProps {
+                    direction: fret_core::Axis::Horizontal,
+                    gap: inner_gap,
+                    align: CrossAlign::Center,
+                    justify: MainAlign::Start,
+                    padding: Edges {
+                        top: Px(0.0),
+                        right: inner_gap,
+                        bottom: Px(0.0),
+                        left: inner_gap,
+                    },
+                    layout: fret_ui::element::LayoutStyle {
+                        size: fret_ui::element::SizeStyle {
+                            width: fret_ui::element::Length::Fill,
+                            height: fret_ui::element::Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    ..Default::default()
                 };
 
                 let label = label.clone();
@@ -501,44 +527,38 @@ impl SidebarMenuButton {
         // In collapsed (icon) mode, show the label via a hover card.
         let theme = Theme::global(&*cx.app).clone();
 
-        let mut hover = HoverCardProps::default();
-        hover.align = HoverCardAlign::Center;
-        hover.side_offset = Px(8.0);
-        hover.layout = decl_style::layout_style(&theme, LayoutRefinement::default());
-
         let label = self.label.clone();
-        cx.hover_card(hover, move |cx| {
-            let trigger = button;
 
-            let chrome = ChromeRefinement::default()
-                .bg(ColorRef::Color(
-                    theme
-                        .color_by_key("popover.background")
-                        .unwrap_or(theme.colors.menu_background),
-                ))
-                .border_1()
-                .border_color(ColorRef::Color(
-                    theme
-                        .color_by_key("popover.border")
-                        .unwrap_or(theme.colors.menu_border),
-                ))
-                .rounded(Radius::Md)
-                .p(Space::N2);
-            let mut props =
-                decl_style::container_props(&theme, chrome, LayoutRefinement::default());
-            props.layout.overflow = Overflow::Clip;
-            let content = cx.container(props, move |cx| {
-                vec![cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: label.clone(),
-                    style: Some(menu_button_style(&theme)),
-                    color: Some(sidebar_fg(&theme)),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                })]
-            });
+        let chrome = ChromeRefinement::default()
+            .bg(ColorRef::Color(
+                theme
+                    .color_by_key("popover.background")
+                    .unwrap_or(theme.colors.menu_background),
+            ))
+            .border_1()
+            .border_color(ColorRef::Color(
+                theme
+                    .color_by_key("popover.border")
+                    .unwrap_or(theme.colors.menu_border),
+            ))
+            .rounded(Radius::Md)
+            .p(Space::N2);
+        let mut props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
+        props.layout.overflow = Overflow::Clip;
+        let content = cx.container(props, move |cx| {
+            vec![cx.text_props(TextProps {
+                layout: Default::default(),
+                text: label.clone(),
+                style: Some(menu_button_style(&theme)),
+                color: Some(sidebar_fg(&theme)),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+            })]
+        });
 
-            vec![trigger, content]
-        })
+        HoverCard::new(button, content)
+            .align(HoverCardAlign::Center)
+            .side_offset(Px(8.0))
+            .into_element(cx)
     }
 }

@@ -4,6 +4,8 @@ This roadmap focuses on building an editor-grade UI framework with docking, tear
 
 Key contracts are captured in ADRs under `docs/adr/`.
 
+The runtime contract surface for `crates/fret-ui` is explicitly locked by `docs/adr/0066-fret-ui-runtime-contract-surface.md`. New runtime public APIs must name an authoritative upstream reference and land with tests before broadening usage.
+
 For the short-horizon execution plan, see `docs/mvp.md` (overview) and `docs/mvp/active-plan.md` (expanded, per-MVP “definition of done”).
 
 ## Toolchain Baseline

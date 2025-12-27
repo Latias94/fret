@@ -9,18 +9,13 @@ use fret_ui::{
     widget::{EventCx, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SheetSide {
     Left,
+    #[default]
     Right,
     Top,
     Bottom,
-}
-
-impl Default for SheetSide {
-    fn default() -> Self {
-        Self::Right
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -327,20 +322,19 @@ impl<H: UiHost> Widget<H> for SheetOverlay {
                     cx.stop_propagation();
                 }
             }
-            Event::Pointer(pe) => match pe {
-                fret_core::PointerEvent::Down {
-                    position, button, ..
-                } => {
-                    if request.close_on_click_outside
-                        && *button == MouseButton::Left
-                        && !self.panel_bounds.contains(*position)
-                    {
-                        cx.dispatch_command(self.close_command.clone());
-                        cx.stop_propagation();
-                    }
+            Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button,
+                ..
+            }) => {
+                if request.close_on_click_outside
+                    && *button == MouseButton::Left
+                    && !self.panel_bounds.contains(*position)
+                {
+                    cx.dispatch_command(self.close_command.clone());
+                    cx.stop_propagation();
                 }
-                _ => {}
-            },
+            }
             _ => {}
         }
     }

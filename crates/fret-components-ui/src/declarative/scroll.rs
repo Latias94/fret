@@ -20,6 +20,7 @@ pub fn overflow_scroll<H: UiHost>(
         ScrollProps {
             layout,
             show_scrollbar,
+            scroll_handle: None,
         },
         f,
     )

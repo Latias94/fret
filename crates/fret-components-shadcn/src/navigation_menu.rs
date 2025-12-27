@@ -370,6 +370,12 @@ impl NavigationMenu {
     }
 }
 
+impl Default for NavigationMenu {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<H: UiHost> Widget<H> for NavigationMenu {
     fn is_focusable(&self) -> bool {
         !self.disabled
@@ -481,13 +487,14 @@ impl<H: UiHost> Widget<H> for NavigationMenu {
                     }
 
                     // Hover switching between menus when open (shadcn-like).
-                    if let (Some(open), Some(hov)) = (self.open_index, hovered) {
-                        if open != hov && self.is_item_enabled(hov) {
-                            self.active_index = hov;
-                            self.set_open(cx, Some(hov));
-                            cx.invalidate_self(Invalidation::Paint);
-                            cx.request_redraw();
-                        }
+                    if let (Some(open), Some(hov)) = (self.open_index, hovered)
+                        && open != hov
+                        && self.is_item_enabled(hov)
+                    {
+                        self.active_index = hov;
+                        self.set_open(cx, Some(hov));
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
                     }
                 }
                 fret_core::PointerEvent::Down {
@@ -521,8 +528,9 @@ impl<H: UiHost> Widget<H> for NavigationMenu {
                     let hovered = self.item_at(*position);
                     self.hovered_index = hovered;
 
-                    if was_pressed.is_some() && was_pressed == hovered {
-                        let idx = was_pressed.expect("pressed exists");
+                    if let Some(idx) = was_pressed
+                        && Some(idx) == hovered
+                    {
                         let next_open = if self.open_index == Some(idx) {
                             None
                         } else {
@@ -605,9 +613,7 @@ impl<H: UiHost> Widget<H> for NavigationMenu {
 
             let bg = if !enabled {
                 Color::TRANSPARENT
-            } else if pressed {
-                self.resolved.bg_open
-            } else if open {
+            } else if pressed || open {
                 self.resolved.bg_open
             } else if hovered {
                 self.resolved.bg_hover
@@ -645,14 +651,15 @@ impl<H: UiHost> Widget<H> for NavigationMenu {
             }
         }
 
-        if focus_visible && !self.items.is_empty() {
-            if let Some(rect) = self.item_bounds.get(self.active_index).copied() {
-                let ring = fret_components_ui::declarative::style::focus_ring(
-                    cx.theme(),
-                    self.resolved.radius,
-                );
-                fret_ui::paint::paint_focus_ring(cx.scene, DrawOrder(2), rect, ring);
-            }
+        if focus_visible
+            && !self.items.is_empty()
+            && let Some(rect) = self.item_bounds.get(self.active_index).copied()
+        {
+            let ring = fret_components_ui::declarative::style::focus_ring(
+                cx.theme(),
+                self.resolved.radius,
+            );
+            fret_ui::paint::paint_focus_ring(cx.scene, DrawOrder(2), rect, ring);
         }
     }
 }

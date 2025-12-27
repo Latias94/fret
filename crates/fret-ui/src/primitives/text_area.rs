@@ -1262,11 +1262,12 @@ impl<H: UiHost> Widget<H> for TextArea {
             corner_radii: self.style.corner_radii,
         });
 
-        if cx.focus == Some(cx.node) && crate::focus_visible::is_focus_visible(cx.app, cx.window) {
-            if let Some(mut ring) = self.style.focus_ring {
-                ring.corner_radii = self.style.corner_radii;
-                crate::paint::paint_focus_ring(cx.scene, DrawOrder(1), cx.bounds, ring);
-            }
+        if cx.focus == Some(cx.node)
+            && crate::focus_visible::is_focus_visible(cx.app, cx.window)
+            && let Some(mut ring) = self.style.focus_ring
+        {
+            ring.corner_radii = self.style.corner_radii;
+            crate::paint::paint_focus_ring(cx.scene, DrawOrder(1), cx.bounds, ring);
         }
 
         let Some(blob) = self.blob else {
@@ -1624,7 +1625,7 @@ mod tests {
     use fret_runtime::Effect;
 
     #[derive(Default)]
-    struct FakeTextService;
+    struct FakeTextService {}
 
     impl TextService for FakeTextService {
         fn prepare(

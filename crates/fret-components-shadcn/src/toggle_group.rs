@@ -317,10 +317,8 @@ impl ToggleGroup {
             return;
         }
 
-        for p in self.prepared.drain(..) {
-            if let Some(p) = p {
-                cx.services.text().release(p.blob);
-            }
+        for p in self.prepared.drain(..).flatten() {
+            cx.services.text().release(p.blob);
         }
         self.prepared.clear();
 
@@ -435,10 +433,8 @@ impl<'a, H: UiHost> ObserveModelCx<H> for PaintCx<'a, H> {
 
 impl<H: UiHost> Widget<H> for ToggleGroup {
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
-        for p in self.prepared.drain(..) {
-            if let Some(p) = p {
-                services.text().release(p.blob);
-            }
+        for p in self.prepared.drain(..).flatten() {
+            services.text().release(p.blob);
         }
         self.prepared_scale_factor_bits = None;
         self.prepared_theme_revision = None;
@@ -522,11 +518,11 @@ impl<H: UiHost> Widget<H> for ToggleGroup {
                     let hovered = self.item_at(*position);
                     self.hovered_index = hovered.filter(|i| self.is_item_enabled(*i));
 
-                    if pressed.is_some() && pressed == hovered && hovered.is_some() {
-                        let idx = pressed.expect("pressed exists");
-                        if let Some(item) = self.items.get(idx) {
-                            self.toggle_value(cx.app, item.value.clone());
-                        }
+                    if let (Some(idx), Some(hov)) = (pressed, hovered)
+                        && idx == hov
+                        && let Some(item) = self.items.get(idx)
+                    {
+                        self.toggle_value(cx.app, item.value.clone());
                     }
 
                     cx.invalidate_self(Invalidation::Paint);
@@ -595,10 +591,10 @@ impl<H: UiHost> Widget<H> for ToggleGroup {
                     cx.stop_propagation();
                     return;
                 }
-                if let Some(item) = self.items.get(self.active_index) {
-                    if self.is_item_enabled(self.active_index) {
-                        self.toggle_value(cx.app, item.value.clone());
-                    }
+                if let Some(item) = self.items.get(self.active_index)
+                    && self.is_item_enabled(self.active_index)
+                {
+                    self.toggle_value(cx.app, item.value.clone());
                 }
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
@@ -643,9 +639,7 @@ impl<H: UiHost> Widget<H> for ToggleGroup {
 
         if desired_total_w > 0.0 && total_w < desired_total_w && n > 0 {
             let each = (total_w - gap * (n.saturating_sub(1) as f32)).max(0.0) / (n as f32);
-            for w in &mut item_ws {
-                *w = each;
-            }
+            item_ws.fill(each);
         }
 
         self.item_bounds.clear();
@@ -782,22 +776,22 @@ impl<H: UiHost> Widget<H> for ToggleGroup {
             });
         }
 
-        if cx.focus == Some(cx.node) && fret_ui::focus_visible::is_focus_visible(cx.app, cx.window)
+        if cx.focus == Some(cx.node)
+            && fret_ui::focus_visible::is_focus_visible(cx.app, cx.window)
+            && let Some(rect) = self.item_bounds.get(self.active_index).copied()
         {
-            if let Some(rect) = self.item_bounds.get(self.active_index).copied() {
-                let focus_ring = cx.theme().colors.focus_ring;
-                cx.scene.push(SceneOp::Quad {
-                    order: DrawOrder(10),
-                    rect,
-                    background: Color {
-                        a: 0.0,
-                        ..focus_ring
-                    },
-                    border: Edges::all(Px(2.0)),
-                    border_color: focus_ring,
-                    corner_radii: Corners::all(self.resolved.radius),
-                });
-            }
+            let focus_ring = cx.theme().colors.focus_ring;
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(10),
+                rect,
+                background: Color {
+                    a: 0.0,
+                    ..focus_ring
+                },
+                border: Edges::all(Px(2.0)),
+                border_color: focus_ring,
+                corner_radii: Corners::all(self.resolved.radius),
+            });
         }
     }
 }

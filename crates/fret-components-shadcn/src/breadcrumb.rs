@@ -17,7 +17,7 @@ enum BreadcrumbItemKind {
 ///
 /// Upstream composes `Breadcrumb` + `BreadcrumbList` + `BreadcrumbItem` + `BreadcrumbLink/Page`
 /// + `BreadcrumbSeparator/Ellipsis`. In Fret we provide a compact builder surface that can render
-/// the same visual/interaction result in a single declarative element tree.
+///   the same visual/interaction result in a single declarative element tree.
 #[derive(Debug, Clone, Default)]
 pub struct Breadcrumb {
     items: Vec<BreadcrumbItem>,

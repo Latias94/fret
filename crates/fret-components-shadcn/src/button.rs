@@ -434,10 +434,11 @@ impl<H: UiHost> Widget<H> for Button {
                     self.pressed = false;
                     cx.release_pointer_capture();
 
-                    if was_pressed && cx.bounds.contains(*position) {
-                        if let Some(command) = self.command.clone() {
-                            cx.dispatch_command(command);
-                        }
+                    if was_pressed
+                        && cx.bounds.contains(*position)
+                        && let Some(command) = self.command.clone()
+                    {
+                        cx.dispatch_command(command);
                     }
 
                     cx.invalidate_self(Invalidation::Paint);
@@ -627,8 +628,10 @@ mod tests {
     #[test]
     fn button_variant_uses_semantic_palette_keys() {
         let mut theme = Theme::global(&TestHost::default()).clone();
-        let mut cfg = ThemeConfig::default();
-        cfg.name = "Semantic".to_string();
+        let mut cfg = ThemeConfig {
+            name: "Semantic".to_string(),
+            ..Default::default()
+        };
         cfg.colors
             .insert("primary".to_string(), "#0000ff".to_string());
         cfg.colors

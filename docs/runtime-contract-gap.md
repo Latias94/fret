@@ -1,0 +1,56 @@
+# Runtime Contract Gap List (ADR 0066)
+
+This document is a practical companion to `docs/adr/0066-fret-ui-runtime-contract-surface.md`.
+It answers: “Do we already meet the Accepted runtime contracts, and what is missing?”
+
+Status legend:
+
+- **Done**: contract is implemented and has tests.
+- **Partial**: mechanism exists but gaps remain for long-term use.
+- **Missing**: contract is not yet implemented (or not yet stable enough).
+
+## Snapshot
+
+- Authoritative contract set: `docs/adr/0066-fret-ui-runtime-contract-surface.md` (Accepted)
+- Primary references:
+  - APG: `docs/reference-stack-ui-behavior.md`
+  - Radix/shadcn outcomes: `repo-ref/primitives`, `repo-ref/ui`
+  - Placement: `repo-ref/floating-ui`
+  - Virtualization: `repo-ref/virtual` (TanStack Virtual)
+  - Ergonomics reference: `repo-ref/gpui-component`
+
+## Contract coverage (current)
+
+| Contract (ADR 0066) | Status | Current implementation entry points | Key gaps (if any) |
+| --- | --- | --- | --- |
+| Input routing + hit testing | **Done** | `crates/fret-ui/src/tree.rs` | — |
+| Hover tracking + geometry queries | **Done** | `crates/fret-ui/src/elements.rs` (`HoverRegion`, `bounds_for_element`), `crates/fret-ui/src/declarative.rs` (bounds recording) | — |
+| Focus + capture + focus-visible | **Partial** | `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/focus_visible.rs` | Focus/capture is now cleared when a modal barrier is installed, and focus/capture requests are scoped to active roots; remaining work is to lock more APG-level traversal patterns at the component layer. |
+| Multi-root layers substrate | **Done** | `crates/fret-ui/src/tree.rs` (`push_overlay_root_ex`, `remove_layer`, `active_input_layers`) | — |
+| Placement solver | **Partial** | `crates/fret-ui/src/overlay_placement.rs` | Arrow support is intentionally deferred to P1 (ADR 0066 Gate 3.2). |
+| Declarative authoring | **Done** | `crates/fret-ui/src/element.rs`, `crates/fret-ui/src/elements.rs`, `crates/fret-ui/src/declarative.rs` | — |
+| Layout vocabulary | **Done** | `crates/fret-ui/src/element.rs`, `crates/fret-ui/src/declarative.rs` | Layout defaults should remain CSS/Tailwind-like; avoid adding per-component defaults in runtime. |
+| Scroll contract | **Done** | `crates/fret-ui/src/scroll.rs`, declarative scroll element in `crates/fret-ui/src/declarative.rs` | — |
+| Virtualization contract (TanStack alignment) | **Done** | `crates/fret-ui/src/virtual_list.rs`, `crates/fret-ui/src/elements.rs`, declarative `VirtualList` in `crates/fret-ui/src/declarative.rs` | Lanes/masonry remain P1. |
+| Text input / IME engine contract | **Partial** | `crates/fret-ui/src/text_input.rs` + ADR 0012/0044/0045/0046 | Single-line is usable; multiline and geometry queries must remain the Stable contract boundary (component chrome stays out of runtime). |
+| Semantics tree | **Partial** | `crates/fret-ui/src/tree.rs` + `crates/fret-core/src/semantics.rs` | `SemanticsSnapshot` exposes `barrier_root` and per-root flags; the eventual platform bridge must enforce “background is inert/hidden under barrier” (ADR 0066 Gate H). |
+
+## P0 “make it usable” tasks (recommended order)
+
+These are the highest-leverage follow-ups before scaling component work.
+
+1) **TanStack Virtual alignment (virtualization contract)**
+   - Done in runtime substrate (`VirtualItem`, `scrollMargin`, `gap`, `rangeExtractor`, stable-key size cache).
+   - Remaining P1: lanes/masonry + more scroll strategies if needed.
+
+## MVP mapping
+
+This is how the tasks above map into the existing MVP queue:
+
+- MVP 62: overlay behavior + placement (Radix/Floating alignment)
+  - substrate: layer uninstall API + barrier semantics tests (runtime)
+  - policy: dismissal/focus trap/restore tests (components)
+- MVP 63: unify scroll ergonomics (GPUI-like)
+  - `ScrollHandle` contract completion and shared scroll-to vocabulary
+- MVP 56 / 50: unify virtualization around composable declarative rows
+  - TanStack Virtual alignment + stable keys (ADR 0047) + shared selection/scroll-to patterns

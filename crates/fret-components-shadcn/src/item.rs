@@ -10,42 +10,27 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementCx, Theme, UiHost};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ItemVariant {
+    #[default]
     Default,
     Outline,
     Muted,
 }
 
-impl Default for ItemVariant {
-    fn default() -> Self {
-        Self::Default
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ItemSize {
+    #[default]
     Default,
     Sm,
 }
 
-impl Default for ItemSize {
-    fn default() -> Self {
-        Self::Default
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ItemMediaVariant {
+    #[default]
     Default,
     Icon,
     Image,
-}
-
-impl Default for ItemMediaVariant {
-    fn default() -> Self {
-        Self::Default
-    }
 }
 
 fn alpha(color: Color, a: f32) -> Color {
@@ -165,6 +150,12 @@ impl ItemSeparator {
             },
             |_cx| Vec::new(),
         )
+    }
+}
+
+impl Default for ItemSeparator {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -503,7 +494,7 @@ impl Item {
 
         let focus_ring = decl_style::focus_ring(&theme, radius);
 
-        let children = Arc::new(self.children);
+        let children = std::rc::Rc::new(self.children);
         let children_for_content = children.clone();
         let enabled = self.enabled && self.on_click.is_some();
         let on_click = self.on_click;

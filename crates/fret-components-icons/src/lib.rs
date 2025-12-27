@@ -1,12 +1,11 @@
-//! Renderer-agnostic icon registry for Fret component libraries.
+//! Renderer-agnostic icon identity and registry for Fret component libraries.
 //!
-//! This crate intentionally does **not** prescribe a rendering representation (SVG, SDF, atlas,
-//! text glyphs, etc.). The initial MVP uses text-glyph fallbacks so that `fret-components-ui`
-//! can ship an `IconButton` without a dedicated vector pipeline.
+//! This crate is intentionally rendering-agnostic:
+//! - Components depend on semantic icon IDs (`IconId`).
+//! - Icon packs register assets as data (`IconSource`).
+//! - Rendering (SVG raster caching, budgets, atlases) remains in the renderer layer.
 
-use std::{borrow::Cow, collections::HashMap};
-
-use fret_core::{FontId, Px};
+use std::{borrow::Cow, collections::HashMap, sync::Arc};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct IconId(Cow<'static, str>);
@@ -16,76 +15,92 @@ impl IconId {
         Self(key.into())
     }
 
+    pub const fn new_static(key: &'static str) -> Self {
+        Self(Cow::Borrowed(key))
+    }
+
     pub fn as_str(&self) -> &str {
         &self.0
     }
 }
 
+pub mod ids {
+    use super::IconId;
+
+    pub mod ui {
+        use super::IconId;
+
+        pub const CHECK: IconId = IconId::new_static("ui.check");
+        pub const CHEVRON_DOWN: IconId = IconId::new_static("ui.chevron.down");
+        pub const CLOSE: IconId = IconId::new_static("ui.close");
+        pub const PLAY: IconId = IconId::new_static("ui.play");
+        pub const SEARCH: IconId = IconId::new_static("ui.search");
+        pub const SETTINGS: IconId = IconId::new_static("ui.settings");
+    }
+}
+
 #[derive(Debug, Clone)]
-pub struct IconGlyph {
-    pub text: Cow<'static, str>,
-    pub font: FontId,
-    pub size: Px,
+pub enum IconSource {
+    SvgStatic(&'static [u8]),
+    SvgBytes(Arc<[u8]>),
+    Alias(IconId),
 }
 
-impl IconGlyph {
-    pub fn new(text: impl Into<Cow<'static, str>>) -> Self {
-        Self {
-            text: text.into(),
-            font: FontId::default(),
-            size: Px(13.0),
-        }
-    }
-
-    pub fn with_size(mut self, size: Px) -> Self {
-        self.size = size;
-        self
-    }
-
-    pub fn with_font(mut self, font: FontId) -> Self {
-        self.font = font;
-        self
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct IconRegistry {
-    glyphs: HashMap<IconId, IconGlyph>,
+    icons: HashMap<IconId, IconSource>,
 }
 
 impl IconRegistry {
-    pub fn register_glyph(&mut self, id: IconId, glyph: IconGlyph) {
-        self.glyphs.insert(id, glyph);
+    pub fn register(&mut self, id: IconId, source: IconSource) {
+        self.icons.insert(id, source);
     }
 
-    pub fn glyph(&self, id: &IconId) -> Option<&IconGlyph> {
-        self.glyphs.get(id)
+    pub fn register_svg_static(&mut self, id: IconId, svg: &'static [u8]) {
+        self.register(id, IconSource::SvgStatic(svg));
     }
 
-    pub fn ensure_builtin_glyphs(&mut self) {
-        for (id, glyph) in builtin_glyphs() {
-            self.glyphs.entry(id).or_insert(glyph);
+    pub fn register_svg_bytes(&mut self, id: IconId, svg: Arc<[u8]>) {
+        self.register(id, IconSource::SvgBytes(svg));
+    }
+
+    pub fn alias(&mut self, id: IconId, target: IconId) {
+        self.register(id, IconSource::Alias(target));
+    }
+
+    pub fn source(&self, id: &IconId) -> Option<&IconSource> {
+        self.icons.get(id)
+    }
+
+    pub fn resolve_svg(&self, id: &IconId) -> Option<ResolvedSvg<'_>> {
+        let mut current = id;
+        for _ in 0..32 {
+            match self.icons.get(current)? {
+                IconSource::SvgStatic(bytes) => return Some(ResolvedSvg::Static(bytes)),
+                IconSource::SvgBytes(bytes) => return Some(ResolvedSvg::Bytes(bytes)),
+                IconSource::Alias(next) => current = next,
+            }
         }
+        None
+    }
+
+    pub fn resolve_svg_owned(&self, id: &IconId) -> Option<ResolvedSvgOwned> {
+        self.resolve_svg(id).map(|r| match r {
+            ResolvedSvg::Static(bytes) => ResolvedSvgOwned::Static(bytes),
+            ResolvedSvg::Bytes(bytes) => ResolvedSvgOwned::Bytes(bytes.clone()),
+        })
     }
 }
 
-impl Default for IconRegistry {
-    fn default() -> Self {
-        let mut out = Self {
-            glyphs: HashMap::new(),
-        };
-        out.ensure_builtin_glyphs();
-        out
-    }
+pub enum ResolvedSvg<'a> {
+    Static(&'static [u8]),
+    Bytes(&'a Arc<[u8]>),
 }
 
-fn builtin_glyphs() -> Vec<(IconId, IconGlyph)> {
-    vec![
-        (IconId::new("check"), IconGlyph::new("✓")),
-        (IconId::new("chevron_down"), IconGlyph::new("▾")),
-        (IconId::new("close"), IconGlyph::new("×")),
-        (IconId::new("play"), IconGlyph::new("▶")),
-        (IconId::new("search"), IconGlyph::new("⌕")),
-        (IconId::new("settings"), IconGlyph::new("⚙")),
-    ]
+#[derive(Clone)]
+pub enum ResolvedSvgOwned {
+    Static(&'static [u8]),
+    Bytes(Arc<[u8]>),
 }
+
+pub const MISSING_ICON_SVG: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M16 8 8 16"/><path d="M8 8l8 8"/></svg>"#;

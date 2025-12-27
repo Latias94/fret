@@ -351,6 +351,21 @@ impl<H: UiHost> Default for UiTree<H> {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn enforce_modal_barrier_scope(&mut self, active_roots: &[NodeId]) {
+        if self
+            .focus
+            .is_some_and(|n| !self.node_in_any_layer(n, active_roots))
+        {
+            self.focus = None;
+        }
+        if self
+            .captured
+            .is_some_and(|n| !self.node_in_any_layer(n, active_roots))
+        {
+            self.captured = None;
+        }
+    }
+
     fn dispatch_event_to_node_chain(
         &mut self,
         app: &mut H,
@@ -361,6 +376,7 @@ impl<H: UiHost> UiTree<H> {
     ) -> bool {
         let services_ptr: *mut dyn UiServices = services;
 
+        let (active_roots, _barrier_root) = self.active_input_layers();
         let mut node_id = start;
         loop {
             let (invalidations, requested_focus, requested_capture, stop_propagation, parent) =
@@ -406,19 +422,22 @@ impl<H: UiHost> UiTree<H> {
                 self.mark_invalidation(id, inv);
             }
 
-            if let Some(focus) = requested_focus {
-                if self.focus != Some(focus) {
-                    if let Some(prev) = self.focus {
-                        self.mark_invalidation(prev, Invalidation::Paint);
-                    }
-                    self.focus = Some(focus);
-                    self.mark_invalidation(focus, Invalidation::Paint);
+            if let Some(focus) = requested_focus
+                && self.focus != Some(focus)
+                && self.node_in_any_layer(focus, &active_roots)
+            {
+                if let Some(prev) = self.focus {
+                    self.mark_invalidation(prev, Invalidation::Paint);
                 }
+                self.focus = Some(focus);
+                self.mark_invalidation(focus, Invalidation::Paint);
             }
 
-            if let Some(capture) = requested_capture {
+            if let Some(capture) = requested_capture
+                && capture.is_none_or(|n| self.node_in_any_layer(n, &active_roots))
+            {
                 self.captured = capture;
-            };
+            }
 
             if self.captured.is_some() || stop_propagation {
                 return true;
@@ -671,7 +690,45 @@ impl<H: UiHost> UiTree<H> {
         });
         self.root_to_layer.insert(root, id);
         self.layer_order.push(id);
+
+        if blocks_underlay_input {
+            let (active_roots, _barrier_root) = self.active_input_layers();
+            self.enforce_modal_barrier_scope(&active_roots);
+        }
+
         id
+    }
+
+    /// Uninstalls an overlay layer and removes its root subtree.
+    ///
+    /// This is the symmetric operation to `push_overlay_root(_ex)` and exists to keep the overlay
+    /// substrate contract minimal but complete (ADR 0066).
+    ///
+    /// Notes:
+    /// - The base layer cannot be removed (use `set_base_root` instead).
+    /// - This removes the layer root node, and recursively removes its children **unless** a child
+    ///   subtree is itself a layer root (which is treated as an independent root).
+    pub fn remove_layer(
+        &mut self,
+        services: &mut dyn UiServices,
+        layer: UiLayerId,
+    ) -> Option<NodeId> {
+        if self.base_layer == Some(layer) {
+            return None;
+        }
+        let root = self.layers.get(layer).map(|l| l.root)?;
+
+        // Make the root removable by the existing subtree removal logic (which normally refuses to
+        // delete layer roots).
+        self.root_to_layer.remove(&root);
+
+        self.layer_order.retain(|&id| id != layer);
+        let _ = self.layers.remove(layer);
+
+        let mut removed: Vec<NodeId> = Vec::new();
+        self.remove_subtree_inner(services, root, &mut removed);
+
+        Some(root)
     }
 
     pub fn set_layer_visible(&mut self, layer: UiLayerId, visible: bool) {
@@ -746,10 +803,10 @@ impl<H: UiHost> UiTree<H> {
         };
 
         for old in old_children {
-            if let Some(n) = self.nodes.get_mut(old) {
-                if n.parent == Some(parent) {
-                    n.parent = None;
-                }
+            if let Some(n) = self.nodes.get_mut(old)
+                && n.parent == Some(parent)
+            {
+                n.parent = None;
             }
         }
 
@@ -945,6 +1002,7 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let (active_layers, barrier_root) = self.active_input_layers();
+        self.enforce_modal_barrier_scope(&active_layers);
         let focus_is_text_input = self.focus_is_text_input();
         let caps = app
             .global::<PlatformCapabilities>()
@@ -1187,9 +1245,7 @@ impl<H: UiHost> UiTree<H> {
             let hit = self.hit_test_layers(&active_layers, pos);
             let hovered_pressable: Option<crate::elements::GlobalElementId> =
                 declarative::with_window_frame(app, window, |window_frame| {
-                    let Some(window_frame) = window_frame else {
-                        return None;
-                    };
+                    let window_frame = window_frame?;
                     let mut node = hit;
                     while let Some(id) = node {
                         if let Some(record) = window_frame.instances.get(&id)
@@ -1214,15 +1270,13 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
 
-            let hovered_hover_card: Option<crate::elements::GlobalElementId> =
+            let hovered_hover_region: Option<crate::elements::GlobalElementId> =
                 declarative::with_window_frame(app, window, |window_frame| {
-                    let Some(window_frame) = window_frame else {
-                        return None;
-                    };
+                    let window_frame = window_frame?;
                     let mut node = hit;
                     while let Some(id) = node {
                         if let Some(record) = window_frame.instances.get(&id)
-                            && matches!(record.instance, declarative::ElementInstance::HoverCard(_))
+                            && matches!(record.instance, declarative::ElementInstance::HoverRegion(_))
                         {
                             return Some(record.element);
                         }
@@ -1232,7 +1286,7 @@ impl<H: UiHost> UiTree<H> {
                 });
 
             let (prev_node, next_node) =
-                crate::elements::update_hovered_hover_card(app, window, hovered_hover_card);
+                crate::elements::update_hovered_hover_region(app, window, hovered_hover_region);
             if prev_node.is_some() || next_node.is_some() {
                 needs_redraw = true;
                 if let Some(node) = prev_node {
@@ -1333,14 +1387,14 @@ impl<H: UiHost> UiTree<H> {
                 self.mark_invalidation(id, inv);
             }
 
-            if let Some(focus) = requested_focus {
-                if self.focus != Some(focus) {
-                    if let Some(prev) = self.focus {
-                        self.mark_invalidation(prev, Invalidation::Paint);
-                    }
-                    self.focus = Some(focus);
-                    self.mark_invalidation(focus, Invalidation::Paint);
+            if let Some(focus) = requested_focus
+                && self.focus != Some(focus)
+            {
+                if let Some(prev) = self.focus {
+                    self.mark_invalidation(prev, Invalidation::Paint);
                 }
+                self.focus = Some(focus);
+                self.mark_invalidation(focus, Invalidation::Paint);
             }
 
             if let Some(capture) = requested_capture {
@@ -1470,14 +1524,14 @@ impl<H: UiHost> UiTree<H> {
                 self.mark_invalidation(id, inv);
             }
 
-            if let Some(focus) = requested_focus {
-                if self.focus != Some(focus) {
-                    if let Some(prev) = self.focus {
-                        self.mark_invalidation(prev, Invalidation::Paint);
-                    }
-                    self.focus = Some(focus);
-                    self.mark_invalidation(focus, Invalidation::Paint);
+            if let Some(focus) = requested_focus
+                && self.focus != Some(focus)
+            {
+                if let Some(prev) = self.focus {
+                    self.mark_invalidation(prev, Invalidation::Paint);
                 }
+                self.focus = Some(focus);
+                self.mark_invalidation(focus, Invalidation::Paint);
             }
 
             if did_handle || stop_propagation {
@@ -1722,11 +1776,11 @@ impl<H: UiHost> UiTree<H> {
                 bounds.origin.x - prev_bounds.origin.x,
                 bounds.origin.y - prev_bounds.origin.y,
             );
-            if delta.x.0 != 0.0 || delta.y.0 != 0.0 {
-                if let Some(children) = self.nodes.get(node).map(|n| n.children.clone()) {
-                    for child in children {
-                        self.translate_subtree_bounds(child, delta);
-                    }
+            if (delta.x.0 != 0.0 || delta.y.0 != 0.0)
+                && let Some(children) = self.nodes.get(node).map(|n| n.children.clone())
+            {
+                for child in children {
+                    self.translate_subtree_bounds(child, delta);
                 }
             }
             return measured;
@@ -2309,6 +2363,28 @@ mod tests {
     };
 
     #[derive(Default)]
+    struct TestStack;
+
+    impl<H: UiHost> Widget<H> for TestStack {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            for &child in cx.children {
+                let _ = cx.layout_in(child, cx.bounds);
+            }
+            cx.available
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            for &child in cx.children {
+                if let Some(bounds) = cx.child_bounds(child) {
+                    cx.paint(child, bounds);
+                } else {
+                    cx.paint(child, cx.bounds);
+                }
+            }
+        }
+    }
+
+    #[derive(Default)]
     struct FakeUiServices;
 
     impl TextService for FakeUiServices {
@@ -2461,7 +2537,10 @@ mod tests {
         assert_eq!(ui.hit_test(node, Point::new(Px(1.0), Px(1.0))), None);
 
         // Inside the rounded rectangle.
-        assert_eq!(ui.hit_test(node, Point::new(Px(25.0), Px(25.0))), Some(node));
+        assert_eq!(
+            ui.hit_test(node, Point::new(Px(25.0), Px(25.0))),
+            Some(node)
+        );
     }
 
     struct CountingPaintWidget {
@@ -2649,12 +2728,12 @@ mod tests {
         let mut ui = UiTree::new();
         ui.set_window(AppWindowId::default());
 
-        let base = ui.create_node(crate::primitives::Stack::new());
+        let base = ui.create_node(TestStack);
         ui.set_root(base);
-        let base_child = ui.create_node(crate::primitives::Stack::new());
+        let base_child = ui.create_node(TestStack);
         ui.add_child(base, base_child);
 
-        let overlay_root = ui.create_node(crate::primitives::Stack::new());
+        let overlay_root = ui.create_node(TestStack);
         ui.push_overlay_root(overlay_root, true);
 
         let mut services = FakeUiServices;
@@ -2683,6 +2762,101 @@ mod tests {
         assert!(snap.nodes.iter().any(|n| n.id == base));
         assert!(snap.nodes.iter().any(|n| n.id == base_child));
         assert!(snap.nodes.iter().any(|n| n.id == overlay_root));
+    }
+
+    #[test]
+    fn modal_barrier_clears_focus_and_capture_in_underlay() {
+        struct CaptureOnDown;
+
+        impl<H: UiHost> Widget<H> for CaptureOnDown {
+            fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+                true
+            }
+
+            fn is_focusable(&self) -> bool {
+                true
+            }
+
+            fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+                if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                    cx.capture_pointer(cx.node);
+                    cx.request_focus(cx.node);
+                }
+            }
+
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                cx.available
+            }
+        }
+
+        let mut app = crate::test_host::TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(TestStack);
+        let underlay = ui.create_node(CaptureOnDown);
+        ui.add_child(root, underlay);
+        ui.set_root(root);
+
+        let mut services = FakeUiServices;
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(100.0)));
+        ui.layout_in(&mut app, &mut services, root, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(ui.focus(), Some(underlay));
+        assert_eq!(ui.captured(), Some(underlay));
+
+        let overlay_root = ui.create_node(TestStack);
+        let _layer = ui.push_overlay_root(overlay_root, true);
+
+        assert_eq!(ui.focus(), None);
+        assert_eq!(ui.captured(), None);
+    }
+
+    #[test]
+    fn remove_layer_uninstalls_overlay_and_removes_subtree() {
+        let mut app = crate::test_host::TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(TestStack);
+        ui.set_root(root);
+
+        let overlay_root = ui.create_node(TestStack);
+        let overlay_child = ui.create_node(TestStack);
+        ui.add_child(overlay_root, overlay_child);
+        let layer = ui.push_overlay_root(overlay_root, true);
+
+        // Pretend an overlay widget captured focus/pointer.
+        ui.focus = Some(overlay_child);
+        ui.captured = Some(overlay_child);
+
+        let mut services = FakeUiServices;
+        let removed_root = ui.remove_layer(&mut services, layer);
+
+        assert_eq!(removed_root, Some(overlay_root));
+        assert!(ui.layers.get(layer).is_none());
+        assert!(!ui.layer_order.contains(&layer));
+        assert!(!ui.root_to_layer.contains_key(&overlay_root));
+
+        assert!(ui.nodes.get(overlay_root).is_none());
+        assert!(ui.nodes.get(overlay_child).is_none());
+        assert_eq!(ui.focus(), None);
+        assert_eq!(ui.captured(), None);
     }
 
     #[test]
@@ -2718,7 +2892,7 @@ mod tests {
         let mut ui = UiTree::new();
         ui.set_window(AppWindowId::default());
 
-        let root = ui.create_node(crate::primitives::Stack::new());
+        let root = ui.create_node(TestStack);
         let probe = ui.create_node(BoundsProbe::new(out));
         ui.add_child(root, probe);
         ui.set_root(root);

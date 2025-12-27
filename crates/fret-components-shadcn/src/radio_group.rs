@@ -200,10 +200,8 @@ impl RadioGroup {
             return;
         }
 
-        for p in self.prepared.drain(..) {
-            if let Some(p) = p {
-                cx.services.text().release(p.blob);
-            }
+        for p in self.prepared.drain(..).flatten() {
+            cx.services.text().release(p.blob);
         }
         self.prepared.clear();
 
@@ -306,10 +304,8 @@ impl RadioGroup {
 
 impl<H: UiHost> Widget<H> for RadioGroup {
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
-        for p in self.prepared.drain(..) {
-            if let Some(p) = p {
-                services.text().release(p.blob);
-            }
+        for p in self.prepared.drain(..).flatten() {
+            services.text().release(p.blob);
         }
         self.prepared_scale_factor_bits = None;
         self.prepared_theme_revision = None;
@@ -389,11 +385,11 @@ impl<H: UiHost> Widget<H> for RadioGroup {
                     let hovered = self.row_at(*position);
                     self.hovered_index = hovered.filter(|i| self.is_item_enabled(*i));
 
-                    if pressed.is_some() && pressed == hovered && hovered.is_some() {
-                        let idx = pressed.expect("pressed exists");
-                        if let Some(item) = self.items.get(idx) {
-                            self.set_selected(cx.app, item.value.clone());
-                        }
+                    if let (Some(idx), Some(hov)) = (pressed, hovered)
+                        && idx == hov
+                        && let Some(item) = self.items.get(idx)
+                    {
+                        self.set_selected(cx.app, item.value.clone());
                     }
 
                     cx.invalidate_self(Invalidation::Paint);
@@ -461,10 +457,10 @@ impl<H: UiHost> Widget<H> for RadioGroup {
                     cx.stop_propagation();
                     return;
                 }
-                if let Some(item) = self.items.get(self.active_index) {
-                    if self.is_item_enabled(self.active_index) {
-                        self.set_selected(cx.app, item.value.clone());
-                    }
+                if let Some(item) = self.items.get(self.active_index)
+                    && self.is_item_enabled(self.active_index)
+                {
+                    self.set_selected(cx.app, item.value.clone());
                 }
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
@@ -519,8 +515,8 @@ impl<H: UiHost> Widget<H> for RadioGroup {
 
         let mut y = cx.bounds.origin.y.0;
         let x = cx.bounds.origin.x.0;
-        for i in 0..n {
-            let row_h = row_heights[i].min(h.max(0.0)).max(0.0);
+        for (i, &h_i) in row_heights.iter().take(n).enumerate() {
+            let row_h = h_i.min(h.max(0.0)).max(0.0);
             let row = Rect {
                 origin: Point::new(Px(x), Px(y)),
                 size: Size::new(Px(w), Px(row_h)),

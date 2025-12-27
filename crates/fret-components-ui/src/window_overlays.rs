@@ -409,6 +409,7 @@ impl WindowOverlays {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ContextMenuRequest;
     use crate::PopoverSurfaceRequest;
     use crate::select::{Select, SelectOption};
     use fret_app::App;
@@ -419,12 +420,30 @@ mod tests {
     use fret_runtime::{CommandId, CommandMeta, Effect, Menu, MenuItem, Model, WhenExpr};
     use fret_ui::widget::Invalidation as UiInvalidation;
     use fret_ui::{
-        ContextMenuRequest, UiTree,
+        UiHost, UiTree,
         widget::{LayoutCx, PaintCx, Widget},
     };
 
     #[derive(Default)]
-    struct FakeServices;
+    struct FakeServices(());
+
+    #[derive(Debug, Default)]
+    struct TestContainer;
+
+    impl<H: UiHost> Widget<H> for TestContainer {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            for &child in cx.children {
+                cx.layout_in(child, cx.bounds);
+            }
+            cx.available
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            for &child in cx.children {
+                cx.paint(child, cx.bounds);
+            }
+        }
+    }
 
     impl TextService for FakeServices {
         fn prepare(
@@ -526,13 +545,13 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
 
         let palette_root = overlays.command_palette_node();
-        let content_root = ui.create_node(fret_ui::primitives::Column::new());
+        let content_root = ui.create_node(TestContainer);
         ui.add_child(palette_root, content_root);
 
         let focus_target = ui.create_node(Focusable);
@@ -579,7 +598,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
@@ -589,7 +608,7 @@ mod tests {
         ui.set_focus(Some(prev_focus));
 
         let palette_root = overlays.command_palette_node();
-        let content_root = ui.create_node(fret_ui::primitives::Column::new());
+        let content_root = ui.create_node(TestContainer);
         ui.add_child(palette_root, content_root);
 
         let focus_target = ui.create_node(Focusable);
@@ -631,7 +650,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
@@ -641,7 +660,7 @@ mod tests {
         ui.set_focus(Some(prev_focus));
 
         let palette_root = overlays.command_palette_node();
-        let content_root = ui.create_node(fret_ui::primitives::Column::new());
+        let content_root = ui.create_node(TestContainer);
         ui.add_child(palette_root, content_root);
 
         let focus_target = ui.create_node(Focusable);
@@ -681,7 +700,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
@@ -746,7 +765,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
@@ -803,7 +822,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
@@ -858,7 +877,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
@@ -908,7 +927,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
@@ -991,7 +1010,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
@@ -1131,7 +1150,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
@@ -1144,9 +1163,12 @@ mod tests {
         let cmd_b = CommandId::from("test.menu.bravo");
         let cmd_c = CommandId::from("test.menu.charlie");
 
-        host.commands_mut().register(cmd_a.clone(), CommandMeta::new("Alpha"));
-        host.commands_mut().register(cmd_b.clone(), CommandMeta::new("Bravo"));
-        host.commands_mut().register(cmd_c.clone(), CommandMeta::new("Charlie"));
+        host.commands_mut()
+            .register(cmd_a.clone(), CommandMeta::new("Alpha"));
+        host.commands_mut()
+            .register(cmd_b.clone(), CommandMeta::new("Bravo"));
+        host.commands_mut()
+            .register(cmd_c.clone(), CommandMeta::new("Charlie"));
 
         let menu = Menu {
             title: "Menu".into(),
@@ -1223,7 +1245,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
@@ -1235,8 +1257,10 @@ mod tests {
         let cmd_a1 = CommandId::from("test.menu.alpha");
         let cmd_a2 = CommandId::from("test.menu.alpine");
 
-        host.commands_mut().register(cmd_a1.clone(), CommandMeta::new("Alpha"));
-        host.commands_mut().register(cmd_a2.clone(), CommandMeta::new("Alpine"));
+        host.commands_mut()
+            .register(cmd_a1.clone(), CommandMeta::new("Alpha"));
+        host.commands_mut()
+            .register(cmd_a2.clone(), CommandMeta::new("Alpine"));
 
         let menu = Menu {
             title: "Menu".into(),
@@ -1318,7 +1342,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
@@ -1331,9 +1355,12 @@ mod tests {
         let cmd1 = CommandId::from("test.menu.item.1");
         let cmd2 = CommandId::from("test.menu.item.2");
 
-        host.commands_mut().register(cmd0.clone(), CommandMeta::new("Item 0"));
-        host.commands_mut().register(cmd1.clone(), CommandMeta::new("Item 1"));
-        host.commands_mut().register(cmd2.clone(), CommandMeta::new("Item 2"));
+        host.commands_mut()
+            .register(cmd0.clone(), CommandMeta::new("Item 0"));
+        host.commands_mut()
+            .register(cmd1.clone(), CommandMeta::new("Item 1"));
+        host.commands_mut()
+            .register(cmd2.clone(), CommandMeta::new("Item 2"));
 
         let menu = Menu {
             title: "Menu".into(),
@@ -1457,7 +1484,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
@@ -1583,7 +1610,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
@@ -1682,7 +1709,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
@@ -1752,7 +1779,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
@@ -1822,7 +1849,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui::primitives::Stack::new());
+        let root = ui.create_node(TestContainer);
         ui.set_root(root);
 
         let mut overlays = WindowOverlays::install(&mut ui);
@@ -1832,7 +1859,7 @@ mod tests {
         ui.set_focus(Some(prev_focus));
 
         let surface_root = overlays.popover_surface_node();
-        let content_root = ui.create_node(fret_ui::primitives::Column::new());
+        let content_root = ui.create_node(TestContainer);
         ui.add_child(surface_root, content_root);
 
         let focus_target = ui.create_node(Focusable);

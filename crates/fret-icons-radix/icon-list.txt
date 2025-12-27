@@ -1,0 +1,7 @@
+# Upstream: repo-ref/icons/packages/radix-icons/icons/*
+check.svg
+chevron-down.svg
+cross-1.svg
+gear.svg
+magnifying-glass.svg
+play.svg

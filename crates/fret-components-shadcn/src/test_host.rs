@@ -47,7 +47,7 @@ impl UiHost for TestHost {
 
         let type_id = TypeId::of::<T>();
         let boxed_any = self.globals.remove(&type_id).expect("global exists");
-        let mut boxed_t: Box<T> = boxed_any.downcast().ok().expect("type matches");
+        let mut boxed_t: Box<T> = boxed_any.downcast().expect("type matches");
 
         let result = f(&mut boxed_t, self);
         self.globals.insert(type_id, boxed_t);

@@ -2,7 +2,7 @@ use fret_app::{
     App, BindingV1, CommandId, Effect, KeySpecV1, Keymap, KeymapFileV1, KeymapService, Menu,
     MenuItem, Model, WindowRequest,
 };
-use fret_components_icons::IconId;
+use fret_components_icons::{IconId, IconRegistry, ids};
 use fret_components_shadcn::{
     Accordion as ShadcnAccordion, AccordionContent as ShadcnAccordionContent,
     AccordionItem as ShadcnAccordionItem, AccordionTrigger as ShadcnAccordionTrigger,
@@ -430,8 +430,8 @@ fn build_ui_kit_contents(
     let input_group_model = app.models_mut().insert("Search...".to_string());
     let input_group = ui.create_node(
         ShadcnInputGroup::new(input_group_model)
-            .leading_icon(IconId::new("search"))
-            .trailing_icon(IconId::new("close")),
+            .leading_icon(ids::ui::SEARCH)
+            .trailing_icon(ids::ui::CLOSE),
     );
     ui.add_child(col, input_group);
 
@@ -695,17 +695,17 @@ fn build_ui_kit_contents(
     ));
     let icons = ui.create_node(Row::new().with_spacing(Px(10.0)));
     let icon_play_tip = ui.create_node(TooltipArea::new("Play"));
-    let icon_play = ui.create_node(IconButton::new(IconId::new("play")));
+    let icon_play = ui.create_node(IconButton::new(ids::ui::PLAY));
     ui.add_child(icon_play_tip, icon_play);
     ui.add_child(icons, icon_play_tip);
 
     let icon_settings_tip = ui.create_node(TooltipArea::new("Settings"));
-    let icon_settings = ui.create_node(IconButton::new(IconId::new("settings")));
+    let icon_settings = ui.create_node(IconButton::new(ids::ui::SETTINGS));
     ui.add_child(icon_settings_tip, icon_settings);
     ui.add_child(icons, icon_settings_tip);
 
     let icon_close_tip = ui.create_node(TooltipArea::new("Close"));
-    let icon_close = ui.create_node(IconButton::new(IconId::new("close")));
+    let icon_close = ui.create_node(IconButton::new(ids::ui::CLOSE));
     ui.add_child(icon_close_tip, icon_close);
     ui.add_child(icons, icon_close_tip);
     ui.add_child(icons_frame, icons);
@@ -1472,7 +1472,7 @@ impl WinitDriver for UiKitDriver {
                                 cx,
                                 state.declarative_text,
                                 size,
-                                IconId::new("search"),
+                                ids::ui::SEARCH,
                                 fret_app::CommandId::from("ui_kit.declarative_text.clear"),
                             ),
                             cx.text("shadcn/ui v4 Field (prototype)"),
@@ -1481,7 +1481,7 @@ impl WinitDriver for UiKitDriver {
                                     cx,
                                     state.declarative_text,
                                     size,
-                                    IconId::new("search"),
+                                    ids::ui::SEARCH,
                                     fret_app::CommandId::from("ui_kit.declarative_text.clear"),
                                 );
                                 ShadcnField::new(control)
@@ -1513,7 +1513,7 @@ impl WinitDriver for UiKitDriver {
                                             ShadcnItemMedia::new(vec![
                                                 fret_components_ui::declarative::icon::icon(
                                                     cx,
-                                                    IconId::new("settings"),
+                                                    ids::ui::SETTINGS,
                                                 ),
                                             ])
                                             .variant(ShadcnItemMediaVariant::Icon)
@@ -1527,7 +1527,7 @@ impl WinitDriver for UiKitDriver {
                                             ShadcnItemActions::new(vec![
                                                 fret_components_ui::declarative::icon::icon(
                                                     cx,
-                                                    IconId::new("chevron_down"),
+                                                    ids::ui::CHEVRON_DOWN,
                                                 ),
                                             ])
                                             .into_element(cx),
@@ -1539,7 +1539,7 @@ impl WinitDriver for UiKitDriver {
                                             ShadcnItemMedia::new(vec![
                                                 fret_components_ui::declarative::icon::icon(
                                                     cx,
-                                                    IconId::new("play"),
+                                                    ids::ui::PLAY,
                                                 ),
                                             ])
                                             .variant(ShadcnItemMediaVariant::Icon)
@@ -1998,6 +1998,7 @@ impl WinitDriver for UiKitDriver {
                                 )
                                 .into_element(
                                     cx,
+                                    0,
                                     |i| i as u64,
                                     |i| ShadcnDataTableRowState {
                                         selected: selected_row == Some(i),
@@ -2033,6 +2034,11 @@ impl WinitDriver for UiKitDriver {
                                         ]
                                     },
                                 ),
+                            let scroll_handle = cx.with_state(
+                                fret_ui::scroll::VirtualListScrollHandle::new,
+                                |h| h.clone(),
+                            );
+
                             fret_components_ui::declarative::list::list_virtualized(
                                 cx,
                                 Some(state.declarative_selection),
@@ -2040,7 +2046,7 @@ impl WinitDriver for UiKitDriver {
                                 Some(Px(base_row_h.0 * 1.9)),
                                 values.len(),
                                 2,
-                                None,
+                                &scroll_handle,
                                 |i| values.get(i).map(String::as_str).unwrap_or(""),
                                 |i| {
                                     Some(fret_app::CommandId::new(format!(
@@ -2049,9 +2055,10 @@ impl WinitDriver for UiKitDriver {
                                 },
                                 |cx, i| {
                                     let label = values.get(i).map(String::as_str).unwrap_or("");
-                                    let leading_icon = if i % 3 == 0 { "play" } else { "settings" };
+                                    let leading_icon =
+                                        if i % 3 == 0 { "ui.play" } else { "ui.settings" };
                                     let trailing_icon =
-                                        if i % 5 == 0 { Some("chevron_down") } else { None };
+                                        if i % 5 == 0 { Some("ui.chevron.down") } else { None };
 
                                     let mut out = Vec::new();
                                     out.push(fret_components_ui::declarative::icon::icon(
@@ -2188,6 +2195,9 @@ fn main() -> anyhow::Result<()> {
     };
 
     let mut app = App::new();
+    app.with_global_mut(IconRegistry::default, |icons, _app| {
+        fret_icons_lucide::register_icons(icons);
+    });
     app.set_global(PlatformCapabilities::default());
     app.set_global(KeymapService::default());
     app.with_global_mut(KeymapService::default, |svc, _app| {

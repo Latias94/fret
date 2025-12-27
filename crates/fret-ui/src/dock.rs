@@ -2,14 +2,13 @@ use fret_core::{
     Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, Edges, NodeId, PanelKey,
     RenderTargetId, Scene, SceneOp, SemanticsRole, TextBlobId, TextConstraints, TextMetrics,
     TextOverflow, TextStyle, TextWrap, ViewportFit, ViewportInputEvent, ViewportInputKind,
-    ViewportMapping, WindowAnchor, WindowMetricsService,
+    ViewportMapping, WindowMetricsService,
     geometry::{Point, Px, Rect, Size},
 };
-use fret_runtime::{CommandId, DragKind, Effect, Menu, MenuItem, WhenExpr, WindowRequest};
+use fret_runtime::{CommandId, DragKind, Effect, WindowRequest};
 use std::{
     collections::{HashMap, HashSet},
     hash::{Hash, Hasher},
-    sync::Arc,
 };
 
 use crate::{
@@ -43,15 +42,6 @@ enum DockDropTarget {
     Float { window: fret_core::AppWindowId },
 }
 
-#[derive(Debug, Clone)]
-struct DockTabContextMenu {
-    window: fret_core::AppWindowId,
-    tabs: DockNodeId,
-    panel: PanelKey,
-    position: Point,
-    grab_offset: Point,
-}
-
 #[derive(Debug, Clone, PartialEq)]
 struct ViewportHover {
     window: fret_core::AppWindowId,
@@ -64,9 +54,7 @@ pub struct DockManager {
     pub panels: HashMap<PanelKey, DockPanel>,
     dock_space_nodes: HashMap<fret_core::AppWindowId, NodeId>,
     hover: Option<DockDropTarget>,
-    dock_tab_context_menu: Option<DockTabContextMenu>,
     viewport_hover: Option<ViewportHover>,
-    viewport_context_menu: Option<ViewportInputEvent>,
     viewport_overlays: HashMap<(fret_core::AppWindowId, RenderTargetId), ViewportOverlay>,
     viewport_content_rects: HashMap<(fret_core::AppWindowId, RenderTargetId), Rect>,
 }
@@ -251,9 +239,7 @@ impl Default for DockManager {
             panels: HashMap::new(),
             dock_space_nodes: HashMap::new(),
             hover: None,
-            dock_tab_context_menu: None,
             viewport_hover: None,
-            viewport_context_menu: None,
             viewport_overlays: HashMap::new(),
             viewport_content_rects: HashMap::new(),
         }
@@ -267,14 +253,6 @@ impl DockManager {
 
     pub fn register_dock_space_node(&mut self, window: fret_core::AppWindowId, node: NodeId) {
         self.dock_space_nodes.insert(window, node);
-    }
-
-    pub fn take_dock_tab_context_menu(
-        &mut self,
-    ) -> Option<(fret_core::AppWindowId, DockNodeId, PanelKey, Point)> {
-        self.dock_tab_context_menu
-            .take()
-            .map(|m| (m.window, m.tabs, m.panel, m.position))
     }
 
     pub fn insert_panel(&mut self, key: PanelKey, panel: DockPanel) {
@@ -859,8 +837,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let mut pending_redraws: Vec<fret_core::AppWindowId> = Vec::new();
         let mut invalidate_paint = false;
         let mut invalidate_layout = false;
-        let mut open_dock_tab_menu: Option<Point> = None;
-        let mut open_viewport_menu: Option<(Point, ViewportInputEvent)> = None;
         let mut request_focus: Option<NodeId> = None;
         let mut request_focus_panel: Option<PanelKey> = None;
         let mut request_pointer_capture: Option<Option<NodeId>> = None;
@@ -1020,34 +996,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             }));
                             request_focus_panel = Some(panel_key.clone());
                             invalidate_layout = true;
-                            dock.dock_tab_context_menu = Some(DockTabContextMenu {
-                                window: self.window,
-                                tabs: tabs_node,
-                                panel: panel_key,
-                                position: *position,
-                                grab_offset: {
-                                    let tab_rect = layout
-                                        .get(&tabs_node)
-                                        .copied()
-                                        .map(split_tab_bar)
-                                        .map(|(bar, _content)| {
-                                            tab_rect_for_index(
-                                                bar,
-                                                tab_index,
-                                                self.tab_scroll_for(tabs_node),
-                                            )
-                                        })
-                                        .unwrap_or_else(|| Rect::new(*position, Size::default()));
-                                    let tab_local = Point::new(
-                                        Px((position.x.0 - tab_rect.origin.x.0).max(0.0)),
-                                        Px((position.y.0 - tab_rect.origin.y.0).max(0.0)),
-                                    );
-                                    tab_local
-                                },
-                            });
                             dock.hover = None;
                             invalidate_paint = true;
-                            open_dock_tab_menu = Some(*position);
                             handled = true;
                         }
 
@@ -1071,11 +1021,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     modifiers: *modifiers,
                                 },
                             ) {
-                                if *button == fret_core::MouseButton::Right
-                                    && hit.viewport.context_menu_enabled
-                                {
-                                    dock.viewport_context_menu = Some(e);
-                                }
                                 pending_effects.push(Effect::ViewportInput(e));
                                 pending_redraws.push(self.window);
                             }
@@ -1085,7 +1030,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 button: *button,
                                 start: *position,
                                 moved: false,
-                                open_context_menu_on_up: *button == fret_core::MouseButton::Right,
                             });
                             request_pointer_capture = Some(Some(cx.node));
                         }
@@ -1161,19 +1105,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         }
 
                         if let Some(capture) = self.viewport_capture.as_mut() {
-                            if capture.open_context_menu_on_up
-                                && !capture.moved
-                                && capture.button == fret_core::MouseButton::Right
-                                && buttons.right
-                            {
-                                let dx = position.x.0 - capture.start.x.0;
-                                let dy = position.y.0 - capture.start.y.0;
-                                let dist2 = dx * dx + dy * dy;
-                                if dist2 > 16.0 {
-                                    capture.moved = true;
-                                }
-                            }
-
                             let hit = capture.hit.clone();
                             dock.viewport_hover = Some(ViewportHover {
                                 window: self.window,
@@ -1372,21 +1303,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         modifiers: *modifiers,
                                     },
                                 );
-                                if *button == fret_core::MouseButton::Right
-                                    && capture.hit.viewport.context_menu_enabled
-                                {
-                                    dock.viewport_context_menu = Some(e);
-                                }
                                 pending_effects.push(Effect::ViewportInput(e));
                                 pending_redraws.push(self.window);
-
-                                if capture.open_context_menu_on_up
-                                    && !capture.moved
-                                    && *button == fret_core::MouseButton::Right
-                                    && capture.hit.viewport.context_menu_enabled
-                                {
-                                    open_viewport_menu = Some((*position, e));
-                                }
 
                                 dock.hover = None;
                                 dock.viewport_hover = None;
@@ -1547,12 +1465,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     }
 
                                     if !requested_tear_off {
-                                        if allow_tear_off && !window_bounds.contains(position) {
-                                            dock.hover = Some(DockDropTarget::Float {
-                                                window: self.window,
-                                            });
-                                        } else if allow_tear_off
-                                            && float_zone(dock_bounds).contains(position)
+                                        if allow_tear_off
+                                            && (!window_bounds.contains(position)
+                                                || float_zone(dock_bounds).contains(position))
                                         {
                                             dock.hover = Some(DockDropTarget::Float {
                                                 window: self.window,
@@ -1595,10 +1510,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             let prev_hover = dock.hover.clone();
                             if let Some(drag) = dock_drag.as_ref() {
                                 let mut dragging = drag.dragging;
-                                if !dragging {
-                                    if drag.source_window != self.window {
-                                        dragging = true;
-                                    }
+                                if !dragging && drag.source_window != self.window {
+                                    dragging = true;
                                 }
 
                                 if dragging {
@@ -1733,70 +1646,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
             cx.app.cancel_drag();
         }
 
-        if let Some(position) = open_dock_tab_menu {
-            if cx.window.is_none() {
-                return;
-            };
-
-            cx.request_focus(cx.node);
-
-            let float_when = WhenExpr::parse("ui.window_tear_off").expect("valid when expr");
-
-            let menu = Menu {
-                title: Arc::from("Dock"),
-                items: vec![
-                    MenuItem::Command {
-                        command: CommandId::from("dock.tab.float"),
-                        when: Some(float_when),
-                    },
-                    MenuItem::Separator,
-                    MenuItem::Command {
-                        command: CommandId::from("dock.tab.move_left"),
-                        when: None,
-                    },
-                    MenuItem::Command {
-                        command: CommandId::from("dock.tab.move_right"),
-                        when: None,
-                    },
-                    MenuItem::Separator,
-                    MenuItem::Command {
-                        command: CommandId::from("dock.tab.close"),
-                        when: None,
-                    },
-                ],
-            };
-
-            cx.open_context_menu(position, menu);
-            cx.stop_propagation();
-            return;
-        }
-
-        if let Some((position, _viewport_event)) = open_viewport_menu {
-            if cx.window.is_none() {
-                return;
-            };
-
-            cx.request_focus(cx.node);
-
-            let menu = Menu {
-                title: Arc::from("Viewport"),
-                items: vec![
-                    MenuItem::Command {
-                        command: CommandId::from("viewport.copy_uv"),
-                        when: None,
-                    },
-                    MenuItem::Command {
-                        command: CommandId::from("viewport.copy_target_px"),
-                        when: None,
-                    },
-                ],
-            };
-
-            cx.open_context_menu(position, menu);
-            cx.stop_propagation();
-            return;
-        }
-
         if let Some(node) = request_focus {
             cx.request_focus(node);
         }
@@ -1837,123 +1686,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     cx.request_focus(cx.node);
                 }
                 cx.request_redraw();
-                cx.stop_propagation();
-                true
-            }
-            "dock.tab.float" => {
-                let Some(dock) = cx.app.global_mut::<DockManager>() else {
-                    return false;
-                };
-                let Some(ctx) = dock.dock_tab_context_menu.take() else {
-                    return false;
-                };
-                cx.app
-                    .push_effect(Effect::Dock(DockOp::RequestFloatPanelToNewWindow {
-                        source_window: ctx.window,
-                        panel: ctx.panel,
-                        anchor: Some(WindowAnchor {
-                            window: ctx.window,
-                            position: ctx.grab_offset,
-                        }),
-                    }));
-                cx.stop_propagation();
-                true
-            }
-            "dock.tab.move_left" => {
-                let Some(dock) = cx.app.global_mut::<DockManager>() else {
-                    return false;
-                };
-                let Some(ctx) = dock.dock_tab_context_menu.take() else {
-                    return false;
-                };
-                let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(ctx.tabs) else {
-                    return false;
-                };
-                let source_index = tabs.iter().position(|p| *p == ctx.panel);
-                let Some(source_index) = source_index else {
-                    return false;
-                };
-                if source_index == 0 {
-                    cx.stop_propagation();
-                    return true;
-                }
-                cx.app.push_effect(Effect::Dock(DockOp::MovePanel {
-                    source_window: ctx.window,
-                    panel: ctx.panel,
-                    target_window: ctx.window,
-                    target_tabs: ctx.tabs,
-                    zone: DropZone::Center,
-                    insert_index: Some(source_index.saturating_sub(1)),
-                }));
-                cx.stop_propagation();
-                true
-            }
-            "dock.tab.move_right" => {
-                let Some(dock) = cx.app.global_mut::<DockManager>() else {
-                    return false;
-                };
-                let Some(ctx) = dock.dock_tab_context_menu.take() else {
-                    return false;
-                };
-                let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(ctx.tabs) else {
-                    return false;
-                };
-                let source_index = tabs.iter().position(|p| *p == ctx.panel);
-                let Some(source_index) = source_index else {
-                    return false;
-                };
-                if source_index + 1 >= tabs.len() {
-                    cx.stop_propagation();
-                    return true;
-                }
-                cx.app.push_effect(Effect::Dock(DockOp::MovePanel {
-                    source_window: ctx.window,
-                    panel: ctx.panel,
-                    target_window: ctx.window,
-                    target_tabs: ctx.tabs,
-                    zone: DropZone::Center,
-                    insert_index: Some(source_index + 2),
-                }));
-                cx.stop_propagation();
-                true
-            }
-            "dock.tab.close" => {
-                let Some(dock) = cx.app.global_mut::<DockManager>() else {
-                    return false;
-                };
-                let Some(ctx) = dock.dock_tab_context_menu.take() else {
-                    return false;
-                };
-                cx.app.push_effect(Effect::Dock(DockOp::ClosePanel {
-                    window: ctx.window,
-                    panel: ctx.panel,
-                }));
-                cx.stop_propagation();
-                true
-            }
-            "viewport.copy_uv" => {
-                let Some(dock) = cx.app.global::<DockManager>() else {
-                    return false;
-                };
-                let Some(e) = dock.viewport_context_menu else {
-                    return false;
-                };
-                cx.app.push_effect(Effect::ClipboardSetText {
-                    text: format!("{:.6}, {:.6}", e.uv.0, e.uv.1),
-                });
-                cx.stop_propagation();
-                true
-            }
-            "viewport.copy_target_px" => {
-                let Some(dock) = cx.app.global::<DockManager>() else {
-                    return false;
-                };
-                let Some(e) = dock.viewport_context_menu else {
-                    return false;
-                };
-                cx.app.push_effect(Effect::ClipboardSetText {
-                    text: format!("{}, {}", e.target_px.0, e.target_px.1),
-                });
                 cx.stop_propagation();
                 true
             }
@@ -2896,7 +2628,6 @@ struct ViewportCaptureState {
     button: fret_core::MouseButton,
     start: Point,
     moved: bool,
-    open_context_menu_on_up: bool,
 }
 
 fn viewport_input_from_hit(
@@ -3692,7 +3423,6 @@ fn dock_space_regions(bounds: Rect) -> (Rect, Rect) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::primitives::Stack;
     use crate::test_host::TestHost;
     use fret_core::{
         AppWindowId, Event, InternalDragEvent, InternalDragKind, PlatformCapabilities, Point, Px,
@@ -3744,6 +3474,28 @@ mod tests {
 
         fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
             false
+        }
+    }
+
+    #[derive(Default)]
+    struct TestStack;
+
+    impl<H: UiHost> Widget<H> for TestStack {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            for &child in cx.children {
+                let _ = cx.layout_in(child, cx.bounds);
+            }
+            cx.available
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            for &child in cx.children {
+                if let Some(bounds) = cx.child_bounds(child) {
+                    cx.paint(child, bounds);
+                } else {
+                    cx.paint(child, cx.bounds);
+                }
+            }
         }
     }
 
@@ -3989,7 +3741,7 @@ mod tests {
         let mut ui = crate::UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(Stack::new());
+        let root = ui.create_node(TestStack);
         let dock_space = ui.create_node(DockSpace::new(window));
         ui.add_child(root, dock_space);
         ui.set_root(root);

@@ -1,0 +1,209 @@
+use std::{cell::RefCell, ops::Deref, rc::Rc};
+
+use fret_core::{Point, Px, Size};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScrollStrategy {
+    Start,
+    Center,
+    End,
+    Nearest,
+}
+
+#[derive(Debug, Default)]
+struct ScrollHandleState {
+    offset: Point,
+    viewport: Size,
+    content: Size,
+}
+
+/// A lightweight imperative handle for driving scroll state.
+///
+/// This is intentionally small and allocation-free to clone, so component-layer code can store it
+/// and pass it back into declarative elements each frame.
+#[derive(Debug, Default, Clone)]
+pub struct ScrollHandle {
+    state: Rc<RefCell<ScrollHandleState>>,
+}
+
+impl ScrollHandle {
+    pub fn offset(&self) -> Point {
+        self.state.borrow().offset
+    }
+
+    pub fn max_offset(&self) -> Point {
+        let state = self.state.borrow();
+        Point::new(
+            Px((state.content.width.0 - state.viewport.width.0).max(0.0)),
+            Px((state.content.height.0 - state.viewport.height.0).max(0.0)),
+        )
+    }
+
+    pub fn clamp_offset(&self, offset: Point) -> Point {
+        let max = self.max_offset();
+        Point::new(
+            Px(offset.x.0.max(0.0).min(max.x.0)),
+            Px(offset.y.0.max(0.0).min(max.y.0)),
+        )
+    }
+
+    pub fn set_offset(&self, offset: Point) {
+        let clamped = self.clamp_offset(offset);
+        let mut state = self.state.borrow_mut();
+        state.offset = clamped;
+    }
+
+    pub fn scroll_to_offset(&self, offset: Point) {
+        self.set_offset(offset);
+    }
+
+    pub fn viewport_size(&self) -> Size {
+        self.state.borrow().viewport
+    }
+
+    pub fn set_viewport_size(&self, viewport: Size) {
+        let mut state = self.state.borrow_mut();
+        state.viewport = Size::new(
+            Px(viewport.width.0.max(0.0)),
+            Px(viewport.height.0.max(0.0)),
+        );
+    }
+
+    pub fn content_size(&self) -> Size {
+        self.state.borrow().content
+    }
+
+    pub fn set_content_size(&self, content: Size) {
+        let mut state = self.state.borrow_mut();
+        state.content = Size::new(Px(content.width.0.max(0.0)), Px(content.height.0.max(0.0)));
+    }
+
+    pub fn scroll_to_range_y(&self, start_y: Px, end_y: Px, strategy: ScrollStrategy) {
+        let start_y = Px(start_y.0.max(0.0));
+        let end_y = Px(end_y.0.max(start_y.0));
+
+        let viewport_h = Px(self.viewport_size().height.0.max(0.0));
+        if viewport_h.0 <= 0.0 {
+            return;
+        }
+
+        let prev = self.offset();
+        let view_top = prev.y;
+        let view_bottom = Px(view_top.0 + viewport_h.0);
+
+        let next_y = match strategy {
+            ScrollStrategy::Start => start_y,
+            ScrollStrategy::End => Px(end_y.0 - viewport_h.0),
+            ScrollStrategy::Center => {
+                let center = 0.5 * (start_y.0 + end_y.0);
+                Px(center - 0.5 * viewport_h.0)
+            }
+            ScrollStrategy::Nearest => {
+                if start_y.0 < view_top.0 {
+                    start_y
+                } else if end_y.0 > view_bottom.0 {
+                    Px(end_y.0 - viewport_h.0)
+                } else {
+                    view_top
+                }
+            }
+        };
+
+        self.set_offset(Point::new(prev.x, next_y));
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DeferredScrollToItem {
+    index: usize,
+    strategy: ScrollStrategy,
+}
+
+#[derive(Debug, Default)]
+struct VirtualListScrollHandleState {
+    items_count: usize,
+    deferred: Option<DeferredScrollToItem>,
+}
+
+/// A scroll handle with VirtualList-specific helpers (scroll-to-item).
+#[derive(Debug, Default, Clone)]
+pub struct VirtualListScrollHandle {
+    state: Rc<RefCell<VirtualListScrollHandleState>>,
+    base_handle: ScrollHandle,
+}
+
+impl Deref for VirtualListScrollHandle {
+    type Target = ScrollHandle;
+
+    fn deref(&self) -> &Self::Target {
+        &self.base_handle
+    }
+}
+
+impl VirtualListScrollHandle {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn base_handle(&self) -> &ScrollHandle {
+        &self.base_handle
+    }
+
+    pub fn scroll_to_item(&self, index: usize, strategy: ScrollStrategy) {
+        let mut state = self.state.borrow_mut();
+        state.deferred = Some(DeferredScrollToItem { index, strategy });
+    }
+
+    pub fn scroll_to_index(&self, index: usize, strategy: ScrollStrategy) {
+        self.scroll_to_item(index, strategy);
+    }
+
+    pub fn scroll_to_bottom(&self) {
+        let items = self.state.borrow().items_count;
+        self.scroll_to_item(items.saturating_sub(1), ScrollStrategy::End);
+    }
+
+    pub(crate) fn set_items_count(&self, items_count: usize) {
+        self.state.borrow_mut().items_count = items_count;
+    }
+
+    pub(crate) fn deferred_scroll_to_item(&self) -> Option<(usize, ScrollStrategy)> {
+        self.state.borrow().deferred.map(|d| (d.index, d.strategy))
+    }
+
+    pub(crate) fn clear_deferred_scroll_to_item(&self) {
+        self.state.borrow_mut().deferred = None;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scroll_handle_clamps_offset_to_content_bounds() {
+        let handle = ScrollHandle::default();
+        handle.set_viewport_size(Size::new(Px(10.0), Px(10.0)));
+        handle.set_content_size(Size::new(Px(20.0), Px(30.0)));
+
+        handle.set_offset(Point::new(Px(-5.0), Px(999.0)));
+        assert_eq!(handle.offset(), Point::new(Px(0.0), Px(20.0)));
+    }
+
+    #[test]
+    fn scroll_handle_scroll_to_range_nearest_keeps_range_visible() {
+        let handle = ScrollHandle::default();
+        handle.set_viewport_size(Size::new(Px(10.0), Px(10.0)));
+        handle.set_content_size(Size::new(Px(10.0), Px(100.0)));
+
+        handle.set_offset(Point::new(Px(0.0), Px(20.0)));
+        handle.scroll_to_range_y(Px(25.0), Px(28.0), ScrollStrategy::Nearest);
+        assert_eq!(handle.offset().y, Px(20.0));
+
+        handle.scroll_to_range_y(Px(5.0), Px(8.0), ScrollStrategy::Nearest);
+        assert_eq!(handle.offset().y, Px(5.0));
+
+        handle.scroll_to_range_y(Px(95.0), Px(99.0), ScrollStrategy::Nearest);
+        assert_eq!(handle.offset().y, Px(89.0));
+    }
+}

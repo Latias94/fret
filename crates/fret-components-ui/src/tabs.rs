@@ -330,10 +330,8 @@ impl<H: UiHost> Widget<H> for Tabs {
                     cx.release_pointer_capture();
                     let pressed = self.pressed.take();
                     let hit = self.hit_test_tab(*position);
-                    if pressed.is_some() && pressed == hit && !self.disabled {
-                        if let Some(i) = hit {
-                            self.set_selected(cx.app, i);
-                        }
+                    if !self.disabled && let Some(i) = hit && pressed == Some(i) {
+                        self.set_selected(cx.app, i);
                     }
                     self.hovered = hit;
                     cx.invalidate_self(Invalidation::Paint);
@@ -625,7 +623,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(240.0), Px(120.0)),
         );
-        let mut text = FakeText::default();
+        let mut text = FakeText;
         let mut scene = Scene::default();
 
         ui.layout_all(&mut app, &mut text, bounds, 1.0);

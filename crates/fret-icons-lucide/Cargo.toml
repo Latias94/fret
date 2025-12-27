@@ -1,0 +1,12 @@
+[package]
+name = "fret-icons-lucide"
+version.workspace = true
+edition.workspace = true
+
+[features]
+default = ["semantic-ui"]
+semantic-ui = []
+
+[dependencies]
+fret-components-icons = { path = "../fret-components-icons" }
+rust-embed.workspace = true

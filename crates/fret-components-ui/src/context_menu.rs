@@ -1,3 +1,4 @@
+use crate::{ContextMenuRequest, ContextMenuService, MenuBarContextMenu};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp,
     SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
@@ -6,7 +7,7 @@ use fret_runtime::{
     CommandId, CommandRegistry, InputContext, KeymapService, MenuItem, format_sequence,
 };
 use fret_ui::{
-    ContextMenuRequest, ContextMenuService, MenuBarContextMenu, Theme, UiHost,
+    Theme, UiHost,
     widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
 use std::sync::Arc;
@@ -291,11 +292,9 @@ impl ContextMenu {
         self.typeahead_last = Some(now);
 
         let lower = typed.to_ascii_lowercase();
-        let cycle_same = self.typeahead.len() == 1 && self.typeahead.chars().next() == Some(lower);
+        let cycle_same = self.typeahead.chars().count() == 1 && self.typeahead.starts_with(lower);
 
-        if self.typeahead.is_empty() {
-            self.typeahead.push(lower);
-        } else if !cycle_same {
+        if self.typeahead.is_empty() || !cycle_same {
             self.typeahead.push(lower);
         }
         self.typeahead.clone()
@@ -420,7 +419,8 @@ impl ContextMenu {
         let mut next_anchor = self.compute_root_panel_anchor(request.position);
 
         loop {
-            let panel = self.build_panel(cx, items, request, constraints, outer, next_anchor, depth);
+            let panel =
+                self.build_panel(cx, items, request, constraints, outer, next_anchor, depth);
             next_anchor = self.compute_next_submenu_anchor(&panel, depth);
             self.panels.push(panel);
 
@@ -463,6 +463,7 @@ impl ContextMenu {
         Rect::new(Point::new(x, y), Size::new(Px(0.0), Px(0.0)))
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn build_panel<H: UiHost>(
         &mut self,
         cx: &mut PaintCx<'_, H>,
@@ -636,8 +637,7 @@ impl ContextMenu {
                     } else if bottom > view_bottom {
                         scroll_offset_y = Px((bottom - viewport_h.0).max(0.0));
                     }
-                    scroll_offset_y =
-                        Px(scroll_offset_y.0.max(0.0).min(max_scroll_offset_y.0));
+                    scroll_offset_y = Px(scroll_offset_y.0.max(0.0).min(max_scroll_offset_y.0));
                     break;
                 }
                 y += h;
@@ -1069,7 +1069,9 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         cx.stop_propagation();
                     }
                 }
-                fret_core::PointerEvent::Wheel { position, delta, .. } => {
+                fret_core::PointerEvent::Wheel {
+                    position, delta, ..
+                } => {
                     let Some((panel, _row)) = self.hit_test(*position) else {
                         return;
                     };
@@ -1082,11 +1084,9 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                     if self.scroll_offsets.len() <= panel {
                         self.scroll_offsets.resize(panel + 1, Px(0.0));
                     }
-                    let next = Px(
-                        (self.scroll_offsets[panel].0 - delta.y.0)
-                            .max(0.0)
-                            .min(p.max_scroll_offset_y.0),
-                    );
+                    let next = Px((self.scroll_offsets[panel].0 - delta.y.0)
+                        .max(0.0)
+                        .min(p.max_scroll_offset_y.0));
                     if next != self.scroll_offsets[panel] {
                         self.scroll_offsets[panel] = next;
                         if let Some(p) = self.panels.get_mut(panel) {

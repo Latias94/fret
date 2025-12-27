@@ -501,7 +501,7 @@ mod tests {
     use fret_ui::widget::EventCx;
 
     #[derive(Default)]
-    struct FakeServices;
+    struct FakeServices(());
 
     impl TextService for FakeServices {
         fn prepare(

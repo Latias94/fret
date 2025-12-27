@@ -59,7 +59,7 @@ pub use field::{
     Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend,
     FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle,
 };
-pub use hover_card::{HoverCard, HoverCardContent, HoverCardTrigger};
+pub use hover_card::{HoverCard, HoverCardAlign, HoverCardContent, HoverCardTrigger};
 pub use input_group::InputGroup;
 pub use input_otp::{InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot, InputOtpPattern};
 pub use item::{

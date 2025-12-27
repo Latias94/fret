@@ -79,6 +79,19 @@ cmdk is a mature behavioral reference for:
 - scroll-into-view behavior for active items,
 - grouping / separators / shortcuts display patterns.
 
+### 5) TanStack Virtual
+
+Role: **virtualization vocabulary** (variable measurement, stable keys, scroll-to strategies).
+
+Use TanStack Virtual as the primary reference for:
+
+- `VirtualItem` shape (index/key/start/end/size),
+- `getItemKey` stable key requirement,
+- overscan and `rangeExtractor` hooks,
+- `scrollMargin` semantics (headers/sticky offsets).
+
+Fret ports the vocabulary and outcomes, not the DOM-specific implementation.
+
 ## Crate boundary mapping (closed-loop)
 
 ### `crates/fret-ui` (runtime substrate)
@@ -96,9 +109,9 @@ Non-goal:
 
 Note:
 
-- `HoverCard` is currently implemented as a small declarative primitive to exercise “anchored panel +
-  overflow: visible hit-testing” semantics; longer-term it may be re-expressed on top of overlay
-  services once placement + dismissal contracts are fully locked (MVP 62).
+- `HoverCard` is implemented in `crates/fret-components-shadcn` as component-layer policy, built on
+  runtime substrate primitives (`HoverRegion`, cross-frame geometry queries, and the placement
+  solver). `crates/fret-ui` does not ship a `HoverCard` runtime element.
 
 ### `crates/fret-components-ui` (infrastructure)
 
@@ -122,4 +135,6 @@ Owns shadcn v4 naming + variants + composition recipes:
 - shadcn/ui v4: `repo-ref/ui`
 - cmdk: `repo-ref/cmdk`
 - Floating UI: `repo-ref/floating-ui`
+- TanStack Virtual: `repo-ref/virtual`
 - gpui-component (Rust ergonomics + structure): `repo-ref/gpui-component`
+- Tailwind CSS (layout vocabulary source): `repo-ref/tailwindcss`

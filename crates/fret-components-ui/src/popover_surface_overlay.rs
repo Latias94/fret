@@ -5,38 +5,28 @@ use fret_core::{
     SceneOp, Size,
 };
 use fret_runtime::CommandId;
+use fret_ui::overlay_placement;
 use fret_ui::paint::paint_shadow;
 use fret_ui::{
     Theme, UiHost,
     widget::{EventCx, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
-use fret_ui::overlay_placement;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PopoverSurfaceSide {
     Top,
+    #[default]
     Bottom,
     Left,
     Right,
 }
 
-impl Default for PopoverSurfaceSide {
-    fn default() -> Self {
-        Self::Bottom
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PopoverSurfaceAlign {
+    #[default]
     Start,
     Center,
     End,
-}
-
-impl Default for PopoverSurfaceAlign {
-    fn default() -> Self {
-        Self::Start
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -289,19 +279,18 @@ impl<H: UiHost> Widget<H> for PopoverSurfaceOverlay {
         };
 
         match event {
-            Event::Pointer(pe) => match pe {
-                fret_core::PointerEvent::Down {
-                    position, button, ..
-                } => {
-                    if *button != MouseButton::Left {
-                        return;
-                    }
-                    if request.close_on_click_outside && !self.panel_bounds.contains(*position) {
-                        self.close(cx, window);
-                    }
+            Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button,
+                ..
+            }) => {
+                if *button != MouseButton::Left {
+                    return;
                 }
-                _ => {}
-            },
+                if request.close_on_click_outside && !self.panel_bounds.contains(*position) {
+                    self.close(cx, window);
+                }
+            }
             Event::KeyDown { key, modifiers, .. } => {
                 if modifiers.ctrl || modifiers.meta || modifiers.alt {
                     return;
@@ -474,10 +463,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(120.0)),
         );
-        let anchor = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(10.0), Px(10.0)),
-        );
+        let anchor = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
         let content = Size::new(Px(190.0), Px(100.0));
 
         let mut overlay = PopoverSurfaceOverlay::new();

@@ -31,6 +31,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Shortcut arbitration / AltGr / multi-stroke bindings**: `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0020-focus-and-command-routing.md`
 - **Renderer (ordering, batching, shapes/SDF)**: `docs/adr/0009-renderer-ordering-and-batching.md`, `docs/adr/0030-shape-rendering-and-sdf-semantics.md`, `docs/adr/0002-display-list.md`
 - **Renderer clipping (soft/rounded)**: `docs/adr/0063-rounded-clipping-and-soft-clip-masks.md`
+- **Icons (semantic keys + SVG-first packaging)**: `docs/adr/0065-icon-system-and-asset-packaging.md`
 - **Editor interaction affordances (selection/docking highlights)**: `docs/adr/0030-shape-rendering-and-sdf-semantics.md`, `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`, `docs/adr/0011-overlays-and-multi-root.md`
 - **Engine viewports (embedded 3D)**: `docs/adr/0010-wgpu-context-ownership.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`, `docs/adr/0025-viewport-input-forwarding.md`, `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
 - **Viewport tools and overlays (example editor layer)**: `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
@@ -124,6 +125,8 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0020-focus-and-command-routing.md`
 - `docs/adr/0028-declarative-elements-and-element-state.md`
 - `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
+- `docs/adr/0066-fret-ui-runtime-contract-surface.md`
+- `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
 - `docs/adr/0032-style-tokens-and-theme-resolution.md`
 - `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
 - `docs/adr/0056-component-size-and-density-system.md`
@@ -137,6 +140,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0042-virtualization-and-large-lists.md`
 - `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
 - `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
+- `docs/adr/0065-icon-system-and-asset-packaging.md`
 - `docs/adr/0044-text-editing-state-and-commands.md`
 - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
 - `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`

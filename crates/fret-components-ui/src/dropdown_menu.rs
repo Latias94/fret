@@ -9,7 +9,7 @@ use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
 
 use crate::recipes::control::{ControlFallbacks, ControlTokenKeys, resolve_control_chrome};
 use crate::style::{ChromeRefinement, ColorFallback, component_color};
-use crate::{Sizable, Size as ComponentSize};
+use crate::{ContextMenuRequest, ContextMenuService, Sizable, Size as ComponentSize};
 
 #[derive(Debug, Clone)]
 struct PreparedText {
@@ -173,11 +173,36 @@ impl DropdownMenuButton {
     }
 
     fn open_menu<H: UiHost>(&self, cx: &mut EventCx<'_, H>) {
+        let Some(window) = cx.window else {
+            return;
+        };
+
         let position = Point::new(
             self.last_bounds.origin.x,
             Px(self.last_bounds.origin.y.0 + self.last_bounds.size.height.0 + 2.0),
         );
-        cx.open_context_menu(position, self.menu.clone());
+
+        let inv_ctx = fret_runtime::InputContext {
+            platform: cx.input_ctx.platform,
+            caps: cx.input_ctx.caps.clone(),
+            ui_has_modal: cx.input_ctx.ui_has_modal,
+            focus_is_text_input: cx.input_ctx.focus_is_text_input,
+        };
+
+        cx.app
+            .with_global_mut(ContextMenuService::default, |service, _app| {
+                service.set_request(
+                    window,
+                    ContextMenuRequest {
+                        position,
+                        menu: self.menu.clone(),
+                        input_ctx: inv_ctx,
+                        menu_bar: None,
+                    },
+                );
+            });
+        cx.dispatch_command(fret_runtime::CommandId::from("context_menu.open"));
+        cx.request_redraw();
     }
 
     fn ensure_prepared<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
