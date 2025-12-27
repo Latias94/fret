@@ -43,6 +43,7 @@ pub mod text_field;
 pub mod toast;
 pub mod toolbar;
 pub mod tooltip;
+pub mod tree;
 pub mod window_overlays;
 
 pub use app_menu_bar::AppMenuBar;
@@ -58,6 +59,9 @@ pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
 pub use text_area_field::TextAreaField;
 pub use toast::{ToastAction, ToastKind, ToastOverlay, ToastRequest, ToastService, ToastStyle};
 pub use tooltip::{TooltipArea, TooltipOverlay, TooltipRequest, TooltipService, TooltipStyle};
+pub use tree::{TreeEntry, TreeItem, TreeItemId, TreeState, TreeView, TreeViewHandles};
+pub use tree::{TreeRowRenderer, TreeRowState};
+pub use tree::{create_tree_view, flatten_tree, render_tree_view_list};
 
 pub use menu_overlay::{
     ContextMenuRequest, ContextMenuService, MenuBarContextMenu, MenuBarContextMenuEntry,

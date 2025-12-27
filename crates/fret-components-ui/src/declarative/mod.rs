@@ -6,6 +6,7 @@ pub mod stack;
 pub mod style;
 pub mod text;
 pub mod text_field;
+pub mod tree;
 
 #[cfg(test)]
 mod padding_semantics_tests;
