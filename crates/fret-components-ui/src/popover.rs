@@ -183,6 +183,8 @@ pub struct Popover {
     hover_row: Option<usize>,
     rows: Vec<PreparedRow>,
     panel_bounds: Rect,
+    scroll_offset_y: Px,
+    max_scroll_offset_y: Px,
     typeahead: String,
     typeahead_last: Option<Instant>,
 }
@@ -199,6 +201,8 @@ impl Popover {
             hover_row: None,
             rows: Vec::new(),
             panel_bounds: Rect::default(),
+            scroll_offset_y: Px(0.0),
+            max_scroll_offset_y: Px(0.0),
             typeahead: String::new(),
             typeahead_last: None,
         }
@@ -258,6 +262,43 @@ impl Popover {
         for row in self.rows.drain(..) {
             services.text().release(row.label);
         }
+    }
+
+    fn relayout_rows(&mut self) {
+        let mut row_y = self.panel_bounds.origin.y.0 + self.style.padding_y.0
+            - self.scroll_offset_y.0;
+        for row in &mut self.rows {
+            row.bounds = Rect::new(
+                Point::new(self.panel_bounds.origin.x, Px(row_y)),
+                Size::new(self.panel_bounds.size.width, self.style.row_height),
+            );
+            row_y += self.style.row_height.0;
+        }
+    }
+
+    fn ensure_row_visible(&mut self, index: usize) {
+        let viewport_h =
+            Px((self.panel_bounds.size.height.0 - self.style.padding_y.0 * 2.0).max(0.0));
+        if viewport_h.0 <= 0.0 {
+            return;
+        }
+
+        let row_h = self.style.row_height.0.max(0.0);
+        let top = (index as f32) * row_h;
+        let bottom = top + row_h;
+
+        let view_top = self.scroll_offset_y.0;
+        let view_bottom = view_top + viewport_h.0;
+
+        if top < view_top {
+            self.scroll_offset_y = Px(top);
+        } else if bottom > view_bottom {
+            self.scroll_offset_y = Px((bottom - viewport_h.0).max(0.0));
+        }
+
+        self.scroll_offset_y =
+            Px(self.scroll_offset_y.0.max(0.0).min(self.max_scroll_offset_y.0.max(0.0)));
+        self.relayout_rows();
     }
 
     fn hit_test_row(&self, point: Point) -> Option<usize> {
@@ -325,11 +366,10 @@ impl Popover {
         }
 
         let panel_w = Px(max_w.0 + self.style.padding_x.0 * 2.0);
-        let panel_h =
-            Px((request.items.len() as f32) * self.style.row_height.0
-                + self.style.padding_y.0 * 2.0);
+        let content_h = Px((request.items.len() as f32) * self.style.row_height.0);
+        let panel_h = Px(content_h.0 + self.style.padding_y.0 * 2.0);
 
-        self.panel_bounds = overlay_placement::anchored_panel_bounds(
+        self.panel_bounds = overlay_placement::anchored_panel_bounds_sized(
             cx.bounds,
             request.anchor,
             Size::new(panel_w, panel_h),
@@ -338,8 +378,14 @@ impl Popover {
             overlay_placement::Align::Start,
         );
 
+        let viewport_h =
+            Px((self.panel_bounds.size.height.0 - self.style.padding_y.0 * 2.0).max(0.0));
+        self.max_scroll_offset_y = Px((content_h.0 - viewport_h.0).max(0.0));
+        self.scroll_offset_y = Px(self.scroll_offset_y.0.max(0.0).min(self.max_scroll_offset_y.0));
+
         // Place rows.
-        let mut row_y = self.panel_bounds.origin.y.0 + self.style.padding_y.0;
+        let mut row_y =
+            self.panel_bounds.origin.y.0 + self.style.padding_y.0 - self.scroll_offset_y.0;
         self.rows.clear();
         for (blob, metrics, enabled) in prepared {
             let bounds = Rect::new(
@@ -382,19 +428,19 @@ impl Popover {
         None
     }
 
-    fn page_step(&self, window_bounds: Rect) -> usize {
-        let view_h = (window_bounds.size.height.0 - self.style.padding_y.0 * 2.0).max(0.0);
+    fn page_step(&self, viewport_bounds: Rect) -> usize {
+        let view_h = (viewport_bounds.size.height.0 - self.style.padding_y.0 * 2.0).max(0.0);
         let row_h = self.style.row_height.0.max(1.0);
         let page = (view_h / row_h).floor() as usize;
         page.max(1)
     }
 
-    fn page_step_enabled(&self, window_bounds: Rect, start: usize, dir: i32) -> Option<usize> {
+    fn page_step_enabled(&self, viewport_bounds: Rect, start: usize, dir: i32) -> Option<usize> {
         let len = self.rows.len();
         if len == 0 {
             return None;
         }
-        let step = self.page_step(window_bounds);
+        let step = self.page_step(viewport_bounds);
         let unclamped = if dir >= 0 {
             start.saturating_add(step)
         } else {
@@ -537,6 +583,8 @@ impl<H: UiHost> Widget<H> for Popover {
         self.last_serial = None;
         self.hover_row = None;
         self.panel_bounds = Rect::default();
+        self.scroll_offset_y = Px(0.0);
+        self.max_scroll_offset_y = Px(0.0);
     }
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
@@ -569,6 +617,26 @@ impl<H: UiHost> Widget<H> for Popover {
                     cx.request_redraw();
                 }
             }
+            Event::Pointer(fret_core::PointerEvent::Wheel { position, delta, .. }) => {
+                if !self.panel_bounds.contains(*position) {
+                    return;
+                }
+                if self.max_scroll_offset_y.0 <= 0.0 {
+                    return;
+                }
+                let next = Px(
+                    (self.scroll_offset_y.0 - delta.y.0)
+                        .max(0.0)
+                        .min(self.max_scroll_offset_y.0),
+                );
+                if next != self.scroll_offset_y {
+                    self.scroll_offset_y = next;
+                    self.relayout_rows();
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                }
+            }
             Event::Pointer(fret_core::PointerEvent::Down {
                 position, button, ..
             }) => {
@@ -597,6 +665,9 @@ impl<H: UiHost> Widget<H> for Popover {
             } => {
                 if let Some(c) = Self::typeahead_char(*key, modifiers) {
                     if self.handle_typeahead(&request, c) {
+                        if let Some(i) = self.hover_row {
+                            self.ensure_row_visible(i);
+                        }
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();
@@ -624,6 +695,7 @@ impl<H: UiHost> Widget<H> for Popover {
                             .unwrap_or(0);
                         if let Some(next) = self.next_enabled_row(base, 1) {
                             self.hover_row = Some(next);
+                            self.ensure_row_visible(next);
                         }
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
@@ -637,6 +709,7 @@ impl<H: UiHost> Widget<H> for Popover {
                             .unwrap_or(0);
                         if let Some(next) = self.next_enabled_row(base, -1) {
                             self.hover_row = Some(next);
+                            self.ensure_row_visible(next);
                         }
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
@@ -648,8 +721,9 @@ impl<H: UiHost> Widget<H> for Popover {
                             .or(request.selected)
                             .or_else(|| self.first_enabled_row())
                             .unwrap_or(0);
-                        if let Some(next) = self.page_step_enabled(cx.bounds, base, 1) {
+                        if let Some(next) = self.page_step_enabled(self.panel_bounds, base, 1) {
                             self.hover_row = Some(next);
+                            self.ensure_row_visible(next);
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
                         }
@@ -661,8 +735,9 @@ impl<H: UiHost> Widget<H> for Popover {
                             .or(request.selected)
                             .or_else(|| self.first_enabled_row())
                             .unwrap_or(0);
-                        if let Some(next) = self.page_step_enabled(cx.bounds, base, -1) {
+                        if let Some(next) = self.page_step_enabled(self.panel_bounds, base, -1) {
                             self.hover_row = Some(next);
+                            self.ensure_row_visible(next);
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
                         }
@@ -671,17 +746,19 @@ impl<H: UiHost> Widget<H> for Popover {
                         self.clear_typeahead();
                         if let Some(i) = self.first_enabled_row() {
                             self.hover_row = Some(i);
-                        cx.invalidate_self(Invalidation::Paint);
-                        cx.request_redraw();
-                    }
+                            self.ensure_row_visible(i);
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                        }
                     }
                     KeyCode::End => {
                         self.clear_typeahead();
-                    if let Some(i) = self.last_enabled_row() {
-                        self.hover_row = Some(i);
-                        cx.invalidate_self(Invalidation::Paint);
-                        cx.request_redraw();
-                    }
+                        if let Some(i) = self.last_enabled_row() {
+                            self.hover_row = Some(i);
+                            self.ensure_row_visible(i);
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                        }
                     }
                     _ => {}
                 }
@@ -728,6 +805,9 @@ impl<H: UiHost> Widget<H> for Popover {
             self.hover_row = request
                 .selected
                 .filter(|&i| self.rows.get(i).is_some_and(|r| r.enabled));
+            if let Some(i) = self.hover_row {
+                self.ensure_row_visible(i);
+            }
             self.clear_typeahead();
         }
 
@@ -747,7 +827,25 @@ impl<H: UiHost> Widget<H> for Popover {
             corner_radii: self.style.corner_radii,
         });
 
+        cx.scene.push(SceneOp::PushClipRRect {
+            rect: self.panel_bounds,
+            corner_radii: self.style.corner_radii,
+        });
+
+        let panel_top = self.panel_bounds.origin.y.0 + self.style.padding_y.0;
+        let panel_bottom =
+            self.panel_bounds.origin.y.0 + self.panel_bounds.size.height.0 - self.style.padding_y.0;
+
         for (i, row) in self.rows.iter().enumerate() {
+            let y = row.bounds.origin.y.0;
+            let h = row.bounds.size.height.0.max(0.0);
+            if y + h < panel_top {
+                continue;
+            }
+            if y > panel_bottom {
+                break;
+            }
+
             let selected = request.selected == Some(i);
             let hovered = self.hover_row == Some(i);
             let bg = if selected {
@@ -787,5 +885,7 @@ impl<H: UiHost> Widget<H> for Popover {
                 },
             });
         }
+
+        cx.scene.push(SceneOp::PopClip);
     }
 }

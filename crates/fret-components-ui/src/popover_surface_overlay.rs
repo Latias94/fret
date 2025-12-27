@@ -249,7 +249,7 @@ fn compute_anchored_panel_bounds(
     preferred_side: PopoverSurfaceSide,
     align: PopoverSurfaceAlign,
 ) -> Rect {
-    overlay_placement::anchored_panel_bounds(
+    overlay_placement::anchored_panel_bounds_sized(
         outer,
         anchor,
         content,
@@ -493,5 +493,30 @@ mod tests {
             placed.origin.x.0 >= 8.0 && placed.origin.y.0 >= 8.0,
             "expected inset clamping to respect window margin"
         );
+    }
+
+    #[test]
+    fn clamps_height_to_available_space_below_anchor() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(200.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(10.0), Px(150.0)),
+            Size::new(Px(40.0), Px(10.0)),
+        );
+        let desired = Size::new(Px(120.0), Px(180.0));
+
+        let mut overlay = PopoverSurfaceOverlay::new();
+        overlay.style.window_margin = Px(0.0);
+        overlay.style.side_offset = Px(8.0);
+
+        let request = PopoverSurfaceRequest::new(NodeId::default(), anchor, NodeId::default())
+            .side(PopoverSurfaceSide::Bottom)
+            .align(PopoverSurfaceAlign::Start);
+
+        let placed = overlay.compute_panel_bounds(outer, &request, desired);
+        // Available space below = 200 - (150 + 10 + 8) = 32
+        assert_eq!(placed.size.height, Px(32.0));
     }
 }
