@@ -4,7 +4,7 @@ use fret_core::{Color, Corners, Edges, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, ElementKind, LayoutStyle, PressableProps, TextProps,
+    AnyElement, ContainerProps, ElementKind, LayoutStyle, PressableA11y, PressableProps, TextProps,
 };
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
@@ -323,6 +323,11 @@ pub fn command_palette_list<H: UiHost>(
                                     on_click: enabled.then(|| {
                                         CommandId::new(format!("command_palette.select.{}", id))
                                     }),
+                                    a11y: PressableA11y {
+                                        role: Some(fret_core::SemanticsRole::ListItem),
+                                        label: Some(label.clone()),
+                                        selected: is_selected,
+                                    },
                                     ..Default::default()
                                 },
                                 |cx, st| {

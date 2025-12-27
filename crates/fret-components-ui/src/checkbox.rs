@@ -230,9 +230,11 @@ impl<H: UiHost> Widget<H> for Checkbox {
     }
 
     fn semantics(&mut self, cx: &mut fret_ui::widget::SemanticsCx<'_, H>) {
-        cx.set_role(SemanticsRole::Button);
         cx.set_disabled(self.disabled);
-        cx.set_selected(self.checked(cx.app));
+        cx.set_role(SemanticsRole::Checkbox);
+        cx.set_focusable(!self.disabled);
+        cx.set_invokable(!self.disabled);
+        cx.set_checked(Some(self.checked(cx.app)));
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {

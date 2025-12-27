@@ -1,10 +1,80 @@
 use fret_core::{Event, KeyCode, MouseButton, NodeId, Rect, UiServices};
 use fret_runtime::CommandId;
+use fret_ui::widget::EventCx;
 use fret_ui::{
     UiHost,
     tree::{UiLayerId, UiTree},
 };
-use fret_ui::widget::EventCx;
+
+#[derive(Debug, Clone, Copy)]
+pub enum OverlayFocusTarget {
+    None,
+    Root,
+    Node(NodeId),
+    FirstFocusableDescendant { root: NodeId, fallback: NodeId },
+}
+
+impl OverlayFocusTarget {
+    fn resolve<H: UiHost>(&self, ui: &UiTree<H>, portal_root: NodeId) -> Option<NodeId> {
+        match *self {
+            Self::None => None,
+            Self::Root => Some(portal_root),
+            Self::Node(id) => Some(id),
+            Self::FirstFocusableDescendant { root, fallback } => {
+                ui.first_focusable_descendant(root).or(Some(fallback))
+            }
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct ModalFocusScope {
+    root: NodeId,
+    owned_portals: Vec<NodeId>,
+}
+
+impl ModalFocusScope {
+    pub fn new(root: NodeId) -> Self {
+        Self {
+            root,
+            owned_portals: Vec::new(),
+        }
+    }
+
+    pub fn root(&self) -> NodeId {
+        self.root
+    }
+
+    pub fn allow_portal(&mut self, root: NodeId) {
+        if root == self.root {
+            return;
+        }
+        if self.owned_portals.contains(&root) {
+            return;
+        }
+        self.owned_portals.push(root);
+    }
+
+    pub fn disallow_portal(&mut self, root: NodeId) {
+        self.owned_portals.retain(|r| *r != root);
+    }
+
+    pub fn traversal_roots_in_ui<H: UiHost>(&self, ui: &UiTree<H>) -> Vec<NodeId> {
+        let mut out = Vec::with_capacity(1 + self.owned_portals.len());
+        out.push(Self::effective_traversal_root(ui, self.root));
+        out.extend(
+            self.owned_portals
+                .iter()
+                .copied()
+                .map(|r| Self::effective_traversal_root(ui, r)),
+        );
+        out
+    }
+
+    fn effective_traversal_root<H: UiHost>(ui: &UiTree<H>, root: NodeId) -> NodeId {
+        ui.children(root).first().copied().unwrap_or(root)
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct OverlayPortal {
@@ -45,6 +115,18 @@ impl OverlayPortal {
         ui.set_layer_visible(self.layer, true);
     }
 
+    pub fn show_with_focus<H: UiHost>(&mut self, ui: &mut UiTree<H>, focus: OverlayFocusTarget) {
+        let was_visible = self.is_visible(ui);
+        self.show(ui);
+        if was_visible {
+            return;
+        }
+
+        if let Some(focus) = focus.resolve(ui, self.root) {
+            ui.set_focus(Some(focus));
+        }
+    }
+
     pub fn hide<H: UiHost>(&mut self, ui: &mut UiTree<H>, services: &mut dyn UiServices) {
         if !self.is_visible(ui) {
             return;
@@ -55,7 +137,14 @@ impl OverlayPortal {
         }
         ui.set_layer_visible(self.layer, false);
 
-        if let Some(prev) = self.previous_focus.take() {
+        // Only restore focus if it was inside this overlay (or missing). If focus already moved
+        // elsewhere (e.g. click-through outside press), do not override it.
+        let should_restore = match ui.focus() {
+            None => true,
+            Some(focus) => ui.node_layer(focus) == Some(self.layer),
+        };
+
+        if should_restore && let Some(prev) = self.previous_focus.take() {
             ui.set_focus(Some(prev));
         }
     }
@@ -154,9 +243,7 @@ impl DismissOnEscapeAndClickOutside {
                 true
             }
             Event::Pointer(fret_core::PointerEvent::Down {
-                position,
-                button,
-                ..
+                position, button, ..
             }) => {
                 if !close_on_click_outside || *button != MouseButton::Left {
                     return false;

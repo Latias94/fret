@@ -21,8 +21,7 @@ pub struct AlertDialogRequest {
     pub default_action: AlertDialogDefaultAction,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AlertDialogDefaultAction {
     #[default]
     Action,

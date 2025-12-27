@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, NodeId, Point, Px, Rect, SceneOp, Size,
-};
+use fret_core::{Color, Corners, DrawOrder, Edges, Event, NodeId, Point, Px, Rect, SceneOp, Size};
 use fret_runtime::CommandId;
 use fret_ui::overlay_placement;
 use fret_ui::paint::paint_shadow;
@@ -276,6 +274,10 @@ impl<H: UiHost> Widget<H> for PopoverSurfaceOverlay {
         cx.set_role(fret_core::SemanticsRole::Panel);
     }
 
+    fn hit_test(&self, _bounds: Rect, position: Point) -> bool {
+        self.panel_bounds.contains(position)
+    }
+
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme());
         let Some(window) = cx.window else {
@@ -387,12 +389,19 @@ impl<H: UiHost> Widget<H> for PopoverSurfaceOverlay {
             corner_radii: self.panel_radii,
         });
 
+        cx.scene.push(SceneOp::PushClipRRect {
+            rect: self.panel_bounds,
+            corner_radii: self.panel_radii,
+        });
+
         for &child in cx.children {
             if child == request.content_node {
                 let bounds = cx.child_bounds(child).unwrap_or(cx.bounds);
                 cx.paint(child, bounds);
             }
         }
+
+        cx.scene.push(SceneOp::PopClip);
     }
 }
 
@@ -474,7 +483,7 @@ mod tests {
     }
 
     #[test]
-    fn clamps_height_to_available_space_below_anchor() {
+    fn clamps_height_to_available_space_on_chosen_side() {
         let outer = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(200.0)),
@@ -495,6 +504,10 @@ mod tests {
 
         let placed = overlay.compute_panel_bounds(outer, &request, desired);
         // Available space below = 200 - (150 + 10 + 8) = 32
-        assert_eq!(placed.size.height, Px(32.0));
+        // Available space above = 150 - 8 = 142
+        // Neither side fits the desired height (180), so the solver should pick the side with less
+        // main-axis overflow (top) and clamp to the available space.
+        assert_eq!(placed.size.height, Px(142.0));
+        assert!(placed.origin.y.0 + placed.size.height.0 <= anchor.origin.y.0);
     }
 }

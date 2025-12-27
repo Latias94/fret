@@ -160,10 +160,8 @@ impl BreadcrumbItem {
 
                 cx.pressable(
                     PressableProps {
-                        layout: Default::default(),
-                        enabled: true,
                         on_click: Some(command),
-                        focus_ring: None,
+                        ..Default::default()
                     },
                     move |cx, st| {
                         vec![breadcrumb_link_text(

@@ -283,6 +283,11 @@ impl<H: UiHost> Widget<H> for Tabs {
     fn semantics(&mut self, cx: &mut fret_ui::widget::SemanticsCx<'_, H>) {
         cx.set_role(SemanticsRole::Panel);
         cx.set_disabled(self.disabled);
+        cx.set_focusable(!self.disabled);
+        let selected = self.selected_index(cx.app);
+        if let Some(label) = self.tabs.get(selected).cloned() {
+            cx.set_value(label.to_string());
+        }
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
@@ -330,7 +335,10 @@ impl<H: UiHost> Widget<H> for Tabs {
                     cx.release_pointer_capture();
                     let pressed = self.pressed.take();
                     let hit = self.hit_test_tab(*position);
-                    if !self.disabled && let Some(i) = hit && pressed == Some(i) {
+                    if !self.disabled
+                        && let Some(i) = hit
+                        && pressed == Some(i)
+                    {
                         self.set_selected(cx.app, i);
                     }
                     self.hovered = hit;

@@ -551,6 +551,7 @@ impl Item {
                     enabled,
                     on_click,
                     focus_ring: Some(focus_ring),
+                    ..Default::default()
                 },
                 move |cx, st| content(cx, st.hovered, st.pressed),
             )

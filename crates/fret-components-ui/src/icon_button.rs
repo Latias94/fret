@@ -5,6 +5,7 @@ use fret_core::{
 };
 use fret_runtime::CommandId;
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
+use std::sync::Arc;
 
 use crate::style::{ColorFallback, MetricFallback, component_color, component_metric};
 use crate::{Sizable, Size as ComponentSize};
@@ -50,6 +51,7 @@ impl Default for ResolvedIconButtonStyle {
 
 pub struct IconButton {
     icon: IconId,
+    aria_label: Option<Arc<str>>,
     command: Option<CommandId>,
     disabled: bool,
     size: ComponentSize,
@@ -65,6 +67,7 @@ impl IconButton {
     pub fn new(icon: IconId) -> Self {
         Self {
             icon,
+            aria_label: None,
             command: None,
             disabled: false,
             size: ComponentSize::Medium,
@@ -74,6 +77,11 @@ impl IconButton {
             last_theme_revision: None,
             resolved: ResolvedIconButtonStyle::default(),
         }
+    }
+
+    pub fn aria_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.aria_label = Some(label.into());
+        self
     }
 
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
@@ -171,6 +179,11 @@ impl<H: UiHost> Widget<H> for IconButton {
     fn semantics(&mut self, cx: &mut fret_ui::widget::SemanticsCx<'_, H>) {
         cx.set_role(SemanticsRole::Button);
         cx.set_disabled(self.disabled);
+        cx.set_focusable(!self.disabled);
+        cx.set_invokable(!self.disabled);
+        if let Some(label) = self.aria_label.as_ref() {
+            cx.set_label(label.as_ref().to_string());
+        }
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {

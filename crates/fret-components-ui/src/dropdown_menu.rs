@@ -278,6 +278,9 @@ impl<H: UiHost> Widget<H> for DropdownMenuButton {
 
     fn semantics(&mut self, cx: &mut fret_ui::widget::SemanticsCx<'_, H>) {
         cx.set_role(SemanticsRole::Button);
+        cx.set_label(self.label.to_string());
+        cx.set_focusable(true);
+        cx.set_invokable(true);
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {

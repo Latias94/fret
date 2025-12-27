@@ -1,7 +1,7 @@
 use crate::{ContextMenuRequest, ContextMenuService, MenuBarContextMenu};
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect, SceneOp,
-    SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
+    Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, NodeId, Point, Px, Rect,
+    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::{
     CommandId, CommandRegistry, InputContext, KeymapService, MenuItem, format_sequence,
@@ -10,6 +10,8 @@ use fret_ui::{
     Theme, UiHost,
     widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -18,6 +20,124 @@ use crate::Size as ComponentSize;
 use crate::recipes::menu_list::resolve_menu_list_row_chrome;
 use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
 use fret_ui::overlay_placement;
+
+pub(crate) const CONTEXT_MENU_A11Y_SLOTS: usize = 256;
+
+#[derive(Debug)]
+pub(crate) struct ContextMenuA11yState {
+    slots: Vec<Option<ContextMenuA11ySlot>>,
+}
+
+impl ContextMenuA11yState {
+    pub(crate) fn new(slot_count: usize) -> Self {
+        Self {
+            slots: vec![None; slot_count],
+        }
+    }
+
+    fn clear(&mut self) {
+        for slot in &mut self.slots {
+            *slot = None;
+        }
+    }
+
+    fn slot(&self, slot: usize) -> Option<&ContextMenuA11ySlot> {
+        self.slots.get(slot).and_then(|s| s.as_ref())
+    }
+
+    fn set_slot(&mut self, slot: usize, value: Option<ContextMenuA11ySlot>) {
+        if let Some(dst) = self.slots.get_mut(slot) {
+            *dst = value;
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct ContextMenuA11ySlot {
+    depth: usize,
+    raw_index: usize,
+    bounds: Rect,
+    label: Option<Arc<str>>,
+    kind: ContextMenuA11ySlotKind,
+    enabled: bool,
+    selected: bool,
+    expanded: bool,
+}
+
+#[derive(Debug, Clone)]
+enum ContextMenuA11ySlotKind {
+    Separator,
+    Command,
+    Submenu,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ContextMenuA11yItem {
+    slot: usize,
+    shared: Rc<RefCell<ContextMenuA11yState>>,
+}
+
+impl ContextMenuA11yItem {
+    pub(crate) fn new(slot: usize, shared: Rc<RefCell<ContextMenuA11yState>>) -> Self {
+        Self { slot, shared }
+    }
+}
+
+impl<H: UiHost> Widget<H> for ContextMenuA11yItem {
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        false
+    }
+
+    fn is_focusable(&self) -> bool {
+        let state = self.shared.borrow();
+        let Some(slot) = state.slot(self.slot) else {
+            return false;
+        };
+
+        slot.enabled
+            && matches!(
+                slot.kind,
+                ContextMenuA11ySlotKind::Command | ContextMenuA11ySlotKind::Submenu
+            )
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.available
+    }
+
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        let state = self.shared.borrow();
+        let Some(slot) = state.slot(self.slot) else {
+            cx.set_role(SemanticsRole::Generic);
+            cx.set_disabled(true);
+            cx.set_focusable(false);
+            cx.set_invokable(false);
+            return;
+        };
+
+        match &slot.kind {
+            ContextMenuA11ySlotKind::Separator => {
+                cx.set_role(SemanticsRole::Generic);
+                cx.set_disabled(true);
+                cx.set_focusable(false);
+                cx.set_invokable(false);
+            }
+            ContextMenuA11ySlotKind::Command | ContextMenuA11ySlotKind::Submenu => {
+                cx.set_role(SemanticsRole::MenuItem);
+                if let Some(label) = slot.label.as_ref() {
+                    cx.set_label(label.as_ref().to_string());
+                }
+                cx.set_disabled(!slot.enabled);
+                cx.set_focusable(slot.enabled);
+                cx.set_invokable(slot.enabled);
+                cx.set_selected(slot.selected);
+                cx.set_expanded(slot.expanded);
+            }
+        }
+    }
+
+    fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+}
 
 #[derive(Debug, Clone)]
 pub struct ContextMenuStyle {
@@ -99,9 +219,12 @@ pub struct ContextMenu {
     style: ContextMenuStyle,
     style_override: bool,
     size: ComponentSize,
+    a11y: Rc<RefCell<ContextMenuA11yState>>,
+    panels_dirty: bool,
     last_bounds: Rect,
     last_serial: Option<u64>,
     last_theme_revision: Option<u64>,
+    last_scale_factor_bits: Option<u32>,
     open_path: Vec<usize>,
     selection: Vec<Option<usize>>,
     hover_panel: Option<usize>,
@@ -140,15 +263,32 @@ enum PreparedRowKind {
     Submenu,
 }
 
+struct ContextMenuPrepareCx<'a, H: UiHost> {
+    app: &'a mut H,
+    services: &'a mut dyn fret_core::UiServices,
+    window: Option<fret_core::AppWindowId>,
+    bounds: Rect,
+    scale_factor: f32,
+}
+
 impl ContextMenu {
     pub fn new() -> Self {
+        Self::new_with_a11y(Rc::new(RefCell::new(ContextMenuA11yState::new(
+            CONTEXT_MENU_A11Y_SLOTS,
+        ))))
+    }
+
+    pub(crate) fn new_with_a11y(a11y: Rc<RefCell<ContextMenuA11yState>>) -> Self {
         Self {
             style: ContextMenuStyle::default(),
             style_override: false,
             size: ComponentSize::Small,
+            a11y,
+            panels_dirty: true,
             last_bounds: Rect::default(),
             last_serial: None,
             last_theme_revision: None,
+            last_scale_factor_bits: None,
             open_path: Vec::new(),
             selection: Vec::new(),
             hover_panel: None,
@@ -180,6 +320,7 @@ impl ContextMenu {
             return;
         }
         self.last_theme_revision = Some(theme.revision());
+        self.panels_dirty = true;
 
         let surface = resolve_surface_chrome(
             theme,
@@ -225,6 +366,90 @@ impl ContextMenu {
                 }
             }
         }
+    }
+
+    fn clear_a11y(&mut self) {
+        self.a11y.borrow_mut().clear();
+    }
+
+    fn update_a11y_from_panels(&mut self) {
+        let mut state = self.a11y.borrow_mut();
+        state.clear();
+
+        let mut slot = 0usize;
+        for (depth, panel) in self.panels.iter().enumerate() {
+            let panel_top = panel.bounds.origin.y.0 + self.style.padding_y.0;
+            let panel_bottom =
+                panel.bounds.origin.y.0 + panel.bounds.size.height.0 - self.style.padding_y.0;
+
+            let selected_raw = self.selection_raw(depth);
+            let expanded_raw = self.open_path.get(depth).copied();
+
+            let mut y = panel.bounds.origin.y.0 + self.style.padding_y.0 - panel.scroll_offset_y.0;
+            for row in &panel.rows {
+                if slot >= state.slots.len() {
+                    return;
+                }
+
+                let h = row.height.0.max(0.0);
+                let row_rect = Rect::new(
+                    Point::new(panel.bounds.origin.x, Px(y)),
+                    Size::new(panel.bounds.size.width, Px(h)),
+                );
+
+                if y + h < panel_top {
+                    y += h;
+                    continue;
+                }
+                if y > panel_bottom {
+                    break;
+                }
+
+                let kind = match &row.kind {
+                    PreparedRowKind::Separator => ContextMenuA11ySlotKind::Separator,
+                    PreparedRowKind::Command(_cmd) => ContextMenuA11ySlotKind::Command,
+                    PreparedRowKind::Submenu => ContextMenuA11ySlotKind::Submenu,
+                };
+
+                state.set_slot(
+                    slot,
+                    Some(ContextMenuA11ySlot {
+                        depth,
+                        raw_index: row.raw_index,
+                        bounds: row_rect,
+                        label: row.label_text.clone(),
+                        kind,
+                        enabled: row.enabled,
+                        selected: selected_raw == Some(row.raw_index),
+                        expanded: expanded_raw == Some(row.raw_index),
+                    }),
+                );
+
+                slot += 1;
+                y += h;
+            }
+        }
+    }
+
+    fn update_a11y_flags_only(&mut self) {
+        let mut state = self.a11y.borrow_mut();
+        for slot in &mut state.slots {
+            let Some(s) = slot.as_mut() else {
+                continue;
+            };
+            s.selected = self.selection_raw(s.depth) == Some(s.raw_index);
+            s.expanded = self.open_path.get(s.depth).copied() == Some(s.raw_index);
+        }
+    }
+
+    fn focused_slot_data(
+        &self,
+        focus: Option<NodeId>,
+        children: &[NodeId],
+    ) -> Option<ContextMenuA11ySlot> {
+        let focus = focus?;
+        let idx = children.iter().position(|&c| c == focus)?;
+        self.a11y.borrow().slot(idx).cloned()
     }
 
     fn typeahead_timeout() -> Duration {
@@ -367,19 +592,30 @@ impl ContextMenu {
 
     fn ensure_prepared<H: UiHost>(
         &mut self,
-        cx: &mut PaintCx<'_, H>,
+        cx: &mut ContextMenuPrepareCx<'_, H>,
     ) -> Option<fret_core::AppWindowId> {
+        if self.last_bounds != cx.bounds {
+            self.panels_dirty = true;
+        }
         self.last_bounds = cx.bounds;
+
+        let scale_bits = cx.scale_factor.to_bits();
+        if self.last_scale_factor_bits != Some(scale_bits) {
+            self.last_scale_factor_bits = Some(scale_bits);
+            self.panels_dirty = true;
+        }
 
         let window = cx.window?;
         let Some(service) = cx.app.global::<ContextMenuService>() else {
             self.cleanup(cx.services);
             self.last_serial = None;
+            self.clear_a11y();
             return Some(window);
         };
         let Some((serial, request)) = service.request(window).map(|(s, r)| (s, r.clone())) else {
             self.cleanup(cx.services);
             self.last_serial = None;
+            self.clear_a11y();
             return Some(window);
         };
 
@@ -392,13 +628,27 @@ impl ContextMenu {
             self.scroll_offsets.clear();
             self.clear_typeahead();
             self.last_serial = Some(serial);
+            self.panels_dirty = true;
         }
 
-        self.rebuild_panels(cx, &request);
+        if self.panels_dirty || self.panels.is_empty() {
+            self.panels_dirty = false;
+            self.rebuild_panels(cx, &request);
+        } else {
+            for (i, panel) in self.panels.iter_mut().enumerate() {
+                if let Some(offset) = self.scroll_offsets.get(i).copied() {
+                    panel.scroll_offset_y = offset;
+                }
+            }
+        }
         Some(window)
     }
 
-    fn rebuild_panels<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>, request: &ContextMenuRequest) {
+    fn rebuild_panels<H: UiHost>(
+        &mut self,
+        cx: &mut ContextMenuPrepareCx<'_, H>,
+        request: &ContextMenuRequest,
+    ) {
         self.cleanup(cx.services);
         self.panels.clear();
 
@@ -466,7 +716,7 @@ impl ContextMenu {
     #[allow(clippy::too_many_arguments)]
     fn build_panel<H: UiHost>(
         &mut self,
-        cx: &mut PaintCx<'_, H>,
+        cx: &mut ContextMenuPrepareCx<'_, H>,
         items: &[MenuItem],
         request: &ContextMenuRequest,
         constraints: TextConstraints,
@@ -818,7 +1068,8 @@ impl ContextMenu {
                 service.set_pending_action(window, None);
             });
 
-        cx.invalidate_self(Invalidation::Paint);
+        self.panels_dirty = true;
+        cx.invalidate_self(Invalidation::Layout);
         cx.request_redraw();
         true
     }
@@ -834,15 +1085,44 @@ impl<H: UiHost> Widget<H> for ContextMenu {
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         self.cleanup(services);
         self.last_serial = None;
+        self.last_scale_factor_bits = None;
         self.open_path.clear();
         self.selection.clear();
         self.hover_panel = None;
         self.hover_row = None;
         self.panels.clear();
+        self.scroll_offsets.clear();
+        self.panels_dirty = true;
+        self.clear_a11y();
     }
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         cx.set_role(SemanticsRole::Menu);
+        cx.set_label("Context menu");
+        cx.set_focusable(true);
+        cx.set_invokable(false);
+
+        let depth = self
+            .focused_slot_data(cx.focus, cx.children)
+            .map(|s| s.depth)
+            .unwrap_or_else(|| self.current_depth());
+        let Some(raw) = self.selection_raw(depth) else {
+            return;
+        };
+        let Some(panel) = self.panels.get(depth) else {
+            return;
+        };
+        let Some(row) = panel.rows.iter().find(|r| r.raw_index == raw) else {
+            return;
+        };
+
+        if let Some(label) = row.label_text.as_ref() {
+            cx.set_value(label.as_ref().to_string());
+        }
+    }
+
+    fn hit_test(&self, _bounds: Rect, position: Point) -> bool {
+        self.panels.iter().any(|p| p.bounds.contains(position))
     }
 
     fn is_focusable(&self) -> bool {
@@ -851,7 +1131,39 @@ impl<H: UiHost> Widget<H> for ContextMenu {
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.sync_style_from_theme(cx.theme());
-        self.last_bounds = cx.bounds;
+
+        {
+            let mut prep = ContextMenuPrepareCx {
+                app: cx.app,
+                services: cx.services,
+                window: cx.window,
+                bounds: cx.bounds,
+                scale_factor: cx.scale_factor,
+            };
+            let _ = self.ensure_prepared(&mut prep);
+        }
+
+        self.update_a11y_from_panels();
+
+        let bounds: Vec<Rect> = {
+            let state = self.a11y.borrow();
+            cx.children
+                .iter()
+                .enumerate()
+                .map(|(i, _)| state.slot(i).map(|s| s.bounds).unwrap_or_default())
+                .collect()
+        };
+
+        for (&child, rect) in cx.children.iter().zip(bounds) {
+            cx.layout_in(child, rect);
+        }
+
+        // Keep selection in sync with AT-controlled focus.
+        if let Some(focused) = self.focused_slot_data(cx.focus, cx.children) {
+            self.set_selection_raw(focused.depth, Some(focused.raw_index));
+            self.update_a11y_flags_only();
+        }
+
         cx.available
     }
 
@@ -870,6 +1182,11 @@ impl<H: UiHost> Widget<H> for ContextMenu {
             return;
         };
 
+        if let Some(focused) = self.focused_slot_data(cx.focus, cx.children) {
+            self.set_selection_raw(focused.depth, Some(focused.raw_index));
+            self.update_a11y_flags_only();
+        }
+
         match event {
             Event::KeyDown { key, modifiers, .. } => {
                 if modifiers.ctrl || modifiers.meta || modifiers.alt {
@@ -877,7 +1194,10 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                 }
 
                 if let Some(c) = Self::typeahead_char(*key, modifiers) {
-                    let depth = self.current_depth();
+                    let depth = self
+                        .focused_slot_data(cx.focus, cx.children)
+                        .map(|s| s.depth)
+                        .unwrap_or_else(|| self.current_depth());
                     let query = self.update_typeahead(c);
                     let selected = self.selection_raw(depth);
                     let next = self
@@ -886,6 +1206,7 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         .and_then(|p| Self::find_typeahead_match(&p.rows, selected, &query));
                     if let Some(raw) = next {
                         self.set_selection_raw(depth, Some(raw));
+                        self.update_a11y_flags_only();
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();
@@ -900,7 +1221,10 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                     }
                     KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
                         self.clear_typeahead();
-                        let depth = self.current_depth();
+                        let depth = self
+                            .focused_slot_data(cx.focus, cx.children)
+                            .map(|s| s.depth)
+                            .unwrap_or_else(|| self.current_depth());
                         let Some(raw) = self.selection_raw(depth) else {
                             return;
                         };
@@ -917,20 +1241,24 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                                 }
                             }
                             PreparedRowKind::Submenu => {
-                                if self.open_path.len() == depth {
-                                    self.open_path.push(raw);
-                                    self.set_selection_raw(depth + 1, None);
-                                    cx.invalidate_self(Invalidation::Paint);
-                                    cx.request_redraw();
-                                    cx.stop_propagation();
-                                }
+                                self.open_path.truncate(depth);
+                                self.open_path.push(raw);
+                                self.set_selection_raw(depth + 1, None);
+                                self.panels_dirty = true;
+                                self.update_a11y_flags_only();
+                                cx.invalidate_self(Invalidation::Layout);
+                                cx.request_redraw();
+                                cx.stop_propagation();
                             }
                             PreparedRowKind::Separator => {}
                         }
                     }
                     KeyCode::Home | KeyCode::End => {
                         self.clear_typeahead();
-                        let depth = self.current_depth();
+                        let depth = self
+                            .focused_slot_data(cx.focus, cx.children)
+                            .map(|s| s.depth)
+                            .unwrap_or_else(|| self.current_depth());
                         let Some(panel) = self.panels.get(depth) else {
                             return;
                         };
@@ -944,13 +1272,17 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                             _ => selectable[0],
                         };
                         self.set_selection_raw(depth, Some(next));
+                        self.update_a11y_flags_only();
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();
                     }
                     KeyCode::PageUp | KeyCode::PageDown => {
                         self.clear_typeahead();
-                        let depth = self.current_depth();
+                        let depth = self
+                            .focused_slot_data(cx.focus, cx.children)
+                            .map(|s| s.depth)
+                            .unwrap_or_else(|| self.current_depth());
                         let Some(panel) = self.panels.get(depth) else {
                             return;
                         };
@@ -970,13 +1302,17 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                             _ => cur,
                         };
                         self.set_selection_raw(depth, Some(selectable[next_i]));
+                        self.update_a11y_flags_only();
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();
                     }
                     KeyCode::ArrowDown | KeyCode::ArrowUp => {
                         self.clear_typeahead();
-                        let depth = self.current_depth();
+                        let depth = self
+                            .focused_slot_data(cx.focus, cx.children)
+                            .map(|s| s.depth)
+                            .unwrap_or_else(|| self.current_depth());
                         let Some(panel) = self.panels.get(depth) else {
                             return;
                         };
@@ -998,13 +1334,17 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                             _ => selectable[0],
                         };
                         self.set_selection_raw(depth, Some(next));
+                        self.update_a11y_flags_only();
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();
                     }
                     KeyCode::ArrowRight => {
                         self.clear_typeahead();
-                        let depth = self.current_depth();
+                        let depth = self
+                            .focused_slot_data(cx.focus, cx.children)
+                            .map(|s| s.depth)
+                            .unwrap_or_else(|| self.current_depth());
                         let Some(raw) = self.selection_raw(depth) else {
                             return;
                         };
@@ -1014,12 +1354,13 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         let Some(row) = panel.rows.iter().find(|r| r.raw_index == raw) else {
                             return;
                         };
-                        if matches!(row.kind, PreparedRowKind::Submenu)
-                            && self.open_path.len() == depth
-                        {
+                        if matches!(row.kind, PreparedRowKind::Submenu) {
+                            self.open_path.truncate(depth);
                             self.open_path.push(raw);
                             self.set_selection_raw(depth + 1, None);
-                            cx.invalidate_self(Invalidation::Paint);
+                            self.panels_dirty = true;
+                            self.update_a11y_flags_only();
+                            cx.invalidate_self(Invalidation::Layout);
                             cx.request_redraw();
                             cx.stop_propagation();
                         }
@@ -1028,7 +1369,9 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         self.clear_typeahead();
                         if self.open_path.pop().is_some() {
                             self.selection.truncate(self.open_path.len() + 1);
-                            cx.invalidate_self(Invalidation::Paint);
+                            self.panels_dirty = true;
+                            self.update_a11y_flags_only();
+                            cx.invalidate_self(Invalidation::Layout);
                             cx.request_redraw();
                             cx.stop_propagation();
                         }
@@ -1046,6 +1389,7 @@ impl<H: UiHost> Widget<H> for ContextMenu {
 
                             let raw = self.panels[panel].rows[row].raw_index;
                             self.set_selection_raw(panel, Some(raw));
+                            self.update_a11y_flags_only();
 
                             if matches!(self.panels[panel].rows[row].kind, PreparedRowKind::Submenu)
                             {
@@ -1054,11 +1398,14 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                                     self.open_path.push(raw);
                                 }
                                 self.set_selection_raw(panel + 1, None);
+                                self.panels_dirty = true;
+                                self.update_a11y_flags_only();
                             } else {
                                 self.open_path.truncate(panel);
+                                self.panels_dirty = true;
                             }
 
-                            cx.invalidate_self(Invalidation::Paint);
+                            cx.invalidate_self(Invalidation::Layout);
                             cx.request_redraw();
                         }
                     } else if let Some(menu_bar) = request.menu_bar.as_ref()
@@ -1092,7 +1439,7 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                         if let Some(p) = self.panels.get_mut(panel) {
                             p.scroll_offset_y = next;
                         }
-                        cx.invalidate_self(Invalidation::Paint);
+                        cx.invalidate_self(Invalidation::Layout);
                         cx.request_redraw();
                     }
                     cx.stop_propagation();
@@ -1118,7 +1465,9 @@ impl<H: UiHost> Widget<H> for ContextMenu {
                                     self.open_path.push(row.raw_index);
                                 }
                                 self.set_selection_raw(panel + 1, None);
-                                cx.invalidate_self(Invalidation::Paint);
+                                self.panels_dirty = true;
+                                self.update_a11y_flags_only();
+                                cx.invalidate_self(Invalidation::Layout);
                                 cx.request_redraw();
                                 cx.stop_propagation();
                             }
@@ -1150,7 +1499,16 @@ impl<H: UiHost> Widget<H> for ContextMenu {
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.sync_style_from_theme(cx.theme());
-        let Some(window) = self.ensure_prepared(cx) else {
+        let Some(window) = ({
+            let mut prep = ContextMenuPrepareCx {
+                app: cx.app,
+                services: cx.services,
+                window: cx.window,
+                bounds: cx.bounds,
+                scale_factor: cx.scale_factor,
+            };
+            self.ensure_prepared(&mut prep)
+        }) else {
             return;
         };
 

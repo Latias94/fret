@@ -172,8 +172,8 @@ impl HoverCard {
                 .unwrap_or(cx.bounds);
             let outer = overlay_placement::inset_rect(outer, Edges::all(window_margin));
 
-            let last_content_size = elements::bounds_for_element(&mut *cx.app, cx.window, content_id)
-                .map(|r| r.size);
+            let last_content_size =
+                elements::bounds_for_element(&mut *cx.app, cx.window, content_id).map(|r| r.size);
             let estimated_size = Size::new(Px(256.0), Px(120.0));
             let content_size = last_content_size.unwrap_or(estimated_size);
 
@@ -201,13 +201,15 @@ impl HoverCard {
             let local_x = Px(bounds.origin.x.0 - region_bounds.origin.x.0);
             let local_y = Px(bounds.origin.y.0 - region_bounds.origin.y.0);
 
-            let mut overlay_layout = LayoutStyle::default();
-            overlay_layout.position = PositionStyle::Absolute;
-            overlay_layout.inset = InsetStyle {
-                top: Some(local_y),
-                left: Some(local_x),
-                right: None,
-                bottom: None,
+            let overlay_layout = LayoutStyle {
+                position: PositionStyle::Absolute,
+                inset: InsetStyle {
+                    top: Some(local_y),
+                    left: Some(local_x),
+                    right: None,
+                    bottom: None,
+                },
+                ..Default::default()
             };
 
             let wrapper = cx.container(

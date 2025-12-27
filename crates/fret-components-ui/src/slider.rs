@@ -259,8 +259,11 @@ impl<H: UiHost> Widget<H> for Slider {
     }
 
     fn semantics(&mut self, cx: &mut fret_ui::widget::SemanticsCx<'_, H>) {
-        cx.set_role(SemanticsRole::Generic);
+        cx.set_role(SemanticsRole::Slider);
         cx.set_disabled(self.disabled);
+        cx.set_focusable(!self.disabled);
+        cx.set_value_editable(!self.disabled);
+        cx.set_value(format!("{}", self.value(cx.app)));
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {

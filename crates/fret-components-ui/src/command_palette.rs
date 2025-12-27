@@ -276,9 +276,7 @@ pub fn render_command_palette_list<H: UiHost>(
     handles: &CommandPaletteHandles,
     size: ComponentSize,
 ) {
-    let bounds = ui
-        .debug_node_bounds(handles.list_mount)
-        .unwrap_or_default();
+    let bounds = ui.debug_node_bounds(handles.list_mount).unwrap_or_default();
 
     let root = fret_ui::declarative::render_root(
         ui,

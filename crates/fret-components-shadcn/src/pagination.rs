@@ -320,6 +320,7 @@ impl PaginationLink {
                 enabled,
                 on_click: self.command,
                 focus_ring: Some(focus_ring),
+                ..Default::default()
             },
             move |cx, st| content(cx, st.hovered, st.pressed),
         )

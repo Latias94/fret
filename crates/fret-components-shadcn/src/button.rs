@@ -350,6 +350,9 @@ impl<H: UiHost> Widget<H> for Button {
     fn semantics(&mut self, cx: &mut fret_ui::widget::SemanticsCx<'_, H>) {
         cx.set_role(fret_core::SemanticsRole::Button);
         cx.set_disabled(self.disabled);
+        cx.set_label(self.label.to_string());
+        cx.set_focusable(!self.disabled);
+        cx.set_invokable(!self.disabled);
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {

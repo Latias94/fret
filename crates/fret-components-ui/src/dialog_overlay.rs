@@ -394,7 +394,11 @@ impl<H: UiHost> Widget<H> for DialogOverlay {
     }
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
-        cx.set_role(SemanticsRole::Panel);
+        cx.set_role(SemanticsRole::Dialog);
+        cx.set_focusable(true);
+        if let Some(request) = self.request.as_ref() {
+            cx.set_label(request.title.as_ref().to_string());
+        }
     }
 
     fn is_focusable(&self) -> bool {

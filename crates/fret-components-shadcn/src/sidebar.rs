@@ -422,6 +422,7 @@ impl SidebarMenuButton {
             on_click: self.on_click.clone(),
             focus_ring: Some(ring),
             layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
+            ..Default::default()
         };
 
         let label = self.label.clone();

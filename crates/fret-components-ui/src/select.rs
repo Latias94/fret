@@ -257,7 +257,19 @@ impl<H: UiHost> Widget<H> for Select {
     }
 
     fn semantics(&mut self, cx: &mut fret_ui::widget::SemanticsCx<'_, H>) {
-        cx.set_role(SemanticsRole::Button);
+        cx.set_role(SemanticsRole::ComboBox);
+        cx.set_focusable(true);
+        cx.set_invokable(true);
+        cx.set_value(self.current_label(cx.app).to_string());
+        if let Some(window) = cx.window
+            && cx
+                .app
+                .global::<PopoverService>()
+                .and_then(|s| s.request(window))
+                .is_some_and(|(_, req)| req.owner == cx.node)
+        {
+            cx.set_expanded(true);
+        }
     }
 
     fn event(&mut self, cx: &mut fret_ui::EventCx<'_, H>, event: &Event) {
@@ -343,7 +355,9 @@ impl<H: UiHost> Widget<H> for Select {
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.sync_style_from_theme(cx.theme());
-        if let Some(window) = cx.window && self.sync_result(cx.app, window, cx.node) {
+        if let Some(window) = cx.window
+            && self.sync_result(cx.app, window, cx.node)
+        {
             // The selected label can change without a direct pointer event on the select
             // itself (e.g. selection happens inside the popover overlay). Ensure we refresh
             // our cached text in the next paint.

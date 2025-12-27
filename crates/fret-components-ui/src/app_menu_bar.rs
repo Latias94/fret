@@ -209,7 +209,8 @@ impl<H: UiHost> Widget<H> for AppMenuBar {
     }
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
-        cx.set_role(SemanticsRole::Menu);
+        cx.set_role(SemanticsRole::MenuBar);
+        cx.set_label("Menu bar");
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {

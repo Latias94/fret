@@ -1,6 +1,4 @@
-use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, Px, Rect, SceneOp, Size,
-};
+use fret_core::{Color, Corners, DrawOrder, Edges, Event, Px, Rect, SceneOp, SemanticsRole, Size};
 use fret_runtime::CommandId;
 use fret_ui::{
     Theme, UiHost,
@@ -117,7 +115,9 @@ impl<H: UiHost> Widget<H> for CommandPaletteOverlay {
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme());
 
-        let _ = self.dismiss.handle_event(cx, event, self.panel_bounds, true, true);
+        let _ = self
+            .dismiss
+            .handle_event(cx, event, self.panel_bounds, true, true);
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
@@ -189,7 +189,8 @@ impl<H: UiHost> Widget<H> for CommandPaletteOverlay {
         self.panel_bounds = Rect::default();
     }
 
-    fn semantics(&mut self, _cx: &mut SemanticsCx<'_, H>) {
-        // Modal overlay semantics are app-specific; defer for now.
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        cx.set_role(SemanticsRole::Dialog);
+        cx.set_label("Command palette");
     }
 }

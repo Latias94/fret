@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, NodeId, Px, Rect, SceneOp, Size,
-};
+use fret_core::{Color, Corners, DrawOrder, Edges, Event, NodeId, Px, Rect, SceneOp, Size};
 use fret_runtime::CommandId;
 use fret_ui::{
     Theme, UiHost,

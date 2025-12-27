@@ -8,6 +8,8 @@ use fret_ui::{
     Theme, UiHost,
     widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::{Duration, Instant};
 use std::{collections::HashMap, sync::Arc};
 
@@ -17,6 +19,102 @@ use crate::recipes::menu_list::resolve_menu_list_row_chrome;
 use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
 use crate::{DismissOnEscapeAndClickOutside, EscapeDismissModifiers};
 use fret_ui::overlay_placement;
+
+pub(crate) const POPOVER_A11Y_SLOTS: usize = 256;
+
+#[allow(dead_code)]
+#[derive(Debug)]
+pub(crate) struct PopoverA11yState {
+    slots: Vec<Option<PopoverA11ySlot>>,
+}
+
+#[allow(dead_code)]
+impl PopoverA11yState {
+    pub(crate) fn new(slot_count: usize) -> Self {
+        Self {
+            slots: vec![None; slot_count],
+        }
+    }
+
+    fn clear(&mut self) {
+        for slot in &mut self.slots {
+            *slot = None;
+        }
+    }
+
+    fn slot(&self, index: usize) -> Option<&PopoverA11ySlot> {
+        self.slots.get(index).and_then(|s| s.as_ref())
+    }
+
+    fn set_slot(&mut self, index: usize, value: Option<PopoverA11ySlot>) {
+        if let Some(dst) = self.slots.get_mut(index) {
+            *dst = value;
+        }
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+struct PopoverA11ySlot {
+    index: usize,
+    bounds: Rect,
+    label: Arc<str>,
+    enabled: bool,
+    selected: bool,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+pub(crate) struct PopoverA11yItem {
+    slot: usize,
+    shared: Rc<RefCell<PopoverA11yState>>,
+}
+
+#[allow(dead_code)]
+impl PopoverA11yItem {
+    pub(crate) fn new(slot: usize, shared: Rc<RefCell<PopoverA11yState>>) -> Self {
+        Self { slot, shared }
+    }
+}
+
+#[allow(dead_code)]
+impl<H: UiHost> Widget<H> for PopoverA11yItem {
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        false
+    }
+
+    fn is_focusable(&self) -> bool {
+        let state = self.shared.borrow();
+        let Some(slot) = state.slot(self.slot) else {
+            return false;
+        };
+        slot.enabled
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.available
+    }
+
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        let state = self.shared.borrow();
+        let Some(slot) = state.slot(self.slot) else {
+            cx.set_role(SemanticsRole::Generic);
+            cx.set_disabled(true);
+            cx.set_focusable(false);
+            cx.set_invokable(false);
+            return;
+        };
+
+        cx.set_role(SemanticsRole::ListItem);
+        cx.set_label(slot.label.as_ref().to_string());
+        cx.set_disabled(!slot.enabled);
+        cx.set_focusable(slot.enabled);
+        cx.set_invokable(slot.enabled);
+        cx.set_selected(slot.selected);
+    }
+
+    fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+}
 
 #[derive(Debug, Clone)]
 pub struct PopoverItem {
@@ -178,9 +276,14 @@ pub struct Popover {
     style: PopoverStyle,
     style_override: bool,
     size: ComponentSize,
+    #[allow(dead_code)]
+    a11y: Rc<RefCell<PopoverA11yState>>,
+    rows_dirty: bool,
     last_bounds: Rect,
     last_serial: Option<u64>,
     last_theme_revision: Option<u64>,
+    #[allow(dead_code)]
+    last_scale_factor_bits: Option<u32>,
     hover_row: Option<usize>,
     rows: Vec<PreparedRow>,
     panel_bounds: Rect,
@@ -191,15 +294,33 @@ pub struct Popover {
     dismiss: DismissOnEscapeAndClickOutside,
 }
 
+#[allow(dead_code)]
+struct PopoverPrepareCx<'a, H: UiHost> {
+    app: &'a mut H,
+    services: &'a mut dyn fret_core::UiServices,
+    window: Option<fret_core::AppWindowId>,
+    bounds: Rect,
+    scale_factor: f32,
+}
+
 impl Popover {
     pub fn new() -> Self {
+        Self::new_with_a11y(Rc::new(RefCell::new(PopoverA11yState::new(
+            POPOVER_A11Y_SLOTS,
+        ))))
+    }
+
+    pub(crate) fn new_with_a11y(a11y: Rc<RefCell<PopoverA11yState>>) -> Self {
         Self {
             style: PopoverStyle::default(),
             style_override: false,
             size: ComponentSize::Small,
+            a11y,
+            rows_dirty: true,
             last_bounds: Rect::default(),
             last_serial: None,
             last_theme_revision: None,
+            last_scale_factor_bits: None,
             hover_row: None,
             rows: Vec::new(),
             panel_bounds: Rect::default(),
@@ -232,6 +353,7 @@ impl Popover {
             return;
         }
         self.last_theme_revision = Some(theme.revision());
+        self.rows_dirty = true;
 
         let surface = resolve_surface_chrome(
             theme,
@@ -266,6 +388,55 @@ impl Popover {
         for row in self.rows.drain(..) {
             services.text().release(row.label);
         }
+    }
+
+    fn clear_a11y(&mut self) {
+        self.a11y.borrow_mut().clear();
+    }
+
+    fn update_a11y_from_rows(&mut self, request: &PopoverRequest) {
+        let mut state = self.a11y.borrow_mut();
+        state.clear();
+
+        let active = self.hover_row.or(request.selected);
+        for slot in 0..state.slots.len() {
+            let Some(item) = request.items.get(slot) else {
+                break;
+            };
+
+            let bounds = self
+                .rows
+                .get(slot)
+                .map(|r| r.bounds)
+                .unwrap_or(self.panel_bounds);
+            state.set_slot(
+                slot,
+                Some(PopoverA11ySlot {
+                    index: slot,
+                    bounds,
+                    label: item.label.clone(),
+                    enabled: item.enabled,
+                    selected: active == Some(slot),
+                }),
+            );
+        }
+    }
+
+    fn update_a11y_flags_only(&mut self, request: &PopoverRequest) {
+        let mut state = self.a11y.borrow_mut();
+        let active = self.hover_row.or(request.selected);
+        for slot in &mut state.slots {
+            let Some(s) = slot.as_mut() else {
+                continue;
+            };
+            s.selected = active == Some(s.index);
+        }
+    }
+
+    fn focused_slot_index(&self, focus: Option<NodeId>, children: &[NodeId]) -> Option<usize> {
+        let focus = focus?;
+        let idx = children.iter().position(|&c| c == focus)?;
+        self.a11y.borrow().slot(idx).map(|s| s.index)
     }
 
     fn relayout_rows(&mut self) {
@@ -306,6 +477,68 @@ impl Popover {
             .max(0.0)
             .min(self.max_scroll_offset_y.0.max(0.0)));
         self.relayout_rows();
+    }
+
+    fn ensure_prepared<H: UiHost>(
+        &mut self,
+        cx: &mut PopoverPrepareCx<'_, H>,
+    ) -> Option<fret_core::AppWindowId> {
+        if self.last_bounds != cx.bounds {
+            self.rows_dirty = true;
+        }
+        self.last_bounds = cx.bounds;
+
+        let scale_bits = cx.scale_factor.to_bits();
+        if self.last_scale_factor_bits != Some(scale_bits) {
+            self.last_scale_factor_bits = Some(scale_bits);
+            self.rows_dirty = true;
+        }
+
+        let window = cx.window?;
+        self.sync_style_from_theme(Theme::global(&*cx.app));
+
+        let Some(service) = cx.app.global::<PopoverService>() else {
+            self.cleanup(cx.services);
+            self.last_serial = None;
+            self.panel_bounds = Rect::default();
+            self.hover_row = None;
+            self.clear_a11y();
+            return Some(window);
+        };
+        let Some((serial, request)) = service.request(window).map(|(s, r)| (s, r.clone())) else {
+            self.cleanup(cx.services);
+            self.last_serial = None;
+            self.panel_bounds = Rect::default();
+            self.hover_row = None;
+            self.clear_a11y();
+            return Some(window);
+        };
+
+        if self.last_serial != Some(serial) {
+            self.cleanup(cx.services);
+            self.last_serial = Some(serial);
+            self.hover_row = None;
+            self.panel_bounds = Rect::default();
+            self.scroll_offset_y = Px(0.0);
+            self.max_scroll_offset_y = Px(0.0);
+            self.clear_typeahead();
+            self.rows_dirty = true;
+        }
+
+        if self.rows_dirty || self.rows.is_empty() {
+            self.rows_dirty = false;
+            self.cleanup(cx.services);
+            self.rebuild_rows(cx, &request);
+            self.hover_row = request
+                .selected
+                .filter(|&i| self.rows.get(i).is_some_and(|r| r.enabled));
+            if let Some(i) = self.hover_row {
+                self.ensure_row_visible(i);
+            }
+            self.clear_typeahead();
+        }
+
+        Some(window)
     }
 
     fn hit_test_row(&self, point: Point) -> Option<usize> {
@@ -351,7 +584,11 @@ impl Popover {
         cx.stop_propagation();
     }
 
-    fn rebuild_rows<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>, request: &PopoverRequest) {
+    fn rebuild_rows<H: UiHost>(
+        &mut self,
+        cx: &mut PopoverPrepareCx<'_, H>,
+        request: &PopoverRequest,
+    ) {
         let text_constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
@@ -589,14 +826,35 @@ impl<H: UiHost> Widget<H> for Popover {
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         self.cleanup(services);
         self.last_serial = None;
+        self.last_scale_factor_bits = None;
         self.hover_row = None;
         self.panel_bounds = Rect::default();
         self.scroll_offset_y = Px(0.0);
         self.max_scroll_offset_y = Px(0.0);
+        self.rows_dirty = true;
+        self.clear_a11y();
     }
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
-        cx.set_role(SemanticsRole::Menu);
+        cx.set_role(SemanticsRole::List);
+        cx.set_label("Popover");
+        cx.set_focusable(true);
+        cx.set_invokable(false);
+
+        if let Some(window) = cx.window
+            && let Some((_, request)) = cx
+                .app
+                .global::<PopoverService>()
+                .and_then(|s| s.request(window))
+            && let Some(active) = self.hover_row.or(request.selected)
+            && let Some(item) = request.items.get(active)
+        {
+            cx.set_value(item.label.as_ref().to_string());
+        }
+    }
+
+    fn hit_test(&self, _bounds: Rect, position: Point) -> bool {
+        self.panel_bounds.contains(position)
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
@@ -615,12 +873,23 @@ impl<H: UiHost> Widget<H> for Popover {
             return;
         };
 
+        if let Some(slot) = self.focused_slot_index(cx.focus, cx.children)
+            && request.items.get(slot).is_some()
+        {
+            if self.hover_row != Some(slot) {
+                self.hover_row = Some(slot);
+                self.clear_typeahead();
+            }
+            self.update_a11y_flags_only(&request);
+        }
+
         match event {
             Event::Pointer(fret_core::PointerEvent::Move { position, .. }) => {
                 let hovered = self.hit_test_row(*position);
                 if hovered != self.hover_row {
                     self.hover_row = hovered;
                     self.clear_typeahead();
+                    self.update_a11y_flags_only(&request);
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                 }
@@ -640,7 +909,7 @@ impl<H: UiHost> Widget<H> for Popover {
                 if next != self.scroll_offset_y {
                     self.scroll_offset_y = next;
                     self.relayout_rows();
-                    cx.invalidate_self(Invalidation::Paint);
+                    cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                     cx.stop_propagation();
                 }
@@ -672,7 +941,10 @@ impl<H: UiHost> Widget<H> for Popover {
                 }
             }
             Event::KeyDown { key, modifiers, .. } => {
-                if self.dismiss.should_dismiss(event, self.panel_bounds, true, false) {
+                if self
+                    .dismiss
+                    .should_dismiss(event, self.panel_bounds, true, false)
+                {
                     self.clear_typeahead();
                     self.close_popover(cx);
                     return;
@@ -682,7 +954,8 @@ impl<H: UiHost> Widget<H> for Popover {
                         if let Some(i) = self.hover_row {
                             self.ensure_row_visible(i);
                         }
-                        cx.invalidate_self(Invalidation::Paint);
+                        self.update_a11y_flags_only(&request);
+                        cx.invalidate_self(Invalidation::Layout);
                         cx.request_redraw();
                         cx.stop_propagation();
                     }
@@ -711,7 +984,8 @@ impl<H: UiHost> Widget<H> for Popover {
                             self.hover_row = Some(next);
                             self.ensure_row_visible(next);
                         }
-                        cx.invalidate_self(Invalidation::Paint);
+                        self.update_a11y_flags_only(&request);
+                        cx.invalidate_self(Invalidation::Layout);
                         cx.request_redraw();
                     }
                     KeyCode::ArrowUp => {
@@ -725,7 +999,8 @@ impl<H: UiHost> Widget<H> for Popover {
                             self.hover_row = Some(next);
                             self.ensure_row_visible(next);
                         }
-                        cx.invalidate_self(Invalidation::Paint);
+                        self.update_a11y_flags_only(&request);
+                        cx.invalidate_self(Invalidation::Layout);
                         cx.request_redraw();
                     }
                     KeyCode::PageDown => {
@@ -738,9 +1013,10 @@ impl<H: UiHost> Widget<H> for Popover {
                         if let Some(next) = self.page_step_enabled(self.panel_bounds, base, 1) {
                             self.hover_row = Some(next);
                             self.ensure_row_visible(next);
-                            cx.invalidate_self(Invalidation::Paint);
-                            cx.request_redraw();
                         }
+                        self.update_a11y_flags_only(&request);
+                        cx.invalidate_self(Invalidation::Layout);
+                        cx.request_redraw();
                     }
                     KeyCode::PageUp => {
                         self.clear_typeahead();
@@ -752,27 +1028,30 @@ impl<H: UiHost> Widget<H> for Popover {
                         if let Some(next) = self.page_step_enabled(self.panel_bounds, base, -1) {
                             self.hover_row = Some(next);
                             self.ensure_row_visible(next);
-                            cx.invalidate_self(Invalidation::Paint);
-                            cx.request_redraw();
                         }
+                        self.update_a11y_flags_only(&request);
+                        cx.invalidate_self(Invalidation::Layout);
+                        cx.request_redraw();
                     }
                     KeyCode::Home => {
                         self.clear_typeahead();
                         if let Some(i) = self.first_enabled_row() {
                             self.hover_row = Some(i);
                             self.ensure_row_visible(i);
-                            cx.invalidate_self(Invalidation::Paint);
-                            cx.request_redraw();
                         }
+                        self.update_a11y_flags_only(&request);
+                        cx.invalidate_self(Invalidation::Layout);
+                        cx.request_redraw();
                     }
                     KeyCode::End => {
                         self.clear_typeahead();
                         if let Some(i) = self.last_enabled_row() {
                             self.hover_row = Some(i);
                             self.ensure_row_visible(i);
-                            cx.invalidate_self(Invalidation::Paint);
-                            cx.request_redraw();
                         }
+                        self.update_a11y_flags_only(&request);
+                        cx.invalidate_self(Invalidation::Layout);
+                        cx.request_redraw();
                     }
                     _ => {}
                 }
@@ -782,8 +1061,53 @@ impl<H: UiHost> Widget<H> for Popover {
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-        self.last_bounds = cx.bounds;
-        Size::new(cx.available.width, cx.available.height)
+        let Some(window) = cx.window else {
+            self.clear_a11y();
+            return cx.available;
+        };
+
+        {
+            let mut prep = PopoverPrepareCx {
+                app: cx.app,
+                services: cx.services,
+                window: cx.window,
+                bounds: cx.bounds,
+                scale_factor: cx.scale_factor,
+            };
+            let _ = self.ensure_prepared(&mut prep);
+        }
+
+        let Some((_, request)) = cx
+            .app
+            .global::<PopoverService>()
+            .and_then(|s| s.request(window))
+            .map(|(serial, req)| (serial, req.clone()))
+        else {
+            self.clear_a11y();
+            return cx.available;
+        };
+
+        if let Some(slot) = self.focused_slot_index(cx.focus, cx.children)
+            && request.items.get(slot).is_some()
+            && self.hover_row != Some(slot)
+        {
+            self.hover_row = Some(slot);
+            self.ensure_row_visible(slot);
+        }
+
+        self.update_a11y_from_rows(&request);
+
+        for (slot, &child) in cx.children.iter().enumerate() {
+            let rect = self
+                .a11y
+                .borrow()
+                .slot(slot)
+                .map(|s| s.bounds)
+                .unwrap_or_default();
+            cx.layout_in(child, rect);
+        }
+
+        cx.available
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
@@ -791,39 +1115,36 @@ impl<H: UiHost> Widget<H> for Popover {
             return;
         };
 
-        self.sync_style_from_theme(cx.theme());
-
-        let Some(service) = cx.app.global::<PopoverService>() else {
+        let has_request = cx
+            .app
+            .global::<PopoverService>()
+            .and_then(|s| s.request(window))
+            .is_some();
+        if !has_request {
             return;
-        };
-        let Some((serial, request)) = service
-            .request(window)
-            .map(|(serial, request)| (serial, request.clone()))
-        else {
-            if self.last_serial.is_some() {
-                self.cleanup(cx.services);
-                self.last_serial = None;
-                self.panel_bounds = Rect::default();
-                self.hover_row = None;
-            }
-            return;
-        };
-
-        let rebuild = self.last_serial != Some(serial) || self.last_bounds != cx.bounds;
-        self.last_serial = Some(serial);
-        self.last_bounds = cx.bounds;
-
-        if rebuild {
-            self.cleanup(cx.services);
-            self.rebuild_rows(cx, &request);
-            self.hover_row = request
-                .selected
-                .filter(|&i| self.rows.get(i).is_some_and(|r| r.enabled));
-            if let Some(i) = self.hover_row {
-                self.ensure_row_visible(i);
-            }
-            self.clear_typeahead();
         }
+
+        let Some(_) = ({
+            let mut prep = PopoverPrepareCx {
+                app: cx.app,
+                services: cx.services,
+                window: cx.window,
+                bounds: cx.bounds,
+                scale_factor: cx.scale_factor,
+            };
+            self.ensure_prepared(&mut prep)
+        }) else {
+            return;
+        };
+
+        let Some((_, request)) = cx
+            .app
+            .global::<PopoverService>()
+            .and_then(|s| s.request(window))
+            .map(|(serial, req)| (serial, req.clone()))
+        else {
+            return;
+        };
 
         if request.items.is_empty() {
             return;
