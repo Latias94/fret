@@ -1,3 +1,5 @@
+> Archived: keep for history; prefer ADRs + `docs/roadmap.md` for active decisions.
+
 # MVP: Vector Paths + SVG Icons (GPUI-Aligned)
 
 Status: MVP-PATH-0..2 implemented; SVG alpha-mask+tint implemented; SVG RGBA implemented; Path MSAA+composite implemented
@@ -8,7 +10,7 @@ Owner: Codex (tracking document created per request; does not modify existing MV
 
 ## Why this document exists
 
-This repository already has an active MVP queue (`docs/mvp.md`, `docs/mvp/active-plan.md`) that other contributors use.
+This repository already has an active MVP queue (`docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`) that other contributors use.
 This document is intentionally **separate** to avoid mixing scopes while we explore a larger renderer contract expansion.
 
 Goal: define an incremental, GPUI-inspired path/SVG rendering plan for Fret with clear risks and acceptance checks.

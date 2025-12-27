@@ -1,3 +1,5 @@
+> Archived: keep for history; prefer ADRs + `docs/roadmap.md` for active decisions.
+
 # MVP: Vector Graphics Roadmap (SVG + Paths)
 
 This document is intentionally standalone to avoid interfering with existing design docs used by others.

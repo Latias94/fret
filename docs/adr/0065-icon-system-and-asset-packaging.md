@@ -124,8 +124,8 @@ No component code holds `ImageId` or manages raster caches directly.
 
 ## References
 
-- Fret SVG icon MVP notes: `docs/mvp-svg-icons.md`
-- Vector graphics roadmap: `docs/mvp-vector-graphics-roadmap.md`
+- Fret SVG icon MVP notes: `docs/archive/mvp-svg-icons.md`
+- Vector graphics roadmap: `docs/archive/mvp-vector-graphics-roadmap.md`
 - Shape/SDF semantics (renderer implementation detail policy): `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
 - GPUI Component icon + assets split: `repo-ref/gpui-component/crates/ui/src/icon.rs`,
   `repo-ref/gpui-component/crates/assets/src/lib.rs`

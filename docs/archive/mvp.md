@@ -1,9 +1,11 @@
+> Archived: this plan is kept for history; prefer `docs/roadmap.md` + `docs/todo-tracker.md` for active work.
+
 # MVP Plan (Overview)
 
 This file is intentionally kept **short and actionable**.
 
-- Full active plan (details, definitions, status notes): `docs/mvp/active-plan.md`
-- Completed stage definitions: `docs/mvp-archive.md`
+- Full active plan (details, definitions, status notes): `docs/archive/mvp/active-plan.md`
+- Completed stage definitions: `docs/archive/mvp-archive.md`
 - Long-horizon priorities and refactors: `docs/roadmap.md`
 - Runtime contract gap list (ADR 0066 conformance): `docs/runtime-contract-gap.md`
 
@@ -39,4 +41,4 @@ Maintain the next MVP items here as a small, high-signal queue. If a task change
 
 ## Current Status (Snapshot)
 
-See `docs/mvp/active-plan.md` for the authoritative, expanded status list and per-MVP details.
+See `docs/archive/mvp/active-plan.md` for the authoritative, expanded status list and per-MVP details.

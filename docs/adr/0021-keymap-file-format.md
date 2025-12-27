@@ -198,5 +198,5 @@ Resolution rule:
 
 ## Implementation Notes (Current Prototype)
 
-- Demo keymap loading: `crates/fret-demo/src/main.rs` reads `./.fret/keymap.json` if present and layers it over defaults.
+- Demo keymap loading (prototype): `crates/fret-demo` reads `./.fret/keymap.json` if present and layers it over defaults.
 - Sample file: `docs/examples/keymap.json`

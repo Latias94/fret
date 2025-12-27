@@ -110,7 +110,7 @@ These anchors are intentionally few; use `rg` to drill down from them.
 - UI runtime + docking widget: `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/dock.rs`
 - Core contracts (IDs, dock graph, scene ops): `crates/fret-core/src/lib.rs`
 - Renderer (quads/SDF/text hooks): `crates/fret-render/src/renderer.rs`
-- Demo (end-to-end wiring + persistence): `crates/fret-demo/src/main.rs`
+- Demo (end-to-end wiring): `crates/fret-demo/src/components_gallery.rs`, `crates/fret-demo/src/ui_kit.rs`
 
 ## Current Focus (“Decide Early”)
 

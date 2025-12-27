@@ -165,13 +165,16 @@ Runtime layout semantics must match the Tailwind/CSS mental model:
 - Taffy is the implementation engine; semantics are validated by tests against our ADRs and
   Tailwind vocabulary usage in `fret-components-*`.
 
-### 4) Compatibility surface: retained widgets must be feature-gated
+### 4) Compatibility surface: retained widgets are isolated
 
-Retained widgets are allowed only as a temporary compatibility layer:
+Retained widgets are allowed only as a temporary compatibility layer, but they are **not** part of
+the runtime contract surface.
 
-- they must be behind a `retained-widgets` feature,
-- they must not be used by runtime tests,
-- they must have an explicit delete plan (see `docs/declarative-only-migration.md`).
+Rules:
+
+- any retained widgets live in `crates/fret-ui-widgets` (not `crates/fret-ui`),
+- `crates/fret-ui` tests must not depend on retained widgets,
+- retained widgets must have an explicit delete plan (see `docs/declarative-only-migration.md`).
 
 ## Comparison: GPUI-style contract surface
 

@@ -1,3 +1,5 @@
+> Archived: keep for history; prefer ADRs + `docs/roadmap.md` for active decisions.
+
 # MVP: SVG Icons (Alpha Mask + Tint)
 
 Status: **ICON-0/ICON-1/ICON-2/IMG-0 implemented**

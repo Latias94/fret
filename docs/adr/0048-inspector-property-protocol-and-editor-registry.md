@@ -136,7 +136,7 @@ Notes:
 - Property edit request plumbing (phased edits): `crates/fret-editor/src/property_edit.rs`
 - Demo inspector uses property tree + registry to build rows and routes edits through commands/services:
   - Inspector panel: `crates/fret-demo/src/editor_shell.rs`
-  - Commit handler: `crates/fret-demo/src/main.rs` (`property_edit.commit`, `inspector_edit.commit`)
+  - Commit handler: prototype lived in `crates/fret-demo` (entrypoints evolve; search for `property_edit.commit` / `inspector_edit.commit`)
 
 Phased edit validation:
 

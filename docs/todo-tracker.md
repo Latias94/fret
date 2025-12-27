@@ -16,18 +16,18 @@ It complements (but does not replace) ADRs:
 - **Implement preedit-first key arbitration end-to-end (runner + routing)**
   - Problem: composing IME sessions must not lose `Tab/Enter/Escape/Arrows/Backspace/...` to focus traversal or global shortcuts.
   - ADRs: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`
-  - Code: `crates/fret-runner-winit-wgpu/src/runner.rs`, `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/text_input.rs`, `crates/fret-ui/src/primitives/text_area.rs`
+  - Code: `crates/fret-runner-winit-wgpu/src/runner.rs`, `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/text_input.rs`, `crates/fret-ui/src/text_area.rs`
   - Current: `crates/fret-ui/src/tree.rs` defers shortcut matching for reserved keys and only falls back if the widget does not `stop_propagation`; `crates/fret-ui/src/text_input.rs` and `crates/fret-ui/src/primitives/text_area.rs` now stop propagation for these keys while `preedit` is non-empty. Remaining gap is wiring a full “is composing” signal that also covers non-preedit IME states and key sequences that never surface as `preedit` strings (platform differences).
 
 - **Define and validate blur/disable semantics for IME enablement**
   - Problem: focused text widgets send `Effect::ImeAllow { enabled: true }`; ensure loss of focus reliably disables IME where appropriate.
   - ADRs: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0020-focus-and-command-routing.md`
-  - Code: `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/text_input.rs`, `crates/fret-ui/src/primitives/text_area.rs`
+  - Code: `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/text_input.rs`, `crates/fret-ui/src/text_area.rs`
 
 - **Multiline IME contract + conformance harness**
   - Goal: lock and validate multiline selection/composition/caret-rect behavior (scroll/wrap/DPI/preedit updates).
   - ADRs: `docs/adr/0071-text-input-multiline-composition-contract.md`, `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
-  - Code: `crates/fret-ui/src/primitives/text_area.rs`, `crates/fret-render/src/text.rs`
+  - Code: `crates/fret-ui/src/text_area.rs`, `crates/fret-render/src/text.rs`
 
 ## P0 — Fonts / Fallbacks / Missing Glyphs
 
@@ -90,7 +90,7 @@ It complements (but does not replace) ADRs:
 - **Formalize the vector path contract now that `SceneOp::Path` exists**
   - Problem: `fret-core::vector_path` and `SceneOp::Path` are implemented, but the contract is not yet locked at the ADR level (stroke joins/caps, AA expectations, transform interaction, caching keys).
   - ADRs: `docs/adr/0002-display-list.md`, `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
-  - Code: `crates/fret-core/src/vector_path.rs`, `crates/fret-core/src/scene.rs`, `crates/fret-render/src/renderer.rs`, `crates/fret-ui/src/primitives/path.rs`
+  - Code: `crates/fret-core/src/vector_path.rs`, `crates/fret-core/src/scene.rs`, `crates/fret-render/src/renderer.rs`, `crates/fret-ui-widgets/src/primitives/path.rs`
 
 - **Clarify the runner vs platform split in docs and code**
   - Problem: `fret-platform` currently hosts the AccessKit bridge, while winit event mapping/effects draining live in `fret-runner-winit-wgpu`; keep responsibilities crisp to avoid duplicating window registries and event translation.

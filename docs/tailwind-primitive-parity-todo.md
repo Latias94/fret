@@ -36,7 +36,7 @@ composition and shadcn-style component parity.
 - Tailwind semantics mapping (this repo): `docs/tailwind-semantics-alignment.md`
 - Tokens/theme resolution: `docs/adr/0032-style-tokens-and-theme-resolution.md`
 - Baseline tokens + gpui/shadcn semantic aliases: `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
-- “No layout no-ops” and style split: `docs/mvp.md` (MVP 59 / MVP 55 / MVP 58)
+- “No layout no-ops” and style split: `docs/archive/mvp.md` (MVP 59 / MVP 55 / MVP 58)
 
 ## Code reference entry points (source of truth)
 

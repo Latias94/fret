@@ -1,21 +1,23 @@
+> Archived: this plan is kept for history; prefer `docs/roadmap.md` + `docs/todo-tracker.md` for active work.
+
 # MVP Plan (Active, Short-Horizon)
 
 This document is the **current execution queue** that complements `docs/roadmap.md`.
 
 It is intentionally kept **short and high-signal**. Detailed historical notes and prior MVP
-definitions live in `docs/mvp/reference-plan.md`.
+definitions live in `docs/archive/mvp/reference-plan.md`.
 
 ## Quick Links
 
-- Overview: `docs/mvp.md`
+- Overview: `docs/archive/mvp.md`
 - Roadmap (long horizon): `docs/roadmap.md`
-- Reference plan (historical): `docs/mvp/reference-plan.md`
+- Reference plan (historical): `docs/archive/mvp/reference-plan.md`
 - Runtime contract gap list: `docs/runtime-contract-gap.md`
 - Known issues / paper cuts: `docs/known-issues.md`
 
 ## Current Status (High-Signal)
 
-- MVP 0–48: foundational contracts + demo/editor prototypes (see `docs/mvp/reference-plan.md`).
+- MVP 0–48: foundational contracts + demo/editor prototypes (see `docs/archive/mvp/reference-plan.md`).
 - Contract note: the `fret-ui` runtime contract surface is locked by ADR 0066. New runtime public APIs must name an authoritative reference and land with tests before broadening usage.
 - MVP 49: declarative authoring is a usable end-to-end path (ADR 0028 / ADR 0039).
   - Execution contract: `render_root(...)` is called **every frame** before layout/paint.

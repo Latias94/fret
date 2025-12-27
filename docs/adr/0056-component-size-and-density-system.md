@@ -146,7 +146,7 @@ Cons:
 
 ## References
 
-- MVP tracking: `docs/mvp/active-plan.md` (MVP 47)
+- MVP tracking: `docs/archive/mvp/active-plan.md` (MVP 47)
 - Theme/tokens: `docs/adr/0032-style-tokens-and-theme-resolution.md`, `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
 - gpui-component sizing ergonomics:
   - `repo-ref/gpui-component/crates/ui/src/styled.rs`

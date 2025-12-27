@@ -11,11 +11,10 @@ contracts early to avoid large rewrites later.
    - Tip: ADRs marked `Status: Proposed` are “decision gates” and should be treated as changeable until accepted.
 4. `docs/repo-ref.md` — pinned local reference sources (where to read upstream code without version drift).
 5. `docs/dependency-policy.md` — dependency and MSRV policy (how we keep contracts portable).
-6. `docs/mvp.md` — short-horizon MVP overview (what to implement next). Expanded plan lives in `docs/mvp/active-plan.md`.
-   - Completed stages archive: `docs/mvp-archive.md`
+6. `docs/todo-tracker.md` — review-driven TODO list (action items linked back to ADRs).
 7. `docs/known-issues.md` — common diagnostics and current platform limitations.
-8. `docs/todo-tracker.md` — review-driven TODO list (action items linked back to ADRs).
-8. ADR deep dives (pick by subsystem):
+8. Archived MVP planning docs (historical): `docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`, `docs/archive/mvp-archive.md`
+9. ADR deep dives (pick by subsystem):
    - UI execution model: `docs/adr/0028-declarative-elements-and-element-state.md`
    - Component authoring: `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
    - Ownership/data flow: `docs/adr/0031-app-owned-models-and-leasing-updates.md`
@@ -27,7 +26,8 @@ contracts early to avoid large rewrites later.
 
 ## Code Entry Points (After You Read The Docs)
 
-- End-to-end demo wiring (effects → runner → render): `crates/fret-demo/src/main.rs`
+- End-to-end demo wiring (effects → runner → render): `crates/fret-demo/src/components_gallery.rs`
+- UI kit harness (widgets/components + overlays): `crates/fret-demo/src/ui_kit.rs` (or `cargo run -p fret-demo --bin ui_kit`)
 - App runtime (effects + models + commands): `crates/fret-app/src/app.rs`
 - Desktop runner (winit window lifecycle + scheduling): `crates/fret-runner-winit-wgpu/src/runner.rs`
 - UI runtime (retained tree prototype) + docking widget: `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/dock.rs`

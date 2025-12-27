@@ -102,4 +102,4 @@ IME candidate windows near the caret:
 - Repeatable dispatch on key-repeat:
   - `crates/fret-ui/src/tree.rs`
 - Demo command registration + bindings:
-  - `crates/fret-demo/src/main.rs`
+  - `crates/fret-demo` (entrypoints evolve; search for text editing command wiring)

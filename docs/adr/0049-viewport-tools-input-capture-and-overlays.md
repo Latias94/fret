@@ -116,8 +116,8 @@ Use:
 
 - Tool manager + interaction state (example editor layer): `crates/fret-editor/src/viewport_tools.rs`
 - Demo tool routing from `Effect::ViewportInput`:
-  - driver handler: `crates/fret-demo/src/main.rs` (`viewport_input`)
-  - cancel path: `crates/fret-demo/src/main.rs` (Escape clears interaction + overlay)
+  - driver handler: prototype lived in `crates/fret-demo` (entrypoints evolve; search for `viewport_input`)
+  - cancel path: prototype lived in `crates/fret-demo` (Escape clears interaction + overlay)
 - Prototype tool interactions:
   - selection marquee: left-drag
   - navigation stub: right-drag orbit, middle-drag pan (drag thresholded so right-click context menu still works)

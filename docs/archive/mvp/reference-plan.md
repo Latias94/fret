@@ -1,8 +1,10 @@
+> Archived: this plan is kept for history; prefer `docs/roadmap.md` + `docs/todo-tracker.md` for active work.
+
 # MVP Plan (Active, Short-Horizon)
 
 This document is the **current execution plan** that complements `docs/roadmap.md`.
 
-Completed stage definitions are archived in `docs/mvp-archive.md` to keep this file actionable.
+Completed stage definitions are archived in `docs/archive/mvp-archive.md` to keep this file actionable.
 
 ## ADR Policy (How MVP Work Locks Contracts)
 
@@ -14,7 +16,7 @@ MVP work is allowed to prototype quickly, but changes that affect “hard-to-cha
 
 ## Current Workspace Status
 
-- MVP 0–6: done (see `docs/mvp-archive.md`)
+- MVP 0–6: done (see `docs/archive/mvp-archive.md`)
   - MVP 5: Text MVP landed (single-line input + IME cursor-area loop)
   - MVP 6: Commands + keymap MVP landed (bind/route/persist; `when` gating)
 - MVP 7: MVP done in demo (command palette overlay; shortcut display; menu model types added)

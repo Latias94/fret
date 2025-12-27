@@ -44,4 +44,4 @@ Renderer implications (ADR 0006 / ADR 0029):
 ## Notes / Future Work
 
 - Theme-level typography tokens/aliases (e.g. global body/mono stacks, weight presets, line-height
-  scales) remain planned work (see `docs/mvp/active-plan.md` "MVP 53").
+  scales) remain planned work (see `docs/archive/mvp/active-plan.md` "MVP 53").

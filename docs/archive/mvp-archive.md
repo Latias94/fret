@@ -1,8 +1,10 @@
+> Archived: this plan is kept for history; some file paths referenced here may no longer exist.
+
 # MVP Plan Archive (Completed Stages)
 
 This file keeps the historical, detailed MVP stage definitions that are already completed.
 
-The active expanded plan lives in `docs/mvp/active-plan.md` (with a short overview in `docs/mvp.md`).
+The active expanded plan lives in `docs/archive/mvp/active-plan.md` (with a short overview in `docs/archive/mvp.md`).
 
 ---
 

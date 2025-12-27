@@ -49,13 +49,15 @@ Owns:
 
 ### Phase 0 — stop new drift
 
-- Freeze new retained-widget work: no new types in `fret_ui::primitives`.
+- Freeze retained-widget work in the runtime: no retained widgets in `crates/fret-ui`.
+- If any retained widgets still exist temporarily, they must live in `crates/fret-ui-widgets` and be
+  treated as compatibility-only.
 - Ensure all new UI kit work is declarative-only (elements), even if some old widgets remain.
 
 ### Phase 1 — extract “engine” types out of retained widgets
 
-Problem: some core element props currently depend on types that live in `fret_ui::primitives` (e.g.
-text input chrome / bound text editing state).
+Problem: some core element props may depend on types that historically lived in retained widgets
+(`crates/fret-ui-widgets`, previously `fret_ui::primitives`).
 
 Actions:
 
@@ -67,7 +69,8 @@ Actions:
 
 Acceptance:
 
-- `crates/fret-ui` builds with `primitives` removed entirely (or behind a temporary feature gate).
+- `crates/fret-ui` builds with retained widgets removed entirely.
+- Any retained-widget compatibility code is isolated in `crates/fret-ui-widgets`.
 
 ### Phase 2 — declarative ScrollHandle and VirtualList v2
 
@@ -105,8 +108,8 @@ Acceptance:
 
 Actions:
 
-- Delete `crates/fret-ui/src/primitives/*` and remove `Widget` authoring from the public API surface.
-- Convert remaining component widgets into declarative element helpers.
+- Delete retained widgets from `crates/fret-ui-widgets` once declarative replacements exist.
+- Convert remaining component widgets into declarative element helpers (preferred).
 
 Acceptance:
 
@@ -120,4 +123,3 @@ Acceptance:
 - `TextField/TextArea/Combobox` will migrate from retained `BoundTextInput/BoundTextArea` widgets to
   declarative `TextInput`/`TextArea` elements with shared engine state.
 - `ResizablePanelGroup` should become a declarative composition over a runtime split contract.
-
