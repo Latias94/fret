@@ -2,10 +2,7 @@
 
 use fret_components_icons::{IconId, IconRegistry, ids};
 use rust_embed::RustEmbed;
-use std::{
-    borrow::Cow,
-    sync::Arc,
-};
+use std::{borrow::Cow, sync::Arc};
 
 #[derive(RustEmbed)]
 #[folder = "assets"]

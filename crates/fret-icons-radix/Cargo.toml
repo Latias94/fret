@@ -9,3 +9,4 @@ semantic-ui = []
 
 [dependencies]
 fret-components-icons = { path = "../fret-components-icons" }
+rust-embed.workspace = true

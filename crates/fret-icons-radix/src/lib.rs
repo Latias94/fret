@@ -1,56 +1,56 @@
-//! Minimal Radix Icons SVG icon pack for Fret demos and component bootstrap.
-//!
-//! This crate registers a small curated set of icons used by the in-tree demos/components.
+//! A small curated set of Radix Icons SVG icons (vendored) for Fret demos/components.
 
-use fret_components_icons::{IconRegistry, ids};
+use fret_components_icons::{IconId, IconRegistry, ids};
+use rust_embed::RustEmbed;
+use std::{borrow::Cow, sync::Arc};
+
+#[derive(RustEmbed)]
+#[folder = "assets"]
+#[include = "icons/*.svg"]
+struct Assets;
 
 pub fn register_icons(reg: &mut IconRegistry) {
+    register_curated(reg);
+
     #[cfg(feature = "semantic-ui")]
     semantic_ui::register(reg);
+}
+
+fn register_curated(reg: &mut IconRegistry) {
+    for line in include_str!("../icon-list.txt").lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+
+        let icon_name = line.strip_suffix(".svg").unwrap_or(line);
+        register_vendor_icon(reg, icon_name);
+    }
+}
+
+fn register_vendor_icon(reg: &mut IconRegistry, icon_name: &str) {
+    let path = format!("icons/{icon_name}.svg");
+    let Some(file) = Assets::get(&path) else {
+        return;
+    };
+
+    let id = IconId::new(format!("radix.{icon_name}"));
+    match file.data {
+        Cow::Borrowed(b) => reg.register_svg_bytes(id, Arc::from(b)),
+        Cow::Owned(v) => reg.register_svg_bytes(id, Arc::from(v)),
+    }
 }
 
 #[cfg(feature = "semantic-ui")]
 mod semantic_ui {
     use super::*;
 
-    const CHECK: &[u8] = include_bytes!("../assets/icons/check.svg");
-    const CHEVRON_DOWN: &[u8] = include_bytes!("../assets/icons/chevron-down.svg");
-    const CROSS_1: &[u8] = include_bytes!("../assets/icons/cross-1.svg");
-    const MAGNIFYING_GLASS: &[u8] = include_bytes!("../assets/icons/magnifying-glass.svg");
-    const GEAR: &[u8] = include_bytes!("../assets/icons/gear.svg");
-    const PLAY: &[u8] = include_bytes!("../assets/icons/play.svg");
-
     pub fn register(reg: &mut IconRegistry) {
-        reg.register_svg_static(
-            fret_components_icons::IconId::new_static("radix.check"),
-            CHECK,
-        );
-        reg.register_svg_static(
-            fret_components_icons::IconId::new_static("radix.chevron-down"),
-            CHEVRON_DOWN,
-        );
-        reg.register_svg_static(
-            fret_components_icons::IconId::new_static("radix.cross-1"),
-            CROSS_1,
-        );
-        reg.register_svg_static(
-            fret_components_icons::IconId::new_static("radix.magnifying-glass"),
-            MAGNIFYING_GLASS,
-        );
-        reg.register_svg_static(
-            fret_components_icons::IconId::new_static("radix.gear"),
-            GEAR,
-        );
-        reg.register_svg_static(
-            fret_components_icons::IconId::new_static("radix.play"),
-            PLAY,
-        );
-
-        reg.register_svg_static(ids::ui::CHECK, CHECK);
-        reg.register_svg_static(ids::ui::CHEVRON_DOWN, CHEVRON_DOWN);
-        reg.register_svg_static(ids::ui::CLOSE, CROSS_1);
-        reg.register_svg_static(ids::ui::SEARCH, MAGNIFYING_GLASS);
-        reg.register_svg_static(ids::ui::SETTINGS, GEAR);
-        reg.register_svg_static(ids::ui::PLAY, PLAY);
+        reg.alias(ids::ui::CHECK, IconId::new("radix.check"));
+        reg.alias(ids::ui::CHEVRON_DOWN, IconId::new("radix.chevron-down"));
+        reg.alias(ids::ui::CLOSE, IconId::new("radix.cross-1"));
+        reg.alias(ids::ui::SEARCH, IconId::new("radix.magnifying-glass"));
+        reg.alias(ids::ui::SETTINGS, IconId::new("radix.gear"));
+        reg.alias(ids::ui::PLAY, IconId::new("radix.play"));
     }
 }
