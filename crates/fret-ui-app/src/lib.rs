@@ -9,20 +9,14 @@ pub use fret_ui::declarative;
 pub use fret_ui::dock;
 pub use fret_ui::element;
 pub use fret_ui::elements;
-pub use fret_ui::legacy_widgets;
 pub use fret_ui::primitives;
 pub use fret_ui::theme;
 pub use fret_ui::tree;
 
 pub use fret_ui::{
-    ContextMenuRequest, ContextMenuService, DockManager, DockPanel, DockPanelContentService,
-    DockSpace, GlobalElementId, Invalidation, PaintCachePolicy, Theme, ThemeConfig, ThemeSnapshot,
-    UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiHost, UiLayerId, ViewportPanel,
-};
-
-pub use fret_ui::legacy_widgets::{
-    Bar, ColoredPanel, FixedPanel, HeaderBody, PanelThemeBackground, Toolbar, ToolbarItem,
-    TreeNode, TreeView, TreeViewStyle,
+    DockManager, DockPanel, DockPanelContentService, DockSpace, GlobalElementId, Invalidation,
+    PaintCachePolicy, Theme, ThemeConfig, ThemeSnapshot, UiDebugFrameStats, UiDebugHitTest,
+    UiDebugLayerInfo, UiHost, UiLayerId, ViewportPanel,
 };
 
 pub use fret_ui::primitives::{
@@ -40,3 +34,5 @@ pub type EventCx<'a> = fret_ui::EventCx<'a, App>;
 pub type CommandCx<'a> = fret_ui::CommandCx<'a, App>;
 pub type LayoutCx<'a> = fret_ui::LayoutCx<'a, App>;
 pub type PaintCx<'a> = fret_ui::PaintCx<'a, App>;
+
+pub mod accessibility_actions;

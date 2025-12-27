@@ -30,7 +30,7 @@ use crate::error::RunnerError;
 
 type WindowAnchor = fret_core::WindowAnchor;
 
-fn macos_window_log(args: fmt::Arguments<'_>) {
+fn macos_window_log(_args: fmt::Arguments<'_>) {
     #[cfg(target_os = "macos")]
     {
         use std::{
@@ -66,11 +66,11 @@ fn macos_window_log(args: fmt::Arguments<'_>) {
             return;
         };
 
-        let _ = writeln!(file, "{}", args);
+        let _ = writeln!(file, "{}", _args);
     }
 }
 
-fn dock_tearoff_log(args: fmt::Arguments<'_>) {
+fn dock_tearoff_log(_args: fmt::Arguments<'_>) {
     #[cfg(target_os = "macos")]
     {
         use std::{
@@ -106,7 +106,7 @@ fn dock_tearoff_log(args: fmt::Arguments<'_>) {
             return;
         };
 
-        let _ = writeln!(file, "{}", args);
+        let _ = writeln!(file, "{}", _args);
     }
 }
 
@@ -336,6 +336,8 @@ pub struct WinitRunnerConfig {
     ///
     /// Set to `1` to disable MSAA-based AA for paths (more compatible, lower quality).
     pub path_msaa_samples: u32,
+    /// Enable platform accessibility integration (AccessKit + winit adapter).
+    pub accessibility_enabled: bool,
     pub wgpu_init: WgpuInit,
 }
 
@@ -372,6 +374,7 @@ impl Default for WinitRunnerConfig {
             external_drop_max_files: 128,
             svg_raster_budget_bytes: 64 * 1024 * 1024,
             path_msaa_samples: 4,
+            accessibility_enabled: true,
             wgpu_init: WgpuInit::CreateDefault,
         }
     }
@@ -578,10 +581,61 @@ pub trait WinitDriver {
     fn before_close_window(&mut self, _app: &mut App, _window: fret_core::AppWindowId) -> bool {
         true
     }
+
+    fn accessibility_snapshot(
+        &mut self,
+        _app: &mut App,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+    ) -> Option<std::sync::Arc<fret_core::SemanticsSnapshot>> {
+        None
+    }
+
+    fn accessibility_focus(
+        &mut self,
+        _app: &mut App,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _target: fret_core::NodeId,
+    ) {
+    }
+
+    fn accessibility_invoke(
+        &mut self,
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _target: fret_core::NodeId,
+    ) {
+    }
+
+    fn accessibility_set_value_text(
+        &mut self,
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _target: fret_core::NodeId,
+        _value: &str,
+    ) {
+    }
+
+    fn accessibility_set_value_numeric(
+        &mut self,
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _target: fret_core::NodeId,
+        _value: f64,
+    ) {
+    }
 }
 
 struct WindowRuntime<S> {
     window: Arc<Window>,
+    accessibility: Option<fret_platform::accessibility::WinitAccessibility>,
     surface: SurfaceState<'static>,
     scene: Scene,
     cursor_pos: Point,
@@ -747,11 +801,21 @@ impl<D: WinitDriver> WinitRunner<D> {
         &mut self,
         event_loop: &ActiveEventLoop,
         spec: WindowCreateSpec,
-    ) -> Result<Arc<Window>, RunnerError> {
+    ) -> Result<
+        (
+            Arc<Window>,
+            Option<fret_platform::accessibility::WinitAccessibility>,
+        ),
+        RunnerError,
+    > {
         let mut attrs = Window::default_attributes()
             .with_title(spec.title)
             .with_inner_size(spec.size)
-            .with_visible(spec.visible);
+            .with_visible(if self.config.accessibility_enabled {
+                false
+            } else {
+                spec.visible
+            });
         if let Some(position) = spec.position {
             attrs = attrs.with_position(position);
         }
@@ -763,12 +827,22 @@ impl<D: WinitDriver> WinitRunner<D> {
 
         macos_window_log(format_args!("[create] winit={:?}", window.id()));
 
-        Ok(window)
+        let accessibility = self
+            .config
+            .accessibility_enabled
+            .then(|| fret_platform::accessibility::WinitAccessibility::new(event_loop, &window));
+
+        if self.config.accessibility_enabled && spec.visible {
+            window.set_visible(true);
+        }
+
+        Ok((window, accessibility))
     }
 
     fn insert_window(
         &mut self,
         window: Arc<Window>,
+        accessibility: Option<fret_platform::accessibility::WinitAccessibility>,
         surface: wgpu::Surface<'static>,
     ) -> Result<fret_core::AppWindowId, RunnerError> {
         let Some(context) = self.context.as_ref() else {
@@ -788,6 +862,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             let user = self.driver.create_window_state(&mut self.app, id);
             WindowRuntime {
                 window,
+                accessibility,
                 surface,
                 scene: Scene::default(),
                 cursor_pos: Point::new(Px(0.0), Px(0.0)),
@@ -1015,14 +1090,14 @@ impl<D: WinitDriver> WinitRunner<D> {
             }
         }
 
-        let window = self.create_os_window(event_loop, spec)?;
+        let (window, accessibility) = self.create_os_window(event_loop, spec)?;
         let surface = {
             let Some(context) = self.context.as_ref() else {
                 return Err(RunnerError::WgpuNotInitialized);
             };
             context.create_surface(window.clone())?
         };
-        self.insert_window(window, surface)
+        self.insert_window(window, accessibility, surface)
     }
 
     fn schedule_timer(&mut self, now: Instant, effect: &Effect) {
@@ -1953,7 +2028,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         true
     }
 
-    fn stop_dock_tearoff_follow(&mut self, now: Instant, raise_on_macos: bool) {
+    fn stop_dock_tearoff_follow(&mut self, _now: Instant, _raise_on_macos: bool) {
         let Some(follow) = self.dock_tearoff_follow.take() else {
             return;
         };
@@ -1963,8 +2038,8 @@ impl<D: WinitDriver> WinitRunner<D> {
         }
 
         #[cfg(target_os = "macos")]
-        if raise_on_macos {
-            self.enqueue_window_front(follow.window, Some(follow.source_window), None, now);
+        if _raise_on_macos {
+            self.enqueue_window_front(follow.window, Some(follow.source_window), None, _now);
         }
     }
 }
@@ -2123,7 +2198,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
         let (context, surface) =
             match std::mem::replace(&mut self.config.wgpu_init, WgpuInit::CreateDefault) {
                 WgpuInit::CreateDefault => {
-                    match pollster::block_on(WgpuContext::new_with_surface(window.clone())) {
+                    match pollster::block_on(WgpuContext::new_with_surface(window.0.clone())) {
                         Ok(v) => v,
                         Err(e) => {
                             error!(error = ?e, "failed to initialize wgpu context");
@@ -2132,7 +2207,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     }
                 }
                 WgpuInit::Provided(context) => {
-                    let surface = match context.create_surface(window.clone()) {
+                    let surface = match context.create_surface(window.0.clone()) {
                         Ok(v) => v,
                         Err(e) => {
                             error!(error = ?e, "failed to create surface from provided context");
@@ -2141,7 +2216,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     };
                     (context, surface)
                 }
-                WgpuInit::Factory(factory) => match factory(window.clone()) {
+                WgpuInit::Factory(factory) => match factory(window.0.clone()) {
                     Ok(v) => v,
                     Err(e) => {
                         error!(error = ?e, "wgpu factory failed");
@@ -2159,7 +2234,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
             self.driver.gpu_ready(&mut self.app, context, renderer);
         }
 
-        let main_window = match self.insert_window(window, surface) {
+        let main_window = match self.insert_window(window.0, window.1, surface) {
             Ok(id) => id,
             Err(e) => {
                 error!(error = ?e, "failed to insert main window runtime");
@@ -2180,6 +2255,12 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
         let Some(app_window) = self.winit_to_app.get(&window_id).copied() else {
             return;
         };
+
+        if let Some(state) = self.windows.get_mut(app_window) {
+            if let Some(a11y) = state.accessibility.as_mut() {
+                a11y.process_event(&state.window, &event);
+            }
+        }
 
         match event {
             WindowEvent::CloseRequested => {
@@ -2655,6 +2736,21 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     &mut state.scene,
                 );
 
+                if let Some(a11y) = state.accessibility.as_mut()
+                    && a11y.is_active()
+                    && let Some(snapshot) = self.driver.accessibility_snapshot(
+                        &mut self.app,
+                        app_window,
+                        &mut state.user,
+                    )
+                {
+                    let update = fret_platform::accessibility::tree_update_from_snapshot(
+                        &snapshot,
+                        state.window.scale_factor(),
+                    );
+                    a11y.update_if_active(|| update);
+                }
+
                 let engine_frame = self.driver.record_engine_frame(
                     &mut self.app,
                     app_window,
@@ -2716,6 +2812,76 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
         self.tick_id.0 = self.tick_id.0.saturating_add(1);
         self.app.set_tick_id(self.tick_id);
         self.saw_left_mouse_release_this_turn = false;
+
+        for (app_window, state) in self.windows.iter_mut() {
+            let Some(a11y) = state.accessibility.as_mut() else {
+                continue;
+            };
+
+            if a11y.take_activation_request() {
+                state.window.request_redraw();
+            }
+
+            let mut requests = Vec::new();
+            a11y.drain_actions(&mut requests);
+            a11y.drain_actions_fallback(&mut requests);
+
+            for req in requests {
+                if let Some(target) = fret_platform::accessibility::focus_target_from_action(&req) {
+                    self.driver.accessibility_focus(
+                        &mut self.app,
+                        app_window,
+                        &mut state.user,
+                        target,
+                    );
+                    self.app.request_redraw(app_window);
+                    continue;
+                }
+
+                if let Some(target) = fret_platform::accessibility::invoke_target_from_action(&req)
+                {
+                    let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
+                    self.driver.accessibility_invoke(
+                        &mut self.app,
+                        services,
+                        app_window,
+                        &mut state.user,
+                        target,
+                    );
+                    self.app.request_redraw(app_window);
+                    continue;
+                }
+
+                if let Some((target, data)) =
+                    fret_platform::accessibility::set_value_from_action(&req)
+                {
+                    let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
+                    match data {
+                        fret_platform::accessibility::SetValueData::Text(value) => {
+                            self.driver.accessibility_set_value_text(
+                                &mut self.app,
+                                services,
+                                app_window,
+                                &mut state.user,
+                                target,
+                                &value,
+                            );
+                        }
+                        fret_platform::accessibility::SetValueData::Numeric(value) => {
+                            self.driver.accessibility_set_value_numeric(
+                                &mut self.app,
+                                services,
+                                app_window,
+                                &mut state.user,
+                                target,
+                                value,
+                            );
+                        }
+                    }
+                    self.app.request_redraw(app_window);
+                }
+            }
+        }
 
         if let Some(follow) = self.dock_tearoff_follow
             && !self.is_left_mouse_down_for_window(follow.source_window)

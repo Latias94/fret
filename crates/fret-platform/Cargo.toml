@@ -4,6 +4,8 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+accesskit.workspace = true
+accesskit_winit.workspace = true
 slotmap.workspace = true
 winit.workspace = true
 fret-core = { path = "../fret-core" }
