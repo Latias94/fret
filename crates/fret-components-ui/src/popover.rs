@@ -15,6 +15,7 @@ use crate::ChromeRefinement;
 use crate::Size as ComponentSize;
 use crate::recipes::menu_list::resolve_menu_list_row_chrome;
 use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
+use crate::{DismissOnEscapeAndClickOutside, EscapeDismissModifiers};
 use fret_ui::overlay_placement;
 
 #[derive(Debug, Clone)]
@@ -187,6 +188,7 @@ pub struct Popover {
     max_scroll_offset_y: Px,
     typeahead: String,
     typeahead_last: Option<Instant>,
+    dismiss: DismissOnEscapeAndClickOutside,
 }
 
 impl Popover {
@@ -205,6 +207,8 @@ impl Popover {
             max_scroll_offset_y: Px(0.0),
             typeahead: String::new(),
             typeahead_last: None,
+            dismiss: DismissOnEscapeAndClickOutside::new(CommandId::from("popover.close"))
+                .escape_modifiers(EscapeDismissModifiers::Any),
         }
     }
 
@@ -647,10 +651,13 @@ impl<H: UiHost> Widget<H> for Popover {
                 if *button != MouseButton::Left {
                     return;
                 }
-                if self.panel_bounds.contains(*position) {
-                    cx.capture_pointer(cx.node);
-                } else {
+                if self
+                    .dismiss
+                    .should_dismiss(event, self.panel_bounds, false, true)
+                {
                     self.close_popover(cx);
+                } else if self.panel_bounds.contains(*position) {
+                    cx.capture_pointer(cx.node);
                 }
             }
             Event::Pointer(fret_core::PointerEvent::Up {
@@ -665,6 +672,11 @@ impl<H: UiHost> Widget<H> for Popover {
                 }
             }
             Event::KeyDown { key, modifiers, .. } => {
+                if self.dismiss.should_dismiss(event, self.panel_bounds, true, false) {
+                    self.clear_typeahead();
+                    self.close_popover(cx);
+                    return;
+                }
                 if let Some(c) = Self::typeahead_char(*key, modifiers) {
                     if self.handle_typeahead(&request, c) {
                         if let Some(i) = self.hover_row {

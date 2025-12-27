@@ -67,6 +67,8 @@ impl OverlayPortal {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EscapeDismissModifiers {
+    /// Always dismiss on Escape regardless of modifiers.
+    Any,
     /// Only dismiss when no modifiers are pressed.
     None,
     /// Dismiss when `ctrl/meta/alt/alt_gr` are not pressed (Shift is allowed).
@@ -132,6 +134,7 @@ impl DismissOnEscapeAndClickOutside {
                 }
 
                 let allow = match self.escape_modifiers {
+                    EscapeDismissModifiers::Any => true,
                     EscapeDismissModifiers::None => {
                         !modifiers.shift
                             && !modifiers.ctrl
