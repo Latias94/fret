@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, NodeId, Px, Rect, SceneOp, Size,
+    Color, Corners, DrawOrder, Edges, Event, NodeId, Px, Rect, SceneOp, Size,
 };
 use fret_runtime::CommandId;
 use fret_ui::{
     Theme, UiHost,
     widget::{EventCx, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
+
+use crate::{DismissOnEscapeAndClickOutside, EscapeDismissModifiers};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SheetSide {
@@ -135,7 +137,7 @@ impl Default for SheetStyle {
 #[derive(Debug)]
 pub struct SheetOverlay {
     style: SheetStyle,
-    close_command: CommandId,
+    dismiss: DismissOnEscapeAndClickOutside,
     last_theme_revision: Option<u64>,
     last_serial: Option<u64>,
     panel_bounds: Rect,
@@ -145,9 +147,11 @@ pub struct SheetOverlay {
 
 impl SheetOverlay {
     pub fn new() -> Self {
+        let close_command = CommandId::from("sheet.close");
         Self {
             style: SheetStyle::default(),
-            close_command: CommandId::from("sheet.close"),
+            dismiss: DismissOnEscapeAndClickOutside::new(close_command)
+                .escape_modifiers(EscapeDismissModifiers::None),
             last_theme_revision: None,
             last_serial: None,
             panel_bounds: Rect::default(),
@@ -157,7 +161,8 @@ impl SheetOverlay {
     }
 
     pub fn with_close_command(mut self, command: CommandId) -> Self {
-        self.close_command = command;
+        self.dismiss = DismissOnEscapeAndClickOutside::new(command)
+            .escape_modifiers(EscapeDismissModifiers::None);
         self
     }
 
@@ -309,34 +314,13 @@ impl<H: UiHost> Widget<H> for SheetOverlay {
         };
         self.last_serial = Some(serial);
 
-        match event {
-            Event::KeyDown { key, modifiers, .. } => {
-                if request.close_on_escape
-                    && *key == KeyCode::Escape
-                    && !modifiers.shift
-                    && !modifiers.ctrl
-                    && !modifiers.alt
-                    && !modifiers.meta
-                {
-                    cx.dispatch_command(self.close_command.clone());
-                    cx.stop_propagation();
-                }
-            }
-            Event::Pointer(fret_core::PointerEvent::Down {
-                position,
-                button,
-                ..
-            }) => {
-                if request.close_on_click_outside
-                    && *button == MouseButton::Left
-                    && !self.panel_bounds.contains(*position)
-                {
-                    cx.dispatch_command(self.close_command.clone());
-                    cx.stop_propagation();
-                }
-            }
-            _ => {}
-        }
+        let _ = self.dismiss.handle_event(
+            cx,
+            event,
+            self.panel_bounds,
+            request.close_on_escape,
+            request.close_on_click_outside,
+        );
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {

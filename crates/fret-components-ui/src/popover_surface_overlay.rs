@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, NodeId, Point, Px, Rect,
-    SceneOp, Size,
+    Color, Corners, DrawOrder, Edges, Event, NodeId, Point, Px, Rect, SceneOp, Size,
 };
 use fret_runtime::CommandId;
 use fret_ui::overlay_placement;
@@ -11,6 +10,8 @@ use fret_ui::{
     Theme, UiHost,
     widget::{EventCx, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
+
+use crate::{DismissOnEscapeAndClickOutside, EscapeDismissModifiers};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PopoverSurfaceSide {
@@ -148,6 +149,7 @@ impl PopoverSurfaceService {
 pub struct PopoverSurfaceOverlay {
     style: PopoverSurfaceStyle,
     close_command: CommandId,
+    dismiss: DismissOnEscapeAndClickOutside,
     last_theme_revision: Option<u64>,
     last_serial: Option<u64>,
     request: Option<PopoverSurfaceRequest>,
@@ -158,9 +160,12 @@ pub struct PopoverSurfaceOverlay {
 
 impl PopoverSurfaceOverlay {
     pub fn new() -> Self {
+        let close_command = CommandId::from("popover_surface.close");
         Self {
             style: PopoverSurfaceStyle::default(),
-            close_command: CommandId::from("popover_surface.close"),
+            close_command: close_command.clone(),
+            dismiss: DismissOnEscapeAndClickOutside::new(close_command)
+                .escape_modifiers(EscapeDismissModifiers::NoCtrlAltMeta),
             last_theme_revision: None,
             last_serial: None,
             request: None,
@@ -171,6 +176,8 @@ impl PopoverSurfaceOverlay {
     }
 
     pub fn with_close_command(mut self, command: CommandId) -> Self {
+        self.dismiss = DismissOnEscapeAndClickOutside::new(command.clone())
+            .escape_modifiers(EscapeDismissModifiers::NoCtrlAltMeta);
         self.close_command = command;
         self
     }
@@ -278,28 +285,13 @@ impl<H: UiHost> Widget<H> for PopoverSurfaceOverlay {
             return;
         };
 
-        match event {
-            Event::Pointer(fret_core::PointerEvent::Down {
-                position,
-                button,
-                ..
-            }) => {
-                if *button != MouseButton::Left {
-                    return;
-                }
-                if request.close_on_click_outside && !self.panel_bounds.contains(*position) {
-                    self.close(cx, window);
-                }
-            }
-            Event::KeyDown { key, modifiers, .. } => {
-                if modifiers.ctrl || modifiers.meta || modifiers.alt {
-                    return;
-                }
-                if request.close_on_escape && *key == KeyCode::Escape {
-                    self.close(cx, window);
-                }
-            }
-            _ => {}
+        if self.dismiss.should_dismiss(
+            event,
+            self.panel_bounds,
+            request.close_on_escape,
+            request.close_on_click_outside,
+        ) {
+            self.close(cx, window);
         }
     }
 

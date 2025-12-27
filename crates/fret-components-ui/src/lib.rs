@@ -23,6 +23,7 @@ pub mod dropdown_menu;
 pub mod frame;
 pub mod icon_button;
 pub mod menu_overlay;
+pub mod overlay_policy;
 pub mod popover;
 pub mod popover_surface;
 pub mod popover_surface_overlay;
@@ -61,6 +62,8 @@ pub use tooltip::{TooltipArea, TooltipOverlay, TooltipRequest, TooltipService, T
 pub use menu_overlay::{
     ContextMenuRequest, ContextMenuService, MenuBarContextMenu, MenuBarContextMenuEntry,
 };
+pub use overlay_policy::OverlayPortal;
+pub use overlay_policy::{DismissOnEscapeAndClickOutside, EscapeDismissModifiers};
 
 pub use resizable_panel_group::ResizablePanelGroup;
 pub use window_overlays::WindowOverlays;

@@ -2,13 +2,13 @@ use fret_core::{AppWindowId, NodeId, UiServices};
 use fret_runtime::{CommandId, Effect};
 use fret_ui::{
     UiHost,
-    tree::{UiLayerId, UiTree},
+    tree::UiTree,
 };
 
 use crate::{
-    CommandPaletteOverlay, ContextMenu, ContextMenuService, DialogOverlay, DialogService, Popover,
-    PopoverService, PopoverSurfaceOverlay, PopoverSurfaceService, SheetOverlay, SheetService,
-    ToastOverlay, TooltipOverlay,
+    CommandPaletteOverlay, ContextMenu, ContextMenuService, DialogOverlay, DialogService,
+    OverlayPortal, Popover, PopoverService, PopoverSurfaceOverlay, PopoverSurfaceService,
+    SheetOverlay, SheetService, ToastOverlay, TooltipOverlay,
 };
 
 /// Standard window-level UI overlays (tooltips, popovers, context menus).
@@ -21,104 +21,60 @@ use crate::{
 ///   composition can evolve without bloating the runtime crate (see ADR 0037, MVP 48).
 #[derive(Debug)]
 pub struct WindowOverlays {
-    _tooltip_node: NodeId,
-    _toast_node: NodeId,
-
-    command_palette_layer: UiLayerId,
-    command_palette_node: NodeId,
-    command_palette_previous_focus: Option<NodeId>,
-
-    dialog_layer: UiLayerId,
-    dialog_node: NodeId,
-    dialog_previous_focus: Option<NodeId>,
-
-    sheet_layer: UiLayerId,
-    sheet_node: NodeId,
-    sheet_previous_focus: Option<NodeId>,
-
-    popover_layer: UiLayerId,
-    popover_node: NodeId,
-    popover_previous_focus: Option<NodeId>,
-
-    popover_surface_layer: UiLayerId,
-    popover_surface_node: NodeId,
-    popover_surface_previous_focus: Option<NodeId>,
-
-    context_menu_layer: UiLayerId,
-    context_menu_node: NodeId,
-    context_menu_previous_focus: Option<NodeId>,
+    command_palette: OverlayPortal,
+    dialog: OverlayPortal,
+    sheet: OverlayPortal,
+    popover: OverlayPortal,
+    popover_surface: OverlayPortal,
+    context_menu: OverlayPortal,
 }
 
 impl WindowOverlays {
     pub fn install<H: UiHost>(ui: &mut UiTree<H>) -> Self {
-        let tooltip_node = ui.create_node(TooltipOverlay::new());
-        let tooltip_layer = ui.push_overlay_root_ex(tooltip_node, false, false);
-        ui.set_layer_wants_pointer_move_events(tooltip_layer, true);
+        let tooltip = OverlayPortal::install(ui, TooltipOverlay::new(), false, false, true);
+        ui.set_layer_wants_pointer_move_events(tooltip.layer, true);
 
         // Toasts should be visually on top but pointer-transparent outside toast bounds.
         // The overlay is hit-testable and relies on per-widget hit testing (`Widget::hit_test`).
-        let toast_node = ui.create_node(ToastOverlay::new());
-        let toast_layer = ui.push_overlay_root_ex(toast_node, false, true);
-        ui.set_layer_wants_timer_events(toast_layer, true);
+        let mut toast = OverlayPortal::install(ui, ToastOverlay::new(), false, true, true);
+        toast.cleanup_on_close = false;
+        ui.set_layer_wants_timer_events(toast.layer, true);
 
-        let command_palette_node = ui.create_node(CommandPaletteOverlay::new());
-        let command_palette_layer = ui.push_overlay_root(command_palette_node, true);
-        ui.set_layer_visible(command_palette_layer, false);
+        let command_palette =
+            OverlayPortal::install(ui, CommandPaletteOverlay::new(), true, true, false);
 
-        let dialog_node = ui.create_node(DialogOverlay::new());
-        let dialog_layer = ui.push_overlay_root(dialog_node, true);
-        ui.set_layer_visible(dialog_layer, false);
+        let dialog = OverlayPortal::install(ui, DialogOverlay::new(), true, true, false);
 
-        let sheet_node = ui.create_node(SheetOverlay::new());
-        let sheet_layer = ui.push_overlay_root(sheet_node, true);
-        ui.set_layer_visible(sheet_layer, false);
+        let sheet = OverlayPortal::install(ui, SheetOverlay::new(), true, true, false);
 
-        let popover_node = ui.create_node(Popover::new());
-        let popover_layer = ui.push_overlay_root(popover_node, true);
-        ui.set_layer_visible(popover_layer, false);
+        let popover = OverlayPortal::install(ui, Popover::new(), true, true, false);
 
-        let popover_surface_node = ui.create_node(PopoverSurfaceOverlay::new());
-        let popover_surface_layer = ui.push_overlay_root(popover_surface_node, true);
-        ui.set_layer_visible(popover_surface_layer, false);
+        let mut popover_surface =
+            OverlayPortal::install(ui, PopoverSurfaceOverlay::new(), true, true, false);
+        popover_surface.cleanup_on_close = false;
 
-        let context_menu_node = ui.create_node(ContextMenu::new());
-        let context_menu_layer = ui.push_overlay_root(context_menu_node, true);
-        ui.set_layer_visible(context_menu_layer, false);
+        let context_menu = OverlayPortal::install(ui, ContextMenu::new(), true, true, false);
 
         Self {
-            _tooltip_node: tooltip_node,
-            _toast_node: toast_node,
-            command_palette_layer,
-            command_palette_node,
-            command_palette_previous_focus: None,
-            dialog_layer,
-            dialog_node,
-            dialog_previous_focus: None,
-            sheet_layer,
-            sheet_node,
-            sheet_previous_focus: None,
-            popover_layer,
-            popover_node,
-            popover_previous_focus: None,
-            popover_surface_layer,
-            popover_surface_node,
-            popover_surface_previous_focus: None,
-            context_menu_layer,
-            context_menu_node,
-            context_menu_previous_focus: None,
+            command_palette,
+            dialog,
+            sheet,
+            popover,
+            popover_surface,
+            context_menu,
         }
     }
 
     pub fn command_palette_node(&self) -> NodeId {
-        self.command_palette_node
+        self.command_palette.root
     }
 
     pub fn sheet_node(&self) -> NodeId {
-        self.sheet_node
+        self.sheet.root
     }
 
     pub fn popover_surface_node(&self) -> NodeId {
-        self.popover_surface_node
+        self.popover_surface.root
     }
 
     pub fn handle_command<H: UiHost>(
@@ -131,37 +87,26 @@ impl WindowOverlays {
     ) -> bool {
         match command.as_str() {
             "command_palette.open" => {
-                let visible = ui.is_layer_visible(self.command_palette_layer);
-                if !visible {
-                    self.command_palette_previous_focus = ui.focus();
-                    ui.set_layer_visible(self.command_palette_layer, true);
-                }
+                self.command_palette.show(ui);
 
                 let focus = ui
-                    .children(self.command_palette_node)
+                    .children(self.command_palette.root)
                     .first()
                     .copied()
                     .and_then(|root| ui.first_focusable_descendant(root))
-                    .unwrap_or(self.command_palette_node);
+                    .unwrap_or(self.command_palette.root);
                 ui.set_focus(Some(focus));
                 app.request_redraw(window);
                 true
             }
             "command_palette.close" => {
-                if ui.is_layer_visible(self.command_palette_layer) {
-                    ui.cleanup_subtree(services, self.command_palette_node);
-                    ui.set_layer_visible(self.command_palette_layer, false);
-                }
-
-                if let Some(prev) = self.command_palette_previous_focus.take() {
-                    ui.set_focus(Some(prev));
-                }
+                self.command_palette.hide(ui, services);
 
                 app.request_redraw(window);
                 true
             }
             "command_palette.toggle" => {
-                if ui.is_layer_visible(self.command_palette_layer) {
+                if self.command_palette.is_visible(ui) {
                     return self.handle_command(
                         app,
                         ui,
@@ -187,20 +132,13 @@ impl WindowOverlays {
                     return true;
                 }
 
-                let visible = ui.is_layer_visible(self.dialog_layer);
-                if !visible {
-                    self.dialog_previous_focus = ui.focus();
-                    ui.set_layer_visible(self.dialog_layer, true);
-                }
-                ui.set_focus(Some(self.dialog_node));
+                self.dialog.show(ui);
+                ui.set_focus(Some(self.dialog.root));
                 app.request_redraw(window);
                 true
             }
             "dialog.close" => {
-                if ui.is_layer_visible(self.dialog_layer) {
-                    ui.cleanup_subtree(services, self.dialog_node);
-                    ui.set_layer_visible(self.dialog_layer, false);
-                }
+                self.dialog.hide(ui, services);
 
                 app.with_global_mut(DialogService::default, |service, app| {
                     let action = service.take_pending_action(window);
@@ -212,10 +150,6 @@ impl WindowOverlays {
                         });
                     }
                 });
-
-                if let Some(prev) = self.dialog_previous_focus.take() {
-                    ui.set_focus(Some(prev));
-                }
 
                 app.request_redraw(window);
                 true
@@ -229,35 +163,24 @@ impl WindowOverlays {
                     return true;
                 }
 
-                let visible = ui.is_layer_visible(self.sheet_layer);
-                if !visible {
-                    self.sheet_previous_focus = ui.focus();
-                    ui.set_layer_visible(self.sheet_layer, true);
-                }
+                self.sheet.show(ui);
                 let request_focus = app
                     .global::<SheetService>()
                     .and_then(|s| s.request(window))
                     .map(|(_, req)| req.request_focus)
                     .unwrap_or(true);
                 if request_focus {
-                    ui.set_focus(Some(self.sheet_node));
+                    ui.set_focus(Some(self.sheet.root));
                 }
                 app.request_redraw(window);
                 true
             }
             "sheet.close" => {
-                if ui.is_layer_visible(self.sheet_layer) {
-                    ui.cleanup_subtree(services, self.sheet_node);
-                    ui.set_layer_visible(self.sheet_layer, false);
-                }
+                self.sheet.hide(ui, services);
 
                 app.with_global_mut(SheetService::default, |service, _app| {
                     service.clear(window);
                 });
-
-                if let Some(prev) = self.sheet_previous_focus.take() {
-                    ui.set_focus(Some(prev));
-                }
 
                 app.request_redraw(window);
                 true
@@ -271,11 +194,7 @@ impl WindowOverlays {
                     return true;
                 }
 
-                let visible = ui.is_layer_visible(self.popover_layer);
-                if !visible {
-                    self.popover_previous_focus = ui.focus();
-                    ui.set_layer_visible(self.popover_layer, true);
-                }
+                self.popover.show(ui);
 
                 let request_focus = app
                     .global::<PopoverService>()
@@ -283,24 +202,17 @@ impl WindowOverlays {
                     .map(|(_, req)| req.request_focus)
                     .unwrap_or(true);
                 if request_focus {
-                    ui.set_focus(Some(self.popover_node));
+                    ui.set_focus(Some(self.popover.root));
                 }
                 app.request_redraw(window);
                 true
             }
             "popover.close" => {
-                if ui.is_layer_visible(self.popover_layer) {
-                    ui.cleanup_subtree(services, self.popover_node);
-                    ui.set_layer_visible(self.popover_layer, false);
-                }
+                self.popover.hide(ui, services);
 
                 app.with_global_mut(PopoverService::default, |service, _app| {
                     service.clear_request(window);
                 });
-
-                if let Some(prev) = self.popover_previous_focus.take() {
-                    ui.set_focus(Some(prev));
-                }
 
                 app.request_redraw(window);
                 true
@@ -314,11 +226,7 @@ impl WindowOverlays {
                     return true;
                 }
 
-                let visible = ui.is_layer_visible(self.popover_surface_layer);
-                if !visible {
-                    self.popover_surface_previous_focus = ui.focus();
-                    ui.set_layer_visible(self.popover_surface_layer, true);
-                }
+                self.popover_surface.show(ui);
 
                 let request_focus = app
                     .global::<PopoverSurfaceService>()
@@ -336,7 +244,7 @@ impl WindowOverlays {
                             .unwrap_or(req.content_node);
                         ui.set_focus(Some(focus));
                     } else {
-                        ui.set_focus(Some(self.popover_surface_node));
+                        ui.set_focus(Some(self.popover_surface.root));
                     }
                 }
 
@@ -344,17 +252,11 @@ impl WindowOverlays {
                 true
             }
             "popover_surface.close" => {
-                if ui.is_layer_visible(self.popover_surface_layer) {
-                    ui.set_layer_visible(self.popover_surface_layer, false);
-                }
+                self.popover_surface.hide(ui, services);
 
                 app.with_global_mut(PopoverSurfaceService::default, |service, _app| {
                     service.clear_request(window);
                 });
-
-                if let Some(prev) = self.popover_surface_previous_focus.take() {
-                    ui.set_focus(Some(prev));
-                }
 
                 app.request_redraw(window);
                 true
@@ -368,20 +270,13 @@ impl WindowOverlays {
                     return true;
                 }
 
-                let visible = ui.is_layer_visible(self.context_menu_layer);
-                if !visible {
-                    self.context_menu_previous_focus = ui.focus();
-                    ui.set_layer_visible(self.context_menu_layer, true);
-                }
-                ui.set_focus(Some(self.context_menu_node));
+                self.context_menu.show(ui);
+                ui.set_focus(Some(self.context_menu.root));
                 app.request_redraw(window);
                 true
             }
             "context_menu.close" => {
-                if ui.is_layer_visible(self.context_menu_layer) {
-                    ui.cleanup_subtree(services, self.context_menu_node);
-                    ui.set_layer_visible(self.context_menu_layer, false);
-                }
+                self.context_menu.hide(ui, services);
 
                 app.with_global_mut(ContextMenuService::default, |service, app| {
                     let action = service.take_pending_action(window);
@@ -393,10 +288,6 @@ impl WindowOverlays {
                         });
                     }
                 });
-
-                if let Some(prev) = self.context_menu_previous_focus.take() {
-                    ui.set_focus(Some(prev));
-                }
 
                 app.request_redraw(window);
                 true
@@ -731,7 +622,7 @@ mod tests {
             &CommandId::from("dialog.open"),
         );
         assert!(handled);
-        assert_eq!(ui.focus(), Some(overlays.dialog_node));
+        assert_eq!(ui.focus(), Some(overlays.dialog.root));
 
         run_frame(&mut ui, &mut host, &mut services);
 
@@ -843,7 +734,7 @@ mod tests {
             &CommandId::from("sheet.open"),
         );
         assert!(handled);
-        assert_eq!(ui.focus(), Some(overlays.sheet_node));
+        assert_eq!(ui.focus(), Some(overlays.sheet.root));
 
         run_frame(&mut ui, &mut host, &mut services);
 
@@ -983,7 +874,7 @@ mod tests {
             &CommandId::from("context_menu.open"),
         );
         assert!(handled);
-        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+        assert_eq!(ui.focus(), Some(overlays.context_menu.root));
 
         run_frame(&mut ui, &mut host, &mut services);
         ui.dispatch_event(
@@ -1066,7 +957,7 @@ mod tests {
             &CommandId::from("context_menu.open"),
         );
         assert!(handled);
-        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+        assert_eq!(ui.focus(), Some(overlays.context_menu.root));
 
         run_frame(&mut ui, &mut host, &mut services);
 
@@ -1113,7 +1004,7 @@ mod tests {
             &CommandId::from("context_menu.open"),
         );
         assert!(handled);
-        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+        assert_eq!(ui.focus(), Some(overlays.context_menu.root));
 
         run_frame(&mut ui, &mut host, &mut services);
 
@@ -1208,7 +1099,7 @@ mod tests {
             &CommandId::from("context_menu.open"),
         );
         assert!(handled);
-        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+        assert_eq!(ui.focus(), Some(overlays.context_menu.root));
 
         run_frame(&mut ui, &mut host, &mut services);
 
@@ -1296,7 +1187,7 @@ mod tests {
             &CommandId::from("context_menu.open"),
         );
         assert!(handled);
-        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+        assert_eq!(ui.focus(), Some(overlays.context_menu.root));
 
         run_frame(&mut ui, &mut host, &mut services);
 
@@ -1400,7 +1291,7 @@ mod tests {
             &CommandId::from("context_menu.open"),
         );
         assert!(handled);
-        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+        assert_eq!(ui.focus(), Some(overlays.context_menu.root));
 
         run_frame(&mut ui, &mut host, &mut services);
 
@@ -1447,7 +1338,7 @@ mod tests {
             &CommandId::from("context_menu.open"),
         );
         assert!(handled);
-        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+        assert_eq!(ui.focus(), Some(overlays.context_menu.root));
 
         run_frame(&mut ui, &mut host, &mut services);
 
@@ -1540,7 +1431,7 @@ mod tests {
             &CommandId::from("context_menu.open"),
         );
         assert!(handled);
-        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+        assert_eq!(ui.focus(), Some(overlays.context_menu.root));
 
         run_frame(&mut ui, &mut host, &mut services);
 
@@ -1567,7 +1458,7 @@ mod tests {
 
         let commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
         assert_eq!(commands, Vec::<CommandId>::new());
-        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+        assert_eq!(ui.focus(), Some(overlays.context_menu.root));
 
         ui.dispatch_event(
             &mut host,
@@ -1583,7 +1474,7 @@ mod tests {
         // First Space re-opens the submenu (no command yet).
         let commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
         assert_eq!(commands, Vec::<CommandId>::new());
-        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+        assert_eq!(ui.focus(), Some(overlays.context_menu.root));
 
         ui.dispatch_event(
             &mut host,
@@ -1666,7 +1557,7 @@ mod tests {
             &CommandId::from("context_menu.open"),
         );
         assert!(handled);
-        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+        assert_eq!(ui.focus(), Some(overlays.context_menu.root));
 
         run_frame(&mut ui, &mut host, &mut services);
 
@@ -1683,7 +1574,7 @@ mod tests {
 
         let commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
         assert_eq!(commands, Vec::<CommandId>::new());
-        assert_eq!(ui.focus(), Some(overlays.context_menu_node));
+        assert_eq!(ui.focus(), Some(overlays.context_menu.root));
 
         ui.dispatch_event(
             &mut host,
@@ -1739,7 +1630,7 @@ mod tests {
         );
 
         let _ = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
-        assert_eq!(ui.focus(), Some(overlays.popover_node));
+        assert_eq!(ui.focus(), Some(overlays.popover.root));
 
         run_frame(&mut ui, &mut host, &mut services);
 
@@ -1809,7 +1700,7 @@ mod tests {
         );
 
         let _ = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
-        assert_eq!(ui.focus(), Some(overlays.popover_node));
+        assert_eq!(ui.focus(), Some(overlays.popover.root));
 
         run_frame(&mut ui, &mut host, &mut services);
 

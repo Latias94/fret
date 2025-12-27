@@ -1,11 +1,13 @@
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, KeyCode, MouseButton, Px, Rect, SceneOp, Size,
+    Color, Corners, DrawOrder, Edges, Event, Px, Rect, SceneOp, Size,
 };
 use fret_runtime::CommandId;
 use fret_ui::{
     Theme, UiHost,
     widget::{EventCx, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
+
+use crate::{DismissOnEscapeAndClickOutside, EscapeDismissModifiers};
 
 #[derive(Debug, Clone)]
 pub struct CommandPaletteStyle {
@@ -50,23 +52,26 @@ impl Default for CommandPaletteStyle {
 /// - The palette content (input + list) is provided by the app/component layer.
 pub struct CommandPaletteOverlay {
     style: CommandPaletteStyle,
-    close_command: CommandId,
+    dismiss: DismissOnEscapeAndClickOutside,
     last_theme_revision: Option<u64>,
     panel_bounds: Rect,
 }
 
 impl CommandPaletteOverlay {
     pub fn new() -> Self {
+        let close_command = CommandId::from("command_palette.close");
         Self {
             style: CommandPaletteStyle::default(),
-            close_command: CommandId::from("command_palette.close"),
+            dismiss: DismissOnEscapeAndClickOutside::new(close_command)
+                .escape_modifiers(EscapeDismissModifiers::None),
             last_theme_revision: None,
             panel_bounds: Rect::default(),
         }
     }
 
     pub fn with_close_command(mut self, command: CommandId) -> Self {
-        self.close_command = command;
+        self.dismiss = DismissOnEscapeAndClickOutside::new(command.clone())
+            .escape_modifiers(EscapeDismissModifiers::None);
         self
     }
 
@@ -112,30 +117,7 @@ impl<H: UiHost> Widget<H> for CommandPaletteOverlay {
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme());
 
-        match event {
-            Event::KeyDown { key, modifiers, .. } => {
-                if *key == KeyCode::Escape
-                    && !modifiers.shift
-                    && !modifiers.ctrl
-                    && !modifiers.alt
-                    && !modifiers.meta
-                {
-                    cx.dispatch_command(self.close_command.clone());
-                    cx.stop_propagation();
-                }
-            }
-            Event::Pointer(fret_core::PointerEvent::Down {
-                position,
-                button,
-                ..
-            }) => {
-                if *button == MouseButton::Left && !self.panel_bounds.contains(*position) {
-                    cx.dispatch_command(self.close_command.clone());
-                    cx.stop_propagation();
-                }
-            }
-            _ => {}
-        }
+        let _ = self.dismiss.handle_event(cx, event, self.panel_bounds, true, true);
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
