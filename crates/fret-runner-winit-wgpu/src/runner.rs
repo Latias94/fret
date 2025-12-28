@@ -412,6 +412,8 @@ pub struct WinitRunnerConfig {
     pub path_msaa_samples: u32,
     /// Enable platform accessibility integration (AccessKit + winit adapter).
     pub accessibility_enabled: bool,
+    /// Optional overrides for the default font family selection used by the text system.
+    pub text_font_families: fret_render::TextFontFamilyConfig,
     pub wgpu_init: WgpuInit,
 }
 
@@ -449,6 +451,7 @@ impl Default for WinitRunnerConfig {
             svg_raster_budget_bytes: 64 * 1024 * 1024,
             path_msaa_samples: 4,
             accessibility_enabled: true,
+            text_font_families: fret_render::TextFontFamilyConfig::default(),
             wgpu_init: WgpuInit::CreateDefault,
         }
     }
@@ -2589,6 +2592,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
         let mut renderer = Renderer::new(&context.adapter, &context.device);
         renderer.set_svg_raster_budget_bytes(self.config.svg_raster_budget_bytes);
         renderer.set_path_msaa_samples(self.config.path_msaa_samples);
+        let _ = renderer.set_text_font_families(&self.config.text_font_families);
 
         self.context = Some(context);
         self.renderer = Some(renderer);
