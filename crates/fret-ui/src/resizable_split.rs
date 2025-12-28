@@ -1,7 +1,11 @@
-use fret_core::{Axis, Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, Size};
+use fret_core::{
+    Axis, Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, Size,
+};
 use fret_runtime::Model;
 
-use crate::{EventCx, Invalidation, LayoutCx, PaintCx, ResizeHandle, UiHost, Widget};
+use crate::resize_handle::ResizeHandle;
+use crate::widget::{EventCx, LayoutCx, PaintCx, Widget};
+use crate::{Invalidation, UiHost};
 
 #[derive(Debug, Clone, Copy)]
 struct DragState {
@@ -241,7 +245,9 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
                     ));
                 }
             }
-            fret_core::PointerEvent::Down { position, button, .. } => {
+            fret_core::PointerEvent::Down {
+                position, button, ..
+            } => {
                 if *button != MouseButton::Left {
                     return;
                 }
@@ -290,7 +296,7 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
         let (rect_a, rect_b, handle_rect, _center) = self.compute_layout(cx.bounds, fraction);
         self.last_handle_rect = handle_rect;
 
-        if cx.children.len() >= 1 {
+        if !cx.children.is_empty() {
             let _ = cx.layout_in(cx.children[0], rect_a);
         }
         if cx.children.len() >= 2 {
@@ -315,11 +321,17 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
             let thickness = Px((self.paint_device_px.max(1.0)).recip().max(1.0));
             let line = match self.axis {
                 Axis::Horizontal => Rect::new(
-                    Point::new(Px(rect.origin.x.0 + rect.size.width.0 * 0.5 - thickness.0 * 0.5), rect.origin.y),
+                    Point::new(
+                        Px(rect.origin.x.0 + rect.size.width.0 * 0.5 - thickness.0 * 0.5),
+                        rect.origin.y,
+                    ),
                     Size::new(thickness, rect.size.height),
                 ),
                 Axis::Vertical => Rect::new(
-                    Point::new(rect.origin.x, Px(rect.origin.y.0 + rect.size.height.0 * 0.5 - thickness.0 * 0.5)),
+                    Point::new(
+                        rect.origin.x,
+                        Px(rect.origin.y.0 + rect.size.height.0 * 0.5 - thickness.0 * 0.5),
+                    ),
                     Size::new(rect.size.width, thickness),
                 ),
             };
@@ -347,8 +359,8 @@ mod tests {
     use crate::test_host::TestHost;
     use crate::tree::UiTree;
     use fret_core::{
-        AppWindowId, Event, PathCommand, PathConstraints, PathMetrics, PathService, PathStyle, Point,
-        PlatformCapabilities, Px, Size, TextConstraints, TextMetrics, TextService,
+        AppWindowId, Event, PathCommand, PathConstraints, PathMetrics, PathService, PathStyle,
+        PlatformCapabilities, Point, Px, Size, TextConstraints, TextMetrics, TextService,
         TextStyle,
     };
     use fret_runtime::Effect;
@@ -427,7 +439,7 @@ mod tests {
         ui.add_child(root, b);
         ui.set_root(root);
 
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let size = Size::new(Px(400.0), Px(120.0));
         let _ = ui.layout(&mut app, &mut services, root, size, 1.0);
         let _ = app.take_effects();
@@ -471,7 +483,7 @@ mod tests {
         ui.add_child(root, b);
         ui.set_root(root);
 
-        let mut services = FakeUiServices::default();
+        let mut services = FakeUiServices;
         let size = Size::new(Px(400.0), Px(120.0));
         let _ = ui.layout(&mut app, &mut services, root, size, 1.0);
 

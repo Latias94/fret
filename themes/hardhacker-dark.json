@@ -39,7 +39,44 @@
     "color.viewport.gizmo.y": "#2FD67B",
     "color.viewport.gizmo.handle.background": "#201C2B",
     "color.viewport.gizmo.handle.border": "#EEE9FC",
-    "color.viewport.rotate_gizmo": "#FAD24A"
+    "color.viewport.rotate_gizmo": "#FAD24A",
+
+    "background": "#201C2B",
+    "foreground": "#EEE9FC",
+    "border": "#171522CC",
+    "ring": "#E965A5CC",
+    "ring-offset-background": "#201C2B",
+
+    "card": "#282433",
+    "card-foreground": "#EEE9FC",
+
+    "popover": "#282433",
+    "popover-foreground": "#EEE9FC",
+
+    "muted": "#282433",
+    "muted-foreground": "#938AAD",
+
+    "accent": "#3F395166",
+    "accent-foreground": "#EEE9FC",
+
+    "primary": "#E965A5",
+    "primary-foreground": "#201C2B",
+
+    "secondary": "#282433",
+    "secondary-foreground": "#EEE9FC",
+
+    "destructive": "#EF4444",
+    "destructive-foreground": "#FFFFFF",
+
+    "input": "#171522CC",
+    "input.background": "#282433",
+    "input.foreground": "#EEE9FC",
+
+    "chart.1": "#93C5FD",
+    "chart.2": "#3B82F6",
+    "chart.3": "#2563EB",
+    "chart.4": "#1D4ED8",
+    "chart.5": "#1E40AF"
   },
   "metrics": {
     "metric.radius.sm": 6,

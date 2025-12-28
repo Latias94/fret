@@ -1498,14 +1498,6 @@ impl LayoutRefinement {
     }
 }
 
-pub fn component_color(key: &'static str, fallback: ColorFallback) -> ColorRef {
-    ColorRef::Token { key, fallback }
-}
-
-pub fn component_metric(key: &'static str, fallback: MetricFallback) -> MetricRef {
-    MetricRef::Token { key, fallback }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

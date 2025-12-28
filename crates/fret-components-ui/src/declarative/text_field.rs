@@ -1,8 +1,8 @@
 use fret_components_icons::{IconId, ids};
 use fret_core::{Axis, Edges, FontId, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
+use fret_ui::Invalidation;
 use fret_ui::element::{ContainerProps, FlexProps, Length, SizeStyle, TextInputProps};
-use fret_ui::widget::Invalidation;
 use fret_ui::{ElementCx, Theme, UiHost};
 
 use crate::declarative::icon;

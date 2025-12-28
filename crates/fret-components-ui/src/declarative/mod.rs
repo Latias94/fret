@@ -1,4 +1,3 @@
-pub mod command_palette;
 pub mod icon;
 pub mod list;
 pub mod scroll;

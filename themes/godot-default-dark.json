@@ -39,7 +39,44 @@
     "color.viewport.gizmo.y": "#4DFF88",
     "color.viewport.gizmo.handle.background": "#141414",
     "color.viewport.gizmo.handle.border": "#C9C9C9",
-    "color.viewport.rotate_gizmo": "#FFD24A"
+    "color.viewport.rotate_gizmo": "#FFD24A",
+
+    "background": "#141414",
+    "foreground": "#C9C9C9",
+    "border": "#121212F2",
+    "ring": "#569EFFCC",
+    "ring-offset-background": "#141414",
+
+    "card": "#191919",
+    "card-foreground": "#C9C9C9",
+
+    "popover": "#191919",
+    "popover-foreground": "#C9C9C9",
+
+    "muted": "#191919",
+    "muted-foreground": "#C9C9C9B3",
+
+    "accent": "#1F1F1F",
+    "accent-foreground": "#C9C9C9",
+
+    "primary": "#569EFF",
+    "primary-foreground": "#FFFFFF",
+
+    "secondary": "#191919",
+    "secondary-foreground": "#C9C9C9",
+
+    "destructive": "#FF4D4D",
+    "destructive-foreground": "#FFFFFF",
+
+    "input": "#121212F2",
+    "input.background": "#191919",
+    "input.foreground": "#C9C9C9",
+
+    "chart.1": "#93C5FD",
+    "chart.2": "#3B82F6",
+    "chart.3": "#2563EB",
+    "chart.4": "#1D4ED8",
+    "chart.5": "#1E40AF"
   },
   "metrics": {
     "metric.radius.sm": 6,

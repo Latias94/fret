@@ -37,6 +37,9 @@ It is intentionally **mechanism-only**: component policies and UI recipes belong
 - **ADR(s):** `docs/adr/0064-overlay-placement-contract.md`
 - **Reference(s):**
   - Floating UI: `repo-ref/floating-ui` (contract vocabulary; not a DOM implementation target)
+- **Related contract(s):**
+  - Cross-frame anchor geometry for declarative elements: `crates/fret-ui/src/elements.rs` (`bounds_for_element`, `root_bounds_for_element`)
+  - Stable overlay owner identity for declarative triggers: `crates/fret-ui/src/elements.rs` (`GlobalElementId`), consumed via `crates/fret-components-ui` (`OverlayOwnerId`)
 
 ### Declarative layout vocabulary (Tailwind/CSS semantics)
 

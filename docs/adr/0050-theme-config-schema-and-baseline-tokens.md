@@ -105,13 +105,37 @@ Supported alias keys (fallback mapping):
 - `foreground` → `color.text.primary`
 - `border` → `color.panel.border`
 - `ring` → `color.focus.ring`
+- `ring-offset-background` → `color.surface.background`
 - `selection.background` → `color.selection.background`
 - `muted.background` → `color.panel.background`
 - `muted.foreground` → `color.text.muted`
 - `accent.background` → `color.hover.background`
 - `accent.foreground` → `color.text.primary`
+- `accent` → `accent.background`
+- `muted` → `muted.background`
+- `popover` → `popover.background`
+- `card` → `card.background`
+- `input` → `input.border`
+- `shadow` → `shadow.color` (best-effort until shadows are first-class tokens)
+
+Extended shadcn-style semantic palette aliases (best-effort fallbacks):
+
+- `primary` → `color.accent`
+- `primary-foreground` / `primary.foreground` → `color.text.primary`
+- `secondary` → `color.panel.background`
+- `secondary-foreground` / `secondary.foreground` → `color.text.primary`
+- `destructive` → `color.viewport.gizmo.x` (best-effort fallback)
+- `destructive-foreground` / `destructive.foreground` → `color.text.primary`
+
+Surface aliases:
+
+- `card.background` → `color.panel.background`
+- `card-foreground` / `card.foreground` → `color.text.primary`
+- `card.border` → `color.panel.border`
 - `popover.background` → `color.menu.background`
 - `popover.foreground` → `color.text.primary`
+- `popover-foreground` → `popover.foreground`
+- `popover.border` → `color.menu.border`
 - `list.background` → `color.list.background`
 - `list.hover.background` → `color.list.row.hover`
 - `list.active.background` → `color.list.row.selected`
@@ -122,12 +146,19 @@ Supported alias keys (fallback mapping):
 - `scrollbar.thumb.background` → `color.scrollbar.thumb`
 - `scrollbar.thumb.hover.background` → `color.scrollbar.thumb.hover`
 
+Input surface aliases:
+
+- `input.background` → `color.panel.background`
+- `input.foreground` → `color.text.primary`
+
 Metric alias keys:
 
 - `radius` → `metric.radius.sm`
 - `radius.lg` → `metric.radius.md`
 - `font.size` → `metric.font.size`
 - `mono_font.size` → `metric.font.mono_size`
+- `font.line_height` → `metric.font.line_height`
+- `mono_font.line_height` → `metric.font.mono_line_height`
 
 Notes:
 

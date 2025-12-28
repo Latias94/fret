@@ -29,7 +29,9 @@ impl AnyElement {
 #[derive(Debug, Clone)]
 pub enum ElementKind {
     Container(ContainerProps),
+    Semantics(SemanticsProps),
     Pressable(PressableProps),
+    RovingFlex(RovingFlexProps),
     Stack(StackProps),
     Column(ColumnProps),
     Row(RowProps),
@@ -209,6 +211,35 @@ impl Default for ContainerProps {
     }
 }
 
+/// A transparent semantics wrapper for structuring the accessibility tree.
+///
+/// This is intentionally input-transparent (hit-test passes through) and paint-transparent: it
+/// only contributes layout and semantics.
+#[derive(Debug, Clone)]
+pub struct SemanticsProps {
+    pub layout: LayoutStyle,
+    pub role: SemanticsRole,
+    pub label: Option<Arc<str>>,
+    pub disabled: bool,
+    pub selected: bool,
+    pub expanded: Option<bool>,
+    pub checked: Option<bool>,
+}
+
+impl Default for SemanticsProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            role: SemanticsRole::Generic,
+            label: None,
+            disabled: false,
+            selected: false,
+            expanded: None,
+            checked: None,
+        }
+    }
+}
+
 /// A low-level drop shadow primitive for component-level elevation recipes.
 ///
 /// This intentionally does not require a dedicated blur pipeline: the runtime can approximate
@@ -226,13 +257,90 @@ pub struct ShadowStyle {
     pub corner_radii: Corners,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PressableProps {
     pub layout: LayoutStyle,
     pub enabled: bool,
+    /// Whether this pressable is a focus traversal stop (Tab order).
+    ///
+    /// When `false`, the node can still be focused programmatically (e.g. roving focus),
+    /// but it is skipped by the default focus traversal.
+    pub focusable: bool,
     pub on_click: Option<CommandId>,
+    pub toggle_model: Option<Model<bool>>,
+    pub set_arc_str_model: Option<PressableSetArcStr>,
+    pub set_option_arc_str_model: Option<PressableSetOptionArcStr>,
+    pub toggle_vec_arc_str_model: Option<PressableToggleVecArcStr>,
     pub focus_ring: Option<RingStyle>,
     pub a11y: PressableA11y,
+}
+
+#[derive(Clone)]
+pub struct PressableSetArcStr {
+    pub model: Model<Arc<str>>,
+    pub value: Arc<str>,
+}
+
+#[derive(Clone)]
+pub struct PressableSetOptionArcStr {
+    pub model: Model<Option<Arc<str>>>,
+    pub value: Arc<str>,
+}
+
+#[derive(Clone)]
+pub struct PressableToggleVecArcStr {
+    pub model: Model<Vec<Arc<str>>>,
+    pub value: Arc<str>,
+}
+
+impl std::fmt::Debug for PressableSetArcStr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PressableSetArcStr")
+            .field("model", &"<model>")
+            .field("value", &self.value.as_ref())
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for PressableSetOptionArcStr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PressableSetOptionArcStr")
+            .field("model", &"<model>")
+            .field("value", &self.value.as_ref())
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for PressableToggleVecArcStr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PressableToggleVecArcStr")
+            .field("model", &"<model>")
+            .field("value", &self.value.as_ref())
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for PressableProps {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PressableProps")
+            .field("layout", &self.layout)
+            .field("enabled", &self.enabled)
+            .field("focusable", &self.focusable)
+            .field("on_click", &self.on_click)
+            .field("toggle_model", &self.toggle_model.is_some())
+            .field("set_arc_str_model", &self.set_arc_str_model.is_some())
+            .field(
+                "set_option_arc_str_model",
+                &self.set_option_arc_str_model.is_some(),
+            )
+            .field(
+                "toggle_vec_arc_str_model",
+                &self.toggle_vec_arc_str_model.is_some(),
+            )
+            .field("focus_ring", &self.focus_ring)
+            .field("a11y", &self.a11y)
+            .finish()
+    }
 }
 
 impl Default for PressableProps {
@@ -240,10 +348,79 @@ impl Default for PressableProps {
         Self {
             layout: LayoutStyle::default(),
             enabled: true,
+            focusable: true,
             on_click: None,
+            toggle_model: None,
+            set_arc_str_model: None,
+            set_option_arc_str_model: None,
+            toggle_vec_arc_str_model: None,
             focus_ring: None,
             a11y: PressableA11y::default(),
         }
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct RovingFlexProps {
+    pub flex: FlexProps,
+    pub roving: RovingFocusProps,
+}
+
+impl std::fmt::Debug for RovingFlexProps {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RovingFlexProps")
+            .field("flex", &self.flex)
+            .field("roving", &self.roving)
+            .finish()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RovingFocusProps {
+    pub enabled: bool,
+    pub wrap: bool,
+    pub disabled: Arc<[bool]>,
+    pub select_option_arc_str: Option<RovingSelectOptionArcStr>,
+    pub typeahead_arc_str: Option<RovingTypeaheadArcStr>,
+}
+
+impl Default for RovingFocusProps {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            wrap: true,
+            disabled: Arc::from([]),
+            select_option_arc_str: None,
+            typeahead_arc_str: None,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct RovingSelectOptionArcStr {
+    pub model: Model<Option<Arc<str>>>,
+    pub values: Arc<[Arc<str>]>,
+}
+
+impl std::fmt::Debug for RovingSelectOptionArcStr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RovingSelectOptionArcStr")
+            .field("model", &"<model>")
+            .field("values_len", &self.values.len())
+            .finish()
+    }
+}
+
+#[derive(Clone)]
+pub struct RovingTypeaheadArcStr {
+    pub labels: Arc<[Arc<str>]>,
+}
+
+impl std::fmt::Debug for RovingTypeaheadArcStr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RovingTypeaheadArcStr")
+            .field("labels_len", &self.labels.len())
+            .finish()
     }
 }
 
@@ -252,6 +429,8 @@ pub struct PressableA11y {
     pub role: Option<SemanticsRole>,
     pub label: Option<Arc<str>>,
     pub selected: bool,
+    pub expanded: Option<bool>,
+    pub checked: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -384,6 +563,7 @@ pub struct TextProps {
 pub struct TextInputProps {
     pub layout: LayoutStyle,
     pub model: Model<String>,
+    pub a11y_label: Option<std::sync::Arc<str>>,
     pub chrome: TextInputStyle,
     pub text_style: TextStyle,
     pub submit_command: Option<CommandId>,
@@ -395,6 +575,7 @@ impl TextInputProps {
         Self {
             layout: LayoutStyle::default(),
             model,
+            a11y_label: None,
             chrome: TextInputStyle::default(),
             text_style: TextStyle::default(),
             submit_command: None,
@@ -408,6 +589,7 @@ impl std::fmt::Debug for TextInputProps {
         f.debug_struct("TextInputProps")
             .field("layout", &self.layout)
             .field("model", &"<model>")
+            .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("chrome", &self.chrome)
             .field("text_style", &self.text_style)
             .field("submit_command", &self.submit_command)

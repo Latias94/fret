@@ -166,18 +166,18 @@ struct UiLayer {
     wants_timer_events: bool,
 }
 
-pub struct Node<H: UiHost> {
-    pub widget: Option<Box<dyn Widget<H>>>,
-    pub parent: Option<NodeId>,
-    pub children: Vec<NodeId>,
-    pub bounds: Rect,
-    pub measured_size: Size,
-    pub invalidation: InvalidationFlags,
+struct Node<H: UiHost> {
+    widget: Option<Box<dyn Widget<H>>>,
+    parent: Option<NodeId>,
+    children: Vec<NodeId>,
+    bounds: Rect,
+    measured_size: Size,
+    invalidation: InvalidationFlags,
     paint_cache: Option<PaintCacheEntry>,
 }
 
 impl<H: UiHost> Node<H> {
-    pub fn new(widget: impl Widget<H> + 'static) -> Self {
+    fn new(widget: impl Widget<H> + 'static) -> Self {
         Self {
             widget: Some(Box::new(widget)),
             parent: None,
@@ -820,7 +820,7 @@ impl<H: UiHost> UiTree<H> {
         self.focus = focus;
     }
 
-    pub fn create_node(&mut self, widget: impl Widget<H> + 'static) -> NodeId {
+    pub(crate) fn create_node(&mut self, widget: impl Widget<H> + 'static) -> NodeId {
         self.nodes.insert(Node::new(widget))
     }
 
@@ -1005,16 +1005,6 @@ impl<H: UiHost> UiTree<H> {
             n.invalidation.layout = true;
             n.invalidation.paint = true;
         }
-    }
-
-    pub fn replace_widget(&mut self, node: NodeId, widget: impl Widget<H> + 'static) {
-        let Some(n) = self.nodes.get_mut(node) else {
-            return;
-        };
-        n.widget = Some(Box::new(widget));
-        n.invalidation.hit_test = true;
-        n.invalidation.layout = true;
-        n.invalidation.paint = true;
     }
 
     pub fn remove_subtree(&mut self, services: &mut dyn UiServices, root: NodeId) -> Vec<NodeId> {
@@ -1363,7 +1353,7 @@ impl<H: UiHost> UiTree<H> {
             if !drag.cross_window_hover || drag.kind != DragKind::DockPanel {
                 return None;
             }
-            let dock = app.global::<crate::DockManager>()?;
+            let dock = app.global::<crate::dock::DockManager>()?;
             let target = dock.dock_space_node(window)?;
             self.node_in_any_layer(target, &active_layers)
                 .then_some(target)
@@ -2668,6 +2658,19 @@ impl<H: UiHost> UiTree<H> {
         }
         self.nodes.contains_key(node).then_some(node)
     }
+
+    pub fn is_descendant(&self, root: NodeId, mut node: NodeId) -> bool {
+        if root == node {
+            return true;
+        }
+        while let Some(parent) = self.nodes.get(node).and_then(|n| n.parent) {
+            if parent == root {
+                return true;
+            }
+            node = parent;
+        }
+        false
+    }
 }
 
 fn pointer_position(pe: &PointerEvent) -> Point {
@@ -2923,7 +2926,7 @@ mod tests {
         let mut ui = UiTree::new();
         ui.set_window(AppWindowId::default());
 
-        let node = ui.create_node(FakeTextInput::default());
+        let node = ui.create_node(FakeTextInput);
         ui.set_root(node);
         ui.set_focus(Some(node));
 
@@ -2938,9 +2941,11 @@ mod tests {
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
         let effects = app.take_effects();
-        assert!(effects
-            .iter()
-            .any(|e| matches!(e, fret_runtime::Effect::ImeAllow { enabled: true, .. })));
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, fret_runtime::Effect::ImeAllow { enabled: true, .. }))
+        );
     }
 
     #[test]
@@ -3407,7 +3412,7 @@ mod tests {
         ui.set_window(window);
 
         let root = ui.create_node(TestStack);
-        let text_input = ui.create_node(crate::TextInput::new());
+        let text_input = ui.create_node(crate::text_input::TextInput::new());
         ui.add_child(root, text_input);
         ui.set_root(root);
 
@@ -3461,7 +3466,7 @@ mod tests {
         ui.set_window(window);
 
         let root = ui.create_node(TestStack);
-        let text_input = ui.create_node(crate::TextInput::new());
+        let text_input = ui.create_node(crate::text_input::TextInput::new());
         ui.add_child(root, text_input);
         ui.set_root(root);
 
@@ -3563,7 +3568,7 @@ mod tests {
         ui.set_window(window);
 
         let root = ui.create_node(TestStack);
-        let text_input = ui.create_node(crate::TextInput::new());
+        let text_input = ui.create_node(crate::text_input::TextInput::new());
         ui.add_child(root, text_input);
         ui.set_root(root);
 
@@ -3603,9 +3608,7 @@ mod tests {
 
         let effects = app.take_effects();
         assert!(
-            !effects
-                .iter()
-                .any(|e| matches!(e, Effect::Command { .. })),
+            !effects.iter().any(|e| matches!(e, Effect::Command { .. })),
             "did not expect any shortcut commands during IME composition"
         );
     }

@@ -3,7 +3,8 @@ use fret_core::{
     TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 
-use crate::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
+use crate::widget::{CommandCx, EventCx, LayoutCx, PaintCx, Widget};
+use crate::{Invalidation, UiHost};
 use fret_core::KeyCode;
 use fret_runtime::{CommandId, Effect, Model};
 
@@ -794,7 +795,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         }
     }
 
-    fn command(&mut self, cx: &mut crate::CommandCx<'_, H>, command: &CommandId) -> bool {
+    fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
         if cx.focus != Some(cx.node) {
             return false;
         }

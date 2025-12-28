@@ -38,7 +38,44 @@
     "sidebar.foreground": "#D7DEE9",
     "sidebar.border": "#3A424D",
     "sidebar.accent": "#363C46",
-    "sidebar.accent.foreground": "#D7DEE9"
+    "sidebar.accent.foreground": "#D7DEE9",
+
+    "background": "#24272E",
+    "foreground": "#D7DEE9",
+    "border": "#3A424D",
+    "ring": "#3D8BFFCC",
+    "ring-offset-background": "#24272E",
+
+    "card": "#2B3038",
+    "card-foreground": "#D7DEE9",
+
+    "popover": "#2B3038",
+    "popover-foreground": "#D7DEE9",
+
+    "muted": "#2B3038",
+    "muted-foreground": "#AAB3C2",
+
+    "accent": "#363C46",
+    "accent-foreground": "#D7DEE9",
+
+    "primary": "#3D8BFF",
+    "primary-foreground": "#FFFFFF",
+
+    "secondary": "#2B3038",
+    "secondary-foreground": "#D7DEE9",
+
+    "destructive": "#E74C3CFF",
+    "destructive-foreground": "#FFFFFF",
+
+    "input": "#3A424D",
+    "input.background": "#2B3038",
+    "input.foreground": "#D7DEE9",
+
+    "chart.1": "#93C5FD",
+    "chart.2": "#3B82F6",
+    "chart.3": "#2563EB",
+    "chart.4": "#1D4ED8",
+    "chart.5": "#1E40AF"
   },
   "metrics": {
     "metric.radius.sm": 6.0,

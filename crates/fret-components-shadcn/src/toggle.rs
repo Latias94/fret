@@ -1,11 +1,17 @@
 use std::sync::Arc;
 
-use fret_core::{
-    Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect,
-    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
+use fret_components_ui::declarative::style as decl_style;
+use fret_components_ui::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space,
 };
-use fret_runtime::Model;
-use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
+use fret_core::{Color, Edges, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_runtime::{CommandId, Model};
+use fret_ui::Invalidation;
+use fret_ui::element::{
+    AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableA11y, PressableProps,
+    TextProps,
+};
+use fret_ui::{ElementCx, Theme, UiHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ToggleVariant {
@@ -22,86 +28,129 @@ pub enum ToggleSize {
     Lg,
 }
 
-#[derive(Debug, Clone)]
-struct PreparedText {
-    blob: fret_core::TextBlobId,
-    metrics: TextMetrics,
-}
-
-#[derive(Debug, Clone)]
-struct ResolvedToggleStyle {
-    padding_x: Px,
-    min_width: Px,
-    min_height: Px,
-    radius: Px,
-    border_width: Px,
-    text_style: TextStyle,
-    fg: Color,
-    fg_disabled: Color,
-    fg_hover: Color,
-    fg_on: Color,
-    border: Color,
-    border_on: Color,
-    bg: Color,
-    bg_hover: Color,
-    bg_on: Color,
-}
-
-impl Default for ResolvedToggleStyle {
-    fn default() -> Self {
-        Self {
-            padding_x: Px(8.0),
-            min_width: Px(36.0),
-            min_height: Px(36.0),
-            radius: Px(8.0),
-            border_width: Px(1.0),
-            text_style: TextStyle::default(),
-            fg: Color::TRANSPARENT,
-            fg_disabled: Color::TRANSPARENT,
-            fg_hover: Color::TRANSPARENT,
-            fg_on: Color::TRANSPARENT,
-            border: Color::TRANSPARENT,
-            border_on: Color::TRANSPARENT,
-            bg: Color::TRANSPARENT,
-            bg_hover: Color::TRANSPARENT,
-            bg_on: Color::TRANSPARENT,
+impl ToggleSize {
+    pub fn component_size(self) -> ComponentSize {
+        match self {
+            Self::Default => ComponentSize::Medium,
+            Self::Sm => ComponentSize::Small,
+            Self::Lg => ComponentSize::Large,
         }
     }
 }
 
+fn toggle_bg_hover(theme: &Theme) -> Color {
+    theme
+        .color_by_key("muted")
+        .unwrap_or(theme.colors.hover_background)
+}
+
+fn toggle_fg_muted(theme: &Theme) -> Color {
+    theme
+        .color_by_key("muted.foreground")
+        .or_else(|| theme.color_by_key("muted-foreground"))
+        .unwrap_or(theme.colors.text_muted)
+}
+
+fn toggle_bg_on(theme: &Theme) -> Color {
+    theme.color_by_key("accent").unwrap_or(theme.colors.accent)
+}
+
+fn toggle_fg_on(theme: &Theme) -> Color {
+    theme
+        .color_by_key("accent-foreground")
+        .or_else(|| theme.color_by_key("accent.foreground"))
+        .unwrap_or(theme.colors.text_primary)
+}
+
+fn toggle_border(theme: &Theme) -> Color {
+    theme
+        .color_by_key("input")
+        .or_else(|| theme.color_by_key("border"))
+        .unwrap_or(theme.colors.panel_border)
+}
+
+fn toggle_text_style(theme: &Theme) -> TextStyle {
+    let px = theme
+        .metric_by_key("component.toggle.text_px")
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or(theme.metrics.font_size);
+    let line_height = theme
+        .metric_by_key("component.toggle.line_height")
+        .or_else(|| theme.metric_by_key("font.line_height"))
+        .unwrap_or(theme.metrics.font_line_height);
+    TextStyle {
+        size: px,
+        weight: FontWeight::MEDIUM,
+        line_height: Some(line_height),
+        ..Default::default()
+    }
+}
+
+#[derive(Clone)]
 pub struct Toggle {
     model: Model<bool>,
-    label: Arc<str>,
+    label: Option<Arc<str>>,
+    children: Vec<AnyElement>,
     disabled: bool,
+    a11y_label: Option<Arc<str>>,
+    on_click: Option<CommandId>,
     variant: ToggleVariant,
     size: ToggleSize,
-    hovered: bool,
-    pressed: bool,
-    last_bounds: Rect,
-    prepared: Option<PreparedText>,
-    prepared_scale_factor_bits: Option<u32>,
-    prepared_theme_revision: Option<u64>,
-    last_theme_revision: Option<u64>,
-    resolved: ResolvedToggleStyle,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+}
+
+impl std::fmt::Debug for Toggle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Toggle")
+            .field("model", &"<model>")
+            .field("label", &self.label.as_ref().map(|s| s.as_ref()))
+            .field("children_len", &self.children.len())
+            .field("disabled", &self.disabled)
+            .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field("on_click", &self.on_click)
+            .field("variant", &self.variant)
+            .field("size", &self.size)
+            .field("chrome", &self.chrome)
+            .field("layout", &self.layout)
+            .finish()
+    }
 }
 
 impl Toggle {
-    pub fn new(model: Model<bool>, label: impl Into<Arc<str>>) -> Self {
+    pub fn new(model: Model<bool>) -> Self {
         Self {
             model,
-            label: label.into(),
+            label: None,
+            children: Vec::new(),
             disabled: false,
-            variant: ToggleVariant::Default,
-            size: ToggleSize::Default,
-            hovered: false,
-            pressed: false,
-            last_bounds: Rect::default(),
-            prepared: None,
-            prepared_scale_factor_bits: None,
-            prepared_theme_revision: None,
-            last_theme_revision: None,
-            resolved: ResolvedToggleStyle::default(),
+            a11y_label: None,
+            on_click: None,
+            variant: ToggleVariant::default(),
+            size: ToggleSize::default(),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn children(mut self, children: Vec<AnyElement>) -> Self {
+        self.children = children;
+        self
+    }
+
+    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
+        self.on_click = Some(command.into());
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -111,387 +160,191 @@ impl Toggle {
 
     pub fn variant(mut self, variant: ToggleVariant) -> Self {
         self.variant = variant;
-        self.last_theme_revision = None;
         self
     }
 
     pub fn size(mut self, size: ToggleSize) -> Self {
         self.size = size;
-        self.last_theme_revision = None;
         self
     }
 
-    fn is_on<H: UiHost>(&self, app: &H) -> bool {
-        app.models().get(self.model).copied().unwrap_or(false)
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
     }
 
-    fn toggle<H: UiHost>(&self, app: &mut H) {
-        let _ = app.models_mut().update(self.model, |v| *v = !*v);
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
     }
 
-    fn sync_style_from_theme(&mut self, theme: &Theme) {
-        if self.last_theme_revision == Some(theme.revision()) {
-            return;
-        }
-        self.last_theme_revision = Some(theme.revision());
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        let model = self.model;
+        let label = self.label;
+        let children = self.children;
+        let disabled = self.disabled;
+        let a11y_label = self.a11y_label.clone();
+        let on_click = self.on_click;
+        let variant = self.variant;
+        let size = self.size.component_size();
+        let chrome = self.chrome;
+        let layout = self.layout;
 
-        let (min_h, min_w, px) = match self.size {
-            ToggleSize::Default => (Px(36.0), Px(36.0), Px(8.0)),
-            ToggleSize::Sm => (Px(32.0), Px(32.0), Px(6.0)),
-            ToggleSize::Lg => (Px(40.0), Px(40.0), Px(10.0)),
-        };
+        cx.observe_model(model, Invalidation::Paint);
 
-        let radius = theme.metrics.radius_md;
-        let border_w = Px(1.0);
+        let theme = Theme::global(&*cx.app).clone();
+        let on_now = cx.app.models().get(model).copied().unwrap_or(false);
 
-        let text_px = theme
-            .metric_by_key("component.toggle.text_px")
-            .unwrap_or(Px(14.0));
-        let line_height = theme
-            .metric_by_key("component.toggle.line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or(theme.metrics.font_line_height);
+        let radius = size.control_radius(&theme);
+        let ring = decl_style::focus_ring(&theme, radius);
+        let text_style = toggle_text_style(&theme);
 
-        let fg = theme
+        let min_h = size.button_h(&theme);
+        let min_w = size.button_h(&theme);
+        let pad_x = size.button_px(&theme);
+        let pad_y = size.button_py(&theme);
+
+        let pressable_layout = decl_style::layout_style(
+            &theme,
+            LayoutRefinement::default()
+                .min_h(MetricRef::Px(min_h))
+                .min_w(MetricRef::Px(min_w))
+                .merge(layout),
+        );
+
+        let fg_disabled = theme.colors.text_disabled;
+        let fg_default = theme
             .color_by_key("foreground")
             .unwrap_or(theme.colors.text_primary);
-        let fg_disabled = theme.colors.text_disabled;
-        let fg_hover = theme
-            .color_by_key("muted.foreground")
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or(theme.colors.text_muted);
-        let fg_on = theme
-            .color_by_key("accent-foreground")
-            .or_else(|| theme.color_by_key("accent.foreground"))
-            .unwrap_or(theme.colors.text_primary);
+        let fg_muted = toggle_fg_muted(&theme);
+        let bg_hover = toggle_bg_hover(&theme);
+        let bg_on = toggle_bg_on(&theme);
+        let fg_on = toggle_fg_on(&theme);
+        let border = toggle_border(&theme);
 
-        let border = theme
-            .color_by_key("input")
-            .or_else(|| theme.color_by_key("border"))
-            .unwrap_or(theme.colors.panel_border);
-        let border_on = border;
-
-        let transparent = Color::TRANSPARENT;
-        let bg_on = theme
-            .color_by_key("accent")
-            .unwrap_or(theme.colors.hover_background);
-        let bg_hover = match self.variant {
-            ToggleVariant::Default => theme
-                .color_by_key("muted")
-                .unwrap_or(theme.colors.hover_background),
-            ToggleVariant::Outline => bg_on,
-        };
-
-        let bg = transparent;
-
-        self.resolved = ResolvedToggleStyle {
-            padding_x: px,
-            min_width: min_w,
-            min_height: min_h,
-            radius,
-            border_width: border_w,
-            text_style: TextStyle {
-                font: fret_core::FontId::default(),
-                size: text_px,
-                line_height: Some(line_height),
+        let base_chrome = match variant {
+            ToggleVariant::Default => ChromeRefinement {
+                radius: Some(MetricRef::Px(radius)),
                 ..Default::default()
             },
-            fg,
-            fg_disabled,
-            fg_hover,
-            fg_on,
-            border: match self.variant {
-                ToggleVariant::Default => transparent,
-                ToggleVariant::Outline => border,
+            ToggleVariant::Outline => ChromeRefinement {
+                radius: Some(MetricRef::Px(radius)),
+                border_width: Some(MetricRef::Px(Px(1.0))),
+                border_color: Some(ColorRef::Color(border)),
+                ..Default::default()
             },
-            border_on: match self.variant {
-                ToggleVariant::Default => transparent,
-                ToggleVariant::Outline => border_on,
-            },
-            bg,
-            bg_hover,
-            bg_on,
-        };
-
-        self.prepared_theme_revision = None;
-        self.prepared_scale_factor_bits = None;
-    }
-
-    fn prepare_text<H: UiHost>(&mut self, cx: &mut LayoutCx<'_, H>) {
-        let theme_rev = cx.theme().revision();
-        let scale_bits = cx.scale_factor.to_bits();
-        if self.prepared_theme_revision == Some(theme_rev)
-            && self.prepared_scale_factor_bits == Some(scale_bits)
-            && self.prepared.is_some()
-        {
-            return;
         }
+        .merge(chrome);
 
-        if let Some(p) = self.prepared.take() {
-            cx.services.text().release(p.blob);
-        }
-
-        let constraints = TextConstraints {
-            max_width: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            scale_factor: cx.scale_factor,
-        };
-        let (blob, metrics) =
-            cx.services
-                .text()
-                .prepare(&self.label, self.resolved.text_style, constraints);
-        self.prepared = Some(PreparedText { blob, metrics });
-        self.prepared_theme_revision = Some(theme_rev);
-        self.prepared_scale_factor_bits = Some(scale_bits);
-    }
-}
-
-impl<H: UiHost> Widget<H> for Toggle {
-    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
-        if let Some(p) = self.prepared.take() {
-            services.text().release(p.blob);
-        }
-        self.prepared_scale_factor_bits = None;
-        self.prepared_theme_revision = None;
-    }
-
-    fn is_focusable(&self) -> bool {
-        !self.disabled
-    }
-
-    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
-        !self.disabled
-    }
-
-    fn hit_test_children(&self, _bounds: Rect, _position: Point) -> bool {
-        !self.disabled
-    }
-
-    fn semantics(&mut self, cx: &mut fret_ui::widget::SemanticsCx<'_, H>) {
-        cx.set_role(SemanticsRole::Button);
-        cx.set_disabled(self.disabled);
-        cx.set_label(self.label.to_string());
-        cx.set_focusable(!self.disabled);
-        cx.set_invokable(!self.disabled);
-        cx.set_selected(self.is_on(cx.app));
-    }
-
-    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-        self.sync_style_from_theme(cx.theme());
-        self.last_bounds = cx.bounds;
-
-        if self.disabled {
-            return;
-        }
-
-        match event {
-            Event::Pointer(pe) => match pe {
-                fret_core::PointerEvent::Move { position, .. } => {
-                    let hovered = self.last_bounds.contains(*position);
-                    if hovered != self.hovered {
-                        self.hovered = hovered;
-                        cx.invalidate_self(Invalidation::Paint);
-                        cx.request_redraw();
-                    }
-                    if hovered || cx.captured == Some(cx.node) {
-                        cx.set_cursor_icon(CursorIcon::Pointer);
-                    }
-                }
-                fret_core::PointerEvent::Down {
-                    position, button, ..
-                } => {
-                    if *button != MouseButton::Left {
-                        return;
-                    }
-                    if !self.last_bounds.contains(*position) {
-                        return;
-                    }
-                    self.pressed = true;
-                    cx.capture_pointer(cx.node);
-                    cx.request_focus(cx.node);
-                    cx.invalidate_self(Invalidation::Paint);
-                    cx.request_redraw();
-                    cx.stop_propagation();
-                }
-                fret_core::PointerEvent::Up {
-                    position, button, ..
-                } => {
-                    if *button != MouseButton::Left {
-                        return;
-                    }
-                    let was_pressed = self.pressed;
-                    self.pressed = false;
-                    cx.release_pointer_capture();
-
-                    let hovered = self.last_bounds.contains(*position);
-                    self.hovered = hovered;
-                    if was_pressed && hovered {
-                        self.toggle(cx.app);
-                        cx.invalidate_self(Invalidation::Paint);
-                        cx.request_redraw();
-                    } else {
-                        cx.invalidate_self(Invalidation::Paint);
-                        cx.request_redraw();
-                    }
-                    cx.stop_propagation();
-                }
-                _ => {}
-            },
-            Event::KeyDown { key, repeat, .. } => {
-                if *repeat {
-                    return;
-                }
-                if cx.focus != Some(cx.node) {
-                    return;
-                }
-                if !matches!(key, KeyCode::Enter | KeyCode::Space) {
-                    return;
-                }
-                if !self.pressed {
-                    self.pressed = true;
-                    cx.invalidate_self(Invalidation::Paint);
-                    cx.request_redraw();
-                }
-                cx.stop_propagation();
-            }
-            Event::KeyUp { key, .. } => {
-                if cx.focus != Some(cx.node) {
-                    return;
-                }
-                if !matches!(key, KeyCode::Enter | KeyCode::Space) {
-                    return;
-                }
-                if self.pressed {
-                    self.pressed = false;
-                    self.toggle(cx.app);
-                    cx.invalidate_self(Invalidation::Paint);
-                    cx.request_redraw();
-                    cx.stop_propagation();
-                }
-            }
-            _ => {}
-        }
-    }
-
-    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-        self.sync_style_from_theme(cx.theme());
-        cx.observe_model(self.model, Invalidation::Paint);
-        self.last_bounds = cx.bounds;
-
-        self.prepare_text(cx);
-        let Some(prepared) = self.prepared.as_ref() else {
-            return Size::new(Px(0.0), Px(0.0));
-        };
-
-        let pad_x = self.resolved.padding_x.0.max(0.0);
-        let desired_w =
-            (prepared.metrics.size.width.0 + pad_x * 2.0).max(self.resolved.min_width.0);
-        let desired_h = self.resolved.min_height.0.max(0.0);
-
-        let w = desired_w.min(cx.available.width.0).max(0.0);
-        let h = desired_h.min(cx.available.height.0).max(0.0);
-        Size::new(Px(w), Px(h))
-    }
-
-    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        self.sync_style_from_theme(cx.theme());
-        cx.observe_model(self.model, Invalidation::Paint);
-        self.last_bounds = cx.bounds;
-
-        let on = self.is_on(cx.app);
-        let Some(prepared) = self.prepared.as_ref() else {
-            return;
-        };
-
-        let (bg, border_color, fg) = if on {
-            (
-                self.resolved.bg_on,
-                self.resolved.border_on,
-                self.resolved.fg_on,
-            )
-        } else if self.pressed || self.hovered {
-            (
-                self.resolved.bg_hover,
-                self.resolved.border,
-                self.resolved.fg_hover,
-            )
-        } else {
-            (self.resolved.bg, self.resolved.border, self.resolved.fg)
-        };
-
-        let mut bg = bg;
-        let mut border_color = border_color;
-        let mut fg = fg;
-        if self.disabled {
-            bg.a *= 0.5;
-            border_color.a *= 0.5;
-            fg = self.resolved.fg_disabled;
-            fg.a *= 0.5;
-        }
-
-        let border_w = Px(self.resolved.border_width.0.max(0.0));
-        cx.scene.push(SceneOp::Quad {
-            order: DrawOrder(0),
-            rect: cx.bounds,
-            background: bg,
-            border: Edges::all(border_w),
-            border_color,
-            corner_radii: Corners::all(self.resolved.radius),
-        });
-
-        if cx.focus == Some(cx.node) && fret_ui::focus_visible::is_focus_visible(cx.app, cx.window)
-        {
-            let focus_ring = cx.theme().colors.focus_ring;
-            cx.scene.push(SceneOp::Quad {
-                order: DrawOrder(1),
-                rect: cx.bounds,
-                background: Color {
-                    a: 0.0,
-                    ..focus_ring
+        cx.pressable(
+            PressableProps {
+                layout: pressable_layout,
+                enabled: !disabled,
+                focusable: true,
+                on_click,
+                toggle_model: Some(model),
+                set_arc_str_model: None,
+                set_option_arc_str_model: None,
+                toggle_vec_arc_str_model: None,
+                focus_ring: Some(ring),
+                a11y: PressableA11y {
+                    role: Some(SemanticsRole::Button),
+                    label: a11y_label,
+                    selected: on_now,
+                    ..Default::default()
                 },
-                border: Edges::all(Px(2.0)),
-                border_color: focus_ring,
-                corner_radii: Corners::all(self.resolved.radius),
-            });
-        }
+            },
+            move |cx, state| {
+                let on = cx.app.models().get(model).copied().unwrap_or(false);
+                let hovered = state.hovered && !state.pressed;
+                let pressed = state.pressed;
 
-        let pad_x = self.resolved.padding_x.0.max(0.0);
-        let inner_w = (cx.bounds.size.width.0 - pad_x * 2.0).max(0.0);
-        let text_x = cx.bounds.origin.x.0
-            + pad_x
-            + ((inner_w - prepared.metrics.size.width.0) * 0.5).max(0.0);
+                let mut fg = if disabled {
+                    fg_disabled
+                } else if on {
+                    fg_on
+                } else if hovered {
+                    fg_muted
+                } else {
+                    fg_default
+                };
 
-        let inner_h = cx.bounds.size.height.0.max(0.0);
-        let text_top =
-            cx.bounds.origin.y.0 + ((inner_h - prepared.metrics.size.height.0) * 0.5).max(0.0);
-        let text_y = text_top + prepared.metrics.baseline.0;
+                let mut bg = if on && !disabled {
+                    Some(bg_on)
+                } else if hovered && !disabled {
+                    Some(bg_hover)
+                } else {
+                    None
+                };
 
-        cx.scene.push(SceneOp::Text {
-            order: DrawOrder(2),
-            origin: Point::new(Px(text_x), Px(text_y)),
-            text: prepared.blob,
-            color: fg,
-        });
+                if pressed && !disabled {
+                    fg = toggle_fg_muted(&theme);
+                    bg = Some(bg_hover);
+                }
+
+                let mut props = decl_style::container_props(
+                    &theme,
+                    base_chrome.clone(),
+                    LayoutRefinement::default(),
+                );
+                props.padding = Edges {
+                    top: pad_y,
+                    right: pad_x,
+                    bottom: pad_y,
+                    left: pad_x,
+                };
+                if bg.is_some() {
+                    props.background = bg;
+                }
+
+                vec![cx.container(
+                    ContainerProps {
+                        padding: props.padding,
+                        background: props.background,
+                        shadow: props.shadow,
+                        border: props.border,
+                        border_color: props.border_color,
+                        corner_radii: props.corner_radii,
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![cx.flex(
+                            FlexProps {
+                                direction: fret_core::Axis::Horizontal,
+                                gap: MetricRef::space(Space::N2).resolve(&theme),
+                                padding: Edges::all(Px(0.0)),
+                                justify: MainAlign::Center,
+                                align: CrossAlign::Center,
+                                wrap: false,
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                let mut out = Vec::new();
+                                out.extend(children);
+                                if let Some(label) = label {
+                                    out.push(cx.text_props(TextProps {
+                                        layout: Default::default(),
+                                        text: label,
+                                        style: Some(text_style),
+                                        color: Some(fg),
+                                        wrap: TextWrap::None,
+                                        overflow: TextOverflow::Clip,
+                                    }));
+                                }
+                                out
+                            },
+                        )]
+                    },
+                )]
+            },
+        )
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::Toggle;
-    use crate::test_host::TestHost;
-    use fret_runtime::ModelStore;
-    use fret_ui::Widget;
-
-    #[test]
-    fn disabled_toggle_is_not_focusable() {
-        let mut models = ModelStore::default();
-        let model = models.insert(false);
-
-        let toggle = Toggle::new(model, "Toggle");
-        assert!(<Toggle as Widget<TestHost>>::is_focusable(&toggle));
-
-        let disabled = Toggle::new(model, "Toggle").disabled(true);
-        assert!(!<Toggle as Widget<TestHost>>::is_focusable(&disabled));
-    }
+pub fn toggle<H: UiHost>(
+    cx: &mut ElementCx<'_, H>,
+    model: Model<bool>,
+    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    Toggle::new(model).children(f(cx)).into_element(cx)
 }

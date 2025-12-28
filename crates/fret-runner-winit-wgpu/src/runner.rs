@@ -37,14 +37,14 @@ mod win32 {
 
     #[repr(C)]
     #[derive(Clone, Copy, Debug, Default)]
-    struct POINT {
+    struct Point {
         x: i32,
         y: i32,
     }
 
     #[repr(C)]
     #[derive(Clone, Copy, Debug, Default)]
-    struct RECT {
+    struct Rect {
         left: i32,
         top: i32,
         right: i32,
@@ -53,10 +53,10 @@ mod win32 {
 
     #[repr(C)]
     #[derive(Clone, Copy, Debug, Default)]
-    struct MONITORINFO {
+    struct MonitorInfo {
         cb_size: u32,
-        rc_monitor: RECT,
-        rc_work: RECT,
+        rc_monitor: Rect,
+        rc_work: Rect,
         dw_flags: u32,
     }
 
@@ -64,13 +64,13 @@ mod win32 {
 
     #[link(name = "user32")]
     unsafe extern "system" {
-        fn GetCursorPos(lpPoint: *mut POINT) -> i32;
-        fn MonitorFromPoint(pt: POINT, dwFlags: u32) -> isize;
-        fn GetMonitorInfoW(hMonitor: isize, lpmi: *mut MONITORINFO) -> i32;
+        fn GetCursorPos(lpPoint: *mut Point) -> i32;
+        fn MonitorFromPoint(pt: Point, dwFlags: u32) -> isize;
+        fn GetMonitorInfoW(hMonitor: isize, lpmi: *mut MonitorInfo) -> i32;
     }
 
     pub fn cursor_pos_physical() -> Option<PhysicalPosition<f64>> {
-        let mut p = POINT::default();
+        let mut p = Point::default();
         let ok = unsafe { GetCursorPos(&mut p) };
         if ok == 0 {
             return None;
@@ -79,7 +79,7 @@ mod win32 {
     }
 
     pub fn monitor_work_area_for_point(point: PhysicalPosition<f64>) -> Option<MonitorRectF64> {
-        let pt = POINT {
+        let pt = Point {
             x: point.x.round() as i32,
             y: point.y.round() as i32,
         };
@@ -88,8 +88,10 @@ mod win32 {
             return None;
         }
 
-        let mut info = MONITORINFO::default();
-        info.cb_size = std::mem::size_of::<MONITORINFO>() as u32;
+        let mut info = MonitorInfo {
+            cb_size: std::mem::size_of::<MonitorInfo>() as u32,
+            ..Default::default()
+        };
         let ok = unsafe { GetMonitorInfoW(hmon, &mut info) };
         if ok == 0 {
             return None;
@@ -982,9 +984,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         };
 
         let monitor = monitor.or_else(|| Self::virtual_desktop_bounds(window));
-        let Some(monitor) = monitor else {
-            return None;
-        };
+        let monitor = monitor?;
 
         let (x, y) = Self::clamp_window_outer_pos_to_monitor(
             desired_x,

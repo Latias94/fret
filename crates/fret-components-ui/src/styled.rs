@@ -197,25 +197,8 @@ pub trait StyledExt: RefineStyle + Sized {
 
 impl<T: RefineStyle> StyledExt for T {}
 
-macro_rules! impl_refine_style {
-    ($ty:path) => {
-        impl RefineStyle for $ty {
-            fn refine_style(self, style: ChromeRefinement) -> Self {
-                <$ty>::refine_style(self, style)
-            }
-        }
-    };
-}
-
-impl_refine_style!(crate::button::Button);
-impl_refine_style!(crate::combobox::Combobox);
-impl_refine_style!(crate::dropdown_menu::DropdownMenuButton);
-impl_refine_style!(crate::frame::Frame);
-impl_refine_style!(crate::scroll_area::ScrollArea);
-impl_refine_style!(crate::select::Select);
-impl_refine_style!(crate::text_area_field::TextAreaField);
-impl_refine_style!(crate::text_field::TextField);
-impl_refine_style!(crate::toolbar::Toolbar);
+// Intentionally no blanket `RefineStyle` impls here: the public component surface is
+// declarative-only, and concrete types that support `RefineStyle` live in downstream crates.
 
 #[cfg(test)]
 mod tests {

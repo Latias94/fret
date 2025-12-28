@@ -8,7 +8,8 @@ use fret_core::{
 };
 use fret_runtime::{Effect, Model};
 
-use crate::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
+use crate::widget::{CommandCx, EventCx, LayoutCx, PaintCx, Widget};
+use crate::{Invalidation, Theme, UiHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct PreparedKey {
@@ -1456,14 +1457,14 @@ impl<H: UiHost> Widget<H> for TextArea {
                 Size::new(Px(hairline.0.max(1.0)), caret.size.height),
             );
 
-            if let Some(window) = cx.window {
-                if self.last_sent_cursor != Some(caret_rect) {
-                    self.last_sent_cursor = Some(caret_rect);
-                    cx.app.push_effect(Effect::ImeSetCursorArea {
-                        window,
-                        rect: caret_rect,
-                    });
-                }
+            if let Some(window) = cx.window
+                && self.last_sent_cursor != Some(caret_rect)
+            {
+                self.last_sent_cursor = Some(caret_rect);
+                cx.app.push_effect(Effect::ImeSetCursorArea {
+                    window,
+                    rect: caret_rect,
+                });
             }
 
             if !self.preedit_rects.is_empty() {
@@ -1901,12 +1902,10 @@ mod tests {
                 &mut scene,
                 1.0,
             );
-            app.take_effects()
-                .into_iter()
-                .find_map(|e| match e {
-                    Effect::ImeSetCursorArea { rect, .. } => Some(rect.origin.x.0),
-                    _ => None,
-                })
+            app.take_effects().into_iter().find_map(|e| match e {
+                Effect::ImeSetCursorArea { rect, .. } => Some(rect.origin.x.0),
+                _ => None,
+            })
         }
 
         ui.dispatch_event(

@@ -1,5 +1,4 @@
 pub mod inspector_edit;
-pub mod inspector_edit_layout;
 pub mod inspector_protocol;
 pub mod project;
 pub mod property;
@@ -9,7 +8,6 @@ pub mod viewport_tools;
 pub use inspector_edit::{
     InspectorEditKind, InspectorEditRequest, InspectorEditService, parse_value,
 };
-pub use inspector_edit_layout::{InspectorEditHint, InspectorEditLayout};
 pub use inspector_protocol::{
     InspectorEditorKind, InspectorEditorRegistry, PropertyLeaf, PropertyMeta, PropertyNode,
     PropertyTree, PropertyTypeTag,

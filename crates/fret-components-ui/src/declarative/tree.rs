@@ -224,6 +224,7 @@ pub fn tree_view_with_renderer<H: UiHost>(
                                 role: Some(SemanticsRole::TreeItem),
                                 label: Some(entry.label.clone()),
                                 selected: is_selected,
+                                ..Default::default()
                             },
                             ..Default::default()
                         },
@@ -271,6 +272,7 @@ pub fn tree_view_with_renderer<H: UiHost>(
                                                             role: Some(SemanticsRole::Button),
                                                             label: Some(Arc::from("Toggle")),
                                                             selected: false,
+                                                            ..Default::default()
                                                         },
                                                         ..Default::default()
                                                     },

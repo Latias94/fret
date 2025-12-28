@@ -208,6 +208,23 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
         *self.stack.last().expect("root exists")
     }
 
+    pub fn with_root_name<R>(&mut self, root_name: &str, f: impl FnOnce(&mut Self) -> R) -> R {
+        let root = global_root(self.window, root_name);
+
+        let prev_stack = std::mem::take(&mut self.stack);
+        let prev_counters = std::mem::take(&mut self.child_counters);
+
+        self.stack = vec![root];
+        self.child_counters = vec![0];
+
+        let out = f(self);
+
+        self.stack = prev_stack;
+        self.child_counters = prev_counters;
+
+        out
+    }
+
     pub fn request_frame(&mut self) {
         self.app.request_redraw(self.window);
     }
@@ -359,6 +376,19 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
     }
 
     #[track_caller]
+    pub fn semantics(
+        &mut self,
+        props: crate::element::SemanticsProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Semantics(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn pressable(
         &mut self,
         props: PressableProps,
@@ -369,6 +399,35 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             let hovered = cx.window_state.hovered_pressable == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
             let children = f(cx, PressableState { hovered, pressed });
+            AnyElement::new(id, ElementKind::Pressable(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn pressable_with_id(
+        &mut self,
+        props: PressableProps,
+        f: impl FnOnce(&mut Self, PressableState, GlobalElementId) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let hovered = cx.window_state.hovered_pressable == Some(id);
+            let pressed = cx.window_state.pressed_pressable == Some(id);
+            let children = f(cx, PressableState { hovered, pressed }, id);
+            AnyElement::new(id, ElementKind::Pressable(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn pressable_with_id_props(
+        &mut self,
+        f: impl FnOnce(&mut Self, PressableState, GlobalElementId) -> (PressableProps, Vec<AnyElement>),
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let hovered = cx.window_state.hovered_pressable == Some(id);
+            let pressed = cx.window_state.pressed_pressable == Some(id);
+            let (props, children) = f(cx, PressableState { hovered, pressed }, id);
             AnyElement::new(id, ElementKind::Pressable(props), children)
         })
     }
@@ -723,6 +782,19 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
     }
 
     #[track_caller]
+    pub fn roving_flex(
+        &mut self,
+        props: crate::element::RovingFlexProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::RovingFlex(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn grid(
         &mut self,
         props: GridProps,
@@ -1000,6 +1072,14 @@ pub fn root_bounds_for_element<H: UiHost>(
         let root = state.node_entry(element).map(|e| e.root)?;
         state.root_bounds(root)
     })
+}
+
+pub fn node_for_element<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> Option<NodeId> {
+    with_window_state(app, window, |st| st.node_entry(element).map(|e| e.node))
 }
 
 /// Returns the last frame's bounds for a declarative element, if available.

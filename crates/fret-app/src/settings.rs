@@ -4,9 +4,15 @@ use std::path::Path;
 #[derive(Debug, thiserror::Error)]
 pub enum SettingsError {
     #[error("failed to read settings file: {path}")]
-    Read { path: String, source: std::io::Error },
+    Read {
+        path: String,
+        source: std::io::Error,
+    },
     #[error("failed to parse settings file JSON: {path}")]
-    Parse { path: String, source: serde_json::Error },
+    Parse {
+        path: String,
+        source: serde_json::Error,
+    },
 }
 
 /// Project/user settings file (v1).
@@ -60,4 +66,3 @@ pub struct FontsSettingsV1 {
     /// Ordered candidate families to use as the default monospace font.
     pub ui_mono: Vec<String>,
 }
-

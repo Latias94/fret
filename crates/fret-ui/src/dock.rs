@@ -12,7 +12,8 @@ use std::{
 };
 
 use crate::{
-    ResizeHandle, UiHost,
+    UiHost,
+    resize_handle::ResizeHandle,
     widget::{EventCx, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
 

@@ -1,17 +1,19 @@
-use crate::BoundTextInput;
 use crate::UiHost;
 use crate::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, HoverRegionProps, LayoutStyle,
     Length, MainAlign, Overflow, PressableProps, SpacerProps, SpinnerProps, StackProps, TextProps,
 };
 use crate::elements::{ElementCx, GlobalElementId, NodeEntry};
+use crate::text_input::BoundTextInput;
 use crate::tree::UiTree;
 use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget};
 use fret_core::{
-    AppWindowId, Color, CursorIcon, DrawOrder, Edges, Event, FontId, MouseButton, NodeId, Point,
-    Px, Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle,
+    AppWindowId, Color, CursorIcon, DrawOrder, Edges, Event, FontId, FrameId, MouseButton, NodeId,
+    Point, Px, Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow,
+    TextStyle,
 };
 use fret_runtime::Effect;
+use fret_runtime::Model;
 use std::collections::HashMap;
 use taffy::{
     TaffyTree,
@@ -173,15 +175,27 @@ pub(crate) struct ElementFrame {
     windows: HashMap<AppWindowId, WindowFrame>,
 }
 
-#[derive(Default)]
 pub(crate) struct WindowFrame {
+    frame_id: FrameId,
     pub(crate) instances: HashMap<NodeId, ElementRecord>,
+}
+
+impl Default for WindowFrame {
+    fn default() -> Self {
+        Self {
+            frame_id: FrameId(0),
+            instances: HashMap::new(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub(crate) enum ElementInstance {
     Container(ContainerProps),
+    Semantics(crate::element::SemanticsProps),
     Pressable(PressableProps),
+    DismissibleLayer(DismissibleLayerProps),
+    RovingFlex(crate::element::RovingFlexProps),
     Stack(StackProps),
     Spacer(SpacerProps),
     Text(TextProps),
@@ -202,6 +216,36 @@ pub(crate) struct ElementRecord {
     pub instance: ElementInstance,
 }
 
+#[derive(Clone)]
+pub(crate) struct DismissibleLayerProps {
+    pub layout: LayoutStyle,
+    pub enabled: bool,
+    pub dismiss_model: Option<Model<bool>>,
+}
+
+impl std::fmt::Debug for DismissibleLayerProps {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DismissibleLayerProps")
+            .field("layout", &self.layout)
+            .field("enabled", &self.enabled)
+            .field("dismiss_model", &self.dismiss_model.is_some())
+            .finish()
+    }
+}
+
+impl Default for DismissibleLayerProps {
+    fn default() -> Self {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Fill;
+        layout.size.height = Length::Fill;
+        Self {
+            layout,
+            enabled: true,
+            dismiss_model: None,
+        }
+    }
+}
+
 pub(crate) fn element_record_for_node<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
@@ -220,7 +264,10 @@ fn layout_style_for_node<H: UiHost>(app: &mut H, window: AppWindowId, node: Node
     element_record_for_node(app, window, node)
         .map(|r| match r.instance {
             ElementInstance::Container(p) => p.layout,
+            ElementInstance::Semantics(p) => p.layout,
             ElementInstance::Pressable(p) => p.layout,
+            ElementInstance::DismissibleLayer(p) => p.layout,
+            ElementInstance::RovingFlex(p) => p.flex.layout,
             ElementInstance::Stack(p) => p.layout,
             ElementInstance::Spacer(p) => p.layout,
             ElementInstance::Text(p) => p.layout,
@@ -467,6 +514,415 @@ impl ElementHostWidget {
         node: NodeId,
     ) -> Option<ElementInstance> {
         element_record_for_node(app, window, node).map(|r| r.instance)
+    }
+
+    fn layout_flex_container<H: UiHost>(
+        &mut self,
+        cx: &mut LayoutCx<'_, H>,
+        window: AppWindowId,
+        props: FlexProps,
+    ) -> Size {
+        let pad_left = props.padding.left.0.max(0.0);
+        let pad_right = props.padding.right.0.max(0.0);
+        let pad_top = props.padding.top.0.max(0.0);
+        let pad_bottom = props.padding.bottom.0.max(0.0);
+        let pad_w = pad_left + pad_right;
+        let pad_h = pad_top + pad_bottom;
+        let inner_origin = fret_core::Point::new(
+            Px(cx.bounds.origin.x.0 + pad_left),
+            Px(cx.bounds.origin.y.0 + pad_top),
+        );
+        let outer_avail_w = match props.layout.size.width {
+            Length::Px(px) => Px(px.0.min(cx.available.width.0.max(0.0))),
+            Length::Fill | Length::Auto => cx.available.width,
+        };
+        let outer_avail_h = match props.layout.size.height {
+            Length::Px(px) => Px(px.0.min(cx.available.height.0.max(0.0))),
+            Length::Fill | Length::Auto => cx.available.height,
+        };
+
+        let inner_avail = Size::new(
+            Px((outer_avail_w.0 - pad_w).max(0.0)),
+            Px((outer_avail_h.0 - pad_h).max(0.0)),
+        );
+
+        let root_style = TaffyStyle {
+            display: Display::Flex,
+            flex_direction: match props.direction {
+                fret_core::Axis::Horizontal => FlexDirection::Row,
+                fret_core::Axis::Vertical => FlexDirection::Column,
+            },
+            flex_wrap: if props.wrap {
+                FlexWrap::Wrap
+            } else {
+                FlexWrap::NoWrap
+            },
+            justify_content: Some(taffy_justify(props.justify)),
+            align_items: Some(taffy_align_items(props.align)),
+            gap: TaffySize {
+                width: LengthPercentage::length(props.gap.0.max(0.0)),
+                height: LengthPercentage::length(props.gap.0.max(0.0)),
+            },
+            size: TaffySize {
+                width: match props.layout.size.width {
+                    Length::Px(px) => Dimension::length((px.0 - pad_w).max(0.0)),
+                    Length::Fill => Dimension::length(inner_avail.width.0.max(0.0)),
+                    Length::Auto => Dimension::auto(),
+                },
+                height: match props.layout.size.height {
+                    Length::Px(px) => Dimension::length((px.0 - pad_h).max(0.0)),
+                    Length::Fill => Dimension::length(inner_avail.height.0.max(0.0)),
+                    Length::Auto => Dimension::auto(),
+                },
+            },
+            max_size: TaffySize {
+                width: Dimension::length(inner_avail.width.0.max(0.0)),
+                height: Dimension::length(inner_avail.height.0.max(0.0)),
+            },
+            ..Default::default()
+        };
+
+        let cache = self
+            .flex_cache
+            .get_or_insert_with(TaffyContainerCache::default);
+
+        if cache.children != cx.children {
+            cache.children = cx.children.to_vec();
+            cache.taffy = TaffyTree::new();
+            cache.child_nodes.clear();
+
+            for &child in cx.children {
+                let layout_style = layout_style_for_node(cx.app, window, child);
+                let spacer_min = element_record_for_node(cx.app, window, child).and_then(|r| {
+                    if let ElementInstance::Spacer(p) = r.instance {
+                        Some(p.min)
+                    } else {
+                        None
+                    }
+                });
+
+                let mut min_w = layout_style.size.min_width.map(|p| p.0);
+                let mut min_h = layout_style.size.min_height.map(|p| p.0);
+                if let Some(min) = spacer_min {
+                    let min = min.0.max(0.0);
+                    match props.direction {
+                        fret_core::Axis::Horizontal => {
+                            min_w = Some(min_w.unwrap_or(0.0).max(min));
+                        }
+                        fret_core::Axis::Vertical => {
+                            min_h = Some(min_h.unwrap_or(0.0).max(min));
+                        }
+                    }
+                }
+
+                let child_style = TaffyStyle {
+                    display: Display::Block,
+                    position: taffy_position(layout_style.position),
+                    inset: taffy_rect_lpa_from_inset(layout_style.position, layout_style.inset),
+                    size: TaffySize {
+                        width: taffy_dimension(layout_style.size.width),
+                        height: taffy_dimension(layout_style.size.height),
+                    },
+                    aspect_ratio: layout_style.aspect_ratio,
+                    min_size: TaffySize {
+                        width: min_w.map(Dimension::length).unwrap_or_else(Dimension::auto),
+                        height: min_h.map(Dimension::length).unwrap_or_else(Dimension::auto),
+                    },
+                    max_size: TaffySize {
+                        width: layout_style
+                            .size
+                            .max_width
+                            .map(|p| Dimension::length(p.0))
+                            .unwrap_or_else(Dimension::auto),
+                        height: layout_style
+                            .size
+                            .max_height
+                            .map(|p| Dimension::length(p.0))
+                            .unwrap_or_else(Dimension::auto),
+                    },
+                    margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
+                    flex_grow: layout_style.flex.grow.max(0.0),
+                    flex_shrink: layout_style.flex.shrink.max(0.0),
+                    flex_basis: taffy_dimension(layout_style.flex.basis),
+                    align_self: layout_style.flex.align_self.map(taffy_align_self),
+                    ..Default::default()
+                };
+
+                let node = cache
+                    .taffy
+                    .new_leaf_with_context(child_style, Some(child))
+                    .expect("taffy leaf");
+                cache.child_nodes.push(node);
+            }
+
+            cache.root = if cache.child_nodes.is_empty() {
+                cache.taffy.new_leaf(root_style).expect("taffy root")
+            } else {
+                cache
+                    .taffy
+                    .new_with_children(root_style, &cache.child_nodes)
+                    .expect("taffy root")
+            };
+        } else {
+            cache
+                .taffy
+                .set_style(cache.root, root_style)
+                .expect("taffy root style");
+
+            for (i, &child) in cx.children.iter().enumerate() {
+                let layout_style = layout_style_for_node(cx.app, window, child);
+                let spacer_min = element_record_for_node(cx.app, window, child).and_then(|r| {
+                    if let ElementInstance::Spacer(p) = r.instance {
+                        Some(p.min)
+                    } else {
+                        None
+                    }
+                });
+
+                let mut min_w = layout_style.size.min_width.map(|p| p.0);
+                let mut min_h = layout_style.size.min_height.map(|p| p.0);
+                if let Some(min) = spacer_min {
+                    let min = min.0.max(0.0);
+                    match props.direction {
+                        fret_core::Axis::Horizontal => {
+                            min_w = Some(min_w.unwrap_or(0.0).max(min));
+                        }
+                        fret_core::Axis::Vertical => {
+                            min_h = Some(min_h.unwrap_or(0.0).max(min));
+                        }
+                    }
+                }
+
+                let child_style = TaffyStyle {
+                    display: Display::Block,
+                    position: taffy_position(layout_style.position),
+                    inset: taffy_rect_lpa_from_inset(layout_style.position, layout_style.inset),
+                    size: TaffySize {
+                        width: taffy_dimension(layout_style.size.width),
+                        height: taffy_dimension(layout_style.size.height),
+                    },
+                    aspect_ratio: layout_style.aspect_ratio,
+                    min_size: TaffySize {
+                        width: min_w.map(Dimension::length).unwrap_or_else(Dimension::auto),
+                        height: min_h.map(Dimension::length).unwrap_or_else(Dimension::auto),
+                    },
+                    max_size: TaffySize {
+                        width: layout_style
+                            .size
+                            .max_width
+                            .map(|p| Dimension::length(p.0))
+                            .unwrap_or_else(Dimension::auto),
+                        height: layout_style
+                            .size
+                            .max_height
+                            .map(|p| Dimension::length(p.0))
+                            .unwrap_or_else(Dimension::auto),
+                    },
+                    margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
+                    flex_grow: layout_style.flex.grow.max(0.0),
+                    flex_shrink: layout_style.flex.shrink.max(0.0),
+                    flex_basis: taffy_dimension(layout_style.flex.basis),
+                    align_self: layout_style.flex.align_self.map(taffy_align_self),
+                    ..Default::default()
+                };
+
+                let node = cache.child_nodes.get(i).copied().expect("taffy child");
+                cache
+                    .taffy
+                    .set_style(node, child_style)
+                    .expect("taffy child style");
+            }
+
+            cache
+                .taffy
+                .mark_dirty(cache.root)
+                .expect("taffy mark dirty");
+        }
+
+        let root = cache.root;
+        let child_nodes = cache.child_nodes.clone();
+        let taffy = &mut cache.taffy;
+
+        let available = taffy::geometry::Size {
+            width: TaffyAvailableSpace::Definite(inner_avail.width.0),
+            height: TaffyAvailableSpace::Definite(inner_avail.height.0),
+        };
+
+        taffy
+            .compute_layout_with_measure(root, available, |known, avail, _id, ctx, _style| {
+                let Some(child) = ctx.and_then(|c| *c) else {
+                    return taffy::geometry::Size::default();
+                };
+
+                let max_w = match avail.width {
+                    TaffyAvailableSpace::Definite(w) => Px(w),
+                    _ => Px(1.0e9),
+                };
+                let max_h = match avail.height {
+                    TaffyAvailableSpace::Definite(h) => Px(h),
+                    _ => Px(1.0e9),
+                };
+
+                let known_w = known.width.map(Px);
+                let known_h = known.height.map(Px);
+
+                let w = known_w.unwrap_or(max_w);
+                let h = known_h.unwrap_or(max_h);
+
+                let probe = Rect::new(inner_origin, Size::new(w, h));
+                let s = cx.layout_in(child, probe);
+                taffy::geometry::Size {
+                    width: s.width.0,
+                    height: s.height.0,
+                }
+            })
+            .expect("taffy compute");
+
+        let root_layout = taffy.layout(root).expect("taffy root layout");
+        let container_inner_size = Size::new(
+            Px(root_layout.size.width.max(0.0)),
+            Px(root_layout.size.height.max(0.0)),
+        );
+        let auto_margin_inner_size = Size::new(
+            match props.layout.size.width {
+                Length::Fill => inner_avail.width,
+                _ => container_inner_size.width,
+            },
+            match props.layout.size.height {
+                Length::Fill => inner_avail.height,
+                _ => container_inner_size.height,
+            },
+        );
+
+        for child_node in child_nodes {
+            let layout = taffy.layout(child_node).expect("taffy layout");
+            let Some(child) = taffy.get_node_context(child_node).and_then(|c| *c) else {
+                continue;
+            };
+            let child_style = layout_style_for_node(cx.app, window, child);
+            let single_child = cx.children.len() == 1;
+
+            let mut x = layout.location.x;
+            let mut y = layout.location.y;
+
+            let margin_left_auto =
+                matches!(child_style.margin.left, crate::element::MarginEdge::Auto);
+            let margin_right_auto =
+                matches!(child_style.margin.right, crate::element::MarginEdge::Auto);
+            let margin_top_auto =
+                matches!(child_style.margin.top, crate::element::MarginEdge::Auto);
+            let margin_bottom_auto =
+                matches!(child_style.margin.bottom, crate::element::MarginEdge::Auto);
+
+            let margin_px = |edge: crate::element::MarginEdge| match edge {
+                crate::element::MarginEdge::Px(px) => px.0,
+                crate::element::MarginEdge::Auto => 0.0,
+            };
+
+            match props.direction {
+                fret_core::Axis::Horizontal => {
+                    if single_child && (margin_left_auto || margin_right_auto) {
+                        let left = if margin_left_auto {
+                            0.0
+                        } else {
+                            margin_px(child_style.margin.left)
+                        };
+                        let right = if margin_right_auto {
+                            0.0
+                        } else {
+                            margin_px(child_style.margin.right)
+                        };
+                        let free =
+                            auto_margin_inner_size.width.0 - layout.size.width - left - right;
+                        if margin_left_auto && margin_right_auto {
+                            x = (left + (free.max(0.0) / 2.0)).max(0.0);
+                        } else if margin_left_auto {
+                            x = (left + free.max(0.0)).max(0.0);
+                        } else if margin_right_auto {
+                            x = left.max(0.0);
+                        }
+                    }
+
+                    if margin_top_auto || margin_bottom_auto {
+                        let top = if margin_top_auto {
+                            0.0
+                        } else {
+                            margin_px(child_style.margin.top)
+                        };
+                        let bottom = if margin_bottom_auto {
+                            0.0
+                        } else {
+                            margin_px(child_style.margin.bottom)
+                        };
+                        let free =
+                            auto_margin_inner_size.height.0 - layout.size.height - top - bottom;
+                        if margin_top_auto && margin_bottom_auto {
+                            y = (top + (free.max(0.0) / 2.0)).max(0.0);
+                        } else if margin_top_auto {
+                            y = (top + free.max(0.0)).max(0.0);
+                        } else if margin_bottom_auto {
+                            y = top.max(0.0);
+                        }
+                    }
+                }
+                fret_core::Axis::Vertical => {
+                    if single_child && (margin_top_auto || margin_bottom_auto) {
+                        let top = if margin_top_auto {
+                            0.0
+                        } else {
+                            margin_px(child_style.margin.top)
+                        };
+                        let bottom = if margin_bottom_auto {
+                            0.0
+                        } else {
+                            margin_px(child_style.margin.bottom)
+                        };
+                        let free =
+                            auto_margin_inner_size.height.0 - layout.size.height - top - bottom;
+                        if margin_top_auto && margin_bottom_auto {
+                            y = (top + (free.max(0.0) / 2.0)).max(0.0);
+                        } else if margin_top_auto {
+                            y = (top + free.max(0.0)).max(0.0);
+                        } else if margin_bottom_auto {
+                            y = top.max(0.0);
+                        }
+                    }
+
+                    if margin_left_auto || margin_right_auto {
+                        let left = if margin_left_auto {
+                            0.0
+                        } else {
+                            margin_px(child_style.margin.left)
+                        };
+                        let right = if margin_right_auto {
+                            0.0
+                        } else {
+                            margin_px(child_style.margin.right)
+                        };
+                        let free =
+                            auto_margin_inner_size.width.0 - layout.size.width - left - right;
+                        if margin_left_auto && margin_right_auto {
+                            x = (left + (free.max(0.0) / 2.0)).max(0.0);
+                        } else if margin_left_auto {
+                            x = (left + free.max(0.0)).max(0.0);
+                        } else if margin_right_auto {
+                            x = left.max(0.0);
+                        }
+                    }
+                }
+            }
+            let rect = Rect::new(
+                fret_core::Point::new(Px(inner_origin.x.0 + x), Px(inner_origin.y.0 + y)),
+                Size::new(Px(layout.size.width), Px(layout.size.height)),
+            );
+            let _ = cx.layout_in(child, rect);
+        }
+
+        let desired = Size::new(
+            Px((container_inner_size.width.0 + pad_w).max(0.0)),
+            Px((container_inner_size.height.0 + pad_h).max(0.0)),
+        );
+        clamp_to_constraints(desired, props.layout, cx.available)
     }
 }
 
@@ -800,6 +1256,34 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     }
                 }
             }
+            ElementInstance::DismissibleLayer(props) => {
+                if !props.enabled {
+                    return;
+                }
+
+                match event {
+                    Event::KeyDown {
+                        key: fret_core::KeyCode::Escape,
+                        repeat: false,
+                        ..
+                    } => {
+                        if let Some(model) = props.dismiss_model {
+                            let _ = cx.app.models_mut().update(model, |v| *v = false);
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                            cx.stop_propagation();
+                        }
+                    }
+                    Event::Pointer(fret_core::PointerEvent::Down { .. }) => {
+                        if let Some(model) = props.dismiss_model {
+                            let _ = cx.app.models_mut().update(model, |v| *v = false);
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                        }
+                    }
+                    _ => {}
+                }
+            }
             ElementInstance::Pressable(props) => {
                 if !props.enabled {
                     return;
@@ -837,8 +1321,33 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                 self.element,
                             );
 
-                            if hovered && let Some(command) = props.on_click.clone() {
-                                cx.dispatch_command(command);
+                            if hovered {
+                                if let Some(model) = props.toggle_model {
+                                    let _ = cx.app.models_mut().update(model, |v| *v = !*v);
+                                }
+                                if let Some(set) = props.set_arc_str_model.clone() {
+                                    let _ =
+                                        cx.app.models_mut().update(set.model, |v| *v = set.value);
+                                }
+                                if let Some(set) = props.set_option_arc_str_model.clone() {
+                                    let value = Some(set.value);
+                                    let _ = cx.app.models_mut().update(set.model, |v| *v = value);
+                                }
+                                if let Some(set) = props.toggle_vec_arc_str_model.clone() {
+                                    let value = set.value;
+                                    let _ = cx.app.models_mut().update(set.model, |v| {
+                                        if let Some(pos) =
+                                            v.iter().position(|it| it.as_ref() == value.as_ref())
+                                        {
+                                            v.remove(pos);
+                                        } else {
+                                            v.push(value.clone());
+                                        }
+                                    });
+                                }
+                                if let Some(command) = props.on_click.clone() {
+                                    cx.dispatch_command(command);
+                                }
                             }
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
@@ -891,6 +1400,28 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             return;
                         }
                         crate::elements::set_pressed_pressable(&mut *cx.app, window, None);
+                        if let Some(model) = props.toggle_model {
+                            let _ = cx.app.models_mut().update(model, |v| *v = !*v);
+                        }
+                        if let Some(set) = props.set_arc_str_model.clone() {
+                            let _ = cx.app.models_mut().update(set.model, |v| *v = set.value);
+                        }
+                        if let Some(set) = props.set_option_arc_str_model.clone() {
+                            let value = Some(set.value);
+                            let _ = cx.app.models_mut().update(set.model, |v| *v = value);
+                        }
+                        if let Some(set) = props.toggle_vec_arc_str_model.clone() {
+                            let value = set.value;
+                            let _ = cx.app.models_mut().update(set.model, |v| {
+                                if let Some(pos) =
+                                    v.iter().position(|it| it.as_ref() == value.as_ref())
+                                {
+                                    v.remove(pos);
+                                } else {
+                                    v.push(value.clone());
+                                }
+                            });
+                        }
                         if let Some(command) = props.on_click.clone() {
                             cx.dispatch_command(command);
                         }
@@ -900,6 +1431,198 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     }
                     _ => {}
                 };
+            }
+            ElementInstance::RovingFlex(props) => {
+                if !props.roving.enabled {
+                    return;
+                }
+
+                let Event::KeyDown { key, repeat, .. } = event else {
+                    return;
+                };
+                if *repeat {
+                    return;
+                }
+
+                enum Nav {
+                    Prev,
+                    Next,
+                    Home,
+                    End,
+                }
+
+                let nav = match (props.flex.direction, key) {
+                    (_, fret_core::KeyCode::Home) => Some(Nav::Home),
+                    (_, fret_core::KeyCode::End) => Some(Nav::End),
+                    (fret_core::Axis::Vertical, fret_core::KeyCode::ArrowUp) => Some(Nav::Prev),
+                    (fret_core::Axis::Vertical, fret_core::KeyCode::ArrowDown) => Some(Nav::Next),
+                    (fret_core::Axis::Horizontal, fret_core::KeyCode::ArrowLeft) => Some(Nav::Prev),
+                    (fret_core::Axis::Horizontal, fret_core::KeyCode::ArrowRight) => {
+                        Some(Nav::Next)
+                    }
+                    _ => None,
+                };
+                let len = cx.children.len();
+                if len == 0 {
+                    return;
+                }
+
+                let current = cx
+                    .focus
+                    .and_then(|focus| cx.children.iter().position(|n| *n == focus));
+
+                let is_disabled = |idx: usize| -> bool {
+                    props.roving.disabled.get(idx).copied().unwrap_or(false)
+                };
+
+                let mut target: Option<usize> = None;
+                match nav {
+                    Some(Nav::Home) => {
+                        target = (0..len).find(|&i| !is_disabled(i));
+                    }
+                    Some(Nav::End) => {
+                        target = (0..len).rev().find(|&i| !is_disabled(i));
+                    }
+                    Some(Nav::Next) if props.roving.wrap => {
+                        let Some(current) = current else {
+                            return;
+                        };
+                        for step in 1..=len {
+                            let idx = (current + step) % len;
+                            if !is_disabled(idx) {
+                                target = Some(idx);
+                                break;
+                            }
+                        }
+                    }
+                    Some(Nav::Prev) if props.roving.wrap => {
+                        let Some(current) = current else {
+                            return;
+                        };
+                        for step in 1..=len {
+                            let idx = (current + len - (step % len)) % len;
+                            if !is_disabled(idx) {
+                                target = Some(idx);
+                                break;
+                            }
+                        }
+                    }
+                    Some(Nav::Next) => {
+                        let Some(current) = current else {
+                            return;
+                        };
+                        target = ((current + 1)..len).find(|&i| !is_disabled(i));
+                    }
+                    Some(Nav::Prev) => {
+                        let Some(current) = current else {
+                            return;
+                        };
+                        if current > 0 {
+                            target = (0..current).rev().find(|&i| !is_disabled(i));
+                        }
+                    }
+                    None => {}
+                }
+
+                if target.is_none()
+                    && let Some(typeahead) = props.roving.typeahead_arc_str.as_ref()
+                {
+                    let key_to_ascii = |key: fret_core::KeyCode| -> Option<char> {
+                        use fret_core::KeyCode;
+                        Some(match key {
+                            KeyCode::KeyA => 'a',
+                            KeyCode::KeyB => 'b',
+                            KeyCode::KeyC => 'c',
+                            KeyCode::KeyD => 'd',
+                            KeyCode::KeyE => 'e',
+                            KeyCode::KeyF => 'f',
+                            KeyCode::KeyG => 'g',
+                            KeyCode::KeyH => 'h',
+                            KeyCode::KeyI => 'i',
+                            KeyCode::KeyJ => 'j',
+                            KeyCode::KeyK => 'k',
+                            KeyCode::KeyL => 'l',
+                            KeyCode::KeyM => 'm',
+                            KeyCode::KeyN => 'n',
+                            KeyCode::KeyO => 'o',
+                            KeyCode::KeyP => 'p',
+                            KeyCode::KeyQ => 'q',
+                            KeyCode::KeyR => 'r',
+                            KeyCode::KeyS => 's',
+                            KeyCode::KeyT => 't',
+                            KeyCode::KeyU => 'u',
+                            KeyCode::KeyV => 'v',
+                            KeyCode::KeyW => 'w',
+                            KeyCode::KeyX => 'x',
+                            KeyCode::KeyY => 'y',
+                            KeyCode::KeyZ => 'z',
+                            KeyCode::Digit0 => '0',
+                            KeyCode::Digit1 => '1',
+                            KeyCode::Digit2 => '2',
+                            KeyCode::Digit3 => '3',
+                            KeyCode::Digit4 => '4',
+                            KeyCode::Digit5 => '5',
+                            KeyCode::Digit6 => '6',
+                            KeyCode::Digit7 => '7',
+                            KeyCode::Digit8 => '8',
+                            KeyCode::Digit9 => '9',
+                            _ => return None,
+                        })
+                    };
+
+                    if let Some(ch) = key_to_ascii(*key) {
+                        let matches = |idx: usize| -> bool {
+                            if is_disabled(idx) {
+                                return false;
+                            }
+                            let Some(label) = typeahead.labels.get(idx) else {
+                                return false;
+                            };
+                            let label = label.as_ref().trim_start();
+                            let Some(first) = label.chars().next() else {
+                                return false;
+                            };
+                            first.to_ascii_lowercase() == ch
+                        };
+
+                        let start = current.map(|i| i.saturating_add(1)).unwrap_or(0);
+                        if props.roving.wrap {
+                            for offset in 0..len {
+                                let idx = (start + offset) % len;
+                                if matches(idx) {
+                                    target = Some(idx);
+                                    break;
+                                }
+                            }
+                        } else {
+                            for idx in start..len {
+                                if matches(idx) {
+                                    target = Some(idx);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                let Some(target) = target else {
+                    return;
+                };
+                if current.is_some_and(|current| target == current) {
+                    return;
+                }
+
+                cx.request_focus(cx.children[target]);
+
+                if let Some(select) = props.roving.select_option_arc_str.as_ref()
+                    && let Some(value) = select.values.get(target).cloned()
+                {
+                    let next = Some(value);
+                    let _ = cx.app.models_mut().update(select.model, |v| *v = next);
+                }
+
+                cx.request_redraw();
+                cx.stop_propagation();
             }
             _ => {}
         }
@@ -929,6 +1652,24 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 cx.set_role(SemanticsRole::Text);
                 cx.set_label(props.text.as_ref().to_string());
             }
+            ElementInstance::Semantics(props) => {
+                cx.set_role(props.role);
+                if let Some(label) = props.label.as_ref() {
+                    cx.set_label(label.as_ref().to_string());
+                }
+                if props.disabled {
+                    cx.set_disabled(true);
+                }
+                if props.selected {
+                    cx.set_selected(true);
+                }
+                if let Some(expanded) = props.expanded {
+                    cx.set_expanded(expanded);
+                }
+                if props.checked.is_some() {
+                    cx.set_checked(props.checked);
+                }
+            }
             ElementInstance::TextInput(props) => {
                 if self.text_input.is_none() {
                     self.text_input = Some(BoundTextInput::new(props.model));
@@ -941,6 +1682,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 input.set_text_style(props.text_style);
                 input.set_submit_command(props.submit_command);
                 input.set_cancel_command(props.cancel_command);
+                if let Some(label) = props.a11y_label.as_ref() {
+                    cx.set_label(label.as_ref().to_string());
+                }
                 input.semantics(cx);
             }
             ElementInstance::Pressable(props) => {
@@ -951,14 +1695,29 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 if props.a11y.selected {
                     cx.set_selected(true);
                 }
+                if let Some(expanded) = props.a11y.expanded {
+                    cx.set_expanded(expanded);
+                }
+                if props.a11y.checked.is_some() {
+                    cx.set_checked(props.a11y.checked);
+                }
                 cx.set_disabled(!props.enabled);
                 cx.set_focusable(props.enabled);
-                cx.set_invokable(props.enabled && props.on_click.is_some());
+                cx.set_invokable(
+                    props.enabled
+                        && (props.on_click.is_some()
+                            || props.toggle_model.is_some()
+                            || props.set_arc_str_model.is_some()
+                            || props.set_option_arc_str_model.is_some()),
+                );
             }
             ElementInstance::VirtualList(_) => {
                 cx.set_role(SemanticsRole::List);
             }
-            ElementInstance::Flex(_) | ElementInstance::Grid(_) => {
+            ElementInstance::Flex(_)
+            | ElementInstance::DismissibleLayer(_)
+            | ElementInstance::RovingFlex(_)
+            | ElementInstance::Grid(_) => {
                 // Flex/Grid are layout containers; they do not imply semantics beyond their children.
             }
             ElementInstance::Image(_)
@@ -991,25 +1750,32 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
         self.hit_testable = match &instance {
             ElementInstance::Pressable(p) => p.enabled,
+            ElementInstance::Semantics(_) => false,
+            ElementInstance::DismissibleLayer(_) => false,
             ElementInstance::Spinner(_) => false,
             _ => true,
         };
         self.hit_test_children = match &instance {
             ElementInstance::Pressable(p) => p.enabled,
+            ElementInstance::Semantics(_) => true,
+            ElementInstance::DismissibleLayer(_) => true,
             ElementInstance::Spinner(_) => false,
             _ => true,
         };
         self.is_text_input = matches!(&instance, ElementInstance::TextInput(_));
         self.is_focusable = match &instance {
             ElementInstance::TextInput(_) => true,
-            ElementInstance::Pressable(p) => p.enabled,
+            ElementInstance::Pressable(p) => p.enabled && p.focusable,
             _ => false,
         };
         self.clips_hit_test = match &instance {
             ElementInstance::Container(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::Semantics(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Pressable(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::DismissibleLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Stack(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Flex(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::RovingFlex(p) => matches!(p.flex.layout.overflow, Overflow::Clip),
             ElementInstance::Grid(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::TextInput(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Scroll(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -1040,8 +1806,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         self.scrollbar_hit_rect = None;
 
         let is_flex = matches!(&instance, ElementInstance::Flex(_));
+        let is_roving_flex = matches!(&instance, ElementInstance::RovingFlex(_));
         let is_grid = matches!(&instance, ElementInstance::Grid(_));
-        if !is_flex {
+        if !is_flex && !is_roving_flex {
             self.flex_cache = None;
         }
         if !is_grid {
@@ -1121,6 +1888,38 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
                 let desired = clamp_to_constraints(max_child, props.layout, cx.available);
                 let base = Rect::new(cx.bounds.origin, desired);
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
+                }
+                desired
+            }
+            ElementInstance::Semantics(props) => {
+                // Probe within the available height budget so measurement passes do not observe an
+                // artificially "infinite" viewport (important for scroll/virtualized children).
+                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let mut max_child = Size::new(Px(0.0), Px(0.0));
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    if layout_style.position == crate::element::PositionStyle::Absolute {
+                        continue;
+                    }
+                    let child_size = cx.layout_in(child, probe_bounds);
+                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
+                }
+
+                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let base = Rect::new(cx.bounds.origin, desired);
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
+                }
+                desired
+            }
+            ElementInstance::DismissibleLayer(props) => {
+                let desired = clamp_to_constraints(cx.available, props.layout, cx.available);
+                let base = cx.bounds;
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
@@ -1779,6 +2578,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 );
                 clamp_to_constraints(desired, props.layout, cx.available)
             }
+            ElementInstance::RovingFlex(props) => {
+                self.layout_flex_container(cx, window, props.flex)
+            }
             ElementInstance::Grid(props) => {
                 let pad_left = props.padding.left.0.max(0.0);
                 let pad_right = props.padding.right.0.max(0.0);
@@ -2187,6 +2989,20 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     Some(props.corner_radii),
                 );
             }
+            ElementInstance::Semantics(props) => {
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+            }
+            ElementInstance::DismissibleLayer(props) => {
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+            }
             ElementInstance::Stack(props) => {
                 paint_children_clipped_if(
                     cx,
@@ -2198,6 +3014,13 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 paint_children_clipped_if(
                     cx,
                     matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+            }
+            ElementInstance::RovingFlex(props) => {
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.flex.layout.overflow, Overflow::Clip),
                     None,
                 );
             }
@@ -2612,12 +3435,144 @@ pub fn render_root<H: UiHost>(
 
         app.with_global_mut(ElementFrame::default, |frame, _app| {
             let w = frame.windows.entry(window).or_default();
-            w.instances.clear();
+            if w.frame_id != frame_id {
+                w.frame_id = frame_id;
+                w.instances.clear();
+            }
             w.instances.insert(
                 root_node,
                 ElementRecord {
                     element: root_id,
                     instance: ElementInstance::Stack(StackProps::default()),
+                },
+            );
+        });
+
+        let mut mounted_children: Vec<NodeId> = Vec::with_capacity(children.len());
+        for child in children {
+            mounted_children.push(mount_element(
+                ui,
+                app,
+                window,
+                root_id,
+                frame_id,
+                window_state,
+                child,
+            ));
+        }
+        ui.set_children(root_node, mounted_children);
+
+        // Record the root's coordinate space for placement/collision logic (anchored overlays).
+        window_state.set_root_bounds(root_id, bounds);
+
+        // Sweep nodes that are not seen for `gc_lag_frames`.
+        let mut stale_nodes: Vec<NodeId> = Vec::new();
+        window_state.retain_nodes(|id, entry| {
+            if *id == root_id {
+                return true;
+            }
+            if entry.root != root_id {
+                return true;
+            }
+            if entry.last_seen_frame.0 >= cutoff {
+                return true;
+            }
+            stale_nodes.push(entry.node);
+            false
+        });
+
+        for node in stale_nodes {
+            let _ = ui.remove_subtree(services, node);
+        }
+
+        if window_state.wants_continuous_frames() {
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+
+        root_node
+    })
+}
+
+/// Render a declarative element tree into a full-window, input-transparent overlay root.
+///
+/// The root handles:
+/// - Escape dismissal (bubbling from any focused descendant).
+/// - Outside-press dismissal via the runtime outside-press observer pass (ADR 0069).
+#[allow(clippy::too_many_arguments)]
+pub fn render_dismissible_root<H: UiHost>(
+    ui: &mut UiTree<H>,
+    app: &mut H,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    root_name: &str,
+    dismiss_model: Model<bool>,
+    render: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+) -> NodeId {
+    let frame_id = app.frame_id();
+
+    let children = crate::elements::with_element_cx(app, window, bounds, root_name, render);
+
+    app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, app| {
+        runtime.prepare_window_for_frame(window, frame_id);
+        let lag = runtime.gc_lag_frames();
+        let cutoff = frame_id.0.saturating_sub(lag);
+
+        let window_state = runtime.for_window_mut(window);
+        let root_id = crate::elements::global_root(window, root_name);
+
+        let root_node = window_state
+            .node_entry(root_id)
+            .map(|e| e.node)
+            .unwrap_or_else(|| {
+                let node = ui.create_node(ElementHostWidget {
+                    element: root_id,
+                    text_cache: TextCache::default(),
+                    hit_testable: true,
+                    hit_test_children: true,
+                    is_focusable: false,
+                    is_text_input: false,
+                    clips_hit_test: true,
+                    clip_hit_test_corner_radii: None,
+                    scrollbar_hit_rect: None,
+                    text_input: None,
+                    flex_cache: None,
+                    grid_cache: None,
+                });
+                window_state.set_node_entry(
+                    root_id,
+                    NodeEntry {
+                        node,
+                        last_seen_frame: frame_id,
+                        root: root_id,
+                    },
+                );
+                node
+            });
+
+        window_state.set_node_entry(
+            root_id,
+            NodeEntry {
+                node: root_node,
+                last_seen_frame: frame_id,
+                root: root_id,
+            },
+        );
+
+        app.with_global_mut(ElementFrame::default, |frame, _app| {
+            let w = frame.windows.entry(window).or_default();
+            if w.frame_id != frame_id {
+                w.frame_id = frame_id;
+                w.instances.clear();
+            }
+            w.instances.insert(
+                root_node,
+                ElementRecord {
+                    element: root_id,
+                    instance: ElementInstance::DismissibleLayer(DismissibleLayerProps {
+                        dismiss_model: Some(dismiss_model),
+                        ..Default::default()
+                    }),
                 },
             );
         });
@@ -2717,7 +3672,9 @@ fn mount_element<H: UiHost>(
 
     let instance = match element.kind {
         ElementKind::Container(p) => ElementInstance::Container(p),
+        ElementKind::Semantics(p) => ElementInstance::Semantics(p),
         ElementKind::Pressable(p) => ElementInstance::Pressable(p),
+        ElementKind::RovingFlex(p) => ElementInstance::RovingFlex(p),
         ElementKind::Stack(p) => ElementInstance::Stack(p),
         ElementKind::Column(p) => ElementInstance::Flex(FlexProps {
             layout: p.layout,
@@ -2779,6 +3736,8 @@ fn mount_element<H: UiHost>(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::render_root;
     use crate::UiHost;
     use crate::element::{AnyElement, CrossAlign, MainAlign};
@@ -3094,6 +4053,419 @@ mod tests {
                     && n.label.as_deref() == Some("Hello declarative")),
             "expected a Text semantics node with label"
         );
+    }
+
+    #[test]
+    fn declarative_text_input_sets_semantics_label() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(60.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert("hello".to_string());
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "a11y-text-input-label",
+            |cx| {
+                let mut props = crate::element::TextInputProps::new(model);
+                props.a11y_label = Some("Search".into());
+                vec![cx.text_input(props)]
+            },
+        );
+        ui.set_root(root);
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.role == fret_core::SemanticsRole::TextField
+                    && n.label.as_deref() == Some("Search")),
+            "expected a TextField semantics node with label"
+        );
+    }
+
+    #[test]
+    fn pressable_toggle_model_toggles_bool_on_click() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(false);
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "pressable-toggle-model",
+            |cx| {
+                vec![cx.pressable(
+                    crate::element::PressableProps {
+                        enabled: true,
+                        toggle_model: Some(model),
+                        ..Default::default()
+                    },
+                    |cx, _state| vec![cx.text("toggle")],
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get(model).copied(), Some(false));
+
+        let pressable_node = ui.children(root)[0];
+        let pressable_bounds = ui
+            .debug_node_bounds(pressable_node)
+            .expect("pressable bounds");
+        let position = Point::new(
+            Px(pressable_bounds.origin.x.0 + 1.0),
+            Px(pressable_bounds.origin.y.0 + 1.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get(model).copied(), Some(true));
+    }
+
+    #[test]
+    fn pressable_set_option_arc_str_model_sets_value_on_click() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(140.0), Px(40.0)));
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(Option::<Arc<str>>::None);
+        let value: Arc<str> = Arc::from("alpha");
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "pressable-set-option-arc-str-model",
+            |cx| {
+                vec![cx.pressable(
+                    crate::element::PressableProps {
+                        enabled: true,
+                        set_option_arc_str_model: Some(crate::element::PressableSetOptionArcStr {
+                            model,
+                            value: value.clone(),
+                        }),
+                        ..Default::default()
+                    },
+                    |cx, _state| vec![cx.text("select")],
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get(model).and_then(|v| v.as_deref()), None);
+
+        let pressable_node = ui.children(root)[0];
+        let pressable_bounds = ui
+            .debug_node_bounds(pressable_node)
+            .expect("pressable bounds");
+        let position = Point::new(
+            Px(pressable_bounds.origin.x.0 + 1.0),
+            Px(pressable_bounds.origin.y.0 + 1.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(
+            app.models().get(model).and_then(|v| v.as_deref()),
+            Some("alpha")
+        );
+    }
+
+    #[test]
+    fn pressable_toggle_vec_arc_str_model_toggles_membership_on_click() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(140.0), Px(40.0)));
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(Vec::<Arc<str>>::new());
+        let value: Arc<str> = Arc::from("alpha");
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "pressable-toggle-vec-arc-str-model",
+            |cx| {
+                vec![cx.pressable(
+                    crate::element::PressableProps {
+                        enabled: true,
+                        toggle_vec_arc_str_model: Some(crate::element::PressableToggleVecArcStr {
+                            model,
+                            value: value.clone(),
+                        }),
+                        ..Default::default()
+                    },
+                    |cx, _state| vec![cx.text("toggle")],
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert!(app.models().get(model).is_some_and(|v| v.is_empty()));
+
+        let pressable_node = ui.children(root)[0];
+        let pressable_bounds = ui
+            .debug_node_bounds(pressable_node)
+            .expect("pressable bounds");
+        let position = Point::new(
+            Px(pressable_bounds.origin.x.0 + 1.0),
+            Px(pressable_bounds.origin.y.0 + 1.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        assert!(
+            app.models()
+                .get(model)
+                .is_some_and(|v| v.len() == 1 && v[0] == value)
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        assert!(app.models().get(model).is_some_and(|v| v.is_empty()));
+    }
+
+    #[test]
+    fn roving_flex_arrow_keys_move_focus_and_update_selection() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let model = app
+            .models_mut()
+            .insert(Option::<Arc<str>>::Some(Arc::from("a")));
+        let values: Arc<[Arc<str>]> = Arc::from([Arc::from("a"), Arc::from("b"), Arc::from("c")]);
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "roving-flex",
+            |cx| {
+                let props = crate::element::RovingFlexProps {
+                    flex: crate::element::FlexProps {
+                        direction: fret_core::Axis::Vertical,
+                        ..Default::default()
+                    },
+                    roving: crate::element::RovingFocusProps {
+                        enabled: true,
+                        wrap: true,
+                        disabled: Arc::from([false, true, false]),
+                        select_option_arc_str: Some(crate::element::RovingSelectOptionArcStr {
+                            model,
+                            values: values.clone(),
+                        }),
+                        ..Default::default()
+                    },
+                };
+
+                vec![cx.roving_flex(props, |cx| {
+                    let mut make = |label: &'static str| {
+                        cx.pressable(
+                            crate::element::PressableProps::default(),
+                            |child_cx, _st| vec![child_cx.text(label)],
+                        )
+                    };
+                    vec![make("a"), make("b"), make("c")]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let roving = ui.children(root)[0];
+        let a = ui.children(roving)[0];
+        let c = ui.children(roving)[2];
+        ui.set_focus(Some(a));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        assert_eq!(
+            ui.focus(),
+            Some(c),
+            "expected ArrowDown to skip disabled child"
+        );
+        assert_eq!(
+            app.models().get(model).and_then(|v| v.as_deref()),
+            Some("c")
+        );
+    }
+
+    #[test]
+    fn pressable_semantics_checked_is_exposed() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(60.0)));
+        let mut services = FakeTextService::default();
+        let model = app.models_mut().insert(true);
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "a11y-pressable-checked",
+            |cx| {
+                vec![cx.pressable(
+                    crate::element::PressableProps {
+                        enabled: true,
+                        toggle_model: Some(model),
+                        a11y: crate::element::PressableA11y {
+                            role: Some(fret_core::SemanticsRole::Checkbox),
+                            label: Some(Arc::from("checked")),
+                            checked: Some(true),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    |cx, _state| vec![cx.text("x")],
+                )]
+            },
+        );
+        ui.set_root(root);
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Checkbox
+                    && n.label.as_deref() == Some("checked")
+            })
+            .expect("expected checkbox semantics node");
+
+        assert_eq!(node.flags.checked, Some(true));
+        assert!(node.actions.invoke, "expected checkbox to be invokable");
     }
 
     #[track_caller]

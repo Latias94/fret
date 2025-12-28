@@ -42,6 +42,7 @@ impl<H: UiHost> TreeRowRenderer<H> for AppTreeRowRenderer {
                     role: Some(SemanticsRole::Button),
                     label: Some(Arc::from("Row action")),
                     selected: false,
+                    ..Default::default()
                 },
                 ..Default::default()
             },
