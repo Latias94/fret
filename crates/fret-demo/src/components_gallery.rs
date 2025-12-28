@@ -75,7 +75,25 @@ impl ComponentsGalleryDriver {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(fret_ui_widgets::primitives::Stack::new());
+        #[derive(Debug, Default)]
+        struct RootContainer;
+
+        impl<H: UiHost> Widget<H> for RootContainer {
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                for &child in cx.children {
+                    let _ = cx.layout_in(child, cx.bounds);
+                }
+                cx.available
+            }
+
+            fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+                for &child in cx.children {
+                    cx.paint(child, cx.bounds);
+                }
+            }
+        }
+
+        let root = ui.create_node(RootContainer);
         ui.set_root(root);
 
         let background = ui.create_node(WindowBackground);
@@ -168,7 +186,7 @@ impl ComponentsGalleryDriver {
             },
         );
 
-        state.ui.set_children(state.tree.list_mount, vec![root]);
+        state.ui.set_children(state.tree.tree_root, vec![root]);
     }
 }
 

@@ -925,8 +925,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             return;
         };
         match instance {
-            ElementInstance::Text(_) => {
+            ElementInstance::Text(props) => {
                 cx.set_role(SemanticsRole::Text);
+                cx.set_label(props.text.as_ref().to_string());
             }
             ElementInstance::TextInput(props) => {
                 if self.text_input.is_none() {
@@ -1459,9 +1460,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             },
                             aspect_ratio: layout_style.aspect_ratio,
                             min_size: TaffySize {
-                                width: min_w
-                                    .map(Dimension::length)
-                                    .unwrap_or_else(Dimension::auto),
+                                width: min_w.map(Dimension::length).unwrap_or_else(Dimension::auto),
                                 height: min_h
                                     .map(Dimension::length)
                                     .unwrap_or_else(Dimension::auto),
@@ -1545,9 +1544,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             },
                             aspect_ratio: layout_style.aspect_ratio,
                             min_size: TaffySize {
-                                width: min_w
-                                    .map(Dimension::length)
-                                    .unwrap_or_else(Dimension::auto),
+                                width: min_w.map(Dimension::length).unwrap_or_else(Dimension::auto),
                                 height: min_h
                                     .map(Dimension::length)
                                     .unwrap_or_else(Dimension::auto),
@@ -2662,6 +2659,10 @@ pub fn render_root<H: UiHost>(
             let _ = ui.remove_subtree(services, node);
         }
 
+        if window_state.wants_continuous_frames() {
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+
         root_node
     })
 }
@@ -2781,7 +2782,7 @@ mod tests {
     use super::render_root;
     use crate::UiHost;
     use crate::element::{AnyElement, CrossAlign, MainAlign};
-    use crate::elements::ElementCx;
+    use crate::elements::{ContinuousFrames, ElementCx};
     use crate::test_host::TestHost;
     use crate::tree::UiTree;
     use crate::widget::Invalidation;
@@ -2911,6 +2912,82 @@ mod tests {
     }
 
     #[test]
+    fn continuous_frames_lease_requests_animation_frames_while_held() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(500.0), Px(500.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let mut lease: Option<ContinuousFrames> = None;
+
+        let _root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "root",
+            |cx| {
+                lease = Some(cx.begin_continuous_frames());
+                Vec::<AnyElement>::new()
+            },
+        );
+
+        let effects = app.take_effects();
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::RequestAnimationFrame(w) if *w == window)),
+            "expected RequestAnimationFrame while beginning a continuous frames lease"
+        );
+
+        app.advance_frame();
+        let _root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "root",
+            |_cx| Vec::<AnyElement>::new(),
+        );
+
+        let effects = app.take_effects();
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::RequestAnimationFrame(w) if *w == window)),
+            "expected RequestAnimationFrame while continuous frames lease is held"
+        );
+
+        drop(lease.take());
+        app.advance_frame();
+        let _root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "root",
+            |_cx| Vec::<AnyElement>::new(),
+        );
+
+        let effects = app.take_effects();
+        assert!(
+            !effects
+                .iter()
+                .any(|e| matches!(e, Effect::RequestAnimationFrame(w) if *w == window)),
+            "did not expect RequestAnimationFrame after dropping the last continuous frames lease"
+        );
+    }
+
+    #[test]
     fn stale_nodes_are_swept_after_gc_lag() {
         let mut app = TestHost::new();
         let mut ui: UiTree<TestHost> = UiTree::new();
@@ -2978,6 +3055,45 @@ mod tests {
             |cx| build_keyed_rows(cx, &[1u64], &mut Vec::new()),
         );
         assert!(ui.debug_node_bounds(node_to_remove).is_none());
+    }
+
+    #[test]
+    fn declarative_text_sets_semantics_label() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(60.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "a11y-text",
+            |cx| vec![cx.text("Hello declarative")],
+        );
+        ui.set_root(root);
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        // Root is a host widget, so text is in a descendant; ensure at least one Text node carries
+        // the label payload.
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.role == fret_core::SemanticsRole::Text
+                    && n.label.as_deref() == Some("Hello declarative")),
+            "expected a Text semantics node with label"
+        );
     }
 
     #[track_caller]

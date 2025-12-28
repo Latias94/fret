@@ -365,7 +365,6 @@ pub struct TreeViewHandles {
     pub items: Model<Vec<TreeItem>>,
     pub state: Model<TreeState>,
     pub tree_root: fret_core::NodeId,
-    pub list_mount: fret_core::NodeId,
 }
 
 pub fn create_tree_view<H: UiHost>(
@@ -377,14 +376,10 @@ pub fn create_tree_view<H: UiHost>(
     let tree_root = ui.create_node(TreeView::new(items, state));
     ui.add_child(parent, tree_root);
 
-    let list_mount = ui.create_node(fret_ui_widgets::primitives::Stack::new());
-    ui.add_child(tree_root, list_mount);
-
     TreeViewHandles {
         items,
         state,
         tree_root,
-        list_mount,
     }
 }
 
@@ -400,7 +395,7 @@ pub fn render_tree_view_list<H: UiHost>(
     handles: &TreeViewHandles,
     size: ComponentSize,
 ) {
-    let bounds = ui.debug_node_bounds(handles.list_mount).unwrap_or_default();
+    let bounds = ui.debug_node_bounds(handles.tree_root).unwrap_or_default();
 
     let root = declarative::render_root(ui, app, services, window, bounds, "tree-view", |cx| {
         vec![crate::declarative::tree::tree_view(
@@ -411,7 +406,7 @@ pub fn render_tree_view_list<H: UiHost>(
         )]
     });
 
-    ui.set_children(handles.list_mount, vec![root]);
+    ui.set_children(handles.tree_root, vec![root]);
 }
 
 #[cfg(test)]

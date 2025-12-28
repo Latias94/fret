@@ -271,6 +271,9 @@ impl<H: UiHost> Widget<H> for Toggle {
     fn semantics(&mut self, cx: &mut fret_ui::widget::SemanticsCx<'_, H>) {
         cx.set_role(SemanticsRole::Button);
         cx.set_disabled(self.disabled);
+        cx.set_label(self.label.to_string());
+        cx.set_focusable(!self.disabled);
+        cx.set_invokable(!self.disabled);
         cx.set_selected(self.is_on(cx.app));
     }
 

@@ -1,20 +1,18 @@
 use std::sync::Arc;
 
 use fret_core::UiServices;
-use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Px, Size};
+use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Size};
 use fret_runtime::{CommandId, Model};
 use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, UiTree, Widget};
-use fret_ui_widgets::primitives::{Column, Stack};
 
 use crate::Size as ComponentSize;
 use crate::command::{CommandItem, visible_item_ids};
-use crate::text_field::TextField;
 
 pub struct CommandPaletteHandles {
     pub items: Model<Vec<CommandItem>>,
     pub query: Model<String>,
     pub selection: Model<Option<Arc<str>>>,
-    pub list_mount: fret_core::NodeId,
+    pub palette_root: fret_core::NodeId,
 }
 
 pub struct CommandPalette {
@@ -153,6 +151,11 @@ impl<H: UiHost> Widget<H> for CommandPalette {
     }
 
     fn command(&mut self, cx: &mut fret_ui::widget::CommandCx<'_, H>, command: &CommandId) -> bool {
+        if command.as_str() == "command_palette.clear_query" {
+            let _ = cx.app.models_mut().update(self.query, |q| q.clear());
+            cx.stop_propagation();
+            return true;
+        }
         if let Some(id) = command.as_str().strip_prefix("command_palette.select.") {
             let id: Arc<str> = Arc::from(id);
             let _ = cx
@@ -186,38 +189,6 @@ impl<H: UiHost> Widget<H> for CommandPalette {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-struct FixedHeight {
-    height: Px,
-}
-
-impl FixedHeight {
-    fn new(height: Px) -> Self {
-        Self { height }
-    }
-}
-
-impl<H: UiHost> Widget<H> for FixedHeight {
-    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-        let h = self.height.0.max(0.0).min(cx.available.height.0);
-        let bounds = fret_core::Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(h)));
-        for &child in cx.children {
-            let _ = cx.layout_in(child, bounds);
-        }
-        Size::new(cx.available.width, Px(h))
-    }
-
-    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        for &child in cx.children {
-            if let Some(bounds) = cx.child_bounds(child) {
-                cx.paint(child, bounds);
-            } else {
-                cx.paint(child, cx.bounds);
-            }
-        }
-    }
-}
-
 /// Builds a command palette subtree under the provided overlay root (`WindowOverlays::command_palette_node()`).
 ///
 /// This helper is intentionally UI-tree oriented: it provides “one-call install” ergonomics for apps.
@@ -226,7 +197,6 @@ pub fn install_command_palette<H: UiHost>(
     app: &mut H,
     overlay_root: fret_core::NodeId,
     items: Model<Vec<CommandItem>>,
-    size: ComponentSize,
 ) -> CommandPaletteHandles {
     let query = app.models_mut().insert(String::new());
     let selection = app.models_mut().insert(None::<Arc<str>>);
@@ -234,41 +204,18 @@ pub fn install_command_palette<H: UiHost>(
     let palette = ui.create_node(CommandPalette::new(items, query, selection));
     ui.add_child(overlay_root, palette);
 
-    let content = ui.create_node(Column::new());
-    ui.add_child(palette, content);
-
-    let input = ui.create_node(
-        TextField::new(query)
-            .with_size(size)
-            .with_cancel_command(CommandId::from("command_palette.close")),
-    );
-    ui.add_child(content, input);
-
-    let list_h = match size {
-        ComponentSize::XSmall => Px(240.0),
-        ComponentSize::Small => Px(260.0),
-        ComponentSize::Medium => Px(300.0),
-        ComponentSize::Large => Px(320.0),
-    };
-    let list_panel = ui.create_node(FixedHeight::new(list_h));
-    ui.add_child(content, list_panel);
-
-    let list_mount = ui.create_node(Stack::new());
-    ui.add_child(list_panel, list_mount);
-
     CommandPaletteHandles {
         items,
         query,
         selection,
-        list_mount,
+        palette_root: palette,
     }
 }
 
-/// Renders the command palette virtualized list subtree (declarative element composition) into the
-/// provided mount node.
+/// Renders the command palette content (declarative element composition) into the palette root.
 ///
 /// Call this once per frame before `UiTree::layout_all` / `paint_all` for the relevant window.
-pub fn render_command_palette_list<H: UiHost>(
+pub fn render_command_palette<H: UiHost>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn UiServices,
@@ -276,7 +223,9 @@ pub fn render_command_palette_list<H: UiHost>(
     handles: &CommandPaletteHandles,
     size: ComponentSize,
 ) {
-    let bounds = ui.debug_node_bounds(handles.list_mount).unwrap_or_default();
+    let bounds = ui
+        .debug_node_bounds(handles.palette_root)
+        .unwrap_or_default();
 
     let root = fret_ui::declarative::render_root(
         ui,
@@ -284,9 +233,9 @@ pub fn render_command_palette_list<H: UiHost>(
         services,
         window,
         bounds,
-        "command-palette-list",
+        "command-palette",
         |cx| {
-            vec![crate::declarative::command_palette::command_palette_list(
+            vec![crate::declarative::command_palette::command_palette_panel(
                 cx,
                 handles.items,
                 handles.query,
@@ -296,5 +245,5 @@ pub fn render_command_palette_list<H: UiHost>(
         },
     );
 
-    ui.set_children(handles.list_mount, vec![root]);
+    ui.set_children(handles.palette_root, vec![root]);
 }

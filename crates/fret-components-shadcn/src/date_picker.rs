@@ -226,6 +226,19 @@ impl<H: UiHost> Widget<H> for DatePicker {
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         cx.set_role(SemanticsRole::Button);
         cx.set_disabled(self.disabled);
+        cx.set_focusable(!self.disabled);
+        cx.set_invokable(!self.disabled);
+
+        let text = self
+            .read_value(&*cx.app)
+            .map(format_date)
+            .unwrap_or_else(|| self.placeholder.clone());
+        cx.set_label(text.to_string());
+
+        let expanded = cx
+            .window
+            .is_some_and(|window| self.is_open(cx.app, window, cx.node));
+        cx.set_expanded(expanded);
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {

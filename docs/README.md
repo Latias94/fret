@@ -29,6 +29,7 @@ contracts early to avoid large rewrites later.
 
 - End-to-end demo wiring (effects → runner → render): `crates/fret-demo/src/components_gallery.rs`
 - UI kit harness (widgets/components + overlays): `crates/fret-demo/src/ui_kit.rs` (or `cargo run -p fret-demo --bin ui_kit`)
+- A11y manual acceptance checklist (overlays + demo): `docs/a11y-acceptance-checklist.md`
 - App runtime (effects + models + commands): `crates/fret-app/src/app.rs`
 - Desktop runner (winit window lifecycle + scheduling): `crates/fret-runner-winit-wgpu/src/runner.rs`
 - UI runtime (retained tree prototype) + docking widget: `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/dock.rs`

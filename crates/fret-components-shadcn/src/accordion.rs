@@ -135,6 +135,8 @@ impl<H: UiHost> Widget<H> for AccordionTrigger {
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         cx.set_role(fret_core::SemanticsRole::Button);
         cx.set_disabled(self.disabled);
+        cx.set_focusable(!self.disabled);
+        cx.set_invokable(!self.disabled);
         cx.set_expanded(self.is_open(cx.app));
     }
 

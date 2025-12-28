@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
+use fret_components_icons::ids;
 use fret_core::{Color, Corners, Edges, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, ElementKind, LayoutStyle, PressableA11y, PressableProps, TextProps,
+    AnyElement, ContainerProps, ElementKind, LayoutStyle, Length, PressableA11y, PressableProps,
+    TextProps,
 };
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
@@ -12,6 +14,7 @@ use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
 use super::stack;
 use super::style;
 use crate::command::CommandItem;
+use crate::declarative::text_field as decl_text_field;
 use crate::{Items, Justify, LayoutRefinement, Size, Space};
 
 #[derive(Debug, Clone)]
@@ -431,6 +434,65 @@ pub fn command_palette_list<H: UiHost>(
                     }
                 },
             )]
+        },
+    )
+}
+
+fn list_height_px(theme: &Theme, size: Size) -> Px {
+    let fallback = match size {
+        Size::XSmall => Px(240.0),
+        Size::Small => Px(260.0),
+        Size::Medium => Px(300.0),
+        Size::Large => Px(320.0),
+    };
+    theme
+        .metric_by_key("component.command_palette.list_height")
+        .unwrap_or(fallback)
+}
+
+/// Declarative command palette content (input + list) designed for installing under
+/// `CommandPaletteOverlay`.
+pub fn command_palette_panel<H: UiHost>(
+    cx: &mut ElementCx<'_, H>,
+    items: Model<Vec<CommandItem>>,
+    query: Model<String>,
+    selection: Model<Option<Arc<str>>>,
+    size: Size,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+    let list_h = list_height_px(&theme, size);
+
+    stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap_y(Space::N2)
+            .items(Items::Stretch),
+        |cx| {
+            let mut out = Vec::new();
+
+            out.push(decl_text_field::text_field_with_leading_icon_and_clear(
+                cx,
+                query,
+                size,
+                ids::ui::SEARCH,
+                CommandId::from("command_palette.clear_query"),
+                Some(CommandId::from("command_palette.close")),
+            ));
+
+            let mut list_layout = LayoutStyle::default();
+            list_layout.size.width = Length::Fill;
+            list_layout.size.height = Length::Px(list_h);
+
+            out.push(cx.container(
+                ContainerProps {
+                    layout: list_layout,
+                    ..Default::default()
+                },
+                |cx| vec![command_palette_list(cx, items, query, selection, size)],
+            ));
+
+            out
         },
     )
 }

@@ -48,6 +48,7 @@ pub use avatar::{Avatar, AvatarFallback, AvatarImage};
 pub use badge::{Badge, BadgeVariant};
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem};
 pub use button::{Button, ButtonSize, ButtonVariant};
+pub use button_group::install_button_group;
 pub use button_group::{ButtonGroup, ButtonGroupItem, ButtonGroupOrientation};
 pub use calendar::{Calendar, Date};
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
@@ -73,6 +74,7 @@ pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
     PaginationLinkSize, PaginationNext, PaginationPrevious,
 };
+pub use radio_group::install_radio_group;
 pub use radio_group::{RadioGroup, RadioGroupItem};
 pub use sidebar::{
     Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader,
@@ -84,6 +86,7 @@ pub use table::{
     Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 };
 pub use toggle::{Toggle, ToggleSize, ToggleVariant};
+pub use toggle_group::install_toggle_group;
 pub use toggle_group::{ToggleGroup, ToggleGroupItem, ToggleGroupType};
 
 pub mod input {
@@ -156,6 +159,8 @@ pub mod toast {
     pub use fret_components_ui::toast::*;
 }
 
+#[cfg(test)]
+mod a11y_tests;
 #[cfg(test)]
 mod test_host;
 

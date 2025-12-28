@@ -18,6 +18,7 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
     size: Size,
     leading_icon: IconId,
     clear_command: CommandId,
+    cancel_command: Option<CommandId>,
 ) -> fret_ui::element::AnyElement {
     cx.scope(|cx| {
         cx.observe_model(model, Invalidation::Layout);
@@ -78,6 +79,7 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
         let mut input = TextInputProps::new(model);
         input.chrome = chrome;
         input.text_style = text_style;
+        input.cancel_command = cancel_command;
         input.layout.size = SizeStyle {
             width: Length::Fill,
             min_height: Some(resolved.min_height),

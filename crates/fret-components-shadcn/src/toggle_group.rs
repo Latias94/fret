@@ -1,12 +1,15 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_components_ui::{MetricRef, Space};
 use fret_core::{
-    Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect,
-    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
+    Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, NodeId, Point, Px,
+    Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_runtime::Model;
-use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
+use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, UiTree, Widget};
 
 use crate::toggle::{ToggleSize, ToggleVariant};
 
@@ -95,6 +98,7 @@ pub struct ToggleGroup {
     selection: SelectionModel,
     items: Vec<ToggleGroupItem>,
     disabled: bool,
+    a11y: Option<Rc<RefCell<ToggleGroupA11yState>>>,
     variant: ToggleVariant,
     size: ToggleSize,
     spacing: Space,
@@ -124,6 +128,7 @@ impl ToggleGroup {
             selection,
             items: Vec::new(),
             disabled: false,
+            a11y: None,
             variant: ToggleVariant::Default,
             size: ToggleSize::Default,
             spacing: Space::N0,
@@ -149,6 +154,11 @@ impl ToggleGroup {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    fn with_a11y(mut self, a11y: Rc<RefCell<ToggleGroupA11yState>>) -> Self {
+        self.a11y = Some(a11y);
         self
     }
 
@@ -453,8 +463,22 @@ impl<H: UiHost> Widget<H> for ToggleGroup {
     }
 
     fn semantics(&mut self, cx: &mut fret_ui::widget::SemanticsCx<'_, H>) {
-        cx.set_role(SemanticsRole::Generic);
+        cx.set_role(SemanticsRole::List);
         cx.set_disabled(self.disabled);
+        cx.set_focusable(!self.disabled && self.items.iter().any(|it| !it.disabled));
+
+        if let Some(a11y) = self.a11y.as_ref() {
+            let mut state = a11y.borrow_mut();
+            state.group_disabled = self.disabled;
+            state.selection = self.selection;
+
+            for (slot, item) in state.items.iter_mut().zip(self.items.iter()) {
+                slot.value = item.value.clone();
+                slot.label = item.label.clone();
+                slot.disabled = item.disabled;
+                slot.selected = self.is_selected(cx.app, &item.value);
+            }
+        }
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
@@ -609,6 +633,19 @@ impl<H: UiHost> Widget<H> for ToggleGroup {
         self.observe_selection_model(cx);
         self.last_bounds = cx.bounds;
 
+        if let Some(a11y) = self.a11y.as_ref() {
+            let mut state = a11y.borrow_mut();
+            state.group_disabled = self.disabled;
+            state.selection = self.selection;
+
+            for (slot, item) in state.items.iter_mut().zip(self.items.iter()) {
+                slot.value = item.value.clone();
+                slot.label = item.label.clone();
+                slot.disabled = item.disabled;
+                slot.selected = self.is_selected(cx.app, &item.value);
+            }
+        }
+
         self.prepare_texts(cx);
 
         let n = self.items.len();
@@ -655,6 +692,20 @@ impl<H: UiHost> Widget<H> for ToggleGroup {
             x += *w;
             if i + 1 < n {
                 x += gap;
+            }
+        }
+
+        if self.a11y.is_some() {
+            if let Some(focus) = cx.focus
+                && let Some(idx) = cx.children.iter().position(|&id| id == focus)
+                && self.is_item_enabled(idx)
+            {
+                self.active_index = idx;
+            }
+
+            for (idx, &child) in cx.children.iter().enumerate() {
+                let rect = self.item_bounds.get(idx).copied().unwrap_or_default();
+                let _ = cx.layout_in(child, rect);
             }
         }
 
@@ -776,8 +827,8 @@ impl<H: UiHost> Widget<H> for ToggleGroup {
             });
         }
 
-        if cx.focus == Some(cx.node)
-            && fret_ui::focus_visible::is_focus_visible(cx.app, cx.window)
+        if fret_ui::focus_visible::is_focus_visible(cx.app, cx.window)
+            && (cx.focus == Some(cx.node) || cx.focus.is_some_and(|f| cx.children.contains(&f)))
             && let Some(rect) = self.item_bounds.get(self.active_index).copied()
         {
             let focus_ring = cx.theme().colors.focus_ring;
@@ -794,4 +845,253 @@ impl<H: UiHost> Widget<H> for ToggleGroup {
             });
         }
     }
+}
+
+#[derive(Debug, Clone)]
+struct ToggleGroupA11ySlot {
+    value: Arc<str>,
+    label: Arc<str>,
+    disabled: bool,
+    selected: bool,
+    node: NodeId,
+}
+
+struct ToggleGroupA11yState {
+    selection: SelectionModel,
+    group_disabled: bool,
+    items: Vec<ToggleGroupA11ySlot>,
+}
+
+impl ToggleGroupA11yState {
+    fn new(selection: SelectionModel, count: usize) -> Self {
+        Self {
+            selection,
+            group_disabled: false,
+            items: (0..count)
+                .map(|_| ToggleGroupA11ySlot {
+                    value: Arc::from(""),
+                    label: Arc::from(""),
+                    disabled: false,
+                    selected: false,
+                    node: NodeId::default(),
+                })
+                .collect(),
+        }
+    }
+
+    fn set_node(&mut self, index: usize, node: NodeId) {
+        if let Some(slot) = self.items.get_mut(index) {
+            slot.node = node;
+        }
+    }
+
+    fn is_item_enabled(&self, index: usize) -> bool {
+        self.items
+            .get(index)
+            .is_some_and(|it| !self.group_disabled && !it.disabled)
+    }
+
+    fn focus_delta_from(&self, from: usize, delta: i32) -> Option<NodeId> {
+        if self.items.is_empty() {
+            return None;
+        }
+        let len = self.items.len() as i32;
+        let mut idx = from as i32;
+        for _ in 0..len {
+            idx = (idx + delta + len) % len;
+            let u = idx as usize;
+            if self.is_item_enabled(u) {
+                return Some(self.items[u].node);
+            }
+        }
+        None
+    }
+
+    fn focus_first(&self) -> Option<NodeId> {
+        self.items
+            .iter()
+            .enumerate()
+            .find(|(i, _)| self.is_item_enabled(*i))
+            .map(|(_, it)| it.node)
+    }
+
+    fn focus_last(&self) -> Option<NodeId> {
+        self.items
+            .iter()
+            .enumerate()
+            .rev()
+            .find(|(i, _)| self.is_item_enabled(*i))
+            .map(|(_, it)| it.node)
+    }
+}
+
+struct ToggleGroupA11yItem {
+    index: usize,
+    a11y: Rc<RefCell<ToggleGroupA11yState>>,
+    pressed: bool,
+}
+
+impl ToggleGroupA11yItem {
+    fn new(index: usize, a11y: Rc<RefCell<ToggleGroupA11yState>>) -> Self {
+        Self {
+            index,
+            a11y,
+            pressed: false,
+        }
+    }
+}
+
+impl<H: UiHost> Widget<H> for ToggleGroupA11yItem {
+    fn is_focusable(&self) -> bool {
+        self.a11y.borrow().is_item_enabled(self.index)
+    }
+
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        false
+    }
+
+    fn hit_test_children(&self, _bounds: Rect, _position: Point) -> bool {
+        false
+    }
+
+    fn semantics(&mut self, cx: &mut fret_ui::widget::SemanticsCx<'_, H>) {
+        let state = self.a11y.borrow();
+        let Some(slot) = state.items.get(self.index) else {
+            cx.set_role(SemanticsRole::Generic);
+            cx.set_disabled(true);
+            return;
+        };
+
+        let disabled = !state.is_item_enabled(self.index);
+        cx.set_role(SemanticsRole::Button);
+        cx.set_label(slot.label.to_string());
+        cx.set_disabled(disabled);
+        cx.set_selected(slot.selected);
+        cx.set_checked(Some(slot.selected));
+        cx.set_focusable(!disabled);
+        cx.set_invokable(!disabled);
+    }
+
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        if cx.focus != Some(cx.node) {
+            self.pressed = false;
+            return;
+        }
+
+        match event {
+            Event::KeyDown { key, repeat, .. } => {
+                if *repeat {
+                    return;
+                }
+
+                match key {
+                    KeyCode::ArrowLeft | KeyCode::ArrowUp => {
+                        if let Some(target) = self.a11y.borrow().focus_delta_from(self.index, -1) {
+                            cx.request_focus(target);
+                        }
+                        cx.stop_propagation();
+                    }
+                    KeyCode::ArrowRight | KeyCode::ArrowDown => {
+                        if let Some(target) = self.a11y.borrow().focus_delta_from(self.index, 1) {
+                            cx.request_focus(target);
+                        }
+                        cx.stop_propagation();
+                    }
+                    KeyCode::Home => {
+                        if let Some(target) = self.a11y.borrow().focus_first() {
+                            cx.request_focus(target);
+                        }
+                        cx.stop_propagation();
+                    }
+                    KeyCode::End => {
+                        if let Some(target) = self.a11y.borrow().focus_last() {
+                            cx.request_focus(target);
+                        }
+                        cx.stop_propagation();
+                    }
+                    KeyCode::Enter | KeyCode::Space => {
+                        if self.a11y.borrow().is_item_enabled(self.index) {
+                            self.pressed = true;
+                        }
+                        cx.stop_propagation();
+                    }
+                    _ => {}
+                }
+            }
+            Event::KeyUp { key, .. } => {
+                if !matches!(key, KeyCode::Enter | KeyCode::Space) {
+                    return;
+                }
+                if !self.pressed {
+                    return;
+                }
+                self.pressed = false;
+
+                let (selection, value) = {
+                    let state = self.a11y.borrow();
+                    if !state.is_item_enabled(self.index) {
+                        return;
+                    }
+                    let Some(slot) = state.items.get(self.index) else {
+                        return;
+                    };
+                    (state.selection, slot.value.clone())
+                };
+
+                match selection {
+                    SelectionModel::Single(m) => {
+                        let _ = cx.app.models_mut().update(m, |v| {
+                            if v.as_ref() == Some(&value) {
+                                *v = None;
+                            } else {
+                                *v = Some(value);
+                            }
+                        });
+                    }
+                    SelectionModel::Multiple(m) => {
+                        let _ = cx.app.models_mut().update(m, |v| {
+                            if let Some(pos) = v.iter().position(|x| x == &value) {
+                                v.remove(pos);
+                            } else {
+                                v.push(value);
+                            }
+                        });
+                    }
+                }
+
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                cx.stop_propagation();
+            }
+            _ => {}
+        }
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.available
+    }
+}
+
+/// Installs a `ToggleGroup` with per-item semantics nodes for assistive technologies.
+pub fn install_toggle_group<H: UiHost>(
+    ui: &mut UiTree<H>,
+    parent: NodeId,
+    group: ToggleGroup,
+) -> NodeId {
+    let count = group.items.len();
+    let a11y = Rc::new(RefCell::new(ToggleGroupA11yState::new(
+        group.selection,
+        count,
+    )));
+
+    let root = ui.create_node(group.with_a11y(a11y.clone()));
+    ui.add_child(parent, root);
+
+    for index in 0..count {
+        let node = ui.create_node(ToggleGroupA11yItem::new(index, a11y.clone()));
+        ui.add_child(root, node);
+        a11y.borrow_mut().set_node(index, node);
+    }
+
+    root
 }

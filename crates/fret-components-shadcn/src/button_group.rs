@@ -1,12 +1,15 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_components_ui::Size as ComponentSize;
 use fret_core::{
-    Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect,
-    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
+    Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, NodeId, Point, Px,
+    Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_runtime::CommandId;
-use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
+use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, UiTree, Widget};
 
 use crate::button::{ButtonSize, ButtonVariant};
 
@@ -93,6 +96,7 @@ pub struct ButtonGroup {
     orientation: ButtonGroupOrientation,
     items: Vec<ButtonGroupItem>,
     disabled: bool,
+    a11y: Option<Rc<RefCell<ButtonGroupA11yState>>>,
     hovered_index: Option<usize>,
     pressed_index: Option<usize>,
     active_index: usize,
@@ -111,6 +115,7 @@ impl ButtonGroup {
             orientation: ButtonGroupOrientation::Horizontal,
             items: Vec::new(),
             disabled: false,
+            a11y: None,
             hovered_index: None,
             pressed_index: None,
             active_index: 0,
@@ -138,6 +143,11 @@ impl ButtonGroup {
         self.items.push(item);
         self.prepared_theme_revision = None;
         self.prepared_scale_factor_bits = None;
+        self
+    }
+
+    fn with_a11y(mut self, a11y: Rc<RefCell<ButtonGroupA11yState>>) -> Self {
+        self.a11y = Some(a11y);
         self
     }
 
@@ -376,8 +386,21 @@ impl<H: UiHost> Widget<H> for ButtonGroup {
     }
 
     fn semantics(&mut self, cx: &mut fret_ui::widget::SemanticsCx<'_, H>) {
-        cx.set_role(SemanticsRole::Generic);
+        cx.set_role(SemanticsRole::List);
         cx.set_disabled(self.disabled);
+        cx.set_focusable(!self.disabled && self.items.iter().any(|it| !it.disabled));
+
+        if let Some(a11y) = self.a11y.as_ref() {
+            let mut state = a11y.borrow_mut();
+            state.group_disabled = self.disabled;
+            state.orientation = self.orientation;
+
+            for (slot, item) in state.items.iter_mut().zip(self.items.iter()) {
+                slot.label = item.label.clone();
+                slot.disabled = item.disabled;
+                slot.command = item.command.clone();
+            }
+        }
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
@@ -530,6 +553,18 @@ impl<H: UiHost> Widget<H> for ButtonGroup {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
 
+        if let Some(a11y) = self.a11y.as_ref() {
+            let mut state = a11y.borrow_mut();
+            state.group_disabled = self.disabled;
+            state.orientation = self.orientation;
+
+            for (slot, item) in state.items.iter_mut().zip(self.items.iter()) {
+                slot.label = item.label.clone();
+                slot.disabled = item.disabled;
+                slot.command = item.command.clone();
+            }
+        }
+
         self.prepare_texts(cx);
 
         let n = self.items.len();
@@ -626,6 +661,20 @@ impl<H: UiHost> Widget<H> for ButtonGroup {
                         x += gap;
                     }
                 }
+
+                if self.a11y.is_some() {
+                    if let Some(focus) = cx.focus
+                        && let Some(idx) = cx.children.iter().position(|&id| id == focus)
+                        && self.is_item_enabled(idx)
+                    {
+                        self.active_index = idx;
+                    }
+
+                    for (idx, &child) in cx.children.iter().enumerate() {
+                        let rect = self.item_bounds.get(idx).copied().unwrap_or_default();
+                        let _ = cx.layout_in(child, rect);
+                    }
+                }
                 Size::new(Px(total_w), Px(total_h))
             }
             ButtonGroupOrientation::Vertical => {
@@ -655,6 +704,20 @@ impl<H: UiHost> Widget<H> for ButtonGroup {
                         y += gap;
                     }
                 }
+
+                if self.a11y.is_some() {
+                    if let Some(focus) = cx.focus
+                        && let Some(idx) = cx.children.iter().position(|&id| id == focus)
+                        && self.is_item_enabled(idx)
+                    {
+                        self.active_index = idx;
+                    }
+
+                    for (idx, &child) in cx.children.iter().enumerate() {
+                        let rect = self.item_bounds.get(idx).copied().unwrap_or_default();
+                        let _ = cx.layout_in(child, rect);
+                    }
+                }
                 Size::new(Px(total_w), Px(total_h))
             }
         }
@@ -674,8 +737,8 @@ impl<H: UiHost> Widget<H> for ButtonGroup {
             return;
         }
 
-        let focused = cx.focus == Some(cx.node)
-            && fret_ui::focus_visible::is_focus_visible(cx.app, cx.window);
+        let focused = fret_ui::focus_visible::is_focus_visible(cx.app, cx.window)
+            && (cx.focus == Some(cx.node) || cx.focus.is_some_and(|f| cx.children.contains(&f)));
 
         for i in 0..n {
             let Some(item) = self.items.get(i) else {
@@ -835,4 +898,227 @@ impl<H: UiHost> Widget<H> for ButtonGroup {
             });
         }
     }
+}
+
+#[derive(Clone)]
+struct ButtonGroupA11ySlot {
+    label: Arc<str>,
+    disabled: bool,
+    command: Option<CommandId>,
+    node: NodeId,
+}
+
+struct ButtonGroupA11yState {
+    group_disabled: bool,
+    orientation: ButtonGroupOrientation,
+    items: Vec<ButtonGroupA11ySlot>,
+}
+
+impl ButtonGroupA11yState {
+    fn new(count: usize) -> Self {
+        Self {
+            group_disabled: false,
+            orientation: ButtonGroupOrientation::Horizontal,
+            items: (0..count)
+                .map(|_| ButtonGroupA11ySlot {
+                    label: Arc::from(""),
+                    disabled: false,
+                    command: None,
+                    node: NodeId::default(),
+                })
+                .collect(),
+        }
+    }
+
+    fn set_node(&mut self, index: usize, node: NodeId) {
+        if let Some(slot) = self.items.get_mut(index) {
+            slot.node = node;
+        }
+    }
+
+    fn is_item_enabled(&self, index: usize) -> bool {
+        self.items
+            .get(index)
+            .is_some_and(|it| !self.group_disabled && !it.disabled && it.command.is_some())
+    }
+
+    fn focus_delta_from(&self, from: usize, delta: i32) -> Option<NodeId> {
+        if self.items.is_empty() {
+            return None;
+        }
+        let len = self.items.len() as i32;
+        let mut idx = from as i32;
+        for _ in 0..len {
+            idx = (idx + delta + len) % len;
+            let u = idx as usize;
+            if self.is_item_enabled(u) {
+                return Some(self.items[u].node);
+            }
+        }
+        None
+    }
+
+    fn focus_first(&self) -> Option<NodeId> {
+        self.items
+            .iter()
+            .enumerate()
+            .find(|(i, _)| self.is_item_enabled(*i))
+            .map(|(_, it)| it.node)
+    }
+
+    fn focus_last(&self) -> Option<NodeId> {
+        self.items
+            .iter()
+            .enumerate()
+            .rev()
+            .find(|(i, _)| self.is_item_enabled(*i))
+            .map(|(_, it)| it.node)
+    }
+}
+
+struct ButtonGroupA11yItem {
+    index: usize,
+    a11y: Rc<RefCell<ButtonGroupA11yState>>,
+    pressed: bool,
+}
+
+impl ButtonGroupA11yItem {
+    fn new(index: usize, a11y: Rc<RefCell<ButtonGroupA11yState>>) -> Self {
+        Self {
+            index,
+            a11y,
+            pressed: false,
+        }
+    }
+}
+
+impl<H: UiHost> Widget<H> for ButtonGroupA11yItem {
+    fn is_focusable(&self) -> bool {
+        self.a11y.borrow().is_item_enabled(self.index)
+    }
+
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        false
+    }
+
+    fn hit_test_children(&self, _bounds: Rect, _position: Point) -> bool {
+        false
+    }
+
+    fn semantics(&mut self, cx: &mut fret_ui::widget::SemanticsCx<'_, H>) {
+        let state = self.a11y.borrow();
+        let Some(slot) = state.items.get(self.index) else {
+            cx.set_role(SemanticsRole::Generic);
+            cx.set_disabled(true);
+            return;
+        };
+
+        let disabled = !state.is_item_enabled(self.index);
+        cx.set_role(SemanticsRole::Button);
+        cx.set_label(slot.label.to_string());
+        cx.set_disabled(disabled);
+        cx.set_focusable(!disabled);
+        cx.set_invokable(!disabled);
+    }
+
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        if cx.focus != Some(cx.node) {
+            self.pressed = false;
+            return;
+        }
+
+        match event {
+            Event::KeyDown { key, repeat, .. } => {
+                if *repeat {
+                    return;
+                }
+
+                let orientation = self.a11y.borrow().orientation;
+                match (orientation, key) {
+                    (ButtonGroupOrientation::Horizontal, KeyCode::ArrowLeft)
+                    | (ButtonGroupOrientation::Vertical, KeyCode::ArrowUp) => {
+                        if let Some(target) = self.a11y.borrow().focus_delta_from(self.index, -1) {
+                            cx.request_focus(target);
+                        }
+                        cx.stop_propagation();
+                    }
+                    (ButtonGroupOrientation::Horizontal, KeyCode::ArrowRight)
+                    | (ButtonGroupOrientation::Vertical, KeyCode::ArrowDown) => {
+                        if let Some(target) = self.a11y.borrow().focus_delta_from(self.index, 1) {
+                            cx.request_focus(target);
+                        }
+                        cx.stop_propagation();
+                    }
+                    (_, KeyCode::Home) => {
+                        if let Some(target) = self.a11y.borrow().focus_first() {
+                            cx.request_focus(target);
+                        }
+                        cx.stop_propagation();
+                    }
+                    (_, KeyCode::End) => {
+                        if let Some(target) = self.a11y.borrow().focus_last() {
+                            cx.request_focus(target);
+                        }
+                        cx.stop_propagation();
+                    }
+                    (_, KeyCode::Enter | KeyCode::Space) => {
+                        if self.a11y.borrow().is_item_enabled(self.index) {
+                            self.pressed = true;
+                        }
+                        cx.stop_propagation();
+                    }
+                    _ => {}
+                }
+            }
+            Event::KeyUp { key, .. } => {
+                if !matches!(key, KeyCode::Enter | KeyCode::Space) {
+                    return;
+                }
+                if !self.pressed {
+                    return;
+                }
+                self.pressed = false;
+
+                let command = self
+                    .a11y
+                    .borrow()
+                    .items
+                    .get(self.index)
+                    .and_then(|it| it.command.clone());
+                let Some(command) = command else {
+                    return;
+                };
+
+                cx.dispatch_command(command);
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                cx.stop_propagation();
+            }
+            _ => {}
+        }
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.available
+    }
+}
+
+pub fn install_button_group<H: UiHost>(
+    ui: &mut UiTree<H>,
+    parent: NodeId,
+    group: ButtonGroup,
+) -> NodeId {
+    let count = group.items.len();
+    let a11y = Rc::new(RefCell::new(ButtonGroupA11yState::new(count)));
+
+    let root = ui.create_node(group.with_a11y(a11y.clone()));
+    ui.add_child(parent, root);
+
+    for index in 0..count {
+        let node = ui.create_node(ButtonGroupA11yItem::new(index, a11y.clone()));
+        ui.add_child(root, node);
+        a11y.borrow_mut().set_node(index, node);
+    }
+
+    root
 }

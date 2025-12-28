@@ -369,6 +369,10 @@ impl<H: UiHost> Widget<H> for InputOTP {
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         cx.set_role(fret_core::SemanticsRole::TextField);
         cx.set_disabled(self.disabled);
+        cx.set_focusable(!self.disabled);
+        cx.set_value_editable(!self.disabled);
+        cx.set_label("One-time password");
+        cx.set_value(self.read_value(&*cx.app));
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
