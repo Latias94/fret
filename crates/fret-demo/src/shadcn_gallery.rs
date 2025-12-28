@@ -386,11 +386,19 @@ pub fn run() -> anyhow::Result<()> {
         fret_icons_lucide::register_icons(icons);
     });
 
-    let config = WinitRunnerConfig {
+    let mut config = WinitRunnerConfig {
         main_window_title: "fret-demo shadcn_gallery".to_string(),
         main_window_size: winit::dpi::LogicalSize::new(720.0, 520.0),
         ..Default::default()
     };
+
+    if let Some(settings) =
+        fret_app::SettingsFileV1::load_json_if_exists(".fret/settings.json").context("load .fret/settings.json")?
+    {
+        config.text_font_families.ui_sans = settings.fonts.ui_sans;
+        config.text_font_families.ui_serif = settings.fonts.ui_serif;
+        config.text_font_families.ui_mono = settings.fonts.ui_mono;
+    }
 
     let driver = ShadcnGalleryDriver;
     let mut runner = WinitRunner::new(config, app, driver);
