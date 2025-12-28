@@ -388,6 +388,7 @@ impl<H: UiHost> UiTree<H> {
             KeyCode::Tab
                 | KeyCode::Space
                 | KeyCode::Enter
+                | KeyCode::NumpadEnter
                 | KeyCode::Escape
                 | KeyCode::ArrowUp
                 | KeyCode::ArrowDown

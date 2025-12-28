@@ -644,6 +644,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                         fret_core::KeyCode::Tab
                             | fret_core::KeyCode::Space
                             | fret_core::KeyCode::Enter
+                            | fret_core::KeyCode::NumpadEnter
                             | fret_core::KeyCode::Escape
                             | fret_core::KeyCode::ArrowUp
                             | fret_core::KeyCode::ArrowDown
