@@ -710,8 +710,26 @@ struct DockTearoffFollow {
     last_outer_pos: Option<PhysicalPosition<i32>>,
 }
 
+#[derive(Clone, Copy, Debug)]
+struct MonitorRectF64 {
+    min_x: f64,
+    min_y: f64,
+    max_x: f64,
+    max_y: f64,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct RectF64 {
+    min_x: f64,
+    min_y: f64,
+    max_x: f64,
+    max_y: f64,
+}
+
 impl<D: WinitDriver> WinitRunner<D> {
-    fn virtual_desktop_bounds(window: &Window) -> Option<(f64, f64, f64, f64)> {
+    const WINDOW_VISIBILITY_PADDING_PX: f64 = 40.0;
+
+    fn virtual_desktop_bounds(window: &Window) -> Option<MonitorRectF64> {
         let mut monitors = window.available_monitors();
         let first = monitors.next()?;
 
@@ -731,7 +749,165 @@ impl<D: WinitDriver> WinitRunner<D> {
             max_y = max_y.max(pos.y as f64 + size.height as f64);
         }
 
-        Some((min_x, min_y, max_x, max_y))
+        Some(MonitorRectF64 {
+            min_x,
+            min_y,
+            max_x,
+            max_y,
+        })
+    }
+
+    fn monitor_rects_physical(window: &Window) -> Vec<MonitorRectF64> {
+        window
+            .available_monitors()
+            .map(|m| {
+                let pos = m.position();
+                let size = m.size();
+                MonitorRectF64 {
+                    min_x: pos.x as f64,
+                    min_y: pos.y as f64,
+                    max_x: pos.x as f64 + size.width as f64,
+                    max_y: pos.y as f64 + size.height as f64,
+                }
+            })
+            .collect()
+    }
+
+    fn find_monitor_for_point(
+        monitors: &[MonitorRectF64],
+        point: PhysicalPosition<f64>,
+    ) -> Option<usize> {
+        if monitors.is_empty() {
+            return None;
+        }
+
+        let mut best = 0usize;
+        let mut best_dist2 = f64::INFINITY;
+        for (i, m) in monitors.iter().enumerate() {
+            let dx = if point.x < m.min_x {
+                m.min_x - point.x
+            } else if point.x > m.max_x {
+                point.x - m.max_x
+            } else {
+                0.0
+            };
+            let dy = if point.y < m.min_y {
+                m.min_y - point.y
+            } else if point.y > m.max_y {
+                point.y - m.max_y
+            } else {
+                0.0
+            };
+            let dist2 = dx * dx + dy * dy;
+            if dist2 < best_dist2 {
+                best_dist2 = dist2;
+                best = i;
+            }
+            if dist2 == 0.0 {
+                return Some(i);
+            }
+        }
+
+        Some(best)
+    }
+
+    fn find_monitor_for_rect(monitors: &[MonitorRectF64], rect: RectF64) -> Option<usize> {
+        if monitors.is_empty() {
+            return None;
+        }
+        if monitors.len() == 1 {
+            return Some(0);
+        }
+
+        let mut best = 0usize;
+        let mut best_area = -1.0f64;
+        for (i, m) in monitors.iter().enumerate() {
+            let ix0 = rect.min_x.max(m.min_x);
+            let iy0 = rect.min_y.max(m.min_y);
+            let ix1 = rect.max_x.min(m.max_x);
+            let iy1 = rect.max_y.min(m.max_y);
+            let iw = (ix1 - ix0).max(0.0);
+            let ih = (iy1 - iy0).max(0.0);
+            let area = iw * ih;
+            if area > best_area {
+                best_area = area;
+                best = i;
+            }
+        }
+        Some(best)
+    }
+
+    fn clamp_window_outer_pos_to_monitor(
+        desired_outer_x: f64,
+        desired_outer_y: f64,
+        outer_size: winit::dpi::PhysicalSize<u32>,
+        monitor: MonitorRectF64,
+        padding: f64,
+    ) -> (f64, f64) {
+        let w = outer_size.width as f64;
+        let h = outer_size.height as f64;
+
+        let pad_x = padding.min(w).max(0.0);
+        let pad_y = padding.min(h).max(0.0);
+
+        // Keep at least `pad` pixels of the window visible within the monitor bounds.
+        let min_x = monitor.min_x - (w - pad_x);
+        let max_x = monitor.max_x - pad_x;
+        let min_y = monitor.min_y - (h - pad_y);
+        let max_y = monitor.max_y - pad_y;
+
+        let clamped_x = desired_outer_x.clamp(min_x, max_x.max(min_x));
+        let clamped_y = desired_outer_y.clamp(min_y, max_y.max(min_y));
+        (clamped_x, clamped_y)
+    }
+
+    fn settle_window_outer_position(
+        &self,
+        window: &Window,
+        cursor_screen_pos: Option<PhysicalPosition<f64>>,
+    ) -> Option<PhysicalPosition<i32>> {
+        let outer_pos = window.outer_position().ok()?;
+        let outer_size = window.outer_size();
+
+        let desired_x = outer_pos.x as f64;
+        let desired_y = outer_pos.y as f64;
+
+        let monitors = Self::monitor_rects_physical(window);
+        let monitor = if let Some(cursor) = cursor_screen_pos
+            && let Some(idx) = Self::find_monitor_for_point(&monitors, cursor)
+            && let Some(m) = monitors.get(idx).copied()
+        {
+            Some(m)
+        } else {
+            let rect = RectF64 {
+                min_x: desired_x,
+                min_y: desired_y,
+                max_x: desired_x + outer_size.width as f64,
+                max_y: desired_y + outer_size.height as f64,
+            };
+            let idx = Self::find_monitor_for_rect(&monitors, rect);
+            idx.and_then(|i| monitors.get(i).copied())
+        };
+
+        let monitor = monitor.or_else(|| Self::virtual_desktop_bounds(window));
+        let Some(monitor) = monitor else {
+            return None;
+        };
+
+        let (x, y) = Self::clamp_window_outer_pos_to_monitor(
+            desired_x,
+            desired_y,
+            outer_size,
+            monitor,
+            Self::WINDOW_VISIBILITY_PADDING_PX,
+        );
+
+        let target = PhysicalPosition::new(x.round() as i32, y.round() as i32);
+        if target == outer_pos {
+            None
+        } else {
+            Some(target)
+        }
     }
 
     fn map_cursor_icon(icon: fret_core::CursorIcon) -> winit::window::CursorIcon {
@@ -974,7 +1150,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             y = y.clamp(min_y, max_y);
         }
 
-        Some(PhysicalPosition::new(x as i32, y as i32).into())
+        Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
     }
 
     fn compute_window_position_from_cursor(
@@ -1000,7 +1176,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             y = y.clamp(min_y, max_y);
         }
 
-        Some(PhysicalPosition::new(x as i32, y as i32).into())
+        Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
     }
 
     fn compute_window_outer_position_from_cursor_grab(
@@ -1062,18 +1238,33 @@ impl<D: WinitDriver> WinitRunner<D> {
         let mut x = screen_pos.x - grab_outer_x;
         let mut y = screen_pos.y - grab_outer_y;
 
-        // Keep the floating window reachable without preventing cross-monitor drags.
-        // Using `current_monitor()` here can "pin" the window at the monitor edge.
-        if let Some((min_x, min_y, max_x, max_y)) =
-            Self::virtual_desktop_bounds(state.window.as_ref())
+        // Align with ImGui docking/multi-viewport behavior:
+        // - platform backend sets the window pos as requested
+        // - visibility/reachability constraints are based on the *target monitor*, not the window's
+        //   current monitor (which can pin the window at monitor edges).
+        let outer_size = state.window.outer_size();
+        let monitors = Self::monitor_rects_physical(state.window.as_ref());
+        if let Some(idx) = Self::find_monitor_for_point(&monitors, screen_pos)
+            && let Some(monitor) = monitors.get(idx).copied()
         {
-            let max_x = (max_x - 40.0).max(min_x);
-            let max_y = (max_y - 40.0).max(min_y);
-            x = x.clamp(min_x, max_x);
-            y = y.clamp(min_y, max_y);
+            (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                x,
+                y,
+                outer_size,
+                monitor,
+                Self::WINDOW_VISIBILITY_PADDING_PX,
+            );
+        } else if let Some(monitor) = Self::virtual_desktop_bounds(state.window.as_ref()) {
+            (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                x,
+                y,
+                outer_size,
+                monitor,
+                Self::WINDOW_VISIBILITY_PADDING_PX,
+            );
         }
 
-        Some(PhysicalPosition::new(x as i32, y as i32).into())
+        Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
     }
 
     fn create_window_from_request(
@@ -2055,6 +2246,11 @@ impl<D: WinitDriver> WinitRunner<D> {
 
         if let Some(state) = self.windows.get(follow.window) {
             state.window.set_window_level(WindowLevel::Normal);
+            if let Some(pos) =
+                self.settle_window_outer_position(state.window.as_ref(), self.cursor_screen_pos)
+            {
+                state.window.set_outer_position(Position::Physical(pos));
+            }
         }
 
         #[cfg(target_os = "macos")]
