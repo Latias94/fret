@@ -5,6 +5,7 @@
 
 pub mod declarative;
 pub mod recipes;
+mod anchor_rect;
 mod sizing;
 mod style;
 mod styled;
@@ -66,6 +67,7 @@ pub use tree::{create_tree_view, flatten_tree, render_tree_view_list};
 pub use menu_overlay::{
     ContextMenuRequest, ContextMenuService, MenuBarContextMenu, MenuBarContextMenuEntry,
 };
+pub use anchor_rect::AnchorRect;
 pub use overlay_policy::OverlayPortal;
 pub use overlay_policy::{DismissOnEscapeAndClickOutside, EscapeDismissModifiers};
 

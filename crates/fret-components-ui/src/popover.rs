@@ -17,7 +17,7 @@ use crate::ChromeRefinement;
 use crate::Size as ComponentSize;
 use crate::recipes::menu_list::resolve_menu_list_row_chrome;
 use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
-use crate::{DismissOnEscapeAndClickOutside, EscapeDismissModifiers};
+use crate::{AnchorRect, DismissOnEscapeAndClickOutside, EscapeDismissModifiers};
 use fret_ui::overlay_placement;
 
 pub(crate) const POPOVER_A11Y_SLOTS: usize = 256;
@@ -139,7 +139,7 @@ impl PopoverItem {
 #[derive(Debug, Clone)]
 pub struct PopoverRequest {
     pub owner: NodeId,
-    pub anchor: Rect,
+    pub anchor: AnchorRect,
     pub items: Vec<PopoverItem>,
     pub selected: Option<usize>,
     /// Whether `WindowOverlays` should move focus to the popover node when opening.
@@ -597,6 +597,9 @@ impl Popover {
         cx: &mut PopoverPrepareCx<'_, H>,
         request: &PopoverRequest,
     ) {
+        let Some(window) = cx.window else {
+            return;
+        };
         let text_constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
@@ -623,9 +626,10 @@ impl Popover {
 
         let outer =
             overlay_placement::inset_rect(cx.bounds, Edges::all(Px(self.style.window_margin.0)));
+        let anchor = request.anchor.resolve(cx.app, window);
         self.panel_bounds = overlay_placement::anchored_panel_bounds_sized(
             outer,
-            request.anchor,
+            anchor,
             Size::new(panel_w, panel_h),
             self.style.gap,
             overlay_placement::Side::Bottom,
@@ -1329,7 +1333,7 @@ mod tests {
                 window,
                 PopoverRequest {
                     owner: popover,
-                    anchor,
+                    anchor: AnchorRect::from_rect(anchor),
                     items,
                     selected: None,
                     request_focus: true,
@@ -1395,7 +1399,7 @@ mod tests {
                 window,
                 PopoverRequest {
                     owner: popover,
-                    anchor,
+                    anchor: AnchorRect::from_rect(anchor),
                     items: vec![PopoverItem::new("Item")],
                     selected: None,
                     request_focus: true,

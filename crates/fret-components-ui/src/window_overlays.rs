@@ -390,6 +390,7 @@ impl WindowOverlays {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::AnchorRect;
     use crate::ContextMenuRequest;
     use crate::PopoverSurfaceRequest;
     use crate::combobox::Combobox;
@@ -688,7 +689,7 @@ mod tests {
                 window,
                 PopoverRequest {
                     owner: trigger,
-                    anchor,
+                    anchor: AnchorRect::from_rect(anchor),
                     items: vec![PopoverItem::new("A")],
                     selected: None,
                     request_focus: true,
@@ -755,7 +756,7 @@ mod tests {
                 window,
                 PopoverRequest {
                     owner: trigger,
-                    anchor,
+                    anchor: AnchorRect::from_rect(anchor),
                     items: vec![
                         PopoverItem::new("A"),
                         PopoverItem::new("B"),
@@ -842,7 +843,7 @@ mod tests {
                 window,
                 PopoverRequest {
                     owner: trigger,
-                    anchor,
+                    anchor: AnchorRect::from_rect(anchor),
                     items: vec![PopoverItem::new("A"), PopoverItem::new("B")],
                     selected: Some(0),
                     request_focus: true,
@@ -915,7 +916,7 @@ mod tests {
                 window,
                 PopoverRequest {
                     owner: combobox,
-                    anchor,
+                    anchor: AnchorRect::from_rect(anchor),
                     items: vec![PopoverItem::new("Apple")],
                     selected: Some(0),
                     request_focus: false,
@@ -2533,10 +2534,10 @@ mod tests {
                 window,
                 PopoverSurfaceRequest::new(
                     prev_focus,
-                    Rect::new(
+                    AnchorRect::from_rect(Rect::new(
                         Point::new(Px(10.0), Px(10.0)),
                         Size::new(Px(20.0), Px(20.0)),
-                    ),
+                    )),
                     content_root,
                 ),
             );

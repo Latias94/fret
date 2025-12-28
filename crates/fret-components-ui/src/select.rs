@@ -9,7 +9,7 @@ use fret_ui::{Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use crate::style::ChromeRefinement;
-use crate::{PopoverItem, PopoverRequest, PopoverService, Sizable, Size as ComponentSize};
+use crate::{AnchorRect, PopoverItem, PopoverRequest, PopoverService, Sizable, Size as ComponentSize};
 
 #[derive(Debug, Clone)]
 pub struct SelectOption {
@@ -229,7 +229,7 @@ impl Select {
                     window,
                     PopoverRequest {
                         owner: cx.node,
-                        anchor: self.last_bounds,
+                        anchor: AnchorRect::from_rect(self.last_bounds),
                         items,
                         selected: Some(selected),
                         request_focus: true,

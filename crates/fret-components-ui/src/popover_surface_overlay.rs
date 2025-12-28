@@ -9,7 +9,7 @@ use fret_ui::{
     widget::{EventCx, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
 
-use crate::{DismissOnEscapeAndClickOutside, EscapeDismissModifiers};
+use crate::{AnchorRect, DismissOnEscapeAndClickOutside, EscapeDismissModifiers};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PopoverSurfaceSide {
@@ -31,7 +31,7 @@ pub enum PopoverSurfaceAlign {
 #[derive(Debug, Clone)]
 pub struct PopoverSurfaceRequest {
     pub owner: NodeId,
-    pub anchor: Rect,
+    pub anchor: AnchorRect,
     pub content_node: NodeId,
     pub side: PopoverSurfaceSide,
     pub align: PopoverSurfaceAlign,
@@ -41,7 +41,7 @@ pub struct PopoverSurfaceRequest {
 }
 
 impl PopoverSurfaceRequest {
-    pub fn new(owner: NodeId, anchor: Rect, content_node: NodeId) -> Self {
+    pub fn new(owner: NodeId, anchor: AnchorRect, content_node: NodeId) -> Self {
         Self {
             owner,
             anchor,
@@ -208,18 +208,13 @@ impl PopoverSurfaceOverlay {
             .unwrap_or(Px(8.0));
     }
 
-    fn compute_panel_bounds(
-        &self,
-        outer: Rect,
-        request: &PopoverSurfaceRequest,
-        content: Size,
-    ) -> Rect {
+    fn compute_panel_bounds(&self, outer: Rect, anchor: Rect, request: &PopoverSurfaceRequest, content: Size) -> Rect {
         let margin = Px(self.style.window_margin.0.max(0.0));
         let outer = overlay_placement::inset_rect(outer, Edges::all(margin));
 
         compute_anchored_panel_bounds(
             outer,
-            request.anchor,
+            anchor,
             content,
             self.style.side_offset,
             request.side,
@@ -322,6 +317,7 @@ impl<H: UiHost> Widget<H> for PopoverSurfaceOverlay {
         self.request = Some(request.clone());
 
         let outer = Rect::new(cx.bounds.origin, cx.available);
+        let anchor = request.anchor.resolve(&mut *cx.app, window);
 
         // Measure the content with a large probe, then place it under the anchor.
         let probe = Rect::new(
@@ -335,7 +331,7 @@ impl<H: UiHost> Widget<H> for PopoverSurfaceOverlay {
             Px((content_size.width.0 + pad.0 * 2.0).max(0.0)),
             Px((content_size.height.0 + pad.0 * 2.0).max(0.0)),
         );
-        self.panel_bounds = self.compute_panel_bounds(outer, &request, desired);
+        self.panel_bounds = self.compute_panel_bounds(outer, anchor, &request, desired);
 
         // Layout all children: only the requested content node is visible; others collapse.
         for &child in cx.children {
@@ -471,11 +467,12 @@ mod tests {
         overlay.style.window_margin = Px(8.0);
         overlay.style.side_offset = Px(0.0);
 
-        let request = PopoverSurfaceRequest::new(NodeId::default(), anchor, NodeId::default())
+        let request =
+            PopoverSurfaceRequest::new(NodeId::default(), AnchorRect::from_rect(anchor), NodeId::default())
             .side(PopoverSurfaceSide::Bottom)
             .align(PopoverSurfaceAlign::Start);
 
-        let placed = overlay.compute_panel_bounds(outer, &request, content);
+        let placed = overlay.compute_panel_bounds(outer, anchor, &request, content);
         assert!(
             placed.origin.x.0 >= 8.0 && placed.origin.y.0 >= 8.0,
             "expected inset clamping to respect window margin"
@@ -498,11 +495,12 @@ mod tests {
         overlay.style.window_margin = Px(0.0);
         overlay.style.side_offset = Px(8.0);
 
-        let request = PopoverSurfaceRequest::new(NodeId::default(), anchor, NodeId::default())
+        let request =
+            PopoverSurfaceRequest::new(NodeId::default(), AnchorRect::from_rect(anchor), NodeId::default())
             .side(PopoverSurfaceSide::Bottom)
             .align(PopoverSurfaceAlign::Start);
 
-        let placed = overlay.compute_panel_bounds(outer, &request, desired);
+        let placed = overlay.compute_panel_bounds(outer, anchor, &request, desired);
         // Available space below = 200 - (150 + 10 + 8) = 32
         // Available space above = 150 - 8 = 142
         // Neither side fits the desired height (180), so the solver should pick the side with less

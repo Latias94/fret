@@ -7,7 +7,7 @@ use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
 
 use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use crate::style::ChromeRefinement;
-use crate::{PopoverItem, PopoverRequest, PopoverService, Size};
+use crate::{AnchorRect, PopoverItem, PopoverRequest, PopoverService, Size};
 
 fn matches_query(label: &str, q: &str) -> bool {
     let q = q.trim();
@@ -146,7 +146,7 @@ impl Combobox {
                     window,
                     PopoverRequest {
                         owner: cx.node,
-                        anchor: self.last_bounds,
+                        anchor: AnchorRect::from_rect(self.last_bounds),
                         items: popover_items,
                         selected,
                         request_focus: false,
