@@ -4,6 +4,10 @@ use std::{
     collections::HashMap,
     hash::{Hash, Hasher},
     panic::Location,
+    sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    },
 };
 
 use crate::SvgSource;
@@ -15,7 +19,7 @@ use crate::element::{
     VirtualListProps, VirtualListState,
 };
 use crate::widget::Invalidation;
-use fret_runtime::{Model, ModelId};
+use fret_runtime::{Effect, Model, ModelId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct GlobalElementId(pub u64);
@@ -66,6 +70,7 @@ pub struct WindowElementState {
     hovered_pressable: Option<GlobalElementId>,
     pressed_pressable: Option<GlobalElementId>,
     hovered_hover_region: Option<GlobalElementId>,
+    continuous_frames: Arc<AtomicUsize>,
 }
 
 #[derive(Debug)]
@@ -129,6 +134,30 @@ impl WindowElementState {
     pub(crate) fn last_bounds(&self, element: GlobalElementId) -> Option<Rect> {
         self.prev_bounds.get(&element).copied()
     }
+
+    pub(crate) fn wants_continuous_frames(&self) -> bool {
+        self.continuous_frames.load(Ordering::Relaxed) > 0
+    }
+
+    pub(crate) fn begin_continuous_frames(&self) -> ContinuousFrames {
+        self.continuous_frames.fetch_add(1, Ordering::Relaxed);
+        ContinuousFrames {
+            leases: self.continuous_frames.clone(),
+        }
+    }
+}
+
+#[must_use]
+pub struct ContinuousFrames {
+    leases: Arc<AtomicUsize>,
+}
+
+impl Drop for ContinuousFrames {
+    fn drop(&mut self) {
+        let _ = self
+            .leases
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |v| v.checked_sub(1));
+    }
 }
 
 pub struct ElementCx<'a, H: UiHost> {
@@ -177,6 +206,21 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
 
     pub fn root_id(&self) -> GlobalElementId {
         *self.stack.last().expect("root exists")
+    }
+
+    pub fn request_frame(&mut self) {
+        self.app.request_redraw(self.window);
+    }
+
+    pub fn request_animation_frame(&mut self) {
+        self.app
+            .push_effect(Effect::RequestAnimationFrame(self.window));
+    }
+
+    pub fn begin_continuous_frames(&mut self) -> ContinuousFrames {
+        let lease = self.window_state.begin_continuous_frames();
+        self.request_animation_frame();
+        lease
     }
 
     #[track_caller]

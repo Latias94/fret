@@ -18,6 +18,9 @@ Maintain the next MVP items here as a small, high-signal queue. If a task change
 - MVP 49 (in progress): Make the declarative component authoring model (ADR 0028 + ADR 0039) the primary, end-to-end usable path (not just a state store): `IntoElement` + `Render`/`RenderOnce` + composition ergonomics, plus a clear `render_root(...)` contract (when it must be called, and what it guarantees).
 - MVP 50 (in progress): Consolidate virtualization around composable, declarative row content (GPUI-style). Runtime contract is now TanStack-aligned (ADR 0070); remaining work is migrating surfaces off fixed-schema runtime rows (`VirtualListRow { text/secondary/trailing... }`) and retiring the legacy path where feasible.
 - MVP 51 (in progress): Tighten the framework/components boundary by moving “standard surfaces” (popover/dialog/menu/tooltip/toast/command palette/menubar) fully into the components layer, keeping `fret-ui` as runtime substrate + performance primitives. `fret-components-ui` remains the reusable infrastructure, while `fret-components-shadcn` becomes the shadcn/ui (v4) aligned naming/taxonomy surface. Compatibility retained widgets stay behind `fret-ui`’s `retained-widgets` feature (`crates/fret-ui/src/primitives/*`) until removal.
+- MVP 66 (next): Make model observation and invalidation propagation (ADR 0051) an "Accepted + tested" contract.
+  - Ensure changed-model propagation invalidates all observing nodes across all windows deterministically.
+  - Remove remaining "manual invalidate all panels" glue from demo/components once conformance is locked.
 - MVP 60 (done): Rounded clipping / `overflow-hidden` semantics (shadcn-critical).
   - Landed: `SceneOp::PushClipRRect` (ADR 0063) + renderer soft clipping (AA) + UI hit-test parity.
 - MVP 61 (next): Declarative layout performance hardening (Taffy integration).
@@ -30,6 +33,11 @@ Maintain the next MVP items here as a small, high-signal queue. If a task change
 - MVP 63 (next): Unify scroll ergonomics around a single handle model (GPUI-like).
   - Introduce a consistent `ScrollHandle`-style substrate: offset, scroll-to, scrollbar, and scroll-into-view primitives.
   - Ensure `ScrollArea` + `VirtualList` composition shares one contract surface (no divergent wheel/drag behavior).
+- MVP 65 (done): Lock a GPUI-style frame request contract to avoid "mode toggle" sprawl.
+  - One-shot `request_frame` + `request_animation_frame`, plus refcounted RAII `begin_continuous_frames` leases (ADR 0034).
+- MVP 67 (next): Fix initial render / invalidation ordering regressions ("doesn't draw until hover").
+  - Add a small regression harness in `fret-demo` that asserts the first frame draws without requiring pointer motion.
+  - Audit the render lifecycle contract (ADR 0015 / ADR 0028) and make initial invalidation/redraw deterministic.
 - MVP 64 (next): APG-aligned keyboard/focus patterns as reusable component-layer recipes.
   - Roving focus, typeahead, Home/End/PageUp/PageDown patterns for menus/listbox/combobox/tree.
   - Expand semantics roles/flags where needed to keep future accessibility bridge viable (ADR 0033).

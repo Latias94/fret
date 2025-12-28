@@ -1668,8 +1668,7 @@ mod tests {
     use crate::test_host::TestHost;
     use fret_core::{
         AppWindowId, CaretAffinity, Event, PlatformCapabilities, Point, Px, Rect, Scene, Size,
-        TextConstraints, TextMetrics,
-        TextService, TextStyle,
+        TextConstraints, TextMetrics, TextService, TextStyle,
     };
     use fret_runtime::Effect;
 
@@ -1692,7 +1691,12 @@ mod tests {
             )
         }
 
-        fn caret_rect(&mut self, _blob: fret_core::TextBlobId, index: usize, _affinity: CaretAffinity) -> Rect {
+        fn caret_rect(
+            &mut self,
+            _blob: fret_core::TextBlobId,
+            index: usize,
+            _affinity: CaretAffinity,
+        ) -> Rect {
             Rect::new(
                 Point::new(Px(index as f32), Px(0.0)),
                 Size::new(Px(1.0), Px(10.0)),
@@ -1796,13 +1800,21 @@ mod tests {
         );
         let _ = app.take_effects();
 
-        fn paint_once(ui: &mut UiTree<TestHost>, root: fret_core::NodeId, app: &mut TestHost, text: &mut FakeTextService) -> f32 {
+        fn paint_once(
+            ui: &mut UiTree<TestHost>,
+            root: fret_core::NodeId,
+            app: &mut TestHost,
+            text: &mut FakeTextService,
+        ) -> f32 {
             let mut scene = Scene::default();
             ui.paint(
                 app,
                 text,
                 root,
-                Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(300.0), Px(200.0))),
+                Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(300.0), Px(200.0)),
+                ),
                 &mut scene,
                 1.0,
             );

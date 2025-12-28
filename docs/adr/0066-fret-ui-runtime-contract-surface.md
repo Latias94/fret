@@ -79,6 +79,7 @@ This is the minimum contract set `fret-components-ui` can depend on long-term.
 | Non-modal outside press observer | opt-in outside-press dispatch for topmost non-modal overlay | click-through dismissal without modal barrier; does not break normal hit-tested routing | Radix DismissableLayer (outcomes) | ADR 0069 |
 | Placement solver | pure placement algorithm API | deterministic placement for same inputs; no component policy in runtime | Floating UI | ADR 0064 |
 | Declarative authoring | element tree + keyed state + model observation | stable IDs, predictable reuse, testable state reuse | GPUI-style authoring model | ADR 0028, ADR 0039, ADR 0051 |
+| Frame scheduling | one-shot frame requests + RAF requests + refcounted continuous leases | event-driven by default; continuous frames are explicit and scoped; coalesced per window per tick | GPUI/Zed `Window::refresh()` mental model | ADR 0034 |
 | Layout vocabulary | `LayoutStyle` + Flex/Grid semantics (Taffy-backed) | CSS/Tailwind-like defaults; no per-component hidden defaults in runtime | CSS + Tailwind semantics, Taffy engine | ADR 0057, ADR 0062, ADR 0035 |
 | Scroll contract | scroll handles + strategies | scroll-to behavior is deterministic; components can build scrollbars/policies | GPUI handle patterns | ADR 0042 |
 | Virtualization contract | variable-size metrics + visible range computation + scroll-to-item | supports measured heights, stable keys, overscan; deterministic | TanStack Virtual (primary), GPUI (engineering ref) | ADR 0070 |
@@ -156,7 +157,22 @@ Engineering reference:
 
 - gpui-component virtual list patterns: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs`
 
-#### 3.4 Layout contract (Stable; CSS/Tailwind semantics)
+#### 3.4 Frame scheduling contract (Stable; GPUI-aligned)
+
+The runtime must support both "draw only when dirty" and "continuous frames while active" without
+introducing component-specific toggles.
+
+Mechanism (runtime/host provided):
+
+- `request_frame(window)`: schedule exactly one draw for the window (coalesced per tick).
+- `request_animation_frame(window)`: request a draw at the runner `frame_interval` cadence.
+- `begin_continuous_frames(window) -> ContinuousFrames`: returns a refcounted RAII lease; while any
+  lease is alive, the window continues to request animation frames; dropping the last lease returns
+  the window to event-driven scheduling.
+
+Reference: GPUI/Zed `Window::refresh()` and its "dirty window invalidator" model (`repo-ref/zed`).
+
+#### 3.5 Layout contract (Stable; CSS/Tailwind semantics)
 
 Runtime layout semantics must match the Tailwind/CSS mental model:
 

@@ -634,8 +634,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     return;
                 }
 
-                if self.is_ime_composing() && !modifiers.ctrl && !modifiers.alt && !modifiers.meta
-                {
+                if self.is_ime_composing() && !modifiers.ctrl && !modifiers.alt && !modifiers.meta {
                     // During IME composition (preedit), reserve common navigation/IME keys for the
                     // platform IME path. The runtime may still map these keys to focus traversal or
                     // global shortcuts, so we must explicitly stop propagation here (ADR 0012).
@@ -1295,8 +1294,8 @@ mod tests {
     use crate::UiTree;
     use crate::test_host::TestHost;
     use fret_core::{
-        AppWindowId, Event, PlatformCapabilities, Point, Px, Rect, Size, TextConstraints, TextMetrics,
-        TextService, TextStyle,
+        AppWindowId, Event, PlatformCapabilities, Point, Px, Rect, Size, TextConstraints,
+        TextMetrics, TextService, TextStyle,
     };
     use fret_runtime::Effect;
 

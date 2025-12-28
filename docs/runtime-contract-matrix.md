@@ -48,6 +48,16 @@ It is intentionally **mechanism-only**: component policies and UI recipes belong
   - Tailwind CSS: `repo-ref/tailwindcss` (semantic target)
   - Taffy: layout engine backend (implementation detail)
 
+### Scheduling (redraw, RAF, continuous frames lease)
+
+- **Module(s):**
+  - `crates/fret-runtime/src/effect.rs`
+  - `crates/fret-runner-winit-wgpu/src/runner.rs`
+  - `crates/fret-ui/src/elements.rs`
+- **ADR(s):** `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
+- **Reference(s):**
+  - GPUI/Zed `Window::refresh()` mental model: `repo-ref/zed/crates/gpui/src/window.rs`
+
 ### Scroll + virtualization contracts
 
 - **Module(s):**
@@ -96,4 +106,3 @@ It is intentionally **mechanism-only**: component policies and UI recipes belong
 - **Rule:** retained widgets are not part of the runtime contract surface; they exist only as a
   temporary compatibility layer while declarative authoring fully replaces widget-based authoring.
 - **ADR:** `docs/adr/0066-fret-ui-runtime-contract-surface.md`
-

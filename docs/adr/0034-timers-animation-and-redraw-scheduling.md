@@ -57,12 +57,38 @@ The platform runner owns the actual timer mechanism and injects timer events bac
 
 ### 3) Animation frames are requested, not assumed
 
-Introduce an explicit request for “next frame as soon as possible”:
+Introduce an explicit request for "next frame as soon as possible":
 
 - `Effect::RequestAnimationFrame(AppWindowId)`
 
 Any subsystem that needs continuous frames (drag operations, animations, caret blink, IME UI) requests
 animation frames while active, and stops requesting when inactive.
+
+### 3.1) Public API shape (P0; GPUI-aligned)
+
+To avoid scattered ad-hoc `request_redraw` calls and "ever-growing mode switches", we lock a small,
+composable scheduling API that matches GPUI/Zed's mental model:
+
+- **One-shot frame request** (GPUI `Window::refresh()`):
+  - `request_frame(window)` marks the window dirty and schedules it to draw *once* on the next
+    available frame.
+  - This request is coalesced per window per tick.
+- **Animation frame request** (explicit "wake up next frame interval"):
+  - `request_animation_frame(window)` requests a frame at the runner’s `frame_interval` cadence.
+  - This is the correct primitive for short-lived animations (spinners, hover intent, transitions),
+    inertial scrolling, caret blinking, and IME UI.
+- **Continuous frames (RAII lease)**:
+  - `begin_continuous_frames(window) -> ContinuousFrames` returns a small RAII lease object.
+  - While *any* lease is alive, the runtime guarantees the window keeps requesting animation frames
+    (effectively "continuous mode", but refcounted and localized).
+  - When the last lease is dropped, the window returns to event-driven scheduling.
+
+Design intent:
+
+- Continuous rendering is expressed as **"hold a lease while you need it"**, not as a set of
+  component-specific boolean toggles.
+- The host/app may still provide an **explicit global override** (profiling/play-mode) that forces
+  continuous rendering regardless of leases.
 
 ### 4) Coalescing and bounded fixed-point draining
 

@@ -68,6 +68,19 @@ It complements (but does not replace) ADRs:
   - ADRs: `docs/adr/0013-docking-ops-and-persistence.md`
   - Code: `crates/fret-ui/src/dock.rs`, app integration applying `DockOp` + invalidation.
 
+## P0 - Scheduling / Render Lifecycle
+
+- **Adopt the continuous frames lease contract across high-frequency subsystems**
+  - Goal: use RAII `begin_continuous_frames` leases (ADR 0034) for viewport rendering, drags, and animations, and avoid ad-hoc RAF loops.
+  - ADRs: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`
+  - Code: `crates/fret-ui/src/elements.rs`, `crates/fret-runner-winit-wgpu/src/runner.rs`
+
+- **Investigate "doesn't draw until hover" initial render regressions**
+  - Symptom: some demo surfaces appear blank on startup and only render after pointer movement/hover.
+  - Hypothesis: missing initial invalidation/redraw request, or render_root/layout/paint ordering drift.
+  - ADRs: `docs/adr/0028-declarative-elements-and-element-state.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
+  - TODO: add a tiny regression harness in `fret-demo` and lock this down with a deterministic first-frame draw rule.
+
 ## P1 — Accessibility (A11y) Conformance
 
 - **Define minimum semantics for text fields (value/selection/composition)**

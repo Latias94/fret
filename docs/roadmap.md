@@ -45,6 +45,7 @@ These items are intentionally scheduled early because they define “hard-to-cha
   - remove hard-coded control heights/spacing from runtime primitives (notably `TextInput`) so `Size` (ADR 0056) stays component-owned. (MVP 48; in progress: `TextInput` done; overlay surfaces moved)
 - P0: Adopt semantics tree + accessibility bridge boundary (A11y-ready infrastructure) (ADR 0033).
 - P0: Adopt timers/animation/redraw scheduling (event-driven + continuous mode) (ADR 0034).
+  - Contract shape locked (GPUI-aligned): one-shot `request_frame`, `request_animation_frame`, and refcounted RAII `begin_continuous_frames` leases (see ADR 0034).
 - P0: Adopt layout constraints + optional Flex/Grid integration boundary (ADR 0035).
 - P0: Fix declarative composable sizing semantics (fit-content by default, typed size constraints, and a Taffy-backed `Flex` container) so Tailwind/shadcn component composition is viable without per-widget layout hacks. (done; ADR 0057 / MVP 52)
 - P0: Adopt Tailwind layout vocabulary as framework-level `LayoutStyle` semantics (margin, position/inset, grid, aspect ratio) so shadcn-style composition can express common patterns (badge overlays, input icons, simple grids) without bespoke per-widget layout hacks. (ADR 0062)
@@ -208,6 +209,7 @@ validate that the framework contracts are sufficient.
 - P0: Decide and implement the primary UI execution model (ADR 0028), while preserving layout/input semantics (ADR 0005). (prototype implemented: declarative element ids + cross-frame state store; retained `UiTree` still hosts most widgets)
 - P0: Invalidation flags: `NeedsLayout`, `NeedsPaint`, `NeedsHitTestRebuild`.
 - P0: Model observation → UI invalidation propagation (avoid manual cross-panel invalidation; align with GPUI `observe`/`notify` mental model). (ADR 0051) (prototype implemented)
+  - Promote ADR 0051 to "Accepted": add conformance tests and remove any remaining demo/component-level manual invalidation glue.
 - P0: Event routing: hit-test, focus, capture, bubble. (prototype implemented; see ADR 0005)
 - P1: External OS file drag-and-drop routing skeleton (winit file DnD + hit-test routing). (prototype implemented; see ADR 0041)
   - Note (macOS/winit): hover/move positions are not continuously available; per-widget drop targets will require a native backend (see ADR 0041).
