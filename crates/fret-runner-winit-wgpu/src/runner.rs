@@ -711,6 +711,29 @@ struct DockTearoffFollow {
 }
 
 impl<D: WinitDriver> WinitRunner<D> {
+    fn virtual_desktop_bounds(window: &Window) -> Option<(f64, f64, f64, f64)> {
+        let mut monitors = window.available_monitors();
+        let first = monitors.next()?;
+
+        let first_pos = first.position();
+        let first_size = first.size();
+        let mut min_x = first_pos.x as f64;
+        let mut min_y = first_pos.y as f64;
+        let mut max_x = first_pos.x as f64 + first_size.width as f64;
+        let mut max_y = first_pos.y as f64 + first_size.height as f64;
+
+        for monitor in monitors {
+            let pos = monitor.position();
+            let size = monitor.size();
+            min_x = min_x.min(pos.x as f64);
+            min_y = min_y.min(pos.y as f64);
+            max_x = max_x.max(pos.x as f64 + size.width as f64);
+            max_y = max_y.max(pos.y as f64 + size.height as f64);
+        }
+
+        Some((min_x, min_y, max_x, max_y))
+    }
+
     fn map_cursor_icon(icon: fret_core::CursorIcon) -> winit::window::CursorIcon {
         match icon {
             fret_core::CursorIcon::Default => winit::window::CursorIcon::Default,
@@ -1039,15 +1062,13 @@ impl<D: WinitDriver> WinitRunner<D> {
         let mut x = screen_pos.x - grab_outer_x;
         let mut y = screen_pos.y - grab_outer_y;
 
-        if let Some(monitor) = state.window.current_monitor() {
-            let pos = monitor.position();
-            let size = monitor.size();
-
-            let min_x = pos.x as f64;
-            let min_y = pos.y as f64;
-            let max_x = min_x + size.width as f64 - 40.0;
-            let max_y = min_y + size.height as f64 - 40.0;
-
+        // Keep the floating window reachable without preventing cross-monitor drags.
+        // Using `current_monitor()` here can "pin" the window at the monitor edge.
+        if let Some((min_x, min_y, max_x, max_y)) =
+            Self::virtual_desktop_bounds(state.window.as_ref())
+        {
+            let max_x = (max_x - 40.0).max(min_x);
+            let max_y = (max_y - 40.0).max(min_y);
             x = x.clamp(min_x, max_x);
             y = y.clamp(min_y, max_y);
         }
