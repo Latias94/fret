@@ -823,16 +823,26 @@ impl<H: UiHost> Widget<H> for TextArea {
                         cx.request_redraw();
                     }
                     ImeEvent::Commit(text) => {
+                        let committed = if text.contains('\r') {
+                            text.replace("\r\n", "\n").replace('\r', "\n")
+                        } else {
+                            text.clone()
+                        };
                         let tick = cx.app.tick_id();
                         if self.last_text_input_tick == Some(tick)
-                            && self.last_text_input_text.as_deref() == Some(text.as_str())
+                            && self.last_text_input_text.as_deref() == Some(committed.as_str())
                         {
+                            self.clear_preedit();
+                            self.ensure_caret_visible = true;
+                            cx.invalidate_self(Invalidation::Layout);
+                            cx.request_redraw();
                             return;
                         }
                         self.last_ime_commit_tick = Some(tick);
-                        self.last_ime_commit_text = Some(text.clone());
+                        self.last_ime_commit_text = Some(committed.clone());
 
-                        self.replace_selection(text);
+                        self.replace_selection(&committed);
+                        self.clear_preedit();
                         self.ensure_caret_visible = true;
                         cx.invalidate_self(Invalidation::Layout);
                         cx.request_redraw();
@@ -1846,6 +1856,81 @@ mod tests {
         assert!(
             (x2 - x0 - 2.0).abs() < 0.001,
             "expected IME cursor x to move by preedit prefix width"
+        );
+    }
+
+    #[test]
+    fn ime_commit_clears_preedit_state() {
+        let window = AppWindowId::default();
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(TextArea::default());
+        ui.set_root(root);
+        ui.set_focus(Some(root));
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut text = FakeTextService::default();
+
+        let _ = ui.layout(
+            &mut app,
+            &mut text,
+            root,
+            Size::new(Px(300.0), Px(200.0)),
+            1.0,
+        );
+        let _ = app.take_effects();
+
+        fn paint_once(
+            ui: &mut UiTree<TestHost>,
+            root: fret_core::NodeId,
+            app: &mut TestHost,
+            text: &mut FakeTextService,
+        ) -> Option<f32> {
+            let mut scene = Scene::default();
+            ui.paint(
+                app,
+                text,
+                root,
+                Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(300.0), Px(200.0)),
+                ),
+                &mut scene,
+                1.0,
+            );
+            app.take_effects()
+                .into_iter()
+                .find_map(|e| match e {
+                    Effect::ImeSetCursorArea { rect, .. } => Some(rect.origin.x.0),
+                    _ => None,
+                })
+        }
+
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::Ime(fret_core::ImeEvent::Preedit {
+                text: "abcd".to_string(),
+                cursor: Some((0, 4)),
+            }),
+        );
+        let x_preedit = paint_once(&mut ui, root, &mut app, &mut text)
+            .expect("expected an IME cursor area effect");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::Ime(fret_core::ImeEvent::Commit("abcd".to_string())),
+        );
+        let _ = app.take_effects();
+
+        let x_after_commit = paint_once(&mut ui, root, &mut app, &mut text).unwrap_or(x_preedit);
+        assert!(
+            (x_after_commit - x_preedit).abs() < 0.001,
+            "expected preedit to be cleared on commit (otherwise cursor area jumps)"
         );
     }
 }

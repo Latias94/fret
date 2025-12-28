@@ -46,7 +46,7 @@ Invariants:
 Multiline text buffers are normalized to `\n` line endings at the framework boundary:
 
 - platform paste / clipboard `\r\n` must be normalized to `\n`,
-- IME commit strings may contain newlines; they are inserted verbatim after normalization.
+- IME commit strings may contain newlines; they are inserted verbatim *after normalization*.
 
 ### 3) Preedit placement and commit semantics
 
@@ -60,6 +60,8 @@ While preedit is active:
   - when commit arrives and a selection exists, commit replaces the selection and clears it.
 - Preedit updates (`ImeEvent::Preedit`) must not permanently mutate the underlying model buffer; the
   committed buffer only changes on commit or explicit non-IME edits.
+- IME commit must clear the preedit state even if the platform does not emit a follow-up
+  "empty preedit" update (prevents stale inline markup and incorrect IME cursor area reporting).
 
 ### 4) Caret rect reporting for IME candidate window positioning
 
