@@ -151,7 +151,7 @@ Fret does **not** need to replicate every numeric preset from gpui-component, bu
 
 ## Quick validation loop (manual)
 
-- Run the UI kit demo: `cargo run -p fret-demo --bin ui_kit`
+- Run the shadcn gallery demo: `cargo run -p fret-demo --bin shadcn_gallery`
 - Spot-check shadcn-like composition patterns:
   - icon-in-input overlay (`relative` + `absolute` + edge padding)
   - dense list rows (`py-0.5`, `min-w-0`, truncation)

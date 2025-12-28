@@ -161,7 +161,7 @@ Status legend:
 Treat these as "behavioral contracts" for shadcn alignment. Prefer turning each bullet into:
 
 - a small unit test when feasible (model-only logic), or
-- a deterministic demo scenario in `fret-demo --bin ui_kit`, with a repeatable repro script.
+- a deterministic demo scenario in `fret-demo --bin shadcn_gallery`, with a repeatable repro script.
 
 **Dialog / AlertDialog (modal, focus restore)**
 

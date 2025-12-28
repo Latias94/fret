@@ -1,3 +1,4 @@
 fn main() -> anyhow::Result<()> {
-    fret_demo::ui_kit::run()
+    fret_demo::components_gallery::run()
 }
+

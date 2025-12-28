@@ -53,7 +53,7 @@ Scope: this is a pragmatic “what’s missing / what’s broken / what’s next
   - `component.radius.*` (`sm`, `md`, `lg`)
 - Fallback rule: when `component.space.*` / `component.radius.*` tokens are missing, `Space`/`Radius` fall back to baseline `metric.*` tokens (and a scale derived from `metric.padding.sm`) to avoid theme drift.
 
-Demo: `cargo run -p fret-demo --bin ui_kit`
+Demo: `cargo run -p fret-demo --bin shadcn_gallery`
 
 ### Theme sanity check (baseline-only)
 
@@ -61,7 +61,7 @@ To verify that component spacing/radius stays consistent even when a theme omits
 copy `themes/fret-baseline-only.json` to `.fret/theme.json` and run the UI kit demo:
 
 - `cp themes/fret-baseline-only.json .fret/theme.json`
-- `cargo run -p fret-demo --bin ui_kit`
+- `cargo run -p fret-demo --bin shadcn_gallery`
 
 ## Known issues (current)
 
@@ -175,7 +175,7 @@ Practical gaps to prioritize for parity:
 
 Update:
 
-- The palette-style shell is prototype implemented and wired in `fret-demo --bin ui_kit`.
+- The palette-style shell is prototype implemented and wired in `fret-demo --bin shadcn_gallery`.
 - The command palette list body is now rendered via **declarative composition** (rows are arbitrary
   element subtrees, not `VirtualListRow { text/secondary/trailing... }`), as an MVP 50 step toward a
   fully composable virtualization contract.

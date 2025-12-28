@@ -16,15 +16,15 @@ The goal is to validate that:
 
 ## Quick start (run the harness)
 
-Run the UI kit:
+Run the shadcn gallery harness:
 
 ```bash
-cargo run -p fret-demo --bin ui_kit
+cargo run -p fret-demo --bin shadcn_gallery
 ```
 
 Notes:
 
-- The UI kit requests a semantics snapshot every frame (`crates/fret-demo/src/ui_kit.rs`).
+- The shadcn gallery requests a semantics snapshot every frame (`crates/fret-demo/src/shadcn_gallery.rs`).
 - The desktop runner enables AccessKit integration by default via `WinitRunnerConfig.accessibility_enabled`.
 
 ## What to test (high signal checks)
@@ -114,4 +114,3 @@ cargo nextest run -p fret-components-ui
   `fret-core` semantics schema behind an ADR + tests.
 - Overlay item a11y nodes use a fixed slot pool (currently 256). Very long menus/lists will expose
   only the first N items to AT until a virtualized a11y contract is defined.
-

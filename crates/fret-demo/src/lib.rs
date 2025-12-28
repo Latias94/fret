@@ -1,2 +1,2 @@
 pub mod components_gallery;
-pub mod ui_kit;
+pub mod shadcn_gallery;

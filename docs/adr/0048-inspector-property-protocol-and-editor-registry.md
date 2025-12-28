@@ -135,7 +135,7 @@ Notes:
 - Protocol types + editor registry (example editor layer): `crates/fret-editor/src/inspector_protocol.rs`
 - Property edit request plumbing (phased edits): `crates/fret-editor/src/property_edit.rs`
 - Inspector edit UI surface (example editor layer widgets): `crates/fret-editor/src/inspector_edit_layout.rs`
-- Demo wiring status: no dedicated inspector demo harness is kept stable yet; if needed, integrate into `fret-demo --bin ui_kit` and treat the demo entrypoint as evolving.
+- Demo wiring status: no dedicated inspector demo harness is kept stable yet; if needed, integrate into `fret-demo --bin shadcn_gallery` and treat the demo entrypoint as evolving.
 
 Phased edit validation:
 
