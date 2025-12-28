@@ -7,7 +7,195 @@ use fret_core::{
     TextOverflow, TextStyle, TextWrap, geometry::Px,
 };
 use slotmap::SlotMap;
-use std::{collections::HashMap, hash::Hash, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    hash::{Hash, Hasher},
+    sync::Arc,
+};
+
+struct FretFallback;
+
+impl cosmic_text::Fallback for FretFallback {
+    fn common_fallback(&self) -> &[&'static str] {
+        #[cfg(target_os = "windows")]
+        {
+            &[
+                // UI
+                "Segoe UI",
+                "Tahoma",
+                // CJK
+                "Microsoft YaHei UI",
+                "Microsoft YaHei",
+                "Yu Gothic UI",
+                "Meiryo UI",
+                "Meiryo",
+                "Nirmala UI",
+                // Emoji
+                "Segoe UI Emoji",
+                "Segoe UI Symbol",
+            ]
+        }
+        #[cfg(target_os = "macos")]
+        {
+            &[
+                // UI (attempt a couple of common names; fontdb will skip missing families)
+                "SF Pro Text",
+                ".SF NS Text",
+                "Helvetica Neue",
+                // CJK
+                "PingFang SC",
+                "PingFang TC",
+                "Hiragino Sans",
+                // Emoji
+                "Apple Color Emoji",
+            ]
+        }
+        #[cfg(all(unix, not(any(target_os = "macos", target_os = "android"))))]
+        {
+            &[
+                // UI
+                "Noto Sans",
+                "DejaVu Sans",
+                "Liberation Sans",
+                // CJK
+                "Noto Sans CJK SC",
+                "Noto Sans CJK JP",
+                "Noto Sans CJK TC",
+                // Emoji
+                "Noto Color Emoji",
+            ]
+        }
+        #[cfg(not(any(
+            target_os = "windows",
+            target_os = "macos",
+            all(unix, not(any(target_os = "macos", target_os = "android")))
+        )))]
+        {
+            &[]
+        }
+    }
+
+    fn forbidden_fallback(&self) -> &[&'static str] {
+        <cosmic_text::PlatformFallback as cosmic_text::Fallback>::forbidden_fallback(
+            &cosmic_text::PlatformFallback,
+        )
+    }
+
+    fn script_fallback(&self, script: unicode_script::Script, locale: &str) -> &[&'static str] {
+        <cosmic_text::PlatformFallback as cosmic_text::Fallback>::script_fallback(
+            &cosmic_text::PlatformFallback,
+            script,
+            locale,
+        )
+    }
+}
+
+fn build_installed_family_set(db: &fontdb::Database) -> HashSet<String> {
+    let mut set = HashSet::new();
+    for face in db.faces() {
+        for (family, _lang) in &face.families {
+            set.insert(family.to_ascii_lowercase());
+        }
+    }
+    set
+}
+
+fn first_installed_family<'a>(
+    installed: &HashSet<String>,
+    candidates: &'a [&'a str],
+) -> Option<&'a str> {
+    candidates
+        .iter()
+        .copied()
+        .find(|name| installed.contains(&name.to_ascii_lowercase()))
+}
+
+fn default_sans_candidates() -> &'static [&'static str] {
+    #[cfg(target_os = "windows")]
+    {
+        &["Segoe UI", "Tahoma", "Arial"]
+    }
+    #[cfg(target_os = "macos")]
+    {
+        &["SF Pro Text", ".SF NS Text", "Helvetica Neue", "Helvetica"]
+    }
+    #[cfg(all(unix, not(any(target_os = "macos", target_os = "android"))))]
+    {
+        &["Noto Sans", "DejaVu Sans", "Liberation Sans"]
+    }
+    #[cfg(not(any(
+        target_os = "windows",
+        target_os = "macos",
+        all(unix, not(any(target_os = "macos", target_os = "android")))
+    )))]
+    {
+        &[]
+    }
+}
+
+fn default_monospace_candidates() -> &'static [&'static str] {
+    #[cfg(target_os = "windows")]
+    {
+        &["Cascadia Mono", "Consolas", "Courier New"]
+    }
+    #[cfg(target_os = "macos")]
+    {
+        &["SF Mono", "Menlo", "Monaco"]
+    }
+    #[cfg(all(unix, not(any(target_os = "macos", target_os = "android"))))]
+    {
+        &["Noto Sans Mono", "DejaVu Sans Mono", "Liberation Mono"]
+    }
+    #[cfg(not(any(
+        target_os = "windows",
+        target_os = "macos",
+        all(unix, not(any(target_os = "macos", target_os = "android")))
+    )))]
+    {
+        &[]
+    }
+}
+
+fn default_serif_candidates() -> &'static [&'static str] {
+    #[cfg(target_os = "windows")]
+    {
+        &["Times New Roman", "Georgia"]
+    }
+    #[cfg(target_os = "macos")]
+    {
+        &["New York", "Times New Roman", "Times"]
+    }
+    #[cfg(all(unix, not(any(target_os = "macos", target_os = "android"))))]
+    {
+        &["DejaVu Serif", "Noto Serif", "Liberation Serif"]
+    }
+    #[cfg(not(any(
+        target_os = "windows",
+        target_os = "macos",
+        all(unix, not(any(target_os = "macos", target_os = "android")))
+    )))]
+    {
+        &[]
+    }
+}
+
+fn font_stack_cache_key(locale: &str, db: &fontdb::Database) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    locale.hash(&mut hasher);
+
+    db.family_name(&Family::SansSerif).hash(&mut hasher);
+    db.family_name(&Family::Serif).hash(&mut hasher);
+    db.family_name(&Family::Monospace).hash(&mut hasher);
+
+    // Include the framework-level fallback policy so changing it can't reuse stale blobs.
+    FretFallback.common_fallback().hash(&mut hasher);
+    <cosmic_text::PlatformFallback as cosmic_text::Fallback>::forbidden_fallback(
+        &cosmic_text::PlatformFallback,
+    )
+    .hash(&mut hasher);
+
+    hasher.finish()
+}
 
 #[derive(Debug, Clone)]
 pub struct GlyphQuad {
@@ -40,6 +228,7 @@ pub struct TextLine {
 struct TextBlobKey {
     text: Arc<str>,
     font: fret_core::FontId,
+    font_stack_key: u64,
     size_bits: u32,
     weight: u16,
     line_height_bits: Option<u32>,
@@ -51,11 +240,17 @@ struct TextBlobKey {
 }
 
 impl TextBlobKey {
-    fn new(text: &str, style: TextStyle, constraints: TextConstraints) -> Self {
+    fn new(
+        text: &str,
+        style: TextStyle,
+        constraints: TextConstraints,
+        font_stack_key: u64,
+    ) -> Self {
         let max_width_bits = constraints.max_width.map(|w| w.0.to_bits());
         Self {
             text: Arc::<str>::from(text),
             font: style.font,
+            font_stack_key,
             size_bits: style.size.0.to_bits(),
             weight: style.weight.0,
             line_height_bits: style.line_height.map(|px| px.0.to_bits()),
@@ -158,6 +353,7 @@ pub struct TextSystem {
     font_system: FontSystem,
     swash_cache: SwashCache,
     scratch: ShapeBuffer,
+    font_stack_key: u64,
 
     blobs: SlotMap<TextBlobId, TextBlob>,
     blob_cache: HashMap<TextBlobKey, TextBlobId>,
@@ -239,10 +435,27 @@ impl TextSystem {
             ],
         });
 
+        let (locale, mut db) = FontSystem::new().into_locale_and_db();
+        let installed = build_installed_family_set(&db);
+
+        if let Some(sans) = first_installed_family(&installed, default_sans_candidates()) {
+            db.set_sans_serif_family(sans);
+        }
+        if let Some(serif) = first_installed_family(&installed, default_serif_candidates()) {
+            db.set_serif_family(serif);
+        }
+        if let Some(mono) = first_installed_family(&installed, default_monospace_candidates()) {
+            db.set_monospace_family(mono);
+        }
+
+        let font_stack_key = font_stack_cache_key(&locale, &db);
+        let font_system = FontSystem::new_with_locale_and_db_and_fallback(locale, db, FretFallback);
+
         Self {
-            font_system: FontSystem::new(),
+            font_system,
             swash_cache: SwashCache::new(),
             scratch: ShapeBuffer::default(),
+            font_stack_key,
 
             blobs: SlotMap::with_key(),
             blob_cache: HashMap::new(),
@@ -329,7 +542,7 @@ impl TextSystem {
         style: TextStyle,
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
-        let key = TextBlobKey::new(text, style, constraints);
+        let key = TextBlobKey::new(text, style, constraints, self.font_stack_key);
         if let Some(id) = self.blob_cache.get(&key).copied() {
             if let Some(blob) = self.blobs.get_mut(id) {
                 blob.ref_count = blob.ref_count.saturating_add(1);
@@ -1034,22 +1247,37 @@ mod tests {
         };
 
         let base = TextStyle::default();
-        let k0 = TextBlobKey::new("hello", base, constraints);
+        let k0 = TextBlobKey::new("hello", base, constraints, 1);
 
         let mut style = base;
         style.weight = FontWeight::BOLD;
-        let k_weight = TextBlobKey::new("hello", style, constraints);
+        let k_weight = TextBlobKey::new("hello", style, constraints, 1);
         assert_ne!(k0, k_weight);
 
         let mut style = base;
         style.line_height = Some(Px(18.0));
-        let k_line_height = TextBlobKey::new("hello", style, constraints);
+        let k_line_height = TextBlobKey::new("hello", style, constraints, 1);
         assert_ne!(k0, k_line_height);
 
         let mut style = base;
         style.letter_spacing_em = Some(0.05);
-        let k_tracking = TextBlobKey::new("hello", style, constraints);
+        let k_tracking = TextBlobKey::new("hello", style, constraints, 1);
         assert_ne!(k0, k_tracking);
+    }
+
+    #[test]
+    fn text_blob_key_includes_font_fallback_policy() {
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let base = TextStyle::default();
+        let k0 = TextBlobKey::new("hello", base, constraints, 1);
+        let k1 = TextBlobKey::new("hello", base, constraints, 2);
+        assert_ne!(k0, k1);
     }
 
     #[test]
