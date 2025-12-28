@@ -54,15 +54,19 @@ the IME is active), the framework defines a deterministic arbitration rule.
 Definitions:
 
 - "Composing" means the focused text input has an active IME preedit/composition state (preedit
-  string is non-empty and/or the platform reports a marked/active composition range).
+  string is non-empty and/or the platform reports a marked/active composition range/cursor (some
+  platforms report composition cursor updates even when the preedit string is empty).
 - "Non-printing keys" include navigation and control keys: arrows, Backspace/Delete, Home/End,
-  PageUp/PageDown, Escape, Enter, Tab.
+  PageUp/PageDown, Escape, Enter (including NumpadEnter), Tab.
+- Some IMEs also use printable keys (notably Space) during composition for candidate conversion; these
+  must be treated as IME-sensitive while composing.
 
 Locked P0 behavior:
 
 1) When the focused widget is a text-editing widget and IME is enabled:
    - If composing, **IME gets first refusal** on `KeyDown` for:
-     `Tab`, `Enter`, `Escape`, arrows, `Backspace`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`.
+      `Tab`, `Space`, `Enter`/`NumpadEnter`, `Escape`, arrows, `Backspace`, `Delete`, `Home`, `End`,
+      `PageUp`, `PageDown`.
    - The UI runtime (text widget) may still handle these keys if the IME does not consume them,
      but **global shortcuts and focus traversal must not run first**.
 
@@ -103,7 +107,7 @@ Locked P0 behavior:
 - The caret rect must be updated whenever:
   - selection/caret moves,
   - layout changes (scrolling, wrapping, DPI scale changes),
-  - preedit (composition) changes.
+  - preedit (composition) text or preedit cursor changes.
 
 Effect shape (implemented in desktop runner):
 
