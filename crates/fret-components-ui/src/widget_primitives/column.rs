@@ -45,8 +45,9 @@ impl<H: UiHost> Widget<H> for Column {
 
         for (i, &child) in cx.children.iter().enumerate() {
             if i > 0 {
-                y = Px(y.0 + self.spacing.0.max(0.0));
-                content_height = Px(content_height.0 + self.spacing.0.max(0.0));
+                let spacing = self.spacing.0.max(0.0);
+                y = Px(y.0 + spacing);
+                content_height = Px(content_height.0 + spacing);
             }
 
             let child_origin = Point::new(inner_origin.x, y);
@@ -75,3 +76,4 @@ impl<H: UiHost> Widget<H> for Column {
         }
     }
 }
+

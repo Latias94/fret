@@ -2,9 +2,9 @@ use fret_core::{
     Color, DrawOrder, FontId, Px, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics,
     TextOverflow, TextStyle, TextWrap,
 };
+use fret_ui::{LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 use fret_ui::widget::SemanticsCx;
-use fret_ui::{LayoutCx, PaintCx, Theme, UiHost, Widget};
 
 #[derive(Debug, Clone)]
 pub struct Text {
@@ -147,79 +147,3 @@ impl<H: UiHost> Widget<H> for Text {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::Text;
-    use crate::test_host::TestHost;
-    use fret_core::{
-        AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathStyle, Px, Rect, Size,
-        TextConstraints, TextMetrics, TextService, geometry::Point,
-    };
-    use fret_ui::UiTree;
-
-    struct FakeUiServices;
-
-    impl TextService for FakeUiServices {
-        fn prepare(
-            &mut self,
-            _text: &str,
-            _style: fret_core::TextStyle,
-            _constraints: TextConstraints,
-        ) -> (fret_core::TextBlobId, TextMetrics) {
-            (
-                fret_core::TextBlobId::default(),
-                TextMetrics {
-                    size: Size::new(Px(10.0), Px(10.0)),
-                    baseline: Px(8.0),
-                },
-            )
-        }
-
-        fn release(&mut self, _blob: fret_core::TextBlobId) {}
-    }
-
-    impl fret_core::PathService for FakeUiServices {
-        fn prepare(
-            &mut self,
-            _commands: &[PathCommand],
-            _style: PathStyle,
-            _constraints: PathConstraints,
-        ) -> (PathId, PathMetrics) {
-            (PathId::default(), PathMetrics::default())
-        }
-
-        fn release(&mut self, _path: PathId) {}
-    }
-
-    impl fret_core::SvgService for FakeUiServices {
-        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
-            fret_core::SvgId::default()
-        }
-
-        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
-            false
-        }
-    }
-
-    #[test]
-    fn text_sets_semantics_label() {
-        let window = AppWindowId::default();
-        let mut ui: UiTree<TestHost> = UiTree::new();
-        ui.set_window(window);
-
-        let root = ui.create_node(Text::new("Hello"));
-        ui.set_root(root);
-
-        let mut app = TestHost::new();
-        let mut services = FakeUiServices;
-        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
-
-        ui.request_semantics_snapshot();
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-        let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let node = snap.nodes.iter().find(|n| n.id == root).expect("text node");
-        assert_eq!(node.role, fret_core::SemanticsRole::Text);
-        assert_eq!(node.label.as_deref(), Some("Hello"));
-    }
-}

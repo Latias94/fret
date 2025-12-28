@@ -523,7 +523,7 @@ mod tests {
         TextConstraints, TextMetrics, TextService, TextStyle,
     };
     use fret_ui::{EventCx, LayoutCx, PaintCx, UiHost, UiTree, Widget};
-    use fret_ui_widgets::primitives::{Column, Scroll};
+    use crate::widget_primitives::{Column, Scroll};
 
     #[derive(Default)]
     struct FakeText;

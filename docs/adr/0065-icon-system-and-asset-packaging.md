@@ -101,10 +101,8 @@ continue to rely on semantic IDs (e.g. `ui.close`) for portability.
 Component-layer helpers (e.g. `fret-components-ui` `Icon` / `IconButton`) render an `IconId` by resolving
 `IconSource`:
 
-- Preferred: SVG bytes -> `fret_ui_widgets::primitives::SvgIcon` (tinted).
-  - This uses `SvgService::register_svg` and emits `SceneOp::SvgMaskIcon`.
-  - Raster caching and memory budgets remain renderer-owned.
-- Optional: for multi-color assets -> `fret_ui_widgets::primitives::SvgImage` (untinted RGBA).
+- Preferred: SVG bytes -> `fret_ui::SvgSource` + declarative `SvgIcon` element (`ElementCx::svg_icon`), emitting `SceneOp::SvgMaskIcon`.
+- Optional: for multi-color assets -> render as an `ImageId` (renderer-owned rasterization/caching).
 - Fallback: glyph -> existing text pipeline.
 
 No component code holds `ImageId` or manages raster caches directly.

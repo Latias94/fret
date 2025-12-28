@@ -5,6 +5,7 @@
 
 pub mod declarative;
 pub mod recipes;
+pub mod widget_primitives;
 mod sizing;
 mod style;
 mod styled;

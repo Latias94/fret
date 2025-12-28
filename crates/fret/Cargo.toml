@@ -7,4 +7,3 @@ edition.workspace = true
 fret-core = { path = "../fret-core" }
 fret-app = { path = "../fret-app" }
 fret-ui = { path = "../fret-ui" }
-fret-ui-widgets = { path = "../fret-ui-widgets" }

@@ -119,7 +119,7 @@ It complements (but does not replace) ADRs:
 - **Formalize the vector path contract now that `SceneOp::Path` exists**
   - Problem: `fret-core::vector_path` and `SceneOp::Path` are implemented, but the contract is not yet locked at the ADR level (stroke joins/caps, AA expectations, transform interaction, caching keys).
   - ADRs: `docs/adr/0002-display-list.md`, `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
-  - Code: `crates/fret-core/src/vector_path.rs`, `crates/fret-core/src/scene.rs`, `crates/fret-render/src/renderer.rs`, `crates/fret-ui-widgets/src/primitives/path.rs`
+  - Code: `crates/fret-core/src/vector_path.rs`, `crates/fret-core/src/scene.rs`, `crates/fret-render/src/renderer.rs`
 
 - **Clarify the runner vs platform split in docs and code**
   - Problem: `fret-platform` currently hosts the AccessKit bridge, while winit event mapping/effects draining live in `fret-runner-winit-wgpu`; keep responsibilities crisp to avoid duplicating window registries and event translation.

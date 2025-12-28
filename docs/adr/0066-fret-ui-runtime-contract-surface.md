@@ -188,7 +188,7 @@ the runtime contract surface.
 
 Rules:
 
-- any retained widgets live in `crates/fret-ui-widgets` (not `crates/fret-ui`),
+- any retained widgets live in `crates/fret-components-ui/src/widget_primitives` (not `crates/fret-ui`),
 - `crates/fret-ui` tests must not depend on retained widgets,
 - retained widgets must have an explicit delete plan (see `docs/declarative-only-migration.md`).
 

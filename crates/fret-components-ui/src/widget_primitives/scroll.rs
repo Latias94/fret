@@ -6,9 +6,7 @@ use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, Widget};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScrollbarGutter {
-    /// Reserve space for the scrollbar by shrinking the content width when overflowed.
     Stable,
-    /// Overlay the scrollbar on top of the content without affecting layout.
     Overlay,
 }
 
@@ -61,14 +59,6 @@ impl Scroll {
         self
     }
 
-    pub fn offset_y(&self) -> Px {
-        self.offset_y
-    }
-
-    // NOTE: This widget scrolls by changing the child subtree bounds during layout so that
-    // hit-testing remains correct. This is inherently O(N) for large subtrees.
-    // For large lists, prefer declarative virtualization (or the legacy `VirtualList`) to keep
-    // scrolling smooth.
     fn has_overflow(&self) -> bool {
         self.last_viewport_height.0 > 0.0
             && self.last_content_height.0 > self.last_viewport_height.0
@@ -117,23 +107,19 @@ impl Scroll {
         let thumb_y = Px(track.origin.y.0 + travel * t);
 
         let thumb = Rect::new(Point::new(track.origin.x, thumb_y), Size::new(w, thumb_h));
-
         Some((track, thumb))
     }
 
-    fn set_offset_from_thumb_y(&mut self, thumb_top_y: Px) {
+    fn set_offset_from_thumb_y(&mut self, thumb_y: Px) {
         let Some((track, thumb)) = self.scrollbar_geometry() else {
             return;
         };
-
-        let viewport_h = self.last_viewport_height.0;
-        let travel = (viewport_h - thumb.size.height.0).max(0.0);
+        let travel = (track.size.height.0 - thumb.size.height.0).max(0.0);
         if travel <= 0.0 {
-            self.offset_y = Px(0.0);
             return;
         }
 
-        let t = ((thumb_top_y.0 - track.origin.y.0) / travel).clamp(0.0, 1.0);
+        let t = ((thumb_y.0 - track.origin.y.0) / travel).clamp(0.0, 1.0);
         let max = self.max_offset().0;
         self.offset_y = Px(max * t);
     }
@@ -146,15 +132,16 @@ impl Default for Scroll {
 }
 
 impl<H: UiHost> Widget<H> for Scroll {
-    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-        self.scrollbar_width = cx.theme().metrics.scrollbar_width;
-        self.last_bounds = cx.bounds;
-        let Event::Pointer(pe) = event else {
-            return;
-        };
+    fn hit_test(&self, _bounds: Rect, position: Point) -> bool {
+        self.last_bounds.contains(position)
+    }
 
-        match pe {
-            PointerEvent::Wheel { delta, .. } => {
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        match event {
+            Event::Pointer(PointerEvent::Wheel { position, delta, .. }) => {
+                if !self.last_bounds.contains(*position) || !self.has_overflow() {
+                    return;
+                }
                 self.offset_y = Px((self.offset_y.0 - delta.y.0).max(0.0));
                 self.clamp_offset(self.last_content_height, self.last_viewport_height);
                 cx.invalidate_self(Invalidation::Layout);
@@ -162,9 +149,9 @@ impl<H: UiHost> Widget<H> for Scroll {
                 cx.request_redraw();
                 cx.stop_propagation();
             }
-            PointerEvent::Down {
+            Event::Pointer(PointerEvent::Down {
                 position, button, ..
-            } => {
+            }) => {
                 if *button != MouseButton::Left {
                     return;
                 }
@@ -190,7 +177,7 @@ impl<H: UiHost> Widget<H> for Scroll {
                 cx.request_redraw();
                 cx.stop_propagation();
             }
-            PointerEvent::Move { position, .. } => {
+            Event::Pointer(PointerEvent::Move { position, .. }) => {
                 if self.has_overflow() {
                     if let Some((track, thumb)) = self.scrollbar_geometry() {
                         let hovered_track = track.contains(*position);
@@ -243,7 +230,7 @@ impl<H: UiHost> Widget<H> for Scroll {
                 cx.request_redraw();
                 cx.stop_propagation();
             }
-            PointerEvent::Up { button, .. } => {
+            Event::Pointer(PointerEvent::Up { button, .. }) => {
                 if *button != MouseButton::Left {
                     return;
                 }
@@ -255,6 +242,7 @@ impl<H: UiHost> Widget<H> for Scroll {
                     cx.stop_propagation();
                 }
             }
+            _ => {}
         }
     }
 
@@ -279,7 +267,6 @@ impl<H: UiHost> Widget<H> for Scroll {
         let mut show_scrollbar = content_height.0 > cx.available.height.0;
 
         if !can_skip_measure || show_scrollbar != self.last_show_scrollbar {
-            // Measure content with unconstrained height (very simple MVP).
             let mut content_size = cx.layout_in(
                 child,
                 Rect::new(cx.bounds.origin, Size::new(content_width, Px(1.0e9))),
@@ -305,7 +292,6 @@ impl<H: UiHost> Widget<H> for Scroll {
         self.last_viewport_height = cx.available.height;
         self.clamp_offset(content_height, cx.available.height);
 
-        // Layout child at a translated origin to implement scrolling.
         let origin = Point::new(
             cx.bounds.origin.x,
             Px(cx.bounds.origin.y.0 - self.offset_y.0),
@@ -334,56 +320,59 @@ impl<H: UiHost> Widget<H> for Scroll {
 
         cx.scene.push(SceneOp::PopClip);
 
-        if let Some((track, thumb)) = self.scrollbar_geometry() {
-            let (track_bg, thumb_bg, thumb_hover_bg, radius) = {
-                let theme = cx.theme();
-                (
-                    theme.colors.scrollbar_track,
-                    theme.colors.scrollbar_thumb,
-                    theme.colors.scrollbar_thumb_hover,
-                    theme.metrics.radius_sm,
-                )
-            };
+        let Some((track, thumb)) = self.scrollbar_geometry() else {
+            return;
+        };
 
-            let track_alpha = if self.hovered_track || self.dragging_thumb {
-                1.0
-            } else {
-                0.35
-            };
-            let thumb_alpha = if self.hovered_thumb || self.dragging_thumb {
-                1.0
-            } else {
-                0.65
-            };
-            cx.scene.push(SceneOp::Quad {
-                order: DrawOrder(100),
-                rect: track,
-                background: Color {
-                    a: (track_bg.a * track_alpha).clamp(0.0, 1.0),
-                    ..track_bg
-                },
-                border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(radius),
-            });
+        let (track_bg, thumb_bg, thumb_hover_bg, radius) = {
+            let theme = cx.theme();
+            (
+                theme.colors.scrollbar_track,
+                theme.colors.scrollbar_thumb,
+                theme.colors.scrollbar_thumb_hover,
+                theme.metrics.radius_sm,
+            )
+        };
 
-            let thumb_bg = if self.dragging_thumb || self.hovered_thumb {
-                thumb_hover_bg
-            } else {
-                thumb_bg
-            };
+        let track_alpha = if self.hovered_track || self.dragging_thumb {
+            1.0
+        } else {
+            0.35
+        };
+        let thumb_alpha = if self.hovered_thumb || self.dragging_thumb {
+            1.0
+        } else {
+            0.65
+        };
 
-            cx.scene.push(SceneOp::Quad {
-                order: DrawOrder(101),
-                rect: thumb,
-                background: Color {
-                    a: (thumb_bg.a * thumb_alpha).clamp(0.0, 1.0),
-                    ..thumb_bg
-                },
-                border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(radius),
-            });
-        }
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(100),
+            rect: track,
+            background: Color {
+                a: track_bg.a * track_alpha,
+                ..track_bg
+            },
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(radius),
+        });
+
+        let thumb_color = if self.hovered_thumb || self.dragging_thumb {
+            thumb_hover_bg
+        } else {
+            thumb_bg
+        };
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(101),
+            rect: thumb,
+            background: Color {
+                a: thumb_color.a * thumb_alpha,
+                ..thumb_color
+            },
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(radius),
+        });
     }
 }
+

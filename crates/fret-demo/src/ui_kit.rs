@@ -7,7 +7,7 @@ use fret_core::{
 };
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui::{Invalidation, LayoutCx, PaintCx, UiTree, Widget};
-use fret_ui_widgets::primitives::{Column, Scroll, Stack, Text};
+use fret_components_ui::widget_primitives::{Column, Scroll, Stack, Text};
 use std::sync::Arc;
 use std::time::Duration;
 use winit::event_loop::EventLoop;

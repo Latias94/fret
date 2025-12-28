@@ -102,7 +102,6 @@ It is intentionally **mechanism-only**: component policies and UI recipes belong
 
 ### Retained widgets (temporary)
 
-- **Crate:** `crates/fret-ui-widgets`
-- **Rule:** retained widgets are not part of the runtime contract surface; they exist only as a
-  temporary compatibility layer while declarative authoring fully replaces widget-based authoring.
+- **Location:** `crates/fret-components-ui/src/widget_primitives`
+- **Rule:** retained widgets are not part of the runtime contract surface; they exist only as a temporary compatibility layer while declarative authoring fully replaces widget-based authoring.
 - **ADR:** `docs/adr/0066-fret-ui-runtime-contract-surface.md`
