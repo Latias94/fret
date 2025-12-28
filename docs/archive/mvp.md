@@ -7,7 +7,7 @@ This file is intentionally kept **short and actionable**.
 - Full active plan (details, definitions, status notes): `docs/archive/mvp/active-plan.md`
 - Completed stage definitions: `docs/archive/mvp-archive.md`
 - Long-horizon priorities and refactors: `docs/roadmap.md`
-- Runtime contract gap list (ADR 0066 conformance): `docs/runtime-contract-gap.md`
+- Runtime contract gap list (ADR 0066 conformance): `docs/archive/backlog/runtime-contract-gap.md`
 
 ## What’s Next
 

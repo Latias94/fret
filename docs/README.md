@@ -6,15 +6,16 @@ contracts early to avoid large rewrites later.
 ## Recommended reading order (for a new contributor or AI agent)
 
 1. `docs/architecture.md` — what Fret is, what it is not, and how crates fit together.
-2. `docs/roadmap.md` — priorities, decision gates, and milestones (what to do next, and what must be decided early).
-3. `docs/adr/README.md` — module-oriented ADR index (where to find the relevant contracts fast).
+2. `docs/runtime-contract-matrix.md` — a compact map of the `fret-ui` runtime contract surface and references.
+3. `docs/roadmap.md` — priorities, decision gates, and milestones (what to do next, and what must be decided early).
+4. `docs/adr/README.md` — module-oriented ADR index (where to find the relevant contracts fast).
    - Tip: ADRs marked `Status: Proposed` are “decision gates” and should be treated as changeable until accepted.
-4. `docs/repo-ref.md` — pinned local reference sources (where to read upstream code without version drift).
-5. `docs/dependency-policy.md` — dependency and MSRV policy (how we keep contracts portable).
-6. `docs/todo-tracker.md` — review-driven TODO list (action items linked back to ADRs).
-7. `docs/known-issues.md` — common diagnostics and current platform limitations.
-8. Archived MVP planning docs (historical): `docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`, `docs/archive/mvp-archive.md`
-9. ADR deep dives (pick by subsystem):
+5. `docs/repo-ref.md` — pinned local reference sources (where to read upstream code without version drift).
+6. `docs/dependency-policy.md` — dependency and MSRV policy (how we keep contracts portable).
+7. `docs/todo-tracker.md` — review-driven TODO list (action items linked back to ADRs).
+8. `docs/known-issues.md` — common diagnostics and current platform limitations.
+9. Archived MVP planning docs (historical): `docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`, `docs/archive/mvp-archive.md`
+10. ADR deep dives (pick by subsystem):
    - UI execution model: `docs/adr/0028-declarative-elements-and-element-state.md`
    - Component authoring: `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
    - Ownership/data flow: `docs/adr/0031-app-owned-models-and-leasing-updates.md`

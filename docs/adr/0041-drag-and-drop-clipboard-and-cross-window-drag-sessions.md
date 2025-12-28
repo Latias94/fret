@@ -238,4 +238,4 @@ External OS file DnD prototype:
 - Event type: `Event::ExternalDrag` (`crates/fret-core/src/input.rs`)
 - Winit mapping (merges with last cursor position for routing): `crates/fret-runner-winit-wgpu/src/runner.rs`
 - UiTree hit-test routing support: `crates/fret-ui/src/tree.rs`
-- Demo probe widget (logs hover/drop): `crates/fret-demo/src/dnd_probe.rs`
+- Demo/probe harness: not yet stabilized in `fret-demo` (add a minimal DnD probe to `crates/fret-demo/src/ui_kit.rs` when needed; see `docs/todo-tracker.md`).

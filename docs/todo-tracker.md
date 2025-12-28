@@ -10,6 +10,7 @@ It complements (but does not replace) ADRs:
 
 - Prefer turning P0 items into `Accepted` ADR decisions or conformance tests before adding new feature surface area.
 - When an item is resolved, either delete it or move it into `docs/known-issues.md` (if it becomes a long-lived limitation).
+- Deep-dive gap/backlog notes live under `docs/archive/backlog/` to keep `docs/` entrypoints small.
 
 ## P0 — IME / Text Input
 

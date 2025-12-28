@@ -12,7 +12,7 @@ definitions live in `docs/archive/mvp/reference-plan.md`.
 - Overview: `docs/archive/mvp.md`
 - Roadmap (long horizon): `docs/roadmap.md`
 - Reference plan (historical): `docs/archive/mvp/reference-plan.md`
-- Runtime contract gap list: `docs/runtime-contract-gap.md`
+- Runtime contract gap list: `docs/archive/backlog/runtime-contract-gap.md`
 - Known issues / paper cuts: `docs/known-issues.md`
 
 ## Current Status (High-Signal)

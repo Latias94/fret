@@ -53,7 +53,9 @@ Implementation anchors (current workspace):
 
 - Command registry + `CommandMeta` shape: `crates/fret-app/src/app.rs`
 - Keymap reverse lookup for UI display (best-effort): `crates/fret-app/src/keymap.rs`
-- Demo command palette overlay: `crates/fret-demo/src/command_palette.rs`
+- Command palette overlay (component kit): `crates/fret-components-ui/src/command_palette_overlay.rs`
+  - Palette list body + filtering: `crates/fret-components-ui/src/command_palette.rs`
+  - Standard overlay wiring: `crates/fret-components-ui/src/window_overlays.rs`
 - Minimal menu model types (data-only): `crates/fret-app/src/menu.rs`
 
 ### 2) Menus and toolbars are derived from command metadata

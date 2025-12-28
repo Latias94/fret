@@ -53,7 +53,7 @@ composition and shadcn-style component parity.
 - Typed scales:
   - `Space` + `Radius` in `crates/fret-components-ui/src/style.rs`
   - Theme extension keys: `component.space.*`, `component.radius.*`
-  - Fallback behavior to baseline `metric.*` (see `docs/ui-kit-gap.md`)
+  - Fallback behavior to baseline `metric.*` (see `docs/archive/backlog/ui-kit-gap.md`)
 - Style patches (“Tailwind-like”), split by intent:
   - `ChromeRefinement` (control chrome): `p/px/py` + per-edge `pt/pr/pb/pl`, `border_*`, `rounded_*`, colors
   - `LayoutRefinement` (layout only): margin/position/inset/aspect/size/flex/grid; **applies only** in declarative authoring (or explicit layout wrappers), never silently on retained widgets

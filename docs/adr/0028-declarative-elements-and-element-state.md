@@ -36,8 +36,8 @@ Implementation anchors (Fret MVP2 skeleton):
 
 - Element IDs + window-scoped cross-frame state store (`(GlobalElementId, TypeId)`):
   - `crates/fret-ui/src/elements.rs`
-- MVP demo widget (keyed vs unkeyed reorder + debug warning):
-  - `crates/fret-demo/src/elements_mvp2.rs`
+- Unkeyed list reorder detection (debug warning; requires explicit keys for dynamic lists):
+  - `crates/fret-ui/src/elements.rs` (logs: "unkeyed element list order changed; add explicit keys to preserve state")
 
 ## Decision
 

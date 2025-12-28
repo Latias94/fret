@@ -134,9 +134,8 @@ Notes:
 
 - Protocol types + editor registry (example editor layer): `crates/fret-editor/src/inspector_protocol.rs`
 - Property edit request plumbing (phased edits): `crates/fret-editor/src/property_edit.rs`
-- Demo inspector uses property tree + registry to build rows and routes edits through commands/services:
-  - Inspector panel: `crates/fret-demo/src/editor_shell.rs`
-  - Commit handler: prototype lived in `crates/fret-demo` (entrypoints evolve; search for `property_edit.commit` / `inspector_edit.commit`)
+- Inspector edit UI surface (example editor layer widgets): `crates/fret-editor/src/inspector_edit_layout.rs`
+- Demo wiring status: no dedicated inspector demo harness is kept stable yet; if needed, integrate into `fret-demo --bin ui_kit` and treat the demo entrypoint as evolving.
 
 Phased edit validation:
 
