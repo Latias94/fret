@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_components_ui::{PopoverItem, PopoverRequest, PopoverService, Size as ComponentSize};
+use fret_components_ui::{AnchorRect, PopoverItem, PopoverRequest, PopoverService, Size as ComponentSize};
 use fret_core::{
     Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, NodeId, Point, Px,
     Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle,
@@ -339,7 +339,7 @@ impl NavigationMenu {
                     window,
                     PopoverRequest {
                         owner: cx.node,
-                        anchor,
+                        anchor: AnchorRect::from_rect(anchor),
                         items: popover_items,
                         selected: None,
                         request_focus: true,
@@ -998,7 +998,7 @@ impl<H: UiHost> Widget<H> for NavigationMenuA11yItem {
                             window,
                             PopoverRequest {
                                 owner: cx.node,
-                                anchor: cx.bounds,
+                                anchor: AnchorRect::from_rect(cx.bounds),
                                 items: popover_items,
                                 selected: None,
                                 request_focus: true,
