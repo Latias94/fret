@@ -573,9 +573,6 @@ impl<H: UiHost> Widget<H> for TextInput {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         let focused = self.is_focused(cx);
-        let Some(window) = cx.window else {
-            return;
-        };
 
         match event {
             Event::Pointer(fret_core::PointerEvent::Down {
@@ -586,10 +583,6 @@ impl<H: UiHost> Widget<H> for TextInput {
                 }
                 cx.request_focus(cx.node);
                 cx.capture_pointer(cx.node);
-                cx.app.push_effect(Effect::ImeAllow {
-                    window,
-                    enabled: true,
-                });
                 self.last_sent_cursor = None;
                 let padding = self.chrome_style.padding.left;
                 let local_x =
@@ -1254,11 +1247,6 @@ impl<H: UiHost> Widget<H> for TextInput {
         if !focused {
             return;
         }
-
-        cx.app.push_effect(Effect::ImeAllow {
-            window,
-            enabled: true,
-        });
 
         let caret_local = self.caret_rect(cx, cx.bounds, cx.scale_factor);
         let caret = Rect::new(

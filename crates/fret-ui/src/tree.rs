@@ -1147,6 +1147,11 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.captured = self.captured;
         }
 
+        // Keep IME enabled state in sync even if focus is set programmatically and no input event
+        // has been dispatched yet (ADR 0012).
+        let focus_is_text_input = self.focus_is_text_input();
+        self.set_ime_allowed(app, focus_is_text_input);
+
         let cache_enabled = self.paint_cache_enabled();
         if cache_enabled {
             self.paint_cache.begin_frame();
@@ -2897,6 +2902,45 @@ mod tests {
         let nb = ui_b.nodes.get(node_b).unwrap();
         assert!(nb.invalidation.layout);
         assert!(nb.invalidation.paint);
+    }
+
+    #[test]
+    fn paint_all_sets_ime_allowed_for_focused_text_input() {
+        #[derive(Default)]
+        struct FakeTextInput;
+
+        impl<H: UiHost> Widget<H> for FakeTextInput {
+            fn is_text_input(&self) -> bool {
+                true
+            }
+
+            fn is_focusable(&self) -> bool {
+                true
+            }
+        }
+
+        let mut app = crate::test_host::TestHost::new();
+        let mut ui = UiTree::new();
+        ui.set_window(AppWindowId::default());
+
+        let node = ui.create_node(FakeTextInput::default());
+        ui.set_root(node);
+        ui.set_focus(Some(node));
+
+        let mut services = FakeUiServices;
+        let bounds = Rect::new(
+            Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let effects = app.take_effects();
+        assert!(effects
+            .iter()
+            .any(|e| matches!(e, fret_runtime::Effect::ImeAllow { enabled: true, .. })));
     }
 
     #[test]

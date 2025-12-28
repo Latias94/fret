@@ -1447,10 +1447,6 @@ impl<H: UiHost> Widget<H> for TextArea {
             );
 
             if let Some(window) = cx.window {
-                cx.app.push_effect(Effect::ImeAllow {
-                    window,
-                    enabled: true,
-                });
                 if self.last_sent_cursor != Some(caret_rect) {
                     self.last_sent_cursor = Some(caret_rect);
                     cx.app.push_effect(Effect::ImeSetCursorArea {
