@@ -1667,7 +1667,8 @@ mod tests {
     use crate::UiTree;
     use crate::test_host::TestHost;
     use fret_core::{
-        AppWindowId, Event, PlatformCapabilities, Point, Px, Size, TextConstraints, TextMetrics,
+        AppWindowId, CaretAffinity, Event, PlatformCapabilities, Point, Px, Rect, Scene, Size,
+        TextConstraints, TextMetrics,
         TextService, TextStyle,
     };
     use fret_runtime::Effect;
@@ -1688,6 +1689,13 @@ mod tests {
                     size: Size::new(Px(10.0), Px(10.0)),
                     baseline: Px(8.0),
                 },
+            )
+        }
+
+        fn caret_rect(&mut self, _blob: fret_core::TextBlobId, index: usize, _affinity: CaretAffinity) -> Rect {
+            Rect::new(
+                Point::new(Px(index as f32), Px(0.0)),
+                Size::new(Px(1.0), Px(10.0)),
             )
         }
 
@@ -1761,6 +1769,75 @@ mod tests {
                     if *w == window && *icon == fret_core::CursorIcon::Text
             )),
             "expected a text cursor effect when hovering a text area"
+        );
+    }
+
+    #[test]
+    fn ime_cursor_area_moves_with_preedit_cursor() {
+        let window = AppWindowId::default();
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(TextArea::default());
+        ui.set_root(root);
+        ui.set_focus(Some(root));
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut text = FakeTextService::default();
+
+        let _ = ui.layout(
+            &mut app,
+            &mut text,
+            root,
+            Size::new(Px(300.0), Px(200.0)),
+            1.0,
+        );
+        let _ = app.take_effects();
+
+        fn paint_once(ui: &mut UiTree<TestHost>, root: fret_core::NodeId, app: &mut TestHost, text: &mut FakeTextService) -> f32 {
+            let mut scene = Scene::default();
+            ui.paint(
+                app,
+                text,
+                root,
+                Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(300.0), Px(200.0))),
+                &mut scene,
+                1.0,
+            );
+            app.take_effects()
+                .into_iter()
+                .find_map(|e| match e {
+                    Effect::ImeSetCursorArea { rect, .. } => Some(rect.origin.x.0),
+                    _ => None,
+                })
+                .expect("expected an IME cursor area effect")
+        }
+
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::Ime(fret_core::ImeEvent::Preedit {
+                text: "abcd".to_string(),
+                cursor: Some((0, 0)),
+            }),
+        );
+        let x0 = paint_once(&mut ui, root, &mut app, &mut text);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::Ime(fret_core::ImeEvent::Preedit {
+                text: "abcd".to_string(),
+                cursor: Some((0, 2)),
+            }),
+        );
+        let x2 = paint_once(&mut ui, root, &mut app, &mut text);
+
+        assert!(
+            (x2 - x0 - 2.0).abs() < 0.001,
+            "expected IME cursor x to move by preedit prefix width"
         );
     }
 }
