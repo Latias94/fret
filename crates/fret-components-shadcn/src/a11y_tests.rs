@@ -1,3 +1,4 @@
+use crate::flow_column::FlowColumn;
 use crate::test_host::TestHost;
 use crate::{AccordionTrigger, CollapsibleTrigger, DatePicker, InputOTP, Toggle};
 use fret_components_ui::{PopoverService, PopoverSurfaceRequest, PopoverSurfaceService};
@@ -106,7 +107,7 @@ fn collapsible_trigger_exposes_invoke_action_and_expanded_state() {
     let mut host = TestHost::default();
     let open: Model<bool> = host.models_mut().insert(false);
 
-    let root = ui.create_node(fret_components_ui::widget_primitives::Column::new());
+    let root = ui.create_node(FlowColumn::new());
     ui.set_root(root);
     let trigger = ui.create_node(CollapsibleTrigger::new(open));
     ui.add_child(root, trigger);
@@ -146,7 +147,7 @@ fn accordion_trigger_exposes_invoke_action_and_expanded_state() {
     let mut host = TestHost::default();
     let selection: Model<Option<std::sync::Arc<str>>> = host.models_mut().insert(None);
 
-    let root = ui.create_node(fret_components_ui::widget_primitives::Column::new());
+    let root = ui.create_node(FlowColumn::new());
     ui.set_root(root);
     let trigger = ui.create_node(AccordionTrigger::single(selection, "item"));
     ui.add_child(root, trigger);
@@ -185,7 +186,7 @@ fn toggle_sets_label_and_exposes_invoke_action() {
     let mut host = TestHost::default();
     let model: Model<bool> = host.models_mut().insert(false);
 
-    let root = ui.create_node(fret_components_ui::widget_primitives::Column::new());
+    let root = ui.create_node(FlowColumn::new());
     ui.set_root(root);
     let toggle = ui.create_node(Toggle::new(model, "Bold"));
     ui.add_child(root, toggle);
@@ -215,10 +216,10 @@ fn date_picker_sets_label_and_expanded_state() {
 
     let model: Model<Option<crate::Date>> = host.models_mut().insert(None);
 
-    let root = ui.create_node(fret_components_ui::widget_primitives::Column::new());
+    let root = ui.create_node(FlowColumn::new());
     ui.set_root(root);
 
-    let content = ui.create_node(fret_components_ui::widget_primitives::Column::new());
+    let content = ui.create_node(FlowColumn::new());
     ui.add_child(root, content);
 
     let picker = ui.create_node(DatePicker::new(model, content));
@@ -271,7 +272,7 @@ fn input_otp_sets_label_value_and_editable_actions() {
     let mut host = TestHost::default();
     let model: Model<String> = host.models_mut().insert("12".to_string());
 
-    let root = ui.create_node(fret_components_ui::widget_primitives::Column::new());
+    let root = ui.create_node(FlowColumn::new());
     ui.set_root(root);
     let otp = ui.create_node(InputOTP::new(model));
     ui.add_child(root, otp);
@@ -300,7 +301,7 @@ fn radio_group_exposes_list_items_and_a11y_invoke_selects_item() {
     let mut host = TestHost::default();
     let model: Model<Option<std::sync::Arc<str>>> = host.models_mut().insert(None);
 
-    let root = ui.create_node(fret_components_ui::widget_primitives::Column::new());
+    let root = ui.create_node(FlowColumn::new());
     ui.set_root(root);
 
     let group = RadioGroup::new(model)
@@ -362,7 +363,7 @@ fn toggle_group_exposes_button_items_and_a11y_invoke_toggles_selection() {
     let mut host = TestHost::default();
     let model: Model<Option<std::sync::Arc<str>>> = host.models_mut().insert(None);
 
-    let root = ui.create_node(fret_components_ui::widget_primitives::Column::new());
+    let root = ui.create_node(FlowColumn::new());
     ui.set_root(root);
 
     let group = ToggleGroup::single(model)
@@ -409,7 +410,7 @@ fn button_group_exposes_button_items_and_a11y_invoke_dispatches_command() {
     ui.set_window(window);
 
     let mut host = TestHost::default();
-    let root = ui.create_node(fret_components_ui::widget_primitives::Column::new());
+    let root = ui.create_node(FlowColumn::new());
     ui.set_root(root);
 
     let cmd = CommandId::from("demo.button_group.bold");
@@ -466,7 +467,7 @@ fn navigation_menu_exposes_menu_items_and_a11y_invoke_dispatches_link_command() 
     ui.set_window(window);
 
     let mut host = TestHost::default();
-    let root = ui.create_node(fret_components_ui::widget_primitives::Column::new());
+    let root = ui.create_node(FlowColumn::new());
     ui.set_root(root);
 
     let new_cmd = CommandId::from("demo.nav.new");

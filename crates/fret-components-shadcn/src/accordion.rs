@@ -1,21 +1,21 @@
 use std::sync::Arc;
 
+use crate::flow_column::FlowColumn;
 use fret_core::{CursorIcon, Event, KeyCode, MouseButton, Point, Px, Rect, Size};
 use fret_runtime::Model;
 use fret_ui::UiHost;
 use fret_ui::widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget};
-use fret_components_ui::widget_primitives::Column;
 
 /// shadcn/ui `Accordion` root.
 ///
 /// In the DOM, children participate in normal flow; in Fret's retained tree we map this to a
 /// vertical flow container.
-pub type Accordion = Column;
+pub type Accordion = FlowColumn;
 
 /// shadcn/ui `AccordionItem`.
 ///
 /// This is a neutral container; styling (e.g. borders) is left to the caller.
-pub type AccordionItem = Column;
+pub type AccordionItem = FlowColumn;
 
 #[derive(Clone, Copy)]
 enum SelectionModel {

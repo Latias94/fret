@@ -1,12 +1,13 @@
 use fret_core::{Point, Px, Rect, Size};
 use fret_ui::{LayoutCx, PaintCx, UiHost, Widget};
 
-pub struct Column {
+#[derive(Debug, Clone, Copy)]
+pub struct FlowColumn {
     pub spacing: Px,
     pub padding: Px,
 }
 
-impl Column {
+impl FlowColumn {
     pub fn new() -> Self {
         Self {
             spacing: Px(0.0),
@@ -25,13 +26,13 @@ impl Column {
     }
 }
 
-impl Default for Column {
+impl Default for FlowColumn {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<H: UiHost> Widget<H> for Column {
+impl<H: UiHost> Widget<H> for FlowColumn {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let pad = self.padding.0.max(0.0);
         let inner_origin = Point::new(

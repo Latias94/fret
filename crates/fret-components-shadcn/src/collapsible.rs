@@ -1,14 +1,14 @@
+use crate::flow_column::FlowColumn;
 use fret_core::{CursorIcon, Event, KeyCode, MouseButton, Point, Px, Rect, Size};
 use fret_runtime::Model;
 use fret_ui::UiHost;
 use fret_ui::widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget};
-use fret_components_ui::widget_primitives::Column;
 
 /// shadcn/ui `Collapsible` root.
 ///
 /// In the DOM, the root does not prescribe layout; children participate in normal flow.
 /// In Fret's retained tree we need a layout container, so we map it to a vertical flow container.
-pub type Collapsible = Column;
+pub type Collapsible = FlowColumn;
 
 pub struct CollapsibleTrigger {
     open: Model<bool>,

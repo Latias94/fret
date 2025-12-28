@@ -522,8 +522,7 @@ mod tests {
         PathService, PathStyle, Point, PointerEvent, Px, Rect, Scene, SceneOp, Size, TextBlobId,
         TextConstraints, TextMetrics, TextService, TextStyle,
     };
-    use fret_ui::{EventCx, LayoutCx, PaintCx, UiHost, UiTree, Widget};
-    use crate::widget_primitives::{Column, Scroll};
+    use fret_ui::{EventCx, Invalidation, LayoutCx, PaintCx, UiHost, UiTree, Widget};
 
     #[derive(Default)]
     struct FakeText;
@@ -590,17 +589,84 @@ mod tests {
         ui.set_window(AppWindowId::default());
         ui.set_paint_cache_enabled(false);
 
-        let scroll = ui.create_node(Scroll::new());
+        #[derive(Debug, Default)]
+        struct ScrollColumn {
+            offset_y: Px,
+        }
+
+        impl ScrollColumn {
+            fn new() -> Self {
+                Self { offset_y: Px(0.0) }
+            }
+        }
+
+        impl<H: UiHost> Widget<H> for ScrollColumn {
+            fn hit_test(&self, bounds: Rect, position: Point) -> bool {
+                bounds.contains(position)
+            }
+
+            fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+                let Event::Pointer(PointerEvent::Wheel { position, delta, .. }) = event else {
+                    return;
+                };
+                if !cx.bounds.contains(*position) {
+                    return;
+                }
+                self.offset_y = Px((self.offset_y.0 - delta.y.0).max(0.0));
+                cx.invalidate_self(Invalidation::Layout);
+                cx.request_redraw();
+                cx.stop_propagation();
+            }
+
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                let viewport_h = cx.available.height;
+                let viewport_w = cx.available.width;
+                let x = cx.bounds.origin.x;
+
+                let mut heights: Vec<Px> = Vec::with_capacity(cx.children.len());
+                let mut content_h = Px(0.0);
+                for &child in cx.children {
+                    let probe = Rect::new(cx.bounds.origin, Size::new(viewport_w, Px(1.0e9)));
+                    let size = cx.layout_in(child, probe);
+                    heights.push(size.height);
+                    content_h = Px(content_h.0 + size.height.0);
+                }
+
+                let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
+                self.offset_y = Px(self.offset_y.0.min(max_offset.0));
+
+                let mut y = Px(cx.bounds.origin.y.0 - self.offset_y.0);
+                for (&child, h) in cx.children.iter().zip(heights) {
+                    let probe = Rect::new(Point::new(x, y), Size::new(viewport_w, Px(1.0e9)));
+                    let _ = cx.layout_in(child, probe);
+                    let final_bounds = Rect::new(Point::new(x, y), Size::new(viewport_w, h));
+                    let _ = cx.layout_in(child, final_bounds);
+                    y = Px(y.0 + h.0);
+                }
+
+                cx.available
+            }
+
+            fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+                for &child in cx.children {
+                    if let Some(bounds) = cx.child_bounds(child) {
+                        cx.paint(child, bounds);
+                    } else {
+                        cx.paint(child, cx.bounds);
+                    }
+                }
+            }
+        }
+
+        let scroll = ui.create_node(ScrollColumn::new());
         ui.set_root(scroll);
-        let col = ui.create_node(Column::new());
-        ui.add_child(scroll, col);
 
         let model = app.models_mut().insert(0usize);
         let tabs = ui.create_node(Tabs::new(
             model,
             vec!["Scene", "Game", "Inspector", "Console"],
         ));
-        ui.add_child(col, tabs);
+        ui.add_child(scroll, tabs);
 
         // Make the column tall enough to scroll.
         #[derive(Default)]
@@ -625,7 +691,7 @@ mod tests {
         }
 
         let spacer = ui.create_node(Spacer::new(Px(800.0)));
-        ui.add_child(col, spacer);
+        ui.add_child(scroll, spacer);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),

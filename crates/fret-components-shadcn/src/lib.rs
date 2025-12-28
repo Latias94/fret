@@ -22,6 +22,7 @@ pub mod card;
 pub mod collapsible;
 pub mod data_table;
 pub mod date_picker;
+mod flow_column;
 pub mod empty;
 pub mod field;
 pub mod hover_card;
