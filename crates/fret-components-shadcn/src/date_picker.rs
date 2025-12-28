@@ -12,7 +12,7 @@ use fret_ui::{Theme, UiHost};
 
 use fret_components_ui::popover_surface::open_popover_surface;
 use fret_components_ui::{
-    MetricRef, PopoverSurfaceAlign, PopoverSurfaceRequest, PopoverSurfaceService,
+    AnchorRect, MetricRef, PopoverSurfaceAlign, PopoverSurfaceRequest, PopoverSurfaceService,
     PopoverSurfaceSide, Size as ComponentSize,
 };
 
@@ -342,7 +342,7 @@ impl<H: UiHost> Widget<H> for DatePicker {
                                 window,
                                 PopoverSurfaceRequest::new(
                                     cx.node,
-                                    self.last_bounds,
+                                    AnchorRect::from_rect(self.last_bounds),
                                     self.content_node,
                                 )
                                 .side(PopoverSurfaceSide::Bottom)
@@ -403,7 +403,11 @@ impl<H: UiHost> Widget<H> for DatePicker {
                     open_popover_surface(
                         cx,
                         window,
-                        PopoverSurfaceRequest::new(cx.node, self.last_bounds, self.content_node)
+                        PopoverSurfaceRequest::new(
+                            cx.node,
+                            AnchorRect::from_rect(self.last_bounds),
+                            self.content_node,
+                        )
                             .side(PopoverSurfaceSide::Bottom)
                             .align(PopoverSurfaceAlign::Start),
                     );
@@ -635,7 +639,11 @@ mod tests {
         host.with_global_mut(PopoverSurfaceService::default, |service, _app| {
             service.set_request(
                 window,
-                PopoverSurfaceRequest::new(node, picker.last_bounds, content_node),
+                PopoverSurfaceRequest::new(
+                    node,
+                    AnchorRect::from_rect(picker.last_bounds),
+                    content_node,
+                ),
             );
         });
 

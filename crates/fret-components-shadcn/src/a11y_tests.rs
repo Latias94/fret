@@ -1,7 +1,7 @@
 use crate::flow_column::FlowColumn;
 use crate::test_host::TestHost;
 use crate::{AccordionTrigger, CollapsibleTrigger, DatePicker, InputOTP, Toggle};
-use fret_components_ui::{PopoverService, PopoverSurfaceRequest, PopoverSurfaceService};
+use fret_components_ui::{AnchorRect, PopoverService, PopoverSurfaceRequest, PopoverSurfaceService};
 use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, PathCommand, PathConstraints, PathId, PathMetrics,
     PathStyle, Px, Rect, SemanticsRole, Size, TextConstraints, TextMetrics, TextService, TextStyle,
@@ -244,10 +244,10 @@ fn date_picker_sets_label_and_expanded_state() {
             window,
             PopoverSurfaceRequest::new(
                 picker,
-                Rect::new(
+                AnchorRect::from_rect(Rect::new(
                     Point::new(Px(10.0), Px(10.0)),
                     Size::new(Px(20.0), Px(10.0)),
-                ),
+                )),
                 content,
             ),
         );
