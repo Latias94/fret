@@ -99,6 +99,11 @@ While a dock drag session is active:
 - Escape cancels the drag session (no `DockOp` committed).
 - Focus should not be forcibly changed by overlay dismissal during the drag.
 
+Implementation note (current):
+
+- Desktop runner consumes `Escape` during an active cross-window dock drag and cancels the drag
+  session immediately (also clearing cross-window hover state and stopping any tear-off follow).
+
 ## Conformance checklist (P0)
 
 - Dock drag does not trigger "outside press" dismissal while dragging.

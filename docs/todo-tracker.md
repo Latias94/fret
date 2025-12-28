@@ -63,6 +63,12 @@ It complements (but does not replace) ADRs:
   - ADRs: `docs/adr/0072-docking-interaction-arbitration-matrix.md`, `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
   - Code: `crates/fret-ui/src/dock.rs`, `crates/fret-ui/src/tree.rs`, `crates/fret-components-ui/src/overlay_policy.rs`
 
+- **Escape cancels cross-window dock drags**
+  - Goal: match editor UX where Escape always cancels an in-progress dock tab drag and clears hover previews.
+  - ADRs: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
+  - Code: `crates/fret-runner-winit-wgpu/src/runner.rs`
+  - Current: the runner consumes `Escape` when a cross-window `DragKind::DockPanel` session is active and cancels drag + hover immediately.
+
 - **Dock host keep-alive and early submission**
   - Goal: ensure dock hosts remain stable targets and do not "drop" docked content due to conditional submission.
   - ADRs: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`

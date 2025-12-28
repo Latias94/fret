@@ -2340,6 +2340,24 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
 
                     match event.state {
                         ElementState::Pressed => {
+                            // ADR 0072 (proposed): Escape cancels an active cross-window dock drag
+                            // session (ImGui/Zed-class behavior). Handle it here so we can also
+                            // clear internal drag hover state and stop any tear-off follow
+                            // movement immediately.
+                            if key == fret_core::KeyCode::Escape
+                                && self.app.drag().is_some_and(|d| {
+                                    d.cross_window_hover && d.kind == fret_app::DragKind::DockPanel
+                                })
+                            {
+                                self.app.cancel_drag();
+                                let _ = self.clear_internal_drag_hover_if_needed();
+                                if self.dock_tearoff_follow.is_some() {
+                                    self.stop_dock_tearoff_follow(Instant::now(), true);
+                                }
+                                self.drain_effects(event_loop);
+                                return;
+                            }
+
                             let services =
                                 Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                             self.driver.handle_event(
