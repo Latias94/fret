@@ -1,8 +1,9 @@
 use crate::style::{
     ChromeRefinement, ColorFallback, MetricFallback, component_color, component_metric,
 };
-use fret_core::{Color, Corners, DrawOrder, Edges, Event, Px, Rect, SceneOp, Size};
-use fret_ui::{EventCx, LayoutCx, PaintCx, Theme, UiHost, Widget};
+use fret_core::{Color, Corners, Edges, Px};
+use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, ScrollProps};
+use fret_ui::{ElementCx, Theme, UiHost};
 
 #[derive(Debug, Clone, Copy)]
 struct ResolvedScrollAreaStyle {
@@ -23,33 +24,24 @@ impl Default for ResolvedScrollAreaStyle {
     }
 }
 
-/// A shadcn-inspired scroll area primitive.
+/// A shadcn-inspired scroll area primitive (declarative).
 ///
-/// This widget delegates scrolling behavior to `fret_ui_widgets::primitives::Scroll`, but provides a stable
-/// component-level styling surface (tokens + optional chrome).
+/// This is intentionally a thin composition helper around the `Scroll` element in `fret-ui`:
+///
+/// - runtime owns scrolling mechanics and scrollbar behavior (hard-to-change semantics),
+/// - components own chrome/tokens (background, border, radius).
 ///
 /// Performance notes:
 /// - `ScrollArea` does not virtualize its children. For large/unknown-length lists, prefer
-///   `fret_ui_widgets::primitives::VirtualList` (or a future `components-ui` list wrapper) to avoid O(N)
-///   layout work
-///   during scrolling.
+///   `fret-ui`'s `VirtualList` element (or a future component wrapper) to avoid O(N) layout work.
+#[derive(Debug, Default, Clone)]
 pub struct ScrollArea {
-    inner: fret_ui_widgets::primitives::Scroll,
     style: ChromeRefinement,
-    last_theme_revision: Option<u64>,
-    resolved: ResolvedScrollAreaStyle,
-    last_bounds: Rect,
 }
 
 impl ScrollArea {
     pub fn new() -> Self {
-        Self {
-            inner: fret_ui_widgets::primitives::Scroll::new().overlay_scrollbar(true),
-            style: ChromeRefinement::default(),
-            last_theme_revision: None,
-            resolved: ResolvedScrollAreaStyle::default(),
-            last_bounds: Rect::default(),
-        }
+        Self::default()
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -57,12 +49,7 @@ impl ScrollArea {
         self
     }
 
-    fn sync_style_from_theme(&mut self, theme: &Theme) {
-        if self.last_theme_revision == Some(theme.revision()) {
-            return;
-        }
-        self.last_theme_revision = Some(theme.revision());
-
+    fn resolve_style(&self, theme: &Theme) -> ResolvedScrollAreaStyle {
         let default_radius = component_metric(
             "component.scroll_area.radius",
             MetricFallback::ThemeRadiusMd,
@@ -84,78 +71,84 @@ impl ScrollArea {
         )
         .resolve(theme);
 
-        self.resolved.corner_radius = self
+        let corner_radius = self
             .style
             .radius
             .as_ref()
             .map(|v| v.resolve(theme))
             .unwrap_or(default_radius);
-        self.resolved.border_width = self
+        let border_width = self
             .style
             .border_width
             .as_ref()
             .map(|v| v.resolve(theme))
             .unwrap_or(default_border_width);
-        self.resolved.background = self
+        let background = self
             .style
             .background
             .as_ref()
             .map(|v| v.resolve(theme))
             .unwrap_or(default_bg);
-        self.resolved.border_color = self
+        let border_color = self
             .style
             .border_color
             .as_ref()
             .map(|v| v.resolve(theme))
             .unwrap_or(default_border_color);
-    }
-}
 
-impl Default for ScrollArea {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<H: UiHost> Widget<H> for ScrollArea {
-    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-        self.sync_style_from_theme(cx.theme());
-        self.last_bounds = cx.bounds;
-        <fret_ui_widgets::primitives::Scroll as Widget<H>>::event(&mut self.inner, cx, event);
-    }
-
-    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-        self.sync_style_from_theme(cx.theme());
-        self.last_bounds = cx.bounds;
-        <fret_ui_widgets::primitives::Scroll as Widget<H>>::layout(&mut self.inner, cx)
-    }
-
-    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        self.sync_style_from_theme(cx.theme());
-        self.last_bounds = cx.bounds;
-
-        if self.resolved.background.a > 0.0 {
-            cx.scene.push(SceneOp::Quad {
-                order: DrawOrder(0),
-                rect: cx.bounds,
-                background: self.resolved.background,
-                border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(self.resolved.corner_radius),
-            });
-        }
-
-        <fret_ui_widgets::primitives::Scroll as Widget<H>>::paint(&mut self.inner, cx);
-
-        if self.resolved.border_width.0 > 0.0 && self.resolved.border_color.a > 0.0 {
-            cx.scene.push(SceneOp::Quad {
-                order: DrawOrder(99),
-                rect: cx.bounds,
-                background: Color::TRANSPARENT,
-                border: Edges::all(self.resolved.border_width),
-                border_color: self.resolved.border_color,
-                corner_radii: Corners::all(self.resolved.corner_radius),
-            });
+        ResolvedScrollAreaStyle {
+            background,
+            border_width,
+            border_color,
+            corner_radius,
         }
     }
+
+    pub fn build<H: UiHost>(
+        self,
+        cx: &mut ElementCx<'_, H>,
+        f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        scroll_area(cx, self, f)
+    }
 }
+
+pub fn scroll_area<H: UiHost>(
+    cx: &mut ElementCx<'_, H>,
+    area: ScrollArea,
+    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+    let resolved = area.resolve_style(&theme);
+
+    let mut container_layout = LayoutStyle::default();
+    container_layout.size.width = Length::Fill;
+    container_layout.size.height = Length::Fill;
+    container_layout.overflow = fret_ui::element::Overflow::Clip;
+
+    let mut scroll_layout = LayoutStyle::default();
+    scroll_layout.size.width = Length::Fill;
+    scroll_layout.size.height = Length::Fill;
+
+    cx.container(
+        ContainerProps {
+            layout: container_layout,
+            background: (resolved.background.a > 0.0).then_some(resolved.background),
+            border: Edges::all(resolved.border_width),
+            border_color: (resolved.border_color.a > 0.0).then_some(resolved.border_color),
+            corner_radii: Corners::all(resolved.corner_radius),
+            ..Default::default()
+        },
+        |cx| {
+            vec![cx.scroll(
+                ScrollProps {
+                    layout: scroll_layout,
+                    show_scrollbar: true,
+                    scroll_handle: None,
+                },
+                f,
+            )]
+        },
+    )
+}
+
