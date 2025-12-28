@@ -30,6 +30,80 @@ use crate::error::RunnerError;
 
 type WindowAnchor = fret_core::WindowAnchor;
 
+#[cfg(target_os = "windows")]
+mod win32 {
+    use super::MonitorRectF64;
+    use winit::dpi::PhysicalPosition;
+
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug, Default)]
+    struct POINT {
+        x: i32,
+        y: i32,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug, Default)]
+    struct RECT {
+        left: i32,
+        top: i32,
+        right: i32,
+        bottom: i32,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug, Default)]
+    struct MONITORINFO {
+        cb_size: u32,
+        rc_monitor: RECT,
+        rc_work: RECT,
+        dw_flags: u32,
+    }
+
+    const MONITOR_DEFAULTTONEAREST: u32 = 2;
+
+    #[link(name = "user32")]
+    unsafe extern "system" {
+        fn GetCursorPos(lpPoint: *mut POINT) -> i32;
+        fn MonitorFromPoint(pt: POINT, dwFlags: u32) -> isize;
+        fn GetMonitorInfoW(hMonitor: isize, lpmi: *mut MONITORINFO) -> i32;
+    }
+
+    pub fn cursor_pos_physical() -> Option<PhysicalPosition<f64>> {
+        let mut p = POINT::default();
+        let ok = unsafe { GetCursorPos(&mut p) };
+        if ok == 0 {
+            return None;
+        }
+        Some(PhysicalPosition::new(p.x as f64, p.y as f64))
+    }
+
+    pub fn monitor_work_area_for_point(point: PhysicalPosition<f64>) -> Option<MonitorRectF64> {
+        let pt = POINT {
+            x: point.x.round() as i32,
+            y: point.y.round() as i32,
+        };
+        let hmon = unsafe { MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST) };
+        if hmon == 0 {
+            return None;
+        }
+
+        let mut info = MONITORINFO::default();
+        info.cb_size = std::mem::size_of::<MONITORINFO>() as u32;
+        let ok = unsafe { GetMonitorInfoW(hmon, &mut info) };
+        if ok == 0 {
+            return None;
+        }
+
+        Some(MonitorRectF64 {
+            min_x: info.rc_work.left as f64,
+            min_y: info.rc_work.top as f64,
+            max_x: info.rc_work.right as f64,
+            max_y: info.rc_work.bottom as f64,
+        })
+    }
+}
+
 fn macos_window_log(_args: fmt::Arguments<'_>) {
     #[cfg(target_os = "macos")]
     {
@@ -872,6 +946,21 @@ impl<D: WinitDriver> WinitRunner<D> {
         let desired_x = outer_pos.x as f64;
         let desired_y = outer_pos.y as f64;
 
+        #[cfg(target_os = "windows")]
+        if let Some(cursor) = cursor_screen_pos
+            && let Some(work) = win32::monitor_work_area_for_point(cursor)
+        {
+            let (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                desired_x,
+                desired_y,
+                outer_size,
+                work,
+                Self::WINDOW_VISIBILITY_PADDING_PX,
+            );
+            let target = PhysicalPosition::new(x.round() as i32, y.round() as i32);
+            return (target != outer_pos).then_some(target);
+        }
+
         let monitors = Self::monitor_rects_physical(window);
         let monitor = if let Some(cursor) = cursor_screen_pos
             && let Some(idx) = Self::find_monitor_for_point(&monitors, cursor)
@@ -1243,25 +1332,61 @@ impl<D: WinitDriver> WinitRunner<D> {
         // - visibility/reachability constraints are based on the *target monitor*, not the window's
         //   current monitor (which can pin the window at monitor edges).
         let outer_size = state.window.outer_size();
-        let monitors = Self::monitor_rects_physical(state.window.as_ref());
-        if let Some(idx) = Self::find_monitor_for_point(&monitors, screen_pos)
-            && let Some(monitor) = monitors.get(idx).copied()
+
+        #[cfg(target_os = "windows")]
+        if let Some(work) = win32::monitor_work_area_for_point(screen_pos) {
+            (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                x,
+                y,
+                outer_size,
+                work,
+                Self::WINDOW_VISIBILITY_PADDING_PX,
+            );
+        } else {
+            let monitors = Self::monitor_rects_physical(state.window.as_ref());
+            if let Some(idx) = Self::find_monitor_for_point(&monitors, screen_pos)
+                && let Some(monitor) = monitors.get(idx).copied()
+            {
+                (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                    x,
+                    y,
+                    outer_size,
+                    monitor,
+                    Self::WINDOW_VISIBILITY_PADDING_PX,
+                );
+            } else if let Some(monitor) = Self::virtual_desktop_bounds(state.window.as_ref()) {
+                (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                    x,
+                    y,
+                    outer_size,
+                    monitor,
+                    Self::WINDOW_VISIBILITY_PADDING_PX,
+                );
+            }
+        }
+
+        #[cfg(not(target_os = "windows"))]
         {
-            (x, y) = Self::clamp_window_outer_pos_to_monitor(
-                x,
-                y,
-                outer_size,
-                monitor,
-                Self::WINDOW_VISIBILITY_PADDING_PX,
-            );
-        } else if let Some(monitor) = Self::virtual_desktop_bounds(state.window.as_ref()) {
-            (x, y) = Self::clamp_window_outer_pos_to_monitor(
-                x,
-                y,
-                outer_size,
-                monitor,
-                Self::WINDOW_VISIBILITY_PADDING_PX,
-            );
+            let monitors = Self::monitor_rects_physical(state.window.as_ref());
+            if let Some(idx) = Self::find_monitor_for_point(&monitors, screen_pos)
+                && let Some(monitor) = monitors.get(idx).copied()
+            {
+                (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                    x,
+                    y,
+                    outer_size,
+                    monitor,
+                    Self::WINDOW_VISIBILITY_PADDING_PX,
+                );
+            } else if let Some(monitor) = Self::virtual_desktop_bounds(state.window.as_ref()) {
+                (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                    x,
+                    y,
+                    outer_size,
+                    monitor,
+                    Self::WINDOW_VISIBILITY_PADDING_PX,
+                );
+            }
         }
 
         Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
@@ -2322,12 +2447,28 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
 
         match event {
             DeviceEvent::MouseMotion { delta } => {
-                let Some(pos) = self.cursor_screen_pos else {
-                    return;
-                };
+                #[cfg(target_os = "windows")]
+                {
+                    if let Some(p) = win32::cursor_pos_physical() {
+                        self.cursor_screen_pos = Some(p);
+                    } else {
+                        let Some(pos) = self.cursor_screen_pos else {
+                            return;
+                        };
+                        self.cursor_screen_pos =
+                            Some(PhysicalPosition::new(pos.x + delta.0, pos.y + delta.1));
+                    }
+                }
 
-                self.cursor_screen_pos =
-                    Some(PhysicalPosition::new(pos.x + delta.0, pos.y + delta.1));
+                #[cfg(not(target_os = "windows"))]
+                {
+                    let Some(pos) = self.cursor_screen_pos else {
+                        return;
+                    };
+
+                    self.cursor_screen_pos =
+                        Some(PhysicalPosition::new(pos.x + delta.0, pos.y + delta.1));
+                }
                 self.route_internal_drag_hover_from_cursor();
                 let _ = self.update_dock_tearoff_follow();
                 self.drain_effects(event_loop);
@@ -2336,6 +2477,11 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 state: ElementState::Released,
                 ..
             } => {
+                #[cfg(target_os = "windows")]
+                if let Some(p) = win32::cursor_pos_physical() {
+                    self.cursor_screen_pos = Some(p);
+                }
+
                 // This fallback path is only for releases that occur outside all windows, where
                 // winit may not emit `WindowEvent::MouseInput`. When releasing over any window,
                 // prefer the regular window event path; otherwise we can incorrectly "force tear-off"
