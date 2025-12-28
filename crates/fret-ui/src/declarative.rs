@@ -423,6 +423,27 @@ struct TextCache {
     last_theme_revision: Option<u64>,
 }
 
+struct TaffyContainerCache {
+    children: Vec<NodeId>,
+    taffy: TaffyTree<Option<NodeId>>,
+    root: TaffyNodeId,
+    child_nodes: Vec<TaffyNodeId>,
+}
+
+impl Default for TaffyContainerCache {
+    fn default() -> Self {
+        // Dummy root; replaced on first use.
+        let mut taffy: TaffyTree<Option<NodeId>> = TaffyTree::new();
+        let root = taffy.new_leaf(TaffyStyle::default()).expect("taffy root");
+        Self {
+            children: Vec::new(),
+            taffy,
+            root,
+            child_nodes: Vec::new(),
+        }
+    }
+}
+
 struct ElementHostWidget {
     element: GlobalElementId,
     text_cache: TextCache,
@@ -434,6 +455,8 @@ struct ElementHostWidget {
     clip_hit_test_corner_radii: Option<fret_core::Corners>,
     scrollbar_hit_rect: Option<Rect>,
     text_input: Option<BoundTextInput>,
+    flex_cache: Option<TaffyContainerCache>,
+    grid_cache: Option<TaffyContainerCache>,
 }
 
 impl ElementHostWidget {
@@ -1015,6 +1038,15 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         };
         self.scrollbar_hit_rect = None;
 
+        let is_flex = matches!(&instance, ElementInstance::Flex(_));
+        let is_grid = matches!(&instance, ElementInstance::Grid(_));
+        if !is_flex {
+            self.flex_cache = None;
+        }
+        if !is_grid {
+            self.grid_cache = None;
+        }
+
         match instance {
             ElementInstance::Container(props) => {
                 let pad_left = props.padding.left.0.max(0.0);
@@ -1344,8 +1376,6 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     Px((outer_avail_h.0 - pad_h).max(0.0)),
                 );
 
-                let mut taffy: TaffyTree<Option<NodeId>> = TaffyTree::new();
-
                 let root_style = TaffyStyle {
                     display: Display::Flex,
                     flex_direction: match props.direction {
@@ -1382,77 +1412,182 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     ..Default::default()
                 };
 
-                let mut child_nodes: Vec<TaffyNodeId> = Vec::new();
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    let spacer_min = element_record_for_node(cx.app, window, child).and_then(|r| {
-                        if let ElementInstance::Spacer(p) = r.instance {
-                            Some(p.min)
-                        } else {
-                            None
-                        }
-                    });
+                let cache = self
+                    .flex_cache
+                    .get_or_insert_with(TaffyContainerCache::default);
 
-                    let mut min_w = layout_style.size.min_width.map(|p| p.0);
-                    let mut min_h = layout_style.size.min_height.map(|p| p.0);
-                    if let Some(min) = spacer_min {
-                        let min = min.0.max(0.0);
-                        match props.direction {
-                            fret_core::Axis::Horizontal => {
-                                min_w = Some(min_w.unwrap_or(0.0).max(min));
-                            }
-                            fret_core::Axis::Vertical => {
-                                min_h = Some(min_h.unwrap_or(0.0).max(min));
+                if cache.children != cx.children {
+                    cache.children = cx.children.to_vec();
+                    cache.taffy = TaffyTree::new();
+                    cache.child_nodes.clear();
+
+                    for &child in cx.children {
+                        let layout_style = layout_style_for_node(cx.app, window, child);
+                        let spacer_min =
+                            element_record_for_node(cx.app, window, child).and_then(|r| {
+                                if let ElementInstance::Spacer(p) = r.instance {
+                                    Some(p.min)
+                                } else {
+                                    None
+                                }
+                            });
+
+                        let mut min_w = layout_style.size.min_width.map(|p| p.0);
+                        let mut min_h = layout_style.size.min_height.map(|p| p.0);
+                        if let Some(min) = spacer_min {
+                            let min = min.0.max(0.0);
+                            match props.direction {
+                                fret_core::Axis::Horizontal => {
+                                    min_w = Some(min_w.unwrap_or(0.0).max(min));
+                                }
+                                fret_core::Axis::Vertical => {
+                                    min_h = Some(min_h.unwrap_or(0.0).max(min));
+                                }
                             }
                         }
+
+                        let child_style = TaffyStyle {
+                            display: Display::Block,
+                            position: taffy_position(layout_style.position),
+                            inset: taffy_rect_lpa_from_inset(
+                                layout_style.position,
+                                layout_style.inset,
+                            ),
+                            size: TaffySize {
+                                width: taffy_dimension(layout_style.size.width),
+                                height: taffy_dimension(layout_style.size.height),
+                            },
+                            aspect_ratio: layout_style.aspect_ratio,
+                            min_size: TaffySize {
+                                width: min_w
+                                    .map(Dimension::length)
+                                    .unwrap_or_else(Dimension::auto),
+                                height: min_h
+                                    .map(Dimension::length)
+                                    .unwrap_or_else(Dimension::auto),
+                            },
+                            max_size: TaffySize {
+                                width: layout_style
+                                    .size
+                                    .max_width
+                                    .map(|p| Dimension::length(p.0))
+                                    .unwrap_or_else(Dimension::auto),
+                                height: layout_style
+                                    .size
+                                    .max_height
+                                    .map(|p| Dimension::length(p.0))
+                                    .unwrap_or_else(Dimension::auto),
+                            },
+                            margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
+                            flex_grow: layout_style.flex.grow.max(0.0),
+                            flex_shrink: layout_style.flex.shrink.max(0.0),
+                            flex_basis: taffy_dimension(layout_style.flex.basis),
+                            align_self: layout_style.flex.align_self.map(taffy_align_self),
+                            ..Default::default()
+                        };
+
+                        let id = cache
+                            .taffy
+                            .new_leaf_with_context(child_style, Some(child))
+                            .expect("taffy leaf");
+                        cache.child_nodes.push(id);
                     }
 
-                    let child_style = TaffyStyle {
-                        display: Display::Block,
-                        position: taffy_position(layout_style.position),
-                        inset: taffy_rect_lpa_from_inset(layout_style.position, layout_style.inset),
-                        size: TaffySize {
-                            width: taffy_dimension(layout_style.size.width),
-                            height: taffy_dimension(layout_style.size.height),
-                        },
-                        aspect_ratio: layout_style.aspect_ratio,
-                        min_size: TaffySize {
-                            width: min_w.map(Dimension::length).unwrap_or_else(Dimension::auto),
-                            height: min_h.map(Dimension::length).unwrap_or_else(Dimension::auto),
-                        },
-                        max_size: TaffySize {
-                            width: layout_style
-                                .size
-                                .max_width
-                                .map(|p| Dimension::length(p.0))
-                                .unwrap_or_else(Dimension::auto),
-                            height: layout_style
-                                .size
-                                .max_height
-                                .map(|p| Dimension::length(p.0))
-                                .unwrap_or_else(Dimension::auto),
-                        },
-                        margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
-                        flex_grow: layout_style.flex.grow.max(0.0),
-                        flex_shrink: layout_style.flex.shrink.max(0.0),
-                        flex_basis: taffy_dimension(layout_style.flex.basis),
-                        align_self: layout_style.flex.align_self.map(taffy_align_self),
-                        ..Default::default()
+                    cache.root = if cache.child_nodes.is_empty() {
+                        cache.taffy.new_leaf(root_style).expect("taffy root")
+                    } else {
+                        cache
+                            .taffy
+                            .new_with_children(root_style, &cache.child_nodes)
+                            .expect("taffy root")
                     };
+                } else {
+                    cache
+                        .taffy
+                        .set_style(cache.root, root_style)
+                        .expect("taffy root style");
 
-                    let id = taffy
-                        .new_leaf_with_context(child_style, Some(child))
-                        .expect("taffy leaf");
-                    child_nodes.push(id);
+                    for (i, &child) in cx.children.iter().enumerate() {
+                        let layout_style = layout_style_for_node(cx.app, window, child);
+                        let spacer_min =
+                            element_record_for_node(cx.app, window, child).and_then(|r| {
+                                if let ElementInstance::Spacer(p) = r.instance {
+                                    Some(p.min)
+                                } else {
+                                    None
+                                }
+                            });
+
+                        let mut min_w = layout_style.size.min_width.map(|p| p.0);
+                        let mut min_h = layout_style.size.min_height.map(|p| p.0);
+                        if let Some(min) = spacer_min {
+                            let min = min.0.max(0.0);
+                            match props.direction {
+                                fret_core::Axis::Horizontal => {
+                                    min_w = Some(min_w.unwrap_or(0.0).max(min));
+                                }
+                                fret_core::Axis::Vertical => {
+                                    min_h = Some(min_h.unwrap_or(0.0).max(min));
+                                }
+                            }
+                        }
+
+                        let child_style = TaffyStyle {
+                            display: Display::Block,
+                            position: taffy_position(layout_style.position),
+                            inset: taffy_rect_lpa_from_inset(
+                                layout_style.position,
+                                layout_style.inset,
+                            ),
+                            size: TaffySize {
+                                width: taffy_dimension(layout_style.size.width),
+                                height: taffy_dimension(layout_style.size.height),
+                            },
+                            aspect_ratio: layout_style.aspect_ratio,
+                            min_size: TaffySize {
+                                width: min_w
+                                    .map(Dimension::length)
+                                    .unwrap_or_else(Dimension::auto),
+                                height: min_h
+                                    .map(Dimension::length)
+                                    .unwrap_or_else(Dimension::auto),
+                            },
+                            max_size: TaffySize {
+                                width: layout_style
+                                    .size
+                                    .max_width
+                                    .map(|p| Dimension::length(p.0))
+                                    .unwrap_or_else(Dimension::auto),
+                                height: layout_style
+                                    .size
+                                    .max_height
+                                    .map(|p| Dimension::length(p.0))
+                                    .unwrap_or_else(Dimension::auto),
+                            },
+                            margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
+                            flex_grow: layout_style.flex.grow.max(0.0),
+                            flex_shrink: layout_style.flex.shrink.max(0.0),
+                            flex_basis: taffy_dimension(layout_style.flex.basis),
+                            align_self: layout_style.flex.align_self.map(taffy_align_self),
+                            ..Default::default()
+                        };
+
+                        let node = cache.child_nodes.get(i).copied().expect("taffy child");
+                        cache
+                            .taffy
+                            .set_style(node, child_style)
+                            .expect("taffy child style");
+                    }
+
+                    cache
+                        .taffy
+                        .mark_dirty(cache.root)
+                        .expect("taffy mark dirty");
                 }
 
-                let root = if child_nodes.is_empty() {
-                    taffy.new_leaf(root_style).expect("taffy root")
-                } else {
-                    taffy
-                        .new_with_children(root_style, &child_nodes)
-                        .expect("taffy root")
-                };
+                let root = cache.root;
+                let child_nodes = cache.child_nodes.clone();
+                let taffy = &mut cache.taffy;
 
                 let available = taffy::geometry::Size {
                     width: TaffyAvailableSpace::Definite(inner_avail.width.0),
@@ -1673,8 +1808,6 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     Px((outer_avail_h.0 - pad_h).max(0.0)),
                 );
 
-                let mut taffy: TaffyTree<Option<NodeId>> = TaffyTree::new();
-
                 let root_style = TaffyStyle {
                     display: Display::Grid,
                     justify_content: Some(taffy_justify(props.justify)),
@@ -1707,62 +1840,142 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     ..Default::default()
                 };
 
-                let mut child_nodes: Vec<TaffyNodeId> = Vec::new();
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
+                let cache = self
+                    .grid_cache
+                    .get_or_insert_with(TaffyContainerCache::default);
 
-                    let child_style = TaffyStyle {
-                        display: Display::Block,
-                        position: taffy_position(layout_style.position),
-                        inset: taffy_rect_lpa_from_inset(layout_style.position, layout_style.inset),
-                        size: TaffySize {
-                            width: taffy_dimension(layout_style.size.width),
-                            height: taffy_dimension(layout_style.size.height),
-                        },
-                        aspect_ratio: layout_style.aspect_ratio,
-                        min_size: TaffySize {
-                            width: layout_style
-                                .size
-                                .min_width
-                                .map(|p| Dimension::length(p.0))
-                                .unwrap_or_else(Dimension::auto),
-                            height: layout_style
-                                .size
-                                .min_height
-                                .map(|p| Dimension::length(p.0))
-                                .unwrap_or_else(Dimension::auto),
-                        },
-                        max_size: TaffySize {
-                            width: layout_style
-                                .size
-                                .max_width
-                                .map(|p| Dimension::length(p.0))
-                                .unwrap_or_else(Dimension::auto),
-                            height: layout_style
-                                .size
-                                .max_height
-                                .map(|p| Dimension::length(p.0))
-                                .unwrap_or_else(Dimension::auto),
-                        },
-                        margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
-                        grid_column: taffy_grid_line(layout_style.grid.column),
-                        grid_row: taffy_grid_line(layout_style.grid.row),
-                        ..Default::default()
+                if cache.children != cx.children {
+                    cache.children = cx.children.to_vec();
+                    cache.taffy = TaffyTree::new();
+                    cache.child_nodes.clear();
+
+                    for &child in cx.children {
+                        let layout_style = layout_style_for_node(cx.app, window, child);
+
+                        let child_style = TaffyStyle {
+                            display: Display::Block,
+                            position: taffy_position(layout_style.position),
+                            inset: taffy_rect_lpa_from_inset(
+                                layout_style.position,
+                                layout_style.inset,
+                            ),
+                            size: TaffySize {
+                                width: taffy_dimension(layout_style.size.width),
+                                height: taffy_dimension(layout_style.size.height),
+                            },
+                            aspect_ratio: layout_style.aspect_ratio,
+                            min_size: TaffySize {
+                                width: layout_style
+                                    .size
+                                    .min_width
+                                    .map(|p| Dimension::length(p.0))
+                                    .unwrap_or_else(Dimension::auto),
+                                height: layout_style
+                                    .size
+                                    .min_height
+                                    .map(|p| Dimension::length(p.0))
+                                    .unwrap_or_else(Dimension::auto),
+                            },
+                            max_size: TaffySize {
+                                width: layout_style
+                                    .size
+                                    .max_width
+                                    .map(|p| Dimension::length(p.0))
+                                    .unwrap_or_else(Dimension::auto),
+                                height: layout_style
+                                    .size
+                                    .max_height
+                                    .map(|p| Dimension::length(p.0))
+                                    .unwrap_or_else(Dimension::auto),
+                            },
+                            margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
+                            grid_column: taffy_grid_line(layout_style.grid.column),
+                            grid_row: taffy_grid_line(layout_style.grid.row),
+                            ..Default::default()
+                        };
+
+                        let id = cache
+                            .taffy
+                            .new_leaf_with_context(child_style, Some(child))
+                            .expect("taffy leaf");
+                        cache.child_nodes.push(id);
+                    }
+
+                    cache.root = if cache.child_nodes.is_empty() {
+                        cache.taffy.new_leaf(root_style).expect("taffy root")
+                    } else {
+                        cache
+                            .taffy
+                            .new_with_children(root_style, &cache.child_nodes)
+                            .expect("taffy root")
                     };
+                } else {
+                    cache
+                        .taffy
+                        .set_style(cache.root, root_style)
+                        .expect("taffy root style");
 
-                    let id = taffy
-                        .new_leaf_with_context(child_style, Some(child))
-                        .expect("taffy leaf");
-                    child_nodes.push(id);
+                    for (i, &child) in cx.children.iter().enumerate() {
+                        let layout_style = layout_style_for_node(cx.app, window, child);
+
+                        let child_style = TaffyStyle {
+                            display: Display::Block,
+                            position: taffy_position(layout_style.position),
+                            inset: taffy_rect_lpa_from_inset(
+                                layout_style.position,
+                                layout_style.inset,
+                            ),
+                            size: TaffySize {
+                                width: taffy_dimension(layout_style.size.width),
+                                height: taffy_dimension(layout_style.size.height),
+                            },
+                            aspect_ratio: layout_style.aspect_ratio,
+                            min_size: TaffySize {
+                                width: layout_style
+                                    .size
+                                    .min_width
+                                    .map(|p| Dimension::length(p.0))
+                                    .unwrap_or_else(Dimension::auto),
+                                height: layout_style
+                                    .size
+                                    .min_height
+                                    .map(|p| Dimension::length(p.0))
+                                    .unwrap_or_else(Dimension::auto),
+                            },
+                            max_size: TaffySize {
+                                width: layout_style
+                                    .size
+                                    .max_width
+                                    .map(|p| Dimension::length(p.0))
+                                    .unwrap_or_else(Dimension::auto),
+                                height: layout_style
+                                    .size
+                                    .max_height
+                                    .map(|p| Dimension::length(p.0))
+                                    .unwrap_or_else(Dimension::auto),
+                            },
+                            margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
+                            grid_column: taffy_grid_line(layout_style.grid.column),
+                            grid_row: taffy_grid_line(layout_style.grid.row),
+                            ..Default::default()
+                        };
+
+                        let node = cache.child_nodes.get(i).copied().expect("taffy child");
+                        cache
+                            .taffy
+                            .set_style(node, child_style)
+                            .expect("taffy child style");
+                    }
+
+                    cache
+                        .taffy
+                        .mark_dirty(cache.root)
+                        .expect("taffy mark dirty");
                 }
 
-                let root = if child_nodes.is_empty() {
-                    taffy.new_leaf(root_style).expect("taffy root")
-                } else {
-                    taffy
-                        .new_with_children(root_style, &child_nodes)
-                        .expect("taffy root")
-                };
+                let root = cache.root;
+                let child_nodes = cache.child_nodes.clone();
+                let taffy = &mut cache.taffy;
 
                 let available = taffy::geometry::Size {
                     width: TaffyAvailableSpace::Definite(inner_avail.width.0),
@@ -2377,6 +2590,8 @@ pub fn render_root<H: UiHost>(
                     clip_hit_test_corner_radii: None,
                     scrollbar_hit_rect: None,
                     text_input: None,
+                    flex_cache: None,
+                    grid_cache: None,
                 });
                 window_state.set_node_entry(
                     root_id,
@@ -2476,6 +2691,8 @@ fn mount_element<H: UiHost>(
                 clip_hit_test_corner_radii: None,
                 scrollbar_hit_rect: None,
                 text_input: None,
+                flex_cache: None,
+                grid_cache: None,
             });
             window_state.set_node_entry(
                 id,
