@@ -38,6 +38,6 @@ contracts early to avoid large rewrites later.
 ## Repository references
 
 - `repo-ref/zed` and `repo-ref/gpui-component` are local reference checkouts used to study GPUI patterns.
-- `repo-ref/godot` is used to study editor workflows (docking, multi-window, viewport patterns).
+- Optional (clone locally when needed): `repo-ref/godot` is used to study editor workflows (docking, multi-window, viewport patterns).
 
 These references are not required to build Fret, but they are helpful when validating architectural decisions.

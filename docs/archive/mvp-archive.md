@@ -39,7 +39,7 @@ Code anchors:
 - IME plumbing + cursor-area effects: `crates/fret-runner-winit-wgpu/src/runner.rs`
 - Text system + atlas uploads: `crates/fret-render/src/text.rs`
 - `SceneOp::Text` rendering: `crates/fret-render/src/renderer.rs`
-- Minimal `Text` / `TextInput` widgets: `crates/fret-ui/src/primitives/text.rs`
+- Minimal `Text` / `TextInput` widgets: `crates/fret-ui/src/text_input.rs`
 - Demo property rows with labels: `crates/fret-demo/src/property_row.rs`
 - Keymap/when parsing + resolver: `crates/fret-app/src/keymap.rs`, `crates/fret-app/src/when_expr.rs`
 - KeyDown → Command resolution (window-scoped): `crates/fret-ui/src/tree.rs`

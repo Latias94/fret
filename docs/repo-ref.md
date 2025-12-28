@@ -5,34 +5,40 @@ These directories are **not** build dependencies of Fret; they exist to avoid �
 
 ## Pin Policy
 
-- Prefer pinning to **the exact crate versions used by this workspace** (see `Cargo.lock`) for `winit` and `wgpu`.
-- For fast-moving UI projects (`zed`/`gpui-component`/`godot`), tracking `main`/`master` is acceptable, but record the commit SHA when referencing behavior.
+- `repo-ref/` is a curated set of upstream sources that we actively reference in ADRs and design reviews.
+- For fast-moving upstreams, tracking `main`/`master` is acceptable, but record the commit SHA when referencing behavior.
+- For crate dependencies (e.g. `winit`, `wgpu`), prefer reading the **exact version** recorded in `Cargo.lock`.
 
-## Pinned Versions (Matches `Cargo.lock`)
+## Dependency Sources (Crates in `Cargo.lock`)
 
-- `winit` (crate `0.30.12`): `repo-ref/winit` @ `v0.30.12` (detached) — commit `f6893a4390df`
-- `wgpu` (crate `28.0.0`): `repo-ref/wgpu` @ `v28.0.0` (detached) — commit `3f02781bb5a0`
+This repository does not currently vendor crate dependency sources under `repo-ref/` (e.g. no `repo-ref/winit`).
 
-Verify locally:
+When you need to cite or inspect dependency behavior:
 
-- `git -C repo-ref/winit describe --tags --always`
-- `git -C repo-ref/wgpu describe --tags --always`
-
-Note: `wgpu 28.x` requires Rust `1.92+` (see `rust-toolchain.toml`).
+- Find the exact version in `Cargo.lock`.
+- Use `cargo vendor` and inspect `vendor/<crate>/src/...` (or fetch that crate version from crates.io).
 
 ## Recorded HEADs (Fast-Moving References)
 
 These directories may track `main`/`master`/`trunk`. When you cite behavior from them, also cite the commit SHA.
 As a baseline, this workspace currently has:
 
-- `repo-ref/zed`: `637ff3425455`
-- `repo-ref/gpui-component`: `5bb53ef9ff2b`
-- `repo-ref/godot`: `1ea6b0ccff99`
-- `repo-ref/dear-imgui-rs`: `a3261f5ed219`
-- `repo-ref/ui` (shadcn/ui): `ccafdaf7c6f6`
-- `repo-ref/tailwindcss`: `1628713453e6`
-- `repo-ref/lucide`: `d391bda36930`
-- `repo-ref/radix-icons`: `112af91ad275`
+- `repo-ref/aria-practices`: `84b921a0`
+- `repo-ref/cmdk`: `dd2250e`
+- `repo-ref/dear-imgui-rs`: `e2b647c`
+- `repo-ref/floating-ui`: `0681dbb6`
+- `repo-ref/fret-ui-precision`: `c52a90d`
+- `repo-ref/gpui-component`: `c3ca1e28`
+- `repo-ref/icons`: `112af91`
+- `repo-ref/imgui`: `396b33d0d`
+- `repo-ref/lucide`: `d391bda3`
+- `repo-ref/primitives`: `90751370`
+- `repo-ref/tailwindcss`: `fbc358ce`
+- `repo-ref/ui` (shadcn/ui): `ccafdaf7`
+- `repo-ref/vello`: `48f38536`
+- `repo-ref/virtual`: `de8c12f`
+- `repo-ref/zed`: `2cad6c8ef1`
+- `repo-ref/makepad`: `b40b9af49`
 
 ## GPUI / Zed (Rendering, Elements, Text, Scene)
 
@@ -47,6 +53,9 @@ Core “GPUI-style declarative UI” and rendering references:
 - Text system architecture:
   - `repo-ref/zed/crates/gpui/src/text_system.rs`
   - `repo-ref/zed/crates/gpui/src/platform/linux/text_system.rs` (cosmic-text integration)
+- IME / composition handling patterns (platform-specific; reference only):
+  - `repo-ref/zed/crates/gpui/src/platform.rs` (search `InputHandler`)
+  - `repo-ref/zed/crates/gpui/src/platform/windows/events.rs` (search `handle_ime_composition`)
 - SDF/border/shadow + text quality shader helpers:
   - `repo-ref/zed/crates/gpui/src/platform/blade/shaders.wgsl`
 
@@ -110,46 +119,25 @@ Where to look:
 - `repo-ref/tailwindcss/packages/`
 - `repo-ref/tailwindcss/crates/` (for how Tailwind models tokens/scales internally)
 
-## Godot (Editor docking + viewports + frame counters)
+## Floating UI (Popover/menu placement vocabulary)
 
-Useful for editor workflow and persistence patterns:
+This is the upstream reference for “floating element” placement (menus, popovers, tooltips). We borrow vocabulary
+and the collision/flip/shift mental model; we do not copy the JS runtime.
 
-- Dock manager / editor docking plumbing:
-  - `repo-ref/godot/editor/docks/editor_dock_manager.cpp`
-  - `repo-ref/godot/editor/editor_node.cpp`
-- Render/idle behavior and “frames drawn” counter:
-  - `repo-ref/godot/main/main.cpp` (search `increment_frames_drawn`)
-  - `repo-ref/godot/core/config/engine.cpp` (search `frames_drawn`)
+Where to look:
 
-## Dear ImGui (Docking + multi-viewport + frame counters)
+- `repo-ref/floating-ui/packages/` (algorithms and docs sources)
+
+## ImGui / Dear ImGui (Docking + multi-viewport vocabulary)
 
 Useful for multi-window docking UX vocabulary and “global frame counter” patterns:
 
+- Upstream ImGui docking/multi-viewport code:
+  - `repo-ref/imgui/` (see `docs/` and docking branches upstream; this checkout may track master)
 - Frame lifecycle (`NewFrame`, `FrameCount`, `Render`):
   - `repo-ref/dear-imgui-rs/dear-imgui-sys/third-party/cimgui/imgui/imgui.cpp`
 - Winit multi-viewport backend logic (echo suppression via frame count):
   - `repo-ref/dear-imgui-rs/backends/dear-imgui-winit/src/multi_viewport.rs`
-
-## Winit (Event loop, multi-window, DPI)
-
-Matches crate `0.30.12` used by this workspace:
-
-- Event loop and proxy:
-  - `repo-ref/winit/src/event_loop.rs`
-- Window events and DPI/scale-factor behavior:
-  - `repo-ref/winit/src/event.rs`
-  - `repo-ref/winit/src/dpi.rs`
-
-## Wgpu (Surface creation, WebGPU/wasm direction)
-
-Matches crate `28.0.0` used by this workspace:
-
-- `Instance::create_surface` and safe/unsafe targets:
-  - `repo-ref/wgpu/wgpu/src/api/instance.rs`
-- Surface types and presentation constraints:
-  - `repo-ref/wgpu/wgpu/src/api/surface.rs`
-- Web canvas surface paths (wasm):
-  - `repo-ref/wgpu/wgpu-hal/src/gles/web.rs`
 
 ## Zed Blog Posts (Design Inspiration)
 

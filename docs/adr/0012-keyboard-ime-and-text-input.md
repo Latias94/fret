@@ -150,8 +150,12 @@ Commands are routed via the focused node (and bubbling rules), with a global fal
 
 Winit reference anchors (desktop):
 
-- IME events: `repo-ref/winit/src/event.rs` (search `WindowEvent::Ime`)
-- IME cursor positioning: `repo-ref/winit/src/window.rs` (search `set_ime_cursor_area`)
+- IME events: winit `WindowEvent::Ime` (`winit/src/event.rs`)
+- IME cursor positioning: winit `Window::set_ime_cursor_area` (`winit/src/window.rs`)
+
+Note: this repository does not currently vendor `winit` sources under `repo-ref/`. If you need to read the
+exact version used by this workspace, use `Cargo.lock` + `cargo vendor` and inspect the vendored sources
+under `vendor/` (or fetch the exact crate version from crates.io).
 
 Effect naming note:
 
@@ -171,4 +175,6 @@ Text input ingestion note:
 Current MVP text widget note:
 
 - A minimal single-line `TextInput` widget renders inline preedit and updates the IME cursor area:
-  - `crates/fret-ui/src/primitives/text.rs`
+  - `crates/fret-ui/src/text_input.rs`
+- Multiline text input experiments (still evolving; see ADR 0071):
+  - `crates/fret-ui/src/text_area.rs`
