@@ -1,14 +1,18 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_components_ui::{PopoverItem, PopoverRequest, PopoverService, Size as ComponentSize};
 use fret_core::{
     Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect,
-    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
+    NodeId, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_runtime::CommandId;
 use fret_ui::{
     EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget, widget::SemanticsCx,
 };
+use fret_ui::UiTree;
 
 #[derive(Debug, Clone)]
 pub struct NavigationMenuLink {
@@ -127,6 +131,7 @@ pub struct NavigationMenu {
     items: Vec<NavigationMenuItem>,
     size: ComponentSize,
     disabled: bool,
+    a11y: Option<Rc<RefCell<NavigationMenuA11yState>>>,
 
     active_index: usize,
     open_index: Option<usize>,
@@ -150,6 +155,7 @@ impl NavigationMenu {
             items: Vec::new(),
             size: ComponentSize::Medium,
             disabled: false,
+            a11y: None,
             active_index: 0,
             open_index: None,
             hovered_index: None,
@@ -173,6 +179,11 @@ impl NavigationMenu {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    fn with_a11y(mut self, a11y: Rc<RefCell<NavigationMenuA11yState>>) -> Self {
+        self.a11y = Some(a11y);
         self
     }
 
@@ -390,9 +401,34 @@ impl<H: UiHost> Widget<H> for NavigationMenu {
     }
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
-        cx.set_role(SemanticsRole::Menu);
+        cx.set_role(SemanticsRole::MenuBar);
         cx.set_disabled(self.disabled);
         cx.set_expanded(self.open_index.is_some());
+        cx.set_focusable(!self.disabled);
+
+        if let Some(a11y) = self.a11y.as_ref() {
+            let mut state = a11y.borrow_mut();
+            state.group_disabled = self.disabled;
+
+            if state.items.len() != self.items.len() {
+                state.items = self
+                    .items
+                    .iter()
+                    .map(|it| NavigationMenuA11ySlot {
+                        label: it.label.clone(),
+                        disabled: it.disabled,
+                        content: it.content.clone(),
+                        node: NodeId::default(),
+                    })
+                    .collect();
+            } else {
+                for (slot, item) in state.items.iter_mut().zip(self.items.iter()) {
+                    slot.label = item.label.clone();
+                    slot.disabled = item.disabled;
+                    slot.content = item.content.clone();
+                }
+            }
+        }
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
@@ -446,6 +482,42 @@ impl<H: UiHost> Widget<H> for NavigationMenu {
             let rect = Rect::new(Point::new(x, y), Size::new(w, h));
             self.item_bounds[i] = rect;
             x = Px(x.0 + w.0 + self.resolved.gap.0);
+        }
+
+        if let Some(a11y) = self.a11y.as_ref() {
+            let mut state = a11y.borrow_mut();
+            state.group_disabled = self.disabled;
+
+            if state.items.len() != self.items.len() {
+                state.items = self
+                    .items
+                    .iter()
+                    .map(|it| NavigationMenuA11ySlot {
+                        label: it.label.clone(),
+                        disabled: it.disabled,
+                        content: it.content.clone(),
+                        node: NodeId::default(),
+                    })
+                    .collect();
+            } else {
+                for (slot, item) in state.items.iter_mut().zip(self.items.iter()) {
+                    slot.label = item.label.clone();
+                    slot.disabled = item.disabled;
+                    slot.content = item.content.clone();
+                }
+            }
+
+            if let Some(focus) = cx.focus
+                && let Some(idx) = cx.children.iter().position(|&id| id == focus)
+                && self.is_item_enabled(idx)
+            {
+                self.active_index = idx;
+            }
+
+            for (idx, &child) in cx.children.iter().enumerate() {
+                let rect = self.item_bounds.get(idx).copied().unwrap_or_default();
+                let _ = cx.layout_in(child, rect);
+            }
         }
 
         let desired_w = Px((x.0 - cx.bounds.origin.x.0).max(0.0));
