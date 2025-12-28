@@ -14,16 +14,20 @@ It complements (but does not replace) ADRs:
 
 ## P0 — IME / Text Input
 
-- **Implement preedit-first key arbitration end-to-end (runner + routing)**
-  - Problem: composing IME sessions must not lose `Tab/Enter/Escape/Arrows/Backspace/...` to focus traversal or global shortcuts.
+- **Preedit-first key arbitration end-to-end (runner + routing)**
+  - Problem: composing IME sessions must not lose `Tab/Space/Enter/NumpadEnter/Escape/Arrows/Backspace/...` to focus traversal or global shortcuts.
   - ADRs: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`
   - Code: `crates/fret-runner-winit-wgpu/src/runner.rs`, `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/text_input.rs`, `crates/fret-ui/src/text_area.rs`
-  - Current: `crates/fret-ui/src/tree.rs` defers shortcut matching for reserved keys and only falls back if the widget does not `stop_propagation`; `crates/fret-ui/src/text_input.rs` and `crates/fret-ui/src/primitives/text_area.rs` now stop propagation for these keys while `preedit` is non-empty. Remaining gap is wiring a full “is composing” signal that also covers non-preedit IME states and key sequences that never surface as `preedit` strings (platform differences).
+  - Current: `crates/fret-ui/src/tree.rs` defers shortcut matching for reserved keys and only falls back if the widget does not `stop_propagation`. `crates/fret-ui/src/text_input.rs` and `crates/fret-ui/src/text_area.rs` stop propagation for these keys while IME is composing (treat “composing” as `preedit` non-empty **or** preedit cursor metadata present).
+  - TODO: add regression tests that assert:
+    - when composing, `Tab/Enter/Escape/...` do not trigger focus traversal or global shortcuts;
+    - when not composing, focus traversal still works (e.g. `Tab` can move focus).
 
 - **Define and validate blur/disable semantics for IME enablement**
   - Problem: focused text widgets send `Effect::ImeAllow { enabled: true }`; ensure loss of focus reliably disables IME where appropriate.
   - ADRs: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0020-focus-and-command-routing.md`
   - Code: `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/text_input.rs`, `crates/fret-ui/src/text_area.rs`
+  - TODO: prefer an explicit “focus changed” hook to clear preedit/composition state, rather than relying on paint-time cleanup.
 
 - **Multiline IME contract + conformance harness**
   - Goal: lock and validate multiline selection/composition/caret-rect behavior (scroll/wrap/DPI/preedit updates).
