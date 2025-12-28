@@ -206,7 +206,7 @@ validate that the framework contracts are sufficient.
 
 ### M2 — UI Runtime Core (Single Window)
 
-- P0: Decide and implement the primary UI execution model (ADR 0028), while preserving layout/input semantics (ADR 0005). (prototype implemented: declarative element ids + cross-frame state store; retained `UiTree` still hosts most widgets)
+- P0: Decide and implement the primary UI execution model (ADR 0028), while preserving layout/input semantics (ADR 0005). (prototype implemented: declarative element ids + cross-frame state store; `UiTree` remains the internal host, but component authoring is declarative-only)
 - P0: Invalidation flags: `NeedsLayout`, `NeedsPaint`, `NeedsHitTestRebuild`.
 - P0: Model observation → UI invalidation propagation (avoid manual cross-panel invalidation; align with GPUI `observe`/`notify` mental model). (ADR 0051) (prototype implemented)
   - Promote ADR 0051 to "Accepted": add conformance tests and remove any remaining demo/component-level manual invalidation glue.
@@ -215,7 +215,7 @@ validate that the framework contracts are sufficient.
   - Note (macOS/winit): hover/move positions are not continuously available; per-widget drop targets will require a native backend (see ADR 0041).
 - P0: Multi-root overlays + z-order + modal blocking model. (see ADR 0011)
 - P0: Semantics tree output (UI-only; platform bridge deferred) (ADR 0033).
-- P1: Base widgets: `Root`, `Stack`, `Split`, `Clip`, `Scroll`, `Column` (non-taffy). (prototype implemented)
+- P1: Base declarative elements: `Container`, `Stack`, `Flex`, `Grid`, `Scroll`, `VirtualList`. (prototype implemented)
 - P1: Scrollbar UX: draggable thumb + track clicking. (prototype implemented)
 - P1: Editor-scale list widgets: `VirtualList` (runtime primitive), `TreeView` (legacy, gated; prototype implemented)
 - P1: Layout contract: `layout_in(child, rect)` stores child bounds for hit-test/paint. (prototype implemented)

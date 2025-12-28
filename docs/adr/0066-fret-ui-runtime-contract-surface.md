@@ -181,16 +181,16 @@ Runtime layout semantics must match the Tailwind/CSS mental model:
 - Taffy is the implementation engine; semantics are validated by tests against our ADRs and
   Tailwind vocabulary usage in `fret-components-*`.
 
-### 4) Compatibility surface: retained widgets are isolated
+### 4) Declarative-only authoring (no retained widget primitives)
 
-Retained widgets are allowed only as a temporary compatibility layer, but they are **not** part of
-the runtime contract surface.
+The component ecosystem is declarative-first (ADR 0028 / ADR 0039). We treat retained widgets
+(`UiTree` + `Widget`) as an internal hosting mechanism, not a supported authoring model.
 
 Rules:
 
-- any retained widgets live in `crates/fret-components-ui/src/widget_primitives` (not `crates/fret-ui`),
-- `crates/fret-ui` tests must not depend on retained widgets,
-- retained widgets must have an explicit delete plan (see `docs/declarative-only-migration.md`).
+- `fret-components-*` APIs should prefer `ElementCx`/`AnyElement` authoring.
+- New reusable UI "primitives" should be expressed as element kinds, handles, or pure algorithms
+  (not as exported retained widgets).
 
 ## Comparison: GPUI-style contract surface
 

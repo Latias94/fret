@@ -61,7 +61,7 @@ definitions live in `docs/archive/mvp/reference-plan.md`.
   - converge on “framework owns virtualization, components own selection/keyboard/menu policies”
   - treat schema-based `VirtualListRow` as legacy during migration, then remove.
   - keep `fret-components-ui` free of schema-based retained list widgets (prefer declarative composition)
-  - compatibility: any retained/widget-based list path must live in `crates/fret-components-ui/src/widget_primitives` (not `crates/fret-ui`).
+  - compatibility: avoid introducing retained/widget-based list primitives; prefer declarative composition.
   - landed: TanStack vocabulary alignment + stable item keys contract (ADR 0070)
 - MVP 61: declarative layout performance hardening (Taffy integration)
   - cache/reuse the Taffy tree and node ids across frames (avoid rebuild + allocation churn)

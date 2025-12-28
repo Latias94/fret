@@ -75,7 +75,8 @@ In both cases, surface creation must use the same `wgpu::Instance` as the device
 - `crates/fret-runner-winit-wgpu`: desktop runner wiring winit + wgpu + renderer (composition + presentation).
 - `crates/fret-render`: wgpu-based renderer building blocks (context/device bootstrap, rendering backends).
 - `crates/fret-ui`: UI runtime (layout, hit-testing, focus routing, display list builder).
-- `crates/fret-components-ui/src/widget_primitives`: retained-widget compatibility primitives (temporary; not part of the runtime contract).
+- `crates/fret-components-ui`: component infrastructure (policies, style composition, overlay managers) built on `fret-ui`.
+- `crates/fret-components-shadcn`: shadcn/ui v4 taxonomy surface + recipes built on `fret-components-ui`.
 - `crates/fret-ui-app`: integration convenience layer that binds `fret-ui` to `fret-app::App` for first-party apps/demos.
 - `crates/fret`: public facade crate (re-exports).
 - `crates/fret-demo`: runnable demo app (docking + persistence + viewports prototypes).

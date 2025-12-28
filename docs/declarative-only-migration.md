@@ -49,15 +49,15 @@ Owns:
 
 ### Phase 0 — stop new drift
 
-- Freeze retained-widget work in the runtime: no retained widgets in `crates/fret-ui`.
-- If any retained widgets still exist temporarily, they must live in `crates/fret-components-ui/src/widget_primitives` and be
-  treated as compatibility-only.
-- Ensure all new UI kit work is declarative-only (elements), even if some old widgets remain.
+- Declarative-only is the default authoring model for the component ecosystem (ADR 0028 / ADR 0039).
+- Do not add any new exported retained widget primitives ("Column/Scroll/Stack" style helpers).
+- Keep `UiTree` + `Widget` as runtime-internal hosting glue; demos and components should render via
+  `declarative::render_root`.
 
 ### Phase 1 — extract “engine” types out of retained widgets
 
-Problem: some core element props may depend on types that historically lived in retained widgets
-(`crates/fret-components-ui/src/widget_primitives`, previously `crates/fret-ui-widgets`).
+Problem: some core element props may depend on types that historically lived in demo/widgets scaffolding
+(previously `crates/fret-ui-widgets`).
 
 Actions:
 
@@ -70,7 +70,6 @@ Actions:
 Acceptance:
 
 - `crates/fret-ui` builds with retained widgets removed entirely.
-- Any retained-widget compatibility code is isolated in `crates/fret-components-ui/src/widget_primitives`.
 
 ### Phase 2 — declarative ScrollHandle and VirtualList v2
 
@@ -108,8 +107,9 @@ Acceptance:
 
 Actions:
 
-- Delete retained widgets from `crates/fret-components-ui/src/widget_primitives` once declarative replacements exist.
 - Convert remaining component widgets into declarative element helpers (preferred).
+- If a retained widget is still needed temporarily, keep it private to a single component module
+  (no shared "primitives" module), and schedule deletion.
 
 Acceptance:
 

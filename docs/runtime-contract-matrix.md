@@ -98,10 +98,7 @@ It is intentionally **mechanism-only**: component policies and UI recipes belong
   - `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
   - `docs/adr/0071-text-input-multiline-composition-contract.md`
 
-## Compatibility-only (non-contract)
+## Notes
 
-### Retained widgets (temporary)
-
-- **Location:** `crates/fret-components-ui/src/widget_primitives`
-- **Rule:** retained widgets are not part of the runtime contract surface; they exist only as a temporary compatibility layer while declarative authoring fully replaces widget-based authoring.
-- **ADR:** `docs/adr/0066-fret-ui-runtime-contract-surface.md`
+- `UiTree` + `Widget` exist as an internal hosting mechanism for declarative elements; they are not
+  a public component authoring model (see ADR 0066).
