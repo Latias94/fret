@@ -41,6 +41,10 @@ Maintain the next MVP items here as a small, high-signal queue. If a task change
 - MVP 64 (next): APG-aligned keyboard/focus patterns as reusable component-layer recipes.
   - Roving focus, typeahead, Home/End/PageUp/PageDown patterns for menus/listbox/combobox/tree.
   - Expand semantics roles/flags where needed to keep future accessibility bridge viable (ADR 0033).
+  - Lock cmdk-style command palette semantics for accessibility:
+    - keep focus in the text input while navigating results,
+    - expose the active result via an `active_descendant` semantics association (ADR 0073),
+    - avoid virtualization until an AT-facing virtualization strategy is defined.
 - MVP 59 (next): Eliminate Tailwind-like “layout no-ops” and harden composition semantics by splitting style patches into `ChromeRefinement` vs `LayoutRefinement`, standardizing token/key vocabulary, and making `merge` semantics match Tailwind-style edge accumulation (e.g. `mt-*` + `ml-*` should compose without dropping edges). Layout refinements must apply only in the declarative path (or explicit layout wrappers), never silently in retained widgets.
 - MVP 55 (next): Expand style patch → layout bridging so Tailwind-like recipes can drive declarative layout without widget-local magic numbers: map additional sizing/flex/overflow knobs into declarative `LayoutStyle` (beyond the current minimal subset).
 - MVP 58 (next): Implement Tailwind layout primitives at the runtime vocabulary level (margin, position/inset, grid, aspect-ratio) per ADR 0062, so shadcn-style layouts (badges, input icons, simple grids) are expressible without bespoke components.

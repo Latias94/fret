@@ -44,6 +44,9 @@ These items are intentionally scheduled early because they define “hard-to-cha
   - move the “standard UI kit surfaces” (popover/dialog/menu/tooltip/toast/command palette/menubar) to the components layer (`fret-components-shadcn` surface built on `fret-components-ui`),
   - remove hard-coded control heights/spacing from runtime primitives (notably `TextInput`) so `Size` (ADR 0056) stays component-owned. (MVP 48; in progress: `TextInput` done; overlay surfaces moved)
 - P0: Adopt semantics tree + accessibility bridge boundary (A11y-ready infrastructure) (ADR 0033).
+- P0/P1: Lock composite-widget semantics needed for cmdk-style UX without a DOM:
+  - active descendant (announce active result while focus remains in the text field) (ADR 0073),
+  - avoid depending on virtualized AT semantics until the virtualization strategy is locked (ADR 0070).
 - P0: Adopt timers/animation/redraw scheduling (event-driven + continuous mode) (ADR 0034).
   - Contract shape locked (GPUI-aligned): one-shot `request_frame`, `request_animation_frame`, and refcounted RAII `begin_continuous_frames` leases (see ADR 0034).
 - P0: Adopt layout constraints + optional Flex/Grid integration boundary (ADR 0035).
@@ -54,7 +57,7 @@ These items are intentionally scheduled early because they define “hard-to-cha
   - APG (keyboard/focus semantics baseline),
   - Radix primitives (dismissal/focus/portal outcomes),
   - Floating UI (placement + collision algorithms),
-  - cmdk (command palette interaction details).
+  - cmdk (command palette interaction details; implies active-descendant semantics, ADR 0073).
   - See: `docs/reference-stack-ui-behavior.md`.
 - P0: Adopt observability strategy (tracing + inspector hooks + renderer metrics) (ADR 0036).
 - P0: Adopt workspace/repo boundaries and external `fret-components` strategy (ADR 0037).

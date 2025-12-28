@@ -56,6 +56,11 @@ ADR or adding a new ADR) before scaling feature surface area.
   - Update: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
   - Decide: exact selection/composition range semantics (byte vs grapheme), and caret-rect reporting requirements for IME candidate placement.
 
+- **Active descendant semantics for composite widgets (command palette / listbox / combobox)**
+  - Add ADR (proposed): `docs/adr/0073-active-descendant-and-composite-widget-semantics.md`
+  - Decide: minimal schema extension to support cmdk-style navigation without moving focus away from text input.
+  - Implement: semantics production in `crates/fret-ui/src/tree.rs`, platform bridge mapping in `crates/fret-platform`.
+
 - **Accessibility conformance baseline (Narrator/VoiceOver/AT-SPI)**
   - Update: `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
   - Decide: minimum roles/actions/fields required for text fields (value/selection/composition), menus, tabs, and viewports.

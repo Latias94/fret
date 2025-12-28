@@ -1,0 +1,179 @@
+# Shadcn Declarative Implementation Progress
+
+Tracks the ongoing work to rebuild Fret's shadcn-aligned component surface as a declarative-only API.
+
+## Scope
+
+- `crates/fret-components-shadcn`: shadcn/ui v4 naming + taxonomy surface (recipes).
+- `crates/fret-components-ui`: reusable infra (tokens/recipes/headless helpers).
+- `crates/fret-ui`: runtime substrate (contracts/mechanisms only).
+
+## Layering & Ownership
+
+This repo intentionally splits responsibilities across three layers (similar to Tailwind + headless + Radix/RSC composition, but in Rust):
+
+- `fret-ui` (**mechanisms/contracts**): element tree, hit-test, focus, semantics/a11y, overlay roots/layers, outside-press observers, layout, paint.
+- `fret-components-ui` (**design-system + infra**, Tailwind-ish): token-driven styling (`Theme` keys + refinements), reusable declarative helpers (`scroll`, `text_field`, etc), and headless state machines (`roving_focus`, hover intent, menu navigation).
+- `fret-components-shadcn` (**taxonomy + recipes**): shadcn/ui v4 naming surface and component composition; no retained widgets, no renderer/platform deps.
+
+App/editor-specific composition belongs in `fret-components-app` / `fret-editor` (e.g. app toolbars, menu bars, command palette wiring).
+
+## Hard Boundary (Enforced in code)
+
+Retained-widget authoring is runtime-internal only:
+
+- `crates/fret-ui`: `widget` module is `pub(crate)`.
+- `crates/fret-ui`: `UiTree::create_node` is `pub(crate)`.
+- Component crates author via declarative elements (`RenderOnce` / `Render` / `IntoElement`), not `Widget`.
+
+## shadcn/ui v4 Registry Baseline
+
+The upstream reference in `repo-ref/ui` defines 54 `registry:ui` components (`repo-ref/ui/apps/v4/registry.json`).
+
+Status below uses Rust module naming (hyphenated names normalized to `_`).
+
+| Registry name | Rust module | Status | Notes |
+| --- | --- | --- | --- |
+| accordion | `accordion` | Missing | Requires collapsible primitives + keyboard/a11y contracts |
+| alert | `alert` | Present |  |
+| alert-dialog | `alert_dialog` | Missing | Modal overlay policy + focus trap |
+| aspect-ratio | `aspect_ratio` | Present |  |
+| avatar | `avatar` | Present |  |
+| badge | `badge` | Present |  |
+| breadcrumb | `breadcrumb` | Present |  |
+| button | `button` | Present |  |
+| button-group | `button_group` | Missing | Likely a thin wrapper over `toggle_group` styling |
+| calendar | `calendar` | Missing | Large surface; likely deferred unless needed |
+| card | `card` | Present |  |
+| carousel | `carousel` | Defer | Not editor-critical |
+| chart | `chart` | Defer | Not editor-critical |
+| checkbox | `checkbox` | Present |  |
+| collapsible | `collapsible` | Missing | Headless open/close + a11y semantics |
+| command | `command` | Missing | Command palette infra + list navigation |
+| context-menu | `context_menu` | Missing | Menu navigation + dismissible overlays |
+| dialog | `dialog` | Missing | Modal barrier + focus trap + restore |
+| drawer | `drawer` | Missing | Usually `sheet` variant; overlay policy |
+| dropdown-menu | `dropdown_menu` | Missing | Menu navigation + dismissible overlays |
+| empty | `empty` | Present |  |
+| field | `field` | Present | Repo-specific “form field” primitives |
+| form | `form` | Present |  |
+| hover-card | `hover_card` | Present | Needs tooltip/popover-grade overlay infra for parity |
+| input | `input` | Present |  |
+| input-group | `input_group` | Missing | Composition over `input` + slots/icons |
+| input-otp | `input_otp` | Missing | Specialized input; can be layered on text input primitives |
+| item | `item` | Present | Repo-specific list/item recipes aligned with shadcn style |
+| kbd | `kbd` | Present |  |
+| label | `label` | Present |  |
+| menubar | `menubar` | Missing | Probably app/editor-owned composition |
+| native-select | `native_select` | Defer | Can map to `select` + platform-native later |
+| navigation-menu | `navigation_menu` | Defer | Complex; not editor-critical |
+| pagination | `pagination` | Present |  |
+| popover | `popover` | Missing | Needs generic popover component (overlay root + placement) |
+| progress | `progress` | Present |  |
+| radio-group | `radio_group` | Present |  |
+| resizable | `resizable` | Missing | Splitters/panels; some runtime pieces exist |
+| scroll-area | `scroll_area` | Missing | Likely a declarative wrapper over `Scroll` + styling |
+| select | `select` | Present | Uses `window_overlays` dismissible popover infra |
+| separator | `separator` | Missing | Simple primitive; should be components-ui declarative |
+| sheet | `sheet` | Missing | Overlay policy (modal/non-modal) + focus handling |
+| sidebar | `sidebar` | Present |  |
+| skeleton | `skeleton` | Present |  |
+| slider | `slider` | Missing | Input primitive; a11y + pointer interaction |
+| sonner | `sonner` | Missing | Toast service + overlay root + timers |
+| spinner | `spinner` | Present |  |
+| switch | `switch` | Present |  |
+| table | `table` | Present |  |
+| tabs | `tabs` | Present |  |
+| textarea | `textarea` | Missing | Text input multi-line wrapper over runtime `TextArea` |
+| toggle | `toggle` | Present |  |
+| toggle-group | `toggle_group` | Present |  |
+| tooltip | `tooltip` | Missing | Hover intent + overlay placement + a11y |
+
+Notes:
+- “Present” means a declarative module exists and compiles; it may still be below the “Definition of Done” parity bar (keyboard/APG, a11y checklist, tests).
+- Most “Missing” entries were previously implemented as retained widgets and intentionally deleted under the declarative-only boundary. They should come back as declarative components backed by `fret-components-ui` infra + `fret-ui` mechanisms.
+- `data_table` exists in `fret-components-shadcn` but is not a `registry:ui` item upstream; treat as an extension.
+
+## Recommended Order (Near-term)
+
+1. `fret-components-ui`: declarative primitives and headless helpers used by everything (pressable, list/tree, focus).
+2. `fret-components-shadcn`: primitives first (`Button` -> `Input/Textarea` -> `Checkbox/Switch/RadioGroup` -> `Tabs/Accordion`).
+3. Overlays (policy lives in components, mechanism lives in runtime): `Popover` -> `Dialog` -> `Tooltip/HoverCard` -> menus -> `Toast`.
+4. Complex components: calendar/date picker, navigation menu, data table (virtualization + selection).
+
+## Definition of Done (Per Component)
+
+- API: shadcn-style public names (`UpperCamelCase` types like `HoverCardTrigger`), declarative-only authoring.
+- Behavior: keyboard + focus outcomes match APG/Radix targets (see `docs/reference-stack-ui-behavior.md`).
+- A11y: correct semantics roles/flags (ADR 0033), and passes the manual checks in `docs/a11y-acceptance-checklist.md`.
+- Tests: add nextest unit/contract tests in the owning crate; keep `cargo nextest run --workspace` green.
+
+## How to Reference the Previous Implementation
+
+- Inspect a file from before deletion: `git show <rev>:<path>`
+- Compare old/new behavior: `git diff <rev1>..<rev2> -- <path>`
+- Trace changes: `git log -- <path>`
+
+## Infrastructure Backlog (components-ui / runtime)
+
+The goal is to keep `fret-components-shadcn` mostly “composition + styling”, and put reusable mechanisms/state in `fret-ui` / `fret-components-ui`.
+
+**Overlay stack (highest leverage)**
+- `fret-ui` (mechanism): multi-root rendering per window, overlay layer install/uninstall, outside-press observers, modal barrier semantics, focus restore primitives.
+- `fret-components-ui` (policy): `WindowOverlays`-style request queues and rendering for popovers/menus/dialogs/toasts; consistent focus-restore rules (ADR 0069).
+
+**Headless state machines**
+- Hover intent (tooltip/hover-card delays), menu navigation (typeahead + roving), focus trapping for dialogs/sheets, and richer typeahead buffer (prefix match with timeout).
+
+**Declarative primitives (Tailwind-ish building blocks)**
+- `separator`, `scroll_area`, `textarea` (wrapper over runtime `TextArea`), `slider`, `resizable` panels/splitters.
+- Input “slots” patterns: `input_group` (leading/trailing icons, clear buttons), `input_otp` helpers.
+
+**Notifications**
+- `sonner`/toast: global service API + per-window overlay root + timers + action dispatch.
+
+**Command palette (`command` / cmdk-style)**
+- Component surface belongs in `fret-components-shadcn` (shadcn taxonomy), but the heavy lifting should live in `fret-components-ui`:
+  - headless filtering/scoring + match highlighting ranges
+  - keyboard navigation (up/down/home/end, typeahead, disabled skipping)
+  - optional virtualization integration
+- Potential runtime/a11y gaps to track:
+  - We currently lack a ListBox/Option-style role pair; `List`/`ListItem` works but may not map ideally to OS AT.
+  - We do not have an "active descendant" semantics link (to announce the active result while keeping focus in the text field, as cmdk does). If we want true cmdk parity, consider adding a semantics association rather than moving focus away from the input.
+  - Virtualized a11y contract is still evolving; avoid virtualization for v1 unless necessary, or define an AT-facing mirror strategy.
+
+## Planned Infra Modules (Concrete)
+
+Intended new building blocks (names tentative):
+
+- `crates/fret-components-ui/src/headless/hover_intent.rs` (tooltip/hover-card delays + cancellation)
+- `crates/fret-components-ui/src/headless/menu_nav.rs` (arrow key navigation + typeahead buffer + disabled skipping)
+- `crates/fret-components-ui/src/headless/focus_trap.rs` (dialog/sheet focus trap + restore hooks)
+- `crates/fret-components-ui/src/declarative/separator.rs` (simple visual + semantics)
+- `crates/fret-components-ui/src/declarative/scroll_area.rs` (Scroll + scrollbar styling wrapper)
+- `crates/fret-components-ui/src/declarative/textarea.rs` (runtime `TextArea` chrome wrapper)
+- `crates/fret-components-ui/src/declarative/slider.rs` (pointer/keyboard input + a11y)
+- Extend `crates/fret-components-ui/src/window_overlays.rs` with: tooltip layer, menu layer, dialog/sheet layer, toast layer
+
+Cross-cutting a11y constraint to keep in mind:
+
+- Roving-focus “items” often should be *not* in Tab traversal, but still AT-focusable/activatable; ensure semantics focusability is not accidentally tied to Tab-stop (see `Pressable` semantics behavior).
+
+## Reference: gpui-component Layering (Upstream Inspiration)
+
+`repo-ref/gpui-component` is a useful comparison point:
+
+- GPUI provides mechanisms like `DismissEvent`, `anchored(...)` placement, focus handles, and deferred overlays.
+- gpui-component implements policy and styling at the component layer (`Popover::overlay_closable`, tooltip styling, input popovers, etc).
+
+This matches Fret’s intended split: `fret-ui` as mechanism; `fret-components-ui`/`fret-components-shadcn` as policy + composition.
+
+## Tracking Table (Update as work proceeds)
+
+| Area | Component | Status | Owner crate | A11y | Tests | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| Boundary | Retained API hidden | Done | `fret-ui` | - | - | `widget` + `create_node` are crate-private |
+| Infra | Declarative tree | Done | `fret-components-ui` | Partial | Partial | Expand with roving focus + typeahead helpers |
+| Primitives | Button | Present | `fret-components-shadcn` | Partial | Not started | Style parity + a11y checklist still pending |
+| Primitives | Input | Present | `fret-components-shadcn` | Partial | Not started | Uses runtime `TextInput` semantics + theming |
+| Overlays | Select | Present | `fret-components-shadcn` | Partial | Partial | Uses `fret-components-ui/window_overlays` dismissible popover |
