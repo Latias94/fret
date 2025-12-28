@@ -408,6 +408,32 @@ mod tests {
         widget::{LayoutCx, PaintCx, Widget},
     };
 
+    fn a11y_invoke(
+        ui: &mut UiTree<App>,
+        host: &mut App,
+        services: &mut FakeServices,
+        target: NodeId,
+    ) {
+        ui.set_focus(Some(target));
+        ui.dispatch_event(
+            host,
+            services,
+            &Event::KeyDown {
+                key: KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            host,
+            services,
+            &Event::KeyUp {
+                key: KeyCode::Space,
+                modifiers: Modifiers::default(),
+            },
+        );
+    }
+
     #[derive(Default)]
     struct FakeServices(());
 
@@ -785,6 +811,74 @@ mod tests {
             .expect("C item semantics node");
         assert!(c.flags.disabled);
         assert!(!c.flags.selected);
+    }
+
+    #[test]
+    fn popover_a11y_invoke_list_item_sets_result_and_closes() {
+        let mut host = App::new();
+        let mut services = FakeServices::default();
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(TwoBoxContainer);
+        ui.set_root(root);
+
+        let trigger = ui.create_node(Focusable);
+        let other = ui.create_node(Focusable);
+        ui.add_child(root, trigger);
+        ui.add_child(root, other);
+
+        let mut overlays = WindowOverlays::install(&mut ui);
+        ui.set_focus(Some(trigger));
+        run_frame(&mut ui, &mut host, &mut services);
+
+        let anchor = ui
+            .debug_node_bounds(trigger)
+            .expect("expected trigger bounds");
+        host.with_global_mut(PopoverService::default, |service, _app| {
+            service.set_request(
+                window,
+                PopoverRequest {
+                    owner: trigger,
+                    anchor,
+                    items: vec![PopoverItem::new("A"), PopoverItem::new("B")],
+                    selected: Some(0),
+                    request_focus: true,
+                },
+            );
+        });
+
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut services,
+            window,
+            &CommandId::from("popover.open"),
+        );
+        assert!(handled);
+        run_frame(&mut ui, &mut host, &mut services);
+        assert!(ui.is_layer_visible(overlays.popover.layer));
+
+        let a11y_children = ui.children(overlays.popover.root);
+        assert!(
+            a11y_children.len() >= 2,
+            "expected at least 2 a11y item nodes"
+        );
+        let b_item = a11y_children[1];
+
+        a11y_invoke(&mut ui, &mut host, &mut services, b_item);
+
+        let app_commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
+        assert!(app_commands.is_empty());
+        assert!(!ui.is_layer_visible(overlays.popover.layer));
+        assert_eq!(ui.focus(), Some(trigger));
+
+        let picked = host
+            .global_mut::<PopoverService>()
+            .and_then(|s| s.take_result(window, trigger));
+        assert_eq!(picked, Some(1));
     }
 
     #[test]
@@ -1483,6 +1577,91 @@ mod tests {
             .expect("C menu item semantics node");
         assert!(!c.flags.disabled);
         assert!(!c.flags.selected);
+    }
+
+    #[test]
+    fn context_menu_a11y_invoke_menu_item_dispatches_command_and_closes() {
+        let mut host = App::new();
+        let mut services = FakeServices::default();
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(TestContainer);
+        ui.set_root(root);
+
+        let mut overlays = WindowOverlays::install(&mut ui);
+
+        let trigger = ui.create_node(Focusable);
+        ui.add_child(root, trigger);
+        ui.set_focus(Some(trigger));
+
+        let cmd_a = CommandId::from("test.menu.a");
+        let cmd_b = CommandId::from("test.menu.b");
+        let cmd_c = CommandId::from("test.menu.c");
+
+        host.commands_mut()
+            .register(cmd_a.clone(), CommandMeta::new("A"));
+        host.commands_mut()
+            .register(cmd_b.clone(), CommandMeta::new("B"));
+        host.commands_mut()
+            .register(cmd_c.clone(), CommandMeta::new("C"));
+
+        let menu = Menu {
+            title: "Menu".into(),
+            items: vec![
+                MenuItem::Command {
+                    command: cmd_a.clone(),
+                    when: None,
+                },
+                MenuItem::Command {
+                    command: cmd_b.clone(),
+                    when: None,
+                },
+                MenuItem::Command {
+                    command: cmd_c.clone(),
+                    when: None,
+                },
+            ],
+        };
+
+        host.with_global_mut(ContextMenuService::default, |service, _app| {
+            service.set_request(
+                window,
+                ContextMenuRequest {
+                    position: Point::new(Px(10.0), Px(10.0)),
+                    menu,
+                    input_ctx: Default::default(),
+                    menu_bar: None,
+                },
+            );
+        });
+
+        let handled = overlays.handle_command(
+            &mut host,
+            &mut ui,
+            &mut services,
+            window,
+            &CommandId::from("context_menu.open"),
+        );
+        assert!(handled);
+        run_frame(&mut ui, &mut host, &mut services);
+        assert!(ui.is_layer_visible(overlays.context_menu.layer));
+
+        let a11y_children = ui.children(overlays.context_menu.root);
+        assert!(
+            a11y_children.len() >= 2,
+            "expected at least 2 a11y item nodes"
+        );
+        let b_item = a11y_children[1];
+
+        a11y_invoke(&mut ui, &mut host, &mut services, b_item);
+
+        let app_commands = pump_commands(&mut overlays, &mut host, &mut ui, &mut services, window);
+        assert_eq!(app_commands, vec![cmd_b]);
+        assert!(!ui.is_layer_visible(overlays.context_menu.layer));
+        assert_eq!(ui.focus(), Some(trigger));
     }
 
     #[test]
