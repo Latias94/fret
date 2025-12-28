@@ -386,6 +386,7 @@ impl<H: UiHost> UiTree<H> {
         matches!(
             key,
             KeyCode::Tab
+                | KeyCode::Space
                 | KeyCode::Enter
                 | KeyCode::Escape
                 | KeyCode::ArrowUp

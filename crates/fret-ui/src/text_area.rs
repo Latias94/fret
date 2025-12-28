@@ -759,6 +759,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 if matches!(
                     key,
                     fret_core::KeyCode::Tab
+                        | fret_core::KeyCode::Space
                         | fret_core::KeyCode::Enter
                         | fret_core::KeyCode::Escape
                         | fret_core::KeyCode::ArrowUp
