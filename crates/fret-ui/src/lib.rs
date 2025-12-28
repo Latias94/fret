@@ -8,6 +8,7 @@ pub mod overlay_placement;
 pub mod paint;
 pub type ItemKey = u64;
 pub mod resize_handle;
+pub mod resizable_split;
 pub mod scroll;
 mod svg_source;
 #[cfg(test)]
@@ -24,6 +25,7 @@ pub use dock::{DockManager, DockPanel, DockPanelContentService, DockSpace, Viewp
 pub use elements::{ElementCx, ElementRuntime, GlobalElementId};
 pub use host::UiHost;
 pub use resize_handle::ResizeHandle;
+pub use resizable_split::ResizableSplit;
 pub use scroll::{ScrollHandle, ScrollStrategy, VirtualListScrollHandle};
 pub use svg_source::SvgSource;
 pub use text_area::{BoundTextArea, TextArea, TextAreaStyle};
