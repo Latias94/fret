@@ -126,7 +126,7 @@ Invalidation must be explicit and compatible with the effects flush loop (ADR 00
 3) **Emoji policy**:
    - which fallback chain and which atlas format is used for emoji?
 4) **Font discovery and user font loading**:
-   - how do we map OS font discovery to stable `FontId` and caching?
+    - how do we map OS font discovery to stable `FontId` and caching?
 5) **Shader contracts**:
    - what parameters become part of the glyph sampling shader interface (gamma ratios, contrast factors)?
 
@@ -144,8 +144,14 @@ selection across machines:
 - `TextStyle.font` (or its higher-level theme token) must resolve to a concrete *family preference*
   rather than an "empty default" (e.g. `FontId::default()` without semantics).
 - Each platform provides a "system UI font" alias (implementation-defined) used as the default.
-- A configurable ordered list of fallback families is supported at the theme/settings layer:
-  - recommended categories: UI fallback, CJK fallback, emoji/color fallback.
+- A configurable ordered list of default family candidates is supported at the settings layer
+  (ADR 0014):
+  - `./.fret/settings.json` → `fonts.ui_sans` / `fonts.ui_serif` / `fonts.ui_mono`.
+  - The renderer selects the first installed family from the list, otherwise falls back to the
+    platform defaults (see `default_*_candidates()` in `crates/fret-render`).
+  - This is the minimum needed to avoid “default font has no kana/kanji” failures (common root cause
+    for IME/tofu issues).
+  - Full per-script fallback customization (UI/CJK/emoji stacks) is still tracked as follow-up work.
 
 ### Fallback resolution behavior
 
@@ -166,6 +172,11 @@ To keep text output deterministic and avoid stale cache bugs:
   used to produce and reuse `TextBlobId`.
 - Any change in font discovery, user font loading, or configured fallbacks must invalidate the
   relevant cached text blobs (directly or via a text-system revision key).
+
+Current status:
+
+- The resolved default family names (`SansSerif`/`Serif`/`Monospace`) participate in the text cache key
+  via a `font_stack_key` (see `crates/fret-render/src/text.rs`).
 
 ### Conformance smoke tests (recommended)
 

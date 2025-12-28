@@ -17,6 +17,7 @@ pub use svg::{
 };
 pub use svg_cache::{CachedSvgImage, SvgImageCache, SvgRasterKind};
 pub use targets::{RenderTargetColorSpace, RenderTargetDescriptor, RenderTargetRegistry};
+pub use text::TextFontFamilyConfig;
 
 pub struct WgpuContext {
     pub instance: wgpu::Instance,

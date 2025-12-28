@@ -57,6 +57,11 @@ Recommended user files:
 - `keymap.json` (user key bindings)
 - `layout.json` (user window/dock layout; see ADR 0013 + ADR 0017)
 
+Notes:
+
+- Text defaults (e.g. default UI font family candidates) live in `settings.json` and are owned by the
+  app/editor layer, then injected into the renderer (see ADR 0029).
+
 ### 2) Settings are strongly typed
 
 Model settings as strongly typed Rust structures that map directly to these files.

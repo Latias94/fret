@@ -8,6 +8,7 @@ use fret_core::{
 };
 use slotmap::SlotMap;
 use std::{
+    borrow::Cow,
     collections::{HashMap, HashSet},
     hash::{Hash, Hasher},
     sync::Arc,
@@ -306,6 +307,14 @@ impl GlyphAtlas {
         }
     }
 
+    fn reset(&mut self) {
+        self.pen_x = 1;
+        self.pen_y = 1;
+        self.row_h = 0;
+        self.glyphs.clear();
+        self.pending.clear();
+    }
+
     fn allocate(&mut self, w: u32, h: u32) -> Option<(u32, u32)> {
         let w = w.saturating_add(2);
         let h = h.saturating_add(2);
@@ -374,6 +383,18 @@ fn family_for_font_id(font: fret_core::FontId) -> Family<'static> {
         // Default: system UI sans-serif (ADR 0029).
         Family::SansSerif
     }
+}
+
+/// Overrides for the default font family selection.
+///
+/// This configures the three generic families used by `TextStyle.font`
+/// (`SansSerif`/`Serif`/`Monospace`). Full per-script fallback customization is tracked
+/// separately (ADR 0029).
+#[derive(Debug, Clone, Default)]
+pub struct TextFontFamilyConfig {
+    pub ui_sans: Vec<String>,
+    pub ui_serif: Vec<String>,
+    pub ui_mono: Vec<String>,
 }
 
 impl TextSystem {
@@ -477,6 +498,52 @@ impl TextSystem {
             atlas_bind_group_layout,
             atlas_bind_group,
         }
+    }
+
+    pub fn set_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {
+        let installed = build_installed_family_set(self.font_system.db());
+        let old_key = self.font_stack_key;
+
+        let pick =
+            |overrides: &[String], defaults: &'static [&'static str]| -> Option<Cow<'_, str>> {
+                for candidate in overrides {
+                    if installed.contains(&candidate.to_ascii_lowercase()) {
+                        return Some(Cow::Owned(candidate.clone()));
+                    }
+                }
+                for &candidate in defaults {
+                    if installed.contains(&candidate.to_ascii_lowercase()) {
+                        return Some(Cow::Borrowed(candidate));
+                    }
+                }
+                None
+            };
+
+        {
+            let db = self.font_system.db_mut();
+
+            if let Some(sans) = pick(&config.ui_sans, default_sans_candidates()) {
+                db.set_sans_serif_family(sans.as_ref());
+            }
+            if let Some(serif) = pick(&config.ui_serif, default_serif_candidates()) {
+                db.set_serif_family(serif.as_ref());
+            }
+            if let Some(mono) = pick(&config.ui_mono, default_monospace_candidates()) {
+                db.set_monospace_family(mono.as_ref());
+            }
+        }
+
+        let new_key = font_stack_cache_key(self.font_system.locale(), self.font_system.db());
+        if new_key == old_key {
+            return false;
+        }
+
+        self.font_stack_key = new_key;
+        self.blobs.clear();
+        self.blob_cache.clear();
+        self.blob_key_by_id.clear();
+        self.atlas.reset();
+        true
     }
 
     pub fn atlas_bind_group_layout(&self) -> &wgpu::BindGroupLayout {

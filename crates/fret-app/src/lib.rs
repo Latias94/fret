@@ -2,6 +2,7 @@ pub mod app;
 pub mod drag;
 pub mod keymap;
 pub mod menu;
+pub mod settings;
 pub mod ui_host;
 pub mod when_expr;
 
@@ -16,3 +17,5 @@ pub use fret_runtime::{
 
 pub use keymap::KeymapError;
 pub use keymap::{BindingV1, KeySpecV1, KeymapFileV1};
+
+pub use settings::{FontsSettingsV1, SettingsError, SettingsFileV1};

@@ -1,0 +1,8 @@
+{
+  "settings_version": 1,
+  "fonts": {
+    "ui_sans": ["Segoe UI", "Inter", "Noto Sans", "Noto Sans CJK SC"],
+    "ui_serif": ["Georgia", "Times New Roman", "Noto Serif"],
+    "ui_mono": ["Cascadia Mono", "Consolas", "JetBrains Mono", "Noto Sans Mono"]
+  }
+}

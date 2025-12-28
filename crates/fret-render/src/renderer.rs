@@ -18,7 +18,7 @@ use crate::svg::{
     SMOOTH_SVG_SCALE_FACTOR, SvgAlphaMask, SvgRenderer, upload_alpha_mask, upload_rgba_image,
 };
 use crate::targets::{RenderTargetDescriptor, RenderTargetRegistry};
-use crate::text::TextSystem;
+use crate::text::{TextFontFamilyConfig, TextSystem};
 
 #[derive(Debug, Clone, Copy)]
 pub struct ClearColor(pub wgpu::Color);
@@ -1063,6 +1063,10 @@ impl Renderer {
         // nearest supported-shape value (rather than rounding up to a potentially unsupported count).
         let pow2_floor = 1u32 << (31 - samples.leading_zeros());
         self.path_msaa_samples = pow2_floor.max(1);
+    }
+
+    pub fn set_text_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {
+        self.text_system.set_font_families(config)
     }
 
     fn effective_path_msaa_samples(&self, format: wgpu::TextureFormat) -> u32 {
