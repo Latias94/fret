@@ -1,6 +1,6 @@
 # ADR 0051: Model Observation and UI Invalidation Propagation (P0)
 
-Status: Proposed
+Status: Accepted
 Scope: UI runtime contract (`fret-ui`) + app model store integration (`fret-app`)
 
 ## Context
@@ -184,6 +184,15 @@ Suggested incremental plan:
 2. Extend `ModelStore` with a “changed model ids” queue drained by the driver.
 3. Wire the driver to broadcast changed ids to all windows’ UI trees.
 4. Migrate demo glue invalidations (e.g. selection → invalidate all panels) to targeted observation.
+
+## Conformance Notes
+
+This contract is considered P0 and must remain deterministic across windows:
+
+- model changes are drained once per tick by the driver/runner and broadcast to all active windows,
+- each window's UI tree invalidates observing nodes based on the current frame's observation graph.
+
+See also: `crates/fret-ui/src/tree.rs` tests for multi-window invalidation coverage.
 
 ## Open Questions
 

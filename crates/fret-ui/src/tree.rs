@@ -2691,6 +2691,7 @@ mod tests {
         TextService, TextStyle, TextWrap,
     };
     use fret_runtime::{BindingV1, KeySpecV1, Keymap, KeymapFileV1, KeymapService, Model};
+    use slotmap::KeyData;
     use std::sync::{
         Arc,
         atomic::{AtomicUsize, Ordering},
@@ -2848,6 +2849,54 @@ mod tests {
         let n = ui.nodes.get(node).unwrap();
         assert!(n.invalidation.layout);
         assert!(n.invalidation.paint);
+    }
+
+    #[test]
+    fn model_change_invalidates_observers_across_windows() {
+        let mut app = crate::test_host::TestHost::new();
+        let model = app.models_mut().insert(0u32);
+
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let window_b = AppWindowId::from(KeyData::from_ffi(2));
+
+        let mut services = FakeUiServices;
+        let bounds = Rect::new(
+            Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+        );
+
+        let mut ui_a = UiTree::new();
+        ui_a.set_window(window_a);
+        let node_a = ui_a.create_node(ObservingWidget { model });
+        ui_a.set_root(node_a);
+        ui_a.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene_a = Scene::default();
+        ui_a.paint_all(&mut app, &mut services, bounds, &mut scene_a, 1.0);
+        ui_a.nodes.get_mut(node_a).unwrap().invalidation.clear();
+
+        let mut ui_b = UiTree::new();
+        ui_b.set_window(window_b);
+        let node_b = ui_b.create_node(ObservingWidget { model });
+        ui_b.set_root(node_b);
+        ui_b.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene_b = Scene::default();
+        ui_b.paint_all(&mut app, &mut services, bounds, &mut scene_b, 1.0);
+        ui_b.nodes.get_mut(node_b).unwrap().invalidation.clear();
+
+        let _ = model.update(&mut app, |v, _cx| *v += 1);
+        let changed = app.take_changed_models();
+        assert!(changed.contains(&model.id()));
+
+        ui_a.propagate_model_changes(&mut app, &changed);
+        ui_b.propagate_model_changes(&mut app, &changed);
+
+        let na = ui_a.nodes.get(node_a).unwrap();
+        assert!(na.invalidation.layout);
+        assert!(na.invalidation.paint);
+
+        let nb = ui_b.nodes.get(node_b).unwrap();
+        assert!(nb.invalidation.layout);
+        assert!(nb.invalidation.paint);
     }
 
     #[test]
