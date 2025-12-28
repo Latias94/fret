@@ -114,6 +114,13 @@ Effect shape (implemented in desktop runner):
 - `Effect::ImeSetCursorArea { window, rect }`
 - `Effect::ImeAllow { window, enabled }` (maps to winit `set_ime_allowed` policy)
 
+Emitter responsibility (P0):
+
+- `Effect::ImeAllow` is owned by the UI runtime (`UiTree`): it is updated when focus changes and
+  at paint time so programmatic focus updates also sync the platform IME state.
+- Text-editing widgets must **not** emit `ImeAllow` every frame; they only emit `ImeSetCursorArea`
+  when the caret rect changes.
+
 ### 4) Preedit is rendered inline (OS candidate window is not enough)
 
 For editor UX parity with VSCode/Zed:

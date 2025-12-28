@@ -173,3 +173,19 @@ Add at least one integration/demo harness that renders and measures:
 
 - ASCII + fullwidth Latin (IME provisional), hiragana/katakana, common kanji, and emoji.
 - A preedit sequence that includes fullwidth Latin + kana before commit (Windows Japanese IME).
+
+## Current MVP status (implementation notes)
+
+This ADR defines the contract and lock-in targets; implementation will evolve. Current code status:
+
+- Text shaping/rasterization uses `cosmic-text` via the renderer text system:
+  - `crates/fret-render/src/text.rs`
+- A framework-level fallback policy and platform-generic family defaults are configured at text-system startup, and a
+  `font_stack_key` participates in `TextBlobId` caching so fallback/generic-family changes cannot reuse stale blobs.
+- `FontId` is still a placeholder core identifier; `TextStyle.font` does not yet select a concrete family/style in the
+  shaping backend (MVP currently uses the configured sans-serif generic family for all runs).
+
+Follow-up decisions (still required):
+
+- Define the stable mapping from theme/settings (“default font stack”) into `FontId` + backend font families, and decide
+  persistence format (store family + features + fallbacks, never numeric `FontId`).

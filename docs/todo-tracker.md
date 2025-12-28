@@ -19,15 +19,15 @@ It complements (but does not replace) ADRs:
   - ADRs: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`
   - Code: `crates/fret-runner-winit-wgpu/src/runner.rs`, `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/text_input.rs`, `crates/fret-ui/src/text_area.rs`
   - Current: `crates/fret-ui/src/tree.rs` defers shortcut matching for reserved keys and only falls back if the widget does not `stop_propagation`. `crates/fret-ui/src/text_input.rs` and `crates/fret-ui/src/text_area.rs` stop propagation for these keys while IME is composing (treat “composing” as `preedit` non-empty **or** preedit cursor metadata present).
-  - TODO: add regression tests that assert:
-    - when composing, `Tab/Enter/Escape/...` do not trigger focus traversal or global shortcuts;
-    - when not composing, focus traversal still works (e.g. `Tab` can move focus).
+  - Current: regression tests exist for:
+    - composing: reserved keys suppress traversal/shortcuts (`tab_focus_next_is_suppressed_during_ime_composition`, `reserved_shortcuts_are_suppressed_during_ime_composition`);
+    - not composing: `Tab` focus traversal works (`tab_focus_next_runs_when_text_input_not_composing`).
 
 - **Define and validate blur/disable semantics for IME enablement**
-  - Problem: focused text widgets send `Effect::ImeAllow { enabled: true }`; ensure loss of focus reliably disables IME where appropriate.
+  - Problem: ensure loss of focus reliably disables IME where appropriate, and avoid per-widget effect spam.
   - ADRs: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0020-focus-and-command-routing.md`
-  - Code: `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/text_input.rs`, `crates/fret-ui/src/text_area.rs`
-  - TODO: prefer an explicit “focus changed” hook to clear preedit/composition state, rather than relying on paint-time cleanup.
+  - Code: `crates/fret-ui/src/tree.rs`
+  - Current: `UiTree` owns `Effect::ImeAllow` and updates it on focus changes and at paint time; widgets only emit `Effect::ImeSetCursorArea` when the caret rect changes.
 
 - **Multiline IME contract + conformance harness**
   - Goal: lock and validate multiline selection/composition/caret-rect behavior (scroll/wrap/DPI/preedit updates).
