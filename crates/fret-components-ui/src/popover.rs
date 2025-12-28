@@ -197,6 +197,8 @@ pub struct PopoverStyle {
     pub border: Edges,
     pub border_color: Color,
     pub corner_radii: Corners,
+    /// Insets the available window bounds so floating shadows don't get clipped at the edges.
+    pub window_margin: Px,
     pub row_hover: Color,
     pub row_selected: Color,
     pub text_color: Color,
@@ -226,6 +228,7 @@ impl Default for PopoverStyle {
                 a: 0.40,
             },
             corner_radii: Corners::all(Px(8.0)),
+            window_margin: Px(8.0),
             row_hover: Color {
                 r: 0.16,
                 g: 0.17,
@@ -372,6 +375,11 @@ impl Popover {
         self.style.border_color = surface.border_color;
         self.style.corner_radii = Corners::all(surface.radius);
         self.style.shadow = Some(crate::declarative::style::shadow_md(theme, surface.radius));
+
+        self.style.window_margin = theme
+            .metric_by_key("component.popover.window_margin")
+            .or_else(|| theme.metric_by_key("component.popover_surface.window_margin"))
+            .unwrap_or(Px(8.0));
 
         let rows = resolve_menu_list_row_chrome(theme, self.size);
         self.style.padding_x = rows.padding_x;
@@ -613,8 +621,10 @@ impl Popover {
         let content_h = Px((request.items.len() as f32) * self.style.row_height.0);
         let panel_h = Px(content_h.0 + self.style.padding_y.0 * 2.0);
 
+        let outer =
+            overlay_placement::inset_rect(cx.bounds, Edges::all(Px(self.style.window_margin.0)));
         self.panel_bounds = overlay_placement::anchored_panel_bounds_sized(
-            cx.bounds,
+            outer,
             request.anchor,
             Size::new(panel_w, panel_h),
             self.style.gap,
@@ -1344,5 +1354,69 @@ mod tests {
 
         // Near the bottom edge, prefer flipping above the anchor rather than overflowing below.
         assert!(bounds.origin.y.0 + bounds.size.height.0 <= anchor.origin.y.0);
+    }
+
+    #[test]
+    fn popover_uses_window_margin_to_avoid_shadow_clipping_at_bottom_edge() {
+        let mut host = App::new();
+        let mut services = FakeServices::default();
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let style = PopoverStyle {
+            padding_x: Px(0.0),
+            padding_y: Px(0.0),
+            row_height: Px(10.0),
+            gap: Px(2.0),
+            window_margin: Px(8.0),
+            ..PopoverStyle::default()
+        };
+
+        let popover = ui.create_node(Popover::new().with_style(style));
+        ui.set_root(popover);
+
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(200.0)),
+        );
+
+        // This placement would fit exactly at the bottom edge without a margin:
+        // anchor_bottom (188) + gap (2) + panel_h (10) == 200.
+        // With a window margin of 8px, we expect the solver to flip above instead.
+        let anchor = Rect::new(
+            Point::new(Px(10.0), Px(178.0)),
+            Size::new(Px(40.0), Px(10.0)),
+        );
+
+        host.with_global_mut(PopoverService::default, |service, _app| {
+            service.set_request(
+                window,
+                PopoverRequest {
+                    owner: popover,
+                    anchor,
+                    items: vec![PopoverItem::new("Item")],
+                    selected: None,
+                    request_focus: true,
+                },
+            );
+        });
+
+        ui.layout_all(&mut host, &mut services, outer, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut host, &mut services, outer, &mut scene, 1.0);
+
+        let Some(bounds) = clip_rect(&scene) else {
+            panic!("expected a popover clip rect to be emitted");
+        };
+
+        // With margin accounted for, we should flip above the anchor.
+        assert!(bounds.origin.y.0 + bounds.size.height.0 <= anchor.origin.y.0);
+
+        // And we should stay within the inset window bounds.
+        let inset_bottom = 200.0 - 8.0;
+        assert!(bounds.origin.y.0 + bounds.size.height.0 <= inset_bottom);
     }
 }
