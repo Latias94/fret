@@ -69,6 +69,12 @@ It complements (but does not replace) ADRs:
   - Code: `crates/fret-runner-winit-wgpu/src/runner.rs`
   - Current: the runner consumes `Escape` when a cross-window `DragKind::DockPanel` session is active and cancels drag + hover immediately.
 
+- **Tear-off window movement across mixed-DPI / multi-monitor setups**
+  - Problem: tear-off floating dock windows can become pinned to a monitor edge (or end up partially unreachable) when runner-side position clamping is tied to the window’s current monitor rather than the cursor/target monitor.
+  - ADRs: `docs/adr/0017-multi-window-display-and-dpi.md`, `docs/adr/0072-docking-interaction-arbitration-matrix.md`
+  - Code: `crates/fret-runner-winit-wgpu/src/runner.rs`
+  - Current: the runner clamps tear-off follow movement to the cursor’s monitor with a visibility padding and settles the final window position on mouse release (commit `f89f2a5`).
+
 - **Dock host keep-alive and early submission**
   - Goal: ensure dock hosts remain stable targets and do not "drop" docked content due to conditional submission.
   - ADRs: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`
@@ -108,7 +114,7 @@ It complements (but does not replace) ADRs:
 - **Add a repeatable IME regression checklist to the demo**
   - Goal: a short "manual test script" that can later be automated (Windows Japanese IME, caret placement, commit/cancel).
   - ADRs: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0071-text-input-multiline-composition-contract.md`
-  - Code: `crates/fret-demo/src/components_gallery.rs` or `crates/fret-demo/src/ui_kit.rs` (choose a stable harness location).
+  - Code: `crates/fret-demo/src/components_gallery.rs` (stable harness location).
 
 - **Prefer `cargo nextest` for workspace tests**
   - Goal: make it easy to run conformance tests consistently.
