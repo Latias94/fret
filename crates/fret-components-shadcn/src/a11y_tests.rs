@@ -1,6 +1,6 @@
 use crate::test_host::TestHost;
 use crate::{AccordionTrigger, CollapsibleTrigger, DatePicker, InputOTP, Toggle};
-use fret_components_ui::{PopoverSurfaceRequest, PopoverSurfaceService};
+use fret_components_ui::{PopoverService, PopoverSurfaceRequest, PopoverSurfaceService};
 use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, PathCommand, PathConstraints, PathId, PathMetrics,
     PathStyle, Px, Rect, SemanticsRole, Size, TextConstraints, TextMetrics, TextService, TextStyle,
@@ -453,4 +453,127 @@ fn button_group_exposes_button_items_and_a11y_invoke_dispatches_command() {
         )
     });
     assert!(dispatched, "expected command to dispatch via a11y invoke");
+}
+
+#[test]
+fn navigation_menu_exposes_menu_items_and_a11y_invoke_dispatches_link_command() {
+    use crate::navigation_menu::install_navigation_menu;
+    use crate::{NavigationMenu, NavigationMenuItem, NavigationMenuLink};
+    use fret_runtime::{CommandId, Effect};
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let mut host = TestHost::default();
+    let root = ui.create_node(fret_ui_widgets::primitives::Column::new());
+    ui.set_root(root);
+
+    let new_cmd = CommandId::from("demo.nav.new");
+    let open_cmd = CommandId::from("demo.nav.open");
+
+    let menu = NavigationMenu::new()
+        .item(
+            NavigationMenuItem::new("File")
+                .link(NavigationMenuLink::new("New").on_click(new_cmd.clone()))
+                .link(
+                    NavigationMenuLink::new("Open")
+                        .on_click(open_cmd.clone())
+                        .disabled(true),
+                ),
+        )
+        .item(
+            NavigationMenuItem::new("Edit")
+                .link(NavigationMenuLink::new("Copy").on_click(CommandId::from("demo.nav.copy"))),
+        );
+    let menu_node = install_navigation_menu(&mut ui, root, menu);
+
+    let mut services = FakeUiServices;
+    run_frame(&mut ui, &mut host, &mut services);
+
+    let snap = request_snapshot(&mut ui, &mut host, &mut services);
+    let menu_sem = snap
+        .nodes
+        .iter()
+        .find(|n| n.id == menu_node)
+        .expect("menu semantics node");
+    assert_eq!(menu_sem.role, SemanticsRole::MenuBar);
+
+    let file_trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
+        .expect("File trigger");
+    assert!(file_trigger.actions.invoke);
+    assert!(!file_trigger.flags.expanded);
+
+    a11y_invoke(&mut ui, &mut host, &mut services, file_trigger.id);
+    run_frame(&mut ui, &mut host, &mut services);
+
+    let requested = host
+        .global::<PopoverService>()
+        .and_then(|s| s.request(window))
+        .map(|(_, req)| req.clone());
+    let req = requested.expect("popover request");
+    assert_eq!(req.owner, file_trigger.id);
+    assert!(req.items.iter().any(|it| it.label.as_ref() == "New"));
+    assert!(req.items.iter().any(|it| it.label.as_ref() == "Open"));
+
+    let dispatched_open = host.effects().iter().any(|e| {
+        matches!(
+            e,
+            Effect::Command { window: Some(w), command } if *w == window && command.as_str() == "popover.open"
+        )
+    });
+    assert!(dispatched_open, "expected popover.open command to dispatch");
+
+    // Simulate selecting "New" (row 0), then any subsequent key event should allow the trigger
+    // to consume the result and dispatch the link command.
+    host.with_global_mut(PopoverService::default, |service, _app| {
+        service.set_result(window, file_trigger.id, 0);
+    });
+    ui.set_focus(Some(file_trigger.id));
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowRight,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    let dispatched_new = host.effects().iter().any(|e| {
+        matches!(
+            e,
+            Effect::Command { window: Some(w), command } if *w == window && command.as_str() == new_cmd.as_str()
+        )
+    });
+    assert!(dispatched_new, "expected selected link command to dispatch");
+
+    // Disabled link should not dispatch.
+    host.with_global_mut(PopoverService::default, |service, _app| {
+        service.set_result(window, file_trigger.id, 1);
+    });
+    ui.set_focus(Some(file_trigger.id));
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowRight,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    let dispatched_open_link = host.effects().iter().any(|e| {
+        matches!(
+            e,
+            Effect::Command { window: Some(w), command } if *w == window && command.as_str() == open_cmd.as_str()
+        )
+    });
+    assert!(
+        !dispatched_open_link,
+        "expected disabled link to not dispatch"
+    );
 }

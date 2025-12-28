@@ -69,6 +69,7 @@ pub use item::{
 };
 pub use kbd::Kbd;
 pub use label::Label;
+pub use navigation_menu::install_navigation_menu;
 pub use navigation_menu::{NavigationMenu, NavigationMenuItem, NavigationMenuLink};
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,

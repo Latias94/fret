@@ -4,15 +4,15 @@ use std::sync::Arc;
 
 use fret_components_ui::{PopoverItem, PopoverRequest, PopoverService, Size as ComponentSize};
 use fret_core::{
-    Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect,
-    NodeId, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle,
+    Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, NodeId, Point, Px,
+    Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle,
     TextWrap,
 };
 use fret_runtime::CommandId;
+use fret_ui::UiTree;
 use fret_ui::{
     EventCx, Invalidation, LayoutCx, PaintCx, Theme, UiHost, Widget, widget::SemanticsCx,
 };
-use fret_ui::UiTree;
 
 #[derive(Debug, Clone)]
 pub struct NavigationMenuLink {
@@ -734,4 +734,308 @@ impl<H: UiHost> Widget<H> for NavigationMenu {
             fret_ui::paint::paint_focus_ring(cx.scene, DrawOrder(2), rect, ring);
         }
     }
+}
+
+#[derive(Clone)]
+struct NavigationMenuA11ySlot {
+    label: Arc<str>,
+    disabled: bool,
+    content: Vec<NavigationMenuLink>,
+    node: NodeId,
+}
+
+struct NavigationMenuA11yState {
+    group_disabled: bool,
+    items: Vec<NavigationMenuA11ySlot>,
+}
+
+impl NavigationMenuA11yState {
+    fn new(count: usize) -> Self {
+        Self {
+            group_disabled: false,
+            items: (0..count)
+                .map(|_| NavigationMenuA11ySlot {
+                    label: Arc::from(""),
+                    disabled: false,
+                    content: Vec::new(),
+                    node: NodeId::default(),
+                })
+                .collect(),
+        }
+    }
+
+    fn set_node(&mut self, index: usize, node: NodeId) {
+        if let Some(slot) = self.items.get_mut(index) {
+            slot.node = node;
+        }
+    }
+
+    fn is_item_enabled(&self, index: usize) -> bool {
+        self.items.get(index).is_some_and(|it| {
+            !self.group_disabled
+                && !it.disabled
+                && !it.content.is_empty()
+                && it.node != NodeId::default()
+        })
+    }
+
+    fn focus_delta_from(&self, from: usize, delta: i32) -> Option<NodeId> {
+        if self.items.is_empty() {
+            return None;
+        }
+        let len = self.items.len() as i32;
+        let mut idx = from as i32;
+        for _ in 0..len {
+            idx = (idx + delta + len) % len;
+            let u = idx as usize;
+            if self.is_item_enabled(u) {
+                return Some(self.items[u].node);
+            }
+        }
+        None
+    }
+
+    fn focus_first(&self) -> Option<NodeId> {
+        self.items
+            .iter()
+            .enumerate()
+            .find(|(i, _)| self.is_item_enabled(*i))
+            .map(|(_, it)| it.node)
+    }
+
+    fn focus_last(&self) -> Option<NodeId> {
+        self.items
+            .iter()
+            .enumerate()
+            .rev()
+            .find(|(i, _)| self.is_item_enabled(*i))
+            .map(|(_, it)| it.node)
+    }
+}
+
+struct NavigationMenuA11yItem {
+    index: usize,
+    a11y: Rc<RefCell<NavigationMenuA11yState>>,
+    pressed: bool,
+}
+
+impl NavigationMenuA11yItem {
+    fn new(index: usize, a11y: Rc<RefCell<NavigationMenuA11yState>>) -> Self {
+        Self {
+            index,
+            a11y,
+            pressed: false,
+        }
+    }
+
+    fn is_open<H: UiHost>(&self, cx: &SemanticsCx<'_, H>) -> bool {
+        let Some(window) = cx.window else {
+            return false;
+        };
+        cx.app
+            .global::<PopoverService>()
+            .and_then(|s| s.request(window))
+            .is_some_and(|(_, req)| req.owner == cx.node)
+    }
+
+    fn sync_popover_result<H: UiHost>(&self, cx: &mut EventCx<'_, H>) -> bool {
+        let Some(window) = cx.window else {
+            return false;
+        };
+        let Some(selected) = cx
+            .app
+            .global_mut::<PopoverService>()
+            .and_then(|s| s.take_result(window, cx.node))
+        else {
+            return false;
+        };
+
+        let link = self
+            .a11y
+            .borrow()
+            .items
+            .get(self.index)
+            .and_then(|it| it.content.get(selected))
+            .cloned();
+        let Some(link) = link else {
+            return false;
+        };
+        if link.disabled {
+            return false;
+        }
+        let Some(command) = link.command else {
+            return false;
+        };
+
+        cx.dispatch_command(command);
+        cx.invalidate_self(Invalidation::Paint);
+        cx.request_redraw();
+        true
+    }
+}
+
+impl<H: UiHost> Widget<H> for NavigationMenuA11yItem {
+    fn is_focusable(&self) -> bool {
+        self.a11y.borrow().is_item_enabled(self.index)
+    }
+
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        false
+    }
+
+    fn hit_test_children(&self, _bounds: Rect, _position: Point) -> bool {
+        false
+    }
+
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        let state = self.a11y.borrow();
+        let Some(slot) = state.items.get(self.index) else {
+            cx.set_role(SemanticsRole::Generic);
+            cx.set_disabled(true);
+            return;
+        };
+
+        let enabled = state.is_item_enabled(self.index);
+        cx.set_role(SemanticsRole::MenuItem);
+        cx.set_label(slot.label.to_string());
+        cx.set_disabled(!enabled);
+        cx.set_focusable(enabled);
+        cx.set_invokable(enabled);
+        cx.set_expanded(self.is_open(cx));
+    }
+
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        let _ = self.sync_popover_result(cx);
+
+        if cx.focus != Some(cx.node) {
+            self.pressed = false;
+            return;
+        }
+
+        match event {
+            Event::KeyDown { key, repeat, .. } => {
+                if *repeat {
+                    return;
+                }
+                match key {
+                    KeyCode::ArrowLeft => {
+                        if let Some(target) = self.a11y.borrow().focus_delta_from(self.index, -1) {
+                            cx.request_focus(target);
+                        }
+                        cx.stop_propagation();
+                    }
+                    KeyCode::ArrowRight => {
+                        if let Some(target) = self.a11y.borrow().focus_delta_from(self.index, 1) {
+                            cx.request_focus(target);
+                        }
+                        cx.stop_propagation();
+                    }
+                    KeyCode::Home => {
+                        if let Some(target) = self.a11y.borrow().focus_first() {
+                            cx.request_focus(target);
+                        }
+                        cx.stop_propagation();
+                    }
+                    KeyCode::End => {
+                        if let Some(target) = self.a11y.borrow().focus_last() {
+                            cx.request_focus(target);
+                        }
+                        cx.stop_propagation();
+                    }
+                    KeyCode::Escape => {
+                        cx.dispatch_command(CommandId::from("popover.close"));
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                    }
+                    KeyCode::Enter | KeyCode::Space => {
+                        if self.a11y.borrow().is_item_enabled(self.index) {
+                            self.pressed = true;
+                        }
+                        cx.stop_propagation();
+                    }
+                    _ => {}
+                }
+            }
+            Event::KeyUp { key, .. } => {
+                if !matches!(key, KeyCode::Enter | KeyCode::Space) {
+                    return;
+                }
+                if !self.pressed {
+                    return;
+                }
+                self.pressed = false;
+
+                let Some(window) = cx.window else {
+                    return;
+                };
+
+                let content = self
+                    .a11y
+                    .borrow()
+                    .items
+                    .get(self.index)
+                    .map(|it| it.content.clone())
+                    .unwrap_or_default();
+                if content.is_empty() {
+                    return;
+                }
+
+                let popover_items: Vec<PopoverItem> = content
+                    .iter()
+                    .map(|it| {
+                        let mut pi = PopoverItem::new(it.label.clone());
+                        if it.disabled {
+                            pi = pi.disabled();
+                        }
+                        pi
+                    })
+                    .collect();
+
+                cx.app
+                    .with_global_mut(PopoverService::default, |service, _app| {
+                        service.set_request(
+                            window,
+                            PopoverRequest {
+                                owner: cx.node,
+                                anchor: cx.bounds,
+                                items: popover_items,
+                                selected: None,
+                                request_focus: true,
+                            },
+                        );
+                    });
+
+                cx.dispatch_command(CommandId::from("popover.open"));
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                cx.stop_propagation();
+            }
+            _ => {}
+        }
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.available
+    }
+}
+
+pub fn install_navigation_menu<H: UiHost>(
+    ui: &mut UiTree<H>,
+    parent: NodeId,
+    menu: NavigationMenu,
+) -> NodeId {
+    let count = menu.items.len();
+    let a11y = Rc::new(RefCell::new(NavigationMenuA11yState::new(count)));
+
+    let root = ui.create_node(menu.with_a11y(a11y.clone()));
+    ui.add_child(parent, root);
+
+    for index in 0..count {
+        let node = ui.create_node(NavigationMenuA11yItem::new(index, a11y.clone()));
+        ui.add_child(root, node);
+        a11y.borrow_mut().set_node(index, node);
+    }
+
+    root
 }
