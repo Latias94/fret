@@ -189,3 +189,9 @@ Follow-up decisions (still required):
 
 - Define the stable mapping from theme/settings (“default font stack”) into `FontId` + backend font families, and decide
   persistence format (store family + features + fallbacks, never numeric `FontId`).
+
+MVP note:
+
+- `FontId::default()` is treated as the system UI sans-serif alias; `FontId::serif()` / `FontId::monospace()` exist as
+  additional built-in aliases. These are interim affordances until the settings-layer font stack and persistence format
+  are fully defined.

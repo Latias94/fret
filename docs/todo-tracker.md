@@ -41,6 +41,7 @@ It complements (but does not replace) ADRs:
   - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`
   - Code: `crates/fret-ui/src/theme.rs`, `crates/fret-render/src/text.rs`
   - Current: `crates/fret-render/src/text.rs` configures `cosmic-text`'s `fontdb` generic families at startup (preferring platform UI font families when present), so `Family::SansSerif` is no longer an implicit "Open Sans" placeholder.
+  - Current: `TextStyle.font` now maps to `cosmic-text` generic families (`FontId::default()` -> sans, `FontId::serif()` -> serif, `FontId::monospace()` -> mono).
   - TODO: expose the default font stack at the theme/settings layer (and decide how user font loading maps to stable `FontId` values).
 
 - **Fallback list participates in `TextBlobId` caching / invalidation**

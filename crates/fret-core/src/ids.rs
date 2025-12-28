@@ -1,4 +1,4 @@
-use slotmap::new_key_type;
+use slotmap::{KeyData, new_key_type};
 
 new_key_type! {
     pub struct AppWindowId;
@@ -10,6 +10,25 @@ new_key_type! {
     pub struct TextBlobId;
     pub struct PathId;
     pub struct RenderTargetId;
+}
+
+impl FontId {
+    /// Built-in "system UI" font alias (implementation-defined).
+    ///
+    /// Note: this is a semantic alias, not a numeric font database id.
+    pub fn ui() -> Self {
+        Self::default()
+    }
+
+    /// Built-in serif font alias (implementation-defined).
+    pub fn serif() -> Self {
+        Self::from(KeyData::from_ffi(1))
+    }
+
+    /// Built-in monospace font alias (implementation-defined).
+    pub fn monospace() -> Self {
+        Self::from(KeyData::from_ffi(2))
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]

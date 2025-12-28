@@ -365,6 +365,17 @@ pub struct TextSystem {
     atlas_bind_group: wgpu::BindGroup,
 }
 
+fn family_for_font_id(font: fret_core::FontId) -> Family<'static> {
+    if font == fret_core::FontId::serif() {
+        Family::Serif
+    } else if font == fret_core::FontId::monospace() {
+        Family::Monospace
+    } else {
+        // Default: system UI sans-serif (ADR 0029).
+        Family::SansSerif
+    }
+}
+
 impl TextSystem {
     pub fn new(device: &wgpu::Device) -> Self {
         let atlas_width = 2048;
@@ -556,7 +567,7 @@ impl TextSystem {
         let scale = constraints.scale_factor.max(1.0);
         let font_size_px = (style.size.0 * scale).max(1.0);
 
-        let mut attrs = Attrs::new().family(Family::SansSerif);
+        let mut attrs = Attrs::new().family(family_for_font_id(style.font));
         attrs = attrs.weight(Weight(style.weight.0));
         if let Some(letter_spacing_em) = style.letter_spacing_em
             && letter_spacing_em != 0.0
@@ -1278,6 +1289,22 @@ mod tests {
         let k0 = TextBlobKey::new("hello", base, constraints, 1);
         let k1 = TextBlobKey::new("hello", base, constraints, 2);
         assert_ne!(k0, k1);
+    }
+
+    #[test]
+    fn font_id_maps_to_cosmic_text_family() {
+        assert_eq!(
+            super::family_for_font_id(fret_core::FontId::ui()),
+            Family::SansSerif
+        );
+        assert_eq!(
+            super::family_for_font_id(fret_core::FontId::serif()),
+            Family::Serif
+        );
+        assert_eq!(
+            super::family_for_font_id(fret_core::FontId::monospace()),
+            Family::Monospace
+        );
     }
 
     #[test]
