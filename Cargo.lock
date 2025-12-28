@@ -1252,6 +1252,7 @@ dependencies = [
  "resvg",
  "slotmap",
  "thiserror 2.0.17",
+ "unicode-script",
  "usvg",
  "wgpu",
 ]
