@@ -40,11 +40,15 @@ It complements (but does not replace) ADRs:
   - Problem: relying on `FontId::default()` without a defined font family causes platform-dependent tofu and IME provisional-state breakage.
   - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`
   - Code: `crates/fret-ui/src/theme.rs`, `crates/fret-render/src/text.rs`
+  - Current: `crates/fret-render/src/text.rs` configures `cosmic-text`'s `fontdb` generic families at startup (preferring platform UI font families when present), so `Family::SansSerif` is no longer an implicit "Open Sans" placeholder.
+  - TODO: expose the default font stack at the theme/settings layer (and decide how user font loading maps to stable `FontId` values).
 
 - **Fallback list participates in `TextBlobId` caching / invalidation**
   - Problem: changing configured fallbacks or font DB state must invalidate cached shaping/rasterization results.
   - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
   - Code: `crates/fret-render/src/text.rs`
+  - Current: `crates/fret-render/src/text.rs` includes a `font_stack_key` (derived from locale + configured generic families + fallback policy) in the `TextBlobKey` cache key.
+  - TODO: when runtime font configuration becomes user-editable, add an explicit invalidation path that bumps the `font_stack_key` and clears cached blobs.
 
 - **Emoji / variation selectors policy**
   - Goal: define baseline behavior for emoji fonts and variation selectors, and add a smoke test string that exercises it.

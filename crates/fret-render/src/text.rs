@@ -90,7 +90,7 @@ impl cosmic_text::Fallback for FretFallback {
     }
 }
 
-fn build_installed_family_set(db: &fontdb::Database) -> HashSet<String> {
+fn build_installed_family_set(db: &cosmic_text::fontdb::Database) -> HashSet<String> {
     let mut set = HashSet::new();
     for face in db.faces() {
         for (family, _lang) in &face.families {
@@ -179,7 +179,7 @@ fn default_serif_candidates() -> &'static [&'static str] {
     }
 }
 
-fn font_stack_cache_key(locale: &str, db: &fontdb::Database) -> u64 {
+fn font_stack_cache_key(locale: &str, db: &cosmic_text::fontdb::Database) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     locale.hash(&mut hasher);
 
@@ -188,7 +188,7 @@ fn font_stack_cache_key(locale: &str, db: &fontdb::Database) -> u64 {
     db.family_name(&Family::Monospace).hash(&mut hasher);
 
     // Include the framework-level fallback policy so changing it can't reuse stale blobs.
-    FretFallback.common_fallback().hash(&mut hasher);
+    <FretFallback as cosmic_text::Fallback>::common_fallback(&FretFallback).hash(&mut hasher);
     <cosmic_text::PlatformFallback as cosmic_text::Fallback>::forbidden_fallback(
         &cosmic_text::PlatformFallback,
     )
