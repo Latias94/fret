@@ -291,13 +291,17 @@ impl TextArea {
     }
 
     fn clear_preedit(&mut self) {
-        if self.preedit.is_empty() {
+        if self.preedit.is_empty() && self.preedit_cursor.is_none() {
             return;
         }
         self.preedit.clear();
         self.preedit_cursor = None;
         self.affinity = CaretAffinity::Downstream;
         self.text_dirty = true;
+    }
+
+    fn is_ime_composing(&self) -> bool {
+        !self.preedit.is_empty() || self.preedit_cursor.is_some()
     }
 
     fn preedit_cursor_end(&self) -> usize {
@@ -743,7 +747,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 if cx.focus != Some(cx.node) {
                     return;
                 }
-                if self.preedit.is_empty() {
+                if !self.is_ime_composing() {
                     return;
                 }
                 if modifiers.ctrl || modifiers.alt || modifiers.meta {
@@ -775,7 +779,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 if cx.focus != Some(cx.node) {
                     return;
                 }
-                if !self.preedit.is_empty() {
+                if self.is_ime_composing() {
                     return;
                 }
                 let tick = cx.app.tick_id();
@@ -832,7 +836,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                         cx.request_redraw();
                     }
                     ImeEvent::Preedit { text, cursor } => {
-                        if text.is_empty() {
+                        if text.is_empty() && cursor.is_none() {
                             self.clear_preedit();
                         } else {
                             self.preedit = text.clone();
@@ -1252,6 +1256,9 @@ impl<H: UiHost> Widget<H> for TextArea {
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.sync_style_from_theme(cx.theme());
+        if cx.focus != Some(cx.node) && self.is_ime_composing() {
+            self.clear_preedit();
+        }
         self.last_bounds = cx.bounds;
         self.flush_pending_releases(cx.services);
 

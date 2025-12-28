@@ -145,8 +145,7 @@ impl TextInput {
         self.text = text.into();
         self.caret = self.text.len();
         self.selection_anchor = self.caret;
-        self.preedit.clear();
-        self.preedit_cursor = None;
+        self.clear_ime_composition();
         self.text_blob = None;
         self.text_metrics = None;
         self.prefix_blob = None;
@@ -157,6 +156,15 @@ impl TextInput {
         self.preedit_metrics = None;
         self.caret_stops.clear();
         self.last_sent_cursor = None;
+    }
+
+    fn is_ime_composing(&self) -> bool {
+        !self.preedit.is_empty() || self.preedit_cursor.is_some()
+    }
+
+    fn clear_ime_composition(&mut self) {
+        self.preedit.clear();
+        self.preedit_cursor = None;
     }
 
     fn queue_release_all_text_blobs(&mut self) {
@@ -486,9 +494,9 @@ impl TextInput {
             .map(|blob| cx.services.caret_x(blob, self.caret))
             .unwrap_or(Px(0.0));
 
-        let mut x = bounds.origin.x + padding_left + caret_x;
+        let mut x = padding_left + caret_x;
 
-        if !self.preedit.is_empty() {
+        if self.is_ime_composing() && !self.preedit.is_empty() {
             let cursor = self
                 .preedit_cursor
                 .map(|(_, end)| end.min(self.preedit.len()))
@@ -509,7 +517,7 @@ impl TextInput {
         let h = self.text_metrics.map(|m| m.size.height).unwrap_or(Px(16.0));
         let hairline = Px((1.0 / scale_factor.max(1.0)).max(1.0 / 8.0));
         Rect::new(
-            fret_core::geometry::Point::new(x, bounds.origin.y + padding_top),
+            fret_core::geometry::Point::new(x, padding_top),
             Size::new(Px(hairline.0.max(1.0)), Px(h.0.max(16.0))),
         )
     }
@@ -591,8 +599,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     .map(|blob| cx.services.hit_test_x(blob, local_x))
                     .unwrap_or_else(|| self.caret_from_x(local_x));
                 self.selection_anchor = self.caret;
-                self.preedit.clear();
-                self.preedit_cursor = None;
+                self.clear_ime_composition();
                 cx.invalidate_self(Invalidation::Layout);
                 cx.request_redraw();
             }
@@ -613,8 +620,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     .text_blob
                     .map(|blob| cx.services.hit_test_x(blob, local_x))
                     .unwrap_or_else(|| self.caret_from_x(local_x));
-                self.preedit.clear();
-                self.preedit_cursor = None;
+                self.clear_ime_composition();
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
             }
@@ -628,7 +634,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     return;
                 }
 
-                if !self.preedit.is_empty() && !modifiers.ctrl && !modifiers.alt && !modifiers.meta
+                if self.is_ime_composing() && !modifiers.ctrl && !modifiers.alt && !modifiers.meta
                 {
                     // During IME composition (preedit), reserve common navigation/IME keys for the
                     // platform IME path. The runtime may still map these keys to focus traversal or
@@ -654,7 +660,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     }
                 }
 
-                if self.preedit.is_empty() {
+                if !self.is_ime_composing() {
                     match key {
                         fret_core::KeyCode::Backspace => {
                             if !self.delete_selection_if_any() {
@@ -733,7 +739,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 self.last_text_input_tick = Some(tick);
                 self.last_text_input_text = Some(text.clone());
 
-                if self.preedit.is_empty() {
+                if !self.is_ime_composing() {
                     self.replace_selection(text);
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
@@ -743,7 +749,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 if !focused {
                     return;
                 }
-                if self.preedit.is_empty() {
+                if !self.is_ime_composing() {
                     let sanitized = text.replace(['\n', '\r'], " ");
                     if !sanitized.is_empty() {
                         self.replace_selection(&sanitized);
@@ -759,8 +765,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 match ime {
                     ImeEvent::Enabled => {}
                     ImeEvent::Disabled => {
-                        self.preedit.clear();
-                        self.preedit_cursor = None;
+                        self.clear_ime_composition();
                         cx.invalidate_self(Invalidation::Layout);
                         cx.request_redraw();
                     }
@@ -778,8 +783,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                         self.last_ime_commit_text = Some(text.clone());
 
                         self.replace_selection(text);
-                        self.preedit.clear();
-                        self.preedit_cursor = None;
+                        self.clear_ime_composition();
                         cx.invalidate_self(Invalidation::Layout);
                         cx.request_redraw();
                     }
@@ -804,8 +808,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         match command.as_str() {
             "text.clear" => {
                 self.text.clear();
-                self.preedit.clear();
-                self.preedit_cursor = None;
+                self.clear_ime_composition();
                 self.caret = 0;
                 self.selection_anchor = 0;
                 cx.invalidate_self(Invalidation::Layout);
@@ -835,8 +838,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                         text: self.text[a..b].to_string(),
                     });
                     self.delete_selection_if_any();
-                    self.preedit.clear();
-                    self.preedit_cursor = None;
+                    self.clear_ime_composition();
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
@@ -954,7 +956,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 true
             }
             "text.delete_backward" => {
-                if self.preedit.is_empty() {
+                if !self.is_ime_composing() {
                     if !self.delete_selection_if_any() {
                         let prev = Self::prev_boundary(&self.text, self.caret);
                         self.text.replace_range(prev..self.caret, "");
@@ -967,7 +969,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 true
             }
             "text.delete_forward" => {
-                if self.preedit.is_empty() {
+                if !self.is_ime_composing() {
                     if !self.delete_selection_if_any() && self.caret < self.text.len() {
                         let next = Self::next_boundary(&self.text, self.caret);
                         self.text.replace_range(self.caret..next, "");
@@ -978,7 +980,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 true
             }
             "text.delete_word_backward" => {
-                if self.preedit.is_empty() {
+                if !self.is_ime_composing() {
                     if !self.delete_selection_if_any() {
                         let prev = Self::move_word_left(&self.text, self.caret);
                         self.text.replace_range(prev..self.caret, "");
@@ -991,7 +993,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 true
             }
             "text.delete_word_forward" => {
-                if self.preedit.is_empty() {
+                if !self.is_ime_composing() {
                     if !self.delete_selection_if_any() {
                         let next = Self::move_word_right(&self.text, self.caret);
                         self.text.replace_range(self.caret..next, "");
@@ -1047,6 +1049,9 @@ impl<H: UiHost> Widget<H> for TextInput {
         self.sync_chrome_from_theme(theme);
         self.sync_text_style_from_theme(theme);
         let focused = cx.focus == Some(cx.node);
+        if !focused && self.is_ime_composing() {
+            self.clear_ime_composition();
+        }
         let border_color = if focused && self.chrome_style.focus_ring.is_some() {
             self.chrome_style.border_color
         } else if focused {
@@ -1153,7 +1158,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         let _padding_right = self.chrome_style.padding.right;
         let padding_top = self.chrome_style.padding.top;
         let padding_bottom = self.chrome_style.padding.bottom;
-        if self.has_selection() && self.preedit.is_empty() {
+        if self.has_selection() && !self.is_ime_composing() {
             let (a, b) = self.selection_range();
             let start_x = self
                 .text_blob
@@ -1254,17 +1259,11 @@ impl<H: UiHost> Widget<H> for TextInput {
             enabled: true,
         });
 
-        let caret_local = self
-            .text_blob
-            .map(|blob| {
-                cx.services
-                    .caret_rect(blob, self.caret, fret_core::CaretAffinity::Downstream)
-            })
-            .unwrap_or_else(|| self.caret_rect(cx, cx.bounds, cx.scale_factor));
+        let caret_local = self.caret_rect(cx, cx.bounds, cx.scale_factor);
         let caret = Rect::new(
             fret_core::Point::new(
-                cx.bounds.origin.x + padding_left + caret_local.origin.x,
-                cx.bounds.origin.y + padding_top + caret_local.origin.y,
+                cx.bounds.origin.x + caret_local.origin.x,
+                cx.bounds.origin.y + caret_local.origin.y,
             ),
             caret_local.size,
         );
@@ -1294,7 +1293,7 @@ mod tests {
     use crate::UiTree;
     use crate::test_host::TestHost;
     use fret_core::{
-        AppWindowId, Event, PlatformCapabilities, Point, Px, Size, TextConstraints, TextMetrics,
+        AppWindowId, Event, PlatformCapabilities, Point, Px, Rect, Size, TextConstraints, TextMetrics,
         TextService, TextStyle,
     };
     use fret_runtime::Effect;
@@ -1388,6 +1387,132 @@ mod tests {
                     if *w == window && *icon == fret_core::CursorIcon::Text
             )),
             "expected a text cursor effect when hovering a text input"
+        );
+    }
+
+    #[derive(Default)]
+    struct ImeTextService {}
+
+    impl TextService for ImeTextService {
+        fn prepare(
+            &mut self,
+            text: &str,
+            _style: TextStyle,
+            _constraints: TextConstraints,
+        ) -> (fret_core::TextBlobId, TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(text.len() as f32), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn caret_x(&mut self, _blob: fret_core::TextBlobId, index: usize) -> Px {
+            Px(index as f32)
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for ImeTextService {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for ImeTextService {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            false
+        }
+    }
+
+    #[test]
+    fn ime_cursor_area_moves_with_preedit_cursor() {
+        let window = AppWindowId::default();
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(TextInput::new().with_text("hello"));
+        ui.set_root(root);
+        ui.set_focus(Some(root));
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut text = ImeTextService::default();
+
+        let _ = ui.layout(
+            &mut app,
+            &mut text,
+            root,
+            Size::new(Px(300.0), Px(40.0)),
+            1.0,
+        );
+        let _ = app.take_effects();
+
+        fn paint_once(
+            ui: &mut UiTree<TestHost>,
+            root: fret_core::NodeId,
+            app: &mut TestHost,
+            text: &mut ImeTextService,
+        ) -> f32 {
+            let mut scene = fret_core::Scene::default();
+            ui.paint(
+                app,
+                text,
+                root,
+                Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(300.0), Px(40.0))),
+                &mut scene,
+                1.0,
+            );
+            app.take_effects()
+                .into_iter()
+                .find_map(|e| match e {
+                    Effect::ImeSetCursorArea { rect, .. } => Some(rect.origin.x.0),
+                    _ => None,
+                })
+                .expect("expected an IME cursor area effect")
+        }
+
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::Ime(ImeEvent::Preedit {
+                text: "abcd".to_string(),
+                cursor: Some((0, 0)),
+            }),
+        );
+        let x0 = paint_once(&mut ui, root, &mut app, &mut text);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::Ime(ImeEvent::Preedit {
+                text: "abcd".to_string(),
+                cursor: Some((0, 2)),
+            }),
+        );
+        let x2 = paint_once(&mut ui, root, &mut app, &mut text);
+
+        assert!(
+            (x2 - x0 - 2.0).abs() < 0.001,
+            "expected IME cursor x to move by preedit prefix width"
         );
     }
 }
