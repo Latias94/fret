@@ -2,7 +2,10 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
-use super::*;
+use super::hit_test::{tab_close_rect, tab_rect_for_index, tab_scroll_for_node};
+use super::layout::{dock_hint_rects, drop_zone_rect, split_handle_center, split_tab_bar};
+use super::manager::DockManager;
+use super::prelude::*;
 
 pub(super) struct PaintDockParams<'a> {
     pub(super) window: fret_core::AppWindowId,

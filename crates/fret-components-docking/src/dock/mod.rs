@@ -1,44 +1,21 @@
-use fret_core::{
-    Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, Edges, NodeId, PanelKey,
-    RenderTargetId, Scene, SceneOp, SemanticsRole, TextConstraints, TextOverflow, TextStyle,
-    TextWrap, ViewportFit, ViewportInputEvent, ViewportInputKind, ViewportMapping,
-    WindowMetricsService,
-    geometry::{Point, Px, Rect, Size},
-};
-use fret_runtime::{CommandId, DragKind, Effect, WindowRequest};
-use std::{
-    collections::{HashMap, HashSet},
-    hash::{Hash, Hasher},
-    sync::Arc,
-};
-
-use fret_ui::InternalDragRouteService;
+use fret_core::geometry::Rect;
+use fret_core::{Color, NodeId, PanelKey, RenderTargetId, Scene, ViewportFit, ViewportMapping};
 use fret_ui::UiHost;
-use fret_ui::retained_bridge::{
-    CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, ResizeHandle, SemanticsCx, Widget,
-};
+use std::sync::Arc;
 
 mod consts;
 mod hit_test;
 mod layout;
 mod paint;
+mod prelude;
 mod types;
 mod viewport;
-
-use self::consts::*;
-use self::hit_test::*;
-use self::layout::*;
-use self::paint::*;
-use self::types::*;
-use self::viewport::*;
 
 mod manager;
 mod space;
 
 pub use manager::{ActivatePanelOptions, DockManager, DockPanelContentService};
 pub use space::DockSpace;
-
-use manager::DockFocusRequestService;
 
 pub struct DockPanel {
     pub title: String,

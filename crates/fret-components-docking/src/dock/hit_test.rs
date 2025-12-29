@@ -2,7 +2,11 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
-use super::*;
+use super::layout::{
+    dock_drop_edge_thickness, dock_hint_rects, split_handle_center, split_handle_rect,
+    split_tab_bar,
+};
+use super::prelude::*;
 
 pub(super) fn tab_scroll_for_node(tab_scroll: &HashMap<DockNodeId, Px>, node: DockNodeId) -> Px {
     tab_scroll.get(&node).copied().unwrap_or(Px(0.0))

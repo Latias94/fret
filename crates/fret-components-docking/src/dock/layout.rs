@@ -2,7 +2,7 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
-use super::*;
+use super::prelude::*;
 
 pub(super) fn compute_layout_map(
     graph: &DockGraph,

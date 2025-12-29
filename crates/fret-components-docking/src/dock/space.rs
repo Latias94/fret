@@ -2,7 +2,23 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
-use super::*;
+use super::hit_test::{
+    hit_test_drop_target, hit_test_split_handle, hit_test_tab, split_children_two,
+    tab_rect_for_index,
+};
+use super::layout::{
+    active_panel_content_bounds, compute_layout_map, compute_split_fraction, dock_space_regions,
+    float_zone, hidden_bounds, split_tab_bar,
+};
+use super::manager::{DockFocusRequestService, DockManager, DockPanelContentService};
+use super::paint::{
+    PaintDockParams, paint_dock, paint_drop_hints, paint_drop_overlay, paint_split_handles,
+};
+use super::prelude::*;
+use super::viewport::{
+    ViewportCaptureState, hit_test_active_viewport_panel, viewport_input_from_hit,
+    viewport_input_from_hit_clamped,
+};
 
 pub struct DockSpace {
     pub window: fret_core::AppWindowId,
