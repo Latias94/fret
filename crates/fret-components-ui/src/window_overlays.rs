@@ -4,7 +4,7 @@
 //! (ADR 0067) and coordinates dismissal + focus restore rules (ADR 0069).
 
 use fret_core::{AppWindowId, Rect, TimerToken};
-use fret_runtime::{CommandId, Effect, Model};
+use fret_runtime::{CommandId, DragKind, Effect, Model};
 use fret_ui::action::DismissReason;
 use fret_ui::declarative;
 use fret_ui::element::AnyElement;
@@ -499,6 +499,10 @@ pub fn render<H: UiHost>(
     window: AppWindowId,
     bounds: Rect,
 ) {
+    let dock_drag_affects_window = app.drag().is_some_and(|d| {
+        d.kind == DragKind::DockPanel && (d.source_window == window || d.current_window == window)
+    });
+
     let (
         modal_requests,
         popover_requests,
@@ -599,6 +603,11 @@ pub fn render<H: UiHost>(
     }
 
     for req in popover_requests {
+        if dock_drag_affects_window {
+            let _ = app.models_mut().update(req.open, |v| *v = false);
+            continue;
+        }
+
         let open = app.models().get(req.open).copied().unwrap_or(false);
         if !open {
             continue;
@@ -724,6 +733,10 @@ pub fn render<H: UiHost>(
     }
 
     for req in hover_overlay_requests {
+        if dock_drag_affects_window {
+            continue;
+        }
+
         seen_hover_overlays.insert(req.id);
 
         let root = fret_ui::declarative::render_root(

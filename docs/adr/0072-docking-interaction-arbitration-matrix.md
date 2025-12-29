@@ -4,7 +4,16 @@ title: "ADR 0072: Docking Interaction Arbitration Matrix (Docking vs Overlays vs
 
 # ADR 0072: Docking Interaction Arbitration Matrix (Docking vs Overlays vs Viewport Capture)
 
-Status: Proposed
+Status: Accepted
+
+## Implementation Status (as of 2025-12-29)
+
+This ADR is implemented for the non-modal overlay stack and docking drags:
+
+- Dock drag sessions are represented as `DragKind::DockPanel` (runtime-level mechanism).
+- While a dock drag session is active in a window, `fret-components-ui/window_overlays` closes
+  non-modal popovers (sets their `open` model to `false`) and suppresses hover overlays to avoid
+  fighting docking interaction.
 
 ## Context
 
