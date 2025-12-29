@@ -206,6 +206,7 @@ pub(crate) enum ElementInstance {
     Text(TextProps),
     TextInput(crate::element::TextInputProps),
     TextArea(crate::element::TextAreaProps),
+    Slider(crate::element::SliderProps),
     VirtualList(crate::element::VirtualListProps),
     Flex(FlexProps),
     Grid(crate::element::GridProps),
@@ -277,6 +278,7 @@ fn layout_style_for_node<H: UiHost>(app: &mut H, window: AppWindowId, node: Node
             ElementInstance::Text(p) => p.layout,
             ElementInstance::TextInput(p) => p.layout,
             ElementInstance::TextArea(p) => p.layout,
+            ElementInstance::Slider(p) => p.layout,
             ElementInstance::VirtualList(p) => p.layout,
             ElementInstance::Flex(p) => p.layout,
             ElementInstance::Grid(p) => p.layout,
@@ -614,6 +616,7 @@ struct ElementHostWidget {
     scrollbar_hit_rect: Option<Rect>,
     text_input: Option<BoundTextInput>,
     text_area: Option<crate::text_area::BoundTextArea>,
+    slider: Option<crate::slider::BoundSlider>,
     flex_cache: Option<TaffyContainerCache>,
     grid_cache: Option<TaffyContainerCache>,
 }
@@ -1104,6 +1107,20 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 area.set_text_style(props.text_style);
                 area.set_min_height(props.min_height);
                 area.event(cx, event);
+            }
+            ElementInstance::Slider(props) => {
+                if self.slider.is_none() {
+                    self.slider = Some(crate::slider::BoundSlider::new(props.model));
+                }
+                let slider = self.slider.as_mut().expect("slider");
+                if slider.model_id() != props.model.id() {
+                    slider.set_model(props.model);
+                }
+                slider.set_range(props.min, props.max);
+                slider.set_step(props.step);
+                slider.set_enabled(props.enabled);
+                slider.set_style(props.chrome);
+                slider.event(cx, event);
             }
             ElementInstance::VirtualList(props) => {
                 let Event::Pointer(pe) = event else {
@@ -1862,6 +1879,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         if let Some(area) = self.text_area.as_mut() {
             area.cleanup_resources(services);
         }
+        if let Some(slider) = self.slider.as_mut() {
+            slider.cleanup_resources(services);
+        }
     }
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
@@ -1928,6 +1948,23 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 }
                 area.semantics(cx);
             }
+            ElementInstance::Slider(props) => {
+                if self.slider.is_none() {
+                    self.slider = Some(crate::slider::BoundSlider::new(props.model));
+                }
+                let slider = self.slider.as_mut().expect("slider");
+                if slider.model_id() != props.model.id() {
+                    slider.set_model(props.model);
+                }
+                slider.set_range(props.min, props.max);
+                slider.set_step(props.step);
+                slider.set_enabled(props.enabled);
+                slider.set_style(props.chrome);
+                if let Some(label) = props.a11y_label.as_ref() {
+                    cx.set_label(label.as_ref().to_string());
+                }
+                slider.semantics(cx);
+            }
             ElementInstance::Pressable(props) => {
                 cx.set_role(props.a11y.role.unwrap_or(SemanticsRole::Button));
                 if let Some(label) = props.a11y.label.as_ref() {
@@ -1987,6 +2024,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         self.hit_testable = match &instance {
             ElementInstance::Pressable(p) => p.enabled,
             ElementInstance::PointerRegion(p) => p.enabled,
+            ElementInstance::Slider(p) => p.enabled,
             ElementInstance::Semantics(_) => false,
             ElementInstance::DismissibleLayer(_) => false,
             ElementInstance::Spinner(_) => false,
@@ -2007,6 +2045,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         self.is_focusable = match &instance {
             ElementInstance::TextInput(_) | ElementInstance::TextArea(_) => true,
             ElementInstance::Pressable(p) => p.enabled && p.focusable,
+            ElementInstance::Slider(p) => p.enabled,
             _ => false,
         };
         self.clips_hit_test = match &instance {
@@ -2021,6 +2060,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::Grid(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::TextInput(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::TextArea(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::Slider(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Scroll(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::HoverRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             // These primitives are always hit-test clipped by their own bounds (they are not
@@ -2266,6 +2306,22 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 area.set_min_height(props.min_height);
 
                 let desired = area.layout(cx);
+                clamp_to_constraints(desired, props.layout, cx.available)
+            }
+            ElementInstance::Slider(props) => {
+                if self.slider.is_none() {
+                    self.slider = Some(crate::slider::BoundSlider::new(props.model));
+                }
+                let slider = self.slider.as_mut().expect("slider");
+                if slider.model_id() != props.model.id() {
+                    slider.set_model(props.model);
+                }
+                slider.set_range(props.min, props.max);
+                slider.set_step(props.step);
+                slider.set_enabled(props.enabled);
+                slider.set_style(props.chrome.clone());
+
+                let desired = slider.layout(cx);
                 clamp_to_constraints(desired, props.layout, cx.available)
             }
             ElementInstance::VirtualList(props) => {
@@ -3283,6 +3339,20 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 area.set_min_height(props.min_height);
                 area.paint(cx);
             }
+            ElementInstance::Slider(props) => {
+                if self.slider.is_none() {
+                    self.slider = Some(crate::slider::BoundSlider::new(props.model));
+                }
+                let slider = self.slider.as_mut().expect("slider");
+                if slider.model_id() != props.model.id() {
+                    slider.set_model(props.model);
+                }
+                slider.set_range(props.min, props.max);
+                slider.set_step(props.step);
+                slider.set_enabled(props.enabled);
+                slider.set_style(props.chrome.clone());
+                slider.paint(cx);
+            }
             ElementInstance::VirtualList(props) => {
                 cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
 
@@ -3579,6 +3649,7 @@ pub fn render_root<H: UiHost>(
                     scrollbar_hit_rect: None,
                     text_input: None,
                     text_area: None,
+                    slider: None,
                     flex_cache: None,
                     grid_cache: None,
                 });
@@ -3719,6 +3790,7 @@ fn render_dismissible_root_impl<H: UiHost, F: FnOnce(&mut ElementCx<'_, H>) -> V
                     scrollbar_hit_rect: None,
                     text_input: None,
                     text_area: None,
+                    slider: None,
                     flex_cache: None,
                     grid_cache: None,
                 });
@@ -3826,6 +3898,7 @@ fn mount_element<H: UiHost>(
                 scrollbar_hit_rect: None,
                 text_input: None,
                 text_area: None,
+                slider: None,
                 flex_cache: None,
                 grid_cache: None,
             });
@@ -3878,6 +3951,7 @@ fn mount_element<H: UiHost>(
         ElementKind::Text(p) => ElementInstance::Text(p),
         ElementKind::TextInput(p) => ElementInstance::TextInput(p),
         ElementKind::TextArea(p) => ElementInstance::TextArea(p),
+        ElementKind::Slider(p) => ElementInstance::Slider(p),
         ElementKind::VirtualList(p) => ElementInstance::VirtualList(p),
         ElementKind::Flex(p) => ElementInstance::Flex(p),
         ElementKind::Grid(p) => ElementInstance::Grid(p),
@@ -4340,6 +4414,64 @@ mod tests {
             app.models().get(model).map(|s| s.as_str()),
             Some("hello\nworld")
         );
+    }
+
+    #[test]
+    fn declarative_slider_updates_model_on_pointer_down() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(40.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(vec![0.0]);
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "slider-pointer-down",
+            |cx| {
+                let mut props = crate::element::SliderProps::new(model);
+                props.min = 0.0;
+                props.max = 100.0;
+                props.step = 1.0;
+                vec![cx.slider(props)]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let slider_node = ui.children(root)[0];
+        let slider_bounds = ui.debug_node_bounds(slider_node).expect("slider bounds");
+        let position = Point::new(
+            Px(slider_bounds.origin.x.0 + slider_bounds.size.width.0 - 1.0),
+            Px(slider_bounds.origin.y.0 + slider_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        let v = app
+            .models()
+            .get(model)
+            .and_then(|values| values.first())
+            .copied()
+            .unwrap_or(f32::NAN);
+        assert!((v - 100.0).abs() < 0.01, "expected slider=100, got {v}");
     }
 
     #[test]
