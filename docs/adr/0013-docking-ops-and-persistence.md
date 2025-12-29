@@ -220,5 +220,5 @@ app-owned dock graph and multi-root overlay model (ADR 0011):
     incidentally triggers layout.
   - Prefer model-driven invalidation (MVP 66) over runner-specific “notify” hooks: after applying an op that
     changes geometry, bump a model that the dock host observes with `Invalidation::Layout`, then request a redraw.
-    This keeps the integration contract portable across hosts and avoids relying on the legacy
-    `Effect::UiInvalidateLayout { window }` escape hatch.
+    This keeps the integration contract portable across hosts and avoids relying on runner-specific invalidation
+    hooks.

@@ -12,19 +12,6 @@ pub enum Effect {
         window: Option<AppWindowId>,
         command: CommandId,
     },
-    /// Legacy framework-level UI invalidation hook (GPUI-style notify).
-    ///
-    /// Prefer model-driven invalidation (MVP 66): bump a model that the affected UI subtree
-    /// observes with `Invalidation::Layout`, then request a redraw for the window.
-    ///
-    /// Rationale: the UI runtime caches layout/hit-test, so a redraw alone is not sufficient when
-    /// geometry changes outside the UI tree.
-    #[deprecated(
-        note = "Prefer model-driven invalidation (MVP 66): update a model observed with Invalidation::Layout and request_redraw(window). This legacy escape hatch will be removed."
-    )]
-    UiInvalidateLayout {
-        window: AppWindowId,
-    },
     ClipboardSetText {
         text: String,
     },

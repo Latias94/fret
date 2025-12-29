@@ -61,7 +61,7 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Adopt layout constraints + optional Flex/Grid integration boundary (ADR 0035).
 - P0: Fix declarative composable sizing semantics (fit-content by default, typed size constraints, and a Taffy-backed `Flex` container) so Tailwind/shadcn component composition is viable without per-widget layout hacks. (done; ADR 0057 / MVP 52)
 - P0: Harden declarative Flex/Grid layout performance (persistent Taffy trees + measure memoization). (done; ADR 0076 / MVP 61)
-- P0: Deprecate the legacy `Effect::UiInvalidateLayout` escape hatch in favor of model-driven invalidation (MVP 66), then remove it once remaining callers are migrated. (in progress)
+- P0: Replace the legacy `Effect::UiInvalidateLayout` escape hatch with model-driven invalidation (MVP 66), then remove it once remaining callers are migrated. (done)
 - P0: Adopt Tailwind layout vocabulary as framework-level `LayoutStyle` semantics (margin, position/inset, grid, aspect ratio) so shadcn-style composition can express common patterns (badge overlays, input icons, simple grids) without bespoke per-widget layout hacks. (ADR 0062)
 - P0: Adopt rounded clipping / `overflow-hidden` semantics as a first-class renderer feature (ADR 0063), so shadcn-style surfaces (Popover/HoverCard/ScrollArea) do not rely on per-component “mask hacks”. (done; MVP 60)
 - P0: Adopt a “behavior reference stack” for component parity without DOM/CSS dependencies:

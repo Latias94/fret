@@ -576,14 +576,6 @@ pub trait WinitDriver {
 
     fn dock_op(&mut self, _app: &mut App, _op: fret_core::DockOp) {}
 
-    fn invalidate_ui_layout(
-        &mut self,
-        _app: &mut App,
-        _window: fret_core::AppWindowId,
-        _state: &mut Self::WindowState,
-    ) {
-    }
-
     fn handle_command(
         &mut self,
         _app: &mut App,
@@ -1518,20 +1510,9 @@ impl<D: WinitDriver> WinitRunner<D> {
             let mut did_work = !effects.is_empty();
 
             for effect in effects {
-                #[allow(deprecated)]
                 match effect {
                     Effect::Redraw(window) => {
                         if let Some(state) = self.windows.get(window) {
-                            state.window.request_redraw();
-                        }
-                    }
-                    Effect::UiInvalidateLayout { window } => {
-                        if let Some(state) = self.windows.get_mut(window) {
-                            self.driver.invalidate_ui_layout(
-                                &mut self.app,
-                                window,
-                                &mut state.user,
-                            );
                             state.window.request_redraw();
                         }
                     }
