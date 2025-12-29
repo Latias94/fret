@@ -485,6 +485,24 @@ struct TaffyContainerCache {
     taffy: TaffyTree<Option<NodeId>>,
     root: TaffyNodeId,
     child_nodes: Vec<TaffyNodeId>,
+    measure_cache: std::collections::HashMap<TaffyMeasureKey, taffy::geometry::Size<f32>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct TaffyMeasureKey {
+    child: NodeId,
+    known_w: Option<u32>,
+    known_h: Option<u32>,
+    avail_w: (u8, u32),
+    avail_h: (u8, u32),
+}
+
+fn taffy_available_space_key(avail: TaffyAvailableSpace) -> (u8, u32) {
+    match avail {
+        TaffyAvailableSpace::Definite(v) => (0, v.to_bits()),
+        TaffyAvailableSpace::MinContent => (1, 0),
+        TaffyAvailableSpace::MaxContent => (2, 0),
+    }
 }
 
 impl Default for TaffyContainerCache {
@@ -497,6 +515,7 @@ impl Default for TaffyContainerCache {
             taffy,
             root,
             child_nodes: Vec::new(),
+            measure_cache: std::collections::HashMap::new(),
         }
     }
 }
@@ -749,6 +768,8 @@ impl ElementHostWidget {
                 .expect("taffy mark dirty");
         }
 
+        cache.measure_cache.clear();
+        let measure_cache = &mut cache.measure_cache;
         let root = cache.root;
         let child_nodes = cache.child_nodes.clone();
         let taffy = &mut cache.taffy;
@@ -763,6 +784,17 @@ impl ElementHostWidget {
                 let Some(child) = ctx.and_then(|c| *c) else {
                     return taffy::geometry::Size::default();
                 };
+
+                let key = TaffyMeasureKey {
+                    child,
+                    known_w: known.width.map(|v| v.to_bits()),
+                    known_h: known.height.map(|v| v.to_bits()),
+                    avail_w: taffy_available_space_key(avail.width),
+                    avail_h: taffy_available_space_key(avail.height),
+                };
+                if let Some(size) = measure_cache.get(&key) {
+                    return *size;
+                }
 
                 let max_w = match avail.width {
                     TaffyAvailableSpace::Definite(w) => Px(w),
@@ -781,10 +813,12 @@ impl ElementHostWidget {
 
                 let probe = Rect::new(inner_origin, Size::new(w, h));
                 let s = cx.layout_in(child, probe);
-                taffy::geometry::Size {
+                let out = taffy::geometry::Size {
                     width: s.width.0,
                     height: s.height.0,
-                }
+                };
+                measure_cache.insert(key, out);
+                out
             })
             .expect("taffy compute");
 
@@ -2527,6 +2561,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         .expect("taffy mark dirty");
                 }
 
+                cache.measure_cache.clear();
+                let measure_cache = &mut cache.measure_cache;
                 let root = cache.root;
                 let child_nodes = cache.child_nodes.clone();
                 let taffy = &mut cache.taffy;
@@ -2545,6 +2581,17 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                 return taffy::geometry::Size::default();
                             };
 
+                            let key = TaffyMeasureKey {
+                                child,
+                                known_w: known.width.map(|v| v.to_bits()),
+                                known_h: known.height.map(|v| v.to_bits()),
+                                avail_w: taffy_available_space_key(avail.width),
+                                avail_h: taffy_available_space_key(avail.height),
+                            };
+                            if let Some(size) = measure_cache.get(&key) {
+                                return *size;
+                            }
+
                             let max_w = match avail.width {
                                 TaffyAvailableSpace::Definite(w) => Px(w),
                                 _ => Px(1.0e9),
@@ -2562,10 +2609,12 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
                             let probe = Rect::new(inner_origin, Size::new(w, h));
                             let s = cx.layout_in(child, probe);
-                            taffy::geometry::Size {
+                            let out = taffy::geometry::Size {
                                 width: s.width.0,
                                 height: s.height.0,
-                            }
+                            };
+                            measure_cache.insert(key, out);
+                            out
                         },
                     )
                     .expect("taffy compute");
@@ -2918,6 +2967,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         .expect("taffy mark dirty");
                 }
 
+                cache.measure_cache.clear();
+                let measure_cache = &mut cache.measure_cache;
                 let root = cache.root;
                 let child_nodes = cache.child_nodes.clone();
                 let taffy = &mut cache.taffy;
@@ -2936,6 +2987,17 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                 return taffy::geometry::Size::default();
                             };
 
+                            let key = TaffyMeasureKey {
+                                child,
+                                known_w: known.width.map(|v| v.to_bits()),
+                                known_h: known.height.map(|v| v.to_bits()),
+                                avail_w: taffy_available_space_key(avail.width),
+                                avail_h: taffy_available_space_key(avail.height),
+                            };
+                            if let Some(size) = measure_cache.get(&key) {
+                                return *size;
+                            }
+
                             let max_w = match avail.width {
                                 TaffyAvailableSpace::Definite(w) => Px(w),
                                 _ => Px(1.0e9),
@@ -2953,10 +3015,12 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
                             let probe = Rect::new(inner_origin, Size::new(w, h));
                             let s = cx.layout_in(child, probe);
-                            taffy::geometry::Size {
+                            let out = taffy::geometry::Size {
                                 width: s.width.0,
                                 height: s.height.0,
-                            }
+                            };
+                            measure_cache.insert(key, out);
+                            out
                         },
                     )
                     .expect("taffy compute");

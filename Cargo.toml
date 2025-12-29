@@ -51,3 +51,8 @@ etagere = "0.2.15"
 resvg = { version = "0.45.0", default-features = false, features = ["text", "system-fonts", "memmap-fonts"] }
 usvg = { version = "0.45.0", default-features = false }
 rust-embed = { version = "8.9.0", features = ["include-exclude"] }
+
+# Speed up debug builds: Taffy is layout-hot and also expensive to compile unoptimized.
+# GPUI applies a similar per-package opt-level override for Taffy.
+[profile.dev.package.taffy]
+opt-level = 3
