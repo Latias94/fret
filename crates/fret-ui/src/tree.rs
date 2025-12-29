@@ -8,7 +8,8 @@ use fret_core::{
     SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, UiServices,
 };
 use fret_runtime::{
-    CommandId, DragKind, Effect, InputContext, KeyChord, KeymapService, ModelId, Platform,
+    CommandId, DragKind, Effect, InputContext, InputDispatchPhase, KeyChord, KeymapService,
+    ModelId, Platform,
 };
 use slotmap::SlotMap;
 use std::collections::HashMap;
@@ -1083,6 +1084,49 @@ impl<H: UiHost> UiTree<H> {
         None
     }
 
+    /// Like `first_focusable_descendant`, but also considers declarative element instances that
+    /// haven't run layout yet.
+    ///
+    /// This is needed because declarative nodes derive focusability from their element instance
+    /// (`PressableProps.focusable`, `TextInput`, ...), and the `ElementHostWidget` only caches that
+    /// information during layout. Overlay policies commonly want to set initial focus immediately
+    /// after installing an overlay root, before layout runs.
+    pub fn first_focusable_descendant_including_declarative(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        root: NodeId,
+    ) -> Option<NodeId> {
+        let mut stack = vec![root];
+        while let Some(id) = stack.pop() {
+            let focusable = if let Some(record) =
+                crate::declarative::element_record_for_node(app, window, id)
+            {
+                match record.instance {
+                    crate::declarative::ElementInstance::TextInput(_) => true,
+                    crate::declarative::ElementInstance::Pressable(p) => p.enabled && p.focusable,
+                    _ => false,
+                }
+            } else {
+                self.nodes
+                    .get(id)
+                    .and_then(|n| n.widget.as_ref())
+                    .is_some_and(|w| w.is_focusable())
+            };
+
+            if focusable {
+                return Some(id);
+            }
+
+            if let Some(node) = self.nodes.get(id) {
+                for &child in node.children.iter().rev() {
+                    stack.push(child);
+                }
+            }
+        }
+        None
+    }
+
     pub fn layout_all(
         &mut self,
         app: &mut H,
@@ -1207,6 +1251,7 @@ impl<H: UiHost> UiTree<H> {
             caps,
             ui_has_modal: barrier_root.is_some(),
             focus_is_text_input,
+            dispatch_phase: InputDispatchPhase::Normal,
         };
 
         // ADR 0012: when a text input is focused, reserve common IME/navigation keys for the
@@ -1694,12 +1739,14 @@ impl<H: UiHost> UiTree<H> {
                     .get(node_id)
                     .map(|n| n.bounds)
                     .unwrap_or_default();
+                let mut observer_ctx = input_ctx.clone();
+                observer_ctx.dispatch_phase = InputDispatchPhase::Observer;
                 let mut cx = EventCx {
                     app,
                     services: unsafe { &mut *services_ptr },
                     node: node_id,
                     window: tree.window,
-                    input_ctx: input_ctx.clone(),
+                    input_ctx: observer_ctx,
                     children: &children,
                     focus: tree.focus,
                     captured: tree.captured,
@@ -1751,6 +1798,7 @@ impl<H: UiHost> UiTree<H> {
             caps,
             ui_has_modal: barrier_root.is_some(),
             focus_is_text_input: self.focus_is_text_input(),
+            dispatch_phase: InputDispatchPhase::Normal,
         };
 
         if self.dispatch_focus_traversal(app, command, &active_layers, barrier_root, base_root) {
@@ -3177,6 +3225,95 @@ mod tests {
             ui.captured(),
             None,
             "observer pass must not capture pointer"
+        );
+    }
+
+    #[test]
+    fn outside_press_observer_dispatch_sets_input_context_phase() {
+        struct RecordObserverPhase {
+            phase: fret_runtime::Model<fret_runtime::InputDispatchPhase>,
+        }
+
+        impl<H: UiHost> Widget<H> for RecordObserverPhase {
+            fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+                false
+            }
+
+            fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+                if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(self.phase, |v| *v = cx.input_ctx.dispatch_phase);
+                }
+            }
+        }
+
+        struct RecordNormalPhase {
+            phase: fret_runtime::Model<fret_runtime::InputDispatchPhase>,
+        }
+
+        impl<H: UiHost> Widget<H> for RecordNormalPhase {
+            fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+                if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(self.phase, |v| *v = cx.input_ctx.dispatch_phase);
+                }
+            }
+        }
+
+        let window = AppWindowId::default();
+
+        let mut app = crate::test_host::TestHost::new();
+        let observer_phase = app
+            .models_mut()
+            .insert(fret_runtime::InputDispatchPhase::Normal);
+        let normal_phase = app
+            .models_mut()
+            .insert(fret_runtime::InputDispatchPhase::Observer);
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let base = ui.create_node(RecordNormalPhase {
+            phase: normal_phase,
+        });
+        ui.set_root(base);
+
+        let overlay = ui.create_node(RecordObserverPhase {
+            phase: observer_phase,
+        });
+        let layer = ui.push_overlay_root_ex(overlay, false, true);
+        ui.set_layer_wants_pointer_down_outside_events(layer, true);
+
+        let mut services = FakeUiServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(
+            app.models().get(observer_phase).copied(),
+            Some(fret_runtime::InputDispatchPhase::Observer),
+            "observer pass should tag InputContext as Observer"
+        );
+        assert_eq!(
+            app.models().get(normal_phase).copied(),
+            Some(fret_runtime::InputDispatchPhase::Normal),
+            "normal hit-tested dispatch should tag InputContext as Normal"
         );
     }
 

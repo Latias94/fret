@@ -13,7 +13,9 @@ pub use command::CommandId;
 pub use commands::{CommandMeta, CommandRegistry, CommandScope};
 pub use drag::{DragKind, DragSession};
 pub use effect::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
-pub use input::{InputContext, KeyChord, Platform, format_chord, format_sequence};
+pub use input::{
+    InputContext, InputDispatchPhase, KeyChord, Platform, format_chord, format_sequence,
+};
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};
 pub use keymap::{DefaultKeybinding, Keymap, KeymapService, PlatformFilter};
 pub use menu::{Menu, MenuBar, MenuItem};

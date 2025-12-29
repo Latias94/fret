@@ -1,12 +1,17 @@
 use crate::UiHost;
 use crate::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, HoverRegionProps, LayoutStyle,
-    Length, MainAlign, Overflow, PressableProps, SpacerProps, SpinnerProps, StackProps, TextProps,
+    Length, MainAlign, Overflow, PointerRegionProps, PressableProps, SpacerProps, SpinnerProps,
+    StackProps, TextProps,
 };
 use crate::elements::{ElementCx, GlobalElementId, NodeEntry};
 use crate::text_input::BoundTextInput;
 use crate::tree::UiTree;
 use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget};
+use crate::{
+    action,
+    action::{ActivateReason, DismissReason, KeyDownCx},
+};
 use fret_core::{
     AppWindowId, Color, CursorIcon, DrawOrder, Edges, Event, FontId, FrameId, MouseButton, NodeId,
     Point, Px, Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow,
@@ -194,6 +199,7 @@ pub(crate) enum ElementInstance {
     Container(ContainerProps),
     Semantics(crate::element::SemanticsProps),
     Pressable(PressableProps),
+    PointerRegion(PointerRegionProps),
     DismissibleLayer(DismissibleLayerProps),
     RovingFlex(crate::element::RovingFlexProps),
     Stack(StackProps),
@@ -266,6 +272,7 @@ fn layout_style_for_node<H: UiHost>(app: &mut H, window: AppWindowId, node: Node
             ElementInstance::Container(p) => p.layout,
             ElementInstance::Semantics(p) => p.layout,
             ElementInstance::Pressable(p) => p.layout,
+            ElementInstance::PointerRegion(p) => p.layout,
             ElementInstance::DismissibleLayer(p) => p.layout,
             ElementInstance::RovingFlex(p) => p.flex.layout,
             ElementInstance::Stack(p) => p.layout,
@@ -967,6 +974,45 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             return;
         };
 
+        if let Event::KeyDown {
+            key,
+            modifiers,
+            repeat,
+        } = event
+            && cx.focus == Some(cx.node)
+            && !matches!(instance, ElementInstance::TextInput(_))
+        {
+            let hook = crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                self.element,
+                crate::action::KeyActionHooks::default,
+                |hooks| hooks.on_key_down.clone(),
+            );
+
+            if let Some(h) = hook {
+                let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
+                let handled = h(
+                    &mut host,
+                    action::ActionCx {
+                        window,
+                        target: self.element,
+                    },
+                    KeyDownCx {
+                        key: *key,
+                        modifiers: *modifiers,
+                        repeat: *repeat,
+                    },
+                );
+                if handled {
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+            }
+        }
+
         match instance {
             ElementInstance::TextInput(props) => {
                 if self.text_input.is_none() {
@@ -1267,7 +1313,28 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         repeat: false,
                         ..
                     } => {
-                        if let Some(model) = props.dismiss_model {
+                        let hook = crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::action::DismissibleActionHooks::default,
+                            |hooks| hooks.on_dismiss_request.clone(),
+                        );
+
+                        if let Some(h) = hook {
+                            let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
+                            h(
+                                &mut host,
+                                action::ActionCx {
+                                    window,
+                                    target: self.element,
+                                },
+                                DismissReason::Escape,
+                            );
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                            cx.stop_propagation();
+                        } else if let Some(model) = props.dismiss_model {
                             let _ = cx.app.models_mut().update(model, |v| *v = false);
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
@@ -1275,7 +1342,31 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         }
                     }
                     Event::Pointer(fret_core::PointerEvent::Down { .. }) => {
-                        if let Some(model) = props.dismiss_model {
+                        if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Observer
+                        {
+                            return;
+                        }
+                        let hook = crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::action::DismissibleActionHooks::default,
+                            |hooks| hooks.on_dismiss_request.clone(),
+                        );
+
+                        if let Some(h) = hook {
+                            let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
+                            h(
+                                &mut host,
+                                action::ActionCx {
+                                    window,
+                                    target: self.element,
+                                },
+                                DismissReason::OutsidePress,
+                            );
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                        } else if let Some(model) = props.dismiss_model {
                             let _ = cx.app.models_mut().update(model, |v| *v = false);
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
@@ -1297,7 +1388,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             if *button != MouseButton::Left {
                                 return;
                             }
-                            cx.request_focus(cx.node);
+                            if props.focusable {
+                                cx.request_focus(cx.node);
+                            }
                             cx.capture_pointer(cx.node);
                             crate::elements::set_pressed_pressable(
                                 &mut *cx.app,
@@ -1322,31 +1415,64 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             );
 
                             if hovered {
-                                if let Some(model) = props.toggle_model {
-                                    let _ = cx.app.models_mut().update(model, |v| *v = !*v);
-                                }
-                                if let Some(set) = props.set_arc_str_model.clone() {
-                                    let _ =
-                                        cx.app.models_mut().update(set.model, |v| *v = set.value);
-                                }
-                                if let Some(set) = props.set_option_arc_str_model.clone() {
-                                    let value = Some(set.value);
-                                    let _ = cx.app.models_mut().update(set.model, |v| *v = value);
-                                }
-                                if let Some(set) = props.toggle_vec_arc_str_model.clone() {
-                                    let value = set.value;
-                                    let _ = cx.app.models_mut().update(set.model, |v| {
-                                        if let Some(pos) =
-                                            v.iter().position(|it| it.as_ref() == value.as_ref())
-                                        {
-                                            v.remove(pos);
-                                        } else {
-                                            v.push(value.clone());
+                                let hook = crate::elements::with_element_state(
+                                    &mut *cx.app,
+                                    window,
+                                    self.element,
+                                    crate::action::PressableActionHooks::default,
+                                    |hooks| hooks.on_activate.clone(),
+                                );
+
+                                if let Some(h) = hook {
+                                    let mut host =
+                                        action::UiActionHostAdapter { app: &mut *cx.app };
+                                    h(
+                                        &mut host,
+                                        action::ActionCx {
+                                            window,
+                                            target: self.element,
+                                        },
+                                        ActivateReason::Pointer,
+                                    );
+                                    if let Some(command) = props.on_click.clone() {
+                                        cx.dispatch_command(command);
+                                    }
+                                } else {
+                                    #[allow(deprecated)]
+                                    {
+                                        if let Some(model) = props.toggle_model {
+                                            let _ = cx.app.models_mut().update(model, |v| *v = !*v);
                                         }
-                                    });
-                                }
-                                if let Some(command) = props.on_click.clone() {
-                                    cx.dispatch_command(command);
+                                        if let Some(set) = props.set_arc_str_model.clone() {
+                                            let _ = cx
+                                                .app
+                                                .models_mut()
+                                                .update(set.model, |v| *v = set.value);
+                                        }
+                                        if let Some(set) = props.set_option_arc_str_model.clone() {
+                                            let value = Some(set.value);
+                                            let _ = cx
+                                                .app
+                                                .models_mut()
+                                                .update(set.model, |v| *v = value);
+                                        }
+                                        if let Some(set) = props.toggle_vec_arc_str_model.clone() {
+                                            let value = set.value;
+                                            let _ = cx.app.models_mut().update(set.model, |v| {
+                                                if let Some(pos) = v
+                                                    .iter()
+                                                    .position(|it| it.as_ref() == value.as_ref())
+                                                {
+                                                    v.remove(pos);
+                                                } else {
+                                                    v.push(value.clone());
+                                                }
+                                            });
+                                        }
+                                        if let Some(command) = props.on_click.clone() {
+                                            cx.dispatch_command(command);
+                                        }
+                                    }
                                 }
                             }
                             cx.invalidate_self(Invalidation::Paint);
@@ -1400,30 +1526,57 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             return;
                         }
                         crate::elements::set_pressed_pressable(&mut *cx.app, window, None);
-                        if let Some(model) = props.toggle_model {
-                            let _ = cx.app.models_mut().update(model, |v| *v = !*v);
-                        }
-                        if let Some(set) = props.set_arc_str_model.clone() {
-                            let _ = cx.app.models_mut().update(set.model, |v| *v = set.value);
-                        }
-                        if let Some(set) = props.set_option_arc_str_model.clone() {
-                            let value = Some(set.value);
-                            let _ = cx.app.models_mut().update(set.model, |v| *v = value);
-                        }
-                        if let Some(set) = props.toggle_vec_arc_str_model.clone() {
-                            let value = set.value;
-                            let _ = cx.app.models_mut().update(set.model, |v| {
-                                if let Some(pos) =
-                                    v.iter().position(|it| it.as_ref() == value.as_ref())
-                                {
-                                    v.remove(pos);
-                                } else {
-                                    v.push(value.clone());
+                        let hook = crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::action::PressableActionHooks::default,
+                            |hooks| hooks.on_activate.clone(),
+                        );
+
+                        if let Some(h) = hook {
+                            let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
+                            h(
+                                &mut host,
+                                action::ActionCx {
+                                    window,
+                                    target: self.element,
+                                },
+                                ActivateReason::Keyboard,
+                            );
+                            if let Some(command) = props.on_click.clone() {
+                                cx.dispatch_command(command);
+                            }
+                        } else {
+                            #[allow(deprecated)]
+                            {
+                                if let Some(model) = props.toggle_model {
+                                    let _ = cx.app.models_mut().update(model, |v| *v = !*v);
                                 }
-                            });
-                        }
-                        if let Some(command) = props.on_click.clone() {
-                            cx.dispatch_command(command);
+                                if let Some(set) = props.set_arc_str_model.clone() {
+                                    let _ =
+                                        cx.app.models_mut().update(set.model, |v| *v = set.value);
+                                }
+                                if let Some(set) = props.set_option_arc_str_model.clone() {
+                                    let value = Some(set.value);
+                                    let _ = cx.app.models_mut().update(set.model, |v| *v = value);
+                                }
+                                if let Some(set) = props.toggle_vec_arc_str_model.clone() {
+                                    let value = set.value;
+                                    let _ = cx.app.models_mut().update(set.model, |v| {
+                                        if let Some(pos) =
+                                            v.iter().position(|it| it.as_ref() == value.as_ref())
+                                        {
+                                            v.remove(pos);
+                                        } else {
+                                            v.push(value.clone());
+                                        }
+                                    });
+                                }
+                                if let Some(command) = props.on_click.clone() {
+                                    cx.dispatch_command(command);
+                                }
+                            }
                         }
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
@@ -1431,6 +1584,66 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     }
                     _ => {}
                 };
+            }
+            ElementInstance::PointerRegion(props) => {
+                if !props.enabled {
+                    return;
+                }
+
+                let Event::Pointer(fret_core::PointerEvent::Down {
+                    position,
+                    button,
+                    modifiers,
+                }) = event
+                else {
+                    return;
+                };
+
+                let hook = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::action::PointerActionHooks::default,
+                    |hooks| hooks.on_pointer_down.clone(),
+                );
+
+                let Some(h) = hook else {
+                    return;
+                };
+
+                let down = action::PointerDownCx {
+                    position: *position,
+                    button: *button,
+                    modifiers: *modifiers,
+                };
+
+                crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::PointerRegionState::default,
+                    |state| {
+                        state.last_down = Some(down);
+                    },
+                );
+
+                let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
+                let handled = h(
+                    &mut host,
+                    action::ActionCx {
+                        window,
+                        target: self.element,
+                    },
+                    down,
+                );
+
+                cx.invalidate_self(Invalidation::Layout);
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+
+                if handled {
+                    cx.stop_propagation();
+                }
             }
             ElementInstance::RovingFlex(props) => {
                 if !props.roving.enabled {
@@ -1524,81 +1737,110 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     None => {}
                 }
 
+                let key_to_ascii = |key: fret_core::KeyCode| -> Option<char> {
+                    use fret_core::KeyCode;
+                    Some(match key {
+                        KeyCode::KeyA => 'a',
+                        KeyCode::KeyB => 'b',
+                        KeyCode::KeyC => 'c',
+                        KeyCode::KeyD => 'd',
+                        KeyCode::KeyE => 'e',
+                        KeyCode::KeyF => 'f',
+                        KeyCode::KeyG => 'g',
+                        KeyCode::KeyH => 'h',
+                        KeyCode::KeyI => 'i',
+                        KeyCode::KeyJ => 'j',
+                        KeyCode::KeyK => 'k',
+                        KeyCode::KeyL => 'l',
+                        KeyCode::KeyM => 'm',
+                        KeyCode::KeyN => 'n',
+                        KeyCode::KeyO => 'o',
+                        KeyCode::KeyP => 'p',
+                        KeyCode::KeyQ => 'q',
+                        KeyCode::KeyR => 'r',
+                        KeyCode::KeyS => 's',
+                        KeyCode::KeyT => 't',
+                        KeyCode::KeyU => 'u',
+                        KeyCode::KeyV => 'v',
+                        KeyCode::KeyW => 'w',
+                        KeyCode::KeyX => 'x',
+                        KeyCode::KeyY => 'y',
+                        KeyCode::KeyZ => 'z',
+                        KeyCode::Digit0 => '0',
+                        KeyCode::Digit1 => '1',
+                        KeyCode::Digit2 => '2',
+                        KeyCode::Digit3 => '3',
+                        KeyCode::Digit4 => '4',
+                        KeyCode::Digit5 => '5',
+                        KeyCode::Digit6 => '6',
+                        KeyCode::Digit7 => '7',
+                        KeyCode::Digit8 => '8',
+                        KeyCode::Digit9 => '9',
+                        _ => return None,
+                    })
+                };
+
                 if target.is_none()
-                    && let Some(typeahead) = props.roving.typeahead_arc_str.as_ref()
+                    && let Some(ch) = key_to_ascii(*key)
                 {
-                    let key_to_ascii = |key: fret_core::KeyCode| -> Option<char> {
-                        use fret_core::KeyCode;
-                        Some(match key {
-                            KeyCode::KeyA => 'a',
-                            KeyCode::KeyB => 'b',
-                            KeyCode::KeyC => 'c',
-                            KeyCode::KeyD => 'd',
-                            KeyCode::KeyE => 'e',
-                            KeyCode::KeyF => 'f',
-                            KeyCode::KeyG => 'g',
-                            KeyCode::KeyH => 'h',
-                            KeyCode::KeyI => 'i',
-                            KeyCode::KeyJ => 'j',
-                            KeyCode::KeyK => 'k',
-                            KeyCode::KeyL => 'l',
-                            KeyCode::KeyM => 'm',
-                            KeyCode::KeyN => 'n',
-                            KeyCode::KeyO => 'o',
-                            KeyCode::KeyP => 'p',
-                            KeyCode::KeyQ => 'q',
-                            KeyCode::KeyR => 'r',
-                            KeyCode::KeyS => 's',
-                            KeyCode::KeyT => 't',
-                            KeyCode::KeyU => 'u',
-                            KeyCode::KeyV => 'v',
-                            KeyCode::KeyW => 'w',
-                            KeyCode::KeyX => 'x',
-                            KeyCode::KeyY => 'y',
-                            KeyCode::KeyZ => 'z',
-                            KeyCode::Digit0 => '0',
-                            KeyCode::Digit1 => '1',
-                            KeyCode::Digit2 => '2',
-                            KeyCode::Digit3 => '3',
-                            KeyCode::Digit4 => '4',
-                            KeyCode::Digit5 => '5',
-                            KeyCode::Digit6 => '6',
-                            KeyCode::Digit7 => '7',
-                            KeyCode::Digit8 => '8',
-                            KeyCode::Digit9 => '9',
-                            _ => return None,
-                        })
-                    };
+                    let hook = crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        self.element,
+                        crate::action::RovingActionHooks::default,
+                        |hooks| hooks.on_typeahead.clone(),
+                    );
 
-                    if let Some(ch) = key_to_ascii(*key) {
-                        let matches = |idx: usize| -> bool {
-                            if is_disabled(idx) {
-                                return false;
-                            }
-                            let Some(label) = typeahead.labels.get(idx) else {
-                                return false;
-                            };
-                            let label = label.as_ref().trim_start();
-                            let Some(first) = label.chars().next() else {
-                                return false;
-                            };
-                            first.to_ascii_lowercase() == ch
-                        };
-
-                        let start = current.map(|i| i.saturating_add(1)).unwrap_or(0);
-                        if props.roving.wrap {
-                            for offset in 0..len {
-                                let idx = (start + offset) % len;
-                                if matches(idx) {
-                                    target = Some(idx);
-                                    break;
+                    if let Some(h) = hook {
+                        let tick = cx.app.tick_id().0;
+                        let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
+                        target = h(
+                            &mut host,
+                            action::ActionCx {
+                                window,
+                                target: self.element,
+                            },
+                            crate::action::RovingTypeaheadCx {
+                                input: ch,
+                                current,
+                                len,
+                                disabled: props.roving.disabled.clone(),
+                                wrap: props.roving.wrap,
+                                tick,
+                            },
+                        );
+                    } else {
+                        #[allow(deprecated)]
+                        if let Some(typeahead) = props.roving.typeahead_arc_str.as_ref() {
+                            let matches = |idx: usize| -> bool {
+                                if is_disabled(idx) {
+                                    return false;
                                 }
-                            }
-                        } else {
-                            for idx in start..len {
-                                if matches(idx) {
-                                    target = Some(idx);
-                                    break;
+                                let Some(label) = typeahead.labels.get(idx) else {
+                                    return false;
+                                };
+                                let label = label.as_ref().trim_start();
+                                let Some(first) = label.chars().next() else {
+                                    return false;
+                                };
+                                first.to_ascii_lowercase() == ch
+                            };
+
+                            let start = current.map(|i| i.saturating_add(1)).unwrap_or(0);
+                            if props.roving.wrap {
+                                for offset in 0..len {
+                                    let idx = (start + offset) % len;
+                                    if matches(idx) {
+                                        target = Some(idx);
+                                        break;
+                                    }
+                                }
+                            } else {
+                                for idx in start..len {
+                                    if matches(idx) {
+                                        target = Some(idx);
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -1614,11 +1856,32 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
                 cx.request_focus(cx.children[target]);
 
-                if let Some(select) = props.roving.select_option_arc_str.as_ref()
-                    && let Some(value) = select.values.get(target).cloned()
-                {
-                    let next = Some(value);
-                    let _ = cx.app.models_mut().update(select.model, |v| *v = next);
+                let hook = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::action::RovingActionHooks::default,
+                    |hooks| hooks.on_active_change.clone(),
+                );
+
+                if let Some(h) = hook {
+                    let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
+                    h(
+                        &mut host,
+                        action::ActionCx {
+                            window,
+                            target: self.element,
+                        },
+                        target,
+                    );
+                } else {
+                    #[allow(deprecated)]
+                    if let Some(select) = props.roving.select_option_arc_str.as_ref()
+                        && let Some(value) = select.values.get(target).cloned()
+                    {
+                        let next = Some(value);
+                        let _ = cx.app.models_mut().update(select.model, |v| *v = next);
+                    }
                 }
 
                 cx.request_redraw();
@@ -1703,13 +1966,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 }
                 cx.set_disabled(!props.enabled);
                 cx.set_focusable(props.enabled);
-                cx.set_invokable(
-                    props.enabled
-                        && (props.on_click.is_some()
-                            || props.toggle_model.is_some()
-                            || props.set_arc_str_model.is_some()
-                            || props.set_option_arc_str_model.is_some()),
-                );
+                cx.set_invokable(props.enabled);
             }
             ElementInstance::VirtualList(_) => {
                 cx.set_role(SemanticsRole::List);
@@ -1721,6 +1978,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 // Flex/Grid are layout containers; they do not imply semantics beyond their children.
             }
             ElementInstance::Image(_)
+            | ElementInstance::PointerRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::Spinner(_)
             | ElementInstance::Scroll(_) => {
@@ -1750,6 +2008,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
         self.hit_testable = match &instance {
             ElementInstance::Pressable(p) => p.enabled,
+            ElementInstance::PointerRegion(p) => p.enabled,
             ElementInstance::Semantics(_) => false,
             ElementInstance::DismissibleLayer(_) => false,
             ElementInstance::Spinner(_) => false,
@@ -1757,6 +2016,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         };
         self.hit_test_children = match &instance {
             ElementInstance::Pressable(p) => p.enabled,
+            ElementInstance::PointerRegion(_) => true,
             ElementInstance::Semantics(_) => true,
             ElementInstance::DismissibleLayer(_) => true,
             ElementInstance::Spinner(_) => false,
@@ -1772,6 +2032,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::Container(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Semantics(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Pressable(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::PointerRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::DismissibleLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Stack(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Flex(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -2851,6 +3112,29 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::Spinner(props) => {
                 clamp_to_constraints(Size::new(Px(16.0), Px(16.0)), props.layout, cx.available)
             }
+            ElementInstance::PointerRegion(props) => {
+                // Probe within the available height budget so measurement passes do not observe an
+                // artificially "infinite" viewport (important for scroll/virtualized children).
+                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let mut max_child = Size::new(Px(0.0), Px(0.0));
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    if layout_style.position == crate::element::PositionStyle::Absolute {
+                        continue;
+                    }
+                    let child_size = cx.layout_in(child, probe_bounds);
+                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
+                }
+
+                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let base = Rect::new(cx.bounds.origin, desired);
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
+                }
+                desired
+            }
             ElementInstance::HoverRegion(props) => {
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
@@ -3284,6 +3568,21 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     cx.scene.push(SceneOp::PopClip);
                 }
             }
+            ElementInstance::PointerRegion(props) => {
+                let clip = matches!(props.layout.overflow, Overflow::Clip);
+                if clip {
+                    cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
+                }
+
+                for &child in cx.children {
+                    let bounds = cx.child_bounds(child).unwrap_or(cx.bounds);
+                    cx.paint(child, bounds);
+                }
+
+                if clip {
+                    cx.scene.push(SceneOp::PopClip);
+                }
+            }
             ElementInstance::Scroll(props) => {
                 let clip = matches!(props.layout.overflow, Overflow::Clip);
                 if clip {
@@ -3385,7 +3684,10 @@ pub fn render_root<H: UiHost>(
 ) -> NodeId {
     let frame_id = app.frame_id();
 
-    let children = crate::elements::with_element_cx(app, window, bounds, root_name, render);
+    let children = crate::elements::with_element_cx(app, window, bounds, root_name, |cx| {
+        cx.dismissible_clear_on_dismiss_request();
+        render(cx)
+    });
 
     app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, app| {
         runtime.prepare_window_for_frame(window, frame_id);
@@ -3499,6 +3801,27 @@ pub fn render_root<H: UiHost>(
 /// - Escape dismissal (bubbling from any focused descendant).
 /// - Outside-press dismissal via the runtime outside-press observer pass (ADR 0069).
 #[allow(clippy::too_many_arguments)]
+pub fn render_dismissible_root_with_hooks<H: UiHost>(
+    ui: &mut UiTree<H>,
+    app: &mut H,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    root_name: &str,
+    render: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+) -> NodeId {
+    render_dismissible_root_impl(ui, app, services, window, bounds, root_name, None, render)
+}
+
+/// Render a declarative element tree into a full-window, input-transparent overlay root.
+///
+/// This API is transitional: `dismiss_model` is a runtime-owned shortcut policy. Prefer
+/// `render_dismissible_root_with_hooks(...)` and register dismissal behavior via
+/// `ElementCx::dismissible_on_dismiss_request(...)` (ADR 0074).
+#[allow(clippy::too_many_arguments)]
+#[deprecated(
+    note = "Transitional API. Prefer render_dismissible_root_with_hooks + ElementCx::dismissible_on_dismiss_request (ADR 0074)."
+)]
 pub fn render_dismissible_root<H: UiHost>(
     ui: &mut UiTree<H>,
     app: &mut H,
@@ -3509,9 +3832,35 @@ pub fn render_dismissible_root<H: UiHost>(
     dismiss_model: Model<bool>,
     render: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
 ) -> NodeId {
+    render_dismissible_root_impl(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        root_name,
+        Some(dismiss_model),
+        render,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn render_dismissible_root_impl<H: UiHost, F: FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>>(
+    ui: &mut UiTree<H>,
+    app: &mut H,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    root_name: &str,
+    dismiss_model: Option<Model<bool>>,
+    render: F,
+) -> NodeId {
     let frame_id = app.frame_id();
 
-    let children = crate::elements::with_element_cx(app, window, bounds, root_name, render);
+    let children = crate::elements::with_element_cx(app, window, bounds, root_name, |cx| {
+        cx.dismissible_clear_on_dismiss_request();
+        render(cx)
+    });
 
     app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, app| {
         runtime.prepare_window_for_frame(window, frame_id);
@@ -3570,7 +3919,7 @@ pub fn render_dismissible_root<H: UiHost>(
                 ElementRecord {
                     element: root_id,
                     instance: ElementInstance::DismissibleLayer(DismissibleLayerProps {
-                        dismiss_model: Some(dismiss_model),
+                        dismiss_model,
                         ..Default::default()
                     }),
                 },
@@ -3674,6 +4023,7 @@ fn mount_element<H: UiHost>(
         ElementKind::Container(p) => ElementInstance::Container(p),
         ElementKind::Semantics(p) => ElementInstance::Semantics(p),
         ElementKind::Pressable(p) => ElementInstance::Pressable(p),
+        ElementKind::PointerRegion(p) => ElementInstance::PointerRegion(p),
         ElementKind::RovingFlex(p) => ElementInstance::RovingFlex(p),
         ElementKind::Stack(p) => ElementInstance::Stack(p),
         ElementKind::Column(p) => ElementInstance::Flex(FlexProps {
@@ -3740,11 +4090,13 @@ mod tests {
 
     use super::render_root;
     use crate::UiHost;
+    use crate::action::{ActivateReason, DismissReason};
     use crate::element::{AnyElement, CrossAlign, MainAlign};
     use crate::elements::{ContinuousFrames, ElementCx};
     use crate::test_host::TestHost;
     use crate::tree::UiTree;
     use crate::widget::Invalidation;
+    use crate::widget::{LayoutCx, PaintCx, Widget};
     use fret_core::{
         AppWindowId, Color, Modifiers, MouseButton, MouseButtons, NodeId, Point, Px, Rect, Scene,
         SceneOp, Size, TextConstraints, TextMetrics, TextService, TextStyle,
@@ -3796,6 +4148,24 @@ mod tests {
 
         fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
             false
+        }
+    }
+
+    #[derive(Default)]
+    struct FillStack;
+
+    impl<H: UiHost> Widget<H> for FillStack {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            for &child in cx.children {
+                let _ = cx.layout(child, cx.available);
+            }
+            cx.available
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            for &child in cx.children {
+                cx.paint(child, cx.bounds);
+            }
         }
     }
 
@@ -4098,6 +4468,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn pressable_toggle_model_toggles_bool_on_click() {
         let mut app = TestHost::new();
         let mut ui: UiTree<TestHost> = UiTree::new();
@@ -4164,6 +4535,249 @@ mod tests {
     }
 
     #[test]
+    fn pressable_on_activate_hook_runs_on_pointer_activation() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+        let mut services = FakeTextService::default();
+
+        let activated = app.models_mut().insert(false);
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "pressable-on-activate-hook-pointer",
+            |cx| {
+                vec![
+                    cx.pressable(crate::element::PressableProps::default(), |cx, _state| {
+                        let activated = activated;
+                        cx.pressable_on_activate(Arc::new(move |host, _cx, reason| {
+                            assert_eq!(reason, ActivateReason::Pointer);
+                            let _ = host.models_mut().update(activated, |v| *v = true);
+                        }));
+                        vec![cx.text("activate")]
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get(activated).copied(), Some(false));
+
+        let pressable_node = ui.children(root)[0];
+        let pressable_bounds = ui
+            .debug_node_bounds(pressable_node)
+            .expect("pressable bounds");
+        let position = Point::new(
+            Px(pressable_bounds.origin.x.0 + 1.0),
+            Px(pressable_bounds.origin.y.0 + 1.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get(activated).copied(), Some(true));
+    }
+
+    #[test]
+    fn pressable_on_activate_hook_runs_on_keyboard_activation() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+        let mut services = FakeTextService::default();
+
+        let activated = app.models_mut().insert(false);
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "pressable-on-activate-hook-keyboard",
+            |cx| {
+                vec![
+                    cx.pressable(crate::element::PressableProps::default(), |cx, _state| {
+                        let activated = activated;
+                        cx.pressable_on_activate(Arc::new(move |host, _cx, reason| {
+                            assert_eq!(reason, ActivateReason::Keyboard);
+                            let _ = host.models_mut().update(activated, |v| *v = true);
+                        }));
+                        vec![cx.text("activate")]
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get(activated).copied(), Some(false));
+
+        let pressable_node = ui.children(root)[0];
+        ui.set_focus(Some(pressable_node));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Enter,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyUp {
+                key: fret_core::KeyCode::Enter,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        assert_eq!(app.models().get(activated).copied(), Some(true));
+    }
+
+    #[test]
+    fn dismissible_on_dismiss_request_hook_runs_on_escape() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(80.0)));
+        let mut services = FakeTextService::default();
+
+        let dismissed = app.models_mut().insert(false);
+
+        let base_root = ui.create_node(FillStack);
+        ui.set_root(base_root);
+
+        let overlay_root = super::render_dismissible_root_with_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "dismissible-hook-escape",
+            |cx| {
+                let dismissed = dismissed;
+                cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, reason| {
+                    assert_eq!(reason, DismissReason::Escape);
+                    let _ = host.models_mut().update(dismissed, |v| *v = true);
+                }));
+
+                vec![
+                    cx.pressable(crate::element::PressableProps::default(), |cx, _| {
+                        vec![cx.text("child")]
+                    }),
+                ]
+            },
+        );
+
+        let layer = ui.push_overlay_root_ex(overlay_root, false, true);
+        ui.set_layer_visible(layer, true);
+
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Focus a descendant in the overlay so Escape bubbles up to the dismissible layer.
+        let focused = ui.children(overlay_root)[0];
+        ui.set_focus(Some(focused));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Escape,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        assert_eq!(app.models().get(dismissed).copied(), Some(true));
+    }
+
+    #[test]
+    fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(80.0)));
+        let mut services = FakeTextService::default();
+
+        let dismissed = app.models_mut().insert(false);
+
+        // Base root provides a hit-test target so the pointer down is "outside" the overlay.
+        let base_root = ui.create_node(FillStack);
+        ui.set_root(base_root);
+
+        let overlay_root = super::render_dismissible_root_with_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "dismissible-hook-outside-press",
+            |cx| {
+                let dismissed = dismissed;
+                cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, reason| {
+                    assert_eq!(reason, DismissReason::OutsidePress);
+                    let _ = host.models_mut().update(dismissed, |v| *v = true);
+                }));
+                Vec::new()
+            },
+        );
+
+        let layer = ui.push_overlay_root_ex(overlay_root, false, true);
+        ui.set_layer_wants_pointer_down_outside_events(layer, true);
+        ui.set_layer_visible(layer, true);
+
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Pointer down hits the base root (overlay has no children and is hit-test transparent),
+        // so outside-press observer dispatch runs for the overlay root.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(2.0), Px(2.0)),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get(dismissed).copied(), Some(true));
+    }
+
+    #[test]
+    #[allow(deprecated)]
     fn pressable_set_option_arc_str_model_sets_value_on_click() {
         let mut app = TestHost::new();
         let mut ui: UiTree<TestHost> = UiTree::new();
@@ -4237,6 +4851,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn pressable_toggle_vec_arc_str_model_toggles_membership_on_click() {
         let mut app = TestHost::new();
         let mut ui: UiTree<TestHost> = UiTree::new();
@@ -4366,15 +4981,21 @@ mod tests {
                         enabled: true,
                         wrap: true,
                         disabled: Arc::from([false, true, false]),
-                        select_option_arc_str: Some(crate::element::RovingSelectOptionArcStr {
-                            model,
-                            values: values.clone(),
-                        }),
                         ..Default::default()
                     },
                 };
 
                 vec![cx.roving_flex(props, |cx| {
+                    let model = model;
+                    let values = values.clone();
+                    cx.roving_on_active_change(Arc::new(move |host, _cx, idx| {
+                        let Some(value) = values.get(idx).cloned() else {
+                            return;
+                        };
+                        let next = Some(value);
+                        let _ = host.models_mut().update(model, |v| *v = next);
+                    }));
+
                     let mut make = |label: &'static str| {
                         cx.pressable(
                             crate::element::PressableProps::default(),
@@ -4415,6 +5036,77 @@ mod tests {
     }
 
     #[test]
+    fn roving_flex_typeahead_hook_can_choose_target_index() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let root =
+            render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "roving-flex-typeahead-hook",
+                |cx| {
+                    let props = crate::element::RovingFlexProps {
+                        flex: crate::element::FlexProps {
+                            direction: fret_core::Axis::Vertical,
+                            ..Default::default()
+                        },
+                        roving: crate::element::RovingFocusProps {
+                            enabled: true,
+                            wrap: true,
+                            disabled: Arc::from([false, false, false]),
+                            ..Default::default()
+                        },
+                    };
+
+                    vec![cx.roving_flex(props, |cx| {
+                        cx.roving_on_typeahead(Arc::new(|_host, _cx, it| {
+                            if it.input == 'c' { Some(2) } else { None }
+                        }));
+
+                        let mut make = |label: &'static str| {
+                            cx.pressable(
+                                crate::element::PressableProps::default(),
+                                |child_cx, _st| vec![child_cx.text(label)],
+                            )
+                        };
+                        vec![make("a"), make("b"), make("c")]
+                    })]
+                },
+            );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let roving = ui.children(root)[0];
+        let a = ui.children(roving)[0];
+        let c = ui.children(roving)[2];
+        ui.set_focus(Some(a));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::KeyC,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        assert_eq!(ui.focus(), Some(c));
+    }
+
+    #[test]
     fn pressable_semantics_checked_is_exposed() {
         let mut app = TestHost::new();
         let mut ui: UiTree<TestHost> = UiTree::new();
@@ -4423,7 +5115,6 @@ mod tests {
 
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(60.0)));
         let mut services = FakeTextService::default();
-        let model = app.models_mut().insert(true);
 
         let root = render_root(
             &mut ui,
@@ -4436,7 +5127,6 @@ mod tests {
                 vec![cx.pressable(
                     crate::element::PressableProps {
                         enabled: true,
-                        toggle_model: Some(model),
                         a11y: crate::element::PressableA11y {
                             role: Some(fret_core::SemanticsRole::Checkbox),
                             label: Some(Arc::from("checked")),

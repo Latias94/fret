@@ -1,0 +1,123 @@
+use crate::UiHost;
+use fret_core::{AppWindowId, KeyCode, Modifiers, MouseButton, Point};
+use fret_runtime::{CommandId, Effect, ModelStore};
+use std::sync::Arc;
+
+/// Context passed to component-owned action handlers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ActionCx {
+    pub window: AppWindowId,
+    pub target: crate::GlobalElementId,
+}
+
+/// Why an element was activated.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ActivateReason {
+    Pointer,
+    Keyboard,
+}
+
+/// Why an overlay is requesting dismissal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DismissReason {
+    Escape,
+    OutsidePress,
+}
+
+/// Pointer down payload for component-owned pointer handlers.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PointerDownCx {
+    pub position: Point,
+    pub button: MouseButton,
+    pub modifiers: Modifiers,
+}
+
+/// Key down payload for component-owned key handlers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct KeyDownCx {
+    pub key: KeyCode,
+    pub modifiers: Modifiers,
+    pub repeat: bool,
+}
+
+/// Object-safe host surface for action handlers.
+///
+/// This intentionally exposes only non-generic operations so handlers can be stored in element
+/// state and invoked by the runtime without coupling to `H: UiHost` (see ADR 0074).
+pub trait UiActionHost {
+    fn models_mut(&mut self) -> &mut ModelStore;
+    fn push_effect(&mut self, effect: Effect);
+    fn request_redraw(&mut self, window: AppWindowId);
+
+    fn dispatch_command(&mut self, window: Option<AppWindowId>, command: CommandId) {
+        self.push_effect(Effect::Command { window, command });
+    }
+}
+
+pub struct UiActionHostAdapter<'a, H: UiHost> {
+    pub app: &'a mut H,
+}
+
+impl<'a, H: UiHost> UiActionHost for UiActionHostAdapter<'a, H> {
+    fn models_mut(&mut self) -> &mut ModelStore {
+        self.app.models_mut()
+    }
+
+    fn push_effect(&mut self, effect: Effect) {
+        self.app.push_effect(effect);
+    }
+
+    fn request_redraw(&mut self, window: AppWindowId) {
+        self.app.request_redraw(window);
+    }
+}
+
+pub type OnActivate = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, ActivateReason) + 'static>;
+
+#[derive(Default)]
+pub(crate) struct PressableActionHooks {
+    pub on_activate: Option<OnActivate>,
+}
+
+pub type OnDismissRequest = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, DismissReason) + 'static>;
+
+#[derive(Default)]
+pub(crate) struct DismissibleActionHooks {
+    pub on_dismiss_request: Option<OnDismissRequest>,
+}
+
+pub type OnPointerDown =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, PointerDownCx) -> bool + 'static>;
+
+#[derive(Default)]
+pub(crate) struct PointerActionHooks {
+    pub on_pointer_down: Option<OnPointerDown>,
+}
+
+pub type OnKeyDown = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, KeyDownCx) -> bool + 'static>;
+
+#[derive(Default)]
+pub(crate) struct KeyActionHooks {
+    pub on_key_down: Option<OnKeyDown>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RovingTypeaheadCx {
+    pub input: char,
+    pub current: Option<usize>,
+    pub len: usize,
+    pub disabled: Arc<[bool]>,
+    pub wrap: bool,
+    pub tick: u64,
+}
+
+pub type OnRovingActiveChange = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, usize) + 'static>;
+
+pub type OnRovingTypeahead =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, RovingTypeaheadCx) -> Option<usize> + 'static>;
+
+#[derive(Default)]
+pub(crate) struct RovingActionHooks {
+    pub on_active_change: Option<OnRovingActiveChange>,
+    pub on_typeahead: Option<OnRovingTypeahead>,
+}

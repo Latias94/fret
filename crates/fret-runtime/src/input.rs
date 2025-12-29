@@ -42,6 +42,19 @@ pub struct InputContext {
     pub caps: PlatformCapabilities,
     pub ui_has_modal: bool,
     pub focus_is_text_input: bool,
+    pub dispatch_phase: InputDispatchPhase,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InputDispatchPhase {
+    Normal,
+    Observer,
+}
+
+impl Default for InputDispatchPhase {
+    fn default() -> Self {
+        Self::Normal
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

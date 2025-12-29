@@ -7,7 +7,10 @@ use fret_core::{AppWindowId, FrameId, NodeId, TickId, TimerToken};
 
 use crate::drag::DragKind;
 use crate::drag::DragSession;
-use fret_runtime::{CommandRegistry, Effect, ModelHost, ModelId, ModelStore};
+use fret_runtime::{
+    BindingV1, CommandRegistry, Effect, KeySpecV1, Keymap, KeymapFileV1, KeymapService, ModelHost,
+    ModelId, ModelStore,
+};
 
 pub struct App {
     globals: HashMap<TypeId, Box<dyn Any>>,
@@ -29,7 +32,7 @@ impl Default for App {
 
 impl App {
     pub fn new() -> Self {
-        Self {
+        let mut app = Self {
             globals: HashMap::new(),
             models: ModelStore::default(),
             commands: CommandRegistry::default(),
@@ -39,7 +42,13 @@ impl App {
             tick_id: TickId::default(),
             frame_id: FrameId::default(),
             next_timer_token: 1,
-        }
+        };
+
+        // Provide a minimal default keymap so basic UI focus traversal works out of the box.
+        // Apps can fully override this by installing their own `KeymapService`.
+        app.set_global(default_keymap_service());
+
+        app
     }
 
     pub fn set_global<T: Any>(&mut self, value: T) {
@@ -235,6 +244,35 @@ impl App {
             effects.push(Effect::Redraw(window));
         }
         effects
+    }
+}
+
+fn default_keymap_service() -> KeymapService {
+    KeymapService {
+        keymap: Keymap::from_v1(KeymapFileV1 {
+            keymap_version: 1,
+            bindings: vec![
+                BindingV1 {
+                    command: Some("focus.next".into()),
+                    platform: None,
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "Tab".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("focus.previous".into()),
+                    platform: None,
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["shift".into()],
+                        key: "Tab".into(),
+                    },
+                },
+            ],
+        })
+        .expect("default keymap must be valid"),
     }
 }
 impl ModelHost for App {

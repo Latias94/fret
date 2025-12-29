@@ -14,12 +14,18 @@ use crate::SvgSource;
 use crate::UiHost;
 use crate::element::{
     AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverRegionProps,
-    ImageProps, LayoutStyle, PressableProps, PressableState, RowProps, ScrollProps, SpacerProps,
-    SpinnerProps, StackProps, SvgIconProps, TextInputProps, TextProps, VirtualListOptions,
-    VirtualListProps, VirtualListState,
+    ImageProps, LayoutStyle, PointerRegionProps, PressableProps, PressableState, RowProps,
+    ScrollProps, SpacerProps, SpinnerProps, StackProps, SvgIconProps, TextInputProps, TextProps,
+    VirtualListOptions, VirtualListProps, VirtualListState,
 };
 use crate::widget::Invalidation;
 use fret_runtime::{Effect, Model, ModelId};
+
+use crate::action::{
+    DismissibleActionHooks, KeyActionHooks, OnActivate, OnDismissRequest, OnKeyDown, OnPointerDown,
+    OnRovingActiveChange, OnRovingTypeahead, PointerActionHooks, PressableActionHooks,
+    RovingActionHooks,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct GlobalElementId(pub u64);
@@ -208,6 +214,23 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
         *self.stack.last().expect("root exists")
     }
 
+    /// Returns the last frame's bounds for a declarative element, if available.
+    ///
+    /// This is safe to call during element rendering: it reads from the `ElementCx`'s already
+    /// borrowed window state, avoiding re-entrant `UiHost::with_global_mut` leases.
+    pub fn last_bounds_for_element(&self, element: GlobalElementId) -> Option<Rect> {
+        self.window_state.last_bounds(element)
+    }
+
+    /// Returns the last recorded root bounds for the element's root, if available.
+    ///
+    /// This is safe to call during element rendering for the same reason as
+    /// `last_bounds_for_element`.
+    pub fn root_bounds_for_element(&self, element: GlobalElementId) -> Option<Rect> {
+        let root = self.window_state.node_entry(element).map(|e| e.root)?;
+        self.window_state.root_bounds(root)
+    }
+
     pub fn with_root_name<R>(&mut self, root_name: &str, f: impl FnOnce(&mut Self) -> R) -> R {
         let root = global_root(self.window, root_name);
 
@@ -259,7 +282,16 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
         f: impl FnOnce(&mut S) -> R,
     ) -> R {
         let id = self.root_id();
-        let key = (id, TypeId::of::<S>());
+        self.with_state_for(id, init, f)
+    }
+
+    pub fn with_state_for<S: Any, R>(
+        &mut self,
+        element: GlobalElementId,
+        init: impl FnOnce() -> S,
+        f: impl FnOnce(&mut S) -> R,
+    ) -> R {
+        let key = (element, TypeId::of::<S>());
 
         let entry = self
             .window_state
@@ -398,6 +430,7 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
+            cx.pressable_clear_on_activate();
             let children = f(cx, PressableState { hovered, pressed });
             AnyElement::new(id, ElementKind::Pressable(props), children)
         })
@@ -413,6 +446,7 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
+            cx.pressable_clear_on_activate();
             let children = f(cx, PressableState { hovered, pressed }, id);
             AnyElement::new(id, ElementKind::Pressable(props), children)
         })
@@ -427,9 +461,207 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
+            cx.pressable_clear_on_activate();
             let (props, children) = f(cx, PressableState { hovered, pressed }, id);
             AnyElement::new(id, ElementKind::Pressable(props), children)
         })
+    }
+
+    /// Register a component-owned activation handler for the current pressable element.
+    ///
+    /// This is a policy hook mechanism (ADR 0074): components decide what activation does (model
+    /// writes, overlay requests, command dispatch), while the runtime remains mechanism-only.
+    pub fn pressable_on_activate(&mut self, handler: OnActivate) {
+        self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_activate = Some(handler);
+        });
+    }
+
+    pub fn pressable_add_on_activate(&mut self, handler: OnActivate) {
+        self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_activate = match hooks.on_activate.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, reason| {
+                        prev(host, cx, reason);
+                        next(host, cx, reason);
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pressable_clear_on_activate(&mut self) {
+        self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_activate = None;
+        });
+    }
+
+    #[track_caller]
+    pub fn pointer_region(
+        &mut self,
+        props: PointerRegionProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            cx.pointer_region_clear_on_pointer_down();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::PointerRegion(props), children)
+        })
+    }
+
+    /// Register a component-owned pointer down handler for the current pointer region element.
+    ///
+    /// This is a mechanism-only hook point: components decide what a pointer down does (open a
+    /// context menu, start a drag, request focus, etc.), while the runtime remains policy-free.
+    pub fn pointer_region_on_pointer_down(&mut self, handler: OnPointerDown) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_down = Some(handler);
+        });
+    }
+
+    pub fn pointer_region_add_on_pointer_down(&mut self, handler: OnPointerDown) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_down = match hooks.on_pointer_down.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, down| {
+                        prev(host, cx, down) || next(host, cx, down)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pointer_region_clear_on_pointer_down(&mut self) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_down = None;
+        });
+    }
+
+    pub fn key_on_key_down_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down = Some(handler);
+        });
+    }
+
+    pub fn key_add_on_key_down_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down = match hooks.on_key_down.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, down| {
+                        prev(host, cx, down) || next(host, cx, down)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn key_clear_on_key_down_for(&mut self, element: GlobalElementId) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down = None;
+        });
+    }
+
+    /// Register a component-owned dismiss handler for the current dismissible root element.
+    ///
+    /// This is intended for overlay policy code that composes
+    /// `render_dismissible_root_with_hooks(...)` and
+    /// wants full control over dismissal semantics (ADR 0074).
+    pub fn dismissible_on_dismiss_request(&mut self, handler: OnDismissRequest) {
+        self.with_state(DismissibleActionHooks::default, |hooks| {
+            hooks.on_dismiss_request = Some(handler);
+        });
+    }
+
+    pub fn dismissible_add_on_dismiss_request(&mut self, handler: OnDismissRequest) {
+        self.with_state(DismissibleActionHooks::default, |hooks| {
+            hooks.on_dismiss_request = match hooks.on_dismiss_request.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, reason| {
+                        prev(host, cx, reason);
+                        next(host, cx, reason);
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn dismissible_clear_on_dismiss_request(&mut self) {
+        self.with_state(DismissibleActionHooks::default, |hooks| {
+            hooks.on_dismiss_request = None;
+        });
+    }
+
+    /// Register a component-owned roving active-change handler for the current roving element.
+    ///
+    /// This hook is invoked when the roving container changes focus among its children due to
+    /// keyboard navigation (arrow keys, Home/End, or typeahead).
+    ///
+    /// Components can implement “automatic activation” (e.g. Tabs) by updating selection models
+    /// here, keeping selection policy out of the runtime (ADR 0074).
+    pub fn roving_on_active_change(&mut self, handler: OnRovingActiveChange) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_active_change = Some(handler);
+        });
+    }
+
+    pub fn roving_add_on_active_change(&mut self, handler: OnRovingActiveChange) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_active_change = match hooks.on_active_change.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, idx| {
+                        prev(host, cx, idx);
+                        next(host, cx, idx);
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn roving_clear_on_active_change(&mut self) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_active_change = None;
+        });
+    }
+
+    /// Register a component-owned roving typeahead handler for the current roving element.
+    ///
+    /// When set, the runtime forwards alphanumeric key presses to this handler so components can
+    /// decide how typeahead should work (buffering, prefix matching, wrapping, etc.).
+    pub fn roving_on_typeahead(&mut self, handler: OnRovingTypeahead) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_typeahead = Some(handler);
+        });
+    }
+
+    pub fn roving_add_on_typeahead(&mut self, handler: OnRovingTypeahead) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_typeahead = match hooks.on_typeahead.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, it| {
+                        prev(host, cx, it.clone()).or_else(|| next(host, cx, it))
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn roving_clear_on_typeahead(&mut self) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_typeahead = None;
+        });
     }
 
     #[track_caller]
@@ -789,6 +1021,8 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
     ) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
+            cx.roving_clear_on_active_change();
+            cx.roving_clear_on_typeahead();
             let children = f(cx);
             AnyElement::new(id, ElementKind::RovingFlex(props), children)
         })

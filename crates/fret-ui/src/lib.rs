@@ -1,3 +1,4 @@
+pub mod action;
 pub mod declarative;
 #[allow(dead_code)]
 pub(crate) mod dock;
