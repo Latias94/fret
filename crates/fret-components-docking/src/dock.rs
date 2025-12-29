@@ -60,6 +60,14 @@ pub struct DockManager {
     viewport_content_rects: HashMap<(fret_core::AppWindowId, RenderTargetId), Rect>,
 }
 
+pub fn create_dock_space_node<H: UiHost>(
+    ui: &mut fret_ui::UiTree<H>,
+    window: fret_core::AppWindowId,
+) -> NodeId {
+    use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+    ui.create_node_retained(DockSpace::new(window))
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ActivatePanelOptions {
     pub focus: bool,

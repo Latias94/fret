@@ -7,7 +7,9 @@
 
 pub mod dock;
 
-pub use dock::{ActivatePanelOptions, DockManager, DockPanel, DockSpace, ViewportPanel};
+pub use dock::{
+    ActivatePanelOptions, DockManager, DockPanel, DockSpace, ViewportPanel, create_dock_space_node,
+};
 
 #[cfg(test)]
 mod test_host;
