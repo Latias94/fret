@@ -704,4 +704,100 @@ mod tests {
             })
         ));
     }
+
+    #[test]
+    fn validate_rejects_opacity_underflow() {
+        let mut scene = Scene::default();
+        scene.push(SceneOp::PopOpacity);
+        assert!(matches!(
+            scene.validate(),
+            Err(SceneValidationError {
+                kind: SceneValidationErrorKind::OpacityUnderflow,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_layer_underflow() {
+        let mut scene = Scene::default();
+        scene.push(SceneOp::PopLayer);
+        assert!(matches!(
+            scene.validate(),
+            Err(SceneValidationError {
+                kind: SceneValidationErrorKind::LayerUnderflow,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_clip_underflow() {
+        let mut scene = Scene::default();
+        scene.push(SceneOp::PopClip);
+        assert!(matches!(
+            scene.validate(),
+            Err(SceneValidationError {
+                kind: SceneValidationErrorKind::ClipUnderflow,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_nonfinite_opacity() {
+        let mut scene = Scene::default();
+        scene.push(SceneOp::PushOpacity { opacity: f32::NAN });
+        assert!(matches!(
+            scene.validate(),
+            Err(SceneValidationError {
+                kind: SceneValidationErrorKind::NonFiniteOpacity,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_nonfinite_transform() {
+        let mut scene = Scene::default();
+        scene.push(SceneOp::PushTransform {
+            transform: Transform2D {
+                a: f32::NAN,
+                ..Transform2D::IDENTITY
+            },
+        });
+        assert!(matches!(
+            scene.validate(),
+            Err(SceneValidationError {
+                kind: SceneValidationErrorKind::NonFiniteTransform,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_unbalanced_opacity_stack() {
+        let mut scene = Scene::default();
+        scene.push(SceneOp::PushOpacity { opacity: 0.5 });
+        assert!(matches!(
+            scene.validate(),
+            Err(SceneValidationError {
+                kind: SceneValidationErrorKind::UnbalancedOpacityStack { remaining: 1 },
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_unbalanced_layer_stack() {
+        let mut scene = Scene::default();
+        scene.push(SceneOp::PushLayer { layer: 1 });
+        assert!(matches!(
+            scene.validate(),
+            Err(SceneValidationError {
+                kind: SceneValidationErrorKind::UnbalancedLayerStack { remaining: 1 },
+                ..
+            })
+        ));
+    }
 }
