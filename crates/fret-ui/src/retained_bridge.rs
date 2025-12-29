@@ -50,6 +50,7 @@ pub mod resizable_panel_group {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn drag_update_fractions(
         axis: Axis,
         bounds: Rect,

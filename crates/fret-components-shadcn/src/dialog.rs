@@ -2,16 +2,17 @@ use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::style as decl_style;
+use fret_components_ui::headless::presence::FadePresence;
 use fret_components_ui::window_overlays;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
-use fret_runtime::Model;
+use fret_runtime::{Effect, Model};
 use fret_ui::Invalidation;
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
-    PressableProps, SemanticsProps, SizeStyle, TextProps,
+    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
+    PositionStyle, PressableProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::{ElementCx, Theme, UiHost};
 
@@ -93,11 +94,28 @@ impl Dialog {
             let id = trigger.id;
             let overlay_root_name = window_overlays::modal_root_name(id);
 
-            if is_open {
+            #[derive(Default)]
+            struct PresenceState {
+                tick: u64,
+                presence: FadePresence,
+            }
+
+            let presence = cx.with_state(PresenceState::default, |st| {
+                st.tick = st.tick.saturating_add(1);
+                st.presence.update(is_open, st.tick)
+            });
+
+            if presence.animating {
+                cx.app.push_effect(Effect::RequestAnimationFrame(cx.window));
+                cx.app.request_redraw(cx.window);
+            }
+
+            if presence.present {
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let overlay_closable = self.overlay_closable;
                 let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
 
+                let opacity = presence.opacity;
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                     let barrier_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
@@ -210,7 +228,21 @@ impl Dialog {
                         move |_cx| vec![content],
                     );
 
-                    vec![barrier, wrapper]
+                    let opacity_layout = LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+                    vec![cx.opacity_props(
+                        OpacityProps {
+                            layout: opacity_layout,
+                            opacity,
+                        },
+                        |_cx| vec![barrier, wrapper],
+                    )]
                 });
 
                 window_overlays::request_modal(
@@ -220,6 +252,7 @@ impl Dialog {
                         root_name: overlay_root_name.clone(),
                         trigger: Some(id),
                         open: self.open,
+                        present: true,
                         initial_focus: None,
                         children: overlay_children,
                     },
@@ -876,18 +909,22 @@ mod tests {
         );
         assert_eq!(app.models().get(open).copied(), Some(false));
 
-        let _ = render_dialog_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            open,
-            true,
-            content_id.clone(),
-            initial_focus_cell.clone(),
-        );
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        // Render a few frames to allow the close animation to finish and the overlay manager to
+        // apply focus restore when the layer is uninstalled.
+        for _ in 0..4 {
+            let _ = render_dialog_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open,
+                true,
+                content_id.clone(),
+                initial_focus_cell.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
 
         let trigger_node =
             fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");

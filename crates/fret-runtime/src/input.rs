@@ -45,16 +45,11 @@ pub struct InputContext {
     pub dispatch_phase: InputDispatchPhase,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum InputDispatchPhase {
+    #[default]
     Normal,
     Observer,
-}
-
-impl Default for InputDispatchPhase {
-    fn default() -> Self {
-        Self::Normal
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

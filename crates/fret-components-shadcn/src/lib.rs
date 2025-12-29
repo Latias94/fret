@@ -80,7 +80,9 @@ pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardT
 pub use checkbox::{Checkbox, checkbox};
 pub use collapsible::{Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible};
 pub use combobox::{Combobox, ComboboxItem, combobox};
-pub use command::{Command, CommandInput, CommandItem, CommandList, CommandPalette, command};
+pub use command::{
+    Command, CommandDialog, CommandInput, CommandItem, CommandList, CommandPalette, command,
+};
 pub use context_menu::{ContextMenu, ContextMenuEntry, ContextMenuItem};
 pub use data_table::{DataTable, DataTableRowState};
 pub use dialog::{

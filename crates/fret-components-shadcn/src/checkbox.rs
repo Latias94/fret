@@ -122,7 +122,7 @@ impl Checkbox {
             let on_click = self.on_click.clone();
             let chrome = self.chrome.clone();
 
-            cx.pressable(
+            let pressable = cx.pressable(
                 PressableProps {
                     layout: pressable_layout,
                     enabled: !disabled,
@@ -144,21 +144,16 @@ impl Checkbox {
                     let checked = cx.app.models().get(model).copied().unwrap_or(false);
 
                     let mut bg = if checked { bg_on } else { Color::TRANSPARENT };
-                    let mut border_color = if checked { bg_on } else { border };
-                    let mut fg = if checked { fg_on } else { Color::TRANSPARENT };
+                    let border_color = if checked { bg_on } else { border };
+                    let fg = if checked { fg_on } else { Color::TRANSPARENT };
 
-                    if st.hovered && !disabled && !checked {
+                    let hovered = st.hovered && !disabled;
+                    if hovered && !checked {
                         let hover = theme
                             .color_by_key("accent")
                             .or_else(|| theme.color_by_key("hover.background"))
                             .unwrap_or(theme.colors.hover_background);
                         bg = alpha_mul(hover, 0.35);
-                    }
-
-                    if disabled {
-                        bg = alpha_mul(bg, 0.5);
-                        border_color = alpha_mul(border_color, 0.5);
-                        fg = alpha_mul(fg, 0.6);
                     }
 
                     let mut props = decl_style::container_props(
@@ -214,7 +209,13 @@ impl Checkbox {
                         },
                     )]
                 },
-            )
+            );
+
+            if disabled {
+                cx.opacity(0.5, |_cx| vec![pressable])
+            } else {
+                pressable
+            }
         })
     }
 }

@@ -404,6 +404,7 @@ pub fn select<H: UiHost>(
                             root_name: overlay_root_name.clone(),
                             trigger: trigger_id,
                             open,
+                            present: true,
                             initial_focus: None,
                             children: overlay_children,
                         },

@@ -133,7 +133,7 @@ impl Switch {
             let on_click = self.on_click.clone();
             let chrome = self.chrome.clone();
 
-            cx.pressable(
+            let pressable = cx.pressable(
                 PressableProps {
                     layout: pressable_layout,
                     enabled: !disabled,
@@ -159,11 +159,9 @@ impl Switch {
                     } else {
                         switch_bg_off(&theme)
                     };
-                    if st.hovered && !disabled {
+                    let hovered = st.hovered && !disabled;
+                    if hovered {
                         bg = alpha_mul(bg, if on { 0.9 } else { 0.7 });
-                    }
-                    if disabled {
-                        bg = alpha_mul(bg, 0.5);
                     }
 
                     let mut track_props = decl_style::container_props(
@@ -212,7 +210,13 @@ impl Switch {
                         vec![cx.container(thumb_props, |_cx| Vec::new())]
                     })]
                 },
-            )
+            );
+
+            if disabled {
+                cx.opacity(0.5, |_cx| vec![pressable])
+            } else {
+                pressable
+            }
         })
     }
 }

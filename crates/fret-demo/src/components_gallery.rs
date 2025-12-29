@@ -34,6 +34,7 @@ struct ComponentsGalleryWindowState {
     dialog_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
+    cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
 }
@@ -80,6 +81,7 @@ impl ComponentsGalleryDriver {
         let dialog_open = app.models_mut().insert(false);
         let alert_dialog_open = app.models_mut().insert(false);
         let sheet_open = app.models_mut().insert(false);
+        let cmdk_open = app.models_mut().insert(false);
         let cmdk_query = app.models_mut().insert(String::new());
         let last_action = app.models_mut().insert(Arc::<str>::from("<none>"));
 
@@ -103,6 +105,7 @@ impl ComponentsGalleryDriver {
             dialog_open,
             alert_dialog_open,
             sheet_open,
+            cmdk_open,
             cmdk_query,
             last_action,
         }
@@ -131,6 +134,7 @@ impl ComponentsGalleryDriver {
         let dialog_open = state.dialog_open;
         let alert_dialog_open = state.alert_dialog_open;
         let sheet_open = state.sheet_open;
+        let cmdk_open = state.cmdk_open;
         let cmdk_query = state.cmdk_query;
         let last_action = state.last_action;
 
@@ -643,24 +647,18 @@ impl ComponentsGalleryDriver {
                                         })
                                         .collect();
 
-                                        let mut cmdk_layout = LayoutStyle::default();
-                                        cmdk_layout.size.width = Length::Px(Px(320.0));
-                                        cmdk_layout.size.min_height = Some(Px(180.0));
-                                        cmdk_layout.overflow = Overflow::Clip;
-                                        let cmdk = cx.container(
-                                            ContainerProps {
-                                                layout: cmdk_layout,
-                                                background: Some(theme.colors.panel_background),
-                                                border: Edges::all(Px(1.0)),
-                                                border_color: Some(theme.colors.panel_border),
-                                                ..Default::default()
-                                            },
-                                            move |cx| {
-                                                vec![shadcn::CommandPalette::new(cmdk_query, cmdk_items)
-                                                    .a11y_label("Command palette")
-                                                    .into_element(cx)]
-                                            },
-                                        );
+                                        let cmdk = shadcn::CommandDialog::new(
+                                            cmdk_open,
+                                            cmdk_query,
+                                            cmdk_items,
+                                        )
+                                        .a11y_label("Command palette")
+                                        .into_element(cx, |cx| {
+                                            shadcn::Button::new("CommandDialog (Ctrl+K)")
+                                                .variant(shadcn::ButtonVariant::Outline)
+                                                .toggle_model(cmdk_open)
+                                                .into_element(cx)
+                                        });
 
                                         vec![
                                             cx.text("overlays: tooltip / dropdown / context-menu / popover / dialog / alert-dialog / sheet"),
@@ -671,7 +669,7 @@ impl ComponentsGalleryDriver {
                                                     .as_deref()
                                                     .unwrap_or("<none>")
                                             )),
-                                            cx.text("cmdk: arrows highlight, Enter selects (focus stays in input)"),
+                                            cx.text("cmdk: Ctrl+K opens, arrows/hover highlight, Enter selects"),
                                             cmdk,
                                         ]
                                     },
@@ -906,6 +904,8 @@ impl WinitDriver for ComponentsGalleryDriver {
         if let Some(item) = command.as_str().strip_prefix("gallery.cmdk.select.") {
             let msg: Arc<str> = Arc::from(format!("cmdk.select.{item}").into_boxed_str());
             let _ = app.models_mut().update(state.last_action, |v| *v = msg);
+            let _ = app.models_mut().update(state.cmdk_open, |v| *v = false);
+            app.request_redraw(window);
         }
 
         if command.as_str() == "gallery.context_menu.action" {
@@ -958,11 +958,32 @@ impl WinitDriver for ComponentsGalleryDriver {
                 .get(state.alert_dialog_open)
                 .copied()
                 .unwrap_or(false)
-            || app.models().get(state.sheet_open).copied().unwrap_or(false);
+            || app.models().get(state.sheet_open).copied().unwrap_or(false)
+            || app.models().get(state.cmdk_open).copied().unwrap_or(false);
 
         if overlays_open {
             state.ui.dispatch_event(app, services, event);
             return;
+        }
+
+        if let Event::KeyDown {
+            key: KeyCode::KeyK,
+            modifiers,
+            repeat: false,
+        } = event
+        {
+            let open_chord = if cfg!(target_os = "macos") {
+                modifiers.meta || modifiers.ctrl
+            } else {
+                modifiers.ctrl
+            };
+
+            if open_chord {
+                let _ = app.models_mut().update(state.cmdk_open, |v| *v = true);
+                let _ = app.models_mut().update(state.cmdk_query, |v| v.clear());
+                app.request_redraw(window);
+                return;
+            }
         }
 
         let focus = state.ui.focus();

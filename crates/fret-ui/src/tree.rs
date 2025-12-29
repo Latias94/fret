@@ -566,7 +566,7 @@ impl<H: UiHost> UiTree<H> {
                         node: node_id,
                         window: tree.window,
                         input_ctx: input_ctx.clone(),
-                        children: &children,
+                        children,
                         focus: tree.focus,
                         captured: tree.captured,
                         bounds,
@@ -909,6 +909,28 @@ impl<H: UiHost> UiTree<H> {
         l.visible = visible;
 
         if !visible {
+            if self
+                .captured
+                .is_some_and(|n| self.node_layer(n).is_some_and(|lid| lid == layer))
+            {
+                self.captured = None;
+            }
+            if self
+                .focus
+                .is_some_and(|n| self.node_layer(n).is_some_and(|lid| lid == layer))
+            {
+                self.focus = None;
+            }
+        }
+    }
+
+    pub fn set_layer_hit_testable(&mut self, layer: UiLayerId, hit_testable: bool) {
+        let Some(l) = self.layers.get_mut(layer) else {
+            return;
+        };
+        l.hit_testable = hit_testable;
+
+        if !hit_testable {
             if self
                 .captured
                 .is_some_and(|n| self.node_layer(n).is_some_and(|lid| lid == layer))
@@ -1433,7 +1455,7 @@ impl<H: UiHost> UiTree<H> {
                     None
                 });
 
-            let (prev_node, next_node) =
+            let (prev_element, prev_node, next_element, next_node) =
                 crate::elements::update_hovered_pressable(app, window, hovered_pressable);
             if prev_node.is_some() || next_node.is_some() {
                 needs_redraw = true;
@@ -1442,6 +1464,54 @@ impl<H: UiHost> UiTree<H> {
                 }
                 if let Some(node) = next_node {
                     self.mark_invalidation(node, Invalidation::Paint);
+                }
+            }
+
+            if let Some(element) = prev_element
+                && prev_node.is_some()
+            {
+                let hook = crate::elements::with_element_state(
+                    app,
+                    window,
+                    element,
+                    crate::action::PressableHoverActionHooks::default,
+                    |hooks| hooks.on_hover_change.clone(),
+                );
+
+                if let Some(h) = hook {
+                    let mut host = crate::action::UiActionHostAdapter { app };
+                    h(
+                        &mut host,
+                        crate::action::ActionCx {
+                            window,
+                            target: element,
+                        },
+                        false,
+                    );
+                }
+            }
+
+            if let Some(element) = next_element
+                && next_node.is_some()
+            {
+                let hook = crate::elements::with_element_state(
+                    app,
+                    window,
+                    element,
+                    crate::action::PressableHoverActionHooks::default,
+                    |hooks| hooks.on_hover_change.clone(),
+                );
+
+                if let Some(h) = hook {
+                    let mut host = crate::action::UiActionHostAdapter { app };
+                    h(
+                        &mut host,
+                        crate::action::ActionCx {
+                            window,
+                            target: element,
+                        },
+                        true,
+                    );
                 }
             }
 
@@ -1463,7 +1533,7 @@ impl<H: UiHost> UiTree<H> {
                     None
                 });
 
-            let (prev_node, next_node) =
+            let (_prev_element, prev_node, _next_element, next_node) =
                 crate::elements::update_hovered_hover_region(app, window, hovered_hover_region);
             if prev_node.is_some() || next_node.is_some() {
                 needs_redraw = true;
@@ -1530,7 +1600,7 @@ impl<H: UiHost> UiTree<H> {
                     node: node_id,
                     window: tree.window,
                     input_ctx: input_ctx.clone(),
-                    children: &children,
+                    children,
                     focus: tree.focus,
                     captured: tree.captured,
                     bounds,
@@ -1732,7 +1802,7 @@ impl<H: UiHost> UiTree<H> {
                     node: node_id,
                     window: tree.window,
                     input_ctx: observer_ctx,
-                    children: &children,
+                    children,
                     focus: tree.focus,
                     captured: tree.captured,
                     bounds,
@@ -3267,6 +3337,44 @@ mod tests {
 
         let overlay = ui.create_node(TransparentOverlay);
         let _ = ui.push_overlay_root_ex(overlay, false, true);
+
+        let mut services = FakeUiServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        let value = app.models().get(clicks).copied().unwrap_or(0);
+        assert_eq!(value, 1);
+    }
+
+    #[test]
+    fn layer_hit_testable_flag_can_make_overlay_pointer_transparent() {
+        let window = AppWindowId::default();
+
+        let mut app = crate::test_host::TestHost::new();
+        let clicks = app.models_mut().insert(0u32);
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let base = ui.create_node(ClickCounter { clicks });
+        ui.set_root(base);
+
+        let overlay = ui.create_node(ClickCounter { clicks });
+        let layer = ui.push_overlay_root_ex(overlay, false, true);
+        ui.set_layer_hit_testable(layer, false);
 
         let mut services = FakeUiServices;
         let bounds = Rect::new(

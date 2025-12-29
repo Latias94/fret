@@ -84,6 +84,13 @@ pub(crate) struct PressableActionHooks {
     pub on_activate: Option<OnActivate>,
 }
 
+pub type OnHoverChange = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, bool) + 'static>;
+
+#[derive(Default)]
+pub(crate) struct PressableHoverActionHooks {
+    pub on_hover_change: Option<OnHoverChange>,
+}
+
 pub type OnDismissRequest = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, DismissReason) + 'static>;
 
 #[derive(Default)]

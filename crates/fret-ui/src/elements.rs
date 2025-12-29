@@ -14,7 +14,7 @@ use crate::SvgSource;
 use crate::UiHost;
 use crate::element::{
     AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverRegionProps,
-    ImageProps, LayoutStyle, PointerRegionProps, PressableProps, PressableState,
+    ImageProps, LayoutStyle, OpacityProps, PointerRegionProps, PressableProps, PressableState,
     ResizablePanelGroupProps, RowProps, ScrollProps, SliderProps, SpacerProps, SpinnerProps,
     StackProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, VirtualListOptions,
     VirtualListProps, VirtualListState,
@@ -22,10 +22,11 @@ use crate::element::{
 use crate::widget::Invalidation;
 use fret_runtime::{Effect, Model, ModelId};
 
+use crate::action::OnHoverChange;
 use crate::action::{
     DismissibleActionHooks, KeyActionHooks, OnActivate, OnDismissRequest, OnKeyDown, OnPointerDown,
     OnRovingActiveChange, OnRovingTypeahead, OnTimer, PointerActionHooks, PressableActionHooks,
-    RovingActionHooks, TimerActionHooks,
+    PressableHoverActionHooks, RovingActionHooks, TimerActionHooks,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -430,6 +431,32 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
     }
 
     #[track_caller]
+    pub fn opacity(
+        &mut self,
+        opacity: f32,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        let props = OpacityProps {
+            opacity: opacity.clamp(0.0, 1.0),
+            ..Default::default()
+        };
+        self.opacity_props(props, f)
+    }
+
+    #[track_caller]
+    pub fn opacity_props(
+        &mut self,
+        props: OpacityProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Opacity(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn pressable(
         &mut self,
         props: PressableProps,
@@ -440,6 +467,7 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             let hovered = cx.window_state.hovered_pressable == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
             cx.pressable_clear_on_activate();
+            cx.pressable_clear_on_hover_change();
             let children = f(cx, PressableState { hovered, pressed });
             AnyElement::new(id, ElementKind::Pressable(props), children)
         })
@@ -456,6 +484,7 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             let hovered = cx.window_state.hovered_pressable == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
             cx.pressable_clear_on_activate();
+            cx.pressable_clear_on_hover_change();
             let children = f(cx, PressableState { hovered, pressed }, id);
             AnyElement::new(id, ElementKind::Pressable(props), children)
         })
@@ -471,6 +500,7 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             let hovered = cx.window_state.hovered_pressable == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
             cx.pressable_clear_on_activate();
+            cx.pressable_clear_on_hover_change();
             let (props, children) = f(cx, PressableState { hovered, pressed }, id);
             AnyElement::new(id, ElementKind::Pressable(props), children)
         })
@@ -504,6 +534,37 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
     pub fn pressable_clear_on_activate(&mut self) {
         self.with_state(PressableActionHooks::default, |hooks| {
             hooks.on_activate = None;
+        });
+    }
+
+    /// Register a component-owned hover change handler for the current pressable element.
+    ///
+    /// This is a mechanism-only hook: the runtime tracks hover deterministically and invokes
+    /// component code on hover transitions, without baking hover policy into `fret-ui`.
+    pub fn pressable_on_hover_change(&mut self, handler: OnHoverChange) {
+        self.with_state(PressableHoverActionHooks::default, |hooks| {
+            hooks.on_hover_change = Some(handler);
+        });
+    }
+
+    pub fn pressable_add_on_hover_change(&mut self, handler: OnHoverChange) {
+        self.with_state(PressableHoverActionHooks::default, |hooks| {
+            hooks.on_hover_change = match hooks.on_hover_change.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, hovered| {
+                        prev(host, cx, hovered);
+                        next(host, cx, hovered);
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pressable_clear_on_hover_change(&mut self) {
+        self.with_state(PressableHoverActionHooks::default, |hooks| {
+            hooks.on_hover_change = None;
         });
     }
 
@@ -1262,16 +1323,21 @@ pub(crate) fn update_hovered_pressable<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
     next: Option<GlobalElementId>,
-) -> (Option<NodeId>, Option<NodeId>) {
+) -> (
+    Option<GlobalElementId>,
+    Option<NodeId>,
+    Option<GlobalElementId>,
+    Option<NodeId>,
+) {
     with_window_state(app, window, |st| {
         let prev = st.hovered_pressable;
         if prev == next {
-            return (None, None);
+            return (None, None, None, None);
         }
         let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
         let next_node = next.and_then(|id| st.node_entry(id).map(|e| e.node));
         st.hovered_pressable = next;
-        (prev_node, next_node)
+        (prev, prev_node, next, next_node)
     })
 }
 
@@ -1279,16 +1345,21 @@ pub(crate) fn update_hovered_hover_region<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
     next: Option<GlobalElementId>,
-) -> (Option<NodeId>, Option<NodeId>) {
+) -> (
+    Option<GlobalElementId>,
+    Option<NodeId>,
+    Option<GlobalElementId>,
+    Option<NodeId>,
+) {
     with_window_state(app, window, |st| {
         let prev = st.hovered_hover_region;
         if prev == next {
-            return (None, None);
+            return (None, None, None, None);
         }
         let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
         let next_node = next.and_then(|id| st.node_entry(id).map(|e| e.node));
         st.hovered_hover_region = next;
-        (prev_node, next_node)
+        (prev, prev_node, next, next_node)
     })
 }
 

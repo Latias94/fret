@@ -237,7 +237,6 @@ impl Button {
             let theme = Theme::global(&*cx.app).clone();
 
             let (bg, bg_hover, bg_active, border_color, fg) = variant_colors(&theme, self.variant);
-            let fg_disabled = theme.colors.text_disabled;
             let shadow_radius = self.size.component_size().control_radius(&theme);
             let shadow = matches!(
                 self.variant,
@@ -278,7 +277,7 @@ impl Button {
             let is_icon = self.size == ButtonSize::Icon;
             let children = self.children;
 
-            cx.pressable(
+            let pressable = cx.pressable(
                 PressableProps {
                     layout: pressable_layout,
                     enabled: !disabled,
@@ -296,19 +295,16 @@ impl Button {
                         cx.pressable_toggle_bool(model);
                     }
 
-                    let (mut bg, mut border_color, mut fg) = if st.pressed {
+                    let hovered = st.hovered && !disabled;
+                    let pressed = st.pressed && !disabled;
+
+                    let (bg, border_color, fg) = if pressed {
                         (bg_active, border_color, fg)
-                    } else if st.hovered {
+                    } else if hovered {
                         (bg_hover, border_color, fg)
                     } else {
                         (bg, border_color, fg)
                     };
-
-                    if disabled {
-                        bg = alpha_mul(bg, 0.5);
-                        border_color = alpha_mul(border_color, 0.5);
-                        fg = alpha_mul(fg_disabled, 0.8);
-                    }
 
                     let padding = if variant == ButtonVariant::Link || is_icon {
                         ChromeRefinement::default()
@@ -375,7 +371,104 @@ impl Button {
                         )]
                     })]
                 },
-            )
+            );
+
+            if disabled {
+                cx.opacity(0.5, |_cx| vec![pressable])
+            } else {
+                pressable
+            }
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
+        Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId, SvgService, TextBlobId,
+        TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
+    };
+    use fret_ui::tree::UiTree;
+
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: CoreTextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: CoreSize::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn disabled_button_emits_opacity_stack_ops() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "disabled-button-emits-opacity-stack-ops",
+            |cx| vec![Button::new("Hello").disabled(true).into_element(cx)],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        assert!(matches!(
+            scene.ops().first(),
+            Some(SceneOp::PushOpacity { opacity }) if (*opacity - 0.5).abs() < 1e-6
+        ));
+        assert!(matches!(scene.ops().last(), Some(SceneOp::PopOpacity)));
     }
 }

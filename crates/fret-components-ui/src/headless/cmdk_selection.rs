@@ -65,6 +65,41 @@ pub fn clamp_active_index(disabled: &[bool], current: Option<usize>) -> Option<u
     disabled.iter().position(|d| !*d)
 }
 
+/// Returns the first enabled index, or `None` if all items are disabled.
+pub fn first_enabled(disabled: &[bool]) -> Option<usize> {
+    disabled.iter().position(|d| !*d)
+}
+
+/// Returns the last enabled index, or `None` if all items are disabled.
+pub fn last_enabled(disabled: &[bool]) -> Option<usize> {
+    disabled.iter().rposition(|d| !*d)
+}
+
+/// Moves the active index by `amount` steps, skipping disabled items.
+///
+/// This is a convenience wrapper around `next_active_index` for PageUp/PageDown style navigation.
+pub fn advance_active_index(
+    disabled: &[bool],
+    current: Option<usize>,
+    forward: bool,
+    wrap: bool,
+    amount: usize,
+) -> Option<usize> {
+    let mut cur = clamp_active_index(disabled, current);
+    if amount == 0 {
+        return cur;
+    }
+
+    for _ in 0..amount {
+        let next = next_active_index(disabled, cur, forward, wrap);
+        if next == cur {
+            break;
+        }
+        cur = next;
+    }
+    cur
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -105,5 +140,27 @@ mod tests {
         let disabled = [true, true];
         assert_eq!(next_active_index(&disabled, None, true, true), None);
         assert_eq!(clamp_active_index(&disabled, Some(0)), None);
+    }
+
+    #[test]
+    fn first_and_last_enabled_work() {
+        let disabled = [true, false, true, false];
+        assert_eq!(first_enabled(&disabled), Some(1));
+        assert_eq!(last_enabled(&disabled), Some(3));
+        assert_eq!(first_enabled(&[true, true]), None);
+        assert_eq!(last_enabled(&[true, true]), None);
+    }
+
+    #[test]
+    fn advance_moves_multiple_steps() {
+        let disabled = [false, true, false, false];
+        assert_eq!(
+            advance_active_index(&disabled, Some(0), true, true, 2),
+            Some(3)
+        );
+        assert_eq!(
+            advance_active_index(&disabled, Some(3), false, true, 3),
+            Some(3)
+        );
     }
 }

@@ -391,6 +391,7 @@ impl DropdownMenu {
                         root_name: overlay_root_name,
                         trigger: trigger_id,
                         open,
+                        present: true,
                         initial_focus: None,
                         children: overlay_children,
                     },

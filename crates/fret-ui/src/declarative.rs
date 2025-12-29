@@ -197,6 +197,7 @@ impl Default for WindowFrame {
 pub(crate) enum ElementInstance {
     Container(ContainerProps),
     Semantics(crate::element::SemanticsProps),
+    Opacity(crate::element::OpacityProps),
     Pressable(PressableProps),
     PointerRegion(PointerRegionProps),
     DismissibleLayer(DismissibleLayerProps),
@@ -270,6 +271,7 @@ fn layout_style_for_node<H: UiHost>(app: &mut H, window: AppWindowId, node: Node
         .map(|r| match r.instance {
             ElementInstance::Container(p) => p.layout,
             ElementInstance::Semantics(p) => p.layout,
+            ElementInstance::Opacity(p) => p.layout,
             ElementInstance::Pressable(p) => p.layout,
             ElementInstance::PointerRegion(p) => p.layout,
             ElementInstance::DismissibleLayer(p) => p.layout,
@@ -586,10 +588,7 @@ impl TaffyContainerCache {
             self.child_nodes.push(node);
 
             let style = style_for_child(child);
-            let style_changed = self
-                .child_styles
-                .get(&child)
-                .map_or(true, |prev| prev != &style);
+            let style_changed = self.child_styles.get(&child) != Some(&style);
             if style_changed {
                 self.taffy
                     .set_style(node, style.clone())
@@ -1901,18 +1900,16 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             _ => {}
         }
 
-        if is_text_input && !cx.stop_propagation {
-            if let Event::KeyDown {
+        if is_text_input
+            && !cx.stop_propagation
+            && let Event::KeyDown {
                 key,
                 modifiers,
                 repeat,
             } = event
-                && cx.focus == Some(cx.node)
-                && try_key_hook(cx, *key, *modifiers, *repeat)
-            {
-                return;
-            }
-        }
+            && cx.focus == Some(cx.node)
+            && try_key_hook(cx, *key, *modifiers, *repeat)
+        {}
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
@@ -2072,6 +2069,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             | ElementInstance::PointerRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::Spinner(_)
+            | ElementInstance::Opacity(_)
             | ElementInstance::Scroll(_) => {
                 cx.set_role(SemanticsRole::Generic);
             }
@@ -2103,6 +2101,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::Slider(p) => p.enabled,
             ElementInstance::Semantics(_) => false,
             ElementInstance::DismissibleLayer(_) => false,
+            ElementInstance::Opacity(_) => false,
             ElementInstance::Spinner(_) => false,
             _ => true,
         };
@@ -2127,6 +2126,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         self.clips_hit_test = match &instance {
             ElementInstance::Container(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Semantics(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::Opacity(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Pressable(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::PointerRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::DismissibleLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -2255,6 +2255,29 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 desired
             }
             ElementInstance::Semantics(props) => {
+                // Probe within the available height budget so measurement passes do not observe an
+                // artificially "infinite" viewport (important for scroll/virtualized children).
+                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let mut max_child = Size::new(Px(0.0), Px(0.0));
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    if layout_style.position == crate::element::PositionStyle::Absolute {
+                        continue;
+                    }
+                    let child_size = cx.layout_in(child, probe_bounds);
+                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
+                }
+
+                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let base = Rect::new(cx.bounds.origin, desired);
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
+                }
+                desired
+            }
+            ElementInstance::Opacity(props) => {
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
                 let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
@@ -3289,6 +3312,26 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     None,
                 );
             }
+            ElementInstance::Opacity(props) => {
+                let opacity = props.opacity.clamp(0.0, 1.0);
+                if opacity <= 0.0 {
+                    return;
+                }
+
+                if opacity < 1.0 {
+                    cx.scene.push(SceneOp::PushOpacity { opacity });
+                }
+
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+
+                if opacity < 1.0 {
+                    cx.scene.push(SceneOp::PopOpacity);
+                }
+            }
             ElementInstance::DismissibleLayer(props) => {
                 paint_children_clipped_if(
                     cx,
@@ -3997,7 +4040,7 @@ fn render_dismissible_root_impl<H: UiHost, F: FnOnce(&mut ElementCx<'_, H>) -> V
 
 fn mount_element<H: UiHost>(
     ui: &mut UiTree<H>,
-    window: AppWindowId,
+    _window: AppWindowId,
     root_id: GlobalElementId,
     frame_id: fret_core::FrameId,
     window_state: &mut crate::elements::WindowElementState,
@@ -4049,6 +4092,7 @@ fn mount_element<H: UiHost>(
     let instance = match element.kind {
         ElementKind::Container(p) => ElementInstance::Container(p),
         ElementKind::Semantics(p) => ElementInstance::Semantics(p),
+        ElementKind::Opacity(p) => ElementInstance::Opacity(p),
         ElementKind::Pressable(p) => ElementInstance::Pressable(p),
         ElementKind::PointerRegion(p) => ElementInstance::PointerRegion(p),
         ElementKind::RovingFlex(p) => ElementInstance::RovingFlex(p),
@@ -4099,7 +4143,7 @@ fn mount_element<H: UiHost>(
     for child in element.children {
         child_nodes.push(mount_element(
             ui,
-            window,
+            _window,
             root_id,
             frame_id,
             window_state,
@@ -4266,6 +4310,56 @@ mod tests {
         }
 
         assert_eq!(ui.children(root.unwrap()).len(), 3);
+    }
+
+    #[test]
+    fn opacity_element_emits_opacity_stack_ops() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(80.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "opacity-element-emits-ops",
+            |cx| {
+                vec![cx.opacity(0.5, |cx| {
+                    let mut props = crate::element::ContainerProps::default();
+                    props.layout.size.width = Length::Fill;
+                    props.layout.size.height = Length::Fill;
+                    props.background = Some(Color {
+                        r: 1.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 1.0,
+                    });
+                    vec![cx.container(props, |_| Vec::new())]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        assert_eq!(scene.ops_len(), 3);
+        assert!(matches!(
+            scene.ops()[0],
+            SceneOp::PushOpacity { opacity } if (opacity - 0.5).abs() < 1e-6
+        ));
+        assert!(matches!(scene.ops()[1], SceneOp::Quad { .. }));
+        assert!(matches!(scene.ops()[2], SceneOp::PopOpacity));
     }
 
     #[test]
@@ -4772,7 +4866,7 @@ mod tests {
 
         let v = app.models().get(model).cloned().unwrap_or_default();
         assert!(
-            v.get(0).copied().unwrap_or(0.0) > 0.33,
+            v.first().copied().unwrap_or(0.0) > 0.33,
             "expected left panel to grow, got {v:?}"
         );
     }
@@ -4799,7 +4893,6 @@ mod tests {
             |cx| {
                 vec![
                     cx.pressable(crate::element::PressableProps::default(), |cx, _state| {
-                        let activated = activated;
                         cx.pressable_on_activate(Arc::new(move |host, _cx, reason| {
                             assert_eq!(reason, ActivateReason::Pointer);
                             let _ = host.models_mut().update(activated, |v| *v = true);
@@ -4846,6 +4939,75 @@ mod tests {
     }
 
     #[test]
+    fn pressable_on_hover_change_hook_runs_on_pointer_move() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+        let mut services = FakeTextService::default();
+
+        let hovered = app.models_mut().insert(false);
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "pressable-on-hover-change-hook",
+            |cx| {
+                vec![
+                    cx.pressable(crate::element::PressableProps::default(), |cx, _state| {
+                        cx.pressable_on_hover_change(Arc::new(move |host, _cx, is_hovered| {
+                            let _ = host.models_mut().update(hovered, |v| *v = is_hovered);
+                        }));
+                        vec![cx.text("hover me")]
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get(hovered).copied(), Some(false));
+
+        let pressable_node = ui.children(root)[0];
+        let pressable_bounds = ui
+            .debug_node_bounds(pressable_node)
+            .expect("pressable bounds");
+        let inside = Point::new(
+            Px(pressable_bounds.origin.x.0 + 1.0),
+            Px(pressable_bounds.origin.y.0 + 1.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: inside,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get(hovered).copied(), Some(true));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: Point::new(Px(pressable_bounds.origin.x.0 + 200.0), Px(2.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get(hovered).copied(), Some(false));
+    }
+
+    #[test]
     fn pressable_on_activate_hook_runs_on_keyboard_activation() {
         let mut app = TestHost::new();
         let mut ui: UiTree<TestHost> = UiTree::new();
@@ -4867,7 +5029,6 @@ mod tests {
             |cx| {
                 vec![
                     cx.pressable(crate::element::PressableProps::default(), |cx, _state| {
-                        let activated = activated;
                         cx.pressable_on_activate(Arc::new(move |host, _cx, reason| {
                             assert_eq!(reason, ActivateReason::Keyboard);
                             let _ = host.models_mut().update(activated, |v| *v = true);
@@ -4929,7 +5090,6 @@ mod tests {
             bounds,
             "dismissible-hook-escape",
             |cx| {
-                let dismissed = dismissed;
                 cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, reason| {
                     assert_eq!(reason, DismissReason::Escape);
                     let _ = host.models_mut().update(dismissed, |v| *v = true);
@@ -4989,7 +5149,6 @@ mod tests {
             bounds,
             "dismissible-hook-outside-press",
             |cx| {
-                let dismissed = dismissed;
                 cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, reason| {
                     assert_eq!(reason, DismissReason::OutsidePress);
                     let _ = host.models_mut().update(dismissed, |v| *v = true);
@@ -5054,12 +5213,10 @@ mod tests {
                         enabled: true,
                         wrap: true,
                         disabled: Arc::from([false, true, false]),
-                        ..Default::default()
                     },
                 };
 
                 vec![cx.roving_flex(props, |cx| {
-                    let model = model;
                     let values = values.clone();
                     cx.roving_on_active_change(Arc::new(move |host, _cx, idx| {
                         let Some(value) = values.get(idx).cloned() else {
@@ -5139,7 +5296,6 @@ mod tests {
                             enabled: true,
                             wrap: true,
                             disabled: Arc::from([false, false, false]),
-                            ..Default::default()
                         },
                     };
 

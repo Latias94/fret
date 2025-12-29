@@ -91,10 +91,11 @@ impl Default for DockDragInversionSettingsV1 {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DockDragInversionModifierV1 {
     None,
+    #[default]
     Shift,
     Ctrl,
     Alt,
@@ -102,23 +103,12 @@ pub enum DockDragInversionModifierV1 {
     Meta,
 }
 
-impl Default for DockDragInversionModifierV1 {
-    fn default() -> Self {
-        Self::Shift
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DockDragInversionPolicyV1 {
+    #[default]
     DockByDefault,
     DockOnlyWhenModifier,
-}
-
-impl Default for DockDragInversionPolicyV1 {
-    fn default() -> Self {
-        Self::DockByDefault
-    }
 }
 
 impl SettingsFileV1 {

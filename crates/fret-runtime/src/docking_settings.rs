@@ -1,16 +1,8 @@
 use fret_core::Modifiers;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct DockingInteractionSettings {
     pub drag_inversion: DockDragInversionSettings,
-}
-
-impl Default for DockingInteractionSettings {
-    fn default() -> Self {
-        Self {
-            drag_inversion: DockDragInversionSettings::default(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

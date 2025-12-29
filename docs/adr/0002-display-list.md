@@ -39,6 +39,11 @@ batching adjacent operations). See `docs/adr/0009-renderer-ordering-and-batching
 - `PushClipRRect/PopClip` extend the stack with rounded clipping (ADR 0063).
 - Rect clips may map to scissor rectangles (fast); rounded clips require soft/AA clip behavior.
 
+Transform interaction:
+
+- Clip geometry is expressed in the current local coordinate space (after transforms).
+- Correct clip+transform composition semantics are locked in ADR 0078.
+
 ### Primitives (current surface area)
 
 The scene contract has grown beyond the initial “Quad/Image/Text/Viewport” set as higher-level UI
@@ -63,4 +68,5 @@ Current `SceneOp` primitives include:
 
 - Define text shaping ownership (what lives in `fret-core` vs `fret-render`).
 - Formalize the vector path contract (fill/stroke semantics, AA expectations, caching keys, and
-  transform interaction) now that `PathService` + `SceneOp::Path` exist.
+  transform interaction) now that `PathService` + `SceneOp::Path` exist:
+  - `docs/adr/0080-vector-path-contract.md`

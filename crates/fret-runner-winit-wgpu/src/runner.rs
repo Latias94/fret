@@ -1415,10 +1415,10 @@ impl<D: WinitDriver> WinitRunner<D> {
         {
             // Avoid the "flash behind the source window" when tearing off a dock panel by
             // creating the new OS window hidden, then letting the deferred raise show it.
-            if let CreateWindowKind::DockFloating { source_window, .. } = request.kind {
-                if !self.is_left_mouse_down_for_window(source_window) {
-                    spec.visible = false;
-                }
+            if let CreateWindowKind::DockFloating { source_window, .. } = request.kind
+                && !self.is_left_mouse_down_for_window(source_window)
+            {
+                spec.visible = false;
             }
         }
 
@@ -1970,10 +1970,10 @@ impl<D: WinitDriver> WinitRunner<D> {
         // If the mouse was released outside any window, winit may not deliver a `MouseInput`
         // event to any window. Use the regular cursor-based drop routing so docking back into an
         // existing window still works (ImGui-style).
-        if let Some(d) = self.app.drag_mut() {
-            if d.kind == fret_app::DragKind::DockPanel {
-                d.dragging = true;
-            }
+        if let Some(d) = self.app.drag_mut()
+            && d.kind == fret_app::DragKind::DockPanel
+        {
+            d.dragging = true;
         }
 
         self.route_internal_drag_drop_from_cursor();
@@ -2503,10 +2503,10 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     if self.saw_left_mouse_release_this_turn || macos_is_left_mouse_down() {
                         return;
                     }
-                    if let Some(d) = self.app.drag_mut() {
-                        if d.kind == fret_app::DragKind::DockPanel {
-                            d.dragging = true;
-                        }
+                    if let Some(d) = self.app.drag_mut()
+                        && d.kind == fret_app::DragKind::DockPanel
+                    {
+                        d.dragging = true;
                     }
                     // Route the drop using the current cursor position, so docking into another
                     // window works even when the `MouseInput` event is missing.

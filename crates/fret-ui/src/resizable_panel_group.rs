@@ -773,11 +773,10 @@ mod tests {
 
         let fractions = app.models_mut().insert(vec![0.33, 0.34, 0.33]);
         let mut group = BoundResizablePanelGroup::new(Axis::Horizontal, fractions);
-        group.set_style({
-            let mut s = ResizablePanelGroupStyle::default();
-            s.gap = Px(0.0);
-            s.hit_thickness = Px(10.0);
-            s
+        group.set_style(ResizablePanelGroupStyle {
+            gap: Px(0.0),
+            hit_thickness: Px(10.0),
+            ..Default::default()
         });
 
         let root_id = ui.create_node(group);

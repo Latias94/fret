@@ -42,7 +42,7 @@ impl TypeaheadBuffer {
         self.buffer.extend(ch.to_lowercase());
     }
 
-    pub fn query<'a>(&'a self, now: u64) -> Option<&'a str> {
+    pub fn query(&self, now: u64) -> Option<&str> {
         if self.buffer.is_empty() {
             return None;
         }

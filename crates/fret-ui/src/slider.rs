@@ -496,7 +496,7 @@ impl<H: UiHost> Widget<H> for BoundSlider {
             corner_radii: Corners::all(radius),
         });
 
-        if values.len() >= 1 {
+        if !values.is_empty() {
             let (fill_start, fill_end) = if values.len() == 1 {
                 (self.min, values[0])
             } else {

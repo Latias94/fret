@@ -39,6 +39,19 @@ Conceptually, the following stateful operations are reserved:
 
 State operations affect all subsequent draw ops until popped.
 
+### 1.1) Coordinate space (clarification)
+
+All geometry carried by `SceneOp` remains in **logical pixels**, but it is interpreted in the **current local
+coordinate space** as affected by the state stack.
+
+In other words:
+
+- `PushTransform` changes the coordinate system for subsequent ops.
+- `PushClip*` defines clip geometry in the coordinate system in effect at the time of the push.
+- The renderer applies `scale_factor` when converting logical pixels to physical pixels (ADR 0002).
+
+For the locked v1 semantics of transform + clip composition, see ADR 0078.
+
 ### 2) Ordering remains authoritative
 
 All state stack operations participate in the same ordering semantics:
@@ -55,6 +68,20 @@ Multi-root composition (ADR 0011) may be implemented by building the final `Scen
 
 optionally encoded as explicit layer ops in the display list for clarity and debugging.
 
+For the locked v1 semantics of `PushLayer / PopLayer`, see ADR 0079.
+
+### 4) Stack invariants (debuggability)
+
+Scene producers must maintain balanced stacks:
+
+- every `PushTransform` must have a matching `PopTransform`,
+- every `PushOpacity` must have a matching `PopOpacity`,
+- every `PushLayer` must have a matching `PopLayer`,
+- every `PushClip*` must have a matching `PopClip`.
+
+Implementations are encouraged to validate these invariants in debug builds and during tests to avoid
+“silent no-op” behavior in renderers.
+
 ## Consequences
 
 - Transforms, opacity, and layers can be added without rewriting the core display list contract.
@@ -63,7 +90,7 @@ optionally encoded as explicit layer ops in the display list for clarity and deb
 
 ## Future Work
 
-- Define the exact state representation (mat3/mat4 for transforms, premultiplied opacity rules).
-- Decide whether “layer” is an explicit op or derived from root ordering only.
+- Lock transform + clip composition semantics (ADR 0078).
+- Decide whether “layer” is an explicit batching contract or a debug-only marker (and whether it implies
+  offscreen composition).
 - Define how state interacts with text shaping caches and atlas coordinates.
-

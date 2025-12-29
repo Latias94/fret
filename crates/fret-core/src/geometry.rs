@@ -192,7 +192,7 @@ impl Transform2D {
     /// Matrix composition: `self * rhs`.
     ///
     /// This means: apply `rhs` first, then `self`.
-    pub fn mul(self, rhs: Self) -> Self {
+    pub fn compose(self, rhs: Self) -> Self {
         Self {
             a: self.a * rhs.a + self.c * rhs.b,
             b: self.b * rhs.a + self.d * rhs.b,
@@ -262,6 +262,20 @@ impl Transform2D {
             return None;
         }
         Some((self.a, Point::new(Px(self.tx), Px(self.ty))))
+    }
+}
+
+impl std::ops::Mul for Transform2D {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        self.compose(rhs)
+    }
+}
+
+impl std::ops::MulAssign for Transform2D {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = self.compose(rhs);
     }
 }
 

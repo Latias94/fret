@@ -617,46 +617,45 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
                         let mut handled = false;
 
-                        if *button == fret_core::MouseButton::Left {
-                            if let Some((floating, _chrome, kind)) =
+                        if *button == fret_core::MouseButton::Left
+                            && let Some((floating, _chrome, kind)) =
                                 hit_test_floating(&dock.graph, self.window, *position)
-                            {
-                                pending_effects.push(Effect::Dock(DockOp::RaiseFloating {
-                                    window: self.window,
-                                    floating,
-                                }));
-                                invalidate_paint = true;
-                                pending_redraws.push(self.window);
+                        {
+                            pending_effects.push(Effect::Dock(DockOp::RaiseFloating {
+                                window: self.window,
+                                floating,
+                            }));
+                            invalidate_paint = true;
+                            pending_redraws.push(self.window);
 
-                                match kind {
-                                    FloatingHitKind::Close => {
-                                        self.hovered_floating_close = Some(floating);
-                                        self.pressed_floating_close = Some(floating);
+                            match kind {
+                                FloatingHitKind::Close => {
+                                    self.hovered_floating_close = Some(floating);
+                                    self.pressed_floating_close = Some(floating);
+                                    request_pointer_capture = Some(Some(cx.node));
+                                    handled = true;
+                                }
+                                FloatingHitKind::TitleBar => {
+                                    if let Some(entry) = dock
+                                        .graph
+                                        .floating_windows(self.window)
+                                        .iter()
+                                        .find(|w| w.floating == floating)
+                                    {
+                                        self.floating_drag = Some(FloatingDragState {
+                                            floating,
+                                            grab_offset: Point::new(
+                                                Px(position.x.0 - entry.rect.origin.x.0),
+                                                Px(position.y.0 - entry.rect.origin.y.0),
+                                            ),
+                                            start_rect: entry.rect,
+                                        });
                                         request_pointer_capture = Some(Some(cx.node));
+                                        request_cursor = Some(fret_core::CursorIcon::Default);
                                         handled = true;
                                     }
-                                    FloatingHitKind::TitleBar => {
-                                        if let Some(entry) = dock
-                                            .graph
-                                            .floating_windows(self.window)
-                                            .iter()
-                                            .find(|w| w.floating == floating)
-                                        {
-                                            self.floating_drag = Some(FloatingDragState {
-                                                floating,
-                                                grab_offset: Point::new(
-                                                    Px(position.x.0 - entry.rect.origin.x.0),
-                                                    Px(position.y.0 - entry.rect.origin.y.0),
-                                                ),
-                                                start_rect: entry.rect,
-                                            });
-                                            request_pointer_capture = Some(Some(cx.node));
-                                            request_cursor = Some(fret_core::CursorIcon::Default);
-                                            handled = true;
-                                        }
-                                    }
-                                    FloatingHitKind::Body => {}
                                 }
+                                FloatingHitKind::Body => {}
                             }
                         }
 
@@ -830,8 +829,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         }
 
                         let hovered_floating =
-                            hit_test_floating(&dock.graph, self.window, *position)
-                                .map(|(floating, chrome, kind)| (floating, chrome, kind));
+                            hit_test_floating(&dock.graph, self.window, *position);
                         let hovered_close =
                             hovered_floating.and_then(|(floating, _chrome, kind)| {
                                 if kind == FloatingHitKind::Close {
@@ -1386,13 +1384,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     }
 
                                     if !requested_tear_off {
-                                        if invert_docking {
-                                            dock.hover = Some(DockDropTarget::Float {
-                                                window: self.window,
-                                            });
-                                        } else if !window_bounds.contains(position)
-                                            || float_zone(dock_bounds).contains(position)
-                                        {
+                                        let wants_float = invert_docking
+                                            || !window_bounds.contains(position)
+                                            || float_zone(dock_bounds).contains(position);
+
+                                        if wants_float {
                                             dock.hover = Some(DockDropTarget::Float {
                                                 window: self.window,
                                             });

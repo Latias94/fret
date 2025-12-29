@@ -171,6 +171,7 @@ impl AlertDialog {
                         root_name: overlay_root_name.clone(),
                         trigger: Some(id),
                         open: self.open,
+                        present: true,
                         initial_focus: None,
                         children: overlay_children,
                     },
@@ -729,18 +730,21 @@ mod tests {
         );
         assert_eq!(app.models().get(open).copied(), Some(false));
 
-        // Frame 3: closed, focus should be restored to trigger.
-        app.set_frame_id(FrameId(3));
-        let _ = render_alert_dialog_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            open,
-            cancel_id.clone(),
-        );
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        // Render a few frames to allow the close animation to finish and the overlay manager to
+        // restore focus when the layer is uninstalled.
+        for frame in 3..=6 {
+            app.set_frame_id(FrameId(frame));
+            let _ = render_alert_dialog_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open,
+                cancel_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
 
         let trigger_node =
             fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");

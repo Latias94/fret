@@ -1134,14 +1134,20 @@ impl Renderer {
         scene: &Scene,
         scale_factor: f32,
     ) {
+        #[cfg(debug_assertions)]
+        if let Err(e) = scene.validate() {
+            panic!("invalid scene: {e}");
+        }
+
         let gpu = SvgRasterGpu { device, queue };
         let mut transform_stack: Vec<Transform2D> = vec![Transform2D::IDENTITY];
 
         let current_transform_scale = |t: Transform2D| -> f32 {
-            if let Some((s, _)) = t.as_translation_uniform_scale() {
-                if s.is_finite() && s > 0.0 {
-                    return s;
-                }
+            if let Some((s, _)) = t.as_translation_uniform_scale()
+                && s.is_finite()
+                && s > 0.0
+            {
+                return s;
             }
 
             let sx = (t.a * t.a + t.b * t.b).sqrt();
@@ -1156,7 +1162,7 @@ impl Renderer {
                     let current = *transform_stack
                         .last()
                         .expect("transform stack must be non-empty");
-                    transform_stack.push(current.mul(*transform));
+                    transform_stack.push(current * *transform);
                 }
                 SceneOp::PopTransform => {
                     if transform_stack.len() > 1 {
@@ -2686,6 +2692,12 @@ impl Renderer {
             scale_factor,
             viewport_size,
         } = params;
+
+        #[cfg(debug_assertions)]
+        if let Err(e) = scene.validate() {
+            panic!("invalid scene: {e}");
+        }
+
         self.ensure_viewport_pipeline(device, format);
         self.ensure_pipeline(device, format);
         self.ensure_text_pipeline(device, format);
@@ -3431,7 +3443,7 @@ impl Renderer {
                     let current = *transform_stack
                         .last()
                         .expect("transform stack must be non-empty");
-                    transform_stack.push(current.mul(*transform));
+                    transform_stack.push(current * *transform);
                 }
                 SceneOp::PopTransform => {
                     if transform_stack.len() > 1 {

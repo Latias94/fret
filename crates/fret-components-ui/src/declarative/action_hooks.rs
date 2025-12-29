@@ -202,13 +202,12 @@ impl<H: UiHost> ActionHooksExt for ElementCx<'_, H> {
             let labels_read = labels_cell.clone();
             let buffer_read = buffer.clone();
 
+            #[allow(clippy::arc_with_non_send_sync)]
             let handler: fret_ui::action::OnRovingTypeahead = Arc::new(
                 move |_host: &mut dyn fret_ui::action::UiActionHost, _cx, it: RovingTypeaheadCx| {
                     let mut buf = buffer_read.borrow_mut();
                     buf.push_char(it.input, it.tick);
-                    let Some(query) = buf.query(it.tick) else {
-                        return None;
-                    };
+                    let query = buf.query(it.tick)?;
 
                     let labels = labels_read.borrow();
                     match_prefix_arc_str(

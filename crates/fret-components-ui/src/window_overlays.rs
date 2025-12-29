@@ -3,7 +3,7 @@
 //! This is a small component-layer orchestration helper that installs `UiTree` overlay roots
 //! (ADR 0067) and coordinates dismissal + focus restore rules (ADR 0069).
 
-use fret_core::{AppWindowId, Rect, TimerToken};
+use fret_core::{AppWindowId, NodeId, Rect, TimerToken};
 use fret_runtime::{CommandId, DragKind, Effect, Model};
 use fret_ui::action::DismissReason;
 use fret_ui::declarative;
@@ -21,6 +21,7 @@ pub struct DismissiblePopoverRequest {
     pub root_name: String,
     pub trigger: GlobalElementId,
     pub open: Model<bool>,
+    pub present: bool,
     pub initial_focus: Option<GlobalElementId>,
     pub children: Vec<AnyElement>,
 }
@@ -32,6 +33,7 @@ impl std::fmt::Debug for DismissiblePopoverRequest {
             .field("root_name", &self.root_name)
             .field("trigger", &self.trigger)
             .field("open", &"<model>")
+            .field("present", &self.present)
             .field("initial_focus", &self.initial_focus)
             .field("children_len", &self.children.len())
             .finish()
@@ -44,6 +46,7 @@ pub struct ModalRequest {
     pub root_name: String,
     pub trigger: Option<GlobalElementId>,
     pub open: Model<bool>,
+    pub present: bool,
     pub initial_focus: Option<GlobalElementId>,
     pub children: Vec<AnyElement>,
 }
@@ -55,6 +58,7 @@ impl std::fmt::Debug for ModalRequest {
             .field("root_name", &self.root_name)
             .field("trigger", &self.trigger)
             .field("open", &"<model>")
+            .field("present", &self.present)
             .field("initial_focus", &self.initial_focus)
             .field("children_len", &self.children.len())
             .finish()
@@ -95,6 +99,7 @@ struct ActivePopover {
     root_name: String,
     trigger: GlobalElementId,
     initial_focus: Option<GlobalElementId>,
+    restore_focus: Option<NodeId>,
 }
 
 struct ActiveModal {
@@ -102,6 +107,7 @@ struct ActiveModal {
     root_name: String,
     trigger: Option<GlobalElementId>,
     initial_focus: Option<GlobalElementId>,
+    restore_focus: Option<NodeId>,
 }
 
 struct ActiveTooltip {
@@ -215,30 +221,20 @@ pub fn request_tooltip_for_window<H: UiHost>(
     });
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ToastPosition {
     TopLeft,
     TopRight,
     BottomLeft,
+    #[default]
     BottomRight,
 }
 
-impl Default for ToastPosition {
-    fn default() -> Self {
-        Self::BottomRight
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ToastVariant {
+    #[default]
     Default,
     Destructive,
-}
-
-impl Default for ToastVariant {
-    fn default() -> Self {
-        Self::Default
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -532,8 +528,7 @@ pub fn render<H: UiHost>(
     let mut seen_toast_layers: HashSet<GlobalElementId> = HashSet::new();
 
     for req in modal_requests {
-        let open = app.models().get(req.open).copied().unwrap_or(false);
-        if !open {
+        if !req.present {
             continue;
         }
         seen_modals.insert(req.id);
@@ -557,6 +552,7 @@ pub fn render<H: UiHost>(
         );
 
         let key = (window, req.id);
+        let restore_focus = ui.focus();
 
         let mut should_focus_initial = false;
         app.with_global_mut(WindowOverlays::default, |overlays, _app| {
@@ -568,6 +564,7 @@ pub fn render<H: UiHost>(
                     root_name: req.root_name.clone(),
                     trigger: req.trigger,
                     initial_focus: req.initial_focus,
+                    restore_focus: None,
                 }
             });
             entry.root_name = req.root_name.clone();
@@ -583,6 +580,9 @@ pub fn render<H: UiHost>(
             };
             ui.set_layer_visible(entry.layer, true);
             should_focus_initial = !was_visible;
+            if should_focus_initial {
+                entry.restore_focus = restore_focus;
+            }
         });
 
         if should_focus_initial {
@@ -604,14 +604,13 @@ pub fn render<H: UiHost>(
 
     for req in popover_requests {
         if dock_drag_affects_window {
-            if app.models().get(req.open).copied().unwrap_or(false) {
+            if req.present {
                 let _ = app.models_mut().update(req.open, |v| *v = false);
             }
             continue;
         }
 
-        let open = app.models().get(req.open).copied().unwrap_or(false);
-        if !open {
+        if !req.present {
             continue;
         }
         seen_popovers.insert(req.id);
@@ -635,6 +634,7 @@ pub fn render<H: UiHost>(
         );
 
         let key = (window, req.id);
+        let restore_focus = ui.focus();
 
         let mut should_focus_initial = false;
         app.with_global_mut(WindowOverlays::default, |overlays, _app| {
@@ -646,6 +646,7 @@ pub fn render<H: UiHost>(
                     root_name: req.root_name.clone(),
                     trigger: req.trigger,
                     initial_focus: req.initial_focus,
+                    restore_focus: None,
                 }
             });
             entry.root_name = req.root_name.clone();
@@ -662,6 +663,9 @@ pub fn render<H: UiHost>(
             };
             ui.set_layer_visible(entry.layer, true);
             should_focus_initial = !was_visible;
+            if should_focus_initial {
+                entry.restore_focus = restore_focus;
+            }
         });
 
         if should_focus_initial {
@@ -681,20 +685,20 @@ pub fn render<H: UiHost>(
         }
     }
 
-    let to_hide_popovers: Vec<(UiLayerId, GlobalElementId)> =
+    let to_hide_popovers: Vec<(UiLayerId, GlobalElementId, Option<NodeId>)> =
         app.with_global_mut(WindowOverlays::default, |overlays, _app| {
-            let mut out: Vec<(UiLayerId, GlobalElementId)> = Vec::new();
+            let mut out: Vec<(UiLayerId, GlobalElementId, Option<NodeId>)> = Vec::new();
             for ((w, id), active) in overlays.popovers.iter() {
                 if *w != window || seen_popovers.contains(id) {
                     continue;
                 }
-                out.push((active.layer, active.trigger));
+                out.push((active.layer, active.trigger, active.restore_focus));
             }
             out
         });
 
-    let to_hide_modals: Vec<(UiLayerId, Option<GlobalElementId>)> =
-        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+    let to_hide_modals: Vec<(UiLayerId, Option<GlobalElementId>, Option<NodeId>)> = app
+        .with_global_mut(WindowOverlays::default, |overlays, _app| {
             overlays
                 .modals
                 .iter()
@@ -702,33 +706,45 @@ pub fn render<H: UiHost>(
                     if *w != window || seen_modals.contains(id) {
                         return None;
                     }
-                    Some((active.layer, active.trigger))
+                    Some((active.layer, active.trigger, active.restore_focus))
                 })
                 .collect()
         });
 
-    for (layer, trigger) in to_hide_popovers {
+    for (layer, trigger, restore_focus) in to_hide_popovers {
         let focus = ui.focus();
-        if focus.is_some_and(|n| ui.node_layer(n) == Some(layer))
-            && let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger)
-        {
+        if focus.is_some_and(|n| ui.node_layer(n) == Some(layer)) {
             ui.set_layer_visible(layer, false);
-            ui.set_focus(Some(trigger_node));
+            if let Some(node) = restore_focus
+                && ui.node_layer(node).is_some()
+            {
+                ui.set_focus(Some(node));
+            } else if let Some(trigger_node) =
+                fret_ui::elements::node_for_element(app, window, trigger)
+            {
+                ui.set_focus(Some(trigger_node));
+            }
         } else {
             ui.set_layer_visible(layer, false);
         }
     }
 
-    for (layer, trigger) in to_hide_modals {
+    for (layer, trigger, restore_focus) in to_hide_modals {
         let focus = ui.focus();
         let focus_in_layer = focus.is_some_and(|n| ui.node_layer(n) == Some(layer));
 
-        if (focus.is_none() || focus_in_layer)
-            && let Some(trigger) = trigger
-            && let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger)
-        {
+        if focus.is_none() || focus_in_layer {
             ui.set_layer_visible(layer, false);
-            ui.set_focus(Some(trigger_node));
+            if let Some(node) = restore_focus
+                && ui.node_layer(node).is_some()
+            {
+                ui.set_focus(Some(node));
+            } else if let Some(trigger) = trigger
+                && let Some(trigger_node) =
+                    fret_ui::elements::node_for_element(app, window, trigger)
+            {
+                ui.set_focus(Some(trigger_node));
+            }
         } else {
             ui.set_layer_visible(layer, false);
         }
@@ -857,13 +873,11 @@ pub fn render<H: UiHost>(
                 cx.timer_on_timer_for(
                     cx.root_id(),
                     Arc::new(move |host, _cx, token| {
-                        let removed = host
-                            .models_mut()
+                        host.models_mut()
                             .update(hook_store, |st| st.remove_toast_by_token(token))
                             .ok()
                             .flatten()
-                            .is_some();
-                        removed
+                            .is_some()
                     }),
                 );
 
@@ -884,8 +898,10 @@ pub fn render<H: UiHost>(
                 let toast_padding = theme.metrics.padding_sm;
                 let radius = theme.metrics.radius_md;
 
-                let mut wrapper_layout = fret_ui::element::LayoutStyle::default();
-                wrapper_layout.position = fret_ui::element::PositionStyle::Absolute;
+                let mut wrapper_layout = fret_ui::element::LayoutStyle {
+                    position: fret_ui::element::PositionStyle::Absolute,
+                    ..Default::default()
+                };
                 match position {
                     ToastPosition::TopLeft => {
                         wrapper_layout.inset.top = Some(margin);
@@ -1251,6 +1267,7 @@ mod tests {
                 root_name: popover_root_name(trigger),
                 trigger,
                 open,
+                present: true,
                 initial_focus: None,
                 children: vec![],
             },
@@ -1325,14 +1342,19 @@ mod tests {
             fret_ui::elements::with_element_cx(&mut app, window, bounds, &root_name, |cx| {
                 vec![cx.container(
                     ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.position = PositionStyle::Absolute;
-                            layout.inset.left = Some(Px(40.0));
-                            layout.inset.top = Some(Px(40.0));
-                            layout.size.width = Length::Px(Px(120.0));
-                            layout.size.height = Length::Px(Px(80.0));
-                            layout
+                        layout: LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: fret_ui::element::InsetStyle {
+                                top: Some(Px(40.0)),
+                                left: Some(Px(40.0)),
+                                ..Default::default()
+                            },
+                            size: fret_ui::element::SizeStyle {
+                                width: Length::Px(Px(120.0)),
+                                height: Length::Px(Px(80.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -1348,6 +1370,7 @@ mod tests {
                 root_name,
                 trigger,
                 open,
+                present: true,
                 initial_focus: None,
                 children,
             },
@@ -1446,6 +1469,7 @@ mod tests {
                 root_name: modal_root_name(GlobalElementId(0xabc)),
                 trigger: None,
                 open,
+                present: true,
                 initial_focus: None,
                 children: modal_children,
             },

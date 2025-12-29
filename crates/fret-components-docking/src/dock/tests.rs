@@ -7,8 +7,9 @@ use super::split_stabilize::{apply_same_axis_locks, compute_same_axis_locks_for_
 use super::{DockManager, DockSpace};
 use crate::test_host::TestHost;
 use fret_core::{
-    AppWindowId, Event, InternalDragEvent, InternalDragKind, PlatformCapabilities, Point, Px,
-    Scene, SceneOp, Size, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle,
+    AppWindowId, Event, InternalDragEvent, InternalDragKind, Modifiers, PlatformCapabilities,
+    Point, Px, Scene, SceneOp, Size, TextBlobId, TextConstraints, TextMetrics, TextService,
+    TextStyle,
 };
 use fret_ui::UiTree;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;

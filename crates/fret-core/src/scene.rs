@@ -8,6 +8,9 @@ use slotmap::Key;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DrawOrder(pub u32);
 
+// `DrawOrder` is intentionally non-semantic for compositing. Scene operation order is authoritative.
+// See `docs/adr/0082-draworder-is-non-semantic.md`.
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Color {
     pub r: f32,
@@ -39,6 +42,138 @@ impl SceneRecording {
         self.fingerprint = 0;
     }
 
+    pub fn validate(&self) -> Result<(), SceneValidationError> {
+        let mut transform_depth: usize = 0;
+        let mut opacity_depth: usize = 0;
+        let mut layer_depth: usize = 0;
+        let mut clip_depth: usize = 0;
+
+        for (index, &op) in self.ops.iter().enumerate() {
+            match op {
+                SceneOp::PushTransform { transform } => {
+                    if !transform.a.is_finite()
+                        || !transform.b.is_finite()
+                        || !transform.c.is_finite()
+                        || !transform.d.is_finite()
+                        || !transform.tx.is_finite()
+                        || !transform.ty.is_finite()
+                    {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteTransform,
+                        });
+                    }
+                    transform_depth = transform_depth.saturating_add(1);
+                }
+                SceneOp::PopTransform => {
+                    if transform_depth == 0 {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::TransformUnderflow,
+                        });
+                    }
+                    transform_depth = transform_depth.saturating_sub(1);
+                }
+                SceneOp::PushOpacity { opacity } => {
+                    if !opacity.is_finite() {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpacity,
+                        });
+                    }
+                    opacity_depth = opacity_depth.saturating_add(1);
+                }
+                SceneOp::PopOpacity => {
+                    if opacity_depth == 0 {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::OpacityUnderflow,
+                        });
+                    }
+                    opacity_depth = opacity_depth.saturating_sub(1);
+                }
+                SceneOp::PushLayer { .. } => {
+                    layer_depth = layer_depth.saturating_add(1);
+                }
+                SceneOp::PopLayer => {
+                    if layer_depth == 0 {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::LayerUnderflow,
+                        });
+                    }
+                    layer_depth = layer_depth.saturating_sub(1);
+                }
+                SceneOp::PushClipRect { .. } | SceneOp::PushClipRRect { .. } => {
+                    clip_depth = clip_depth.saturating_add(1);
+                }
+                SceneOp::PopClip => {
+                    if clip_depth == 0 {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::ClipUnderflow,
+                        });
+                    }
+                    clip_depth = clip_depth.saturating_sub(1);
+                }
+                SceneOp::Quad { .. }
+                | SceneOp::Image { .. }
+                | SceneOp::ImageRegion { .. }
+                | SceneOp::MaskImage { .. }
+                | SceneOp::SvgMaskIcon { .. }
+                | SceneOp::SvgImage { .. }
+                | SceneOp::Text { .. }
+                | SceneOp::Path { .. }
+                | SceneOp::ViewportSurface { .. } => {}
+            }
+        }
+
+        if transform_depth != 0 {
+            return Err(SceneValidationError {
+                index: self.ops.len(),
+                op: SceneOp::PopTransform,
+                kind: SceneValidationErrorKind::UnbalancedTransformStack {
+                    remaining: transform_depth,
+                },
+            });
+        }
+        if opacity_depth != 0 {
+            return Err(SceneValidationError {
+                index: self.ops.len(),
+                op: SceneOp::PopOpacity,
+                kind: SceneValidationErrorKind::UnbalancedOpacityStack {
+                    remaining: opacity_depth,
+                },
+            });
+        }
+        if layer_depth != 0 {
+            return Err(SceneValidationError {
+                index: self.ops.len(),
+                op: SceneOp::PopLayer,
+                kind: SceneValidationErrorKind::UnbalancedLayerStack {
+                    remaining: layer_depth,
+                },
+            });
+        }
+        if clip_depth != 0 {
+            return Err(SceneValidationError {
+                index: self.ops.len(),
+                op: SceneOp::PopClip,
+                kind: SceneValidationErrorKind::UnbalancedClipStack {
+                    remaining: clip_depth,
+                },
+            });
+        }
+
+        Ok(())
+    }
+
     pub fn push(&mut self, op: SceneOp) {
         self.fingerprint = mix_scene_op(self.fingerprint, op);
         self.ops.push(op);
@@ -58,11 +193,55 @@ impl SceneRecording {
             return;
         }
 
-        self.push(SceneOp::PushTransform {
-            transform: Transform2D::translation(delta),
-        });
-        self.replay_ops(ops);
+        self.replay_ops_transformed(ops, Transform2D::translation(delta));
+    }
+
+    pub fn replay_ops_transformed(&mut self, ops: &[SceneOp], transform: Transform2D) {
+        self.with_transform(transform, |scene| scene.replay_ops(ops));
+    }
+
+    pub fn with_transform<T>(
+        &mut self,
+        transform: Transform2D,
+        f: impl FnOnce(&mut Self) -> T,
+    ) -> T {
+        self.push(SceneOp::PushTransform { transform });
+        let out = f(self);
         self.push(SceneOp::PopTransform);
+        out
+    }
+
+    pub fn with_opacity<T>(&mut self, opacity: f32, f: impl FnOnce(&mut Self) -> T) -> T {
+        self.push(SceneOp::PushOpacity { opacity });
+        let out = f(self);
+        self.push(SceneOp::PopOpacity);
+        out
+    }
+
+    pub fn with_layer<T>(&mut self, layer: u32, f: impl FnOnce(&mut Self) -> T) -> T {
+        self.push(SceneOp::PushLayer { layer });
+        let out = f(self);
+        self.push(SceneOp::PopLayer);
+        out
+    }
+
+    pub fn with_clip_rect<T>(&mut self, rect: Rect, f: impl FnOnce(&mut Self) -> T) -> T {
+        self.push(SceneOp::PushClipRect { rect });
+        let out = f(self);
+        self.push(SceneOp::PopClip);
+        out
+    }
+
+    pub fn with_clip_rrect<T>(
+        &mut self,
+        rect: Rect,
+        corner_radii: Corners,
+        f: impl FnOnce(&mut Self) -> T,
+    ) -> T {
+        self.push(SceneOp::PushClipRRect { rect, corner_radii });
+        let out = f(self);
+        self.push(SceneOp::PopClip);
+        out
     }
 
     pub fn ops(&self) -> &[SceneOp] {
@@ -189,6 +368,39 @@ pub enum SceneOp {
         opacity: f32,
     },
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SceneValidationErrorKind {
+    TransformUnderflow,
+    OpacityUnderflow,
+    LayerUnderflow,
+    ClipUnderflow,
+    NonFiniteTransform,
+    NonFiniteOpacity,
+    UnbalancedTransformStack { remaining: usize },
+    UnbalancedOpacityStack { remaining: usize },
+    UnbalancedLayerStack { remaining: usize },
+    UnbalancedClipStack { remaining: usize },
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct SceneValidationError {
+    pub index: usize,
+    pub op: SceneOp,
+    pub kind: SceneValidationErrorKind,
+}
+
+impl std::fmt::Display for SceneValidationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "scene validation error at op index {}: {:?}",
+            self.index, self.kind
+        )
+    }
+}
+
+impl std::error::Error for SceneValidationError {}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct UvRect {
@@ -463,5 +675,33 @@ mod tests {
         assert!(matches!(scene.ops()[0], SceneOp::PushTransform { .. }));
         assert!(matches!(scene.ops()[1], SceneOp::Quad { .. }));
         assert!(matches!(scene.ops()[2], SceneOp::PopTransform));
+    }
+
+    #[test]
+    fn validate_rejects_transform_underflow() {
+        let mut scene = Scene::default();
+        scene.push(SceneOp::PopTransform);
+        assert!(matches!(
+            scene.validate(),
+            Err(SceneValidationError {
+                kind: SceneValidationErrorKind::TransformUnderflow,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_unbalanced_clip_stack() {
+        let mut scene = Scene::default();
+        scene.push(SceneOp::PushClipRect {
+            rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(1.0), Px(1.0))),
+        });
+        assert!(matches!(
+            scene.validate(),
+            Err(SceneValidationError {
+                kind: SceneValidationErrorKind::UnbalancedClipStack { remaining: 1 },
+                ..
+            })
+        ));
     }
 }

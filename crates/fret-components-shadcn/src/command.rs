@@ -21,7 +21,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementCx, Theme, UiHost};
 
-use crate::{Input, ScrollArea};
+use crate::{Dialog, DialogContent, Input, ScrollArea};
 
 fn border(theme: &Theme) -> Color {
     theme
@@ -307,10 +307,9 @@ impl CommandList {
         let disabled = self.disabled;
         let items = self.items;
 
-        // TODO(a11y): Switch to cmdk-style behavior (focus stays in the input) and drive highlight
-        // changes via `TextInputProps::active_descendant` (ADR 0073). The current implementation
-        // uses roving focus (moves focus between rows), which is a reasonable fallback but not the
-        // desired long-term semantics for command palettes.
+        // Note: `CommandList` is a simple list rendering helper (legacy roving-style semantics).
+        // `CommandPalette` is the cmdk-style implementation that keeps focus in the input and
+        // drives highlight via `active_descendant` (ADR 0073).
         if items.is_empty() {
             let empty = self.empty_text;
             let fg = theme.colors.text_muted;
@@ -701,6 +700,28 @@ impl CommandPalette {
                                 ..Default::default()
                             },
                             move |cx, st| {
+                                if enabled {
+                                    let active = active;
+                                    cx.pressable_on_hover_change(Arc::new(
+                                        move |host, action_cx, hovered| {
+                                            if !hovered {
+                                                return;
+                                            }
+                                            let current = host
+                                                .models_mut()
+                                                .get(active)
+                                                .copied()
+                                                .unwrap_or(None);
+                                            let next = Some(idx);
+                                            if current != next {
+                                                let _ =
+                                                    host.models_mut().update(active, |v| *v = next);
+                                                host.request_redraw(action_cx.window);
+                                            }
+                                        },
+                                    ));
+                                }
+
                                 let hovered = st.hovered && !st.pressed;
                                 let pressed = st.pressed;
                                 let bg = if selected {
@@ -824,6 +845,43 @@ impl CommandPalette {
                                     }
                                     true
                                 }
+                                KeyCode::Home => {
+                                    let current =
+                                        host.models_mut().get(active).copied().unwrap_or(None);
+                                    let next = cmdk_selection::first_enabled(&disabled_flags);
+                                    if next != current {
+                                        let _ = host.models_mut().update(active, |v| *v = next);
+                                        host.request_redraw(action_cx.window);
+                                    }
+                                    true
+                                }
+                                KeyCode::End => {
+                                    let current =
+                                        host.models_mut().get(active).copied().unwrap_or(None);
+                                    let next = cmdk_selection::last_enabled(&disabled_flags);
+                                    if next != current {
+                                        let _ = host.models_mut().update(active, |v| *v = next);
+                                        host.request_redraw(action_cx.window);
+                                    }
+                                    true
+                                }
+                                KeyCode::PageDown | KeyCode::PageUp => {
+                                    let current =
+                                        host.models_mut().get(active).copied().unwrap_or(None);
+                                    let forward = down.key == KeyCode::PageDown;
+                                    let next = cmdk_selection::advance_active_index(
+                                        &disabled_flags,
+                                        current,
+                                        forward,
+                                        wrap_read.get(),
+                                        10,
+                                    );
+                                    if next != current {
+                                        let _ = host.models_mut().update(active, |v| *v = next);
+                                        host.request_redraw(action_cx.window);
+                                    }
+                                    true
+                                }
                                 KeyCode::Enter | KeyCode::NumpadEnter => {
                                     let current =
                                         host.models_mut().get(active).copied().unwrap_or(None);
@@ -931,6 +989,92 @@ impl CommandPalette {
     }
 }
 
+#[derive(Clone)]
+pub struct CommandDialog {
+    open: Model<bool>,
+    query: Model<String>,
+    items: Vec<CommandItem>,
+    a11y_label: Option<Arc<str>>,
+    disabled: bool,
+    wrap: bool,
+    empty_text: Arc<str>,
+}
+
+impl std::fmt::Debug for CommandDialog {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CommandDialog")
+            .field("open", &"<model>")
+            .field("query", &"<model>")
+            .field("items_len", &self.items.len())
+            .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field("disabled", &self.disabled)
+            .field("wrap", &self.wrap)
+            .field("empty_text", &self.empty_text.as_ref())
+            .finish()
+    }
+}
+
+impl CommandDialog {
+    pub fn new(open: Model<bool>, query: Model<String>, items: Vec<CommandItem>) -> Self {
+        Self {
+            open,
+            query,
+            items,
+            a11y_label: None,
+            disabled: false,
+            wrap: true,
+            empty_text: Arc::from("No results."),
+        }
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn wrap(mut self, wrap: bool) -> Self {
+        self.wrap = wrap;
+        self
+    }
+
+    pub fn empty_text(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.empty_text = text.into();
+        self
+    }
+
+    pub fn into_element<H: UiHost>(
+        self,
+        cx: &mut ElementCx<'_, H>,
+        trigger: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
+    ) -> AnyElement {
+        let open = self.open;
+        let query = self.query;
+        let items = self.items;
+        let a11y_label = self.a11y_label;
+        let disabled = self.disabled;
+        let wrap = self.wrap;
+        let empty_text = self.empty_text;
+
+        Dialog::new(open).into_element(cx, trigger, move |cx| {
+            let palette = CommandPalette::new(query, items)
+                .a11y_label(a11y_label.unwrap_or_else(|| Arc::from("Command palette")))
+                .disabled(disabled)
+                .wrap(wrap)
+                .empty_text(empty_text)
+                .into_element(cx);
+
+            DialogContent::new(vec![palette])
+                .refine_style(ChromeRefinement::default().p(Space::N0))
+                .into_element(cx)
+        })
+    }
+}
+
 #[derive(Default)]
 struct CommandPaletteState {
     active: Option<Model<Option<usize>>>,
@@ -949,7 +1093,8 @@ mod tests {
     use super::*;
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Modifiers, Point, Px, Rect, SemanticsRole, Size, SvgId, SvgService,
+        AppWindowId, Modifiers, MouseButtons, Point, Px, Rect, SemanticsRole, Size, SvgId,
+        SvgService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
@@ -1103,5 +1248,94 @@ mod tests {
             active_node.flags.selected,
             "highlighted row should be selected"
         );
+    }
+
+    #[test]
+    fn cmdk_hover_moves_highlight_while_focus_stays_in_input() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(String::new());
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+            CommandItem::new("Beta").on_select(CommandId::new("beta")),
+            CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+        ];
+
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            items.clone(),
+        );
+
+        let input = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable text input");
+        ui.set_focus(Some(input));
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let beta_bounds = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListItem && n.label.as_deref() == Some("Beta"))
+            .map(|n| n.bounds)
+            .expect("Beta row bounds");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: Point::new(
+                    Px(beta_bounds.origin.x.0 + 1.0),
+                    Px(beta_bounds.origin.y.0 + 1.0),
+                ),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            items,
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+        let focus = snap.focus.expect("focus");
+        assert_eq!(focus, input, "focus should remain on the input node");
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::TextField && n.id == focus)
+            .expect("focused text field node");
+
+        let active = input
+            .active_descendant
+            .expect("active_descendant should be set");
+        let active_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == active)
+            .expect("active_descendant should reference a node in the snapshot");
+
+        assert_eq!(active_node.role, SemanticsRole::ListItem);
+        assert_eq!(active_node.label.as_deref(), Some("Beta"));
     }
 }

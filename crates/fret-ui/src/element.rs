@@ -30,6 +30,7 @@ impl AnyElement {
 pub enum ElementKind {
     Container(ContainerProps),
     Semantics(SemanticsProps),
+    Opacity(OpacityProps),
     Pressable(PressableProps),
     PointerRegion(PointerRegionProps),
     RovingFlex(RovingFlexProps),
@@ -266,6 +267,25 @@ impl Default for SemanticsProps {
             expanded: None,
             checked: None,
             active_descendant: None,
+        }
+    }
+}
+
+/// A paint-only opacity group wrapper (ADR 0019).
+///
+/// This is intentionally layout-only + paint-only: it does not imply semantics beyond its
+/// children, and it is input-transparent (hit-test passes through).
+#[derive(Debug, Clone, Copy)]
+pub struct OpacityProps {
+    pub layout: LayoutStyle,
+    pub opacity: f32,
+}
+
+impl Default for OpacityProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            opacity: 1.0,
         }
     }
 }

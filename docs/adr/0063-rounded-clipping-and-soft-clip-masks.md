@@ -49,6 +49,16 @@ Clip operations participate in ordering exactly like `PushClipRect` does today:
 - `corner_radii` is per-corner in logical pixels (TL/TR/BR/BL), clamped by the renderer to the
   rect’s dimensions (same rule as quads, ADR 0030).
 
+### Interaction with transforms
+
+Rounded clipping must compose correctly with `PushTransform` (ADR 0019):
+
+- `PushClipRRect` captures the cumulative transform in effect at the time it is pushed.
+- Subsequent transforms do not retroactively move the clip entry; ordering of ops is how producers
+  express “fixed viewport clip” vs “moving mask”.
+
+See ADR 0078 for the full transform + clip composition semantics.
+
 ### Edge quality (AA)
 
 Unlike scissor clipping, rounded clip boundaries must be smooth:
@@ -79,4 +89,3 @@ clipping:
   this contract.
 - A fully general clip/mask system may be required for complex vector shapes; rounded-rect clipping
   is the minimal shadcn-aligned substrate.
-

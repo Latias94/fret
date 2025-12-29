@@ -1,16 +1,17 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::style as decl_style;
+use fret_components_ui::headless::presence::FadePresence;
 use fret_components_ui::window_overlays;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_core::{
     Edges, FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
 };
-use fret_runtime::Model;
+use fret_runtime::{Effect, Model};
 use fret_ui::Invalidation;
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
-    SemanticsProps, SizeStyle, TextProps,
+    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
+    PositionStyle, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized, inset_rect};
 use fret_ui::{ElementCx, Theme, UiHost};
@@ -123,7 +124,23 @@ impl Popover {
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
 
-            if is_open {
+            #[derive(Default)]
+            struct PresenceState {
+                tick: u64,
+                presence: FadePresence,
+            }
+
+            let presence = cx.with_state(PresenceState::default, |st| {
+                st.tick = st.tick.saturating_add(1);
+                st.presence.update(is_open, st.tick)
+            });
+
+            if presence.animating {
+                cx.app.push_effect(Effect::RequestAnimationFrame(cx.window));
+                cx.app.request_redraw(cx.window);
+            }
+
+            if presence.present {
                 let overlay_root_name = window_overlays::popover_root_name(trigger_id);
                 let align = self.align;
                 let side = self.side;
@@ -134,6 +151,7 @@ impl Popover {
                         .unwrap_or(Px(8.0))
                 });
 
+                let opacity = presence.opacity;
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                     let anchor = cx.last_bounds_for_element(trigger_id);
                     let Some(anchor) = anchor else {
@@ -170,7 +188,7 @@ impl Popover {
                         align,
                     );
 
-                    vec![cx.container(
+                    let wrapper = cx.container(
                         ContainerProps {
                             layout: LayoutStyle {
                                 position: PositionStyle::Absolute,
@@ -190,6 +208,22 @@ impl Popover {
                             ..Default::default()
                         },
                         move |_cx| vec![content],
+                    );
+
+                    let opacity_layout = LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+                    vec![cx.opacity_props(
+                        OpacityProps {
+                            layout: opacity_layout,
+                            opacity,
+                        },
+                        |_cx| vec![wrapper],
                     )]
                 });
 
@@ -208,6 +242,7 @@ impl Popover {
                         root_name: overlay_root_name,
                         trigger: trigger_id,
                         open: self.open,
+                        present: true,
                         initial_focus,
                         children: overlay_children,
                     },
