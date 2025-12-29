@@ -822,20 +822,16 @@ impl DockGraph {
         }
     }
 
-    pub fn export_layout_v1(&self, windows: &[(AppWindowId, String)]) -> crate::DockLayoutV1 {
-        self.export_layout_v1_with_placement(windows, |_| None)
+    pub fn export_layout(&self, windows: &[(AppWindowId, String)]) -> crate::DockLayout {
+        self.export_layout_with_placement(windows, |_| None)
     }
 
-    pub fn export_layout_v2(&self, windows: &[(AppWindowId, String)]) -> crate::DockLayoutV2 {
-        self.export_layout_v2_with_placement(windows, |_| None)
-    }
-
-    pub fn export_layout_v1_with_placement(
+    pub fn export_layout_with_placement(
         &self,
         windows: &[(AppWindowId, String)],
-        mut placement: impl FnMut(AppWindowId) -> Option<crate::DockWindowPlacementV1>,
-    ) -> crate::DockLayoutV1 {
-        use crate::{DockLayoutNodeV1, DockLayoutWindowV1};
+        mut placement: impl FnMut(AppWindowId) -> Option<crate::DockWindowPlacement>,
+    ) -> crate::DockLayout {
+        use crate::{DockLayoutFloatingWindow, DockLayoutNode, DockLayoutWindow};
         use std::collections::HashMap;
 
         fn visit(
@@ -843,7 +839,7 @@ impl DockGraph {
             node: DockNodeId,
             next_id: &mut u32,
             ids: &mut HashMap<DockNodeId, u32>,
-            out: &mut Vec<DockLayoutNodeV1>,
+            out: &mut Vec<DockLayoutNode>,
         ) {
             if ids.contains_key(&node) {
                 return;
@@ -859,7 +855,7 @@ impl DockGraph {
 
             match n {
                 DockNode::Tabs { tabs, active } => {
-                    out.push(DockLayoutNodeV1::Tabs {
+                    out.push(DockLayoutNode::Tabs {
                         id,
                         tabs: tabs.clone(),
                         active: *active,
@@ -877,7 +873,7 @@ impl DockGraph {
                         .iter()
                         .filter_map(|c| ids.get(c).copied())
                         .collect();
-                    out.push(DockLayoutNodeV1::Split {
+                    out.push(DockLayoutNode::Split {
                         id,
                         axis: *axis,
                         children: child_ids,
@@ -895,94 +891,8 @@ impl DockGraph {
 
         let mut next_id: u32 = 1;
         let mut ids: HashMap<DockNodeId, u32> = HashMap::new();
-        let mut nodes: Vec<DockLayoutNodeV1> = Vec::new();
-        let mut out_windows: Vec<DockLayoutWindowV1> = Vec::new();
-
-        for (window, logical_window_id) in windows {
-            let Some(root) = self.window_root(*window) else {
-                continue;
-            };
-            visit(self, root, &mut next_id, &mut ids, &mut nodes);
-            let Some(root_id) = ids.get(&root).copied() else {
-                continue;
-            };
-            out_windows.push(DockLayoutWindowV1 {
-                logical_window_id: logical_window_id.clone(),
-                root: root_id,
-                placement: placement(*window),
-            });
-        }
-
-        crate::DockLayoutV1::new_v1(out_windows, nodes)
-    }
-
-    pub fn export_layout_v2_with_placement(
-        &self,
-        windows: &[(AppWindowId, String)],
-        mut placement: impl FnMut(AppWindowId) -> Option<crate::DockWindowPlacementV1>,
-    ) -> crate::DockLayoutV2 {
-        use crate::{DockLayoutFloatingWindowV2, DockLayoutNodeV1, DockLayoutWindowV2};
-        use std::collections::HashMap;
-
-        fn visit(
-            graph: &DockGraph,
-            node: DockNodeId,
-            next_id: &mut u32,
-            ids: &mut HashMap<DockNodeId, u32>,
-            out: &mut Vec<DockLayoutNodeV1>,
-        ) {
-            if ids.contains_key(&node) {
-                return;
-            }
-
-            let id = *next_id;
-            *next_id = next_id.saturating_add(1);
-            ids.insert(node, id);
-
-            let Some(n) = graph.nodes.get(node) else {
-                return;
-            };
-
-            match n {
-                DockNode::Tabs { tabs, active } => {
-                    out.push(DockLayoutNodeV1::Tabs {
-                        id,
-                        tabs: tabs.clone(),
-                        active: *active,
-                    });
-                }
-                DockNode::Split {
-                    axis,
-                    children,
-                    fractions,
-                } => {
-                    for child in children {
-                        visit(graph, *child, next_id, ids, out);
-                    }
-                    let child_ids: Vec<u32> = children
-                        .iter()
-                        .filter_map(|c| ids.get(c).copied())
-                        .collect();
-                    out.push(DockLayoutNodeV1::Split {
-                        id,
-                        axis: *axis,
-                        children: child_ids,
-                        fractions: fractions.clone(),
-                    });
-                }
-                DockNode::Floating { child } => {
-                    visit(graph, *child, next_id, ids, out);
-                    if let Some(&child_id) = ids.get(child) {
-                        ids.insert(node, child_id);
-                    }
-                }
-            }
-        }
-
-        let mut next_id: u32 = 1;
-        let mut ids: HashMap<DockNodeId, u32> = HashMap::new();
-        let mut nodes: Vec<DockLayoutNodeV1> = Vec::new();
-        let mut out_windows: Vec<DockLayoutWindowV2> = Vec::new();
+        let mut nodes: Vec<DockLayoutNode> = Vec::new();
+        let mut out_windows: Vec<DockLayoutWindow> = Vec::new();
 
         for (window, logical_window_id) in windows {
             let Some(root) = self.window_root(*window) else {
@@ -993,19 +903,19 @@ impl DockGraph {
                 continue;
             };
 
-            let mut floatings: Vec<DockLayoutFloatingWindowV2> = Vec::new();
+            let mut floatings: Vec<DockLayoutFloatingWindow> = Vec::new();
             for floating in self.floating_windows(*window) {
                 visit(self, floating.floating, &mut next_id, &mut ids, &mut nodes);
                 let Some(floating_root) = ids.get(&floating.floating).copied() else {
                     continue;
                 };
-                floatings.push(DockLayoutFloatingWindowV2 {
+                floatings.push(DockLayoutFloatingWindow {
                     root: floating_root,
-                    rect: crate::DockRectV2::from_rect(floating.rect),
+                    rect: crate::DockRect::from_rect(floating.rect),
                 });
             }
 
-            out_windows.push(DockLayoutWindowV2 {
+            out_windows.push(DockLayoutWindow {
                 logical_window_id: logical_window_id.clone(),
                 root: root_id,
                 placement: placement(*window),
@@ -1013,44 +923,44 @@ impl DockGraph {
             });
         }
 
-        crate::DockLayoutV2::new_v2(out_windows, nodes)
+        crate::DockLayout::new(out_windows, nodes)
     }
 
-    pub fn import_subtree_from_layout_v1(
+    pub fn import_subtree_from_layout(
         &mut self,
-        layout: &crate::DockLayoutV1,
+        layout: &crate::DockLayout,
         root: u32,
     ) -> Option<DockNodeId> {
-        use crate::DockLayoutNodeV1;
+        use crate::DockLayoutNode;
         use std::collections::HashMap;
 
-        if layout.layout_version != crate::DOCK_LAYOUT_VERSION_V1 {
+        if layout.layout_version != crate::DOCK_LAYOUT_VERSION {
             return None;
         }
 
-        let mut by_id: HashMap<u32, &DockLayoutNodeV1> = HashMap::new();
+        let mut by_id: HashMap<u32, &DockLayoutNode> = HashMap::new();
         for node in &layout.nodes {
             let id = match node {
-                DockLayoutNodeV1::Split { id, .. } => *id,
-                DockLayoutNodeV1::Tabs { id, .. } => *id,
+                DockLayoutNode::Split { id, .. } => *id,
+                DockLayoutNode::Tabs { id, .. } => *id,
             };
             by_id.insert(id, node);
         }
 
         fn build(
             graph: &mut DockGraph,
-            by_id: &HashMap<u32, &DockLayoutNodeV1>,
+            by_id: &HashMap<u32, &DockLayoutNode>,
             id: u32,
         ) -> Option<DockNodeId> {
             let node = by_id.get(&id)?;
             match node {
-                DockLayoutNodeV1::Tabs { tabs, active, .. } => {
+                DockLayoutNode::Tabs { tabs, active, .. } => {
                     Some(graph.insert_node(DockNode::Tabs {
                         tabs: tabs.clone(),
                         active: *active,
                     }))
                 }
-                DockLayoutNodeV1::Split {
+                DockLayoutNode::Split {
                     axis,
                     children,
                     fractions,
@@ -1072,70 +982,14 @@ impl DockGraph {
         build(self, &by_id, root)
     }
 
-    pub fn import_subtree_from_layout_v2(
+    pub fn import_layout_for_windows(
         &mut self,
-        layout: &crate::DockLayoutV2,
-        root: u32,
-    ) -> Option<DockNodeId> {
-        use crate::DockLayoutNodeV1;
-        use std::collections::HashMap;
-
-        if layout.layout_version != crate::DOCK_LAYOUT_VERSION_V2 {
-            return None;
-        }
-
-        let mut by_id: HashMap<u32, &DockLayoutNodeV1> = HashMap::new();
-        for node in &layout.nodes {
-            let id = match node {
-                DockLayoutNodeV1::Split { id, .. } => *id,
-                DockLayoutNodeV1::Tabs { id, .. } => *id,
-            };
-            by_id.insert(id, node);
-        }
-
-        fn build(
-            graph: &mut DockGraph,
-            by_id: &HashMap<u32, &DockLayoutNodeV1>,
-            id: u32,
-        ) -> Option<DockNodeId> {
-            let node = by_id.get(&id)?;
-            match node {
-                DockLayoutNodeV1::Tabs { tabs, active, .. } => {
-                    Some(graph.insert_node(DockNode::Tabs {
-                        tabs: tabs.clone(),
-                        active: *active,
-                    }))
-                }
-                DockLayoutNodeV1::Split {
-                    axis,
-                    children,
-                    fractions,
-                    ..
-                } => {
-                    let mut child_nodes: Vec<DockNodeId> = Vec::new();
-                    for child in children {
-                        child_nodes.push(build(graph, by_id, *child)?);
-                    }
-                    Some(graph.insert_node(DockNode::Split {
-                        axis: *axis,
-                        children: child_nodes,
-                        fractions: fractions.clone(),
-                    }))
-                }
-            }
-        }
-
-        build(self, &by_id, root)
-    }
-
-    pub fn import_layout_v2_for_windows(
-        &mut self,
-        layout: &crate::DockLayoutV2,
+        layout: &crate::DockLayout,
         windows: &[(AppWindowId, String)],
     ) -> bool {
         use std::collections::HashMap;
 
-        if layout.layout_version != crate::DOCK_LAYOUT_VERSION_V2 {
+        if layout.layout_version != crate::DOCK_LAYOUT_VERSION {
             return false;
         }
 
@@ -1150,14 +1004,14 @@ impl DockGraph {
                 continue;
             };
 
-            let Some(root) = self.import_subtree_from_layout_v2(layout, w.root) else {
+            let Some(root) = self.import_subtree_from_layout(layout, w.root) else {
                 continue;
             };
             self.set_window_root(window, root);
 
             self.floating_windows_mut(window).clear();
             for f in &w.floatings {
-                let Some(child) = self.import_subtree_from_layout_v2(layout, f.root) else {
+                let Some(child) = self.import_subtree_from_layout(layout, f.root) else {
                     continue;
                 };
                 let floating = self.insert_node(DockNode::Floating { child });
@@ -1251,7 +1105,7 @@ mod tests {
     }
 
     #[test]
-    fn layout_v2_roundtrips_floatings_with_rect_and_order() {
+    fn layout_roundtrips_floatings_with_rect_and_order() {
         let w = window(1);
         let panel_a = PanelKey::new("test.a");
         let panel_b = PanelKey::new("test.b");
@@ -1285,10 +1139,10 @@ mod tests {
         });
 
         let windows = vec![(w, "main".to_string())];
-        let layout = g.export_layout_v2(&windows);
+        let layout = g.export_layout(&windows);
 
         let mut g2 = DockGraph::new();
-        assert!(g2.import_layout_v2_for_windows(&layout, &windows));
+        assert!(g2.import_layout_for_windows(&layout, &windows));
         assert_eq!(
             g2.collect_panels_in_window(w),
             vec![panel_a, panel_b, panel_c]

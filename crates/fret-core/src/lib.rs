@@ -20,9 +20,8 @@ pub use capabilities::{ExternalDragPayloadKind, PlatformCapabilities};
 pub use cursor::CursorIcon;
 pub use dock::{Axis, DockFloatingWindow, DockGraph, DockNode, DropZone};
 pub use dock_layout::{
-    DOCK_LAYOUT_VERSION_V1, DOCK_LAYOUT_VERSION_V2, DockLayoutBuilder, DockLayoutFloatingWindowV2,
-    DockLayoutNodeV1, DockLayoutV1, DockLayoutV2, DockLayoutWindowV1, DockLayoutWindowV2,
-    DockRectV2, DockWindowPlacementV1, EditorDockLayoutSpec,
+    DOCK_LAYOUT_VERSION, DockLayout, DockLayoutBuilder, DockLayoutFloatingWindow, DockLayoutNode,
+    DockLayoutWindow, DockRect, DockWindowPlacement, EditorDockLayoutSpec,
 };
 pub use dock_op::DockOp;
 pub use geometry::{Corners, Edges, Point, Px, Rect, Size};

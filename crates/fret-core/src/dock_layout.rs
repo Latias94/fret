@@ -2,20 +2,19 @@ use serde::{Deserialize, Serialize};
 
 use crate::{AppWindowId, Axis, DockGraph, DockNode, DockNodeId, PanelKey};
 
-pub const DOCK_LAYOUT_VERSION_V1: u32 = 1;
-pub const DOCK_LAYOUT_VERSION_V2: u32 = 2;
+pub const DOCK_LAYOUT_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DockLayoutV1 {
+pub struct DockLayout {
     pub layout_version: u32,
-    pub windows: Vec<DockLayoutWindowV1>,
-    pub nodes: Vec<DockLayoutNodeV1>,
+    pub windows: Vec<DockLayoutWindow>,
+    pub nodes: Vec<DockLayoutNode>,
 }
 
-impl DockLayoutV1 {
-    pub fn new_v1(windows: Vec<DockLayoutWindowV1>, nodes: Vec<DockLayoutNodeV1>) -> Self {
+impl DockLayout {
+    pub fn new(windows: Vec<DockLayoutWindow>, nodes: Vec<DockLayoutNode>) -> Self {
         Self {
-            layout_version: DOCK_LAYOUT_VERSION_V1,
+            layout_version: DOCK_LAYOUT_VERSION,
             windows,
             nodes,
         }
@@ -23,57 +22,32 @@ impl DockLayoutV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DockLayoutV2 {
-    pub layout_version: u32,
-    pub windows: Vec<DockLayoutWindowV2>,
-    pub nodes: Vec<DockLayoutNodeV1>,
-}
-
-impl DockLayoutV2 {
-    pub fn new_v2(windows: Vec<DockLayoutWindowV2>, nodes: Vec<DockLayoutNodeV1>) -> Self {
-        Self {
-            layout_version: DOCK_LAYOUT_VERSION_V2,
-            windows,
-            nodes,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DockLayoutWindowV1 {
+pub struct DockLayoutWindow {
     pub logical_window_id: String,
     pub root: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub placement: Option<DockWindowPlacementV1>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DockLayoutWindowV2 {
-    pub logical_window_id: String,
-    pub root: u32,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub placement: Option<DockWindowPlacementV1>,
+    pub placement: Option<DockWindowPlacement>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub floatings: Vec<DockLayoutFloatingWindowV2>,
+    pub floatings: Vec<DockLayoutFloatingWindow>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DockLayoutFloatingWindowV2 {
+pub struct DockLayoutFloatingWindow {
     /// Root node id within `nodes` for the floating dock tree (tabs/splits).
     pub root: u32,
     /// Floating window rect in logical pixels, relative to the host window's inner content origin.
-    pub rect: DockRectV2,
+    pub rect: DockRect,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct DockRectV2 {
+pub struct DockRect {
     pub x: f32,
     pub y: f32,
     pub w: f32,
     pub h: f32,
 }
 
-impl DockRectV2 {
+impl DockRect {
     pub fn from_rect(rect: crate::Rect) -> Self {
         Self {
             x: rect.origin.x.0,
@@ -92,7 +66,7 @@ impl DockRectV2 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DockWindowPlacementV1 {
+pub struct DockWindowPlacement {
     pub width: u32,
     pub height: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -105,7 +79,7 @@ pub struct DockWindowPlacementV1 {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind")]
-pub enum DockLayoutNodeV1 {
+pub enum DockLayoutNode {
     #[serde(rename = "split")]
     Split {
         id: u32,
