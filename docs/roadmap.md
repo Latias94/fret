@@ -276,7 +276,7 @@ Notes:
 
 Remaining work (still P0, but can iterate after MVP2):
 
-- Persist/restore window placement (monitor + DPI-aware geometry) separate from the logical dock layout. (prototype implemented; stored as `DockLayoutWindowV1.placement`)
+- Persist/restore window placement (monitor + DPI-aware geometry) separate from the logical dock layout. (prototype implemented; stored as `DockLayoutWindow.placement`)
 - Improve hit-testing + drop-zone heuristics and polish the UX (snap thresholds, preview animations).
   - “Product UI” affordances to match Unity/Godot:
     - dock drag hint overlay and tab drop indicators (Godot-style),

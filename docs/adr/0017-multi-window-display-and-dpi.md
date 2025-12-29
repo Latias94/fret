@@ -46,7 +46,7 @@ Persistence is split:
 
 Implementation note:
 
-- The v1 layout schema allows storing placement as optional metadata per logical window (`DockLayoutWindowV1.placement`)
+- The dock layout schema allows storing placement as optional metadata per logical window (`DockLayoutWindow.placement`)
   without making the dock graph depend on platform geometry.
 
 ### 3) Cross-monitor movement is supported by explicit scale factor events
@@ -72,4 +72,4 @@ When a window’s scale factor changes, the platform backend emits a scale-facto
 Prototype implementation (desktop runner + demo):
 
 - Window move events are forwarded as data: `crates/fret-runner-winit-wgpu/src/runner.rs`
-- Demo persists/restores `DockLayoutWindowV1.placement`: implemented in `crates/fret-demo` (entrypoints evolve; search for `DockLayoutWindowV1` usage).
+- Demo persists/restores `DockLayoutWindow.placement`: implemented in `crates/fret-demo` (entrypoints evolve; search for `DockLayoutWindow` usage).

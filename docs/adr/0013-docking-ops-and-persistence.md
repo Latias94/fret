@@ -209,7 +209,7 @@ app-owned dock graph and multi-root overlay model (ADR 0011):
 ## Implementation Notes (Current Prototype)
 
 - Stable identity: implemented as `PanelKind`/`PanelKey` in `crates/fret-core/src/panels.rs`.
-- Persistence v1: implemented as `DockLayoutV1` in `crates/fret-core/src/dock_layout.rs`.
+- Persistence: implemented as `DockLayout` (schema v2) in `crates/fret-core/src/dock_layout.rs`.
 - Transaction vocabulary: `DockOp` exists in `crates/fret-core/src/dock_op.rs`.
   - The demo applies `DockOp` via the runner’s effect drain path (`Effect::Dock`), which is the intended integration point.
   - Floating windows are requested via `DockOp::RequestFloatPanelToNewWindow` (window creation remains app/runner-owned).
