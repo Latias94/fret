@@ -571,7 +571,10 @@ pub(super) fn paint_drop_hint_icon(
             } else {
                 (
                     Rect::new(
-                        Point::new(Px(inner.origin.x.0 + inner.size.width.0 - w.0), inner.origin.y),
+                        Point::new(
+                            Px(inner.origin.x.0 + inner.size.width.0 - w.0),
+                            inner.origin.y,
+                        ),
                         Size::new(w, inner.size.height),
                     ),
                     Px(inner.origin.x.0 + inner.size.width.0 - w.0),
@@ -608,7 +611,10 @@ pub(super) fn paint_drop_hint_icon(
             } else {
                 (
                     Rect::new(
-                        Point::new(inner.origin.x, Px(inner.origin.y.0 + inner.size.height.0 - h.0)),
+                        Point::new(
+                            inner.origin.x,
+                            Px(inner.origin.y.0 + inner.size.height.0 - h.0),
+                        ),
                         Size::new(inner.size.width, h),
                     ),
                     Px(inner.origin.y.0 + inner.size.height.0 - h.0),

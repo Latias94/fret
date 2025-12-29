@@ -1,8 +1,8 @@
 use fret_core::{
     Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, Edges, NodeId, PanelKey,
-    RenderTargetId, Scene, SceneOp, SemanticsRole, TextBlobId, TextConstraints, TextMetrics,
-    TextOverflow, TextStyle, TextWrap, ViewportFit, ViewportInputEvent, ViewportInputKind,
-    ViewportMapping, WindowMetricsService,
+    RenderTargetId, Scene, SceneOp, SemanticsRole, TextConstraints, TextOverflow, TextStyle,
+    TextWrap, ViewportFit, ViewportInputEvent, ViewportInputKind, ViewportMapping,
+    WindowMetricsService,
     geometry::{Point, Px, Rect, Size},
 };
 use fret_runtime::{CommandId, DragKind, Effect, WindowRequest};
@@ -18,14 +18,18 @@ use fret_ui::retained_bridge::{
     CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, ResizeHandle, SemanticsCx, Widget,
 };
 
+mod consts;
 mod hit_test;
 mod layout;
 mod paint;
+mod types;
 mod viewport;
 
+use self::consts::*;
 use self::hit_test::*;
 use self::layout::*;
 use self::paint::*;
+use self::types::*;
 use self::viewport::*;
 
 mod manager;
@@ -86,18 +90,6 @@ impl DockViewportOverlayHooksService {
     }
 }
 
-#[derive(Debug, Clone)]
-struct DockPanelDragPayload {
-    panel: PanelKey,
-    grab_offset: Point,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-enum DockDropTarget {
-    Dock(HoverTarget),
-    Float { window: fret_core::AppWindowId },
-}
-
 pub fn create_dock_space_node<H: UiHost>(
     ui: &mut fret_ui::UiTree<H>,
     window: fret_core::AppWindowId,
@@ -106,43 +98,13 @@ pub fn create_dock_space_node<H: UiHost>(
     ui.create_node_retained(DockSpace::new(window))
 }
 
-#[derive(Debug, Clone, Copy)]
-struct DividerDragState {
-    split: DockNodeId,
-    axis: fret_core::Axis,
-    bounds: Rect,
-    fraction: f32,
-    grab_offset: f32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct HoverTarget {
-    tabs: DockNodeId,
-    zone: DropZone,
-    insert_index: Option<usize>,
-}
-
-const DOCK_TAB_H: Px = Px(28.0);
-const DOCK_TAB_W: Px = Px(120.0);
-const DOCK_TAB_CLOSE_SIZE: Px = Px(16.0);
-const DOCK_TAB_CLOSE_GAP: Px = Px(6.0);
-const DOCK_SPLIT_HANDLE_HIT_THICKNESS: Px = Px(6.0);
-const DOCK_SPLIT_HANDLE_GAP: Px = Px(0.0);
-
-#[derive(Debug, Clone, Copy)]
-struct PreparedTabTitle {
-    blob: TextBlobId,
-    metrics: TextMetrics,
-    title_hash: u64,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::test_host::TestHost;
     use fret_core::{
         AppWindowId, Event, InternalDragEvent, InternalDragKind, PlatformCapabilities, Point, Px,
-        Scene, SceneOp, Size, TextConstraints, TextMetrics, TextService, TextStyle,
+        Scene, SceneOp, Size, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle,
     };
     use fret_ui::UiTree;
     use fret_ui::retained_bridge::UiTreeRetainedExt as _;

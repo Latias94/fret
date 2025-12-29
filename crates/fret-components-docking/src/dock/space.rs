@@ -669,7 +669,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 continue;
                             }
 
-                            self.clamp_and_ensure_active_visible(node_id, tab_bar, tabs.len(), *active);
+                            self.clamp_and_ensure_active_visible(
+                                node_id,
+                                tab_bar,
+                                tabs.len(),
+                                *active,
+                            );
 
                             let max_scroll = Self::max_tab_scroll(tab_bar, tabs.len());
                             if max_scroll.0 <= 0.0 {
@@ -1195,7 +1200,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 visible_tabs_nodes.insert(node_id);
 
                 let (tab_bar, _content) = split_tab_bar(rect);
-            self.clamp_and_ensure_active_visible(node_id, tab_bar, tabs.len(), *active);
+                self.clamp_and_ensure_active_visible(node_id, tab_bar, tabs.len(), *active);
             }
             self.tab_scroll
                 .retain(|tabs_node, _| visible_tabs_nodes.contains(tabs_node));
