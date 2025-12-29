@@ -138,6 +138,7 @@ impl ComponentsGalleryDriver {
             bounds,
             "components-gallery",
             |cx| {
+                cx.observe_model(tree_state, Invalidation::Layout);
                 let theme = Theme::global(&*cx.app);
                 let selected = cx.app.models().get(tree_state).and_then(|s| s.selected);
 
@@ -226,11 +227,13 @@ impl ComponentsGalleryDriver {
                                             align: CrossAlign::Center,
                                             wrap: true,
                                         },
-                                        |cx| {
-                                            let checkbox_value =
-                                                cx.app.models().get(checkbox).copied().unwrap_or(false);
-                                            let switch_value =
-                                                cx.app.models().get(switch).copied().unwrap_or(false);
+                                    |cx| {
+                                        cx.observe_model(checkbox, Invalidation::Layout);
+                                        cx.observe_model(switch, Invalidation::Layout);
+                                        let checkbox_value =
+                                            cx.app.models().get(checkbox).copied().unwrap_or(false);
+                                        let switch_value =
+                                            cx.app.models().get(switch).copied().unwrap_or(false);
 
                                             vec![
                                                 shadcn::Checkbox::new(checkbox)
@@ -252,13 +255,14 @@ impl ComponentsGalleryDriver {
                                             padding: Edges::all(Px(0.0)),
                                             justify: MainAlign::Start,
                                             align: CrossAlign::Stretch,
-                                            wrap: false,
-                                        },
-                                        |cx| {
-                                            let value = cx
-                                                .app
-                                                .models()
-                                                .get(radio)
+                                        wrap: false,
+                                    },
+                                    |cx| {
+                                        cx.observe_model(radio, Invalidation::Layout);
+                                        let value = cx
+                                            .app
+                                            .models()
+                                            .get(radio)
                                                 .and_then(|v| v.as_deref())
                                                 .unwrap_or("<none>");
 
@@ -287,6 +291,7 @@ impl ComponentsGalleryDriver {
                                         wrap: false,
                                     },
                                     |cx| {
+                                        cx.observe_model(select, Invalidation::Layout);
                                         let value = cx
                                             .app
                                             .models()
@@ -322,6 +327,7 @@ impl ComponentsGalleryDriver {
                                         wrap: false,
                                     },
                                     |cx| {
+                                        cx.observe_model(last_action, Invalidation::Layout);
                                         let last_action = cx.app.models().get(last_action).cloned();
 
                                         let overlays = cx.flex(
@@ -803,7 +809,6 @@ impl WinitDriver for ComponentsGalleryDriver {
             state.tree_state,
             &command,
         ) {
-            app.request_redraw(window);
             return;
         }
 
@@ -826,32 +831,27 @@ impl WinitDriver for ComponentsGalleryDriver {
             let _ = app
                 .models_mut()
                 .update(state.progress, |v| *v = (*v + 10.0).min(100.0));
-            app.request_redraw(window);
         }
 
         if command.as_str() == "gallery.progress.dec" {
             let _ = app
                 .models_mut()
                 .update(state.progress, |v| *v = (*v - 10.0).max(0.0));
-            app.request_redraw(window);
         }
 
         if command.as_str() == "gallery.progress.reset" {
             let _ = app.models_mut().update(state.progress, |v| *v = 35.0);
-            app.request_redraw(window);
         }
 
         if let Some(item) = command.as_str().strip_prefix("gallery.dropdown.select.") {
             let msg: Arc<str> = Arc::from(format!("dropdown.select.{item}").into_boxed_str());
             let _ = app.models_mut().update(state.last_action, |v| *v = msg);
-            app.request_redraw(window);
         }
 
         if command.as_str() == "gallery.context_menu.action" {
             let _ = app.models_mut().update(state.last_action, |v| {
                 *v = Arc::<str>::from("context_menu.action");
             });
-            app.request_redraw(window);
         }
     }
 
@@ -922,7 +922,6 @@ impl WinitDriver for ComponentsGalleryDriver {
                 state.tree_state,
                 event,
             ) {
-                app.request_redraw(window);
                 return;
             }
         }
