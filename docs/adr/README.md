@@ -51,6 +51,11 @@ ADR or adding a new ADR) before scaling feature surface area.
 
 ### P1 (Lock soon; otherwise behavior will drift)
 
+- **Docking split sizing + resizable primitive contract**
+  - Add ADR (proposed): `docs/adr/0077-resizable-panel-groups-and-docking-split-sizing.md`
+  - Decide: runtime-owned resize mechanics, docking integration shape, and whether to eventually persist pixel `preferred_px` hints vs fractions-only.
+  - Implement: docking host rendering in `crates/fret-components-docking`, runtime substrate in `crates/fret-ui`.
+
 - **Text input semantics for multiline + IME composition ranges**
   - Add ADR (proposed): `docs/adr/0071-text-input-multiline-composition-contract.md`
   - Update: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
