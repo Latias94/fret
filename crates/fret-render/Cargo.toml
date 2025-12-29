@@ -19,3 +19,4 @@ usvg.workspace = true
 
 [dev-dependencies]
 naga.workspace = true
+pollster.workspace = true

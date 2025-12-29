@@ -34,13 +34,15 @@ impl Default for ClearColor {
     }
 }
 
-const MAX_CLIPS: usize = 8;
+const MAX_CLIPS: usize = 32;
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct ClipRRectUniform {
     rect: [f32; 4],
     corner_radii: [f32; 4],
+    inv0: [f32; 4],
+    inv1: [f32; 4],
 }
 
 #[repr(C)]
@@ -56,6 +58,8 @@ struct ViewportUniform {
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct QuadInstance {
     rect: [f32; 4],
+    transform0: [f32; 4],
+    transform1: [f32; 4],
     color: [f32; 4],
     corner_radii: [f32; 4],
     border: [f32; 4],
@@ -660,17 +664,22 @@ fn svg_draw_rect_px(
     }
 }
 
-fn scissor_from_rect(rect: Rect, scale_factor: f32, viewport: (u32, u32)) -> Option<ScissorRect> {
+fn scissor_from_bounds_px(
+    min_x: f32,
+    min_y: f32,
+    max_x: f32,
+    max_y: f32,
+    viewport: (u32, u32),
+) -> Option<ScissorRect> {
     let (vw, vh) = viewport;
     if vw == 0 || vh == 0 {
         return None;
     }
 
-    let (x, y, w, h) = rect_to_pixels(rect, scale_factor);
-    let x0 = x.floor().clamp(0.0, vw as f32) as i32;
-    let y0 = y.floor().clamp(0.0, vh as f32) as i32;
-    let x1 = (x + w).ceil().clamp(0.0, vw as f32) as i32;
-    let y1 = (y + h).ceil().clamp(0.0, vh as f32) as i32;
+    let x0 = min_x.floor().clamp(0.0, vw as f32) as i32;
+    let y0 = min_y.floor().clamp(0.0, vh as f32) as i32;
+    let x1 = max_x.ceil().clamp(0.0, vw as f32) as i32;
+    let y1 = max_y.ceil().clamp(0.0, vh as f32) as i32;
 
     let w = (x1 - x0).max(0) as u32;
     let h = (y1 - y0).max(0) as u32;
@@ -2525,6 +2534,16 @@ impl Renderer {
                             offset: 64,
                             shader_location: 4,
                         },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x4,
+                            offset: 80,
+                            shader_location: 5,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x4,
+                            offset: 96,
+                            shader_location: 6,
+                        },
                     ],
                 }],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
@@ -3364,8 +3383,8 @@ impl Renderer {
             .last()
             .expect("scissor stack must be non-empty");
 
-        let mut active_rounded_clips: Vec<ClipRRectUniform> = Vec::new();
-        let mut clip_kind_stack: Vec<bool> = Vec::new();
+        let mut active_clips: Vec<ClipRRectUniform> = Vec::new();
+        let mut clip_shader_stack: Vec<bool> = Vec::new();
 
         uniforms.push(ViewportUniform {
             viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
@@ -3396,40 +3415,61 @@ impl Renderer {
         let mut transform_stack: Vec<Transform2D> = vec![Transform2D::IDENTITY];
         let mut opacity_stack: Vec<f32> = vec![1.0];
 
-        let current_transform_params = |t: Transform2D| -> (f32, f32, f32) {
-            if let Some((s, tr)) = t.as_translation_uniform_scale() {
-                return (s, tr.x.0, tr.y.0);
-            }
-            (1.0, t.tx, t.ty)
+        let to_physical_px = |t: Transform2D| t.to_physical_px(scale_factor);
+        let current_transform_px = |stack: &[Transform2D]| {
+            to_physical_px(*stack.last().expect("transform stack must be non-empty"))
         };
 
-        let transform_rect = |rect: Rect, s: f32, tx: f32, ty: f32| -> Rect {
-            Rect::new(
-                Point::new(Px(rect.origin.x.0 * s + tx), Px(rect.origin.y.0 * s + ty)),
-                Size::new(Px(rect.size.width.0 * s), Px(rect.size.height.0 * s)),
+        let current_transform_max_scale = |t: Transform2D| -> f32 {
+            if let Some((s, _)) = t.as_translation_uniform_scale()
+                && s.is_finite()
+                && s > 0.0
+            {
+                return s;
+            }
+
+            let sx = (t.a * t.a + t.b * t.b).sqrt();
+            let sy = (t.c * t.c + t.d * t.d).sqrt();
+            let s = sx.max(sy);
+            if s.is_finite() && s > 0.0 { s } else { 1.0 }
+        };
+
+        let transform_rows = |t_px: Transform2D| -> ([f32; 4], [f32; 4]) {
+            (
+                [t_px.a, t_px.c, t_px.tx, 0.0],
+                [t_px.b, t_px.d, t_px.ty, 0.0],
             )
         };
 
-        let transform_point = |p: Point, s: f32, tx: f32, ty: f32| -> Point {
-            Point::new(Px(p.x.0 * s + tx), Px(p.y.0 * s + ty))
+        let apply_transform_px = |t_px: Transform2D, x: f32, y: f32| -> (f32, f32) {
+            let p = t_px.apply_point(Point::new(Px(x), Px(y)));
+            (p.x.0, p.y.0)
         };
 
-        let scale_edges = |e: Edges, s: f32| -> Edges {
-            Edges {
-                top: Px(e.top.0 * s),
-                right: Px(e.right.0 * s),
-                bottom: Px(e.bottom.0 * s),
-                left: Px(e.left.0 * s),
-            }
-        };
+        let transform_quad_points_px =
+            |t_px: Transform2D, x: f32, y: f32, w: f32, h: f32| -> [(f32, f32); 4] {
+                let (x0, y0) = (x, y);
+                let (x1, y1) = (x + w, y + h);
+                [
+                    apply_transform_px(t_px, x0, y0),    // TL
+                    apply_transform_px(t_px, x + w, y0), // TR
+                    apply_transform_px(t_px, x1, y1),    // BR
+                    apply_transform_px(t_px, x0, y1),    // BL
+                ]
+            };
 
-        let scale_corners = |c: Corners, s: f32| -> Corners {
-            Corners {
-                top_left: Px(c.top_left.0 * s),
-                top_right: Px(c.top_right.0 * s),
-                bottom_right: Px(c.bottom_right.0 * s),
-                bottom_left: Px(c.bottom_left.0 * s),
+        let bounds_of_quad_points = |pts: &[(f32, f32); 4]| -> (f32, f32, f32, f32) {
+            let mut min_x = pts[0].0;
+            let mut max_x = pts[0].0;
+            let mut min_y = pts[0].1;
+            let mut max_y = pts[0].1;
+            for (x, y) in pts.iter().copied() {
+                min_x = min_x.min(x);
+                max_x = max_x.max(x);
+                min_y = min_y.min(y);
+                max_y = max_y.max(y);
             }
+            (min_x, min_y, max_x, max_y)
         };
 
         let color_with_opacity = |mut c: Color, opacity: f32| -> Color {
@@ -3463,37 +3503,25 @@ impl Renderer {
                 }
                 SceneOp::PushLayer { .. } | SceneOp::PopLayer => {}
                 SceneOp::PushClipRect { rect } => {
-                    let (s, tx, ty) = current_transform_params(
-                        *transform_stack
-                            .last()
-                            .expect("transform stack must be non-empty"),
-                    );
-                    let rect = transform_rect(*rect, s, tx, ty);
-                    let Some(new_scissor) = scissor_from_rect(rect, scale_factor, viewport_size)
-                    else {
-                        continue;
+                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
+                    let new_scissor = if w <= 0.0 || h <= 0.0 {
+                        Some(ScissorRect {
+                            x: 0,
+                            y: 0,
+                            w: 0,
+                            h: 0,
+                        })
+                    } else {
+                        let t_px = to_physical_px(
+                            *transform_stack
+                                .last()
+                                .expect("transform stack must be non-empty"),
+                        );
+                        let quad = transform_quad_points_px(t_px, x, y, w, h);
+                        let (min_x, min_y, max_x, max_y) = bounds_of_quad_points(&quad);
+                        scissor_from_bounds_px(min_x, min_y, max_x, max_y, viewport_size)
                     };
-
-                    let combined = intersect_scissor(current_scissor, new_scissor);
-                    if combined != current_scissor {
-                        flush_quad_batch!();
-                    }
-
-                    current_scissor = combined;
-                    scissor_stack.push(current_scissor);
-                    clip_kind_stack.push(false);
-                }
-                SceneOp::PushClipRRect { rect, corner_radii } => {
-                    let (s, tx, ty) = current_transform_params(
-                        *transform_stack
-                            .last()
-                            .expect("transform stack must be non-empty"),
-                    );
-                    let rect = transform_rect(*rect, s, tx, ty);
-                    let corner_radii = scale_corners(*corner_radii, s);
-
-                    let Some(new_scissor) = scissor_from_rect(rect, scale_factor, viewport_size)
-                    else {
+                    let Some(new_scissor) = new_scissor else {
                         continue;
                     };
 
@@ -3505,32 +3533,118 @@ impl Renderer {
                     current_scissor = combined;
                     scissor_stack.push(current_scissor);
 
-                    let (x, y, w, h) = rect_to_pixels(rect, scale_factor);
-                    let radii = corners_to_vec4(corner_radii).map(|r| r * scale_factor);
-                    let radii = clamp_corner_radii_for_rect(w, h, radii);
-                    let is_rrect = radii.iter().any(|v| *v > 0.0);
-                    if is_rrect && active_rounded_clips.len() < MAX_CLIPS {
-                        flush_quad_batch!();
+                    if w <= 0.0 || h <= 0.0 {
+                        clip_shader_stack.push(false);
+                        continue;
+                    }
 
-                        active_rounded_clips.push(ClipRRectUniform {
+                    let t_px = current_transform_px(&transform_stack);
+                    let Some(inv_px) = t_px.inverse() else {
+                        clip_shader_stack.push(false);
+                        continue;
+                    };
+                    if active_clips.len() < MAX_CLIPS {
+                        flush_quad_batch!();
+                        let (inv0, inv1) = transform_rows(inv_px);
+                        active_clips.push(ClipRRectUniform {
                             rect: [x, y, w, h],
-                            corner_radii: radii,
+                            corner_radii: [0.0; 4],
+                            inv0,
+                            inv1,
                         });
 
                         let mut clips = [ClipRRectUniform::zeroed(); MAX_CLIPS];
-                        for (i, clip) in active_rounded_clips.iter().enumerate() {
+                        for (i, clip) in active_clips.iter().enumerate() {
                             clips[i] = *clip;
                         }
                         current_uniform_index = uniforms.len() as u32;
                         uniforms.push(ViewportUniform {
                             viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
-                            clip_count: active_rounded_clips.len() as u32,
+                            clip_count: active_clips.len() as u32,
                             _pad0: 0,
                             clips,
                         });
-                        clip_kind_stack.push(true);
+                        clip_shader_stack.push(true);
                     } else {
-                        clip_kind_stack.push(false);
+                        clip_shader_stack.push(false);
+                    }
+                }
+                SceneOp::PushClipRRect { rect, corner_radii } => {
+                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
+                    let radii = corners_to_vec4(*corner_radii).map(|r| r * scale_factor);
+                    let radii = if w > 0.0 && h > 0.0 {
+                        clamp_corner_radii_for_rect(w, h, radii)
+                    } else {
+                        [0.0; 4]
+                    };
+
+                    let new_scissor = if w <= 0.0 || h <= 0.0 {
+                        Some(ScissorRect {
+                            x: 0,
+                            y: 0,
+                            w: 0,
+                            h: 0,
+                        })
+                    } else {
+                        let t_px = to_physical_px(
+                            *transform_stack
+                                .last()
+                                .expect("transform stack must be non-empty"),
+                        );
+                        let quad = transform_quad_points_px(t_px, x, y, w, h);
+                        let (min_x, min_y, max_x, max_y) = bounds_of_quad_points(&quad);
+                        scissor_from_bounds_px(min_x, min_y, max_x, max_y, viewport_size)
+                    };
+                    let Some(new_scissor) = new_scissor else {
+                        continue;
+                    };
+
+                    let combined = intersect_scissor(current_scissor, new_scissor);
+                    if combined != current_scissor {
+                        flush_quad_batch!();
+                    }
+
+                    current_scissor = combined;
+                    scissor_stack.push(current_scissor);
+
+                    if w <= 0.0 || h <= 0.0 {
+                        clip_shader_stack.push(false);
+                        continue;
+                    }
+
+                    let t_px = to_physical_px(
+                        *transform_stack
+                            .last()
+                            .expect("transform stack must be non-empty"),
+                    );
+                    let Some(inv_px) = t_px.inverse() else {
+                        clip_shader_stack.push(false);
+                        continue;
+                    };
+                    if active_clips.len() < MAX_CLIPS {
+                        flush_quad_batch!();
+                        let (inv0, inv1) = transform_rows(inv_px);
+                        active_clips.push(ClipRRectUniform {
+                            rect: [x, y, w, h],
+                            corner_radii: radii,
+                            inv0,
+                            inv1,
+                        });
+
+                        let mut clips = [ClipRRectUniform::zeroed(); MAX_CLIPS];
+                        for (i, clip) in active_clips.iter().enumerate() {
+                            clips[i] = *clip;
+                        }
+                        current_uniform_index = uniforms.len() as u32;
+                        uniforms.push(ViewportUniform {
+                            viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
+                            clip_count: active_clips.len() as u32,
+                            _pad0: 0,
+                            clips,
+                        });
+                        clip_shader_stack.push(true);
+                    } else {
+                        clip_shader_stack.push(false);
                     }
                 }
                 SceneOp::PopClip => {
@@ -3545,20 +3659,20 @@ impl Renderer {
                         }
                     }
 
-                    if let Some(was_rrect) = clip_kind_stack.pop()
-                        && was_rrect
+                    if let Some(was_shader_clip) = clip_shader_stack.pop()
+                        && was_shader_clip
                     {
                         flush_quad_batch!();
-                        active_rounded_clips.pop();
+                        active_clips.pop();
 
                         let mut clips = [ClipRRectUniform::zeroed(); MAX_CLIPS];
-                        for (i, clip) in active_rounded_clips.iter().enumerate() {
+                        for (i, clip) in active_clips.iter().enumerate() {
                             clips[i] = *clip;
                         }
                         current_uniform_index = uniforms.len() as u32;
                         uniforms.push(ViewportUniform {
                             viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
-                            clip_count: active_rounded_clips.len() as u32,
+                            clip_count: active_clips.len() as u32,
                             _pad0: 0,
                             clips,
                         });
@@ -3576,21 +3690,13 @@ impl Renderer {
                         .last()
                         .expect("opacity stack must be non-empty");
 
-                    let (s, tx, ty) = current_transform_params(
-                        *transform_stack
-                            .last()
-                            .expect("transform stack must be non-empty"),
-                    );
-                    let rect = transform_rect(*rect, s, tx, ty);
-                    let border = scale_edges(*border, s);
-                    let corner_radii = scale_corners(*corner_radii, s);
+                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
                     let background = color_with_opacity(*background, opacity);
                     let border_color = color_with_opacity(*border_color, opacity);
 
                     if background.a <= 0.0 && border_color.a <= 0.0 {
                         continue;
                     }
-                    let (x, y, w, h) = rect_to_pixels(rect, scale_factor);
                     if w <= 0.0 || h <= 0.0 {
                         continue;
                     }
@@ -3611,11 +3717,20 @@ impl Renderer {
                         ));
                     }
 
-                    let corner_radii = corners_to_vec4(corner_radii).map(|r| r * scale_factor);
+                    let t_px = to_physical_px(
+                        *transform_stack
+                            .last()
+                            .expect("transform stack must be non-empty"),
+                    );
+                    let (transform0, transform1) = transform_rows(t_px);
+
+                    let corner_radii = corners_to_vec4(*corner_radii).map(|r| r * scale_factor);
                     let corner_radii = clamp_corner_radii_for_rect(w, h, corner_radii);
-                    let border = edges_to_vec4(border).map(|e| e * scale_factor);
+                    let border = edges_to_vec4(*border).map(|e| e * scale_factor);
                     instances.push(QuadInstance {
                         rect: [x, y, w, h],
+                        transform0,
+                        transform1,
                         color: color_to_linear_rgba_premul(background),
                         corner_radii,
                         border,
@@ -3643,58 +3758,49 @@ impl Renderer {
                     if self.images.get(*image).is_none() {
                         continue;
                     }
-                    let (s, tx, ty) = current_transform_params(
-                        *transform_stack
-                            .last()
-                            .expect("transform stack must be non-empty"),
-                    );
-                    let rect = transform_rect(*rect, s, tx, ty);
-                    let (x, y, w, h) = rect_to_pixels(rect, scale_factor);
+                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
                     if w <= 0.0 || h <= 0.0 {
                         continue;
                     }
+                    let t_px = current_transform_px(&transform_stack);
+                    let quad = transform_quad_points_px(t_px, x, y, w, h);
 
                     let first_vertex = viewport_vertices.len() as u32;
                     let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
 
-                    let x0 = x;
-                    let y0 = y;
-                    let x1 = x + w;
-                    let y1 = y + h;
-
                     viewport_vertices.extend_from_slice(&[
                         ViewportVertex {
-                            pos_px: [x0, y0],
+                            pos_px: [quad[0].0, quad[0].1],
                             uv: [0.0, 0.0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x1, y0],
+                            pos_px: [quad[1].0, quad[1].1],
                             uv: [1.0, 0.0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x1, y1],
+                            pos_px: [quad[2].0, quad[2].1],
                             uv: [1.0, 1.0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x0, y0],
+                            pos_px: [quad[0].0, quad[0].1],
                             uv: [0.0, 0.0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x1, y1],
+                            pos_px: [quad[2].0, quad[2].1],
                             uv: [1.0, 1.0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x0, y1],
+                            pos_px: [quad[3].0, quad[3].1],
                             uv: [0.0, 1.0],
                             opacity: o,
                             _pad: [0.0; 3],
@@ -3731,59 +3837,50 @@ impl Renderer {
                     if self.images.get(*image).is_none() {
                         continue;
                     }
-                    let (s, tx, ty) = current_transform_params(
-                        *transform_stack
-                            .last()
-                            .expect("transform stack must be non-empty"),
-                    );
-                    let rect = transform_rect(*rect, s, tx, ty);
-                    let (x, y, w, h) = rect_to_pixels(rect, scale_factor);
+                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
                     if w <= 0.0 || h <= 0.0 {
                         continue;
                     }
+                    let t_px = current_transform_px(&transform_stack);
+                    let quad = transform_quad_points_px(t_px, x, y, w, h);
 
                     let first_vertex = viewport_vertices.len() as u32;
                     let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
 
-                    let x0 = x;
-                    let y0 = y;
-                    let x1 = x + w;
-                    let y1 = y + h;
-
                     let (u0, v0, u1, v1) = (uv.u0, uv.v0, uv.u1, uv.v1);
                     viewport_vertices.extend_from_slice(&[
                         ViewportVertex {
-                            pos_px: [x0, y0],
+                            pos_px: [quad[0].0, quad[0].1],
                             uv: [u0, v0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x1, y0],
+                            pos_px: [quad[1].0, quad[1].1],
                             uv: [u1, v0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x1, y1],
+                            pos_px: [quad[2].0, quad[2].1],
                             uv: [u1, v1],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x0, y0],
+                            pos_px: [quad[0].0, quad[0].1],
                             uv: [u0, v0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x1, y1],
+                            pos_px: [quad[2].0, quad[2].1],
                             uv: [u1, v1],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x0, y1],
+                            pos_px: [quad[3].0, quad[3].1],
                             uv: [u0, v1],
                             opacity: o,
                             _pad: [0.0; 3],
@@ -3821,56 +3918,47 @@ impl Renderer {
                     if self.images.get(*image).is_none() {
                         continue;
                     }
-                    let (s, tx, ty) = current_transform_params(
-                        *transform_stack
-                            .last()
-                            .expect("transform stack must be non-empty"),
-                    );
-                    let rect = transform_rect(*rect, s, tx, ty);
-                    let (x, y, w, h) = rect_to_pixels(rect, scale_factor);
+                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
                     if w <= 0.0 || h <= 0.0 {
                         continue;
                     }
+                    let t_px = current_transform_px(&transform_stack);
+                    let quad = transform_quad_points_px(t_px, x, y, w, h);
 
                     let first_vertex = text_vertices.len() as u32;
                     let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
                     let mut premul = color_to_linear_rgba_premul(*color);
                     premul = premul.map(|c| c * o);
 
-                    let x0 = x;
-                    let y0 = y;
-                    let x1 = x + w;
-                    let y1 = y + h;
-
                     let (u0, v0, u1, v1) = (uv.u0, uv.v0, uv.u1, uv.v1);
                     text_vertices.extend_from_slice(&[
                         TextVertex {
-                            pos_px: [x0, y0],
+                            pos_px: [quad[0].0, quad[0].1],
                             uv: [u0, v0],
                             color: premul,
                         },
                         TextVertex {
-                            pos_px: [x1, y0],
+                            pos_px: [quad[1].0, quad[1].1],
                             uv: [u1, v0],
                             color: premul,
                         },
                         TextVertex {
-                            pos_px: [x1, y1],
+                            pos_px: [quad[2].0, quad[2].1],
                             uv: [u1, v1],
                             color: premul,
                         },
                         TextVertex {
-                            pos_px: [x0, y0],
+                            pos_px: [quad[0].0, quad[0].1],
                             uv: [u0, v0],
                             color: premul,
                         },
                         TextVertex {
-                            pos_px: [x1, y1],
+                            pos_px: [quad[2].0, quad[2].1],
                             uv: [u1, v1],
                             color: premul,
                         },
                         TextVertex {
-                            pos_px: [x0, y1],
+                            pos_px: [quad[3].0, quad[3].1],
                             uv: [u0, v1],
                             color: premul,
                         },
@@ -3905,11 +3993,10 @@ impl Renderer {
                         continue;
                     }
 
-                    let (s, tx, ty) = current_transform_params(
-                        *transform_stack
-                            .last()
-                            .expect("transform stack must be non-empty"),
-                    );
+                    let t = *transform_stack
+                        .last()
+                        .expect("transform stack must be non-empty");
+                    let s = current_transform_max_scale(t);
                     let key_rect = Rect::new(
                         rect.origin,
                         Size::new(Px(rect.size.width.0 * s), Px(rect.size.height.0 * s)),
@@ -3928,8 +4015,7 @@ impl Renderer {
                         continue;
                     }
 
-                    let draw_rect = transform_rect(*rect, s, tx, ty);
-                    let (x, y, w, h) = rect_to_pixels(draw_rect, scale_factor);
+                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
                     if w <= 0.0 || h <= 0.0 {
                         continue;
                     }
@@ -3939,46 +4025,55 @@ impl Renderer {
                     let mut premul = color_to_linear_rgba_premul(*color);
                     premul = premul.map(|c| c * o);
 
-                    let (x0, y0, x1, y1) =
+                    let (lx0, ly0, lx1, ly1) =
                         svg_draw_rect_px(x, y, w, h, entry.size_px, SMOOTH_SVG_SCALE_FACTOR, *fit);
+                    let t_px = current_transform_px(&transform_stack);
+                    let quad = [
+                        apply_transform_px(t_px, lx0, ly0),
+                        apply_transform_px(t_px, lx1, ly0),
+                        apply_transform_px(t_px, lx1, ly1),
+                        apply_transform_px(t_px, lx0, ly1),
+                    ];
 
                     let (u0, v0, u1, v1) = (entry.uv.u0, entry.uv.v0, entry.uv.u1, entry.uv.v1);
                     text_vertices.extend_from_slice(&[
                         TextVertex {
-                            pos_px: [x0, y0],
+                            pos_px: [quad[0].0, quad[0].1],
                             uv: [u0, v0],
                             color: premul,
                         },
                         TextVertex {
-                            pos_px: [x1, y0],
+                            pos_px: [quad[1].0, quad[1].1],
                             uv: [u1, v0],
                             color: premul,
                         },
                         TextVertex {
-                            pos_px: [x1, y1],
+                            pos_px: [quad[2].0, quad[2].1],
                             uv: [u1, v1],
                             color: premul,
                         },
                         TextVertex {
-                            pos_px: [x0, y0],
+                            pos_px: [quad[0].0, quad[0].1],
                             uv: [u0, v0],
                             color: premul,
                         },
                         TextVertex {
-                            pos_px: [x1, y1],
+                            pos_px: [quad[2].0, quad[2].1],
                             uv: [u1, v1],
                             color: premul,
                         },
                         TextVertex {
-                            pos_px: [x0, y1],
+                            pos_px: [quad[3].0, quad[3].1],
                             uv: [u0, v1],
                             color: premul,
                         },
                     ]);
 
-                    let svg_scissor = scissor_from_rect(draw_rect, scale_factor, viewport_size)
-                        .map(|s| intersect_scissor(current_scissor, s))
-                        .unwrap_or(current_scissor);
+                    let (min_x, min_y, max_x, max_y) = bounds_of_quad_points(&quad);
+                    let svg_scissor =
+                        scissor_from_bounds_px(min_x, min_y, max_x, max_y, viewport_size)
+                            .map(|s| intersect_scissor(current_scissor, s))
+                            .unwrap_or(current_scissor);
                     ordered_draws.push(OrderedDraw::Mask(MaskDraw {
                         scissor: svg_scissor,
                         uniform_index: current_uniform_index,
@@ -4007,11 +4102,10 @@ impl Renderer {
                         continue;
                     }
 
-                    let (s, tx, ty) = current_transform_params(
-                        *transform_stack
-                            .last()
-                            .expect("transform stack must be non-empty"),
-                    );
+                    let t = *transform_stack
+                        .last()
+                        .expect("transform stack must be non-empty");
+                    let s = current_transform_max_scale(t);
                     let key_rect = Rect::new(
                         rect.origin,
                         Size::new(Px(rect.size.width.0 * s), Px(rect.size.height.0 * s)),
@@ -4031,8 +4125,7 @@ impl Renderer {
                         continue;
                     }
 
-                    let draw_rect = transform_rect(*rect, s, tx, ty);
-                    let (x, y, w, h) = rect_to_pixels(draw_rect, scale_factor);
+                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
                     if w <= 0.0 || h <= 0.0 {
                         continue;
                     }
@@ -4040,51 +4133,60 @@ impl Renderer {
                     let first_vertex = viewport_vertices.len() as u32;
                     let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
 
-                    let (x0, y0, x1, y1) =
+                    let (lx0, ly0, lx1, ly1) =
                         svg_draw_rect_px(x, y, w, h, entry.size_px, SMOOTH_SVG_SCALE_FACTOR, *fit);
+                    let t_px = current_transform_px(&transform_stack);
+                    let quad = [
+                        apply_transform_px(t_px, lx0, ly0),
+                        apply_transform_px(t_px, lx1, ly0),
+                        apply_transform_px(t_px, lx1, ly1),
+                        apply_transform_px(t_px, lx0, ly1),
+                    ];
 
                     viewport_vertices.extend_from_slice(&[
                         ViewportVertex {
-                            pos_px: [x0, y0],
+                            pos_px: [quad[0].0, quad[0].1],
                             uv: [0.0, 0.0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x1, y0],
+                            pos_px: [quad[1].0, quad[1].1],
                             uv: [1.0, 0.0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x1, y1],
+                            pos_px: [quad[2].0, quad[2].1],
                             uv: [1.0, 1.0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x0, y0],
+                            pos_px: [quad[0].0, quad[0].1],
                             uv: [0.0, 0.0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x1, y1],
+                            pos_px: [quad[2].0, quad[2].1],
                             uv: [1.0, 1.0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x0, y1],
+                            pos_px: [quad[3].0, quad[3].1],
                             uv: [0.0, 1.0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                     ]);
 
-                    let svg_scissor = scissor_from_rect(draw_rect, scale_factor, viewport_size)
-                        .map(|s| intersect_scissor(current_scissor, s))
-                        .unwrap_or(current_scissor);
+                    let (min_x, min_y, max_x, max_y) = bounds_of_quad_points(&quad);
+                    let svg_scissor =
+                        scissor_from_bounds_px(min_x, min_y, max_x, max_y, viewport_size)
+                            .map(|s| intersect_scissor(current_scissor, s))
+                            .unwrap_or(current_scissor);
                     ordered_draws.push(OrderedDraw::Image(ImageDraw {
                         scissor: svg_scissor,
                         uniform_index: current_uniform_index,
@@ -4112,12 +4214,7 @@ impl Renderer {
                         continue;
                     }
 
-                    let (s, tx, ty) = current_transform_params(
-                        *transform_stack
-                            .last()
-                            .expect("transform stack must be non-empty"),
-                    );
-                    let origin = transform_point(*origin, s, tx, ty);
+                    let t_px = current_transform_px(&transform_stack);
 
                     let first_vertex = text_vertices.len() as u32;
 
@@ -4127,41 +4224,47 @@ impl Renderer {
                         color_to_linear_rgba_premul(color_with_opacity(*color, group_opacity));
 
                     for g in &blob.glyphs {
-                        let x0 = base_x + g.rect[0] * s * scale_factor;
-                        let y0 = base_y + g.rect[1] * s * scale_factor;
-                        let x1 = x0 + g.rect[2] * s * scale_factor;
-                        let y1 = y0 + g.rect[3] * s * scale_factor;
+                        let lx0 = base_x + g.rect[0] * scale_factor;
+                        let ly0 = base_y + g.rect[1] * scale_factor;
+                        let lx1 = lx0 + g.rect[2] * scale_factor;
+                        let ly1 = ly0 + g.rect[3] * scale_factor;
+                        let quad = [
+                            apply_transform_px(t_px, lx0, ly0),
+                            apply_transform_px(t_px, lx1, ly0),
+                            apply_transform_px(t_px, lx1, ly1),
+                            apply_transform_px(t_px, lx0, ly1),
+                        ];
 
                         let (u0, v0, u1, v1) = (g.uv[0], g.uv[1], g.uv[2], g.uv[3]);
 
                         text_vertices.extend_from_slice(&[
                             TextVertex {
-                                pos_px: [x0, y0],
+                                pos_px: [quad[0].0, quad[0].1],
                                 uv: [u0, v0],
                                 color: premul,
                             },
                             TextVertex {
-                                pos_px: [x1, y0],
+                                pos_px: [quad[1].0, quad[1].1],
                                 uv: [u1, v0],
                                 color: premul,
                             },
                             TextVertex {
-                                pos_px: [x1, y1],
+                                pos_px: [quad[2].0, quad[2].1],
                                 uv: [u1, v1],
                                 color: premul,
                             },
                             TextVertex {
-                                pos_px: [x0, y0],
+                                pos_px: [quad[0].0, quad[0].1],
                                 uv: [u0, v0],
                                 color: premul,
                             },
                             TextVertex {
-                                pos_px: [x1, y1],
+                                pos_px: [quad[2].0, quad[2].1],
                                 uv: [u1, v1],
                                 color: premul,
                             },
                             TextVertex {
-                                pos_px: [x0, y1],
+                                pos_px: [quad[3].0, quad[3].1],
                                 uv: [u0, v1],
                                 color: premul,
                             },
@@ -4201,12 +4304,7 @@ impl Renderer {
                     if prepared.triangles.is_empty() {
                         continue;
                     }
-
-                    let (s, tx, ty) = current_transform_params(
-                        *transform_stack
-                            .last()
-                            .expect("transform stack must be non-empty"),
-                    );
+                    let t_px = current_transform_px(&transform_stack);
 
                     let local_bounds = Rect::new(
                         fret_core::Point::new(
@@ -4215,9 +4313,11 @@ impl Renderer {
                         ),
                         prepared.metrics.bounds.size,
                     );
-                    let path_bounds = transform_rect(local_bounds, s, tx, ty);
+                    let (bx, by, bw, bh) = rect_to_pixels(local_bounds, scale_factor);
+                    let bounds_quad = transform_quad_points_px(t_px, bx, by, bw, bh);
+                    let (min_x, min_y, max_x, max_y) = bounds_of_quad_points(&bounds_quad);
                     let Some(bounds_scissor) =
-                        scissor_from_rect(path_bounds, scale_factor, viewport_size)
+                        scissor_from_bounds_px(min_x, min_y, max_x, max_y, viewport_size)
                     else {
                         continue;
                     };
@@ -4227,15 +4327,17 @@ impl Renderer {
                     }
 
                     let first_vertex = path_vertices.len() as u32;
-                    let origin = transform_point(*origin, s, tx, ty);
                     let ox = origin.x.0 * scale_factor;
                     let oy = origin.y.0 * scale_factor;
                     let premul =
                         color_to_linear_rgba_premul(color_with_opacity(*color, group_opacity));
 
                     for p in &prepared.triangles {
+                        let lx = ox + p[0] * scale_factor;
+                        let ly = oy + p[1] * scale_factor;
+                        let (wx, wy) = apply_transform_px(t_px, lx, ly);
                         path_vertices.push(PathVertex {
-                            pos_px: [ox + p[0] * s * scale_factor, oy + p[1] * s * scale_factor],
+                            pos_px: [wx, wy],
                             color: premul,
                         });
                     }
@@ -4267,58 +4369,49 @@ impl Renderer {
                     if self.render_targets.get(*target).is_none() {
                         continue;
                     }
-                    let (s, tx, ty) = current_transform_params(
-                        *transform_stack
-                            .last()
-                            .expect("transform stack must be non-empty"),
-                    );
-                    let rect = transform_rect(*rect, s, tx, ty);
-                    let (x, y, w, h) = rect_to_pixels(rect, scale_factor);
+                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
                     if w <= 0.0 || h <= 0.0 {
                         continue;
                     }
+                    let t_px = current_transform_px(&transform_stack);
+                    let quad = transform_quad_points_px(t_px, x, y, w, h);
 
                     let first_vertex = viewport_vertices.len() as u32;
                     let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
 
-                    let x0 = x;
-                    let y0 = y;
-                    let x1 = x + w;
-                    let y1 = y + h;
-
                     viewport_vertices.extend_from_slice(&[
                         ViewportVertex {
-                            pos_px: [x0, y0],
+                            pos_px: [quad[0].0, quad[0].1],
                             uv: [0.0, 0.0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x1, y0],
+                            pos_px: [quad[1].0, quad[1].1],
                             uv: [1.0, 0.0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x1, y1],
+                            pos_px: [quad[2].0, quad[2].1],
                             uv: [1.0, 1.0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x0, y0],
+                            pos_px: [quad[0].0, quad[0].1],
                             uv: [0.0, 0.0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x1, y1],
+                            pos_px: [quad[2].0, quad[2].1],
                             uv: [1.0, 1.0],
                             opacity: o,
                             _pad: [0.0; 3],
                         },
                         ViewportVertex {
-                            pos_px: [x0, y1],
+                            pos_px: [quad[3].0, quad[3].1],
                             uv: [0.0, 1.0],
                             opacity: o,
                             _pad: [0.0; 3],
@@ -4525,11 +4618,13 @@ impl fret_core::SvgService for Renderer {
 }
 
 const QUAD_SHADER: &str = r#"
-const MAX_CLIPS: u32 = 8u;
+const MAX_CLIPS: u32 = 32u;
 
 struct ClipRRect {
   rect: vec4<f32>,
   corner_radii: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
 };
 
 struct Viewport {
@@ -4543,6 +4638,8 @@ struct Viewport {
 
 struct QuadInstance {
   rect: vec4<f32>,
+  transform0: vec4<f32>,
+  transform1: vec4<f32>,
   color: vec4<f32>,
   corner_radii: vec4<f32>,
   border: vec4<f32>,
@@ -4552,8 +4649,8 @@ struct QuadInstance {
 struct VsOut {
   @builtin(position) clip_pos: vec4<f32>,
   @location(0) pixel_pos: vec2<f32>,
-  @location(1) rect_origin: vec2<f32>,
-  @location(2) rect_size: vec2<f32>,
+  @location(1) local_pos: vec2<f32>,
+  @location(2) rect: vec4<f32>,
   @location(3) color: vec4<f32>,
   @location(4) corner_radii: vec4<f32>,
   @location(5) border: vec4<f32>,
@@ -4581,20 +4678,26 @@ fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
 fn vs_main(
   @builtin(vertex_index) vertex_index: u32,
   @location(0) rect: vec4<f32>,
-  @location(1) color: vec4<f32>,
-  @location(2) corner_radii: vec4<f32>,
-  @location(3) border: vec4<f32>,
-  @location(4) border_color: vec4<f32>,
+  @location(1) transform0: vec4<f32>,
+  @location(2) transform1: vec4<f32>,
+  @location(3) color: vec4<f32>,
+  @location(4) corner_radii: vec4<f32>,
+  @location(5) border: vec4<f32>,
+  @location(6) border_color: vec4<f32>,
 ) -> VsOut {
   let uv = quad_vertex_xy(vertex_index);
-  let pixel_pos = rect.xy + uv * rect.zw;
+  let local_pos = rect.xy + uv * rect.zw;
+  let pixel_pos = vec2<f32>(
+    dot(transform0.xy, local_pos) + transform0.z,
+    dot(transform1.xy, local_pos) + transform1.z
+  );
   let clip_xy = to_clip_space(pixel_pos);
 
   var out: VsOut;
   out.clip_pos = vec4<f32>(clip_xy, 0.0, 1.0);
   out.pixel_pos = pixel_pos;
-  out.rect_origin = rect.xy;
-  out.rect_size = rect.zw;
+  out.local_pos = local_pos;
+  out.rect = rect;
   out.color = color;
   out.corner_radii = corner_radii;
   out.border = border;
@@ -4642,7 +4745,11 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
       break;
     }
     let clip = viewport.clips[i];
-    let sdf = quad_sdf(pixel_pos, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    let clip_local = vec2<f32>(
+      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
+      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
+    );
+    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
     let aa = max(fwidth(sdf), 1e-4);
     let a = 1.0 - smoothstep(-aa, aa, sdf);
     alpha = alpha * a;
@@ -4660,7 +4767,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
     discard;
   }
 
-  let outer_sdf = quad_sdf(input.pixel_pos, input.rect_origin, input.rect_size, input.corner_radii);
+  let outer_sdf = quad_sdf(input.local_pos, input.rect.xy, input.rect.zw, input.corner_radii);
 
   // NOTE: AA must scale with derivatives. A fixed threshold (e.g. 0.5) breaks under DPI changes
   // and transforms. See ADR 0030.
@@ -4673,8 +4780,8 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   }
 
   // Border alignment: inside. Inner radii are derived by subtracting adjacent border widths.
-  let inner_origin = input.rect_origin + vec2<f32>(input.border.x, input.border.y);
-  let inner_size = input.rect_size - vec2<f32>(input.border.x + input.border.z, input.border.y + input.border.w);
+  let inner_origin = input.rect.xy + vec2<f32>(input.border.x, input.border.y);
+  let inner_size = input.rect.zw - vec2<f32>(input.border.x + input.border.z, input.border.y + input.border.w);
 
   let inner_radii = max(
     vec4<f32>(0.0),
@@ -4688,7 +4795,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 
   var alpha_inner = 0.0;
   if (inner_size.x > 0.0 && inner_size.y > 0.0) {
-    let inner_sdf = quad_sdf(input.pixel_pos, inner_origin, inner_size, inner_radii);
+    let inner_sdf = quad_sdf(input.local_pos, inner_origin, inner_size, inner_radii);
     let aa_inner = max(fwidth(inner_sdf), 1e-4);
     alpha_inner = 1.0 - smoothstep(-aa_inner, aa_inner, inner_sdf);
   }
@@ -4702,11 +4809,13 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 "#;
 
 const VIEWPORT_SHADER: &str = r#"
-const MAX_CLIPS: u32 = 8u;
+const MAX_CLIPS: u32 = 32u;
 
 struct ClipRRect {
   rect: vec4<f32>,
   corner_radii: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
 };
 
 struct Viewport {
@@ -4776,7 +4885,11 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
       break;
     }
     let clip = viewport.clips[i];
-    let sdf = quad_sdf(pixel_pos, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    let clip_local = vec2<f32>(
+      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
+      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
+    );
+    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
     let aa = max(fwidth(sdf), 1e-4);
     let a = 1.0 - smoothstep(-aa, aa, sdf);
     alpha = alpha * a;
@@ -4811,11 +4924,13 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 "#;
 
 const COMPOSITE_PREMUL_SHADER: &str = r#"
-const MAX_CLIPS: u32 = 8u;
+const MAX_CLIPS: u32 = 32u;
 
 struct ClipRRect {
   rect: vec4<f32>,
   corner_radii: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
 };
 
 struct Viewport {
@@ -4885,7 +5000,11 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
       break;
     }
     let clip = viewport.clips[i];
-    let sdf = quad_sdf(pixel_pos, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    let clip_local = vec2<f32>(
+      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
+      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
+    );
+    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
     let aa = max(fwidth(sdf), 1e-4);
     let a = 1.0 - smoothstep(-aa, aa, sdf);
     alpha = alpha * a;
@@ -4920,11 +5039,13 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 "#;
 
 const PATH_SHADER: &str = r#"
-const MAX_CLIPS: u32 = 8u;
+const MAX_CLIPS: u32 = 32u;
 
 struct ClipRRect {
   rect: vec4<f32>,
   corner_radii: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
 };
 
 struct Viewport {
@@ -4989,7 +5110,11 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
       break;
     }
     let clip = viewport.clips[i];
-    let sdf = quad_sdf(pixel_pos, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    let clip_local = vec2<f32>(
+      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
+      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
+    );
+    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
     let aa = max(fwidth(sdf), 1e-4);
     let a = 1.0 - smoothstep(-aa, aa, sdf);
     alpha = alpha * a;
@@ -5021,11 +5146,13 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 "#;
 
 const TEXT_SHADER: &str = r#"
-const MAX_CLIPS: u32 = 8u;
+const MAX_CLIPS: u32 = 32u;
 
 struct ClipRRect {
   rect: vec4<f32>,
   corner_radii: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
 };
 
 struct Viewport {
@@ -5095,7 +5222,11 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
       break;
     }
     let clip = viewport.clips[i];
-    let sdf = quad_sdf(pixel_pos, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    let clip_local = vec2<f32>(
+      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
+      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
+    );
+    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
     let aa = max(fwidth(sdf), 1e-4);
     let a = 1.0 - smoothstep(-aa, aa, sdf);
     alpha = alpha * a;
@@ -5130,11 +5261,13 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 "#;
 
 const MASK_SHADER: &str = r#"
-const MAX_CLIPS: u32 = 8u;
+const MAX_CLIPS: u32 = 32u;
 
 struct ClipRRect {
   rect: vec4<f32>,
   corner_radii: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
 };
 
 struct Viewport {
@@ -5204,7 +5337,11 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
       break;
     }
     let clip = viewport.clips[i];
-    let sdf = quad_sdf(pixel_pos, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    let clip_local = vec2<f32>(
+      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
+      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
+    );
+    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
     let aa = max(fwidth(sdf), 1e-4);
     let a = 1.0 - smoothstep(-aa, aa, sdf);
     alpha = alpha * a;
@@ -5244,6 +5381,7 @@ mod tests {
         COMPOSITE_PREMUL_SHADER, MASK_SHADER, PATH_SHADER, QUAD_SHADER, TEXT_SHADER,
         VIEWPORT_SHADER, clamp_corner_radii_for_rect, svg_draw_rect_px,
     };
+    use fret_core::geometry::{Point, Px, Transform2D};
 
     #[test]
     fn shaders_parse_as_wgsl() {
@@ -5257,6 +5395,51 @@ mod tests {
         ] {
             naga::front::wgsl::parse_str(src)
                 .unwrap_or_else(|err| panic!("WGSL parse failed for {name} shader: {err}"));
+        }
+    }
+
+    #[test]
+    fn transform_rows_match_apply_point() {
+        let t = Transform2D {
+            a: 1.3,
+            b: -0.2,
+            c: 0.7,
+            d: 0.9,
+            tx: 10.0,
+            ty: -5.0,
+        };
+        let row0 = [t.a, t.c, t.tx, 0.0];
+        let row1 = [t.b, t.d, t.ty, 0.0];
+
+        for (x, y) in [(0.0, 0.0), (12.5, -3.25), (-100.0, 50.0)] {
+            let p = t.apply_point(Point::new(Px(x), Px(y)));
+            let x2 = row0[0] * x + row0[1] * y + row0[2];
+            let y2 = row1[0] * x + row1[1] * y + row1[2];
+            assert!((p.x.0 - x2).abs() < 1e-4);
+            assert!((p.y.0 - y2).abs() < 1e-4);
+        }
+    }
+
+    #[test]
+    fn inverse_rows_match_apply_point() {
+        let t = Transform2D {
+            a: 1.3,
+            b: -0.2,
+            c: 0.7,
+            d: 0.9,
+            tx: 10.0,
+            ty: -5.0,
+        };
+        let inv = t.inverse().expect("invertible");
+        let inv0 = [inv.a, inv.c, inv.tx, 0.0];
+        let inv1 = [inv.b, inv.d, inv.ty, 0.0];
+
+        for (x, y) in [(0.0, 0.0), (12.5, -3.25), (-100.0, 50.0)] {
+            let p = inv.apply_point(Point::new(Px(x), Px(y)));
+            let x2 = inv0[0] * x + inv0[1] * y + inv0[2];
+            let y2 = inv1[0] * x + inv1[1] * y + inv1[2];
+            assert!((p.x.0 - x2).abs() < 1e-4);
+            assert!((p.y.0 - y2).abs() < 1e-4);
         }
     }
 

@@ -102,4 +102,9 @@ to a shader-based clip evaluation or a mask pass. “Over-clipping” or “unde
   - transform-before-clip moving masks,
   - rounded clip under rotation,
   - and viewport overlays under zoom.
+
+Current status:
+
+- `crates/fret-render/tests/affine_clip_conformance.rs` provides a GPU-level conformance check for
+  affine transform + clip-local evaluation (may skip in environments without a usable adapter).
 - Decide how `PushLayer` should interact with batching and potential offscreen composition.
