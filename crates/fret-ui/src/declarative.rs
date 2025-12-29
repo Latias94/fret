@@ -207,6 +207,7 @@ pub(crate) enum ElementInstance {
     TextInput(crate::element::TextInputProps),
     TextArea(crate::element::TextAreaProps),
     Slider(crate::element::SliderProps),
+    ResizablePanelGroup(crate::element::ResizablePanelGroupProps),
     VirtualList(crate::element::VirtualListProps),
     Flex(FlexProps),
     Grid(crate::element::GridProps),
@@ -279,6 +280,7 @@ fn layout_style_for_node<H: UiHost>(app: &mut H, window: AppWindowId, node: Node
             ElementInstance::TextInput(p) => p.layout,
             ElementInstance::TextArea(p) => p.layout,
             ElementInstance::Slider(p) => p.layout,
+            ElementInstance::ResizablePanelGroup(p) => p.layout,
             ElementInstance::VirtualList(p) => p.layout,
             ElementInstance::Flex(p) => p.layout,
             ElementInstance::Grid(p) => p.layout,
@@ -617,6 +619,7 @@ struct ElementHostWidget {
     text_input: Option<BoundTextInput>,
     text_area: Option<crate::text_area::BoundTextArea>,
     slider: Option<crate::slider::BoundSlider>,
+    resizable_panel_group: Option<crate::resizable_panel_group::BoundResizablePanelGroup>,
     flex_cache: Option<TaffyContainerCache>,
     grid_cache: Option<TaffyContainerCache>,
 }
@@ -1121,6 +1124,27 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 slider.set_enabled(props.enabled);
                 slider.set_style(props.chrome);
                 slider.event(cx, event);
+            }
+            ElementInstance::ResizablePanelGroup(props) => {
+                if self.resizable_panel_group.is_none() {
+                    self.resizable_panel_group =
+                        Some(crate::resizable_panel_group::BoundResizablePanelGroup::new(
+                            props.axis,
+                            props.model,
+                        ));
+                }
+                let group = self
+                    .resizable_panel_group
+                    .as_mut()
+                    .expect("resizable panel group");
+                if group.model_id() != props.model.id() {
+                    group.set_model(props.model);
+                }
+                group.set_axis(props.axis);
+                group.set_enabled(props.enabled);
+                group.set_min_px(props.min_px.clone());
+                group.set_style(props.chrome.clone());
+                group.event(cx, event);
             }
             ElementInstance::VirtualList(props) => {
                 let Event::Pointer(pe) = event else {
@@ -1882,6 +1906,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         if let Some(slider) = self.slider.as_mut() {
             slider.cleanup_resources(services);
         }
+        if let Some(group) = self.resizable_panel_group.as_mut() {
+            group.cleanup_resources(services);
+        }
     }
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
@@ -1964,6 +1991,27 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     cx.set_label(label.as_ref().to_string());
                 }
                 slider.semantics(cx);
+            }
+            ElementInstance::ResizablePanelGroup(props) => {
+                if self.resizable_panel_group.is_none() {
+                    self.resizable_panel_group =
+                        Some(crate::resizable_panel_group::BoundResizablePanelGroup::new(
+                            props.axis,
+                            props.model,
+                        ));
+                }
+                let group = self
+                    .resizable_panel_group
+                    .as_mut()
+                    .expect("resizable panel group");
+                if group.model_id() != props.model.id() {
+                    group.set_model(props.model);
+                }
+                group.set_axis(props.axis);
+                group.set_enabled(props.enabled);
+                group.set_min_px(props.min_px.clone());
+                group.set_style(props.chrome.clone());
+                group.semantics(cx);
             }
             ElementInstance::Pressable(props) => {
                 cx.set_role(props.a11y.role.unwrap_or(SemanticsRole::Button));
@@ -2061,6 +2109,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::TextInput(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::TextArea(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Slider(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::ResizablePanelGroup(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Scroll(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::HoverRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             // These primitives are always hit-test clipped by their own bounds (they are not
@@ -2322,6 +2371,29 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 slider.set_style(props.chrome.clone());
 
                 let desired = slider.layout(cx);
+                clamp_to_constraints(desired, props.layout, cx.available)
+            }
+            ElementInstance::ResizablePanelGroup(props) => {
+                if self.resizable_panel_group.is_none() {
+                    self.resizable_panel_group =
+                        Some(crate::resizable_panel_group::BoundResizablePanelGroup::new(
+                            props.axis,
+                            props.model,
+                        ));
+                }
+                let group = self
+                    .resizable_panel_group
+                    .as_mut()
+                    .expect("resizable panel group");
+                if group.model_id() != props.model.id() {
+                    group.set_model(props.model);
+                }
+                group.set_axis(props.axis);
+                group.set_enabled(props.enabled);
+                group.set_min_px(props.min_px.clone());
+                group.set_style(props.chrome.clone());
+
+                let desired = group.layout(cx);
                 clamp_to_constraints(desired, props.layout, cx.available)
             }
             ElementInstance::VirtualList(props) => {
@@ -3353,6 +3425,27 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 slider.set_style(props.chrome.clone());
                 slider.paint(cx);
             }
+            ElementInstance::ResizablePanelGroup(props) => {
+                if self.resizable_panel_group.is_none() {
+                    self.resizable_panel_group =
+                        Some(crate::resizable_panel_group::BoundResizablePanelGroup::new(
+                            props.axis,
+                            props.model,
+                        ));
+                }
+                let group = self
+                    .resizable_panel_group
+                    .as_mut()
+                    .expect("resizable panel group");
+                if group.model_id() != props.model.id() {
+                    group.set_model(props.model);
+                }
+                group.set_axis(props.axis);
+                group.set_enabled(props.enabled);
+                group.set_min_px(props.min_px.clone());
+                group.set_style(props.chrome.clone());
+                group.paint(cx);
+            }
             ElementInstance::VirtualList(props) => {
                 cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
 
@@ -3650,6 +3743,7 @@ pub fn render_root<H: UiHost>(
                     text_input: None,
                     text_area: None,
                     slider: None,
+                    resizable_panel_group: None,
                     flex_cache: None,
                     grid_cache: None,
                 });
@@ -3791,6 +3885,7 @@ fn render_dismissible_root_impl<H: UiHost, F: FnOnce(&mut ElementCx<'_, H>) -> V
                     text_input: None,
                     text_area: None,
                     slider: None,
+                    resizable_panel_group: None,
                     flex_cache: None,
                     grid_cache: None,
                 });
@@ -3899,6 +3994,7 @@ fn mount_element<H: UiHost>(
                 text_input: None,
                 text_area: None,
                 slider: None,
+                resizable_panel_group: None,
                 flex_cache: None,
                 grid_cache: None,
             });
@@ -3952,6 +4048,7 @@ fn mount_element<H: UiHost>(
         ElementKind::TextInput(p) => ElementInstance::TextInput(p),
         ElementKind::TextArea(p) => ElementInstance::TextArea(p),
         ElementKind::Slider(p) => ElementInstance::Slider(p),
+        ElementKind::ResizablePanelGroup(p) => ElementInstance::ResizablePanelGroup(p),
         ElementKind::VirtualList(p) => ElementInstance::VirtualList(p),
         ElementKind::Flex(p) => ElementInstance::Flex(p),
         ElementKind::Grid(p) => ElementInstance::Grid(p),
@@ -4472,6 +4569,86 @@ mod tests {
             .copied()
             .unwrap_or(f32::NAN);
         assert!((v - 100.0).abs() < 0.01, "expected slider=100, got {v}");
+    }
+
+    #[test]
+    fn declarative_resizable_panel_group_updates_model_on_drag() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(40.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(vec![0.33, 0.34, 0.33]);
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "resizable-panel-group-drag",
+            |cx| {
+                let mut props = crate::element::ResizablePanelGroupProps::new(
+                    fret_core::Axis::Horizontal,
+                    model,
+                );
+                props.min_px = vec![Px(10.0)];
+                props.chrome = crate::ResizablePanelGroupStyle {
+                    hit_thickness: Px(10.0),
+                    ..Default::default()
+                };
+                vec![cx.resizable_panel_group(props, |cx| {
+                    vec![
+                        cx.spacer(crate::element::SpacerProps::default()),
+                        cx.spacer(crate::element::SpacerProps::default()),
+                        cx.spacer(crate::element::SpacerProps::default()),
+                    ]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // With 3 equal-ish panels and a 10px gap, the first handle center is ~98px.
+        let down = Point::new(Px(98.0), Px(20.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: down,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: Point::new(Px(128.0), Px(20.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(128.0), Px(20.0)),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        let v = app.models().get(model).cloned().unwrap_or_default();
+        assert!(
+            v.get(0).copied().unwrap_or(0.0) > 0.33,
+            "expected left panel to grow, got {v:?}"
+        );
     }
 
     #[test]

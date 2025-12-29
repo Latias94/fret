@@ -11,6 +11,8 @@ pub mod paint;
 pub mod retained_bridge;
 pub type ItemKey = u64;
 #[allow(dead_code)]
+pub(crate) mod resizable_panel_group;
+#[allow(dead_code)]
 pub(crate) mod resizable_split;
 #[allow(dead_code)]
 pub(crate) mod resize_handle;
@@ -41,6 +43,7 @@ or `fret-components-ui::declarative::action_hooks::ActionHooksExt`."
 pub use drag_route::InternalDragRouteService;
 pub use elements::{ElementCx, ElementRuntime, GlobalElementId};
 pub use host::UiHost;
+pub use resizable_panel_group::ResizablePanelGroupStyle;
 pub use scroll::{ScrollHandle, ScrollStrategy, VirtualListScrollHandle};
 pub use slider::SliderStyle;
 pub use svg_source::SvgSource;

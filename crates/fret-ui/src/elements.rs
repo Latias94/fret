@@ -14,9 +14,10 @@ use crate::SvgSource;
 use crate::UiHost;
 use crate::element::{
     AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverRegionProps,
-    ImageProps, LayoutStyle, PointerRegionProps, PressableProps, PressableState, RowProps,
-    ScrollProps, SliderProps, SpacerProps, SpinnerProps, StackProps, SvgIconProps, TextAreaProps,
-    TextInputProps, TextProps, VirtualListOptions, VirtualListProps, VirtualListState,
+    ImageProps, LayoutStyle, PointerRegionProps, PressableProps, PressableState,
+    ResizablePanelGroupProps, RowProps, ScrollProps, SliderProps, SpacerProps, SpinnerProps,
+    StackProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, VirtualListOptions,
+    VirtualListProps, VirtualListState,
 };
 use crate::widget::Invalidation;
 use fret_runtime::{Effect, Model, ModelId};
@@ -779,6 +780,19 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             AnyElement::new(id, ElementKind::Slider(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn resizable_panel_group(
+        &mut self,
+        props: ResizablePanelGroupProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::ResizablePanelGroup(props), children)
         })
     }
 
