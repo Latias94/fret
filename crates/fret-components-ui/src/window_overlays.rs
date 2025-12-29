@@ -604,7 +604,9 @@ pub fn render<H: UiHost>(
 
     for req in popover_requests {
         if dock_drag_affects_window {
-            let _ = app.models_mut().update(req.open, |v| *v = false);
+            if app.models().get(req.open).copied().unwrap_or(false) {
+                let _ = app.models_mut().update(req.open, |v| *v = false);
+            }
             continue;
         }
 
