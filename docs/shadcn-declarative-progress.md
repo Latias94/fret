@@ -18,6 +18,14 @@ This repo intentionally splits responsibilities across three layers (similar to 
 
 App/editor-specific composition belongs in `fret-components-app` / `fret-editor` (e.g. app toolbars, menu bars, command palette wiring).
 
+### Interaction Policy (Action Hooks)
+
+Cross-cutting interaction policies (toggle models, close overlays, selection writes, “dismiss on escape/outside press”, etc.) are *component-owned*:
+
+- `fret-ui` provides hook plumbing (`on_activate`, `on_dismiss_request`) as a mechanism-only substrate (ADR 0074).
+- `fret-components-ui` and `fret-components-shadcn` register handlers to implement policies for each component.
+- Legacy runtime shortcuts on `PressableProps` / dismissible roots remain as transitional compatibility and should migrate out over time.
+
 ## Hard Boundary (Enforced in code)
 
 Retained-widget authoring is runtime-internal only:
@@ -36,7 +44,7 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 | --- | --- | --- | --- |
 | accordion | `accordion` | Missing | Requires collapsible primitives + keyboard/a11y contracts |
 | alert | `alert` | Present |  |
-| alert-dialog | `alert_dialog` | Missing | Modal overlay policy + focus trap |
+| alert-dialog | `alert_dialog` | Present | Modal overlay policy; Tab traversal wraps within modal barrier (ADR 0068) |
 | aspect-ratio | `aspect_ratio` | Present |  |
 | avatar | `avatar` | Present |  |
 | badge | `badge` | Present |  |
@@ -50,10 +58,10 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 | checkbox | `checkbox` | Present |  |
 | collapsible | `collapsible` | Missing | Headless open/close + a11y semantics |
 | command | `command` | Missing | Command palette infra + list navigation |
-| context-menu | `context_menu` | Missing | Menu navigation + dismissible overlays |
-| dialog | `dialog` | Missing | Modal barrier + focus trap + restore |
+| context-menu | `context_menu` | Present | Right click + (macOS) ctrl-click + Shift+F10 |
+| dialog | `dialog` | Present | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
 | drawer | `drawer` | Missing | Usually `sheet` variant; overlay policy |
-| dropdown-menu | `dropdown_menu` | Missing | Menu navigation + dismissible overlays |
+| dropdown-menu | `dropdown_menu` | Present | Menu navigation + typeahead + dismissible popover infra (ADR 0074) |
 | empty | `empty` | Present |  |
 | field | `field` | Present | Repo-specific “form field” primitives |
 | form | `form` | Present |  |
@@ -68,14 +76,14 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 | native-select | `native_select` | Defer | Can map to `select` + platform-native later |
 | navigation-menu | `navigation_menu` | Defer | Complex; not editor-critical |
 | pagination | `pagination` | Present |  |
-| popover | `popover` | Missing | Needs generic popover component (overlay root + placement) |
+| popover | `popover` | Present | Anchored placement + click-through outside press dismissal (ADR 0069); non-modal (no focus trap) |
 | progress | `progress` | Present |  |
 | radio-group | `radio_group` | Present |  |
 | resizable | `resizable` | Missing | Splitters/panels; some runtime pieces exist |
 | scroll-area | `scroll_area` | Missing | Likely a declarative wrapper over `Scroll` + styling |
 | select | `select` | Present | Uses `window_overlays` dismissible popover infra |
 | separator | `separator` | Missing | Simple primitive; should be components-ui declarative |
-| sheet | `sheet` | Missing | Overlay policy (modal/non-modal) + focus handling |
+| sheet | `sheet` | Present | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
 | sidebar | `sidebar` | Present |  |
 | skeleton | `skeleton` | Present |  |
 | slider | `slider` | Missing | Input primitive; a11y + pointer interaction |
@@ -87,7 +95,7 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 | textarea | `textarea` | Missing | Text input multi-line wrapper over runtime `TextArea` |
 | toggle | `toggle` | Present |  |
 | toggle-group | `toggle_group` | Present |  |
-| tooltip | `tooltip` | Missing | Hover intent + overlay placement + a11y |
+| tooltip | `tooltip` | Present | Hover intent + placement; rendered via overlay root (not clipped) |
 
 Notes:
 - “Present” means a declarative module exists and compiles; it may still be below the “Definition of Done” parity bar (keyboard/APG, a11y checklist, tests).

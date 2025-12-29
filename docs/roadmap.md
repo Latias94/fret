@@ -43,6 +43,10 @@ These items are intentionally scheduled early because they define “hard-to-cha
   - keep `fret-ui` as the runtime substrate (tree, routing, layers, docking, performance primitives),
   - move the “standard UI kit surfaces” (popover/dialog/menu/tooltip/toast/command palette/menubar) to the components layer (`fret-components-shadcn` surface built on `fret-components-ui`),
   - remove hard-coded control heights/spacing from runtime primitives (notably `TextInput`) so `Size` (ADR 0056) stays component-owned. (MVP 48; in progress: `TextInput` done; overlay surfaces moved)
+- P0: Eliminate remaining **interaction policy leaks** from `crates/fret-ui` so the runtime contract surface stays small and optimizable.
+  - Replace runtime “shortcut model writes” (pressable toggle/set variants, dismiss-by-model patterns) with component-owned policy/handlers (ADR 0074).
+  - Keep roving/typeahead/menu navigation policies in `crates/fret-components-ui/headless` (MVP 64), not in runtime element props.
+  - Treat this as a gating refactor before scaling shadcn parity work, to avoid repeated contract churn.
 - P0: Adopt semantics tree + accessibility bridge boundary (A11y-ready infrastructure) (ADR 0033).
 - P0/P1: Lock composite-widget semantics needed for cmdk-style UX without a DOM:
   - active descendant (announce active result while focus remains in the text field) (ADR 0073),

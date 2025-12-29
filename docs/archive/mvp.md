@@ -18,6 +18,10 @@ Maintain the next MVP items here as a small, high-signal queue. If a task change
 - MVP 49 (in progress): Make the declarative component authoring model (ADR 0028 + ADR 0039) the primary, end-to-end usable path (not just a state store): `IntoElement` + `Render`/`RenderOnce` + composition ergonomics, plus a clear `render_root(...)` contract (when it must be called, and what it guarantees).
 - MVP 50 (in progress): Consolidate virtualization around composable, declarative row content (GPUI-style). Runtime contract is now TanStack-aligned (ADR 0070); remaining work is migrating surfaces off fixed-schema runtime rows (`VirtualListRow { text/secondary/trailing... }`) and retiring the legacy path where feasible.
 - MVP 51 (in progress): Tighten the framework/components boundary by moving “standard surfaces” (popover/dialog/menu/tooltip/toast/command palette/menubar) fully into the components layer, keeping `fret-ui` as runtime substrate + performance primitives. `fret-components-ui` remains the reusable infrastructure, while `fret-components-shadcn` becomes the shadcn/ui (v4) aligned naming/taxonomy surface. Compatibility retained widgets stay behind `fret-ui`’s `retained-widgets` feature (`crates/fret-ui/src/primitives/*`) until removal.
+- MVP 68 (next): Eliminate remaining interaction policy leaks from `fret-ui` before scaling the component surface.
+  - Replace runtime “shortcut model writes” (pressable toggle/set variants) with component-owned handlers (ADR 0074).
+  - Move dismissal policy (Escape / outside press) fully to `fret-components-ui` overlay policy code (ADR 0067/0069/0074).
+  - Keep roving/typeahead/menu navigation policies in `fret-components-ui/headless` (MVP 64) rather than runtime props.
 - MVP 66 (next): Make model observation and invalidation propagation (ADR 0051) an "Accepted + tested" contract.
   - Ensure changed-model propagation invalidates all observing nodes across all windows deterministically.
   - Remove remaining "manual invalidate all panels" glue from demo/components once conformance is locked.

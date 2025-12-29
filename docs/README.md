@@ -8,14 +8,15 @@ contracts early to avoid large rewrites later.
 1. `docs/architecture.md` — what Fret is, what it is not, and how crates fit together.
 2. `docs/runtime-contract-matrix.md` — a compact map of the `fret-ui` runtime contract surface and references.
 3. `docs/roadmap.md` — priorities, decision gates, and milestones (what to do next, and what must be decided early).
-4. `docs/adr/README.md` — module-oriented ADR index (where to find the relevant contracts fast).
+4. `docs/action-hooks.md` — how we keep `fret-ui` mechanism-only by moving interaction policy to components (ADR 0074).
+5. `docs/adr/README.md` — module-oriented ADR index (where to find the relevant contracts fast).
    - Tip: ADRs marked `Status: Proposed` are “decision gates” and should be treated as changeable until accepted.
-5. `docs/repo-ref.md` — pinned local reference sources (where to read upstream code without version drift).
-6. `docs/dependency-policy.md` — dependency and MSRV policy (how we keep contracts portable).
-7. `docs/todo-tracker.md` — review-driven TODO list (action items linked back to ADRs).
-8. `docs/known-issues.md` — common diagnostics and current platform limitations.
-9. Archived MVP planning docs (historical): `docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`, `docs/archive/mvp-archive.md`
-10. ADR deep dives (pick by subsystem):
+6. `docs/repo-ref.md` — pinned local reference sources (where to read upstream code without version drift).
+7. `docs/dependency-policy.md` — dependency and MSRV policy (how we keep contracts portable).
+8. `docs/todo-tracker.md` — review-driven TODO list (action items linked back to ADRs).
+9. `docs/known-issues.md` — common diagnostics and current platform limitations.
+10. Archived MVP planning docs (historical): `docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`, `docs/archive/mvp-archive.md`
+11. ADR deep dives (pick by subsystem):
    - UI execution model: `docs/adr/0028-declarative-elements-and-element-state.md`
    - Component authoring: `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
    - Ownership/data flow: `docs/adr/0031-app-owned-models-and-leasing-updates.md`
@@ -28,7 +29,7 @@ contracts early to avoid large rewrites later.
 ## Code Entry Points (After You Read The Docs)
 
 - End-to-end demo wiring (effects → runner → render): `crates/fret-demo/src/components_gallery.rs`
-- shadcn gallery harness (widgets/components + overlays): `crates/fret-demo/src/shadcn_gallery.rs` (or `cargo run -p fret-demo --bin shadcn_gallery`)
+- shadcn surface smoke test (components + overlays): `crates/fret-demo/src/components_gallery.rs` (or `cargo run -p fret-demo --bin components_gallery`)
 - A11y manual acceptance checklist (overlays + demo): `docs/a11y-acceptance-checklist.md`
 - App runtime (effects + models + commands): `crates/fret-app/src/app.rs`
 - Desktop runner (winit window lifecycle + scheduling): `crates/fret-runner-winit-wgpu/src/runner.rs`
