@@ -94,7 +94,7 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 | popover | `popover` | Present | Anchored placement + click-through outside press dismissal (ADR 0069); non-modal (no focus trap) |
 | progress | `progress` | Present |  |
 | radio-group | `radio_group` | Present |  |
-| resizable | `resizable` | Missing | Splitters/panels; some runtime pieces exist |
+| resizable | `resizable` | Present | Runtime-owned drag + layout; multi-panel group; a11y TBD |
 | scroll-area | `scroll_area` | Present | Declarative wrapper over `Scroll` + styling |
 | select | `select` | Present | Uses `window_overlays` dismissible popover infra |
 | separator | `separator` | Present | Simple primitive; declarative-only |
