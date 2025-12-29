@@ -27,7 +27,7 @@ Maintain the next MVP items here as a small, high-signal queue. If a task change
   - Add a feature-gated retained bridge (`fret-ui/unstable-retained-bridge`) so the docking UI can move without a rewrite.
   - Move viewport overlay drawing/policy (gizmos, marquee, selection rect) to `fret-editor` / app-layer code (ADR 0027).
     Docking exposes `DockViewportOverlayHooks` to let the app paint overlays without docking owning overlay shapes.
-- MVP 66 (next): Make model observation and invalidation propagation (ADR 0051) an "Accepted + tested" contract.
+- MVP 66 (in progress): Make model observation and invalidation propagation (ADR 0051) an "Accepted + tested" contract.
   - Ensure changed-model propagation invalidates all observing nodes across all windows deterministically.
   - Remove remaining "manual invalidate all panels" glue from demo/components once conformance is locked.
 - MVP 60 (done): Rounded clipping / `overflow-hidden` semantics (shadcn-critical).
