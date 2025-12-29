@@ -143,7 +143,7 @@ impl ComponentsGalleryDriver {
             "components-gallery",
             |cx| {
                 cx.observe_model(tree_state, Invalidation::Layout);
-                let theme = Theme::global(&*cx.app);
+                let theme = Theme::global(&*cx.app).clone();
                 let selected = cx.app.models().get(tree_state).and_then(|s| s.selected);
 
                 let title: Arc<str> = Arc::from("components_gallery");

@@ -1013,6 +1013,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             return;
         };
 
+        let is_text_input = matches!(
+            instance,
+            ElementInstance::TextInput(_) | ElementInstance::TextArea(_)
+        );
+
         if let Event::Timer { token } = event {
             let hook = crate::elements::with_element_state(
                 &mut *cx.app,
@@ -1041,17 +1046,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             }
         }
 
-        if let Event::KeyDown {
-            key,
-            modifiers,
-            repeat,
-        } = event
-            && cx.focus == Some(cx.node)
-            && !matches!(
-                instance,
-                ElementInstance::TextInput(_) | ElementInstance::TextArea(_)
-            )
-        {
+        let try_key_hook = |cx: &mut EventCx<'_, H>,
+                            key: fret_core::KeyCode,
+                            modifiers: fret_core::Modifiers,
+                            repeat: bool| {
             let hook = crate::elements::with_element_state(
                 &mut *cx.app,
                 window,
@@ -1069,18 +1067,31 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         target: self.element,
                     },
                     KeyDownCx {
-                        key: *key,
-                        modifiers: *modifiers,
-                        repeat: *repeat,
+                        key,
+                        modifiers,
+                        repeat,
                     },
                 );
                 if handled {
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();
-                    return;
+                    return true;
                 }
             }
+            false
+        };
+
+        if let Event::KeyDown {
+            key,
+            modifiers,
+            repeat,
+        } = event
+            && cx.focus == Some(cx.node)
+            && !is_text_input
+            && try_key_hook(cx, *key, *modifiers, *repeat)
+        {
+            return;
         }
 
         match instance {
@@ -1888,6 +1899,19 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 cx.stop_propagation();
             }
             _ => {}
+        }
+
+        if is_text_input && !cx.stop_propagation {
+            if let Event::KeyDown {
+                key,
+                modifiers,
+                repeat,
+            } = event
+                && cx.focus == Some(cx.node)
+                && try_key_hook(cx, *key, *modifiers, *repeat)
+            {
+                return;
+            }
         }
     }
 
@@ -4095,7 +4119,7 @@ mod tests {
     use super::render_root;
     use crate::UiHost;
     use crate::action::{ActivateReason, DismissReason};
-    use crate::element::{AnyElement, CrossAlign, MainAlign};
+    use crate::element::{AnyElement, CrossAlign, Length, MainAlign, TextInputProps};
     use crate::elements::{ContinuousFrames, ElementCx};
     use crate::test_host::TestHost;
     use crate::tree::UiTree;
@@ -4242,6 +4266,94 @@ mod tests {
         }
 
         assert_eq!(ui.children(root.unwrap()).len(), 3);
+    }
+
+    #[test]
+    fn key_hook_runs_for_focused_text_input() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let value = app.models_mut().insert(String::new());
+        let invoked = app.models_mut().insert(0u32);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(80.0)),
+        );
+        let mut text = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "key-hook-text-input",
+            |cx| {
+                let mut props = TextInputProps::new(value);
+                props.layout.size.width = Length::Px(Px(160.0));
+                props.layout.size.height = Length::Px(Px(32.0));
+                let input = cx.text_input(props);
+
+                cx.key_on_key_down_for(
+                    input.id,
+                    Arc::new(move |host, _cx, down| {
+                        if down.repeat {
+                            return false;
+                        }
+                        if down.key != fret_core::KeyCode::ArrowDown {
+                            return false;
+                        }
+                        let _ = host.models_mut().update(invoked, |v| *v += 1);
+                        true
+                    }),
+                );
+
+                vec![input]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+        let input_node = ui.children(root)[0];
+        let input_bounds = ui.debug_node_bounds(input_node).expect("input bounds");
+        let pos = Point::new(
+            Px(input_bounds.origin.x.0 + 2.0),
+            Px(input_bounds.origin.y.0 + 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        assert_eq!(app.models().get(invoked).copied().unwrap_or_default(), 1);
     }
 
     #[test]
