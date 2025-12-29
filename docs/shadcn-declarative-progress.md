@@ -24,7 +24,8 @@ Cross-cutting interaction policies (toggle models, close overlays, selection wri
 
 - `fret-ui` provides hook plumbing (`on_activate`, `on_dismiss_request`) as a mechanism-only substrate (ADR 0074).
 - `fret-components-ui` and `fret-components-shadcn` register handlers to implement policies for each component.
-- Legacy runtime shortcuts on `PressableProps` / dismissible roots remain as transitional compatibility and should migrate out over time.
+- Legacy runtime shortcuts on `PressableProps` / dismissible roots have been removed from `crates/fret-ui`.
+  Use component-owned action hooks (`fret-components-ui::declarative::action_hooks::ActionHooksExt`) instead.
 
 ## Hard Boundary (Enforced in code)
 

@@ -18,7 +18,6 @@ use fret_core::{
     TextStyle,
 };
 use fret_runtime::Effect;
-use fret_runtime::Model;
 use std::collections::HashMap;
 use taffy::{
     TaffyTree,
@@ -226,20 +225,14 @@ pub(crate) struct ElementRecord {
 pub(crate) struct DismissibleLayerProps {
     pub layout: LayoutStyle,
     pub enabled: bool,
-    #[cfg(feature = "compat-policy-shortcuts")]
-    pub dismiss_model: Option<Model<bool>>,
 }
 
 impl std::fmt::Debug for DismissibleLayerProps {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut out = f.debug_struct("DismissibleLayerProps");
         out.field("layout", &self.layout)
-            .field("enabled", &self.enabled);
-        #[cfg(feature = "compat-policy-shortcuts")]
-        {
-            out.field("dismiss_model", &self.dismiss_model.is_some());
-        }
-        out.finish()
+            .field("enabled", &self.enabled)
+            .finish()
     }
 }
 
@@ -251,8 +244,6 @@ impl Default for DismissibleLayerProps {
         Self {
             layout,
             enabled: true,
-            #[cfg(feature = "compat-policy-shortcuts")]
-            dismiss_model: None,
         }
     }
 }
@@ -1346,16 +1337,6 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
                             cx.stop_propagation();
-                        } else {
-                            #[cfg(feature = "compat-policy-shortcuts")]
-                            {
-                                if let Some(model) = props.dismiss_model {
-                                    let _ = cx.app.models_mut().update(model, |v| *v = false);
-                                    cx.invalidate_self(Invalidation::Paint);
-                                    cx.request_redraw();
-                                    cx.stop_propagation();
-                                }
-                            }
                         }
                     }
                     Event::Pointer(fret_core::PointerEvent::Down { .. }) => {
@@ -1383,15 +1364,6 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             );
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
-                        } else {
-                            #[cfg(feature = "compat-policy-shortcuts")]
-                            {
-                                if let Some(model) = props.dismiss_model {
-                                    let _ = cx.app.models_mut().update(model, |v| *v = false);
-                                    cx.invalidate_self(Invalidation::Paint);
-                                    cx.request_redraw();
-                                }
-                            }
                         }
                     }
                     _ => {}
@@ -1456,40 +1428,6 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                         },
                                         ActivateReason::Pointer,
                                     );
-                                } else {
-                                    #[cfg(feature = "compat-policy-shortcuts")]
-                                    #[allow(deprecated)]
-                                    {
-                                        if let Some(model) = props.toggle_model {
-                                            let _ = cx.app.models_mut().update(model, |v| *v = !*v);
-                                        }
-                                        if let Some(set) = props.set_arc_str_model.clone() {
-                                            let _ = cx
-                                                .app
-                                                .models_mut()
-                                                .update(set.model, |v| *v = set.value);
-                                        }
-                                        if let Some(set) = props.set_option_arc_str_model.clone() {
-                                            let value = Some(set.value);
-                                            let _ = cx
-                                                .app
-                                                .models_mut()
-                                                .update(set.model, |v| *v = value);
-                                        }
-                                        if let Some(set) = props.toggle_vec_arc_str_model.clone() {
-                                            let value = set.value;
-                                            let _ = cx.app.models_mut().update(set.model, |v| {
-                                                if let Some(pos) = v
-                                                    .iter()
-                                                    .position(|it| it.as_ref() == value.as_ref())
-                                                {
-                                                    v.remove(pos);
-                                                } else {
-                                                    v.push(value.clone());
-                                                }
-                                            });
-                                        }
-                                    }
                                 }
                                 if let Some(command) = props.on_click.clone() {
                                     cx.dispatch_command(command);
@@ -1564,34 +1502,6 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                 },
                                 ActivateReason::Keyboard,
                             );
-                        } else {
-                            #[cfg(feature = "compat-policy-shortcuts")]
-                            #[allow(deprecated)]
-                            {
-                                if let Some(model) = props.toggle_model {
-                                    let _ = cx.app.models_mut().update(model, |v| *v = !*v);
-                                }
-                                if let Some(set) = props.set_arc_str_model.clone() {
-                                    let _ =
-                                        cx.app.models_mut().update(set.model, |v| *v = set.value);
-                                }
-                                if let Some(set) = props.set_option_arc_str_model.clone() {
-                                    let value = Some(set.value);
-                                    let _ = cx.app.models_mut().update(set.model, |v| *v = value);
-                                }
-                                if let Some(set) = props.toggle_vec_arc_str_model.clone() {
-                                    let value = set.value;
-                                    let _ = cx.app.models_mut().update(set.model, |v| {
-                                        if let Some(pos) =
-                                            v.iter().position(|it| it.as_ref() == value.as_ref())
-                                        {
-                                            v.remove(pos);
-                                        } else {
-                                            v.push(value.clone());
-                                        }
-                                    });
-                                }
-                            }
                         }
                         if let Some(command) = props.on_click.clone() {
                             cx.dispatch_command(command);
@@ -1827,44 +1737,6 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                 tick,
                             },
                         );
-                    } else {
-                        #[cfg(feature = "compat-policy-shortcuts")]
-                        #[allow(deprecated)]
-                        {
-                            if let Some(typeahead) = props.roving.typeahead_arc_str.as_ref() {
-                                let matches = |idx: usize| -> bool {
-                                    if is_disabled(idx) {
-                                        return false;
-                                    }
-                                    let Some(label) = typeahead.labels.get(idx) else {
-                                        return false;
-                                    };
-                                    let label = label.as_ref().trim_start();
-                                    let Some(first) = label.chars().next() else {
-                                        return false;
-                                    };
-                                    first.to_ascii_lowercase() == ch
-                                };
-
-                                let start = current.map(|i| i.saturating_add(1)).unwrap_or(0);
-                                if props.roving.wrap {
-                                    for offset in 0..len {
-                                        let idx = (start + offset) % len;
-                                        if matches(idx) {
-                                            target = Some(idx);
-                                            break;
-                                        }
-                                    }
-                                } else {
-                                    for idx in start..len {
-                                        if matches(idx) {
-                                            target = Some(idx);
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
 
@@ -1895,17 +1767,6 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         },
                         target,
                     );
-                } else {
-                    #[cfg(feature = "compat-policy-shortcuts")]
-                    #[allow(deprecated)]
-                    {
-                        if let Some(select) = props.roving.select_option_arc_str.as_ref()
-                            && let Some(value) = select.values.get(target).cloned()
-                        {
-                            let next = Some(value);
-                            let _ = cx.app.models_mut().update(select.model, |v| *v = next);
-                        }
-                    }
                 }
 
                 cx.request_redraw();
@@ -3832,39 +3693,7 @@ pub fn render_dismissible_root_with_hooks<H: UiHost>(
     root_name: &str,
     render: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
 ) -> NodeId {
-    render_dismissible_root_impl(ui, app, services, window, bounds, root_name, None, render)
-}
-
-/// Render a declarative element tree into a full-window, input-transparent overlay root.
-///
-/// This API is transitional: `dismiss_model` is a runtime-owned shortcut policy. Prefer
-/// `render_dismissible_root_with_hooks(...)` and register dismissal behavior via
-/// `ElementCx::dismissible_on_dismiss_request(...)` (ADR 0074).
-#[allow(clippy::too_many_arguments)]
-#[deprecated(
-    note = "Transitional API. Prefer render_dismissible_root_with_hooks + ElementCx::dismissible_on_dismiss_request (ADR 0074)."
-)]
-#[cfg(feature = "compat-policy-shortcuts")]
-pub fn render_dismissible_root<H: UiHost>(
-    ui: &mut UiTree<H>,
-    app: &mut H,
-    services: &mut dyn fret_core::UiServices,
-    window: AppWindowId,
-    bounds: Rect,
-    root_name: &str,
-    dismiss_model: Model<bool>,
-    render: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
-) -> NodeId {
-    render_dismissible_root_impl(
-        ui,
-        app,
-        services,
-        window,
-        bounds,
-        root_name,
-        Some(dismiss_model),
-        render,
-    )
+    render_dismissible_root_impl(ui, app, services, window, bounds, root_name, render)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -3875,12 +3704,8 @@ fn render_dismissible_root_impl<H: UiHost, F: FnOnce(&mut ElementCx<'_, H>) -> V
     window: AppWindowId,
     bounds: Rect,
     root_name: &str,
-    dismiss_model: Option<Model<bool>>,
     render: F,
 ) -> NodeId {
-    #[cfg(not(feature = "compat-policy-shortcuts"))]
-    let _ = dismiss_model;
-
     let frame_id = app.frame_id();
 
     let children = crate::elements::with_element_cx(app, window, bounds, root_name, |cx| {
@@ -3942,19 +3767,7 @@ fn render_dismissible_root_impl<H: UiHost, F: FnOnce(&mut ElementCx<'_, H>) -> V
                 root_node,
                 ElementRecord {
                     element: root_id,
-                    instance: {
-                        #[cfg(feature = "compat-policy-shortcuts")]
-                        {
-                            ElementInstance::DismissibleLayer(DismissibleLayerProps {
-                                dismiss_model,
-                                ..Default::default()
-                            })
-                        }
-                        #[cfg(not(feature = "compat-policy-shortcuts"))]
-                        {
-                            ElementInstance::DismissibleLayer(DismissibleLayerProps::default())
-                        }
-                    },
+                    instance: ElementInstance::DismissibleLayer(DismissibleLayerProps::default()),
                 },
             );
 
@@ -4499,74 +4312,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "compat-policy-shortcuts")]
-    #[allow(deprecated)]
-    fn pressable_toggle_model_toggles_bool_on_click() {
-        let mut app = TestHost::new();
-        let mut ui: UiTree<TestHost> = UiTree::new();
-        let window = AppWindowId::default();
-        ui.set_window(window);
-
-        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
-        let mut services = FakeTextService::default();
-
-        let model = app.models_mut().insert(false);
-
-        let root = render_root(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            "pressable-toggle-model",
-            |cx| {
-                vec![cx.pressable(
-                    crate::element::PressableProps {
-                        enabled: true,
-                        toggle_model: Some(model),
-                        ..Default::default()
-                    },
-                    |cx, _state| vec![cx.text("toggle")],
-                )]
-            },
-        );
-        ui.set_root(root);
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-        assert_eq!(app.models().get(model).copied(), Some(false));
-
-        let pressable_node = ui.children(root)[0];
-        let pressable_bounds = ui
-            .debug_node_bounds(pressable_node)
-            .expect("pressable bounds");
-        let position = Point::new(
-            Px(pressable_bounds.origin.x.0 + 1.0),
-            Px(pressable_bounds.origin.y.0 + 1.0),
-        );
-
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
-                position,
-                button: MouseButton::Left,
-                modifiers: Modifiers::default(),
-            }),
-        );
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
-                position,
-                button: MouseButton::Left,
-                modifiers: Modifiers::default(),
-            }),
-        );
-
-        assert_eq!(app.models().get(model).copied(), Some(true));
-    }
-
-    #[test]
     fn pressable_on_activate_hook_runs_on_pointer_activation() {
         let mut app = TestHost::new();
         let mut ui: UiTree<TestHost> = UiTree::new();
@@ -4806,178 +4551,6 @@ mod tests {
         );
 
         assert_eq!(app.models().get(dismissed).copied(), Some(true));
-    }
-
-    #[test]
-    #[cfg(feature = "compat-policy-shortcuts")]
-    #[allow(deprecated)]
-    fn pressable_set_option_arc_str_model_sets_value_on_click() {
-        let mut app = TestHost::new();
-        let mut ui: UiTree<TestHost> = UiTree::new();
-        let window = AppWindowId::default();
-        ui.set_window(window);
-
-        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(140.0), Px(40.0)));
-        let mut services = FakeTextService::default();
-
-        let model = app.models_mut().insert(Option::<Arc<str>>::None);
-        let value: Arc<str> = Arc::from("alpha");
-
-        let root = render_root(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            "pressable-set-option-arc-str-model",
-            |cx| {
-                vec![cx.pressable(
-                    crate::element::PressableProps {
-                        enabled: true,
-                        set_option_arc_str_model: Some(crate::element::PressableSetOptionArcStr {
-                            model,
-                            value: value.clone(),
-                        }),
-                        ..Default::default()
-                    },
-                    |cx, _state| vec![cx.text("select")],
-                )]
-            },
-        );
-        ui.set_root(root);
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-        assert_eq!(app.models().get(model).and_then(|v| v.as_deref()), None);
-
-        let pressable_node = ui.children(root)[0];
-        let pressable_bounds = ui
-            .debug_node_bounds(pressable_node)
-            .expect("pressable bounds");
-        let position = Point::new(
-            Px(pressable_bounds.origin.x.0 + 1.0),
-            Px(pressable_bounds.origin.y.0 + 1.0),
-        );
-
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
-                position,
-                button: MouseButton::Left,
-                modifiers: Modifiers::default(),
-            }),
-        );
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
-                position,
-                button: MouseButton::Left,
-                modifiers: Modifiers::default(),
-            }),
-        );
-
-        assert_eq!(
-            app.models().get(model).and_then(|v| v.as_deref()),
-            Some("alpha")
-        );
-    }
-
-    #[test]
-    #[cfg(feature = "compat-policy-shortcuts")]
-    #[allow(deprecated)]
-    fn pressable_toggle_vec_arc_str_model_toggles_membership_on_click() {
-        let mut app = TestHost::new();
-        let mut ui: UiTree<TestHost> = UiTree::new();
-        let window = AppWindowId::default();
-        ui.set_window(window);
-
-        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(140.0), Px(40.0)));
-        let mut services = FakeTextService::default();
-
-        let model = app.models_mut().insert(Vec::<Arc<str>>::new());
-        let value: Arc<str> = Arc::from("alpha");
-
-        let root = render_root(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            "pressable-toggle-vec-arc-str-model",
-            |cx| {
-                vec![cx.pressable(
-                    crate::element::PressableProps {
-                        enabled: true,
-                        toggle_vec_arc_str_model: Some(crate::element::PressableToggleVecArcStr {
-                            model,
-                            value: value.clone(),
-                        }),
-                        ..Default::default()
-                    },
-                    |cx, _state| vec![cx.text("toggle")],
-                )]
-            },
-        );
-        ui.set_root(root);
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-        assert!(app.models().get(model).is_some_and(|v| v.is_empty()));
-
-        let pressable_node = ui.children(root)[0];
-        let pressable_bounds = ui
-            .debug_node_bounds(pressable_node)
-            .expect("pressable bounds");
-        let position = Point::new(
-            Px(pressable_bounds.origin.x.0 + 1.0),
-            Px(pressable_bounds.origin.y.0 + 1.0),
-        );
-
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
-                position,
-                button: MouseButton::Left,
-                modifiers: Modifiers::default(),
-            }),
-        );
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
-                position,
-                button: MouseButton::Left,
-                modifiers: Modifiers::default(),
-            }),
-        );
-
-        assert!(
-            app.models()
-                .get(model)
-                .is_some_and(|v| v.len() == 1 && v[0] == value)
-        );
-
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
-                position,
-                button: MouseButton::Left,
-                modifiers: Modifiers::default(),
-            }),
-        );
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
-                position,
-                button: MouseButton::Left,
-                modifiers: Modifiers::default(),
-            }),
-        );
-
-        assert!(app.models().get(model).is_some_and(|v| v.is_empty()));
     }
 
     #[test]

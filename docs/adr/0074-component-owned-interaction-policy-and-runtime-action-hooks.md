@@ -85,17 +85,19 @@ This keeps:
 - `UiHost` (ADR 0052) as the embedder-facing contract,
 - `UiActionHost` as an internal-by-default, policy-calling surface.
 
-### 3) Compatibility tier for legacy shortcuts
+### 3) Status of legacy shortcuts
 
-Existing runtime shortcuts remain temporarily as **Compatibility** APIs (ADR 0066 stability tiers):
+The legacy runtime-owned shortcuts have been removed from `crates/fret-ui` to keep the runtime
+contract surface mechanism-only (ADR 0066):
 
 - `PressableProps.{toggle_model,set_arc_str_model,...}`
-- runtime dismissal-by-model booleans (dismissible root/layer)
-- `RovingFlex` model-write coupling
+- dismissal-by-model booleans (`dismiss_model`)
+- `RovingFlex` model-write coupling (`select_option_arc_str` / `typeahead_arc_str`)
 
-New component work should adopt action hooks instead of adding new runtime shortcut variants.
-Once `fret-components-*` no longer relies on these shortcuts, we will remove them behind a migration
-plan.
+Component code should implement these behaviors via action hooks (ADR 0074):
+
+- `ElementCx::{pressable_*, dismissible_*, roving_*}`
+- `fret-components-ui::declarative::action_hooks::ActionHooksExt` (recommended convenience layer)
 
 ## Consequences
 

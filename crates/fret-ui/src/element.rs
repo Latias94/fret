@@ -292,99 +292,8 @@ pub struct PressableProps {
     /// but it is skipped by the default focus traversal.
     pub focusable: bool,
     pub on_click: Option<CommandId>,
-
-    /// Transitional shortcut: runtime-owned activation policy that toggles a model.
-    ///
-    /// Prefer component-owned action hooks (ADR 0074):
-    /// - Register activation behavior via `ElementCx::pressable_on_activate(...)` /
-    ///   `ElementCx::pressable_add_on_activate(...)`.
-    /// - Or use the component helper trait
-    ///   `fret_components_ui::declarative::action_hooks::ActionHooksExt`.
-    #[deprecated(
-        note = "Transitional API. Prefer component-owned action hooks (ElementCx::pressable_on_activate / pressable_add_on_activate) (ADR 0074)."
-    )]
-    #[cfg(feature = "compat-policy-shortcuts")]
-    pub toggle_model: Option<Model<bool>>,
-
-    /// Transitional shortcut: runtime-owned activation policy that writes an `Arc<str>` model.
-    ///
-    /// Prefer component-owned action hooks (ADR 0074). See `toggle_model` docs for details.
-    #[deprecated(note = "Transitional API. Prefer component-owned action hooks (ADR 0074).")]
-    #[cfg(feature = "compat-policy-shortcuts")]
-    pub set_arc_str_model: Option<PressableSetArcStr>,
-
-    /// Transitional shortcut: runtime-owned activation policy that writes an `Option<Arc<str>>` model.
-    ///
-    /// Prefer component-owned action hooks (ADR 0074). See `toggle_model` docs for details.
-    #[deprecated(note = "Transitional API. Prefer component-owned action hooks (ADR 0074).")]
-    #[cfg(feature = "compat-policy-shortcuts")]
-    pub set_option_arc_str_model: Option<PressableSetOptionArcStr>,
-
-    /// Transitional shortcut: runtime-owned activation policy that toggles membership in a `Vec<Arc<str>>` model.
-    ///
-    /// Prefer component-owned action hooks (ADR 0074). See `toggle_model` docs for details.
-    #[deprecated(note = "Transitional API. Prefer component-owned action hooks (ADR 0074).")]
-    #[cfg(feature = "compat-policy-shortcuts")]
-    pub toggle_vec_arc_str_model: Option<PressableToggleVecArcStr>,
     pub focus_ring: Option<RingStyle>,
     pub a11y: PressableA11y,
-}
-
-#[cfg(feature = "compat-policy-shortcuts")]
-#[derive(Clone)]
-#[deprecated(note = "Transitional API. Prefer component-owned action hooks (ADR 0074).")]
-pub struct PressableSetArcStr {
-    pub model: Model<Arc<str>>,
-    pub value: Arc<str>,
-}
-
-#[cfg(feature = "compat-policy-shortcuts")]
-#[derive(Clone)]
-#[deprecated(note = "Transitional API. Prefer component-owned action hooks (ADR 0074).")]
-pub struct PressableSetOptionArcStr {
-    pub model: Model<Option<Arc<str>>>,
-    pub value: Arc<str>,
-}
-
-#[cfg(feature = "compat-policy-shortcuts")]
-#[derive(Clone)]
-#[deprecated(note = "Transitional API. Prefer component-owned action hooks (ADR 0074).")]
-pub struct PressableToggleVecArcStr {
-    pub model: Model<Vec<Arc<str>>>,
-    pub value: Arc<str>,
-}
-
-#[cfg(feature = "compat-policy-shortcuts")]
-#[allow(deprecated)]
-impl std::fmt::Debug for PressableSetArcStr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PressableSetArcStr")
-            .field("model", &"<model>")
-            .field("value", &self.value.as_ref())
-            .finish()
-    }
-}
-
-#[cfg(feature = "compat-policy-shortcuts")]
-#[allow(deprecated)]
-impl std::fmt::Debug for PressableSetOptionArcStr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PressableSetOptionArcStr")
-            .field("model", &"<model>")
-            .field("value", &self.value.as_ref())
-            .finish()
-    }
-}
-
-#[cfg(feature = "compat-policy-shortcuts")]
-#[allow(deprecated)]
-impl std::fmt::Debug for PressableToggleVecArcStr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PressableToggleVecArcStr")
-            .field("model", &"<model>")
-            .field("value", &self.value.as_ref())
-            .finish()
-    }
 }
 
 impl std::fmt::Debug for PressableProps {
@@ -394,21 +303,6 @@ impl std::fmt::Debug for PressableProps {
             .field("enabled", &self.enabled)
             .field("focusable", &self.focusable)
             .field("on_click", &self.on_click);
-
-        #[cfg(feature = "compat-policy-shortcuts")]
-        #[allow(deprecated)]
-        {
-            out.field("toggle_model", &self.toggle_model.is_some())
-                .field("set_arc_str_model", &self.set_arc_str_model.is_some())
-                .field(
-                    "set_option_arc_str_model",
-                    &self.set_option_arc_str_model.is_some(),
-                )
-                .field(
-                    "toggle_vec_arc_str_model",
-                    &self.toggle_vec_arc_str_model.is_some(),
-                );
-        }
 
         out.field("focus_ring", &self.focus_ring)
             .field("a11y", &self.a11y)
@@ -423,14 +317,6 @@ impl Default for PressableProps {
             enabled: true,
             focusable: true,
             on_click: None,
-            #[cfg(feature = "compat-policy-shortcuts")]
-            toggle_model: None,
-            #[cfg(feature = "compat-policy-shortcuts")]
-            set_arc_str_model: None,
-            #[cfg(feature = "compat-policy-shortcuts")]
-            set_option_arc_str_model: None,
-            #[cfg(feature = "compat-policy-shortcuts")]
-            toggle_vec_arc_str_model: None,
             focus_ring: None,
             a11y: PressableA11y::default(),
         }
@@ -457,28 +343,6 @@ pub struct RovingFocusProps {
     pub enabled: bool,
     pub wrap: bool,
     pub disabled: Arc<[bool]>,
-
-    /// Transitional shortcut: runtime-owned roving “automatic activation” policy.
-    ///
-    /// Prefer component-owned roving hooks (ADR 0074):
-    /// - Register selection updates via `ElementCx::roving_on_active_change(...)`.
-    /// - For listbox/select-style widgets, compute the target value in the component layer and
-    ///   write your model there.
-    #[deprecated(
-        note = "Transitional API. Prefer component-owned roving hooks (ElementCx::roving_on_active_change) (ADR 0074)."
-    )]
-    #[cfg(feature = "compat-policy-shortcuts")]
-    pub select_option_arc_str: Option<RovingSelectOptionArcStr>,
-
-    /// Transitional shortcut: runtime-owned roving typeahead policy.
-    ///
-    /// Prefer component-owned typeahead via `ElementCx::roving_on_typeahead(...)` and, if needed,
-    /// a per-element buffer in component code (e.g. `fret-components-ui/headless/typeahead.rs`).
-    #[deprecated(
-        note = "Transitional API. Prefer component-owned roving hooks (ElementCx::roving_on_typeahead) (ADR 0074)."
-    )]
-    #[cfg(feature = "compat-policy-shortcuts")]
-    pub typeahead_arc_str: Option<RovingTypeaheadArcStr>,
 }
 
 impl Default for RovingFocusProps {
@@ -487,47 +351,7 @@ impl Default for RovingFocusProps {
             enabled: true,
             wrap: true,
             disabled: Arc::from([]),
-            #[cfg(feature = "compat-policy-shortcuts")]
-            select_option_arc_str: None,
-            #[cfg(feature = "compat-policy-shortcuts")]
-            typeahead_arc_str: None,
         }
-    }
-}
-
-#[cfg(feature = "compat-policy-shortcuts")]
-#[derive(Clone)]
-#[deprecated(note = "Transitional API. Prefer component-owned roving hooks (ADR 0074).")]
-pub struct RovingSelectOptionArcStr {
-    pub model: Model<Option<Arc<str>>>,
-    pub values: Arc<[Arc<str>]>,
-}
-
-#[cfg(feature = "compat-policy-shortcuts")]
-#[allow(deprecated)]
-impl std::fmt::Debug for RovingSelectOptionArcStr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RovingSelectOptionArcStr")
-            .field("model", &"<model>")
-            .field("values_len", &self.values.len())
-            .finish()
-    }
-}
-
-#[cfg(feature = "compat-policy-shortcuts")]
-#[derive(Clone)]
-#[deprecated(note = "Transitional API. Prefer component-owned roving hooks (ADR 0074).")]
-pub struct RovingTypeaheadArcStr {
-    pub labels: Arc<[Arc<str>]>,
-}
-
-#[cfg(feature = "compat-policy-shortcuts")]
-#[allow(deprecated)]
-impl std::fmt::Debug for RovingTypeaheadArcStr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RovingTypeaheadArcStr")
-            .field("labels_len", &self.labels.len())
-            .finish()
     }
 }
 

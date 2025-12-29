@@ -115,7 +115,7 @@ The goal is to enable a staged migration:
 
 - `crates/fret-ui` contains no docking UI widgets.
 - `crates/fret-ui` contains no viewport overlay policy/shape enums.
-- Docking UI is implementable without enabling `compat-policy-shortcuts`.
+- Docking UI is implementable without runtime-owned policy shortcuts (ADR 0074).
 - shadcn/tailwind component crates do not enable `unstable-retained-bridge`.
 
 ## Consequences
