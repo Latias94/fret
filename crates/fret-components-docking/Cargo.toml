@@ -1,0 +1,10 @@
+[package]
+name = "fret-components-docking"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fret-core = { path = "../fret-core" }
+fret-runtime = { path = "../fret-runtime" }
+fret-ui = { path = "../fret-ui", features = ["unstable-retained-bridge"] }
+tracing.workspace = true

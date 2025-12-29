@@ -1153,6 +1153,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-components-docking"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+ "tracing",
+]
+
+[[package]]
 name = "fret-components-icons"
 version = "0.1.0"
 

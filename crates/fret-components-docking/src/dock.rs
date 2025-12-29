@@ -11,10 +11,10 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use crate::{
-    UiHost,
-    resize_handle::ResizeHandle,
-    widget::{EventCx, LayoutCx, PaintCx, SemanticsCx, Widget},
+use fret_ui::InternalDragRouteService;
+use fret_ui::UiHost;
+use fret_ui::retained_bridge::{
+    CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, ResizeHandle, SemanticsCx, Widget,
 };
 
 pub struct DockPanel {
@@ -554,7 +554,7 @@ impl DockSpace {
     fn rebuild_tab_titles(
         &mut self,
         services: &mut dyn fret_core::UiServices,
-        theme: crate::ThemeSnapshot,
+        theme: fret_ui::ThemeSnapshot,
         scale_factor: f32,
         dock: &DockManager,
         layout: &std::collections::HashMap<DockNodeId, Rect>,
@@ -710,7 +710,7 @@ impl DockSpace {
     fn rebuild_empty_state(
         &mut self,
         services: &mut dyn fret_core::UiServices,
-        theme: crate::ThemeSnapshot,
+        theme: fret_ui::ThemeSnapshot,
         scale_factor: f32,
         max_width: Px,
     ) {
@@ -748,7 +748,7 @@ impl DockSpace {
     fn rebuild_dock_hint_glyphs(
         &mut self,
         services: &mut dyn fret_core::UiServices,
-        theme: crate::ThemeSnapshot,
+        theme: fret_ui::ThemeSnapshot,
         scale_factor: f32,
     ) {
         self.dock_hint_style.size = Px((theme.metrics.font_size.0 + 5.0).max(0.0));
@@ -896,6 +896,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let mut end_dock_drag = false;
 
         {
+            cx.app
+                .with_global_mut(InternalDragRouteService::default, |routes, _app| {
+                    routes.set(self.window, DragKind::DockPanel, cx.node);
+                });
             let Some(dock) = cx.app.global_mut::<DockManager>() else {
                 return;
             };
@@ -1099,8 +1103,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 dock.graph.update_split_two(divider.split, f0);
                                 divider.fraction = f0;
                                 self.divider_drag = Some(divider);
-                                cx.invalidate(cx.node, crate::widget::Invalidation::Layout);
-                                cx.invalidate(cx.node, crate::widget::Invalidation::Paint);
+                                cx.invalidate(cx.node, Invalidation::Layout);
+                                cx.invalidate(cx.node, Invalidation::Paint);
                             }
                             return;
                         }
@@ -1654,10 +1658,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
             cx.set_cursor_icon(icon);
         }
         if invalidate_layout {
-            cx.invalidate(cx.node, crate::widget::Invalidation::Layout);
+            cx.invalidate(cx.node, Invalidation::Layout);
         }
         if invalidate_paint {
-            cx.invalidate(cx.node, crate::widget::Invalidation::Paint);
+            cx.invalidate(cx.node, Invalidation::Paint);
         }
 
         for window in pending_redraws {
@@ -1668,15 +1672,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
         }
     }
 
-    fn command(&mut self, cx: &mut crate::widget::CommandCx<'_, H>, command: &CommandId) -> bool {
+    fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
         match command.as_str() {
             "dock.focus_requested_panel" => {
-                let Some(panel) = cx
-                    .app
-                    .with_global_mut(DockFocusRequestService::default, |service, _app| {
-                        service.take(self.window)
-                    })
-                else {
+                let Some(panel) = cx.app.with_global_mut(
+                    DockFocusRequestService::default,
+                    |service: &mut DockFocusRequestService, _app| service.take(self.window),
+                ) else {
                     return false;
                 };
 
@@ -1698,6 +1700,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
         self.last_bounds = cx.bounds;
         let hidden = hidden_bounds(Size::new(Px(0.0), Px(0.0)));
 
+        cx.app
+            .with_global_mut(InternalDragRouteService::default, |routes, _app| {
+                routes.set(self.window, DragKind::DockPanel, cx.node);
+            });
         if let Some(dock) = cx.app.global_mut::<DockManager>() {
             dock.register_dock_space_node(self.window, cx.node);
         }
@@ -1986,7 +1992,7 @@ struct PaintDockParams<'a> {
 }
 
 fn paint_dock(
-    theme: crate::ThemeSnapshot,
+    theme: fret_ui::ThemeSnapshot,
     dock: &DockManager,
     params: PaintDockParams<'_>,
     scene: &mut Scene,
@@ -2190,7 +2196,7 @@ fn paint_dock(
 }
 
 fn paint_viewport_crosshair(
-    theme: crate::ThemeSnapshot,
+    theme: fret_ui::ThemeSnapshot,
     content: Rect,
     position: Point,
     scene: &mut Scene,
@@ -2231,7 +2237,7 @@ fn paint_viewport_crosshair(
 }
 
 fn paint_viewport_overlay(
-    theme: crate::ThemeSnapshot,
+    theme: fret_ui::ThemeSnapshot,
     content: Rect,
     overlay: ViewportOverlay,
     scene: &mut Scene,
@@ -2257,7 +2263,7 @@ fn paint_viewport_overlay(
 }
 
 fn paint_viewport_gizmo(
-    theme: crate::ThemeSnapshot,
+    theme: fret_ui::ThemeSnapshot,
     content: Rect,
     gizmo: ViewportGizmo,
     scene: &mut Scene,
@@ -2345,7 +2351,7 @@ fn paint_viewport_gizmo(
 }
 
 fn paint_viewport_rotate_gizmo(
-    theme: crate::ThemeSnapshot,
+    theme: fret_ui::ThemeSnapshot,
     content: Rect,
     gizmo: ViewportRotateGizmo,
     scene: &mut Scene,
@@ -2447,7 +2453,7 @@ fn paint_viewport_marker(content: Rect, marker: ViewportMarker, scene: &mut Scen
         Size::new(t, Px(len.0 * 2.0)),
     );
 
-    let shadow = crate::element::ShadowStyle {
+    let shadow = fret_ui::element::ShadowStyle {
         color: Color {
             r: 0.0,
             g: 0.0,
@@ -2460,8 +2466,8 @@ fn paint_viewport_marker(content: Rect, marker: ViewportMarker, scene: &mut Scen
         softness: 0,
         corner_radii: fret_core::Corners::all(Px(0.0)),
     };
-    crate::paint::paint_shadow(scene, fret_core::DrawOrder(10), h, shadow);
-    crate::paint::paint_shadow(scene, fret_core::DrawOrder(10), v, shadow);
+    fret_ui::paint::paint_shadow(scene, fret_core::DrawOrder(10), h, shadow);
+    fret_ui::paint::paint_shadow(scene, fret_core::DrawOrder(10), v, shadow);
 
     for rect in [h, v] {
         scene.push(SceneOp::Quad {
@@ -2494,7 +2500,7 @@ fn paint_viewport_marker(content: Rect, marker: ViewportMarker, scene: &mut Scen
 }
 
 fn paint_viewport_marquee(
-    theme: crate::ThemeSnapshot,
+    theme: fret_ui::ThemeSnapshot,
     content: Rect,
     marquee: ViewportMarquee,
     scene: &mut Scene,
@@ -2794,7 +2800,7 @@ fn tab_rect_for_index(tab_bar: Rect, index: usize, scroll: Px) -> Rect {
     }
 }
 
-fn tab_close_rect(theme: crate::ThemeSnapshot, tab_rect: Rect) -> Rect {
+fn tab_close_rect(theme: fret_ui::ThemeSnapshot, tab_rect: Rect) -> Rect {
     let pad = theme.metrics.padding_sm.0.max(0.0);
     let x = tab_rect.origin.x.0 + tab_rect.size.width.0 - pad - DOCK_TAB_CLOSE_SIZE.0;
     let y = tab_rect.origin.y.0 + (tab_rect.size.height.0 - DOCK_TAB_CLOSE_SIZE.0) * 0.5;
@@ -2808,7 +2814,7 @@ fn hit_test_tab(
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     tab_scroll: &HashMap<DockNodeId, Px>,
-    theme: crate::ThemeSnapshot,
+    theme: fret_ui::ThemeSnapshot,
     position: Point,
 ) -> Option<(DockNodeId, usize, PanelKey, bool)> {
     for (&node, &rect) in layout.iter() {
@@ -3072,7 +3078,7 @@ fn compute_split_fraction(
 }
 
 fn paint_split_handles(
-    theme: crate::ThemeSnapshot,
+    theme: fret_ui::ThemeSnapshot,
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     active: Option<DockNodeId>,
@@ -3120,7 +3126,7 @@ fn paint_split_handles(
 }
 
 fn paint_drop_overlay(
-    theme: crate::ThemeSnapshot,
+    theme: fret_ui::ThemeSnapshot,
     target: Option<DockDropTarget>,
     window: fret_core::AppWindowId,
     bounds: Rect,
@@ -3245,7 +3251,7 @@ fn paint_drop_overlay(
 }
 
 fn paint_drop_hints(
-    theme: crate::ThemeSnapshot,
+    theme: fret_ui::ThemeSnapshot,
     glyphs: Option<DockHintGlyphs>,
     target: Option<DockDropTarget>,
     _window: fret_core::AppWindowId,
@@ -3429,6 +3435,8 @@ mod tests {
         AppWindowId, Event, InternalDragEvent, InternalDragKind, PlatformCapabilities, Point, Px,
         Scene, SceneOp, Size, TextConstraints, TextMetrics, TextService, TextStyle,
     };
+    use fret_ui::UiTree;
+    use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
     #[derive(Default)]
     struct FakeTextService;
@@ -3535,10 +3543,10 @@ mod tests {
 
     #[test]
     fn dock_space_paints_empty_state_when_no_window_root() {
-        let mut ui = crate::UiTree::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(AppWindowId::default());
 
-        let root = ui.create_node(DockSpace::new(AppWindowId::default()));
+        let root = ui.create_node_retained(DockSpace::new(AppWindowId::default()));
         ui.set_root(root);
 
         let mut app = TestHost::new();
@@ -3569,10 +3577,10 @@ mod tests {
     fn dock_space_clears_hover_on_drop_without_drag_session() {
         let window = AppWindowId::default();
 
-        let mut ui = crate::UiTree::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(DockSpace::new(window));
+        let root = ui.create_node_retained(DockSpace::new(window));
         ui.set_root(root);
 
         let mut app = TestHost::new();
@@ -3615,10 +3623,10 @@ mod tests {
     fn dock_split_handle_hover_sets_resize_cursor_effect() {
         let window = AppWindowId::default();
 
-        let mut ui = crate::UiTree::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(DockSpace::new(window));
+        let root = ui.create_node_retained(DockSpace::new(window));
         ui.set_root(root);
 
         let mut app = TestHost::new();
@@ -3674,10 +3682,10 @@ mod tests {
     fn dock_tab_drop_outside_window_requests_float() {
         let window = AppWindowId::default();
 
-        let mut ui = crate::UiTree::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(DockSpace::new(window));
+        let root = ui.create_node_retained(DockSpace::new(window));
         ui.set_root(root);
 
         let mut app = TestHost::new();
@@ -3739,11 +3747,11 @@ mod tests {
     fn dock_tab_drop_outside_routes_to_dock_space() {
         let window = AppWindowId::default();
 
-        let mut ui = crate::UiTree::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
         ui.set_window(window);
 
-        let root = ui.create_node(TestStack);
-        let dock_space = ui.create_node(DockSpace::new(window));
+        let root = ui.create_node_retained(TestStack);
+        let dock_space = ui.create_node_retained(DockSpace::new(window));
         ui.add_child(root, dock_space);
         ui.set_root(root);
 

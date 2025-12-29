@@ -88,8 +88,8 @@ The goal is to enable a staged migration:
 
 - Add `InternalDragRouteService` (mechanism) in `fret-ui`.
 - Add `unstable-retained-bridge` (feature-gated) in `fret-ui`.
-- Feature-gate the current in-runtime docking module (`fret-ui/experimental-docking`) to prevent
-  accidental runtime surface expansion while the migration proceeds.
+- Migrate docking UI out of `fret-ui` into a dedicated crate (Stage 1), removing the in-runtime
+  docking widget implementation from the runtime substrate.
 
 ### Stage 1 (move docking UI out)
 

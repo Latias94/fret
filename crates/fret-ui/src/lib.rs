@@ -1,7 +1,5 @@
 pub mod action;
 pub mod declarative;
-#[cfg(feature = "experimental-docking")]
-pub(crate) mod dock;
 pub mod drag_route;
 pub mod element;
 pub mod elements;
