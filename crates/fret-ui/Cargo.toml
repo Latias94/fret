@@ -5,6 +5,8 @@ edition.workspace = true
 
 [features]
 default = []
+compat-policy-shortcuts = []
+experimental-docking = []
 
 [dependencies]
 fret-core = { path = "../fret-core" }

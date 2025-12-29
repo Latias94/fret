@@ -8,8 +8,7 @@ use fret_core::{
     SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, UiServices,
 };
 use fret_runtime::{
-    CommandId, DragKind, Effect, InputContext, InputDispatchPhase, KeyChord, KeymapService,
-    ModelId, Platform,
+    CommandId, Effect, InputContext, InputDispatchPhase, KeyChord, KeymapService, ModelId, Platform,
 };
 use slotmap::SlotMap;
 use std::collections::HashMap;
@@ -1387,19 +1386,19 @@ impl<H: UiHost> UiTree<H> {
             _ => None,
         };
 
-        // Dock tab drags must be routed to the `DockSpace` root, even if the cursor is over
-        // another widget (e.g. menu bar) or outside all hit-testable widgets (tear-off).
-        let dock_drag_target = (|| {
+        // Internal drag overrides may need to route events to a stable "anchor" node, even if
+        // hit-testing fails or the cursor is over an unrelated widget (e.g. docking tear-off).
+        let internal_drag_target = (|| {
             if !matches!(event, Event::InternalDrag(_)) {
                 return None;
             }
             let window = self.window?;
             let drag = app.drag()?;
-            if !drag.cross_window_hover || drag.kind != DragKind::DockPanel {
+            if !drag.cross_window_hover {
                 return None;
             }
-            let dock = app.global::<crate::dock::DockManager>()?;
-            let target = dock.dock_space_node(window)?;
+            let routes = app.global::<crate::drag_route::InternalDragRouteService>()?;
+            let target = routes.route(window, drag.kind)?;
             self.node_in_any_layer(target, &active_layers)
                 .then_some(target)
         })();
@@ -1485,7 +1484,7 @@ impl<H: UiHost> UiTree<H> {
 
         let target = if let Some(captured) = captured {
             Some(captured)
-        } else if let Some(target) = dock_drag_target {
+        } else if let Some(target) = internal_drag_target {
             Some(target)
         } else if let Some(pos) = event_position(event) {
             let hit = self.hit_test_layers(&active_layers, pos);

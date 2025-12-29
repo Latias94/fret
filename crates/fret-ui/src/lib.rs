@@ -1,7 +1,8 @@
 pub mod action;
 pub mod declarative;
-#[allow(dead_code)]
+#[cfg(feature = "experimental-docking")]
 pub(crate) mod dock;
+pub mod drag_route;
 pub mod element;
 pub mod elements;
 pub mod focus_visible;
@@ -28,6 +29,7 @@ pub mod virtual_list;
 #[allow(dead_code)]
 pub(crate) mod widget;
 
+pub use drag_route::InternalDragRouteService;
 pub use elements::{ElementCx, ElementRuntime, GlobalElementId};
 pub use host::UiHost;
 pub use scroll::{ScrollHandle, ScrollStrategy, VirtualListScrollHandle};

@@ -2,7 +2,7 @@ use std::any::Any;
 
 use fret_core::{AppWindowId, Point};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DragKind {
     DockPanel,
     Custom,

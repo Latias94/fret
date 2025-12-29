@@ -1,3 +1,4 @@
+#![deny(deprecated)]
 //! General-purpose UI components built on top of `fret-ui`.
 //!
 //! This crate is intentionally domain-agnostic (no engine/editor-specific concepts).

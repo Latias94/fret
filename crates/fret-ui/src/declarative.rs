@@ -226,16 +226,20 @@ pub(crate) struct ElementRecord {
 pub(crate) struct DismissibleLayerProps {
     pub layout: LayoutStyle,
     pub enabled: bool,
+    #[cfg(feature = "compat-policy-shortcuts")]
     pub dismiss_model: Option<Model<bool>>,
 }
 
 impl std::fmt::Debug for DismissibleLayerProps {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("DismissibleLayerProps")
-            .field("layout", &self.layout)
-            .field("enabled", &self.enabled)
-            .field("dismiss_model", &self.dismiss_model.is_some())
-            .finish()
+        let mut out = f.debug_struct("DismissibleLayerProps");
+        out.field("layout", &self.layout)
+            .field("enabled", &self.enabled);
+        #[cfg(feature = "compat-policy-shortcuts")]
+        {
+            out.field("dismiss_model", &self.dismiss_model.is_some());
+        }
+        out.finish()
     }
 }
 
@@ -247,6 +251,7 @@ impl Default for DismissibleLayerProps {
         Self {
             layout,
             enabled: true,
+            #[cfg(feature = "compat-policy-shortcuts")]
             dismiss_model: None,
         }
     }
@@ -1334,11 +1339,16 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
                             cx.stop_propagation();
-                        } else if let Some(model) = props.dismiss_model {
-                            let _ = cx.app.models_mut().update(model, |v| *v = false);
-                            cx.invalidate_self(Invalidation::Paint);
-                            cx.request_redraw();
-                            cx.stop_propagation();
+                        } else {
+                            #[cfg(feature = "compat-policy-shortcuts")]
+                            {
+                                if let Some(model) = props.dismiss_model {
+                                    let _ = cx.app.models_mut().update(model, |v| *v = false);
+                                    cx.invalidate_self(Invalidation::Paint);
+                                    cx.request_redraw();
+                                    cx.stop_propagation();
+                                }
+                            }
                         }
                     }
                     Event::Pointer(fret_core::PointerEvent::Down { .. }) => {
@@ -1366,10 +1376,15 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             );
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
-                        } else if let Some(model) = props.dismiss_model {
-                            let _ = cx.app.models_mut().update(model, |v| *v = false);
-                            cx.invalidate_self(Invalidation::Paint);
-                            cx.request_redraw();
+                        } else {
+                            #[cfg(feature = "compat-policy-shortcuts")]
+                            {
+                                if let Some(model) = props.dismiss_model {
+                                    let _ = cx.app.models_mut().update(model, |v| *v = false);
+                                    cx.invalidate_self(Invalidation::Paint);
+                                    cx.request_redraw();
+                                }
+                            }
                         }
                     }
                     _ => {}
@@ -1434,10 +1449,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                         },
                                         ActivateReason::Pointer,
                                     );
-                                    if let Some(command) = props.on_click.clone() {
-                                        cx.dispatch_command(command);
-                                    }
                                 } else {
+                                    #[cfg(feature = "compat-policy-shortcuts")]
                                     #[allow(deprecated)]
                                     {
                                         if let Some(model) = props.toggle_model {
@@ -1469,10 +1482,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                                 }
                                             });
                                         }
-                                        if let Some(command) = props.on_click.clone() {
-                                            cx.dispatch_command(command);
-                                        }
                                     }
+                                }
+                                if let Some(command) = props.on_click.clone() {
+                                    cx.dispatch_command(command);
                                 }
                             }
                             cx.invalidate_self(Invalidation::Paint);
@@ -1544,10 +1557,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                 },
                                 ActivateReason::Keyboard,
                             );
-                            if let Some(command) = props.on_click.clone() {
-                                cx.dispatch_command(command);
-                            }
                         } else {
+                            #[cfg(feature = "compat-policy-shortcuts")]
                             #[allow(deprecated)]
                             {
                                 if let Some(model) = props.toggle_model {
@@ -1573,10 +1584,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                         }
                                     });
                                 }
-                                if let Some(command) = props.on_click.clone() {
-                                    cx.dispatch_command(command);
-                                }
                             }
+                        }
+                        if let Some(command) = props.on_click.clone() {
+                            cx.dispatch_command(command);
                         }
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
@@ -1810,36 +1821,39 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             },
                         );
                     } else {
+                        #[cfg(feature = "compat-policy-shortcuts")]
                         #[allow(deprecated)]
-                        if let Some(typeahead) = props.roving.typeahead_arc_str.as_ref() {
-                            let matches = |idx: usize| -> bool {
-                                if is_disabled(idx) {
-                                    return false;
-                                }
-                                let Some(label) = typeahead.labels.get(idx) else {
-                                    return false;
-                                };
-                                let label = label.as_ref().trim_start();
-                                let Some(first) = label.chars().next() else {
-                                    return false;
-                                };
-                                first.to_ascii_lowercase() == ch
-                            };
-
-                            let start = current.map(|i| i.saturating_add(1)).unwrap_or(0);
-                            if props.roving.wrap {
-                                for offset in 0..len {
-                                    let idx = (start + offset) % len;
-                                    if matches(idx) {
-                                        target = Some(idx);
-                                        break;
+                        {
+                            if let Some(typeahead) = props.roving.typeahead_arc_str.as_ref() {
+                                let matches = |idx: usize| -> bool {
+                                    if is_disabled(idx) {
+                                        return false;
                                     }
-                                }
-                            } else {
-                                for idx in start..len {
-                                    if matches(idx) {
-                                        target = Some(idx);
-                                        break;
+                                    let Some(label) = typeahead.labels.get(idx) else {
+                                        return false;
+                                    };
+                                    let label = label.as_ref().trim_start();
+                                    let Some(first) = label.chars().next() else {
+                                        return false;
+                                    };
+                                    first.to_ascii_lowercase() == ch
+                                };
+
+                                let start = current.map(|i| i.saturating_add(1)).unwrap_or(0);
+                                if props.roving.wrap {
+                                    for offset in 0..len {
+                                        let idx = (start + offset) % len;
+                                        if matches(idx) {
+                                            target = Some(idx);
+                                            break;
+                                        }
+                                    }
+                                } else {
+                                    for idx in start..len {
+                                        if matches(idx) {
+                                            target = Some(idx);
+                                            break;
+                                        }
                                     }
                                 }
                             }
@@ -1875,12 +1889,15 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         target,
                     );
                 } else {
+                    #[cfg(feature = "compat-policy-shortcuts")]
                     #[allow(deprecated)]
-                    if let Some(select) = props.roving.select_option_arc_str.as_ref()
-                        && let Some(value) = select.values.get(target).cloned()
                     {
-                        let next = Some(value);
-                        let _ = cx.app.models_mut().update(select.model, |v| *v = next);
+                        if let Some(select) = props.roving.select_option_arc_str.as_ref()
+                            && let Some(value) = select.values.get(target).cloned()
+                        {
+                            let next = Some(value);
+                            let _ = cx.app.models_mut().update(select.model, |v| *v = next);
+                        }
                     }
                 }
 
@@ -3822,6 +3839,7 @@ pub fn render_dismissible_root_with_hooks<H: UiHost>(
 #[deprecated(
     note = "Transitional API. Prefer render_dismissible_root_with_hooks + ElementCx::dismissible_on_dismiss_request (ADR 0074)."
 )]
+#[cfg(feature = "compat-policy-shortcuts")]
 pub fn render_dismissible_root<H: UiHost>(
     ui: &mut UiTree<H>,
     app: &mut H,
@@ -3855,6 +3873,9 @@ fn render_dismissible_root_impl<H: UiHost, F: FnOnce(&mut ElementCx<'_, H>) -> V
     dismiss_model: Option<Model<bool>>,
     render: F,
 ) -> NodeId {
+    #[cfg(not(feature = "compat-policy-shortcuts"))]
+    let _ = dismiss_model;
+
     let frame_id = app.frame_id();
 
     let children = crate::elements::with_element_cx(app, window, bounds, root_name, |cx| {
@@ -3918,10 +3939,19 @@ fn render_dismissible_root_impl<H: UiHost, F: FnOnce(&mut ElementCx<'_, H>) -> V
                 root_node,
                 ElementRecord {
                     element: root_id,
-                    instance: ElementInstance::DismissibleLayer(DismissibleLayerProps {
-                        dismiss_model,
-                        ..Default::default()
-                    }),
+                    instance: {
+                        #[cfg(feature = "compat-policy-shortcuts")]
+                        {
+                            ElementInstance::DismissibleLayer(DismissibleLayerProps {
+                                dismiss_model,
+                                ..Default::default()
+                            })
+                        }
+                        #[cfg(not(feature = "compat-policy-shortcuts"))]
+                        {
+                            ElementInstance::DismissibleLayer(DismissibleLayerProps::default())
+                        }
+                    },
                 },
             );
         });
@@ -4468,6 +4498,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "compat-policy-shortcuts")]
     #[allow(deprecated)]
     fn pressable_toggle_model_toggles_bool_on_click() {
         let mut app = TestHost::new();
@@ -4777,6 +4808,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "compat-policy-shortcuts")]
     #[allow(deprecated)]
     fn pressable_set_option_arc_str_model_sets_value_on_click() {
         let mut app = TestHost::new();
@@ -4851,6 +4883,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "compat-policy-shortcuts")]
     #[allow(deprecated)]
     fn pressable_toggle_vec_arc_str_model_toggles_membership_on_click() {
         let mut app = TestHost::new();

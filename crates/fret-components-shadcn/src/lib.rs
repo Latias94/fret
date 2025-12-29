@@ -1,3 +1,4 @@
+#![deny(deprecated)]
 //! shadcn/ui v4-aligned component facade.
 //!
 //! This crate is a **naming + taxonomy surface** intended to mirror shadcn/ui (v4) so users can
