@@ -8,7 +8,7 @@ use fret_runtime::{CommandId, Model};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::{SvgSource, TextInputStyle};
+use crate::{SvgSource, TextAreaStyle, TextInputStyle};
 
 /// Declarative element tree node (ephemeral per frame), keyed by a stable `GlobalElementId`.
 ///
@@ -39,6 +39,7 @@ pub enum ElementKind {
     Spacer(SpacerProps),
     Text(TextProps),
     TextInput(TextInputProps),
+    TextArea(TextAreaProps),
     VirtualList(VirtualListProps),
     Flex(FlexProps),
     Grid(GridProps),
@@ -525,6 +526,42 @@ impl std::fmt::Debug for TextInputProps {
             .field("text_style", &self.text_style)
             .field("submit_command", &self.submit_command)
             .field("cancel_command", &self.cancel_command)
+            .finish()
+    }
+}
+
+#[derive(Clone)]
+pub struct TextAreaProps {
+    pub layout: LayoutStyle,
+    pub model: Model<String>,
+    pub a11y_label: Option<std::sync::Arc<str>>,
+    pub chrome: TextAreaStyle,
+    pub text_style: TextStyle,
+    pub min_height: Px,
+}
+
+impl TextAreaProps {
+    pub fn new(model: Model<String>) -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            model,
+            a11y_label: None,
+            chrome: TextAreaStyle::default(),
+            text_style: TextStyle::default(),
+            min_height: Px(80.0),
+        }
+    }
+}
+
+impl std::fmt::Debug for TextAreaProps {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TextAreaProps")
+            .field("layout", &self.layout)
+            .field("model", &"<model>")
+            .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field("chrome", &self.chrome)
+            .field("text_style", &self.text_style)
+            .field("min_height", &self.min_height)
             .finish()
     }
 }

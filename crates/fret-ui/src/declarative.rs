@@ -205,6 +205,7 @@ pub(crate) enum ElementInstance {
     Spacer(SpacerProps),
     Text(TextProps),
     TextInput(crate::element::TextInputProps),
+    TextArea(crate::element::TextAreaProps),
     VirtualList(crate::element::VirtualListProps),
     Flex(FlexProps),
     Grid(crate::element::GridProps),
@@ -275,6 +276,7 @@ fn layout_style_for_node<H: UiHost>(app: &mut H, window: AppWindowId, node: Node
             ElementInstance::Spacer(p) => p.layout,
             ElementInstance::Text(p) => p.layout,
             ElementInstance::TextInput(p) => p.layout,
+            ElementInstance::TextArea(p) => p.layout,
             ElementInstance::VirtualList(p) => p.layout,
             ElementInstance::Flex(p) => p.layout,
             ElementInstance::Grid(p) => p.layout,
@@ -611,6 +613,7 @@ struct ElementHostWidget {
     clip_hit_test_corner_radii: Option<fret_core::Corners>,
     scrollbar_hit_rect: Option<Rect>,
     text_input: Option<BoundTextInput>,
+    text_area: Option<crate::text_area::BoundTextArea>,
     flex_cache: Option<TaffyContainerCache>,
     grid_cache: Option<TaffyContainerCache>,
 }
@@ -1038,7 +1041,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             repeat,
         } = event
             && cx.focus == Some(cx.node)
-            && !matches!(instance, ElementInstance::TextInput(_))
+            && !matches!(
+                instance,
+                ElementInstance::TextInput(_) | ElementInstance::TextArea(_)
+            )
         {
             let hook = crate::elements::with_element_state(
                 &mut *cx.app,
@@ -1085,6 +1091,19 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 input.set_submit_command(props.submit_command);
                 input.set_cancel_command(props.cancel_command);
                 input.event(cx, event);
+            }
+            ElementInstance::TextArea(props) => {
+                if self.text_area.is_none() {
+                    self.text_area = Some(crate::text_area::BoundTextArea::new(props.model));
+                }
+                let area = self.text_area.as_mut().expect("text area");
+                if area.model_id() != props.model.id() {
+                    area.set_model(props.model);
+                }
+                area.set_style(props.chrome);
+                area.set_text_style(props.text_style);
+                area.set_min_height(props.min_height);
+                area.event(cx, event);
             }
             ElementInstance::VirtualList(props) => {
                 let Event::Pointer(pe) = event else {
@@ -1840,6 +1859,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         if let Some(input) = self.text_input.as_mut() {
             input.cleanup_resources(services);
         }
+        if let Some(area) = self.text_area.as_mut() {
+            area.cleanup_resources(services);
+        }
     }
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
@@ -1889,6 +1911,22 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     cx.set_label(label.as_ref().to_string());
                 }
                 input.semantics(cx);
+            }
+            ElementInstance::TextArea(props) => {
+                if self.text_area.is_none() {
+                    self.text_area = Some(crate::text_area::BoundTextArea::new(props.model));
+                }
+                let area = self.text_area.as_mut().expect("text area");
+                if area.model_id() != props.model.id() {
+                    area.set_model(props.model);
+                }
+                area.set_style(props.chrome);
+                area.set_text_style(props.text_style);
+                area.set_min_height(props.min_height);
+                if let Some(label) = props.a11y_label.as_ref() {
+                    cx.set_label(label.as_ref().to_string());
+                }
+                area.semantics(cx);
             }
             ElementInstance::Pressable(props) => {
                 cx.set_role(props.a11y.role.unwrap_or(SemanticsRole::Button));
@@ -1962,9 +2000,12 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::Spinner(_) => false,
             _ => true,
         };
-        self.is_text_input = matches!(&instance, ElementInstance::TextInput(_));
+        self.is_text_input = matches!(
+            &instance,
+            ElementInstance::TextInput(_) | ElementInstance::TextArea(_)
+        );
         self.is_focusable = match &instance {
-            ElementInstance::TextInput(_) => true,
+            ElementInstance::TextInput(_) | ElementInstance::TextArea(_) => true,
             ElementInstance::Pressable(p) => p.enabled && p.focusable,
             _ => false,
         };
@@ -1979,6 +2020,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::RovingFlex(p) => matches!(p.flex.layout.overflow, Overflow::Clip),
             ElementInstance::Grid(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::TextInput(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::TextArea(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Scroll(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::HoverRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             // These primitives are always hit-test clipped by their own bounds (they are not
@@ -2211,6 +2253,21 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 let desired = input.layout(cx);
                 clamp_to_constraints(desired, props.layout, cx.available)
             }
+            ElementInstance::TextArea(props) => {
+                if self.text_area.is_none() {
+                    self.text_area = Some(crate::text_area::BoundTextArea::new(props.model));
+                }
+                let area = self.text_area.as_mut().expect("text area");
+                if area.model_id() != props.model.id() {
+                    area.set_model(props.model);
+                }
+                area.set_style(props.chrome);
+                area.set_text_style(props.text_style);
+                area.set_min_height(props.min_height);
+
+                let desired = area.layout(cx);
+                clamp_to_constraints(desired, props.layout, cx.available)
+            }
             ElementInstance::VirtualList(props) => {
                 let mut metrics = crate::elements::with_element_state(
                     &mut *cx.app,
@@ -2420,14 +2477,13 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 cache.sync_root_style(root_style);
                 cache.sync_children(cx.children, |child| {
                     let layout_style = layout_style_for_node(cx.app, window, child);
-                    let spacer_min =
-                        element_record_for_node(cx.app, window, child).and_then(|r| {
-                            if let ElementInstance::Spacer(p) = r.instance {
-                                Some(p.min)
-                            } else {
-                                None
-                            }
-                        });
+                    let spacer_min = element_record_for_node(cx.app, window, child).and_then(|r| {
+                        if let ElementInstance::Spacer(p) = r.instance {
+                            Some(p.min)
+                        } else {
+                            None
+                        }
+                    });
 
                     let mut min_w = layout_style.size.min_width.map(|p| p.0);
                     let mut min_h = layout_style.size.min_height.map(|p| p.0);
@@ -3214,6 +3270,19 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 input.set_cancel_command(props.cancel_command);
                 input.paint(cx);
             }
+            ElementInstance::TextArea(props) => {
+                if self.text_area.is_none() {
+                    self.text_area = Some(crate::text_area::BoundTextArea::new(props.model));
+                }
+                let area = self.text_area.as_mut().expect("text area");
+                if area.model_id() != props.model.id() {
+                    area.set_model(props.model);
+                }
+                area.set_style(props.chrome);
+                area.set_text_style(props.text_style);
+                area.set_min_height(props.min_height);
+                area.paint(cx);
+            }
             ElementInstance::VirtualList(props) => {
                 cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
 
@@ -3509,6 +3578,7 @@ pub fn render_root<H: UiHost>(
                     clip_hit_test_corner_radii: None,
                     scrollbar_hit_rect: None,
                     text_input: None,
+                    text_area: None,
                     flex_cache: None,
                     grid_cache: None,
                 });
@@ -3648,6 +3718,7 @@ fn render_dismissible_root_impl<H: UiHost, F: FnOnce(&mut ElementCx<'_, H>) -> V
                     clip_hit_test_corner_radii: None,
                     scrollbar_hit_rect: None,
                     text_input: None,
+                    text_area: None,
                     flex_cache: None,
                     grid_cache: None,
                 });
@@ -3754,6 +3825,7 @@ fn mount_element<H: UiHost>(
                 clip_hit_test_corner_radii: None,
                 scrollbar_hit_rect: None,
                 text_input: None,
+                text_area: None,
                 flex_cache: None,
                 grid_cache: None,
             });
@@ -3805,6 +3877,7 @@ fn mount_element<H: UiHost>(
         ElementKind::Spacer(p) => ElementInstance::Spacer(p),
         ElementKind::Text(p) => ElementInstance::Text(p),
         ElementKind::TextInput(p) => ElementInstance::TextInput(p),
+        ElementKind::TextArea(p) => ElementInstance::TextArea(p),
         ElementKind::VirtualList(p) => ElementInstance::VirtualList(p),
         ElementKind::Flex(p) => ElementInstance::Flex(p),
         ElementKind::Grid(p) => ElementInstance::Grid(p),
@@ -4220,6 +4293,52 @@ mod tests {
                 .any(|n| n.role == fret_core::SemanticsRole::TextField
                     && n.label.as_deref() == Some("Search")),
             "expected a TextField semantics node with label"
+        );
+    }
+
+    #[test]
+    fn declarative_text_area_updates_model_on_text_input() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(String::new());
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "text-area-text-input",
+            |cx| {
+                let mut props = crate::element::TextAreaProps::new(model);
+                props.min_height = Px(80.0);
+                vec![cx.text_area(props)]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable text area");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::TextInput("hello\nworld".to_string()),
+        );
+        assert_eq!(
+            app.models().get(model).map(|s| s.as_str()),
+            Some("hello\nworld")
         );
     }
 

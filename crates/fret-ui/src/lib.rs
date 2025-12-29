@@ -41,6 +41,7 @@ pub use elements::{ElementCx, ElementRuntime, GlobalElementId};
 pub use host::UiHost;
 pub use scroll::{ScrollHandle, ScrollStrategy, VirtualListScrollHandle};
 pub use svg_source::SvgSource;
+pub use text_area::TextAreaStyle;
 pub use text_input_style::TextInputStyle;
 pub use theme::{Theme, ThemeConfig, ThemeSnapshot};
 pub use tree::{

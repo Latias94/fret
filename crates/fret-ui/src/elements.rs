@@ -15,8 +15,8 @@ use crate::UiHost;
 use crate::element::{
     AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverRegionProps,
     ImageProps, LayoutStyle, PointerRegionProps, PressableProps, PressableState, RowProps,
-    ScrollProps, SpacerProps, SpinnerProps, StackProps, SvgIconProps, TextInputProps, TextProps,
-    VirtualListOptions, VirtualListProps, VirtualListState,
+    ScrollProps, SpacerProps, SpinnerProps, StackProps, SvgIconProps, TextAreaProps,
+    TextInputProps, TextProps, VirtualListOptions, VirtualListProps, VirtualListState,
 };
 use crate::widget::Invalidation;
 use fret_runtime::{Effect, Model, ModelId};
@@ -763,6 +763,14 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             AnyElement::new(id, ElementKind::TextInput(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn text_area(&mut self, props: TextAreaProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::TextArea(props), Vec::new())
         })
     }
 

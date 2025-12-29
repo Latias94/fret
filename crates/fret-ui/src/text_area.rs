@@ -1557,6 +1557,13 @@ impl BoundTextArea {
         }
     }
 
+    pub fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
+        self.area.queue_release_blob();
+        self.area.flush_pending_releases(services);
+        self.area.metrics = None;
+        self.area.prepared_key = None;
+    }
+
     pub fn with_text_style(mut self, style: TextStyle) -> Self {
         self.area.text_style = style;
         self.area.text_style_override = true;
@@ -1592,6 +1599,19 @@ impl BoundTextArea {
         self.area.style = style;
         self.area.style_override = true;
         self.area.last_theme_revision = None;
+    }
+
+    pub fn model_id(&self) -> fret_runtime::ModelId {
+        self.model.id()
+    }
+
+    pub fn set_model(&mut self, model: Model<String>) {
+        if self.model.id() == model.id() {
+            return;
+        }
+        self.model = model;
+        self.last_revision = None;
+        self.dirty_since_sync = false;
     }
 
     fn sync_from_model<H: UiHost>(&mut self, app: &H, force: bool) {
