@@ -10,12 +10,10 @@ use fret_core::{AppWindowId, DockOp};
 use fret_runtime::{CreateWindowKind, CreateWindowRequest, Effect, UiHost, WindowRequest};
 
 use crate::DockManager;
+use crate::invalidation::DockInvalidationService;
 
 fn invalidate_windows<H: UiHost>(app: &mut H, windows: impl IntoIterator<Item = AppWindowId>) {
-    for window in windows {
-        app.push_effect(Effect::UiInvalidateLayout { window });
-        app.request_redraw(window);
-    }
+    DockInvalidationService::bump_windows(app, windows);
 }
 
 /// Handle a docking transaction emitted by the UI layer.

@@ -6,6 +6,7 @@
 //! - docking UI and policy live here
 
 pub mod dock;
+mod invalidation;
 pub mod runtime;
 
 pub use dock::{

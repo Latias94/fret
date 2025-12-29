@@ -13,7 +13,7 @@ use fret_core::{
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
-use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui::{Theme, UiTree};
 use std::sync::Arc;
 use winit::event_loop::EventLoop;
 
@@ -261,17 +261,6 @@ impl WinitDriver for DockingDemoDriver {
         state
             .ui
             .paint_all(app, services, bounds, scene, scale_factor);
-    }
-
-    fn invalidate_ui_layout(
-        &mut self,
-        _app: &mut App,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        if let Some(root) = state.root {
-            state.ui.invalidate(root, Invalidation::Layout);
-        }
     }
 
     fn window_create_spec(
