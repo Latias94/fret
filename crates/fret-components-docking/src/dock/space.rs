@@ -595,6 +595,17 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         button,
                         modifiers,
                     } => {
+                        // Arbitration: while a dock drag session is active (or viewport capture is
+                        // active), we do not allow starting competing capture sessions from a
+                        // secondary button press. The active session owns the interaction.
+                        if dock_drag.is_some()
+                            || self.viewport_capture.is_some()
+                            || self.divider_drag.is_some()
+                            || self.floating_drag.is_some()
+                        {
+                            return;
+                        }
+
                         let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
                         let mut handled = false;
 

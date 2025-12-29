@@ -14,6 +14,8 @@ This ADR is implemented for the non-modal overlay stack and docking drags:
 - While a dock drag session is active in a window, `fret-components-ui/window_overlays` closes
   non-modal popovers (sets their `open` model to `false`) and suppresses hover overlays to avoid
   fighting docking interaction.
+- While a dock drag session is active, docking suppresses starting competing capture sessions from
+  secondary pointer-down events (e.g. viewport capture) in the same window.
 
 ## Context
 
