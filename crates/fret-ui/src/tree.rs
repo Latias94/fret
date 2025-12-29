@@ -3481,11 +3481,19 @@ mod tests {
         );
         ui.paint_all(&mut app, &mut services, bounds_b, &mut scene, 1.0);
         assert_eq!(paints.load(Ordering::SeqCst), 1);
-        assert_eq!(scene.ops_len(), 1);
+        assert_eq!(scene.ops_len(), 3);
 
-        match scene.ops()[0] {
-            SceneOp::Quad { rect, .. } => assert_eq!(rect, bounds_b),
-            _ => panic!("expected quad op"),
+        match (scene.ops()[0], scene.ops()[1], scene.ops()[2]) {
+            (
+                SceneOp::PushTransform { transform },
+                SceneOp::Quad { rect, .. },
+                SceneOp::PopTransform,
+            ) => {
+                assert_eq!(transform.tx, bounds_b.origin.x.0 - bounds_a.origin.x.0);
+                assert_eq!(transform.ty, bounds_b.origin.y.0 - bounds_a.origin.y.0);
+                assert_eq!(rect, bounds_a);
+            }
+            _ => panic!("expected push-transform + quad + pop-transform ops"),
         }
     }
 

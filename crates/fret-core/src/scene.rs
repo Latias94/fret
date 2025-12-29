@@ -1,6 +1,6 @@
 use crate::{
     SvgFit,
-    geometry::{Corners, Edges, Point, Rect},
+    geometry::{Corners, Edges, Point, Rect, Transform2D},
     ids::{ImageId, PathId, RenderTargetId, SvgId, TextBlobId},
 };
 use slotmap::Key;
@@ -57,10 +57,12 @@ impl SceneRecording {
             self.replay_ops(ops);
             return;
         }
-        self.ops.reserve(ops.len());
-        for &op in ops {
-            self.push(translate_scene_op(op, delta));
-        }
+
+        self.push(SceneOp::PushTransform {
+            transform: Transform2D::translation(delta),
+        });
+        self.replay_ops(ops);
+        self.push(SceneOp::PopTransform);
     }
 
     pub fn ops(&self) -> &[SceneOp] {
@@ -83,6 +85,25 @@ impl SceneRecording {
 
 #[derive(Debug, Clone, Copy)]
 pub enum SceneOp {
+    PushTransform {
+        transform: Transform2D,
+    },
+    PopTransform,
+
+    /// Opacity multiplier applied to subsequent draw ops.
+    ///
+    /// The opacity stack composes multiplicatively (parent * child).
+    PushOpacity {
+        opacity: f32,
+    },
+    PopOpacity,
+
+    /// Reserved layer stack marker (ADR 0019).
+    PushLayer {
+        layer: u32,
+    },
+    PopLayer,
+
     PushClipRect {
         rect: Rect,
     },
@@ -242,12 +263,32 @@ fn mix_corners(mut state: u64, c: Corners) -> u64 {
 
 fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
     match op {
+        SceneOp::PushTransform { transform } => {
+            let mut state = mix_u64(state, 100);
+            state = mix_f32(state, transform.a);
+            state = mix_f32(state, transform.b);
+            state = mix_f32(state, transform.c);
+            state = mix_f32(state, transform.d);
+            state = mix_f32(state, transform.tx);
+            mix_f32(state, transform.ty)
+        }
+        SceneOp::PopTransform => mix_u64(state, 101),
+        SceneOp::PushOpacity { opacity } => {
+            let state = mix_u64(state, 102);
+            mix_f32(state, opacity)
+        }
+        SceneOp::PopOpacity => mix_u64(state, 103),
+        SceneOp::PushLayer { layer } => {
+            let state = mix_u64(state, 104);
+            mix_u64(state, u64::from(layer))
+        }
+        SceneOp::PopLayer => mix_u64(state, 105),
         SceneOp::PushClipRect { rect } => {
             let state = mix_u64(state, 1);
             mix_rect(state, rect)
         }
         SceneOp::PushClipRRect { rect, corner_radii } => {
-            let mut state = mix_u64(state, 9);
+            let mut state = mix_u64(state, 13);
             state = mix_rect(state, rect);
             mix_corners(state, corner_radii)
         }
@@ -399,138 +440,28 @@ fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
     }
 }
 
-fn translate_point(p: Point, delta: Point) -> Point {
-    Point::new(p.x + delta.x, p.y + delta.y)
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::geometry::{Px, Size};
 
-fn translate_rect(r: Rect, delta: Point) -> Rect {
-    Rect::new(translate_point(r.origin, delta), r.size)
-}
+    #[test]
+    fn replay_ops_translated_wraps_in_transform_stack() {
+        let ops = [SceneOp::Quad {
+            order: DrawOrder(0),
+            rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
+            background: Color::TRANSPARENT,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(0.0)),
+        }];
 
-fn translate_scene_op(op: SceneOp, delta: Point) -> SceneOp {
-    match op {
-        SceneOp::PushClipRect { rect } => SceneOp::PushClipRect {
-            rect: translate_rect(rect, delta),
-        },
-        SceneOp::PushClipRRect { rect, corner_radii } => SceneOp::PushClipRRect {
-            rect: translate_rect(rect, delta),
-            corner_radii,
-        },
-        SceneOp::PopClip => SceneOp::PopClip,
-        SceneOp::Quad {
-            order,
-            rect,
-            background,
-            border,
-            border_color,
-            corner_radii,
-        } => SceneOp::Quad {
-            order,
-            rect: translate_rect(rect, delta),
-            background,
-            border,
-            border_color,
-            corner_radii,
-        },
-        SceneOp::Image {
-            order,
-            rect,
-            image,
-            opacity,
-        } => SceneOp::Image {
-            order,
-            rect: translate_rect(rect, delta),
-            image,
-            opacity,
-        },
-        SceneOp::ImageRegion {
-            order,
-            rect,
-            image,
-            uv,
-            opacity,
-        } => SceneOp::ImageRegion {
-            order,
-            rect: translate_rect(rect, delta),
-            image,
-            uv,
-            opacity,
-        },
-        SceneOp::MaskImage {
-            order,
-            rect,
-            image,
-            uv,
-            color,
-            opacity,
-        } => SceneOp::MaskImage {
-            order,
-            rect: translate_rect(rect, delta),
-            image,
-            uv,
-            color,
-            opacity,
-        },
-        SceneOp::SvgMaskIcon {
-            order,
-            rect,
-            svg,
-            fit,
-            color,
-            opacity,
-        } => SceneOp::SvgMaskIcon {
-            order,
-            rect: translate_rect(rect, delta),
-            svg,
-            fit,
-            color,
-            opacity,
-        },
-        SceneOp::SvgImage {
-            order,
-            rect,
-            svg,
-            fit,
-            opacity,
-        } => SceneOp::SvgImage {
-            order,
-            rect: translate_rect(rect, delta),
-            svg,
-            fit,
-            opacity,
-        },
-        SceneOp::Text {
-            order,
-            origin,
-            text,
-            color,
-        } => SceneOp::Text {
-            order,
-            origin: translate_point(origin, delta),
-            text,
-            color,
-        },
-        SceneOp::Path {
-            order,
-            origin,
-            path,
-            color,
-        } => SceneOp::Path {
-            order,
-            origin: translate_point(origin, delta),
-            path,
-            color,
-        },
-        SceneOp::ViewportSurface {
-            order,
-            rect,
-            target,
-            opacity,
-        } => SceneOp::ViewportSurface {
-            order,
-            rect: translate_rect(rect, delta),
-            target,
-            opacity,
-        },
+        let mut scene = Scene::default();
+        scene.replay_ops_translated(&ops, Point::new(Px(2.0), Px(3.0)));
+
+        assert_eq!(scene.ops_len(), 3);
+        assert!(matches!(scene.ops()[0], SceneOp::PushTransform { .. }));
+        assert!(matches!(scene.ops()[1], SceneOp::Quad { .. }));
+        assert!(matches!(scene.ops()[2], SceneOp::PopTransform));
     }
 }

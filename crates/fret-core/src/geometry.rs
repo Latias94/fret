@@ -133,3 +133,156 @@ impl Edges {
         }
     }
 }
+
+/// A 2D affine transform in logical pixels.
+///
+/// Matrix form (applied to column vectors):
+///
+/// ```text
+/// | a  c  tx |
+/// | b  d  ty |
+/// | 0  0  1  |
+/// ```
+///
+/// So:
+/// - `x' = a*x + c*y + tx`
+/// - `y' = b*x + d*y + ty`
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Transform2D {
+    pub a: f32,
+    pub b: f32,
+    pub c: f32,
+    pub d: f32,
+    pub tx: f32,
+    pub ty: f32,
+}
+
+impl Default for Transform2D {
+    fn default() -> Self {
+        Self::IDENTITY
+    }
+}
+
+impl Transform2D {
+    pub const IDENTITY: Self = Self {
+        a: 1.0,
+        b: 0.0,
+        c: 0.0,
+        d: 1.0,
+        tx: 0.0,
+        ty: 0.0,
+    };
+
+    pub const fn translation(delta: Point) -> Self {
+        Self {
+            tx: delta.x.0,
+            ty: delta.y.0,
+            ..Self::IDENTITY
+        }
+    }
+
+    pub const fn scale_uniform(s: f32) -> Self {
+        Self {
+            a: s,
+            d: s,
+            ..Self::IDENTITY
+        }
+    }
+
+    /// Matrix composition: `self * rhs`.
+    ///
+    /// This means: apply `rhs` first, then `self`.
+    pub fn mul(self, rhs: Self) -> Self {
+        Self {
+            a: self.a * rhs.a + self.c * rhs.b,
+            b: self.b * rhs.a + self.d * rhs.b,
+            c: self.a * rhs.c + self.c * rhs.d,
+            d: self.b * rhs.c + self.d * rhs.d,
+            tx: self.a * rhs.tx + self.c * rhs.ty + self.tx,
+            ty: self.b * rhs.tx + self.d * rhs.ty + self.ty,
+        }
+    }
+
+    pub fn apply_point(self, p: Point) -> Point {
+        Point::new(
+            Px(self.a * p.x.0 + self.c * p.y.0 + self.tx),
+            Px(self.b * p.x.0 + self.d * p.y.0 + self.ty),
+        )
+    }
+
+    pub fn inverse(self) -> Option<Self> {
+        let det = self.a * self.d - self.b * self.c;
+        if !det.is_finite() || det == 0.0 {
+            return None;
+        }
+        let inv_det = 1.0 / det;
+        let ia = self.d * inv_det;
+        let ib = -self.b * inv_det;
+        let ic = -self.c * inv_det;
+        let id = self.a * inv_det;
+
+        let itx = -(ia * self.tx + ic * self.ty);
+        let ity = -(ib * self.tx + id * self.ty);
+
+        Some(Self {
+            a: ia,
+            b: ib,
+            c: ic,
+            d: id,
+            tx: itx,
+            ty: ity,
+        })
+    }
+
+    /// Converts a logical-px transform to a physical-px transform.
+    ///
+    /// If you already have coordinates multiplied by `scale_factor`, apply the returned transform
+    /// directly in physical pixels.
+    pub fn to_physical_px(self, scale_factor: f32) -> Self {
+        Self {
+            tx: self.tx * scale_factor,
+            ty: self.ty * scale_factor,
+            ..self
+        }
+    }
+
+    /// Returns `(scale, translation)` if this is a translation + uniform scale transform.
+    pub fn as_translation_uniform_scale(self) -> Option<(f32, Point)> {
+        if !self.a.is_finite()
+            || !self.b.is_finite()
+            || !self.c.is_finite()
+            || !self.d.is_finite()
+            || !self.tx.is_finite()
+            || !self.ty.is_finite()
+        {
+            return None;
+        }
+
+        if self.b != 0.0 || self.c != 0.0 || self.a != self.d {
+            return None;
+        }
+        Some((self.a, Point::new(Px(self.tx), Px(self.ty))))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn transform_inverse_roundtrips_point() {
+        let t = Transform2D {
+            a: 2.0,
+            b: 1.0,
+            c: -0.5,
+            d: 1.5,
+            tx: 10.0,
+            ty: -7.0,
+        };
+        let inv = t.inverse().expect("invertible");
+        let p = Point::new(Px(3.0), Px(4.0));
+        let p2 = inv.apply_point(t.apply_point(p));
+        assert!((p2.x.0 - p.x.0).abs() < 1e-4);
+        assert!((p2.y.0 - p.y.0).abs() < 1e-4);
+    }
+}

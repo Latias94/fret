@@ -1,6 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 use fret_core::{
-    geometry::{Corners, Edges, Rect},
+    geometry::{Corners, Edges, Point, Px, Rect, Size, Transform2D},
     scene::{Color, Scene, SceneOp, UvRect},
 };
 use lyon::tessellation::{
@@ -1135,29 +1135,86 @@ impl Renderer {
         scale_factor: f32,
     ) {
         let gpu = SvgRasterGpu { device, queue };
+        let mut transform_stack: Vec<Transform2D> = vec![Transform2D::IDENTITY];
+
+        let current_transform_scale = |t: Transform2D| -> f32 {
+            if let Some((s, _)) = t.as_translation_uniform_scale() {
+                if s.is_finite() && s > 0.0 {
+                    return s;
+                }
+            }
+
+            let sx = (t.a * t.a + t.b * t.b).sqrt();
+            let sy = (t.c * t.c + t.d * t.d).sqrt();
+            let s = sx.max(sy);
+            if s.is_finite() && s > 0.0 { s } else { 1.0 }
+        };
+
         for op in scene.ops() {
             match op {
+                SceneOp::PushTransform { transform } => {
+                    let current = *transform_stack
+                        .last()
+                        .expect("transform stack must be non-empty");
+                    transform_stack.push(current.mul(*transform));
+                }
+                SceneOp::PopTransform => {
+                    if transform_stack.len() > 1 {
+                        transform_stack.pop();
+                    }
+                }
+                SceneOp::PushOpacity { .. }
+                | SceneOp::PopOpacity
+                | SceneOp::PushLayer { .. }
+                | SceneOp::PopLayer
+                | SceneOp::PushClipRect { .. }
+                | SceneOp::PushClipRRect { .. }
+                | SceneOp::PopClip => {}
                 SceneOp::SvgMaskIcon { rect, svg, fit, .. } => {
+                    let s = current_transform_scale(
+                        *transform_stack
+                            .last()
+                            .expect("transform stack must be non-empty"),
+                    );
+                    let rect = Rect::new(
+                        rect.origin,
+                        Size::new(Px(rect.size.width.0 * s), Px(rect.size.height.0 * s)),
+                    );
                     let _ = self.ensure_svg_raster(
                         &gpu,
                         *svg,
-                        *rect,
+                        rect,
                         scale_factor,
                         SvgRasterKind::AlphaMask,
                         *fit,
                     );
                 }
                 SceneOp::SvgImage { rect, svg, fit, .. } => {
+                    let s = current_transform_scale(
+                        *transform_stack
+                            .last()
+                            .expect("transform stack must be non-empty"),
+                    );
+                    let rect = Rect::new(
+                        rect.origin,
+                        Size::new(Px(rect.size.width.0 * s), Px(rect.size.height.0 * s)),
+                    );
                     let _ = self.ensure_svg_raster(
                         &gpu,
                         *svg,
-                        *rect,
+                        rect,
                         scale_factor,
                         SvgRasterKind::Rgba,
                         *fit,
                     );
                 }
-                _ => {}
+                SceneOp::Quad { .. }
+                | SceneOp::Image { .. }
+                | SceneOp::ImageRegion { .. }
+                | SceneOp::MaskImage { .. }
+                | SceneOp::Text { .. }
+                | SceneOp::Path { .. }
+                | SceneOp::ViewportSurface { .. } => {}
             }
         }
 
@@ -3324,10 +3381,83 @@ impl Renderer {
             }};
         }
 
+        let mut transform_stack: Vec<Transform2D> = vec![Transform2D::IDENTITY];
+        let mut opacity_stack: Vec<f32> = vec![1.0];
+
+        let current_transform_params = |t: Transform2D| -> (f32, f32, f32) {
+            if let Some((s, tr)) = t.as_translation_uniform_scale() {
+                return (s, tr.x.0, tr.y.0);
+            }
+            (1.0, t.tx, t.ty)
+        };
+
+        let transform_rect = |rect: Rect, s: f32, tx: f32, ty: f32| -> Rect {
+            Rect::new(
+                Point::new(Px(rect.origin.x.0 * s + tx), Px(rect.origin.y.0 * s + ty)),
+                Size::new(Px(rect.size.width.0 * s), Px(rect.size.height.0 * s)),
+            )
+        };
+
+        let transform_point = |p: Point, s: f32, tx: f32, ty: f32| -> Point {
+            Point::new(Px(p.x.0 * s + tx), Px(p.y.0 * s + ty))
+        };
+
+        let scale_edges = |e: Edges, s: f32| -> Edges {
+            Edges {
+                top: Px(e.top.0 * s),
+                right: Px(e.right.0 * s),
+                bottom: Px(e.bottom.0 * s),
+                left: Px(e.left.0 * s),
+            }
+        };
+
+        let scale_corners = |c: Corners, s: f32| -> Corners {
+            Corners {
+                top_left: Px(c.top_left.0 * s),
+                top_right: Px(c.top_right.0 * s),
+                bottom_right: Px(c.bottom_right.0 * s),
+                bottom_left: Px(c.bottom_left.0 * s),
+            }
+        };
+
+        let color_with_opacity = |mut c: Color, opacity: f32| -> Color {
+            c.a = (c.a * opacity).clamp(0.0, 1.0);
+            c
+        };
+
         for op in scene.ops() {
             match op {
+                SceneOp::PushTransform { transform } => {
+                    let current = *transform_stack
+                        .last()
+                        .expect("transform stack must be non-empty");
+                    transform_stack.push(current.mul(*transform));
+                }
+                SceneOp::PopTransform => {
+                    if transform_stack.len() > 1 {
+                        transform_stack.pop();
+                    }
+                }
+                SceneOp::PushOpacity { opacity } => {
+                    let current = *opacity_stack
+                        .last()
+                        .expect("opacity stack must be non-empty");
+                    opacity_stack.push((current * opacity).clamp(0.0, 1.0));
+                }
+                SceneOp::PopOpacity => {
+                    if opacity_stack.len() > 1 {
+                        opacity_stack.pop();
+                    }
+                }
+                SceneOp::PushLayer { .. } | SceneOp::PopLayer => {}
                 SceneOp::PushClipRect { rect } => {
-                    let Some(new_scissor) = scissor_from_rect(*rect, scale_factor, viewport_size)
+                    let (s, tx, ty) = current_transform_params(
+                        *transform_stack
+                            .last()
+                            .expect("transform stack must be non-empty"),
+                    );
+                    let rect = transform_rect(*rect, s, tx, ty);
+                    let Some(new_scissor) = scissor_from_rect(rect, scale_factor, viewport_size)
                     else {
                         continue;
                     };
@@ -3342,7 +3472,15 @@ impl Renderer {
                     clip_kind_stack.push(false);
                 }
                 SceneOp::PushClipRRect { rect, corner_radii } => {
-                    let Some(new_scissor) = scissor_from_rect(*rect, scale_factor, viewport_size)
+                    let (s, tx, ty) = current_transform_params(
+                        *transform_stack
+                            .last()
+                            .expect("transform stack must be non-empty"),
+                    );
+                    let rect = transform_rect(*rect, s, tx, ty);
+                    let corner_radii = scale_corners(*corner_radii, s);
+
+                    let Some(new_scissor) = scissor_from_rect(rect, scale_factor, viewport_size)
                     else {
                         continue;
                     };
@@ -3355,8 +3493,9 @@ impl Renderer {
                     current_scissor = combined;
                     scissor_stack.push(current_scissor);
 
-                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
-                    let radii = clamp_corner_radii_for_rect(w, h, corners_to_vec4(*corner_radii));
+                    let (x, y, w, h) = rect_to_pixels(rect, scale_factor);
+                    let radii = corners_to_vec4(corner_radii).map(|r| r * scale_factor);
+                    let radii = clamp_corner_radii_for_rect(w, h, radii);
                     let is_rrect = radii.iter().any(|v| *v > 0.0);
                     if is_rrect && active_rounded_clips.len() < MAX_CLIPS {
                         flush_quad_batch!();
@@ -3421,10 +3560,25 @@ impl Renderer {
                     corner_radii,
                     ..
                 } => {
+                    let opacity = *opacity_stack
+                        .last()
+                        .expect("opacity stack must be non-empty");
+
+                    let (s, tx, ty) = current_transform_params(
+                        *transform_stack
+                            .last()
+                            .expect("transform stack must be non-empty"),
+                    );
+                    let rect = transform_rect(*rect, s, tx, ty);
+                    let border = scale_edges(*border, s);
+                    let corner_radii = scale_corners(*corner_radii, s);
+                    let background = color_with_opacity(*background, opacity);
+                    let border_color = color_with_opacity(*border_color, opacity);
+
                     if background.a <= 0.0 && border_color.a <= 0.0 {
                         continue;
                     }
-                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
+                    let (x, y, w, h) = rect_to_pixels(rect, scale_factor);
                     if w <= 0.0 || h <= 0.0 {
                         continue;
                     }
@@ -3445,14 +3599,15 @@ impl Renderer {
                         ));
                     }
 
-                    let corner_radii =
-                        clamp_corner_radii_for_rect(w, h, corners_to_vec4(*corner_radii));
+                    let corner_radii = corners_to_vec4(corner_radii).map(|r| r * scale_factor);
+                    let corner_radii = clamp_corner_radii_for_rect(w, h, corner_radii);
+                    let border = edges_to_vec4(border).map(|e| e * scale_factor);
                     instances.push(QuadInstance {
                         rect: [x, y, w, h],
-                        color: color_to_linear_rgba_premul(*background),
+                        color: color_to_linear_rgba_premul(background),
                         corner_radii,
-                        border: edges_to_vec4(*border),
-                        border_color: color_to_linear_rgba_premul(*border_color),
+                        border,
+                        border_color: color_to_linear_rgba_premul(border_color),
                     });
                 }
                 SceneOp::Image { .. } => {
@@ -3466,19 +3621,29 @@ impl Renderer {
                     else {
                         unreachable!();
                     };
-                    if *opacity <= 0.0 {
+                    let group_opacity = *opacity_stack
+                        .last()
+                        .expect("opacity stack must be non-empty");
+
+                    if *opacity <= 0.0 || group_opacity <= 0.0 {
                         continue;
                     }
                     if self.images.get(*image).is_none() {
                         continue;
                     }
-                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
+                    let (s, tx, ty) = current_transform_params(
+                        *transform_stack
+                            .last()
+                            .expect("transform stack must be non-empty"),
+                    );
+                    let rect = transform_rect(*rect, s, tx, ty);
+                    let (x, y, w, h) = rect_to_pixels(rect, scale_factor);
                     if w <= 0.0 || h <= 0.0 {
                         continue;
                     }
 
                     let first_vertex = viewport_vertices.len() as u32;
-                    let o = opacity.clamp(0.0, 1.0);
+                    let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
 
                     let x0 = x;
                     let y0 = y;
@@ -3544,19 +3709,29 @@ impl Renderer {
                     else {
                         unreachable!();
                     };
-                    if *opacity <= 0.0 {
+                    let group_opacity = *opacity_stack
+                        .last()
+                        .expect("opacity stack must be non-empty");
+
+                    if *opacity <= 0.0 || group_opacity <= 0.0 {
                         continue;
                     }
                     if self.images.get(*image).is_none() {
                         continue;
                     }
-                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
+                    let (s, tx, ty) = current_transform_params(
+                        *transform_stack
+                            .last()
+                            .expect("transform stack must be non-empty"),
+                    );
+                    let rect = transform_rect(*rect, s, tx, ty);
+                    let (x, y, w, h) = rect_to_pixels(rect, scale_factor);
                     if w <= 0.0 || h <= 0.0 {
                         continue;
                     }
 
                     let first_vertex = viewport_vertices.len() as u32;
-                    let o = opacity.clamp(0.0, 1.0);
+                    let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
 
                     let x0 = x;
                     let y0 = y;
@@ -3624,19 +3799,29 @@ impl Renderer {
                     else {
                         unreachable!();
                     };
-                    if *opacity <= 0.0 || color.a <= 0.0 {
+                    let group_opacity = *opacity_stack
+                        .last()
+                        .expect("opacity stack must be non-empty");
+
+                    if *opacity <= 0.0 || group_opacity <= 0.0 || color.a <= 0.0 {
                         continue;
                     }
                     if self.images.get(*image).is_none() {
                         continue;
                     }
-                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
+                    let (s, tx, ty) = current_transform_params(
+                        *transform_stack
+                            .last()
+                            .expect("transform stack must be non-empty"),
+                    );
+                    let rect = transform_rect(*rect, s, tx, ty);
+                    let (x, y, w, h) = rect_to_pixels(rect, scale_factor);
                     if w <= 0.0 || h <= 0.0 {
                         continue;
                     }
 
                     let first_vertex = text_vertices.len() as u32;
-                    let o = opacity.clamp(0.0, 1.0);
+                    let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
                     let mut premul = color_to_linear_rgba_premul(*color);
                     premul = premul.map(|c| c * o);
 
@@ -3700,13 +3885,26 @@ impl Renderer {
                     else {
                         unreachable!();
                     };
-                    if *opacity <= 0.0 || color.a <= 0.0 {
+                    let group_opacity = *opacity_stack
+                        .last()
+                        .expect("opacity stack must be non-empty");
+
+                    if *opacity <= 0.0 || group_opacity <= 0.0 || color.a <= 0.0 {
                         continue;
                     }
 
+                    let (s, tx, ty) = current_transform_params(
+                        *transform_stack
+                            .last()
+                            .expect("transform stack must be non-empty"),
+                    );
+                    let key_rect = Rect::new(
+                        rect.origin,
+                        Size::new(Px(rect.size.width.0 * s), Px(rect.size.height.0 * s)),
+                    );
                     let key = Self::svg_raster_key(
                         *svg,
-                        *rect,
+                        key_rect,
                         scale_factor,
                         SvgRasterKind::AlphaMask,
                         *fit,
@@ -3718,13 +3916,14 @@ impl Renderer {
                         continue;
                     }
 
-                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
+                    let draw_rect = transform_rect(*rect, s, tx, ty);
+                    let (x, y, w, h) = rect_to_pixels(draw_rect, scale_factor);
                     if w <= 0.0 || h <= 0.0 {
                         continue;
                     }
 
                     let first_vertex = text_vertices.len() as u32;
-                    let o = opacity.clamp(0.0, 1.0);
+                    let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
                     let mut premul = color_to_linear_rgba_premul(*color);
                     premul = premul.map(|c| c * o);
 
@@ -3765,7 +3964,7 @@ impl Renderer {
                         },
                     ]);
 
-                    let svg_scissor = scissor_from_rect(*rect, scale_factor, viewport_size)
+                    let svg_scissor = scissor_from_rect(draw_rect, scale_factor, viewport_size)
                         .map(|s| intersect_scissor(current_scissor, s))
                         .unwrap_or(current_scissor);
                     ordered_draws.push(OrderedDraw::Mask(MaskDraw {
@@ -3788,12 +3987,31 @@ impl Renderer {
                     else {
                         unreachable!();
                     };
-                    if *opacity <= 0.0 {
+                    let group_opacity = *opacity_stack
+                        .last()
+                        .expect("opacity stack must be non-empty");
+
+                    if *opacity <= 0.0 || group_opacity <= 0.0 {
                         continue;
                     }
 
-                    let key =
-                        Self::svg_raster_key(*svg, *rect, scale_factor, SvgRasterKind::Rgba, *fit);
+                    let (s, tx, ty) = current_transform_params(
+                        *transform_stack
+                            .last()
+                            .expect("transform stack must be non-empty"),
+                    );
+                    let key_rect = Rect::new(
+                        rect.origin,
+                        Size::new(Px(rect.size.width.0 * s), Px(rect.size.height.0 * s)),
+                    );
+
+                    let key = Self::svg_raster_key(
+                        *svg,
+                        key_rect,
+                        scale_factor,
+                        SvgRasterKind::Rgba,
+                        *fit,
+                    );
                     let Some(entry) = self.svg_rasters.get(&key) else {
                         continue;
                     };
@@ -3801,13 +4019,14 @@ impl Renderer {
                         continue;
                     }
 
-                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
+                    let draw_rect = transform_rect(*rect, s, tx, ty);
+                    let (x, y, w, h) = rect_to_pixels(draw_rect, scale_factor);
                     if w <= 0.0 || h <= 0.0 {
                         continue;
                     }
 
                     let first_vertex = viewport_vertices.len() as u32;
-                    let o = opacity.clamp(0.0, 1.0);
+                    let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
 
                     let (x0, y0, x1, y1) =
                         svg_draw_rect_px(x, y, w, h, entry.size_px, SMOOTH_SVG_SCALE_FACTOR, *fit);
@@ -3851,7 +4070,7 @@ impl Renderer {
                         },
                     ]);
 
-                    let svg_scissor = scissor_from_rect(*rect, scale_factor, viewport_size)
+                    let svg_scissor = scissor_from_rect(draw_rect, scale_factor, viewport_size)
                         .map(|s| intersect_scissor(current_scissor, s))
                         .unwrap_or(current_scissor);
                     ordered_draws.push(OrderedDraw::Image(ImageDraw {
@@ -3874,17 +4093,32 @@ impl Renderer {
                         continue;
                     };
 
+                    let group_opacity = *opacity_stack
+                        .last()
+                        .expect("opacity stack must be non-empty");
+                    if group_opacity <= 0.0 || color.a <= 0.0 {
+                        continue;
+                    }
+
+                    let (s, tx, ty) = current_transform_params(
+                        *transform_stack
+                            .last()
+                            .expect("transform stack must be non-empty"),
+                    );
+                    let origin = transform_point(*origin, s, tx, ty);
+
                     let first_vertex = text_vertices.len() as u32;
 
                     let base_x = origin.x.0 * scale_factor;
                     let base_y = origin.y.0 * scale_factor;
-                    let premul = color_to_linear_rgba_premul(*color);
+                    let premul =
+                        color_to_linear_rgba_premul(color_with_opacity(*color, group_opacity));
 
                     for g in &blob.glyphs {
-                        let x0 = base_x + g.rect[0] * scale_factor;
-                        let y0 = base_y + g.rect[1] * scale_factor;
-                        let x1 = x0 + g.rect[2] * scale_factor;
-                        let y1 = y0 + g.rect[3] * scale_factor;
+                        let x0 = base_x + g.rect[0] * s * scale_factor;
+                        let y0 = base_y + g.rect[1] * s * scale_factor;
+                        let x1 = x0 + g.rect[2] * s * scale_factor;
+                        let y1 = y0 + g.rect[3] * s * scale_factor;
 
                         let (u0, v0, u1, v1) = (g.uv[0], g.uv[1], g.uv[2], g.uv[3]);
 
@@ -3943,7 +4177,10 @@ impl Renderer {
                     else {
                         unreachable!();
                     };
-                    if color.a <= 0.0 {
+                    let group_opacity = *opacity_stack
+                        .last()
+                        .expect("opacity stack must be non-empty");
+                    if color.a <= 0.0 || group_opacity <= 0.0 {
                         continue;
                     }
                     let Some(prepared) = self.paths.get(*path) else {
@@ -3953,13 +4190,20 @@ impl Renderer {
                         continue;
                     }
 
-                    let path_bounds = Rect::new(
+                    let (s, tx, ty) = current_transform_params(
+                        *transform_stack
+                            .last()
+                            .expect("transform stack must be non-empty"),
+                    );
+
+                    let local_bounds = Rect::new(
                         fret_core::Point::new(
                             origin.x + prepared.metrics.bounds.origin.x,
                             origin.y + prepared.metrics.bounds.origin.y,
                         ),
                         prepared.metrics.bounds.size,
                     );
+                    let path_bounds = transform_rect(local_bounds, s, tx, ty);
                     let Some(bounds_scissor) =
                         scissor_from_rect(path_bounds, scale_factor, viewport_size)
                     else {
@@ -3971,13 +4215,15 @@ impl Renderer {
                     }
 
                     let first_vertex = path_vertices.len() as u32;
+                    let origin = transform_point(*origin, s, tx, ty);
                     let ox = origin.x.0 * scale_factor;
                     let oy = origin.y.0 * scale_factor;
-                    let premul = color_to_linear_rgba_premul(*color);
+                    let premul =
+                        color_to_linear_rgba_premul(color_with_opacity(*color, group_opacity));
 
                     for p in &prepared.triangles {
                         path_vertices.push(PathVertex {
-                            pos_px: [ox + p[0] * scale_factor, oy + p[1] * scale_factor],
+                            pos_px: [ox + p[0] * s * scale_factor, oy + p[1] * s * scale_factor],
                             color: premul,
                         });
                     }
@@ -3999,19 +4245,29 @@ impl Renderer {
                     ..
                 } => {
                     flush_quad_batch!();
-                    if *opacity <= 0.0 {
+                    let group_opacity = *opacity_stack
+                        .last()
+                        .expect("opacity stack must be non-empty");
+
+                    if *opacity <= 0.0 || group_opacity <= 0.0 {
                         continue;
                     }
                     if self.render_targets.get(*target).is_none() {
                         continue;
                     }
-                    let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
+                    let (s, tx, ty) = current_transform_params(
+                        *transform_stack
+                            .last()
+                            .expect("transform stack must be non-empty"),
+                    );
+                    let rect = transform_rect(*rect, s, tx, ty);
+                    let (x, y, w, h) = rect_to_pixels(rect, scale_factor);
                     if w <= 0.0 || h <= 0.0 {
                         continue;
                     }
 
                     let first_vertex = viewport_vertices.len() as u32;
-                    let o = opacity.clamp(0.0, 1.0);
+                    let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
 
                     let x0 = x;
                     let y0 = y;
