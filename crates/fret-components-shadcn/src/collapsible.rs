@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::LayoutRefinement;
+use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_core::SemanticsRole;
 use fret_runtime::Model;
 use fret_ui::Invalidation;

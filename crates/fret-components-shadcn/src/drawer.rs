@@ -6,11 +6,12 @@ use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementCx, UiHost};
 
-pub use crate::sheet::{
-    SheetContent as DrawerContent, SheetDescription as DrawerDescription, SheetFooter as DrawerFooter,
-    SheetHeader as DrawerHeader, SheetSide as DrawerSide, SheetTitle as DrawerTitle,
-};
 use crate::Sheet;
+pub use crate::sheet::{
+    SheetContent as DrawerContent, SheetDescription as DrawerDescription,
+    SheetFooter as DrawerFooter, SheetHeader as DrawerHeader, SheetSide as DrawerSide,
+    SheetTitle as DrawerTitle,
+};
 
 #[derive(Clone)]
 pub struct Drawer {
