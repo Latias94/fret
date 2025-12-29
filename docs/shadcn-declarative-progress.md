@@ -101,7 +101,7 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 | sheet | `sheet` | Present | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
 | sidebar | `sidebar` | Present |  |
 | skeleton | `skeleton` | Present |  |
-| slider | `slider` | Missing | Input primitive; a11y + pointer interaction |
+| slider | `slider` | Present | Runtime `Slider` engine + shadcn wrapper; a11y TBD |
 | sonner | `sonner` | Present | Toast store + overlay layer + timers (no a11y yet) |
 | spinner | `spinner` | Present |  |
 | switch | `switch` | Present |  |
@@ -183,7 +183,7 @@ Intended new building blocks (names tentative):
 - `crates/fret-components-ui/src/declarative/separator.rs` (simple visual + semantics)
 - `crates/fret-components-ui/src/declarative/scroll_area.rs` (Scroll + scrollbar styling wrapper)
 - `crates/fret-components-ui/src/declarative/textarea.rs` (runtime `TextArea` chrome wrapper)
-- `crates/fret-components-ui/src/declarative/slider.rs` (pointer/keyboard input + a11y)
+- `crates/fret-ui/src/slider.rs` (pointer/keyboard input; a11y TBD)
 - Extend `crates/fret-components-ui/src/window_overlays.rs` with: tooltip layer, menu layer, dialog/sheet layer, toast layer
 
 Cross-cutting a11y constraint to keep in mind:

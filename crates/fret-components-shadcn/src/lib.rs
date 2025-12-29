@@ -47,6 +47,7 @@ pub mod separator;
 pub mod sheet;
 pub mod sidebar;
 pub mod skeleton;
+pub mod slider;
 pub mod sonner;
 pub mod spinner;
 pub mod switch;
@@ -128,6 +129,7 @@ pub use sidebar::{
     SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 };
 pub use skeleton::Skeleton;
+pub use slider::{Slider, slider};
 pub use sonner::{
     Sonner, ToastAction, ToastId, ToastPosition, ToastRequest, ToastVariant, Toaster,
 };
