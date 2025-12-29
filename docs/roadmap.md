@@ -6,7 +6,11 @@ Key contracts are captured in ADRs under `docs/adr/`.
 
 The runtime contract surface for `crates/fret-ui` is explicitly locked by `docs/adr/0066-fret-ui-runtime-contract-surface.md`. New runtime public APIs must name an authoritative upstream reference and land with tests before broadening usage.
 
-For historical short-horizon execution plans, see `docs/archive/mvp.md` (overview) and `docs/archive/mvp/active-plan.md` (expanded, per-MVP “definition of done”).
+Historical MVP planning snapshots live under `docs/archive/` (e.g. `docs/archive/mvp.md`,
+`docs/archive/mvp/active-plan.md`). These are kept for context only and are not maintained as
+active plans.
+
+Workstream notes live under `docs/workstreams/` (not a roadmap; do not treat as progress tracking).
 
 For the “foundation-first, component-validated” execution loop (Plan C), see `docs/foundation-first-workflow.md`.
 

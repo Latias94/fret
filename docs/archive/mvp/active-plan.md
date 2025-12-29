@@ -1,8 +1,8 @@
-> Archived: this plan is kept for history; prefer `docs/roadmap.md` + `docs/todo-tracker.md` for active work.
+> Archived: this plan is kept for history; prefer `docs/roadmap.md` + `docs/shadcn-declarative-progress.md` for active work.
 
-# MVP Plan (Active, Short-Horizon)
+# MVP Plan (Historical Snapshot)
 
-This document is the **current execution queue** that complements `docs/roadmap.md`.
+This document used to be an execution queue. It is no longer maintained as an active plan.
 
 It is intentionally kept **short and high-signal**. Detailed historical notes and prior MVP
 definitions live in `docs/archive/mvp/reference-plan.md`.

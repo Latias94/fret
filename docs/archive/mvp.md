@@ -1,17 +1,15 @@
-> Archived: this plan is kept for history; prefer `docs/roadmap.md` + `docs/todo-tracker.md` for active work.
+> Archived: this plan is kept for history; prefer `docs/roadmap.md` + `docs/shadcn-declarative-progress.md` for active work.
 
-# MVP Plan (Overview)
+# MVP Plan (Historical Overview Snapshot)
 
-This file is intentionally kept **short and actionable**.
+This file is a historical snapshot and is not maintained as an active execution queue.
 
-- Full active plan (details, definitions, status notes): `docs/archive/mvp/active-plan.md`
+- Historical expanded plan (details, definitions, status notes): `docs/archive/mvp/active-plan.md`
 - Completed stage definitions: `docs/archive/mvp-archive.md`
 - Long-horizon priorities and refactors: `docs/roadmap.md`
 - Runtime contract gap list (ADR 0066 conformance): `docs/archive/backlog/runtime-contract-gap.md`
 
-## What’s Next
-
-Maintain the next MVP items here as a small, high-signal queue. If a task changes a “hard-to-change” contract, update or add an ADR before broadening usage.
+## Historical “What’s Next” Snapshot
 
 - Contract note: the `fret-ui` runtime contract surface is now locked (ADR 0066). New runtime public APIs must name an authoritative reference and land with tests before broadening usage.
 - Execution note: we follow a “foundation-first, component-validated” loop (Plan C). See `docs/foundation-first-workflow.md`.
@@ -63,4 +61,4 @@ Maintain the next MVP items here as a small, high-signal queue. If a task change
 
 ## Current Status (Snapshot)
 
-See `docs/archive/mvp/active-plan.md` for the authoritative, expanded status list and per-MVP details.
+See `docs/roadmap.md` for current priorities and milestones.

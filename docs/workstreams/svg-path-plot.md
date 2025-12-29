@@ -1,6 +1,7 @@
-# MVP: SVG / Path / Plot Rendering Roadmap
+# SVG / Path / Plot Rendering Workstream Notes
 
-Status: active (workstream notes; do not treat as the repo-wide roadmap).
+Status: active workstream notes (not a repo-wide roadmap). The authoritative roadmap lives in
+`docs/roadmap.md`.
 
 ## Goal
 

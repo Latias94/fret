@@ -10,7 +10,7 @@ Owner: Codex (tracking document created per request; does not modify existing MV
 
 ## Why this document exists
 
-This repository already has an active MVP queue (`docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`) that other contributors use.
+This repository has historical MVP planning docs (`docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`) that are kept for context.
 This document is intentionally **separate** to avoid mixing scopes while we explore a larger renderer contract expansion.
 
 Goal: define an incremental, GPUI-inspired path/SVG rendering plan for Fret with clear risks and acceptance checks.

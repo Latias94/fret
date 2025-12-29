@@ -4,7 +4,10 @@
 
 This file keeps the historical, detailed MVP stage definitions that are already completed.
 
-The active expanded plan lives in `docs/archive/mvp/active-plan.md` (with a short overview in `docs/archive/mvp.md`).
+For current priorities and milestones, prefer:
+
+- `docs/roadmap.md`
+- `docs/shadcn-declarative-progress.md`
 
 ---
 

@@ -2,7 +2,7 @@
 >
 > For the current source of truth, prefer:
 >
-> - `docs/roadmap.md` (priorities + milestones)
-> - `docs/archive/mvp.md` (short, high-signal “what’s next” queue)
-> - `docs/todo-tracker.md` (review-driven actionable TODOs)
-
+> - `docs/roadmap.md` (repo-wide priorities + milestones)
+> - `docs/shadcn-declarative-progress.md` (shadcn/ui v4 parity + declarative-only migration)
+>
+> Historical MVP snapshots live under `docs/archive/` and are kept for context only.

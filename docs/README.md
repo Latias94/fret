@@ -3,20 +3,28 @@
 This repository is intentionally documentation-driven: the goal is to lock in “hard-to-change” editor-grade UI
 contracts early to avoid large rewrites later.
 
+## Sources of Truth
+
+- Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
+- Contracts: `docs/adr/`
+- Workstream notes (non-authoritative): `docs/workstreams/`
+- Historical planning docs: `docs/archive/`
+
 ## Recommended reading order (for a new contributor or AI agent)
 
 1. `docs/architecture.md` — what Fret is, what it is not, and how crates fit together.
 2. `docs/runtime-contract-matrix.md` — a compact map of the `fret-ui` runtime contract surface and references.
 3. `docs/roadmap.md` — priorities, decision gates, and milestones (what to do next, and what must be decided early).
-4. `docs/action-hooks.md` — how we keep `fret-ui` mechanism-only by moving interaction policy to components (ADR 0074).
-5. `docs/adr/README.md` — module-oriented ADR index (where to find the relevant contracts fast).
+4. `docs/shadcn-declarative-progress.md` — shadcn/ui v4 parity and the declarative-only migration tracker.
+5. `docs/action-hooks.md` — how we keep `fret-ui` mechanism-only by moving interaction policy to components (ADR 0074).
+6. `docs/adr/README.md` — module-oriented ADR index (where to find the relevant contracts fast).
    - Tip: ADRs marked `Status: Proposed` are “decision gates” and should be treated as changeable until accepted.
-6. `docs/repo-ref.md` — pinned local reference sources (where to read upstream code without version drift).
-7. `docs/dependency-policy.md` — dependency and MSRV policy (how we keep contracts portable).
-8. `docs/todo-tracker.md` — review-driven TODO list (action items linked back to ADRs).
-9. `docs/known-issues.md` — common diagnostics and current platform limitations.
-10. Archived MVP planning docs (historical): `docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`, `docs/archive/mvp-archive.md`
-11. ADR deep dives (pick by subsystem):
+7. `docs/repo-ref.md` — pinned local reference sources (where to read upstream code without version drift).
+8. `docs/dependency-policy.md` — dependency and MSRV policy (how we keep contracts portable).
+9. `docs/todo-tracker.md` — review-driven TODO list (action items linked back to ADRs).
+10. `docs/known-issues.md` — common diagnostics and current platform limitations.
+11. Archived MVP planning docs (historical): `docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`, `docs/archive/mvp-archive.md`
+12. ADR deep dives (pick by subsystem):
    - UI execution model: `docs/adr/0028-declarative-elements-and-element-state.md`
    - Component authoring: `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
    - Ownership/data flow: `docs/adr/0031-app-owned-models-and-leasing-updates.md`
