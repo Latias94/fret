@@ -318,7 +318,10 @@ pub struct ToastStore {
 
 impl ToastStore {
     fn toasts_for_window(&self, window: AppWindowId) -> &[ToastEntry] {
-        self.by_window.get(&window).map(Vec::as_slice).unwrap_or(&[])
+        self.by_window
+            .get(&window)
+            .map(Vec::as_slice)
+            .unwrap_or(&[])
     }
 
     fn add_toast(
@@ -414,7 +417,8 @@ struct ToastService {
 
 pub fn toast_store<H: UiHost>(app: &mut H) -> Model<ToastStore> {
     app.with_global_mut(ToastService::default, |svc, app| {
-        *svc.store.get_or_insert_with(|| app.models_mut().insert(ToastStore::default()))
+        *svc.store
+            .get_or_insert_with(|| app.models_mut().insert(ToastStore::default()))
     })
 }
 
@@ -439,16 +443,19 @@ pub fn toast_action(
     window: AppWindowId,
     request: ToastRequest,
 ) -> ToastId {
-    let token = request.duration.filter(|d| d.as_secs_f32() > 0.0).map(|after| {
-        let token = host.next_timer_token();
-        host.push_effect(Effect::SetTimer {
-            window: Some(window),
-            token,
-            after,
-            repeat: None,
+    let token = request
+        .duration
+        .filter(|d| d.as_secs_f32() > 0.0)
+        .map(|after| {
+            let token = host.next_timer_token();
+            host.push_effect(Effect::SetTimer {
+                window: Some(window),
+                token,
+                after,
+                repeat: None,
+            });
+            token
         });
-        token
-    });
 
     let result = host
         .models_mut()
@@ -471,7 +478,10 @@ pub fn dismiss_toast_action(
     window: AppWindowId,
     id: ToastId,
 ) -> bool {
-    let removed = host.models_mut().update(store, |st| st.remove_toast(window, id)).ok();
+    let removed = host
+        .models_mut()
+        .update(store, |st| st.remove_toast(window, id))
+        .ok();
     let Some(entry) = removed.flatten() else {
         return false;
     };
@@ -489,22 +499,27 @@ pub fn render<H: UiHost>(
     window: AppWindowId,
     bounds: Rect,
 ) {
-    let (modal_requests, popover_requests, hover_overlay_requests, tooltip_requests, toast_requests) = app
-        .with_global_mut(WindowOverlays::default, |overlays, _app| {
-            overlays
-                .windows
-                .get_mut(&window)
-                .map(|w| {
-                    (
-                        std::mem::take(&mut w.modals),
-                        std::mem::take(&mut w.popovers),
-                        std::mem::take(&mut w.hover_overlays),
-                        std::mem::take(&mut w.tooltips),
-                        std::mem::take(&mut w.toasts),
-                    )
-                })
-                .unwrap_or_default()
-        });
+    let (
+        modal_requests,
+        popover_requests,
+        hover_overlay_requests,
+        tooltip_requests,
+        toast_requests,
+    ) = app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        overlays
+            .windows
+            .get_mut(&window)
+            .map(|w| {
+                (
+                    std::mem::take(&mut w.modals),
+                    std::mem::take(&mut w.popovers),
+                    std::mem::take(&mut w.hover_overlays),
+                    std::mem::take(&mut w.tooltips),
+                    std::mem::take(&mut w.toasts),
+                )
+            })
+            .unwrap_or_default()
+    });
 
     let mut seen_modals: HashSet<GlobalElementId> = HashSet::new();
     let mut seen_popovers: HashSet<GlobalElementId> = HashSet::new();
@@ -824,18 +839,18 @@ pub fn render<H: UiHost>(
                 cx.observe_model(store, Invalidation::Paint);
 
                 let hook_store = store;
-                    cx.timer_on_timer_for(
-                        cx.root_id(),
-                        Arc::new(move |host, _cx, token| {
-                            let removed = host
-                                .models_mut()
-                                .update(hook_store, |st| st.remove_toast_by_token(token))
-                                .ok()
-                                .flatten()
-                                .is_some();
-                            removed
-                        }),
-                    );
+                cx.timer_on_timer_for(
+                    cx.root_id(),
+                    Arc::new(move |host, _cx, token| {
+                        let removed = host
+                            .models_mut()
+                            .update(hook_store, |st| st.remove_toast_by_token(token))
+                            .ok()
+                            .flatten()
+                            .is_some();
+                        removed
+                    }),
+                );
 
                 let toasts: Vec<ToastEntry> = cx
                     .app
