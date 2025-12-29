@@ -6,6 +6,25 @@ title: "ADR 0073: Active Descendant for Composite Widgets (Command Palette / Lis
 
 Status: Proposed
 
+## Implementation Status (as of 2025-12-29)
+
+This ADR is **not implemented yet**.
+
+What exists today:
+
+- A semantics snapshot contract and platform bridge boundary (ADR 0033) with roles/flags/actions.
+- Overlay + list semantics tests for several window-scoped overlay surfaces
+  (see `docs/a11y-acceptance-checklist.md` and `crates/fret-components-ui/src/window_overlays.rs`).
+- Roving-focus navigation for composite lists is typically implemented by **moving focus** between
+  rows (via `UiTree` focus primitives), which works without `active_descendant` but is not ideal
+  for cmdk-style “focus stays in the text field” experiences.
+
+What is missing (core gap):
+
+- The semantics schema does not include an association like `active_descendant`, so a focused
+  `TextField` cannot semantically “point at” the currently highlighted option row without moving
+  focus.
+
 ## Context
 
 Fret is rebuilding shadcn-aligned UI surfaces as declarative-only components. One high-leverage
@@ -120,3 +139,33 @@ Cons:
 - Overlays and modal gating: `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - Virtualization identity: `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`, `docs/adr/0070-virtualization-contract.md`
 - WAI-ARIA `aria-activedescendant` (conceptual reference): https://www.w3.org/TR/wai-aria-1.2/#aria-activedescendant
+
+## Suggested Implementation Plan (incremental)
+
+### Phase A — Schema + bridge (framework-level, minimal)
+
+1) Extend the semantics data model with `active_descendant: Option<NodeId>`.
+   - Location candidates:
+     - `crates/fret-core/src/semantics.rs`: extend `SemanticsNode`.
+     - Any snapshot/container types that need to carry the association.
+2) Teach `crates/fret-ui` semantics snapshot production to populate it.
+   - Mechanism: a widget/element must be able to set `active_descendant` on its semantics node
+     during `Widget::semantics(...)` (or the declarative element equivalent).
+3) Update the platform accessibility bridge (AccessKit) mapping so AT can announce the active row
+   while focus remains on the input.
+
+### Phase B — Component-layer policy (cmdk-style command palette)
+
+1) Define a headless “command palette selection” policy in `crates/fret-components-ui`:
+   - Keep focus in the text input (better IME/caret behavior).
+   - Maintain an internal “active index / active row id”.
+2) In `fret-components-shadcn`, wire `Command`/`CommandList` recipes so:
+   - the highlighted row is marked `selected=true`, and
+   - the input semantics node sets `active_descendant` to the highlighted row id.
+
+### Phase C — Virtualization constraints (only if needed)
+
+If `CommandList` becomes virtualized:
+
+- ensure stable item-key → stable semantics node identity (ADR 0047 / ADR 0070),
+- ensure `active_descendant` never points to recycled/absent row nodes.
