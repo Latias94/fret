@@ -1,8 +1,8 @@
 use crate::UiHost;
 use crate::elements::{ElementCx, GlobalElementId};
 use fret_core::{
-    Color, Corners, Edges, ImageId, Px, SemanticsRole, SvgFit, TextOverflow, TextStyle, TextWrap,
-    UvRect,
+    Color, Corners, Edges, ImageId, NodeId, Px, SemanticsRole, SvgFit, TextOverflow, TextStyle,
+    TextWrap, UvRect,
 };
 use fret_runtime::{CommandId, Model};
 use std::collections::HashMap;
@@ -252,6 +252,7 @@ pub struct SemanticsProps {
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,
+    pub active_descendant: Option<NodeId>,
 }
 
 impl Default for SemanticsProps {
@@ -264,6 +265,7 @@ impl Default for SemanticsProps {
             selected: false,
             expanded: None,
             checked: None,
+            active_descendant: None,
         }
     }
 }
@@ -498,6 +500,7 @@ pub struct TextInputProps {
     pub layout: LayoutStyle,
     pub model: Model<String>,
     pub a11y_label: Option<std::sync::Arc<str>>,
+    pub active_descendant: Option<NodeId>,
     pub chrome: TextInputStyle,
     pub text_style: TextStyle,
     pub submit_command: Option<CommandId>,
@@ -510,6 +513,7 @@ impl TextInputProps {
             layout: LayoutStyle::default(),
             model,
             a11y_label: None,
+            active_descendant: None,
             chrome: TextInputStyle::default(),
             text_style: TextStyle::default(),
             submit_command: None,

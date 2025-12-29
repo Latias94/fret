@@ -2618,6 +2618,7 @@ impl<H: UiHost> UiTree<H> {
                     ..fret_core::SemanticsFlags::default()
                 };
 
+                let mut active_descendant: Option<NodeId> = None;
                 let mut label: Option<String> = None;
                 let mut value: Option<String> = None;
                 let mut actions = fret_core::SemanticsActions {
@@ -2646,6 +2647,7 @@ impl<H: UiHost> UiTree<H> {
                         label: &mut label,
                         value: &mut value,
                         actions: &mut actions,
+                        active_descendant: &mut active_descendant,
                     };
                     widget.semantics(&mut cx);
                 }
@@ -2656,6 +2658,7 @@ impl<H: UiHost> UiTree<H> {
                     role,
                     bounds,
                     flags,
+                    active_descendant,
                     label,
                     value,
                     actions,

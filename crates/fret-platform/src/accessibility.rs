@@ -295,6 +295,12 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
             out.set_value(value.clone());
         }
 
+        if let Some(active) = node.active_descendant
+            && reachable.contains(&active)
+        {
+            out.set_active_descendant(to_accesskit_id(active));
+        }
+
         nodes_out.push((to_accesskit_id(node.id), out));
     }
 
@@ -346,5 +352,119 @@ pub fn set_value_from_action(req: &ActionRequest) -> Option<(fret_core::NodeId, 
         accesskit::ActionData::Value(v) => Some((target, SetValueData::Text(v.to_string()))),
         accesskit::ActionData::NumericValue(v) => Some((target, SetValueData::Numeric(*v))),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{to_accesskit_id, tree_update_from_snapshot};
+    use fret_core::{
+        AppWindowId, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole,
+        SemanticsRoot, SemanticsSnapshot,
+    };
+    use slotmap::KeyData;
+
+    fn node(id: u64) -> fret_core::NodeId {
+        fret_core::NodeId::from(KeyData::from_ffi(id))
+    }
+
+    #[test]
+    fn active_descendant_is_emitted_for_reachable_descendant() {
+        let window = AppWindowId::default();
+        let root = node(1);
+        let input = node(2);
+        let list = node(3);
+        let item = node(4);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(10.0), Px(10.0)),
+        );
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root,
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus: Some(input),
+            captured: None,
+            nodes: vec![
+                SemanticsNode {
+                    id: root,
+                    parent: None,
+                    role: SemanticsRole::Window,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    label: None,
+                    value: None,
+                    actions: SemanticsActions::default(),
+                },
+                SemanticsNode {
+                    id: input,
+                    parent: Some(root),
+                    role: SemanticsRole::TextField,
+                    bounds,
+                    flags: SemanticsFlags {
+                        focused: true,
+                        ..SemanticsFlags::default()
+                    },
+                    active_descendant: Some(item),
+                    label: Some("Command input".to_string()),
+                    value: None,
+                    actions: SemanticsActions {
+                        focus: true,
+                        set_value: true,
+                        ..SemanticsActions::default()
+                    },
+                },
+                SemanticsNode {
+                    id: list,
+                    parent: Some(root),
+                    role: SemanticsRole::List,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    label: None,
+                    value: None,
+                    actions: SemanticsActions::default(),
+                },
+                SemanticsNode {
+                    id: item,
+                    parent: Some(list),
+                    role: SemanticsRole::ListItem,
+                    bounds,
+                    flags: SemanticsFlags {
+                        selected: true,
+                        ..SemanticsFlags::default()
+                    },
+                    active_descendant: None,
+                    label: Some("Item 1".to_string()),
+                    value: None,
+                    actions: SemanticsActions::default(),
+                },
+            ],
+        };
+
+        let update = tree_update_from_snapshot(&snapshot, 1.0);
+        let input_id = to_accesskit_id(input);
+        let item_id = to_accesskit_id(item);
+
+        let input_node = update
+            .nodes
+            .iter()
+            .find_map(|(id, n)| (*id == input_id).then_some(n))
+            .expect("input node present");
+
+        assert_eq!(
+            input_node.active_descendant(),
+            Some(item_id),
+            "focused text field should reference the active descendant"
+        );
     }
 }

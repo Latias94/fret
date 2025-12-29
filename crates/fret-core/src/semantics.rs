@@ -50,6 +50,10 @@ pub struct SemanticsNode {
     pub role: SemanticsRole,
     pub bounds: Rect,
     pub flags: SemanticsFlags,
+    /// When this node retains actual keyboard focus but another descendant is the current
+    /// "active item" (e.g. composite widgets using `aria-activedescendant`), this points to that
+    /// active descendant node.
+    pub active_descendant: Option<NodeId>,
     /// Human-readable name/label for assistive technologies.
     pub label: Option<String>,
     /// Value text, typically for text fields and sliders.

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_components_ui::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use fret_core::{Corners, FontId, TextStyle};
+use fret_core::{Corners, FontId, NodeId, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, Length, SizeStyle, TextInputProps};
 use fret_ui::{ElementCx, TextInputStyle, Theme, UiHost};
@@ -10,6 +10,7 @@ use fret_ui::{ElementCx, TextInputStyle, Theme, UiHost};
 pub struct Input {
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
+    active_descendant: Option<NodeId>,
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
 }
@@ -19,6 +20,7 @@ impl Input {
         Self {
             model,
             a11y_label: None,
+            active_descendant: None,
             submit_command: None,
             cancel_command: None,
         }
@@ -26,6 +28,11 @@ impl Input {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn active_descendant(mut self, node: NodeId) -> Self {
+        self.active_descendant = Some(node);
         self
     }
 
@@ -44,6 +51,7 @@ impl Input {
             cx,
             self.model,
             self.a11y_label,
+            self.active_descendant,
             self.submit_command,
             self.cancel_command,
         )
@@ -54,6 +62,7 @@ pub fn input<H: UiHost>(
     cx: &mut ElementCx<'_, H>,
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
+    active_descendant: Option<NodeId>,
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
 ) -> AnyElement {
@@ -89,6 +98,7 @@ pub fn input<H: UiHost>(
 
     let mut props = TextInputProps::new(model);
     props.a11y_label = a11y_label;
+    props.active_descendant = active_descendant;
     props.submit_command = submit_command;
     props.cancel_command = cancel_command;
     props.chrome = chrome;

@@ -200,6 +200,7 @@ pub struct SemanticsCx<'a, H: UiHost> {
     pub(crate) label: &'a mut Option<String>,
     pub(crate) value: &'a mut Option<String>,
     pub(crate) actions: &'a mut fret_core::SemanticsActions,
+    pub(crate) active_descendant: &'a mut Option<NodeId>,
 }
 
 impl<'a, H: UiHost> SemanticsCx<'a, H> {
@@ -241,6 +242,10 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
 
     pub fn set_checked(&mut self, checked: Option<bool>) {
         self.flags.checked = checked;
+    }
+
+    pub fn set_active_descendant(&mut self, node: Option<NodeId>) {
+        *self.active_descendant = node;
     }
 }
 

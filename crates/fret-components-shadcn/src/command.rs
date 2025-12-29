@@ -4,8 +4,7 @@ use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::CommandId;
 use fret_ui::Invalidation;
@@ -175,8 +174,10 @@ impl CommandInput {
             };
             wrapper.border_color = Some(border);
 
-            let input = Input::new(self.model)
-                .a11y_label(self.a11y_label.unwrap_or_else(|| Arc::from("Command input")));
+            let input = Input::new(self.model).a11y_label(
+                self.a11y_label
+                    .unwrap_or_else(|| Arc::from("Command input")),
+            );
 
             cx.container(wrapper, move |cx| {
                 let mut input = input.into_element(cx);
@@ -294,6 +295,10 @@ impl CommandList {
         let disabled = self.disabled;
         let items = self.items;
 
+        // TODO(a11y): Switch to cmdk-style behavior (focus stays in the input) and drive highlight
+        // changes via `TextInputProps::active_descendant` (ADR 0073). The current implementation
+        // uses roving focus (moves focus between rows), which is a reasonable fallback but not the
+        // desired long-term semantics for command palettes.
         if items.is_empty() {
             let empty = self.empty_text;
             let fg = theme.colors.text_muted;
@@ -341,104 +346,114 @@ impl CommandList {
 
         let scroll = self.scroll;
 
-        ScrollArea::new(vec![cx.roving_flex(
-            RovingFlexProps {
-                flex: FlexProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout.size.min_height = Some(Px(0.0));
-                        layout
-                    },
-                    direction: fret_core::Axis::Vertical,
-                    gap: Px(0.0),
-                    padding: Edges::all(Px(0.0)),
-                    justify: MainAlign::Start,
-                    align: CrossAlign::Stretch,
-                    wrap: false,
-                    ..Default::default()
-                },
-                roving,
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::List,
+                ..Default::default()
             },
             move |cx| {
-                let mut out = Vec::with_capacity(items.len());
-
-                for (idx, item) in items.into_iter().enumerate() {
-                    let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
-                    let focusable = tab_stop.is_some_and(|i| i == idx);
-
-                    let label = item.label.clone();
-                    let command = item.command;
-                    let children = item.children;
-
-                    out.push(cx.pressable(
-                        PressableProps {
-                            layout: item_layout,
-                            enabled,
-                            focusable,
-                            on_click: command,
-                            focus_ring: Some(ring),
-                            a11y: PressableA11y {
-                                role: Some(SemanticsRole::Button),
-                                label: Some(label.clone()),
+                vec![
+                    ScrollArea::new(vec![cx.roving_flex(
+                        RovingFlexProps {
+                            flex: FlexProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.min_height = Some(Px(0.0));
+                                    layout
+                                },
+                                direction: fret_core::Axis::Vertical,
+                                gap: Px(0.0),
+                                padding: Edges::all(Px(0.0)),
+                                justify: MainAlign::Start,
+                                align: CrossAlign::Stretch,
+                                wrap: false,
                                 ..Default::default()
                             },
-                            ..Default::default()
+                            roving,
                         },
-                        move |cx, st| {
-                            let hovered = st.hovered && !st.pressed;
-                            let pressed = st.pressed;
+                        move |cx| {
+                            let mut out = Vec::with_capacity(items.len());
 
-                            let bg = (hovered || pressed).then_some(bg_hover);
-                            let props = ContainerProps {
-                                layout: LayoutStyle::default(),
-                                padding: Edges {
-                                    top: pad_y,
-                                    right: pad_x,
-                                    bottom: pad_y,
-                                    left: pad_x,
-                                },
-                                background: bg,
-                                shadow: None,
-                                border: Edges::all(Px(0.0)),
-                                border_color: None,
-                                corner_radii: Corners::all(radius),
-                            };
+                            for (idx, item) in items.into_iter().enumerate() {
+                                let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
+                                let focusable = tab_stop.is_some_and(|i| i == idx);
 
-                            vec![cx.container(props, move |cx| {
-                                vec![cx.row(
-                                    RowProps {
-                                        layout: LayoutStyle::default(),
-                                        gap: row_gap,
-                                        padding: Edges::all(Px(0.0)),
-                                        justify: MainAlign::SpaceBetween,
-                                        align: CrossAlign::Center,
+                                let label = item.label.clone();
+                                let command = item.command;
+                                let children = item.children;
+
+                                out.push(cx.pressable(
+                                    PressableProps {
+                                        layout: item_layout,
+                                        enabled,
+                                        focusable,
+                                        on_click: command,
+                                        focus_ring: Some(ring),
+                                        a11y: PressableA11y {
+                                            role: Some(SemanticsRole::ListItem),
+                                            label: Some(label.clone()),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
                                     },
-                                    move |cx| {
-                                        if children.is_empty() {
-                                            vec![cx.text_props(TextProps {
-                                                layout: LayoutStyle::default(),
-                                                text: label.clone(),
-                                                style: Some(text_style),
-                                                color: Some(fg),
-                                                wrap: TextWrap::None,
-                                                overflow: TextOverflow::Clip,
-                                            })]
-                                        } else {
-                                            children
-                                        }
+                                    move |cx, st| {
+                                        let hovered = st.hovered && !st.pressed;
+                                        let pressed = st.pressed;
+
+                                        let bg = (hovered || pressed).then_some(bg_hover);
+                                        let props = ContainerProps {
+                                            layout: LayoutStyle::default(),
+                                            padding: Edges {
+                                                top: pad_y,
+                                                right: pad_x,
+                                                bottom: pad_y,
+                                                left: pad_x,
+                                            },
+                                            background: bg,
+                                            shadow: None,
+                                            border: Edges::all(Px(0.0)),
+                                            border_color: None,
+                                            corner_radii: Corners::all(radius),
+                                        };
+
+                                        vec![cx.container(props, move |cx| {
+                                            vec![cx.row(
+                                                RowProps {
+                                                    layout: LayoutStyle::default(),
+                                                    gap: row_gap,
+                                                    padding: Edges::all(Px(0.0)),
+                                                    justify: MainAlign::SpaceBetween,
+                                                    align: CrossAlign::Center,
+                                                },
+                                                move |cx| {
+                                                    if children.is_empty() {
+                                                        vec![cx.text_props(TextProps {
+                                                            layout: LayoutStyle::default(),
+                                                            text: label.clone(),
+                                                            style: Some(text_style),
+                                                            color: Some(fg),
+                                                            wrap: TextWrap::None,
+                                                            overflow: TextOverflow::Clip,
+                                                        })]
+                                                    } else {
+                                                        children
+                                                    }
+                                                },
+                                            )]
+                                        })]
                                     },
-                                )]
-                            })]
+                                ));
+                            }
+
+                            out
                         },
-                    ));
-                }
-
-                out
+                    )])
+                    .refine_layout(scroll)
+                    .into_element(cx),
+                ]
             },
-        )])
-        .refine_layout(scroll)
-        .into_element(cx)
+        )
     }
 }
 

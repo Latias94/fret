@@ -1941,6 +1941,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 if props.checked.is_some() {
                     cx.set_checked(props.checked);
                 }
+                if props.active_descendant.is_some() {
+                    cx.set_active_descendant(props.active_descendant);
+                }
             }
             ElementInstance::TextInput(props) => {
                 if self.text_input.is_none() {
@@ -1957,6 +1960,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 if let Some(label) = props.a11y_label.as_ref() {
                     cx.set_label(label.as_ref().to_string());
                 }
+                cx.set_active_descendant(props.active_descendant);
                 input.semantics(cx);
             }
             ElementInstance::TextArea(props) => {
@@ -4614,8 +4618,18 @@ mod tests {
         ui.set_root(root);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-        // With 3 equal-ish panels and a 10px gap, the first handle center is ~98px.
-        let down = Point::new(Px(98.0), Px(20.0));
+        let fractions_now = app.models().get(model).cloned().unwrap_or_default();
+        let layout = crate::resizable_panel_group::compute_resizable_panel_group_layout(
+            fret_core::Axis::Horizontal,
+            bounds,
+            3,
+            fractions_now,
+            Px(0.0),
+            Px(10.0),
+            &[Px(10.0)],
+        );
+        let down_x = layout.handle_centers.first().copied().unwrap_or(0.0);
+        let down = Point::new(Px(down_x), Px(20.0));
         ui.dispatch_event(
             &mut app,
             &mut services,

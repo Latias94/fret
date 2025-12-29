@@ -215,6 +215,14 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
         *self.stack.last().expect("root exists")
     }
 
+    /// Returns the last known `NodeId` for a declarative element, if available.
+    ///
+    /// This is safe to call during element rendering: it reads from the `ElementCx`'s already
+    /// borrowed window state, avoiding re-entrant `UiHost::with_global_mut` leases.
+    pub fn node_for_element(&self, element: GlobalElementId) -> Option<NodeId> {
+        self.window_state.node_entry(element).map(|e| e.node)
+    }
+
     /// Returns the last frame's bounds for a declarative element, if available.
     ///
     /// This is safe to call during element rendering: it reads from the `ElementCx`'s already
