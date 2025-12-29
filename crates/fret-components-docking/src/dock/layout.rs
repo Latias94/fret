@@ -86,6 +86,9 @@ fn compute_layout_map_impl(
                 compute_layout_map_impl(graph, children[i], child_rect, out);
             }
         }
+        DockNode::Floating { child } => {
+            compute_layout_map_impl(graph, *child, bounds, out);
+        }
     }
 }
 

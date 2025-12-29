@@ -65,6 +65,21 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                         dock.clear_viewport_layout_for_window(*new_window);
                         invalidate_windows(app, [*source_window, *new_window]);
                     }
+                    DockOp::FloatPanelInWindow {
+                        source_window,
+                        target_window,
+                        ..
+                    } => {
+                        dock.clear_viewport_layout_for_window(*source_window);
+                        dock.clear_viewport_layout_for_window(*target_window);
+                        invalidate_windows(app, [*source_window, *target_window]);
+                    }
+                    DockOp::SetFloatingRect { window, .. }
+                    | DockOp::RaiseFloating { window, .. }
+                    | DockOp::MergeFloatingInto { window, .. } => {
+                        dock.clear_viewport_layout_for_window(*window);
+                        invalidate_windows(app, [*window]);
+                    }
                     DockOp::MergeWindowInto {
                         source_window,
                         target_window,
@@ -217,6 +232,12 @@ mod tests {
         ));
 
         assert!(handle_dock_window_created(&mut app, &create, window_b));
+
+        let changed = app.take_changed_models();
+        assert!(
+            !changed.is_empty(),
+            "expected docking invalidation to bump an observed model (MVP 66)"
+        );
 
         let dock = app.global::<DockManager>().expect("dock manager exists");
         assert!(

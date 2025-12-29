@@ -1,4 +1,4 @@
-use crate::{AppWindowId, DockNodeId, DropZone, PanelKey, WindowAnchor};
+use crate::{AppWindowId, DockNodeId, DropZone, PanelKey, Rect, WindowAnchor};
 
 /// High-level docking operations emitted by the UI layer and applied by the app layer.
 ///
@@ -38,6 +38,37 @@ pub enum DockOp {
         source_window: AppWindowId,
         panel: PanelKey,
         anchor: Option<WindowAnchor>,
+    },
+
+    /// Float a panel into an in-window floating dock container (ImGui docking, viewports disabled).
+    ///
+    /// This does not create a new OS window; the floating container is rendered within
+    /// `target_window`'s dock host.
+    FloatPanelInWindow {
+        source_window: AppWindowId,
+        panel: PanelKey,
+        target_window: AppWindowId,
+        rect: Rect,
+    },
+
+    /// Update the bounds of an in-window floating dock container.
+    SetFloatingRect {
+        window: AppWindowId,
+        floating: DockNodeId,
+        rect: Rect,
+    },
+
+    /// Raise an in-window floating dock container above other floating containers in the window.
+    RaiseFloating {
+        window: AppWindowId,
+        floating: DockNodeId,
+    },
+
+    /// Merge an in-window floating dock container back into an existing tab stack.
+    MergeFloatingInto {
+        window: AppWindowId,
+        floating: DockNodeId,
+        target_tabs: DockNodeId,
     },
 
     /// Merge all panels from `source_window` into `target_tabs` in `target_window`, then remove

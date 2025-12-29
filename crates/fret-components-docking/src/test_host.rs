@@ -26,6 +26,7 @@ impl TestHost {
         Self::default()
     }
 
+    #[allow(dead_code)]
     pub(crate) fn advance_frame(&mut self) {
         self.frame_id.0 = self.frame_id.0.saturating_add(1);
     }

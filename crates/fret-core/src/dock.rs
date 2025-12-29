@@ -32,12 +32,26 @@ pub enum DockNode {
         tabs: Vec<PanelKey>,
         active: usize,
     },
+    /// An in-window floating dock container (ImGui docking, viewports disabled).
+    ///
+    /// The container node is stable: docking within the floating window replaces `child` while
+    /// keeping the container id stable. Window metadata (rect, z-order) is stored in `DockGraph`.
+    Floating {
+        child: DockNodeId,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DockFloatingWindow {
+    pub floating: DockNodeId,
+    pub rect: Rect,
 }
 
 #[derive(Debug, Default)]
 pub struct DockGraph {
     nodes: SlotMap<DockNodeId, DockNode>,
     window_roots: HashMap<AppWindowId, DockNodeId>,
+    window_floatings: HashMap<AppWindowId, Vec<DockFloatingWindow>>,
 }
 
 impl DockGraph {
@@ -67,6 +81,17 @@ impl DockGraph {
 
     pub fn remove_window_root(&mut self, window: AppWindowId) -> Option<DockNodeId> {
         self.window_roots.remove(&window)
+    }
+
+    pub fn floating_windows(&self, window: AppWindowId) -> &[DockFloatingWindow] {
+        self.window_floatings
+            .get(&window)
+            .map(|v| v.as_slice())
+            .unwrap_or(&[])
+    }
+
+    pub fn floating_windows_mut(&mut self, window: AppWindowId) -> &mut Vec<DockFloatingWindow> {
+        self.window_floatings.entry(window).or_default()
     }
 
     pub fn move_panel(
@@ -128,6 +153,7 @@ impl DockGraph {
 
             let ok = self.insert_panel_into_tabs_at(target_tabs, panel, index);
             self.collapse_empty_tabs_upwards(source_window, source_tabs);
+            self.remove_empty_floating_windows(source_window);
             return ok;
         }
 
@@ -156,6 +182,7 @@ impl DockGraph {
 
         self.replace_node_in_window_tree(target_window, target_tabs, split);
         self.collapse_empty_tabs_upwards(source_window, source_tabs);
+        self.remove_empty_floating_windows(source_window);
         true
     }
 
@@ -167,6 +194,7 @@ impl DockGraph {
             return false;
         }
         self.collapse_empty_tabs_upwards(window, tabs);
+        self.remove_empty_floating_windows(window);
         true
     }
 
@@ -190,6 +218,99 @@ impl DockGraph {
         });
         self.set_window_root(new_window, tabs);
         self.collapse_empty_tabs_upwards(source_window, source_tabs);
+        self.remove_empty_floating_windows(source_window);
+        true
+    }
+
+    pub fn float_panel_in_window(
+        &mut self,
+        source_window: AppWindowId,
+        panel: PanelKey,
+        target_window: AppWindowId,
+        rect: Rect,
+    ) -> bool {
+        let Some((source_tabs, source_index)) = self.find_panel_in_window(source_window, &panel)
+        else {
+            return false;
+        };
+        if !self.remove_panel_from_tabs(source_tabs, source_index) {
+            return false;
+        }
+
+        let tabs = self.insert_node(DockNode::Tabs {
+            tabs: vec![panel],
+            active: 0,
+        });
+        let floating = self.insert_node(DockNode::Floating { child: tabs });
+        self.floating_windows_mut(target_window)
+            .push(DockFloatingWindow { floating, rect });
+
+        self.collapse_empty_tabs_upwards(source_window, source_tabs);
+        self.remove_empty_floating_windows(source_window);
+        true
+    }
+
+    pub fn set_floating_rect(
+        &mut self,
+        window: AppWindowId,
+        floating: DockNodeId,
+        rect: Rect,
+    ) -> bool {
+        let Some(list) = self.window_floatings.get_mut(&window) else {
+            return false;
+        };
+        let Some(entry) = list.iter_mut().find(|w| w.floating == floating) else {
+            return false;
+        };
+        entry.rect = rect;
+        true
+    }
+
+    pub fn raise_floating(&mut self, window: AppWindowId, floating: DockNodeId) -> bool {
+        let Some(list) = self.window_floatings.get_mut(&window) else {
+            return false;
+        };
+        let Some(index) = list.iter().position(|w| w.floating == floating) else {
+            return false;
+        };
+        if index + 1 == list.len() {
+            return true;
+        }
+        let entry = list.remove(index);
+        list.push(entry);
+        true
+    }
+
+    pub fn merge_floating_into(
+        &mut self,
+        window: AppWindowId,
+        floating: DockNodeId,
+        target_tabs: DockNodeId,
+    ) -> bool {
+        let Some(list) = self.window_floatings.get(&window) else {
+            return false;
+        };
+        if !list.iter().any(|w| w.floating == floating) {
+            return false;
+        }
+
+        let panels = self.collect_panels_in_subtree(floating);
+        for panel in panels {
+            let _ = self.move_panel_between_windows(
+                window,
+                panel,
+                window,
+                target_tabs,
+                DropZone::Center,
+                None,
+            );
+        }
+
+        if let Some(list) = self.window_floatings.get_mut(&window)
+            && let Some(index) = list.iter().position(|w| w.floating == floating)
+        {
+            list.remove(index);
+        }
         true
     }
 
@@ -279,6 +400,9 @@ impl DockGraph {
                     self.compute_layout(children[i], child_rect, out);
                 }
             }
+            DockNode::Floating { child } => {
+                self.compute_layout(*child, bounds, out);
+            }
         }
     }
 
@@ -288,7 +412,12 @@ impl DockGraph {
         panel: &PanelKey,
     ) -> Option<(DockNodeId, usize)> {
         let root = self.window_root(window)?;
-        self.find_panel_in_subtree(root, panel)
+        self.find_panel_in_subtree(root, panel).or_else(|| {
+            self.window_floatings.get(&window).and_then(|list| {
+                list.iter()
+                    .find_map(|w| self.find_panel_in_subtree(w.floating, panel))
+            })
+        })
     }
 
     pub fn windows(&self) -> Vec<AppWindowId> {
@@ -298,10 +427,16 @@ impl DockGraph {
     }
 
     pub fn collect_panels_in_window(&self, window: AppWindowId) -> Vec<PanelKey> {
-        let Some(root) = self.window_root(window) else {
-            return Vec::new();
-        };
-        self.collect_panels_in_subtree(root)
+        let mut out: Vec<PanelKey> = Vec::new();
+        if let Some(root) = self.window_root(window) {
+            out.extend(self.collect_panels_in_subtree(root));
+        }
+        if let Some(list) = self.window_floatings.get(&window) {
+            for w in list {
+                out.extend(self.collect_panels_in_subtree(w.floating));
+            }
+        }
+        out
     }
 
     pub fn first_tabs_in_window(&self, window: AppWindowId) -> Option<DockNodeId> {
@@ -322,6 +457,7 @@ impl DockGraph {
                 }
                 out
             }
+            DockNode::Floating { child } => self.collect_panels_in_subtree(*child),
         }
     }
 
@@ -333,6 +469,7 @@ impl DockGraph {
                 .iter()
                 .copied()
                 .find_map(|child| self.first_tabs_in_subtree(child)),
+            DockNode::Floating { child } => self.first_tabs_in_subtree(*child),
         }
     }
 
@@ -348,6 +485,7 @@ impl DockGraph {
                 .iter()
                 .copied()
                 .find_map(|child| self.find_panel_in_subtree(child, panel)),
+            DockNode::Floating { child } => self.find_panel_in_subtree(*child, panel),
         }
     }
 
@@ -400,24 +538,74 @@ impl DockGraph {
         old: DockNodeId,
         new: DockNodeId,
     ) {
-        let Some(root) = self.window_root(window) else {
+        if let Some(root) = self.window_root(window) {
+            if root == old {
+                self.set_window_root(window, new);
+                return;
+            }
+            if let Some(parent) = self.find_parent_in_subtree(root, old)
+                && self.replace_child_in_node(parent, old, new)
+            {
+                return;
+            }
+        }
+
+        let mut floating_index: Option<usize> = None;
+        let mut floating_parent: Option<DockNodeId> = None;
+        let mut floating_root_is_old = false;
+        if let Some(list) = self.window_floatings.get(&window) {
+            for (i, w) in list.iter().enumerate() {
+                if w.floating == old {
+                    floating_index = Some(i);
+                    floating_root_is_old = true;
+                    break;
+                }
+                if let Some(parent) = self.find_parent_in_subtree(w.floating, old) {
+                    floating_index = Some(i);
+                    floating_parent = Some(parent);
+                    break;
+                }
+            }
+        }
+
+        let Some(index) = floating_index else {
             return;
         };
-        if root == old {
-            self.set_window_root(window, new);
+
+        if floating_root_is_old {
+            if let Some(list) = self.window_floatings.get_mut(&window)
+                && index < list.len()
+            {
+                list[index].floating = new;
+            }
             return;
         }
-        let Some(parent) = self.find_parent_in_subtree(root, old) else {
+
+        let Some(parent) = floating_parent else {
             return;
         };
-        let Some(DockNode::Split { children, .. }) = self.nodes.get_mut(parent) else {
-            return;
-        };
-        for child in children.iter_mut() {
-            if *child == old {
-                *child = new;
-                break;
+        let _ = self.replace_child_in_node(parent, old, new);
+    }
+
+    fn replace_child_in_node(&mut self, parent: DockNodeId, old: DockNodeId, new: DockNodeId) -> bool {
+        match self.nodes.get_mut(parent) {
+            Some(DockNode::Split { children, .. }) => {
+                for child in children.iter_mut() {
+                    if *child == old {
+                        *child = new;
+                        return true;
+                    }
+                }
+                false
             }
+            Some(DockNode::Floating { child }) => {
+                if *child == old {
+                    *child = new;
+                    return true;
+                }
+                false
+            }
+            _ => false,
         }
     }
 
@@ -434,16 +622,19 @@ impl DockGraph {
                     .copied()
                     .find_map(|child| self.find_parent_in_subtree(child, target))
             }
+            DockNode::Floating { child } => {
+                if *child == target {
+                    return Some(node);
+                }
+                self.find_parent_in_subtree(*child, target)
+            }
         }
     }
 
     fn collapse_empty_tabs_upwards(&mut self, window: AppWindowId, start_tabs: DockNodeId) {
-        let Some(root) = self.window_root(window) else {
+        let Some(root) = self.root_for_node_in_window_forest(window, start_tabs) else {
             return;
         };
-        if root == start_tabs {
-            return;
-        }
 
         let is_empty_tabs = matches!(
             self.nodes.get(start_tabs),
@@ -455,10 +646,14 @@ impl DockGraph {
 
         let mut current = start_tabs;
         loop {
-            let root = self.window_root(window).unwrap();
             let Some(parent) = self.find_parent_in_subtree(root, current) else {
                 break;
             };
+
+            if matches!(self.nodes.get(parent), Some(DockNode::Floating { .. })) {
+                self.remove_floating_window(window, parent);
+                break;
+            }
 
             let Some(DockNode::Split {
                 children,
@@ -482,11 +677,72 @@ impl DockGraph {
 
             let only_child = children[0];
             if root == parent {
-                self.set_window_root(window, only_child);
+                if self.window_root(window) == Some(root) {
+                    self.set_window_root(window, only_child);
+                } else if let Some(DockNode::Floating { child }) = self.nodes.get_mut(root) {
+                    *child = only_child;
+                }
                 break;
             }
             self.replace_node_in_window_tree(window, parent, only_child);
             current = parent;
+        }
+    }
+
+    fn root_for_node_in_window_forest(
+        &self,
+        window: AppWindowId,
+        target: DockNodeId,
+    ) -> Option<DockNodeId> {
+        fn contains(graph: &DockGraph, root: DockNodeId, target: DockNodeId) -> bool {
+            if root == target {
+                return true;
+            }
+            let Some(n) = graph.nodes.get(root) else {
+                return false;
+            };
+            match n {
+                DockNode::Tabs { .. } => false,
+                DockNode::Split { children, .. } => {
+                    children.iter().copied().any(|c| contains(graph, c, target))
+                }
+                DockNode::Floating { child } => contains(graph, *child, target),
+            }
+        }
+
+        if let Some(root) = self.window_root(window)
+            && contains(self, root, target)
+        {
+            return Some(root);
+        }
+        if let Some(list) = self.window_floatings.get(&window) {
+            for w in list {
+                if contains(self, w.floating, target) {
+                    return Some(w.floating);
+                }
+            }
+        }
+        None
+    }
+
+    fn remove_floating_window(&mut self, window: AppWindowId, floating: DockNodeId) -> bool {
+        let Some(list) = self.window_floatings.get_mut(&window) else {
+            return false;
+        };
+        let Some(index) = list.iter().position(|w| w.floating == floating) else {
+            return false;
+        };
+        list.remove(index);
+        true
+    }
+
+    fn remove_empty_floating_windows(&mut self, window: AppWindowId) {
+        let Some(mut list) = self.window_floatings.remove(&window) else {
+            return;
+        };
+        list.retain(|w| !self.collect_panels_in_subtree(w.floating).is_empty());
+        if !list.is_empty() {
+            self.window_floatings.insert(window, list);
         }
     }
 
@@ -515,6 +771,23 @@ impl DockGraph {
                 new_window,
             } => self.float_panel_to_window(*source_window, panel.clone(), *new_window),
             DockOp::RequestFloatPanelToNewWindow { .. } => false,
+            DockOp::FloatPanelInWindow {
+                source_window,
+                panel,
+                target_window,
+                rect,
+            } => self.float_panel_in_window(*source_window, panel.clone(), *target_window, *rect),
+            DockOp::SetFloatingRect {
+                window,
+                floating,
+                rect,
+            } => self.set_floating_rect(*window, *floating, *rect),
+            DockOp::RaiseFloating { window, floating } => self.raise_floating(*window, *floating),
+            DockOp::MergeFloatingInto {
+                window,
+                floating,
+                target_tabs,
+            } => self.merge_floating_into(*window, *floating, *target_tabs),
             DockOp::MergeWindowInto {
                 source_window,
                 target_window,
@@ -532,6 +805,7 @@ impl DockGraph {
                     );
                 }
                 let _ = self.remove_window_root(*source_window);
+                let _ = self.window_floatings.remove(source_window);
                 true
             }
             DockOp::SetSplitFractionTwo {
@@ -598,6 +872,12 @@ impl DockGraph {
                         children: child_ids,
                         fractions: fractions.clone(),
                     });
+                }
+                DockNode::Floating { child } => {
+                    visit(graph, *child, next_id, ids, out);
+                    if let Some(&child_id) = ids.get(child) {
+                        ids.insert(node, child_id);
+                    }
                 }
             }
         }
@@ -679,5 +959,79 @@ impl DockGraph {
         }
 
         build(self, &by_id, root)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use slotmap::KeyData;
+
+    fn window(id: u64) -> AppWindowId {
+        AppWindowId::from(KeyData::from_ffi(id))
+    }
+
+    fn rect(x: f32, y: f32, w: f32, h: f32) -> Rect {
+        Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
+    }
+
+    #[test]
+    fn float_panel_in_window_creates_floating_container() {
+        let w = window(1);
+        let panel_a = PanelKey::new("test.a");
+        let panel_b = PanelKey::new("test.b");
+
+        let mut g = DockGraph::new();
+        let tabs = g.insert_node(DockNode::Tabs {
+            tabs: vec![panel_a.clone(), panel_b.clone()],
+            active: 0,
+        });
+        g.set_window_root(w, tabs);
+
+        let ok = g.apply_op(&DockOp::FloatPanelInWindow {
+            source_window: w,
+            panel: panel_b.clone(),
+            target_window: w,
+            rect: rect(10.0, 20.0, 300.0, 200.0),
+        });
+        assert!(ok);
+        assert_eq!(g.collect_panels_in_window(w).len(), 2);
+        assert!(g.floating_windows(w).iter().any(|f| {
+            g.collect_panels_in_subtree(f.floating)
+                .contains(&panel_b)
+        }));
+        assert!(g.find_panel_in_window(w, &panel_b).is_some());
+    }
+
+    #[test]
+    fn merge_floating_into_moves_panels_and_removes_floating_entry() {
+        let w = window(1);
+        let panel_a = PanelKey::new("test.a");
+        let panel_b = PanelKey::new("test.b");
+
+        let mut g = DockGraph::new();
+        let main_tabs = g.insert_node(DockNode::Tabs {
+            tabs: vec![panel_a.clone(), panel_b.clone()],
+            active: 0,
+        });
+        g.set_window_root(w, main_tabs);
+
+        assert!(g.apply_op(&DockOp::FloatPanelInWindow {
+            source_window: w,
+            panel: panel_b.clone(),
+            target_window: w,
+            rect: rect(0.0, 0.0, 200.0, 160.0),
+        }));
+
+        let floating = g.floating_windows(w).first().unwrap().floating;
+        assert!(g.apply_op(&DockOp::MergeFloatingInto {
+            window: w,
+            floating,
+            target_tabs: main_tabs,
+        }));
+
+        assert!(g.floating_windows(w).is_empty());
+        let (tabs, _i) = g.find_panel_in_window(w, &panel_b).expect("panel in window");
+        assert_eq!(tabs, main_tabs);
     }
 }
