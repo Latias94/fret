@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_components_ui::declarative::action_hooks::ActionHooksExt;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
@@ -7,8 +8,8 @@ use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, MainAlign, PressableA11y, PressableProps,
-    PressableSetOptionArcStr, PressableToggleVecArcStr, RovingFlexProps, RovingFocusProps,
+    AnyElement, CrossAlign, FlexProps, MainAlign, PressableA11y, PressableProps, RovingFlexProps,
+    RovingFocusProps,
 };
 use fret_ui::{ElementCx, Theme, UiHost};
 
@@ -257,7 +258,6 @@ impl ToggleGroup {
             enabled: !group_disabled,
             wrap: true,
             disabled: Arc::from(disabled_flags.clone().into_boxed_slice()),
-            select_option_arc_str: None,
             ..Default::default()
         };
 
@@ -341,20 +341,6 @@ impl ToggleGroup {
                                     enabled,
                                     focusable,
                                     on_click: None,
-                                    toggle_model: None,
-                                    set_arc_str_model: None,
-                                    set_option_arc_str_model: model_single.map(|m| {
-                                        PressableSetOptionArcStr {
-                                            model: m,
-                                            value: value.clone(),
-                                        }
-                                    }),
-                                    toggle_vec_arc_str_model: model_multi.map(|m| {
-                                        PressableToggleVecArcStr {
-                                            model: m,
-                                            value: value.clone(),
-                                        }
-                                    }),
                                     focus_ring: Some(ring),
                                     a11y: PressableA11y {
                                         role: Some(SemanticsRole::Button),
@@ -362,8 +348,16 @@ impl ToggleGroup {
                                         selected: on,
                                         ..Default::default()
                                     },
+                                    ..Default::default()
                                 },
                                 move |cx, state| {
+                                    if let Some(m) = model_single {
+                                        cx.pressable_set_option_arc_str(m, value.clone());
+                                    }
+                                    if let Some(m) = model_multi {
+                                        cx.pressable_toggle_vec_arc_str(m, value.clone());
+                                    }
+
                                     let hovered = state.hovered && !state.pressed;
                                     let pressed = state.pressed;
 

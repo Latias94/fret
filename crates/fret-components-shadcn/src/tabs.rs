@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_components_ui::declarative::action_hooks::ActionHooksExt;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
@@ -10,8 +11,7 @@ use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableA11y, PressableProps,
-    PressableSetOptionArcStr, RovingFlexProps, RovingFocusProps, RovingSelectOptionArcStr,
-    SemanticsProps, TextProps,
+    RovingFlexProps, RovingFocusProps, SemanticsProps, TextProps,
 };
 use fret_ui::{ElementCx, Theme, UiHost};
 
@@ -181,10 +181,6 @@ impl Tabs {
             enabled: !tabs_disabled,
             wrap: true,
             disabled: Arc::from(disabled_flags.clone().into_boxed_slice()),
-            select_option_arc_str: Some(RovingSelectOptionArcStr {
-                model,
-                values: values_arc,
-            }),
             ..Default::default()
         };
 
@@ -226,6 +222,8 @@ impl Tabs {
                         roving,
                     },
                     |cx| {
+                        cx.roving_select_option_arc_str(model, values_arc.clone());
+
                         let fg_muted = tabs_list_fg_muted(&theme);
                         let fg_disabled = theme.colors.text_disabled;
                         let fg_active = theme
@@ -268,13 +266,6 @@ impl Tabs {
                                     enabled: !item_disabled,
                                     focusable: tab_stop,
                                     on_click: None,
-                                    toggle_model: None,
-                                    set_arc_str_model: None,
-                                    set_option_arc_str_model: Some(PressableSetOptionArcStr {
-                                        model,
-                                        value,
-                                    }),
-                                    toggle_vec_arc_str_model: None,
                                     focus_ring: Some(ring),
                                     a11y: PressableA11y {
                                         role: Some(SemanticsRole::Tab),
@@ -282,8 +273,11 @@ impl Tabs {
                                         selected: active,
                                         ..Default::default()
                                     },
+                                    ..Default::default()
                                 },
                                 move |cx, _state| {
+                                    cx.pressable_set_option_arc_str(model, value.clone());
+
                                     vec![cx.container(
                                         ContainerProps {
                                             padding: Edges {

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_components_icons::ids;
+use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::icon as decl_icon;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
@@ -127,10 +128,6 @@ impl Checkbox {
                     enabled: !disabled,
                     focusable: true,
                     on_click,
-                    toggle_model: Some(model),
-                    set_arc_str_model: None,
-                    set_option_arc_str_model: None,
-                    toggle_vec_arc_str_model: None,
                     focus_ring: Some(decl_style::focus_ring(&theme, radius)),
                     a11y: PressableA11y {
                         role: Some(fret_core::SemanticsRole::Checkbox),
@@ -138,8 +135,11 @@ impl Checkbox {
                         checked: Some(checked),
                         ..Default::default()
                     },
+                    ..Default::default()
                 },
                 move |cx, st| {
+                    cx.pressable_toggle_bool(model);
+
                     let theme = Theme::global(&*cx.app).clone();
                     let checked = cx.app.models().get(model).copied().unwrap_or(false);
 

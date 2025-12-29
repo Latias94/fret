@@ -7,6 +7,7 @@
 //! the public component surface (see ADR 0066 / declarative-only migration).
 
 pub mod alert;
+pub mod alert_dialog;
 pub mod aspect_ratio;
 pub mod avatar;
 pub mod badge;
@@ -14,7 +15,10 @@ pub mod breadcrumb;
 pub mod button;
 pub mod card;
 pub mod checkbox;
+pub mod context_menu;
 pub mod data_table;
+pub mod dialog;
+pub mod dropdown_menu;
 pub mod empty;
 pub mod field;
 pub mod form;
@@ -24,9 +28,11 @@ pub mod item;
 pub mod kbd;
 pub mod label;
 pub mod pagination;
+pub mod popover;
 pub mod progress;
 pub mod radio_group;
 pub mod select;
+pub mod sheet;
 pub mod sidebar;
 pub mod skeleton;
 pub mod spinner;
@@ -35,8 +41,13 @@ pub mod table;
 pub mod tabs;
 pub mod toggle;
 pub mod toggle_group;
+pub mod tooltip;
 
 pub use alert::{Alert, AlertDescription, AlertTitle, AlertVariant};
+pub use alert_dialog::{
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+    AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+};
 pub use aspect_ratio::AspectRatio;
 pub use avatar::{Avatar, AvatarFallback, AvatarImage};
 pub use badge::{Badge, BadgeVariant};
@@ -44,7 +55,14 @@ pub use breadcrumb::{Breadcrumb, BreadcrumbItem};
 pub use button::{Button, ButtonSize, ButtonVariant};
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
 pub use checkbox::{Checkbox, checkbox};
+pub use context_menu::{ContextMenu, ContextMenuEntry, ContextMenuItem};
 pub use data_table::{DataTable, DataTableRowState};
+pub use dialog::{
+    Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+};
+pub use dropdown_menu::{
+    DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem, DropdownMenuSide,
+};
 pub use empty::Empty;
 pub use field::{
     Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend,
@@ -63,9 +81,15 @@ pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
     PaginationLinkSize, PaginationNext, PaginationPrevious,
 };
+pub use popover::{
+    Popover, PopoverAlign, PopoverContent, PopoverHeader, PopoverSide, PopoverTitle, PopoverTrigger,
+};
 pub use progress::{Progress, progress};
 pub use radio_group::{RadioGroup, RadioGroupItem, radio_group};
 pub use select::{Select, SelectItem, select};
+pub use sheet::{
+    Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetSide, SheetTitle,
+};
 pub use sidebar::{
     Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader,
     SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -81,5 +105,6 @@ pub use toggle::{Toggle, ToggleSize, ToggleVariant, toggle};
 pub use toggle_group::{
     ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple, toggle_group_single,
 };
+pub use tooltip::{Tooltip, TooltipAlign, TooltipContent, TooltipSide, TooltipTrigger};
 
 pub use fret_components_ui::{ChromeRefinement, LayoutRefinement, Radius, Size, Space, StyledExt};

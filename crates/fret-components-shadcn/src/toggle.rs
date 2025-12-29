@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space,
@@ -242,10 +243,6 @@ impl Toggle {
                 enabled: !disabled,
                 focusable: true,
                 on_click,
-                toggle_model: Some(model),
-                set_arc_str_model: None,
-                set_option_arc_str_model: None,
-                toggle_vec_arc_str_model: None,
                 focus_ring: Some(ring),
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::Button),
@@ -253,8 +250,11 @@ impl Toggle {
                     selected: on_now,
                     ..Default::default()
                 },
+                ..Default::default()
             },
             move |cx, state| {
+                cx.pressable_toggle_bool(model);
+
                 let on = cx.app.models().get(model).copied().unwrap_or(false);
                 let hovered = state.hovered && !state.pressed;
                 let pressed = state.pressed;

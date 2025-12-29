@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_components_icons::ids;
+use fret_components_ui::declarative::action_hooks::ActionHooksExt;
 use fret_components_ui::declarative::icon as decl_icon;
 use fret_components_ui::declarative::scroll as decl_scroll;
 use fret_components_ui::declarative::style as decl_style;
@@ -15,8 +16,7 @@ use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, PressableA11y, PressableProps, PressableSetOptionArcStr,
-    RovingFlexProps, RovingFocusProps, RovingSelectOptionArcStr, RovingTypeaheadArcStr,
+    Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
     SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
@@ -174,15 +174,13 @@ pub fn select<H: UiHost>(
                 border
             };
 
+            cx.pressable_toggle_bool(open);
+
             let props = PressableProps {
                 layout: trigger_layout,
                 enabled,
                 focusable: true,
                 on_click: None,
-                toggle_model: Some(open),
-                set_arc_str_model: None,
-                set_option_arc_str_model: None,
-                toggle_vec_arc_str_model: None,
                 focus_ring: Some(ring),
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::ComboBox),
@@ -190,6 +188,7 @@ pub fn select<H: UiHost>(
                     expanded: Some(is_open),
                     ..Default::default()
                 },
+                ..Default::default()
             };
 
             let overlay_root_name = window_overlays::popover_root_name(trigger_id);
@@ -242,8 +241,7 @@ pub fn select<H: UiHost>(
                             enabled: true,
                             wrap: true,
                             disabled: Arc::from(disabled.clone().into_boxed_slice()),
-                            select_option_arc_str: Some(RovingSelectOptionArcStr { model, values: values_arc }),
-                            typeahead_arc_str: Some(RovingTypeaheadArcStr { labels: labels_arc }),
+                            ..Default::default()
                         };
 
                         let popover_layout = LayoutStyle {
@@ -296,15 +294,24 @@ pub fn select<H: UiHost>(
                                                             justify: MainAlign::Start,
                                                             align: CrossAlign::Stretch,
                                                             wrap: false,
-                                                        },
-                                                        roving,
                                                     },
-                                                    |cx| {
-                                                        let mut out = Vec::with_capacity(items.len());
-                                                        for (idx, item) in items.iter().cloned().enumerate() {
-                                                            let item_disabled = disabled.get(idx).copied().unwrap_or(true);
-                                                            let tab_stop = active.is_some_and(|a| a == idx);
-                                                            let is_selected = selected
+                                                    roving,
+                                                },
+                                                |cx| {
+                                                    cx.roving_select_option_arc_str(
+                                                        model,
+                                                        values_arc.clone(),
+                                                    );
+                                                    cx.roving_typeahead_prefix_arc_str(
+                                                        labels_arc.clone(),
+                                                        30,
+                                                    );
+
+                                                    let mut out = Vec::with_capacity(items.len());
+                                                    for (idx, item) in items.iter().cloned().enumerate() {
+                                                        let item_disabled = disabled.get(idx).copied().unwrap_or(true);
+                                                        let tab_stop = active.is_some_and(|a| a == idx);
+                                                        let is_selected = selected
                                                                 .as_ref()
                                                                 .is_some_and(|v| v.as_ref() == item.value.as_ref());
 
@@ -321,13 +328,6 @@ pub fn select<H: UiHost>(
                                                                     enabled: !item_disabled,
                                                                     focusable: tab_stop,
                                                                     on_click: None,
-                                                                    toggle_model: Some(open),
-                                                                    set_arc_str_model: None,
-                                                                    set_option_arc_str_model: Some(PressableSetOptionArcStr {
-                                                                        model,
-                                                                        value: item.value.clone(),
-                                                                    }),
-                                                                    toggle_vec_arc_str_model: None,
                                                                     focus_ring: Some(item_ring),
                                                                     a11y: PressableA11y {
                                                                         role: Some(SemanticsRole::ListItem),
@@ -335,9 +335,16 @@ pub fn select<H: UiHost>(
                                                                         selected: is_selected,
                                                                         ..Default::default()
                                                                     },
+                                                                    ..Default::default()
                                                                 },
                                                                 |cx, st, id| {
                                                                     let _ = id;
+
+                                                                    cx.pressable_set_option_arc_str(
+                                                                        model,
+                                                                        item.value.clone(),
+                                                                    );
+                                                                    cx.pressable_set_bool(open, false);
 
                                                                     let theme = Theme::global(&*cx.app).clone();
                                                                     let mut bg = Color::TRANSPARENT;

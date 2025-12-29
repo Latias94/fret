@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_components_ui::declarative::action_hooks::ActionHooksExt;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::{MetricRef, Space};
@@ -10,8 +11,8 @@ use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, PressableSetOptionArcStr, RovingFlexProps, RovingFocusProps,
-    RovingSelectOptionArcStr, SemanticsProps, SizeStyle, TextProps,
+    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, SizeStyle,
+    TextProps,
 };
 use fret_ui::{ElementCx, Theme, UiHost};
 
@@ -185,10 +186,6 @@ impl RadioGroup {
                         enabled: !group_disabled,
                         wrap: true,
                         disabled: Arc::from(disabled.clone().into_boxed_slice()),
-                        select_option_arc_str: Some(RovingSelectOptionArcStr {
-                            model,
-                            values: values_arc.clone(),
-                        }),
                         ..Default::default()
                     };
 
@@ -206,6 +203,8 @@ impl RadioGroup {
                             roving,
                         },
                         move |cx| {
+                            cx.roving_select_option_arc_str(model, values_arc.clone());
+
                             let mut out = Vec::with_capacity(items.len());
                             for (idx, item) in items.iter().cloned().enumerate() {
                                 let item_disabled = disabled.get(idx).copied().unwrap_or(true);
@@ -229,13 +228,6 @@ impl RadioGroup {
                                         enabled: item_enabled,
                                         focusable: tab_stop,
                                         on_click: None,
-                                        toggle_model: None,
-                                        set_arc_str_model: None,
-                                        set_option_arc_str_model: Some(PressableSetOptionArcStr {
-                                            model,
-                                            value: pressable_item_value.clone(),
-                                        }),
-                                        toggle_vec_arc_str_model: None,
                                         focus_ring: Some(ring_style),
                                         a11y: PressableA11y {
                                             role: Some(SemanticsRole::ListItem),
@@ -243,8 +235,14 @@ impl RadioGroup {
                                             selected: is_selected,
                                             ..Default::default()
                                         },
+                                        ..Default::default()
                                     },
                                     move |cx, st| {
+                                        cx.pressable_set_option_arc_str(
+                                            model,
+                                            pressable_item_value.clone(),
+                                        );
+
                                         let theme = Theme::global(&*cx.app).clone();
 
                                         let mut border_color =

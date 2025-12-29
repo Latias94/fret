@@ -4,7 +4,7 @@ use fret_core::{Edges, Px};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{AnyElement, LayoutStyle, Length};
-use fret_ui::{ElementCx, Theme, UiHost, elements};
+use fret_ui::{ElementCx, Theme, UiHost};
 
 #[derive(Clone)]
 pub struct Progress {
@@ -101,7 +101,8 @@ impl Progress {
 
             cx.container(track_props, move |cx| {
                 let track_id = cx.root_id();
-                let track_w = elements::bounds_for_element(&mut *cx.app, cx.window, track_id)
+                let track_w = cx
+                    .last_bounds_for_element(track_id)
                     .map(|r| r.size.width)
                     .unwrap_or(Px(0.0));
 

@@ -5,11 +5,14 @@ use fret_components_icons::IconRegistry;
 use fret_components_shadcn as shadcn;
 use fret_components_ui::tree::{TreeItem, TreeItemId, TreeState};
 use fret_core::{
-    AppWindowId, Edges, Event, KeyCode, PlatformCapabilities, Px, Rect, Scene, UiServices,
+    AppWindowId, Edges, Event, KeyCode, PlatformCapabilities, Px, Rect, Scene, SemanticsRole,
+    UiServices,
 };
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui::declarative;
-use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign};
+use fret_ui::element::{
+    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+};
 use fret_ui::{Invalidation, Theme, UiTree};
 use std::sync::Arc;
 use winit::event_loop::EventLoop;
@@ -25,6 +28,13 @@ struct ComponentsGalleryWindowState {
     radio: Model<Option<Arc<str>>>,
     select: Model<Option<Arc<str>>>,
     select_open: Model<bool>,
+    dropdown_open: Model<bool>,
+    context_menu_open: Model<bool>,
+    popover_open: Model<bool>,
+    dialog_open: Model<bool>,
+    alert_dialog_open: Model<bool>,
+    sheet_open: Model<bool>,
+    last_action: Model<Arc<str>>,
 }
 
 #[derive(Default)]
@@ -63,6 +73,13 @@ impl ComponentsGalleryDriver {
             .models_mut()
             .insert(Option::<Arc<str>>::Some(Arc::from("apple")));
         let select_open = app.models_mut().insert(false);
+        let dropdown_open = app.models_mut().insert(false);
+        let context_menu_open = app.models_mut().insert(false);
+        let popover_open = app.models_mut().insert(false);
+        let dialog_open = app.models_mut().insert(false);
+        let alert_dialog_open = app.models_mut().insert(false);
+        let sheet_open = app.models_mut().insert(false);
+        let last_action = app.models_mut().insert(Arc::<str>::from("<none>"));
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -78,6 +95,13 @@ impl ComponentsGalleryDriver {
             radio,
             select,
             select_open,
+            dropdown_open,
+            context_menu_open,
+            popover_open,
+            dialog_open,
+            alert_dialog_open,
+            sheet_open,
+            last_action,
         }
     }
 
@@ -98,6 +122,13 @@ impl ComponentsGalleryDriver {
         let radio = state.radio;
         let select = state.select;
         let select_open = state.select_open;
+        let dropdown_open = state.dropdown_open;
+        let context_menu_open = state.context_menu_open;
+        let popover_open = state.popover_open;
+        let dialog_open = state.dialog_open;
+        let alert_dialog_open = state.alert_dialog_open;
+        let sheet_open = state.sheet_open;
+        let last_action = state.last_action;
 
         let root = declarative::render_root(
             &mut state.ui,
@@ -277,6 +308,310 @@ impl ComponentsGalleryDriver {
                                                 ])
                                                 .into_element(cx),
                                             cx.text(format!("select: {value}")),
+                                        ]
+                                    },
+                                ),
+                                cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle::default(),
+                                        direction: fret_core::Axis::Vertical,
+                                        gap: Px(8.0),
+                                        padding: Edges::all(Px(0.0)),
+                                        justify: MainAlign::Start,
+                                        align: CrossAlign::Stretch,
+                                        wrap: false,
+                                    },
+                                    |cx| {
+                                        let last_action = cx.app.models().get(last_action).cloned();
+
+                                        let overlays = cx.flex(
+                                            FlexProps {
+                                                layout: LayoutStyle::default(),
+                                                direction: fret_core::Axis::Horizontal,
+                                                gap: Px(8.0),
+                                                padding: Edges::all(Px(0.0)),
+                                                justify: MainAlign::Start,
+                                                align: CrossAlign::Center,
+                                                wrap: true,
+                                            },
+                                            |cx| {
+                                                let tooltip = shadcn::Tooltip::new(
+                                                    shadcn::Button::new("Tooltip (hover)")
+                                                        .variant(shadcn::ButtonVariant::Outline)
+                                                        .into_element(cx),
+                                                    shadcn::TooltipContent::new(
+                                                        "Tooltip: hover intent + placement",
+                                                    )
+                                                    .into_element(cx),
+                                                )
+                                                .open_delay_frames(10)
+                                                .close_delay_frames(10)
+                                                .side(shadcn::TooltipSide::Top)
+                                                .into_element(cx);
+
+                                                let hover_card = {
+                                                    let theme = Theme::global(&*cx.app);
+                                                    cx.container(
+                                                        ContainerProps {
+                                                            layout: {
+                                                                let mut layout = LayoutStyle::default();
+                                                                layout.size.width = Length::Px(Px(240.0));
+                                                                layout.size.height = Length::Px(Px(72.0));
+                                                                layout.overflow = Overflow::Clip;
+                                                                layout
+                                                            },
+                                                            padding: Edges::all(Px(8.0)),
+                                                            background: Some(theme.colors.panel_background),
+                                                            border: Edges::all(Px(1.0)),
+                                                            border_color: Some(theme.colors.panel_border),
+                                                            ..Default::default()
+                                                        },
+                                                        |cx| {
+                                                            vec![cx.flex(
+                                                                FlexProps {
+                                                                    layout: {
+                                                                        let mut layout = LayoutStyle::default();
+                                                                        layout.size.width = Length::Fill;
+                                                                        layout.size.height = Length::Fill;
+                                                                        layout
+                                                                    },
+                                                                    direction: fret_core::Axis::Vertical,
+                                                                    gap: Px(0.0),
+                                                                    padding: Edges::all(Px(0.0)),
+                                                                    justify: MainAlign::End,
+                                                                    align: CrossAlign::Start,
+                                                                    wrap: false,
+                                                                },
+                                                                |cx| {
+                                                                    vec![shadcn::HoverCard::new(
+                                                                        shadcn::Button::new("HoverCard (hover, not clipped)")
+                                                                            .variant(shadcn::ButtonVariant::Outline)
+                                                                            .into_element(cx),
+                                                                        shadcn::HoverCardContent::new(vec![
+                                                                            cx.text("HoverCard content (overlay-root)"),
+                                                                            cx.text("Move pointer from trigger to content."),
+                                                                        ])
+                                                                        .into_element(cx),
+                                                                    )
+                                                                    .close_delay_frames(10)
+                                                                    .into_element(cx)]
+                                                                },
+                                                            )]
+                                                        },
+                                                    )
+                                                };
+
+                                                let dropdown = shadcn::DropdownMenu::new(dropdown_open)
+                                                    .into_element(
+                                                        cx,
+                                                        |cx| {
+                                                            shadcn::Button::new("DropdownMenu")
+                                                                .variant(shadcn::ButtonVariant::Outline)
+                                                                .toggle_model(dropdown_open)
+                                                                .into_element(cx)
+                                                        },
+                                                        |_cx| {
+                                                            vec![
+                                                                shadcn::DropdownMenuEntry::Item(
+                                                                    shadcn::DropdownMenuItem::new("Apple")
+                                                                        .on_select(
+                                                                            "gallery.dropdown.select.apple",
+                                                                        ),
+                                                                ),
+                                                                shadcn::DropdownMenuEntry::Item(
+                                                                    shadcn::DropdownMenuItem::new("Banana")
+                                                                        .on_select(
+                                                                            "gallery.dropdown.select.banana",
+                                                                        ),
+                                                                ),
+                                                                shadcn::DropdownMenuEntry::Separator,
+                                                                shadcn::DropdownMenuEntry::Item(
+                                                                    shadcn::DropdownMenuItem::new("Disabled")
+                                                                        .disabled(true),
+                                                                ),
+                                                            ]
+                                                        },
+                                                    );
+
+                                                let context_menu =
+                                                    shadcn::ContextMenu::new(context_menu_open)
+                                                        .into_element(
+                                                            cx,
+                                                            |cx| {
+                                                                shadcn::Button::new("ContextMenu (right click / Shift+F10)")
+                                                                .variant(shadcn::ButtonVariant::Outline)
+                                                                .into_element(cx)
+                                                            },
+                                                            |_cx| {
+                                                                vec![
+                                                                    shadcn::ContextMenuEntry::Item(
+                                                                        shadcn::ContextMenuItem::new(
+                                                                            "Action",
+                                                                        )
+                                                                        .on_select(
+                                                                            "gallery.context_menu.action",
+                                                                        ),
+                                                                    ),
+                                                                    shadcn::ContextMenuEntry::Separator,
+                                                                    shadcn::ContextMenuEntry::Item(
+                                                                        shadcn::ContextMenuItem::new(
+                                                                            "Disabled",
+                                                                        )
+                                                                        .disabled(true),
+                                                                    ),
+                                                                ]
+                                                            },
+                                                        );
+
+                                                let popover = shadcn::Popover::new(popover_open)
+                                                    .auto_focus(true)
+                                                    .into_element(
+                                                        cx,
+                                                        |cx| {
+                                                            shadcn::Button::new("Popover")
+                                                                .variant(shadcn::ButtonVariant::Outline)
+                                                                .toggle_model(popover_open)
+                                                                .into_element(cx)
+                                                        },
+                                                        |cx| {
+                                                            shadcn::PopoverContent::new(vec![
+                                                                cx.text("Popover content"),
+                                                                shadcn::Button::new("Close")
+                                                                    .variant(shadcn::ButtonVariant::Secondary)
+                                                                    .toggle_model(popover_open)
+                                                                    .into_element(cx),
+                                                            ])
+                                                            .into_element(cx)
+                                                        },
+                                                    );
+
+                                                let dialog = shadcn::Dialog::new(dialog_open).into_element(
+                                                    cx,
+                                                    |cx| {
+                                                        shadcn::Button::new("Dialog")
+                                                            .variant(shadcn::ButtonVariant::Outline)
+                                                            .toggle_model(dialog_open)
+                                                            .into_element(cx)
+                                                    },
+                                                    |cx| {
+                                                        shadcn::DialogContent::new(vec![
+                                                            shadcn::DialogHeader::new(vec![
+                                                                shadcn::DialogTitle::new("Dialog")
+                                                                    .into_element(cx),
+                                                                shadcn::DialogDescription::new(
+                                                                    "Escape / overlay click closes",
+                                                                )
+                                                                .into_element(cx),
+                                                            ])
+                                                            .into_element(cx),
+                                                            shadcn::DialogFooter::new(vec![
+                                                                shadcn::Button::new("Close")
+                                                                    .variant(shadcn::ButtonVariant::Secondary)
+                                                                    .toggle_model(dialog_open)
+                                                                    .into_element(cx),
+                                                            ])
+                                                            .into_element(cx),
+                                                        ])
+                                                        .into_element(cx)
+                                                    },
+                                                );
+
+                                                let alert_dialog = shadcn::AlertDialog::new(alert_dialog_open)
+                                                    .into_element(
+                                                        cx,
+                                                        |cx| {
+                                                            shadcn::Button::new("AlertDialog")
+                                                                .variant(shadcn::ButtonVariant::Outline)
+                                                                .toggle_model(alert_dialog_open)
+                                                                .into_element(cx)
+                                                        },
+                                                        |cx| {
+                                                            shadcn::AlertDialogContent::new(vec![
+                                                                shadcn::AlertDialogHeader::new(vec![
+                                                                    shadcn::AlertDialogTitle::new(
+                                                                        "Are you absolutely sure?",
+                                                                    )
+                                                                    .into_element(cx),
+                                                                    shadcn::AlertDialogDescription::new(
+                                                                        "This is non-closable by overlay click.",
+                                                                    )
+                                                                    .into_element(cx),
+                                                                ])
+                                                                .into_element(cx),
+                                                                shadcn::AlertDialogFooter::new(vec![
+                                                                    shadcn::AlertDialogCancel::new(
+                                                                        "Cancel",
+                                                                        alert_dialog_open,
+                                                                    )
+                                                                    .into_element(cx),
+                                                                    shadcn::AlertDialogAction::new(
+                                                                        "Continue",
+                                                                        alert_dialog_open,
+                                                                    )
+                                                                    .into_element(cx),
+                                                                ])
+                                                                .into_element(cx),
+                                                            ])
+                                                            .into_element(cx)
+                                                        },
+                                                    );
+
+                                                let sheet = shadcn::Sheet::new(sheet_open)
+                                                    .side(shadcn::SheetSide::Right)
+                                                    .size(Px(360.0))
+                                                    .into_element(
+                                                        cx,
+                                                        |cx| {
+                                                            shadcn::Button::new("Sheet")
+                                                                .variant(shadcn::ButtonVariant::Outline)
+                                                                .toggle_model(sheet_open)
+                                                                .into_element(cx)
+                                                        },
+                                                        |cx| {
+                                                            shadcn::SheetContent::new(vec![
+                                                                shadcn::SheetHeader::new(vec![
+                                                                    shadcn::SheetTitle::new("Sheet")
+                                                                        .into_element(cx),
+                                                                    shadcn::SheetDescription::new(
+                                                                        "A modal side panel.",
+                                                                    )
+                                                                    .into_element(cx),
+                                                                ])
+                                                                .into_element(cx),
+                                                                shadcn::SheetFooter::new(vec![
+                                                                    shadcn::Button::new("Close")
+                                                                        .variant(shadcn::ButtonVariant::Secondary)
+                                                                        .toggle_model(sheet_open)
+                                                                        .into_element(cx),
+                                                                ])
+                                                                .into_element(cx),
+                                                            ])
+                                                            .into_element(cx)
+                                                        },
+                                                    );
+
+                                            vec![
+                                                tooltip,
+                                                hover_card,
+                                                dropdown,
+                                                context_menu,
+                                                popover,
+                                                dialog,
+                                                alert_dialog,
+                                                    sheet,
+                                                ]
+                                            },
+                                        );
+
+                                        vec![
+                                            cx.text("overlays: tooltip / dropdown / context-menu / popover / dialog / alert-dialog / sheet"),
+                                            overlays,
+                                            cx.text(format!(
+                                                "last action: {}",
+                                                last_action
+                                                    .as_deref()
+                                                    .unwrap_or("<none>")
+                                            )),
                                         ]
                                     },
                                 ),
@@ -505,6 +840,19 @@ impl WinitDriver for ComponentsGalleryDriver {
             let _ = app.models_mut().update(state.progress, |v| *v = 35.0);
             app.request_redraw(window);
         }
+
+        if let Some(item) = command.as_str().strip_prefix("gallery.dropdown.select.") {
+            let msg: Arc<str> = Arc::from(format!("dropdown.select.{item}").into_boxed_str());
+            let _ = app.models_mut().update(state.last_action, |v| *v = msg);
+            app.request_redraw(window);
+        }
+
+        if command.as_str() == "gallery.context_menu.action" {
+            let _ = app.models_mut().update(state.last_action, |v| {
+                *v = Arc::<str>::from("context_menu.action");
+            });
+            app.request_redraw(window);
+        }
     }
 
     fn handle_event(
@@ -515,25 +863,68 @@ impl WinitDriver for ComponentsGalleryDriver {
         state: &mut Self::WindowState,
         event: &Event,
     ) {
-        if let Event::KeyDown {
-            key: KeyCode::Escape,
-            repeat: false,
-            ..
-        } = event
-        {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
-
         if matches!(event, Event::WindowCloseRequested) {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
         }
 
-        if ComponentsGalleryDriver::handle_tree_key_event(app, state.items, state.tree_state, event)
-        {
-            app.request_redraw(window);
+        let overlays_open = app
+            .models()
+            .get(state.select_open)
+            .copied()
+            .unwrap_or(false)
+            || app
+                .models()
+                .get(state.dropdown_open)
+                .copied()
+                .unwrap_or(false)
+            || app
+                .models()
+                .get(state.context_menu_open)
+                .copied()
+                .unwrap_or(false)
+            || app
+                .models()
+                .get(state.popover_open)
+                .copied()
+                .unwrap_or(false)
+            || app
+                .models()
+                .get(state.dialog_open)
+                .copied()
+                .unwrap_or(false)
+            || app
+                .models()
+                .get(state.alert_dialog_open)
+                .copied()
+                .unwrap_or(false)
+            || app.models().get(state.sheet_open).copied().unwrap_or(false);
+
+        if overlays_open {
+            state.ui.dispatch_event(app, services, event);
             return;
+        }
+
+        let focus = state.ui.focus();
+        let focused_is_tree_item = focus.is_some_and(|focused| {
+            state.ui.semantics_snapshot().is_some_and(|snap| {
+                snap.nodes
+                    .iter()
+                    .find(|n| n.id == focused)
+                    .is_some_and(|n| n.role == SemanticsRole::TreeItem)
+            })
+        });
+
+        if focus.is_none() || focused_is_tree_item {
+            if ComponentsGalleryDriver::handle_tree_key_event(
+                app,
+                state.items,
+                state.tree_state,
+                event,
+            ) {
+                app.request_redraw(window);
+                return;
+            }
         }
 
         state.ui.dispatch_event(app, services, event);

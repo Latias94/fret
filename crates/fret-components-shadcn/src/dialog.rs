@@ -1,0 +1,1168 @@
+use std::sync::Arc;
+
+use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
+use fret_components_ui::declarative::style as decl_style;
+use fret_components_ui::window_overlays;
+use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_core::{
+    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+};
+use fret_runtime::Model;
+use fret_ui::Invalidation;
+use fret_ui::element::{
+    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
+    PressableProps, SemanticsProps, SizeStyle, TextProps,
+};
+use fret_ui::{ElementCx, Theme, UiHost};
+
+fn default_overlay_color() -> Color {
+    Color {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+        a: 0.8,
+    }
+}
+
+/// shadcn/ui `Dialog` (v4).
+///
+/// This is a modal overlay (barrier-backed) installed via the component-layer overlay manager
+/// (`fret-components-ui/window_overlays.rs`).
+///
+/// Notes:
+/// - Dismiss on Escape is handled by the shared dismissible root (ADR 0067).
+/// - Overlay click-to-dismiss is implemented here by rendering a full-window barrier behind the
+///   dialog content.
+#[derive(Clone)]
+pub struct Dialog {
+    open: Model<bool>,
+    overlay_closable: bool,
+    overlay_color: Option<Color>,
+    window_padding: Space,
+}
+
+impl std::fmt::Debug for Dialog {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Dialog")
+            .field("open", &"<model>")
+            .field("overlay_closable", &self.overlay_closable)
+            .field("overlay_color", &self.overlay_color)
+            .field("window_padding", &self.window_padding)
+            .finish()
+    }
+}
+
+impl Dialog {
+    pub fn new(open: Model<bool>) -> Self {
+        Self {
+            open,
+            overlay_closable: true,
+            overlay_color: None,
+            window_padding: Space::N6,
+        }
+    }
+
+    pub fn overlay_closable(mut self, overlay_closable: bool) -> Self {
+        self.overlay_closable = overlay_closable;
+        self
+    }
+
+    pub fn overlay_color(mut self, overlay_color: Color) -> Self {
+        self.overlay_color = Some(overlay_color);
+        self
+    }
+
+    pub fn window_padding(mut self, padding: Space) -> Self {
+        self.window_padding = padding;
+        self
+    }
+
+    pub fn into_element<H: UiHost>(
+        self,
+        cx: &mut ElementCx<'_, H>,
+        trigger: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
+        content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
+    ) -> AnyElement {
+        cx.scope(|cx| {
+            cx.observe_model(self.open, Invalidation::Paint);
+
+            let theme = Theme::global(&*cx.app).clone();
+            let is_open = cx.app.models().get(self.open).copied().unwrap_or(false);
+
+            let trigger = trigger(cx);
+            let id = trigger.id;
+            let overlay_root_name = window_overlays::modal_root_name(id);
+
+            if is_open {
+                let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
+                let overlay_closable = self.overlay_closable;
+                let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
+
+                let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
+                    let barrier_layout = LayoutStyle {
+                        position: PositionStyle::Absolute,
+                        inset: InsetStyle {
+                            top: Some(Px(0.0)),
+                            right: Some(Px(0.0)),
+                            bottom: Some(Px(0.0)),
+                            left: Some(Px(0.0)),
+                        },
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+
+                    let barrier_fill = cx.container(
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            padding: Edges::all(Px(0.0)),
+                            background: Some(overlay_color),
+                            shadow: None,
+                            border: Edges::all(Px(0.0)),
+                            border_color: None,
+                            corner_radii: Corners::all(Px(0.0)),
+                        },
+                        |_cx| Vec::new(),
+                    );
+
+                    let barrier = if overlay_closable {
+                        let open = self.open;
+                        cx.pressable(
+                            PressableProps {
+                                layout: barrier_layout,
+                                enabled: true,
+                                focusable: false,
+                                on_click: None,
+                                ..Default::default()
+                            },
+                            move |cx, _st| {
+                                cx.pressable_set_bool(open, false);
+                                vec![barrier_fill]
+                            },
+                        )
+                    } else {
+                        cx.container(
+                            ContainerProps {
+                                layout: barrier_layout,
+                                padding: Edges::all(Px(0.0)),
+                                background: Some(overlay_color),
+                                shadow: None,
+                                border: Edges::all(Px(0.0)),
+                                border_color: None,
+                                corner_radii: Corners::all(Px(0.0)),
+                            },
+                            |_cx| Vec::new(),
+                        )
+                    };
+
+                    let content = content(cx);
+
+                    let outer = cx.bounds;
+                    let available_w = Px((outer.size.width.0 - window_padding_px.0 * 2.0).max(0.0));
+                    let available_h =
+                        Px((outer.size.height.0 - window_padding_px.0 * 2.0).max(0.0));
+
+                    let last_size = cx.last_bounds_for_element(content.id).map(|r| r.size);
+
+                    let desired_w = last_size.map(|s| s.width).unwrap_or(Px(512.0));
+                    let desired_h = last_size.map(|s| s.height).unwrap_or(Px(320.0));
+
+                    let content_w = Px(desired_w.0.min(available_w.0).max(0.0));
+                    let content_h = Px(desired_h.0.min(available_h.0).max(0.0));
+
+                    let left = Px(outer.origin.x.0
+                        + window_padding_px.0
+                        + ((available_w.0 - content_w.0) * 0.5).max(0.0));
+                    let top = Px(outer.origin.y.0
+                        + window_padding_px.0
+                        + ((available_h.0 - content_h.0) * 0.5).max(0.0));
+
+                    let wrapper = cx.container(
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    top: Some(top),
+                                    left: Some(left),
+                                    right: None,
+                                    bottom: None,
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(content_w),
+                                    height: Length::Px(content_h),
+                                    ..Default::default()
+                                },
+                                overflow: Overflow::Visible,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        move |_cx| vec![content],
+                    );
+
+                    vec![barrier, wrapper]
+                });
+
+                window_overlays::request_modal(
+                    cx,
+                    window_overlays::ModalRequest {
+                        id,
+                        root_name: overlay_root_name.clone(),
+                        trigger: Some(id),
+                        open: self.open,
+                        initial_focus: None,
+                        children: overlay_children,
+                    },
+                );
+            }
+
+            trigger
+        })
+    }
+}
+
+/// shadcn/ui `DialogContent` (v4).
+#[derive(Debug, Clone)]
+pub struct DialogContent {
+    children: Vec<AnyElement>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+}
+
+impl DialogContent {
+    pub fn new(children: Vec<AnyElement>) -> Self {
+        Self {
+            children,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+
+        let bg = theme
+            .color_by_key("background")
+            .unwrap_or(theme.colors.panel_background);
+        let border = theme
+            .color_by_key("border")
+            .unwrap_or(theme.colors.panel_border);
+
+        let radius = theme.metrics.radius_lg;
+        let shadow = decl_style::shadow_lg(&theme, radius);
+
+        let chrome = ChromeRefinement::default()
+            .rounded(Radius::Lg)
+            .border_1()
+            .bg(ColorRef::Color(bg))
+            .border_color(ColorRef::Color(border))
+            .p(Space::N6)
+            .merge(self.chrome);
+
+        let layout = LayoutRefinement::default()
+            .w_full()
+            .max_w(MetricRef::Px(Px(512.0)))
+            .merge(self.layout);
+
+        let props = decl_style::container_props(&theme, chrome, layout);
+        let children = self.children;
+        let container = cx.container(
+            ContainerProps {
+                shadow: Some(shadow),
+                ..props
+            },
+            move |_cx| children,
+        );
+
+        cx.semantics(
+            SemanticsProps {
+                role: SemanticsRole::Dialog,
+                ..Default::default()
+            },
+            move |_cx| vec![container],
+        )
+    }
+}
+
+/// shadcn/ui `DialogHeader` (v4).
+#[derive(Debug, Clone)]
+pub struct DialogHeader {
+    children: Vec<AnyElement>,
+}
+
+impl DialogHeader {
+    pub fn new(children: Vec<AnyElement>) -> Self {
+        Self { children }
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        let props = decl_style::container_props(
+            Theme::global(&*cx.app),
+            ChromeRefinement::default().pb(Space::N4),
+            LayoutRefinement::default(),
+        );
+        let children = self.children;
+        cx.container(props, move |_cx| children)
+    }
+}
+
+/// shadcn/ui `DialogFooter` (v4).
+#[derive(Debug, Clone)]
+pub struct DialogFooter {
+    children: Vec<AnyElement>,
+}
+
+impl DialogFooter {
+    pub fn new(children: Vec<AnyElement>) -> Self {
+        Self { children }
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        let props = decl_style::container_props(
+            Theme::global(&*cx.app),
+            ChromeRefinement::default().pt(Space::N4),
+            LayoutRefinement::default(),
+        );
+        let children = self.children;
+        cx.container(props, move |_cx| children)
+    }
+}
+
+/// shadcn/ui `DialogTitle` (v4).
+#[derive(Debug, Clone)]
+pub struct DialogTitle {
+    text: Arc<str>,
+}
+
+impl DialogTitle {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self { text: text.into() }
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let fg = theme
+            .color_by_key("foreground")
+            .unwrap_or(theme.colors.text_primary);
+
+        let px = theme
+            .metric_by_key("component.dialog.title_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or(theme.metrics.font_size);
+        let line_height = theme
+            .metric_by_key("component.dialog.title_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or(theme.metrics.font_line_height);
+
+        cx.text_props(TextProps {
+            layout: Default::default(),
+            text: self.text,
+            style: Some(TextStyle {
+                font: FontId::default(),
+                size: px,
+                weight: FontWeight::SEMIBOLD,
+                line_height: Some(line_height),
+                letter_spacing_em: Some(-0.02),
+            }),
+            color: Some(fg),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        })
+    }
+}
+
+/// shadcn/ui `DialogDescription` (v4).
+#[derive(Debug, Clone)]
+pub struct DialogDescription {
+    text: Arc<str>,
+}
+
+impl DialogDescription {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self { text: text.into() }
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let fg = theme
+            .color_by_key("muted.foreground")
+            .or_else(|| theme.color_by_key("muted-foreground"))
+            .unwrap_or(theme.colors.text_muted);
+
+        let px = theme
+            .metric_by_key("component.dialog.description_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or(theme.metrics.font_size);
+        let line_height = theme
+            .metric_by_key("component.dialog.description_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or(theme.metrics.font_line_height);
+
+        cx.text_props(TextProps {
+            layout: Default::default(),
+            text: self.text,
+            style: Some(TextStyle {
+                font: FontId::default(),
+                size: px,
+                weight: FontWeight::NORMAL,
+                line_height: Some(line_height),
+                letter_spacing_em: None,
+            }),
+            color: Some(fg),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    use fret_app::App;
+    use fret_components_ui::declarative::action_hooks::ActionHooksExt;
+    use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
+    use fret_core::{
+        KeyCode, Modifiers, Px, TextBlobId, TextConstraints, TextMetrics, TextService,
+        TextStyle as CoreTextStyle,
+    };
+    use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_runtime::Effect;
+    use fret_ui::UiTree;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: CoreTextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    fn render_dialog_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        overlay_closable: bool,
+        content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        initial_focus_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) -> fret_ui::elements::GlobalElementId {
+        window_overlays::begin_frame(app, window);
+
+        let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st, id| {
+                        cx.pressable_toggle_bool(open);
+                        trigger_id = Some(id);
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let dialog = Dialog::new(open)
+                    .overlay_closable(overlay_closable)
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let focusable = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(200.0));
+                                        layout.size.height = Length::Px(Px(44.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                |cx, _st, id| {
+                                    initial_focus_id_out.set(Some(id));
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            );
+
+                            let content = DialogContent::new(vec![focusable]).into_element(cx);
+                            content_id_out.set(Some(content.id));
+                            content
+                        },
+                    );
+
+                vec![dialog]
+            });
+
+        ui.set_root(root);
+        window_overlays::render(ui, app, services, window, bounds);
+        trigger_id.expect("trigger id")
+    }
+
+    fn apply_command_effects(ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices) {
+        let effects = app.flush_effects();
+        for effect in effects {
+            let Effect::Command { window: _, command } = effect else {
+                continue;
+            };
+            let _ = ui.dispatch_command(app, services, &command);
+        }
+    }
+
+    #[test]
+    fn dialog_overlay_click_closes_when_overlay_closable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        // First frame: render closed.
+        let trigger = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            true,
+            content_id.clone(),
+            Rc::new(Cell::new(None)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Open via trigger click.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get(open).copied(), Some(true));
+
+        // Second frame: render open + overlay.
+        let _ = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            true,
+            content_id.clone(),
+            Rc::new(Cell::new(None)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        assert!(content_id.get().is_some());
+
+        // Click inside content should not close.
+        let inside = Point::new(Px(400.0), Px(300.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: inside,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: inside,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get(open).copied(), Some(true));
+
+        // Click outside content should close via barrier.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(4.0), Px(4.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(4.0), Px(4.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get(open).copied(), Some(false));
+
+        let _ = trigger;
+    }
+
+    #[test]
+    fn dialog_overlay_click_does_not_close_when_not_overlay_closable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        // Render open.
+        let _ = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            false,
+            content_id.clone(),
+            Rc::new(Cell::new(None)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Click outside content should not close.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(4.0), Px(4.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(4.0), Px(4.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get(open).copied(), Some(true));
+    }
+
+    #[test]
+    fn dialog_escape_closes() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let _ = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            true,
+            content_id.clone(),
+            Rc::new(Cell::new(None)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Escape,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        assert_eq!(app.models().get(open).copied(), Some(false));
+    }
+
+    #[test]
+    fn dialog_focuses_first_focusable_on_open_and_restores_trigger_on_close() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let initial_focus_cell: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        // First frame: closed.
+        let trigger = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            true,
+            content_id.clone(),
+            initial_focus_cell.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Open via trigger click.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get(open).copied(), Some(true));
+
+        // Second frame: open.
+        let _ = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            true,
+            content_id.clone(),
+            initial_focus_cell.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let initial_focus_element_id = initial_focus_cell.get().expect("initial focus element id");
+        let initial_focus_node =
+            fret_ui::elements::node_for_element(&mut app, window, initial_focus_element_id)
+                .expect("initial focus node");
+        assert_eq!(ui.focus(), Some(initial_focus_node));
+
+        // Close via Escape and render one more frame to apply focus restore policy.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Escape,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert_eq!(app.models().get(open).copied(), Some(false));
+
+        let _ = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            true,
+            content_id.clone(),
+            initial_focus_cell.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+        assert_eq!(ui.focus(), Some(trigger_node));
+    }
+
+    #[test]
+    fn dialog_tab_traversal_wraps_within_modal_layer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let first_focusable_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let second_focusable_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        // Frame 1: closed.
+        let first_focusable_id_frame1 = first_focusable_id.clone();
+        let second_focusable_id_frame1 = second_focusable_id.clone();
+        window_overlays::begin_frame(&mut app, window);
+        let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let first_focusable_id = first_focusable_id_frame1.clone();
+                let second_focusable_id = second_focusable_id_frame1.clone();
+
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st, id| {
+                        cx.pressable_toggle_bool(open);
+                        trigger_id = Some(id);
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let dialog = Dialog::new(open).into_element(
+                    cx,
+                    |_cx| trigger,
+                    move |cx| {
+                        let first = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(200.0));
+                                    layout.size.height = Length::Px(Px(44.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st, id| {
+                                first_focusable_id.set(Some(id));
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        let second = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(200.0));
+                                    layout.size.height = Length::Px(Px(44.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st, id| {
+                                second_focusable_id.set(Some(id));
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        DialogContent::new(vec![first, second]).into_element(cx)
+                    },
+                );
+
+                vec![dialog]
+            },
+        );
+        ui.set_root(root);
+        window_overlays::render(&mut ui, &mut app, &mut services, window, bounds);
+        let trigger_element = trigger_id.expect("trigger id");
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Open via trigger click.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get(open).copied(), Some(true));
+
+        // Frame 2: open.
+        let first_focusable_id_frame2 = first_focusable_id.clone();
+        let second_focusable_id_frame2 = second_focusable_id.clone();
+        window_overlays::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let first_focusable_id = first_focusable_id_frame2.clone();
+                let second_focusable_id = second_focusable_id_frame2.clone();
+
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st, id| {
+                        let _ = id;
+                        cx.pressable_toggle_bool(open);
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let dialog = Dialog::new(open).into_element(
+                    cx,
+                    |_cx| trigger,
+                    move |cx| {
+                        let first = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(200.0));
+                                    layout.size.height = Length::Px(Px(44.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st, id| {
+                                first_focusable_id.set(Some(id));
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        let second = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(200.0));
+                                    layout.size.height = Length::Px(Px(44.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st, id| {
+                                second_focusable_id.set(Some(id));
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        DialogContent::new(vec![first, second]).into_element(cx)
+                    },
+                );
+                vec![dialog]
+            },
+        );
+        ui.set_root(root);
+        window_overlays::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let first_element_id = first_focusable_id
+            .get()
+            .expect("first focusable element id");
+        let second_element_id = second_focusable_id
+            .get()
+            .expect("second focusable element id");
+        let first_node =
+            fret_ui::elements::node_for_element(&mut app, window, first_element_id).expect("first");
+        let second_node = fret_ui::elements::node_for_element(&mut app, window, second_element_id)
+            .expect("second");
+
+        assert_eq!(ui.focus(), Some(first_node));
+
+        // Tab -> next
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::Tab,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        apply_command_effects(&mut ui, &mut app, &mut services);
+        assert_eq!(ui.focus(), Some(second_node));
+
+        // Tab -> wrap
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::Tab,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        apply_command_effects(&mut ui, &mut app, &mut services);
+        assert_eq!(ui.focus(), Some(first_node));
+
+        // Shift+Tab -> previous (wrap)
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::Tab,
+                modifiers: Modifiers {
+                    shift: true,
+                    ..Modifiers::default()
+                },
+                repeat: false,
+            },
+        );
+        apply_command_effects(&mut ui, &mut app, &mut services);
+        assert_eq!(ui.focus(), Some(second_node));
+
+        // Sanity: focus must never escape to the trigger while modal is open.
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger");
+        assert_ne!(ui.focus(), Some(trigger_node));
+    }
+}

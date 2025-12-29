@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space,
@@ -146,16 +147,33 @@ fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Button {
     label: Arc<str>,
     children: Vec<AnyElement>,
     command: Option<CommandId>,
+    toggle_model: Option<fret_runtime::Model<bool>>,
     disabled: bool,
     variant: ButtonVariant,
     size: ButtonSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+}
+
+impl std::fmt::Debug for Button {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Button")
+            .field("label", &self.label)
+            .field("children_len", &self.children.len())
+            .field("command", &self.command)
+            .field("toggle_model", &self.toggle_model.is_some())
+            .field("disabled", &self.disabled)
+            .field("variant", &self.variant)
+            .field("size", &self.size)
+            .field("chrome", &self.chrome)
+            .field("layout", &self.layout)
+            .finish()
+    }
 }
 
 impl Button {
@@ -165,6 +183,7 @@ impl Button {
             label,
             children: Vec::new(),
             command: None,
+            toggle_model: None,
             disabled: false,
             variant: ButtonVariant::default(),
             size: ButtonSize::default(),
@@ -180,6 +199,11 @@ impl Button {
 
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    pub fn toggle_model(mut self, model: fret_runtime::Model<bool>) -> Self {
+        self.toggle_model = Some(model);
         self
     }
 
@@ -243,6 +267,7 @@ impl Button {
             let pressable_layout = decl_style::layout_style(&theme, base_layout);
 
             let command = self.command;
+            let toggle_model = self.toggle_model;
             let a11y_label = self.label.clone();
             let disabled = self.disabled;
             let user_chrome = self.chrome;
@@ -259,17 +284,18 @@ impl Button {
                     enabled: !disabled,
                     focusable: true,
                     on_click: command,
-                    toggle_model: None,
-                    set_arc_str_model: None,
-                    set_option_arc_str_model: None,
-                    toggle_vec_arc_str_model: None,
                     focus_ring: Some(decl_style::focus_ring(&theme, radius)),
                     a11y: PressableA11y {
                         label: Some(a11y_label.clone()),
                         ..Default::default()
                     },
+                    ..Default::default()
                 },
                 move |cx, st| {
+                    if let Some(model) = toggle_model {
+                        cx.pressable_toggle_bool(model);
+                    }
+
                     let (mut bg, mut border_color, mut fg) = if st.pressed {
                         (bg_active, border_color, fg)
                     } else if st.hovered {
