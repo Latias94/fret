@@ -1518,6 +1518,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             let mut did_work = !effects.is_empty();
 
             for effect in effects {
+                #[allow(deprecated)]
                 match effect {
                     Effect::Redraw(window) => {
                         if let Some(state) = self.windows.get(window) {

@@ -218,7 +218,7 @@ app-owned dock graph and multi-root overlay model (ADR 0011):
     (tabs, splits, window merge/tear-off), the host must invalidate the dock host widget for `Layout` (ADR 0005),
     not only request a redraw. Otherwise hit-testing and panel content bounds may remain stale until another input
     incidentally triggers layout.
-  - Prefer a framework-level “notify” hook over demo-only commands: emit `Effect::UiInvalidateLayout { window }`
-    for each affected window, and have the runner/driver invalidate the dock host node’s layout for that window.
-    This matches the GPUI mental model where state changes call `notify()` and the window invalidator schedules
-    a layout/paint pass.
+  - Prefer model-driven invalidation (MVP 66) over runner-specific “notify” hooks: after applying an op that
+    changes geometry, bump a model that the dock host observes with `Invalidation::Layout`, then request a redraw.
+    This keeps the integration contract portable across hosts and avoids relying on the legacy
+    `Effect::UiInvalidateLayout { window }` escape hatch.
