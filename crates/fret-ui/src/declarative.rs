@@ -485,6 +485,9 @@ struct TaffyContainerCache {
     taffy: TaffyTree<Option<NodeId>>,
     root: TaffyNodeId,
     child_nodes: Vec<TaffyNodeId>,
+    node_by_child: HashMap<NodeId, TaffyNodeId>,
+    root_style: Option<TaffyStyle>,
+    child_styles: HashMap<NodeId, TaffyStyle>,
     measure_cache: std::collections::HashMap<TaffyMeasureKey, taffy::geometry::Size<f32>>,
 }
 
@@ -507,7 +510,7 @@ fn taffy_available_space_key(avail: TaffyAvailableSpace) -> (u8, u32) {
 
 impl Default for TaffyContainerCache {
     fn default() -> Self {
-        // Dummy root; replaced on first use.
+        // Root stays stable across frames; children are updated incrementally.
         let mut taffy: TaffyTree<Option<NodeId>> = TaffyTree::new();
         let root = taffy.new_leaf(TaffyStyle::default()).expect("taffy root");
         Self {
@@ -515,7 +518,84 @@ impl Default for TaffyContainerCache {
             taffy,
             root,
             child_nodes: Vec::new(),
+            node_by_child: HashMap::new(),
+            root_style: None,
+            child_styles: HashMap::new(),
             measure_cache: std::collections::HashMap::new(),
+        }
+    }
+}
+
+impl TaffyContainerCache {
+    fn sync_root_style(&mut self, root_style: TaffyStyle) {
+        if self.root_style.as_ref() == Some(&root_style) {
+            return;
+        }
+        self.taffy
+            .set_style(self.root, root_style.clone())
+            .expect("taffy root style");
+        self.root_style = Some(root_style);
+    }
+
+    fn sync_children(
+        &mut self,
+        children: &[NodeId],
+        mut style_for_child: impl FnMut(NodeId) -> TaffyStyle,
+    ) {
+        let children_changed = self.children != children;
+
+        if children_changed {
+            let keep: std::collections::HashSet<NodeId> = children.iter().copied().collect();
+            let removed: Vec<NodeId> = self
+                .node_by_child
+                .keys()
+                .copied()
+                .filter(|child| !keep.contains(child))
+                .collect();
+
+            for child in removed {
+                let Some(node) = self.node_by_child.remove(&child) else {
+                    continue;
+                };
+                self.child_styles.remove(&child);
+                self.taffy.remove(node).expect("taffy remove");
+            }
+
+            self.children = children.to_vec();
+        }
+
+        self.child_nodes.clear();
+        self.child_nodes.reserve(children.len());
+        for &child in children {
+            let node = if let Some(&node) = self.node_by_child.get(&child) {
+                node
+            } else {
+                let node = self
+                    .taffy
+                    .new_leaf_with_context(TaffyStyle::default(), Some(child))
+                    .expect("taffy leaf");
+                self.node_by_child.insert(child, node);
+                node
+            };
+            self.child_nodes.push(node);
+
+            let style = style_for_child(child);
+            let style_changed = self
+                .child_styles
+                .get(&child)
+                .map_or(true, |prev| prev != &style);
+            if style_changed {
+                self.taffy
+                    .set_style(node, style.clone())
+                    .expect("taffy child style");
+                self.child_styles.insert(child, style);
+            }
+        }
+
+        if children_changed {
+            self.taffy
+                .set_children(self.root, &self.child_nodes)
+                .expect("taffy set children");
         }
     }
 }
@@ -615,213 +695,126 @@ impl ElementHostWidget {
             .flex_cache
             .get_or_insert_with(TaffyContainerCache::default);
 
-        if cache.children != cx.children {
-            cache.children = cx.children.to_vec();
-            cache.taffy = TaffyTree::new();
-            cache.child_nodes.clear();
+        cache.sync_root_style(root_style);
+        cache.sync_children(cx.children, |child| {
+            let layout_style = layout_style_for_node(cx.app, window, child);
+            let spacer_min = element_record_for_node(cx.app, window, child).and_then(|r| {
+                if let ElementInstance::Spacer(p) = r.instance {
+                    Some(p.min)
+                } else {
+                    None
+                }
+            });
 
-            for &child in cx.children {
-                let layout_style = layout_style_for_node(cx.app, window, child);
-                let spacer_min = element_record_for_node(cx.app, window, child).and_then(|r| {
-                    if let ElementInstance::Spacer(p) = r.instance {
-                        Some(p.min)
-                    } else {
-                        None
+            let mut min_w = layout_style.size.min_width.map(|p| p.0);
+            let mut min_h = layout_style.size.min_height.map(|p| p.0);
+            if let Some(min) = spacer_min {
+                let min = min.0.max(0.0);
+                match props.direction {
+                    fret_core::Axis::Horizontal => {
+                        min_w = Some(min_w.unwrap_or(0.0).max(min));
                     }
-                });
-
-                let mut min_w = layout_style.size.min_width.map(|p| p.0);
-                let mut min_h = layout_style.size.min_height.map(|p| p.0);
-                if let Some(min) = spacer_min {
-                    let min = min.0.max(0.0);
-                    match props.direction {
-                        fret_core::Axis::Horizontal => {
-                            min_w = Some(min_w.unwrap_or(0.0).max(min));
-                        }
-                        fret_core::Axis::Vertical => {
-                            min_h = Some(min_h.unwrap_or(0.0).max(min));
-                        }
+                    fret_core::Axis::Vertical => {
+                        min_h = Some(min_h.unwrap_or(0.0).max(min));
                     }
                 }
-
-                let child_style = TaffyStyle {
-                    display: Display::Block,
-                    position: taffy_position(layout_style.position),
-                    inset: taffy_rect_lpa_from_inset(layout_style.position, layout_style.inset),
-                    size: TaffySize {
-                        width: taffy_dimension(layout_style.size.width),
-                        height: taffy_dimension(layout_style.size.height),
-                    },
-                    aspect_ratio: layout_style.aspect_ratio,
-                    min_size: TaffySize {
-                        width: min_w.map(Dimension::length).unwrap_or_else(Dimension::auto),
-                        height: min_h.map(Dimension::length).unwrap_or_else(Dimension::auto),
-                    },
-                    max_size: TaffySize {
-                        width: layout_style
-                            .size
-                            .max_width
-                            .map(|p| Dimension::length(p.0))
-                            .unwrap_or_else(Dimension::auto),
-                        height: layout_style
-                            .size
-                            .max_height
-                            .map(|p| Dimension::length(p.0))
-                            .unwrap_or_else(Dimension::auto),
-                    },
-                    margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
-                    flex_grow: layout_style.flex.grow.max(0.0),
-                    flex_shrink: layout_style.flex.shrink.max(0.0),
-                    flex_basis: taffy_dimension(layout_style.flex.basis),
-                    align_self: layout_style.flex.align_self.map(taffy_align_self),
-                    ..Default::default()
-                };
-
-                let node = cache
-                    .taffy
-                    .new_leaf_with_context(child_style, Some(child))
-                    .expect("taffy leaf");
-                cache.child_nodes.push(node);
             }
 
-            cache.root = if cache.child_nodes.is_empty() {
-                cache.taffy.new_leaf(root_style).expect("taffy root")
-            } else {
-                cache
-                    .taffy
-                    .new_with_children(root_style, &cache.child_nodes)
-                    .expect("taffy root")
-            };
-        } else {
-            cache
-                .taffy
-                .set_style(cache.root, root_style)
-                .expect("taffy root style");
-
-            for (i, &child) in cx.children.iter().enumerate() {
-                let layout_style = layout_style_for_node(cx.app, window, child);
-                let spacer_min = element_record_for_node(cx.app, window, child).and_then(|r| {
-                    if let ElementInstance::Spacer(p) = r.instance {
-                        Some(p.min)
-                    } else {
-                        None
-                    }
-                });
-
-                let mut min_w = layout_style.size.min_width.map(|p| p.0);
-                let mut min_h = layout_style.size.min_height.map(|p| p.0);
-                if let Some(min) = spacer_min {
-                    let min = min.0.max(0.0);
-                    match props.direction {
-                        fret_core::Axis::Horizontal => {
-                            min_w = Some(min_w.unwrap_or(0.0).max(min));
-                        }
-                        fret_core::Axis::Vertical => {
-                            min_h = Some(min_h.unwrap_or(0.0).max(min));
-                        }
-                    }
-                }
-
-                let child_style = TaffyStyle {
-                    display: Display::Block,
-                    position: taffy_position(layout_style.position),
-                    inset: taffy_rect_lpa_from_inset(layout_style.position, layout_style.inset),
-                    size: TaffySize {
-                        width: taffy_dimension(layout_style.size.width),
-                        height: taffy_dimension(layout_style.size.height),
-                    },
-                    aspect_ratio: layout_style.aspect_ratio,
-                    min_size: TaffySize {
-                        width: min_w.map(Dimension::length).unwrap_or_else(Dimension::auto),
-                        height: min_h.map(Dimension::length).unwrap_or_else(Dimension::auto),
-                    },
-                    max_size: TaffySize {
-                        width: layout_style
-                            .size
-                            .max_width
-                            .map(|p| Dimension::length(p.0))
-                            .unwrap_or_else(Dimension::auto),
-                        height: layout_style
-                            .size
-                            .max_height
-                            .map(|p| Dimension::length(p.0))
-                            .unwrap_or_else(Dimension::auto),
-                    },
-                    margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
-                    flex_grow: layout_style.flex.grow.max(0.0),
-                    flex_shrink: layout_style.flex.shrink.max(0.0),
-                    flex_basis: taffy_dimension(layout_style.flex.basis),
-                    align_self: layout_style.flex.align_self.map(taffy_align_self),
-                    ..Default::default()
-                };
-
-                let node = cache.child_nodes.get(i).copied().expect("taffy child");
-                cache
-                    .taffy
-                    .set_style(node, child_style)
-                    .expect("taffy child style");
+            TaffyStyle {
+                display: Display::Block,
+                position: taffy_position(layout_style.position),
+                inset: taffy_rect_lpa_from_inset(layout_style.position, layout_style.inset),
+                size: TaffySize {
+                    width: taffy_dimension(layout_style.size.width),
+                    height: taffy_dimension(layout_style.size.height),
+                },
+                aspect_ratio: layout_style.aspect_ratio,
+                min_size: TaffySize {
+                    width: min_w.map(Dimension::length).unwrap_or_else(Dimension::auto),
+                    height: min_h.map(Dimension::length).unwrap_or_else(Dimension::auto),
+                },
+                max_size: TaffySize {
+                    width: layout_style
+                        .size
+                        .max_width
+                        .map(|p| Dimension::length(p.0))
+                        .unwrap_or_else(Dimension::auto),
+                    height: layout_style
+                        .size
+                        .max_height
+                        .map(|p| Dimension::length(p.0))
+                        .unwrap_or_else(Dimension::auto),
+                },
+                margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
+                flex_grow: layout_style.flex.grow.max(0.0),
+                flex_shrink: layout_style.flex.shrink.max(0.0),
+                flex_basis: taffy_dimension(layout_style.flex.basis),
+                align_self: layout_style.flex.align_self.map(taffy_align_self),
+                ..Default::default()
             }
+        });
 
-            cache
-                .taffy
-                .mark_dirty(cache.root)
-                .expect("taffy mark dirty");
-        }
+        cache
+            .taffy
+            .mark_dirty(cache.root)
+            .expect("taffy mark dirty");
 
         cache.measure_cache.clear();
-        let measure_cache = &mut cache.measure_cache;
         let root = cache.root;
-        let child_nodes = cache.child_nodes.clone();
-        let taffy = &mut cache.taffy;
+        {
+            let measure_cache = &mut cache.measure_cache;
+            let taffy = &mut cache.taffy;
 
-        let available = taffy::geometry::Size {
-            width: TaffyAvailableSpace::Definite(inner_avail.width.0),
-            height: TaffyAvailableSpace::Definite(inner_avail.height.0),
-        };
+            let available = taffy::geometry::Size {
+                width: TaffyAvailableSpace::Definite(inner_avail.width.0),
+                height: TaffyAvailableSpace::Definite(inner_avail.height.0),
+            };
 
-        taffy
-            .compute_layout_with_measure(root, available, |known, avail, _id, ctx, _style| {
-                let Some(child) = ctx.and_then(|c| *c) else {
-                    return taffy::geometry::Size::default();
-                };
+            taffy
+                .compute_layout_with_measure(root, available, |known, avail, _id, ctx, _style| {
+                    let Some(child) = ctx.and_then(|c| *c) else {
+                        return taffy::geometry::Size::default();
+                    };
 
-                let key = TaffyMeasureKey {
-                    child,
-                    known_w: known.width.map(|v| v.to_bits()),
-                    known_h: known.height.map(|v| v.to_bits()),
-                    avail_w: taffy_available_space_key(avail.width),
-                    avail_h: taffy_available_space_key(avail.height),
-                };
-                if let Some(size) = measure_cache.get(&key) {
-                    return *size;
-                }
+                    let key = TaffyMeasureKey {
+                        child,
+                        known_w: known.width.map(|v| v.to_bits()),
+                        known_h: known.height.map(|v| v.to_bits()),
+                        avail_w: taffy_available_space_key(avail.width),
+                        avail_h: taffy_available_space_key(avail.height),
+                    };
+                    if let Some(size) = measure_cache.get(&key) {
+                        return *size;
+                    }
 
-                let max_w = match avail.width {
-                    TaffyAvailableSpace::Definite(w) => Px(w),
-                    _ => Px(1.0e9),
-                };
-                let max_h = match avail.height {
-                    TaffyAvailableSpace::Definite(h) => Px(h),
-                    _ => Px(1.0e9),
-                };
+                    let max_w = match avail.width {
+                        TaffyAvailableSpace::Definite(w) => Px(w),
+                        _ => Px(1.0e9),
+                    };
+                    let max_h = match avail.height {
+                        TaffyAvailableSpace::Definite(h) => Px(h),
+                        _ => Px(1.0e9),
+                    };
 
-                let known_w = known.width.map(Px);
-                let known_h = known.height.map(Px);
+                    let known_w = known.width.map(Px);
+                    let known_h = known.height.map(Px);
 
-                let w = known_w.unwrap_or(max_w);
-                let h = known_h.unwrap_or(max_h);
+                    let w = known_w.unwrap_or(max_w);
+                    let h = known_h.unwrap_or(max_h);
 
-                let probe = Rect::new(inner_origin, Size::new(w, h));
-                let s = cx.layout_in(child, probe);
-                let out = taffy::geometry::Size {
-                    width: s.width.0,
-                    height: s.height.0,
-                };
-                measure_cache.insert(key, out);
-                out
-            })
-            .expect("taffy compute");
+                    let probe = Rect::new(inner_origin, Size::new(w, h));
+                    let s = cx.layout_in(child, probe);
+                    let out = taffy::geometry::Size {
+                        width: s.width.0,
+                        height: s.height.0,
+                    };
+                    measure_cache.insert(key, out);
+                    out
+                })
+                .expect("taffy compute");
+        }
 
+        let taffy = &cache.taffy;
         let root_layout = taffy.layout(root).expect("taffy root layout");
         let container_inner_size = Size::new(
             Px(root_layout.size.width.max(0.0)),
@@ -838,7 +831,7 @@ impl ElementHostWidget {
             },
         );
 
-        for child_node in child_nodes {
+        for &child_node in &cache.child_nodes {
             let layout = taffy.layout(child_node).expect("taffy layout");
             let Some(child) = taffy.get_node_context(child_node).and_then(|c| *c) else {
                 continue;
@@ -1010,6 +1003,34 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         let Some(instance) = self.instance(cx.app, window, cx.node) else {
             return;
         };
+
+        if let Event::Timer { token } = event {
+            let hook = crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                self.element,
+                crate::action::TimerActionHooks::default,
+                |hooks| hooks.on_timer.clone(),
+            );
+
+            if let Some(h) = hook {
+                let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
+                let handled = h(
+                    &mut host,
+                    action::ActionCx {
+                        window,
+                        target: self.element,
+                    },
+                    *token,
+                );
+                if handled {
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+            }
+        }
 
         if let Event::KeyDown {
             key,
@@ -2396,229 +2417,132 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     .flex_cache
                     .get_or_insert_with(TaffyContainerCache::default);
 
-                if cache.children != cx.children {
-                    cache.children = cx.children.to_vec();
-                    cache.taffy = TaffyTree::new();
-                    cache.child_nodes.clear();
+                cache.sync_root_style(root_style);
+                cache.sync_children(cx.children, |child| {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    let spacer_min =
+                        element_record_for_node(cx.app, window, child).and_then(|r| {
+                            if let ElementInstance::Spacer(p) = r.instance {
+                                Some(p.min)
+                            } else {
+                                None
+                            }
+                        });
 
-                    for &child in cx.children {
-                        let layout_style = layout_style_for_node(cx.app, window, child);
-                        let spacer_min =
-                            element_record_for_node(cx.app, window, child).and_then(|r| {
-                                if let ElementInstance::Spacer(p) = r.instance {
-                                    Some(p.min)
-                                } else {
-                                    None
-                                }
-                            });
-
-                        let mut min_w = layout_style.size.min_width.map(|p| p.0);
-                        let mut min_h = layout_style.size.min_height.map(|p| p.0);
-                        if let Some(min) = spacer_min {
-                            let min = min.0.max(0.0);
-                            match props.direction {
-                                fret_core::Axis::Horizontal => {
-                                    min_w = Some(min_w.unwrap_or(0.0).max(min));
-                                }
-                                fret_core::Axis::Vertical => {
-                                    min_h = Some(min_h.unwrap_or(0.0).max(min));
-                                }
+                    let mut min_w = layout_style.size.min_width.map(|p| p.0);
+                    let mut min_h = layout_style.size.min_height.map(|p| p.0);
+                    if let Some(min) = spacer_min {
+                        let min = min.0.max(0.0);
+                        match props.direction {
+                            fret_core::Axis::Horizontal => {
+                                min_w = Some(min_w.unwrap_or(0.0).max(min));
+                            }
+                            fret_core::Axis::Vertical => {
+                                min_h = Some(min_h.unwrap_or(0.0).max(min));
                             }
                         }
-
-                        let child_style = TaffyStyle {
-                            display: Display::Block,
-                            position: taffy_position(layout_style.position),
-                            inset: taffy_rect_lpa_from_inset(
-                                layout_style.position,
-                                layout_style.inset,
-                            ),
-                            size: TaffySize {
-                                width: taffy_dimension(layout_style.size.width),
-                                height: taffy_dimension(layout_style.size.height),
-                            },
-                            aspect_ratio: layout_style.aspect_ratio,
-                            min_size: TaffySize {
-                                width: min_w.map(Dimension::length).unwrap_or_else(Dimension::auto),
-                                height: min_h
-                                    .map(Dimension::length)
-                                    .unwrap_or_else(Dimension::auto),
-                            },
-                            max_size: TaffySize {
-                                width: layout_style
-                                    .size
-                                    .max_width
-                                    .map(|p| Dimension::length(p.0))
-                                    .unwrap_or_else(Dimension::auto),
-                                height: layout_style
-                                    .size
-                                    .max_height
-                                    .map(|p| Dimension::length(p.0))
-                                    .unwrap_or_else(Dimension::auto),
-                            },
-                            margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
-                            flex_grow: layout_style.flex.grow.max(0.0),
-                            flex_shrink: layout_style.flex.shrink.max(0.0),
-                            flex_basis: taffy_dimension(layout_style.flex.basis),
-                            align_self: layout_style.flex.align_self.map(taffy_align_self),
-                            ..Default::default()
-                        };
-
-                        let id = cache
-                            .taffy
-                            .new_leaf_with_context(child_style, Some(child))
-                            .expect("taffy leaf");
-                        cache.child_nodes.push(id);
                     }
 
-                    cache.root = if cache.child_nodes.is_empty() {
-                        cache.taffy.new_leaf(root_style).expect("taffy root")
-                    } else {
-                        cache
-                            .taffy
-                            .new_with_children(root_style, &cache.child_nodes)
-                            .expect("taffy root")
-                    };
-                } else {
-                    cache
-                        .taffy
-                        .set_style(cache.root, root_style)
-                        .expect("taffy root style");
-
-                    for (i, &child) in cx.children.iter().enumerate() {
-                        let layout_style = layout_style_for_node(cx.app, window, child);
-                        let spacer_min =
-                            element_record_for_node(cx.app, window, child).and_then(|r| {
-                                if let ElementInstance::Spacer(p) = r.instance {
-                                    Some(p.min)
-                                } else {
-                                    None
-                                }
-                            });
-
-                        let mut min_w = layout_style.size.min_width.map(|p| p.0);
-                        let mut min_h = layout_style.size.min_height.map(|p| p.0);
-                        if let Some(min) = spacer_min {
-                            let min = min.0.max(0.0);
-                            match props.direction {
-                                fret_core::Axis::Horizontal => {
-                                    min_w = Some(min_w.unwrap_or(0.0).max(min));
-                                }
-                                fret_core::Axis::Vertical => {
-                                    min_h = Some(min_h.unwrap_or(0.0).max(min));
-                                }
-                            }
-                        }
-
-                        let child_style = TaffyStyle {
-                            display: Display::Block,
-                            position: taffy_position(layout_style.position),
-                            inset: taffy_rect_lpa_from_inset(
-                                layout_style.position,
-                                layout_style.inset,
-                            ),
-                            size: TaffySize {
-                                width: taffy_dimension(layout_style.size.width),
-                                height: taffy_dimension(layout_style.size.height),
-                            },
-                            aspect_ratio: layout_style.aspect_ratio,
-                            min_size: TaffySize {
-                                width: min_w.map(Dimension::length).unwrap_or_else(Dimension::auto),
-                                height: min_h
-                                    .map(Dimension::length)
-                                    .unwrap_or_else(Dimension::auto),
-                            },
-                            max_size: TaffySize {
-                                width: layout_style
-                                    .size
-                                    .max_width
-                                    .map(|p| Dimension::length(p.0))
-                                    .unwrap_or_else(Dimension::auto),
-                                height: layout_style
-                                    .size
-                                    .max_height
-                                    .map(|p| Dimension::length(p.0))
-                                    .unwrap_or_else(Dimension::auto),
-                            },
-                            margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
-                            flex_grow: layout_style.flex.grow.max(0.0),
-                            flex_shrink: layout_style.flex.shrink.max(0.0),
-                            flex_basis: taffy_dimension(layout_style.flex.basis),
-                            align_self: layout_style.flex.align_self.map(taffy_align_self),
-                            ..Default::default()
-                        };
-
-                        let node = cache.child_nodes.get(i).copied().expect("taffy child");
-                        cache
-                            .taffy
-                            .set_style(node, child_style)
-                            .expect("taffy child style");
+                    TaffyStyle {
+                        display: Display::Block,
+                        position: taffy_position(layout_style.position),
+                        inset: taffy_rect_lpa_from_inset(layout_style.position, layout_style.inset),
+                        size: TaffySize {
+                            width: taffy_dimension(layout_style.size.width),
+                            height: taffy_dimension(layout_style.size.height),
+                        },
+                        aspect_ratio: layout_style.aspect_ratio,
+                        min_size: TaffySize {
+                            width: min_w.map(Dimension::length).unwrap_or_else(Dimension::auto),
+                            height: min_h.map(Dimension::length).unwrap_or_else(Dimension::auto),
+                        },
+                        max_size: TaffySize {
+                            width: layout_style
+                                .size
+                                .max_width
+                                .map(|p| Dimension::length(p.0))
+                                .unwrap_or_else(Dimension::auto),
+                            height: layout_style
+                                .size
+                                .max_height
+                                .map(|p| Dimension::length(p.0))
+                                .unwrap_or_else(Dimension::auto),
+                        },
+                        margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
+                        flex_grow: layout_style.flex.grow.max(0.0),
+                        flex_shrink: layout_style.flex.shrink.max(0.0),
+                        flex_basis: taffy_dimension(layout_style.flex.basis),
+                        align_self: layout_style.flex.align_self.map(taffy_align_self),
+                        ..Default::default()
                     }
+                });
 
-                    cache
-                        .taffy
-                        .mark_dirty(cache.root)
-                        .expect("taffy mark dirty");
-                }
+                cache
+                    .taffy
+                    .mark_dirty(cache.root)
+                    .expect("taffy mark dirty");
 
                 cache.measure_cache.clear();
-                let measure_cache = &mut cache.measure_cache;
                 let root = cache.root;
-                let child_nodes = cache.child_nodes.clone();
-                let taffy = &mut cache.taffy;
 
-                let available = taffy::geometry::Size {
-                    width: TaffyAvailableSpace::Definite(inner_avail.width.0),
-                    height: TaffyAvailableSpace::Definite(inner_avail.height.0),
-                };
+                {
+                    let measure_cache = &mut cache.measure_cache;
+                    let taffy = &mut cache.taffy;
 
-                taffy
-                    .compute_layout_with_measure(
-                        root,
-                        available,
-                        |known, avail, _id, ctx, _style| {
-                            let Some(child) = ctx.and_then(|c| *c) else {
-                                return taffy::geometry::Size::default();
-                            };
+                    let available = taffy::geometry::Size {
+                        width: TaffyAvailableSpace::Definite(inner_avail.width.0),
+                        height: TaffyAvailableSpace::Definite(inner_avail.height.0),
+                    };
 
-                            let key = TaffyMeasureKey {
-                                child,
-                                known_w: known.width.map(|v| v.to_bits()),
-                                known_h: known.height.map(|v| v.to_bits()),
-                                avail_w: taffy_available_space_key(avail.width),
-                                avail_h: taffy_available_space_key(avail.height),
-                            };
-                            if let Some(size) = measure_cache.get(&key) {
-                                return *size;
-                            }
+                    taffy
+                        .compute_layout_with_measure(
+                            root,
+                            available,
+                            |known, avail, _id, ctx, _style| {
+                                let Some(child) = ctx.and_then(|c| *c) else {
+                                    return taffy::geometry::Size::default();
+                                };
 
-                            let max_w = match avail.width {
-                                TaffyAvailableSpace::Definite(w) => Px(w),
-                                _ => Px(1.0e9),
-                            };
-                            let max_h = match avail.height {
-                                TaffyAvailableSpace::Definite(h) => Px(h),
-                                _ => Px(1.0e9),
-                            };
+                                let key = TaffyMeasureKey {
+                                    child,
+                                    known_w: known.width.map(|v| v.to_bits()),
+                                    known_h: known.height.map(|v| v.to_bits()),
+                                    avail_w: taffy_available_space_key(avail.width),
+                                    avail_h: taffy_available_space_key(avail.height),
+                                };
+                                if let Some(size) = measure_cache.get(&key) {
+                                    return *size;
+                                }
 
-                            let known_w = known.width.map(Px);
-                            let known_h = known.height.map(Px);
+                                let max_w = match avail.width {
+                                    TaffyAvailableSpace::Definite(w) => Px(w),
+                                    _ => Px(1.0e9),
+                                };
+                                let max_h = match avail.height {
+                                    TaffyAvailableSpace::Definite(h) => Px(h),
+                                    _ => Px(1.0e9),
+                                };
 
-                            let w = known_w.unwrap_or(max_w);
-                            let h = known_h.unwrap_or(max_h);
+                                let known_w = known.width.map(Px);
+                                let known_h = known.height.map(Px);
 
-                            let probe = Rect::new(inner_origin, Size::new(w, h));
-                            let s = cx.layout_in(child, probe);
-                            let out = taffy::geometry::Size {
-                                width: s.width.0,
-                                height: s.height.0,
-                            };
-                            measure_cache.insert(key, out);
-                            out
-                        },
-                    )
-                    .expect("taffy compute");
+                                let w = known_w.unwrap_or(max_w);
+                                let h = known_h.unwrap_or(max_h);
 
+                                let probe = Rect::new(inner_origin, Size::new(w, h));
+                                let s = cx.layout_in(child, probe);
+                                let out = taffy::geometry::Size {
+                                    width: s.width.0,
+                                    height: s.height.0,
+                                };
+                                measure_cache.insert(key, out);
+                                out
+                            },
+                        )
+                        .expect("taffy compute");
+                }
+
+                let taffy = &cache.taffy;
                 let root_layout = taffy.layout(root).expect("taffy root layout");
                 let container_inner_size = Size::new(
                     Px(root_layout.size.width.max(0.0)),
@@ -2635,7 +2559,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     },
                 );
 
-                for child_node in child_nodes {
+                for &child_node in &cache.child_nodes {
                     let layout = taffy.layout(child_node).expect("taffy layout");
                     let Some(child) = taffy.get_node_context(child_node).and_then(|c| *c) else {
                         continue;
@@ -2838,194 +2762,118 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     .grid_cache
                     .get_or_insert_with(TaffyContainerCache::default);
 
-                if cache.children != cx.children {
-                    cache.children = cx.children.to_vec();
-                    cache.taffy = TaffyTree::new();
-                    cache.child_nodes.clear();
+                cache.sync_root_style(root_style);
+                cache.sync_children(cx.children, |child| {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
 
-                    for &child in cx.children {
-                        let layout_style = layout_style_for_node(cx.app, window, child);
-
-                        let child_style = TaffyStyle {
-                            display: Display::Block,
-                            position: taffy_position(layout_style.position),
-                            inset: taffy_rect_lpa_from_inset(
-                                layout_style.position,
-                                layout_style.inset,
-                            ),
-                            size: TaffySize {
-                                width: taffy_dimension(layout_style.size.width),
-                                height: taffy_dimension(layout_style.size.height),
-                            },
-                            aspect_ratio: layout_style.aspect_ratio,
-                            min_size: TaffySize {
-                                width: layout_style
-                                    .size
-                                    .min_width
-                                    .map(|p| Dimension::length(p.0))
-                                    .unwrap_or_else(Dimension::auto),
-                                height: layout_style
-                                    .size
-                                    .min_height
-                                    .map(|p| Dimension::length(p.0))
-                                    .unwrap_or_else(Dimension::auto),
-                            },
-                            max_size: TaffySize {
-                                width: layout_style
-                                    .size
-                                    .max_width
-                                    .map(|p| Dimension::length(p.0))
-                                    .unwrap_or_else(Dimension::auto),
-                                height: layout_style
-                                    .size
-                                    .max_height
-                                    .map(|p| Dimension::length(p.0))
-                                    .unwrap_or_else(Dimension::auto),
-                            },
-                            margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
-                            grid_column: taffy_grid_line(layout_style.grid.column),
-                            grid_row: taffy_grid_line(layout_style.grid.row),
-                            ..Default::default()
-                        };
-
-                        let id = cache
-                            .taffy
-                            .new_leaf_with_context(child_style, Some(child))
-                            .expect("taffy leaf");
-                        cache.child_nodes.push(id);
+                    TaffyStyle {
+                        display: Display::Block,
+                        position: taffy_position(layout_style.position),
+                        inset: taffy_rect_lpa_from_inset(layout_style.position, layout_style.inset),
+                        size: TaffySize {
+                            width: taffy_dimension(layout_style.size.width),
+                            height: taffy_dimension(layout_style.size.height),
+                        },
+                        aspect_ratio: layout_style.aspect_ratio,
+                        min_size: TaffySize {
+                            width: layout_style
+                                .size
+                                .min_width
+                                .map(|p| Dimension::length(p.0))
+                                .unwrap_or_else(Dimension::auto),
+                            height: layout_style
+                                .size
+                                .min_height
+                                .map(|p| Dimension::length(p.0))
+                                .unwrap_or_else(Dimension::auto),
+                        },
+                        max_size: TaffySize {
+                            width: layout_style
+                                .size
+                                .max_width
+                                .map(|p| Dimension::length(p.0))
+                                .unwrap_or_else(Dimension::auto),
+                            height: layout_style
+                                .size
+                                .max_height
+                                .map(|p| Dimension::length(p.0))
+                                .unwrap_or_else(Dimension::auto),
+                        },
+                        margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
+                        grid_column: taffy_grid_line(layout_style.grid.column),
+                        grid_row: taffy_grid_line(layout_style.grid.row),
+                        ..Default::default()
                     }
+                });
 
-                    cache.root = if cache.child_nodes.is_empty() {
-                        cache.taffy.new_leaf(root_style).expect("taffy root")
-                    } else {
-                        cache
-                            .taffy
-                            .new_with_children(root_style, &cache.child_nodes)
-                            .expect("taffy root")
-                    };
-                } else {
-                    cache
-                        .taffy
-                        .set_style(cache.root, root_style)
-                        .expect("taffy root style");
-
-                    for (i, &child) in cx.children.iter().enumerate() {
-                        let layout_style = layout_style_for_node(cx.app, window, child);
-
-                        let child_style = TaffyStyle {
-                            display: Display::Block,
-                            position: taffy_position(layout_style.position),
-                            inset: taffy_rect_lpa_from_inset(
-                                layout_style.position,
-                                layout_style.inset,
-                            ),
-                            size: TaffySize {
-                                width: taffy_dimension(layout_style.size.width),
-                                height: taffy_dimension(layout_style.size.height),
-                            },
-                            aspect_ratio: layout_style.aspect_ratio,
-                            min_size: TaffySize {
-                                width: layout_style
-                                    .size
-                                    .min_width
-                                    .map(|p| Dimension::length(p.0))
-                                    .unwrap_or_else(Dimension::auto),
-                                height: layout_style
-                                    .size
-                                    .min_height
-                                    .map(|p| Dimension::length(p.0))
-                                    .unwrap_or_else(Dimension::auto),
-                            },
-                            max_size: TaffySize {
-                                width: layout_style
-                                    .size
-                                    .max_width
-                                    .map(|p| Dimension::length(p.0))
-                                    .unwrap_or_else(Dimension::auto),
-                                height: layout_style
-                                    .size
-                                    .max_height
-                                    .map(|p| Dimension::length(p.0))
-                                    .unwrap_or_else(Dimension::auto),
-                            },
-                            margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
-                            grid_column: taffy_grid_line(layout_style.grid.column),
-                            grid_row: taffy_grid_line(layout_style.grid.row),
-                            ..Default::default()
-                        };
-
-                        let node = cache.child_nodes.get(i).copied().expect("taffy child");
-                        cache
-                            .taffy
-                            .set_style(node, child_style)
-                            .expect("taffy child style");
-                    }
-
-                    cache
-                        .taffy
-                        .mark_dirty(cache.root)
-                        .expect("taffy mark dirty");
-                }
+                cache
+                    .taffy
+                    .mark_dirty(cache.root)
+                    .expect("taffy mark dirty");
 
                 cache.measure_cache.clear();
-                let measure_cache = &mut cache.measure_cache;
                 let root = cache.root;
-                let child_nodes = cache.child_nodes.clone();
-                let taffy = &mut cache.taffy;
 
-                let available = taffy::geometry::Size {
-                    width: TaffyAvailableSpace::Definite(inner_avail.width.0),
-                    height: TaffyAvailableSpace::Definite(inner_avail.height.0),
-                };
+                {
+                    let measure_cache = &mut cache.measure_cache;
+                    let taffy = &mut cache.taffy;
 
-                taffy
-                    .compute_layout_with_measure(
-                        root,
-                        available,
-                        |known, avail, _id, ctx, _style| {
-                            let Some(child) = ctx.and_then(|c| *c) else {
-                                return taffy::geometry::Size::default();
-                            };
+                    let available = taffy::geometry::Size {
+                        width: TaffyAvailableSpace::Definite(inner_avail.width.0),
+                        height: TaffyAvailableSpace::Definite(inner_avail.height.0),
+                    };
 
-                            let key = TaffyMeasureKey {
-                                child,
-                                known_w: known.width.map(|v| v.to_bits()),
-                                known_h: known.height.map(|v| v.to_bits()),
-                                avail_w: taffy_available_space_key(avail.width),
-                                avail_h: taffy_available_space_key(avail.height),
-                            };
-                            if let Some(size) = measure_cache.get(&key) {
-                                return *size;
-                            }
+                    taffy
+                        .compute_layout_with_measure(
+                            root,
+                            available,
+                            |known, avail, _id, ctx, _style| {
+                                let Some(child) = ctx.and_then(|c| *c) else {
+                                    return taffy::geometry::Size::default();
+                                };
 
-                            let max_w = match avail.width {
-                                TaffyAvailableSpace::Definite(w) => Px(w),
-                                _ => Px(1.0e9),
-                            };
-                            let max_h = match avail.height {
-                                TaffyAvailableSpace::Definite(h) => Px(h),
-                                _ => Px(1.0e9),
-                            };
+                                let key = TaffyMeasureKey {
+                                    child,
+                                    known_w: known.width.map(|v| v.to_bits()),
+                                    known_h: known.height.map(|v| v.to_bits()),
+                                    avail_w: taffy_available_space_key(avail.width),
+                                    avail_h: taffy_available_space_key(avail.height),
+                                };
+                                if let Some(size) = measure_cache.get(&key) {
+                                    return *size;
+                                }
 
-                            let known_w = known.width.map(Px);
-                            let known_h = known.height.map(Px);
+                                let max_w = match avail.width {
+                                    TaffyAvailableSpace::Definite(w) => Px(w),
+                                    _ => Px(1.0e9),
+                                };
+                                let max_h = match avail.height {
+                                    TaffyAvailableSpace::Definite(h) => Px(h),
+                                    _ => Px(1.0e9),
+                                };
 
-                            let w = known_w.unwrap_or(max_w);
-                            let h = known_h.unwrap_or(max_h);
+                                let known_w = known.width.map(Px);
+                                let known_h = known.height.map(Px);
 
-                            let probe = Rect::new(inner_origin, Size::new(w, h));
-                            let s = cx.layout_in(child, probe);
-                            let out = taffy::geometry::Size {
-                                width: s.width.0,
-                                height: s.height.0,
-                            };
-                            measure_cache.insert(key, out);
-                            out
-                        },
-                    )
-                    .expect("taffy compute");
+                                let w = known_w.unwrap_or(max_w);
+                                let h = known_h.unwrap_or(max_h);
 
-                for child_node in child_nodes {
+                                let probe = Rect::new(inner_origin, Size::new(w, h));
+                                let s = cx.layout_in(child, probe);
+                                let out = taffy::geometry::Size {
+                                    width: s.width.0,
+                                    height: s.height.0,
+                                };
+                                measure_cache.insert(key, out);
+                                out
+                            },
+                        )
+                        .expect("taffy compute");
+                }
+
+                let taffy = &cache.taffy;
+
+                for &child_node in &cache.child_nodes {
                     let layout = taffy.layout(child_node).expect("taffy layout");
                     let Some(child) = taffy.get_node_context(child_node).and_then(|c| *c) else {
                         continue;

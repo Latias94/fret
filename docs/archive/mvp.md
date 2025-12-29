@@ -18,10 +18,9 @@ Maintain the next MVP items here as a small, high-signal queue. If a task change
 - MVP 49 (in progress): Make the declarative component authoring model (ADR 0028 + ADR 0039) the primary, end-to-end usable path (not just a state store): `IntoElement` + `Render`/`RenderOnce` + composition ergonomics, plus a clear `render_root(...)` contract (when it must be called, and what it guarantees).
 - MVP 50 (in progress): Consolidate virtualization around composable, declarative row content (GPUI-style). Runtime contract is now TanStack-aligned (ADR 0070); remaining work is migrating surfaces off fixed-schema runtime rows (`VirtualListRow { text/secondary/trailing... }`) and retiring the legacy path where feasible.
 - MVP 51 (in progress): Tighten the framework/components boundary by moving “standard surfaces” (popover/dialog/menu/tooltip/toast/command palette/menubar) fully into the components layer, keeping `fret-ui` as runtime substrate + performance primitives. `fret-components-ui` remains the reusable infrastructure, while `fret-components-shadcn` becomes the shadcn/ui (v4) aligned naming/taxonomy surface. Compatibility retained widgets stay behind `fret-ui`’s `retained-widgets` feature (`crates/fret-ui/src/primitives/*`) until removal.
-- MVP 68 (next): Eliminate remaining interaction policy leaks from `fret-ui` before scaling the component surface.
-  - Replace runtime “shortcut model writes” (pressable toggle/set variants) with component-owned handlers (ADR 0074).
-  - Move dismissal policy (Escape / outside press) fully to `fret-components-ui` overlay policy code (ADR 0067/0069/0074).
-  - Keep roving/typeahead/menu navigation policies in `fret-components-ui/headless` (MVP 64) rather than runtime props.
+- MVP 68 (done): Eliminate interaction policy leaks from `fret-ui` before scaling the component surface.
+  - Removed runtime “shortcut model writes” (pressable toggle/set variants, dismiss-by-model, roving/typeahead coupling) per ADR 0074.
+  - Components must express policy via action hooks + component-owned headless helpers (`fret-components-ui` / `fret-components-shadcn`).
 - MVP 69 (done): Docking layering cleanup (B route): move docking UI/policy out of `fret-ui`.
   - Keep dock graph/ops/persistence in `fret-core` (stable contract).
   - Add a generic internal-drag routing hook in `fret-ui` so docking can preserve tear-off/cross-window drags.
@@ -33,8 +32,8 @@ Maintain the next MVP items here as a small, high-signal queue. If a task change
   - Remove remaining "manual invalidate all panels" glue from demo/components once conformance is locked.
 - MVP 60 (done): Rounded clipping / `overflow-hidden` semantics (shadcn-critical).
   - Landed: `SceneOp::PushClipRRect` (ADR 0063) + renderer soft clipping (AA) + UI hit-test parity.
-- MVP 61 (next): Declarative layout performance hardening (Taffy integration).
-  - Avoid rebuilding a fresh Taffy tree per layout pass; cache and update nodes across frames and eliminate redundant `layout_in(...)` calls during measurement.
+- MVP 61 (done): Declarative layout performance hardening (Taffy integration).
+  - Landed: per-solve measure memoization + persistent container-owned Taffy trees (ADR 0076).
 - MVP 62 (next): Overlay behavior + placement contract (APG/Radix/Floating UI alignment).
   - Lock dismissal/focus/portal rules for popover/menu/tooltip/dialog/sheet (Radix-like outcomes; ADR 0067).
   - Lock modal-aware Tab traversal baseline (`focus.next`/`focus.previous`) to keep overlay focus policies consistent (ADR 0068).

@@ -1,6 +1,6 @@
 # ADR 0076: Declarative Layout Performance Hardening (Persistent Taffy Trees)
 
-Status: Accepted (direction; incremental rollout)
+Status: Accepted (incremental rollout; steps 1–3 implemented)
 
 ## Context
 
@@ -84,9 +84,9 @@ This keeps iteration speed acceptable while still running the rest of the worksp
 
 ## Rollout Plan
 
-1. Land dev profile override for Taffy.
-2. Land per-solve measure memoization in Flex/Grid.
-3. Refactor container caches to avoid rebuilding `TaffyTree` on child list changes:
+1. Land dev profile override for Taffy. (done)
+2. Land per-solve measure memoization in Flex/Grid. (done)
+3. Refactor container caches to avoid rebuilding `TaffyTree` on child list changes: (done)
    - introduce `HashMap<NodeId, TaffyNodeId>` mapping
    - update root children list incrementally
 4. Add profiling counters / debug stats to validate reductions in:
@@ -99,4 +99,3 @@ This keeps iteration speed acceptable while still running the rest of the worksp
 - ADR 0057: Declarative Layout Style and Flex Semantics
 - ADR 0042: Virtualization and Large Lists (no unbounded children in layout engines)
 - GPUI uses Taffy internally: `repo-ref/zed/crates/gpui/src/taffy.rs` (reference)
-

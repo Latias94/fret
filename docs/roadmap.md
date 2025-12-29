@@ -43,11 +43,9 @@ These items are intentionally scheduled early because they define “hard-to-cha
   - keep `fret-ui` as the runtime substrate (tree, routing, layers, docking, performance primitives),
   - move the “standard UI kit surfaces” (popover/dialog/menu/tooltip/toast/command palette/menubar) to the components layer (`fret-components-shadcn` surface built on `fret-components-ui`),
   - remove hard-coded control heights/spacing from runtime primitives (notably `TextInput`) so `Size` (ADR 0056) stays component-owned. (MVP 48; in progress: `TextInput` done; overlay surfaces moved)
-- P0: Eliminate remaining **interaction policy leaks** from `crates/fret-ui` so the runtime contract surface stays small and optimizable.
-  - Replace runtime “shortcut model writes” (pressable toggle/set variants, dismiss-by-model patterns) with component-owned policy/handlers (ADR 0074).
-  - Keep roving/typeahead/menu navigation policies in `crates/fret-components-ui/headless` (MVP 64), not in runtime element props.
-  - Feature-gate any remaining compatibility shortcuts in `fret-ui` so new components cannot accidentally depend on them.
-  - Treat this as a gating refactor before scaling shadcn parity work, to avoid repeated contract churn.
+- P0: Eliminate **interaction policy leaks** from `crates/fret-ui` so the runtime contract surface stays small and optimizable. (done; ADR 0074 / MVP 68)
+  - Removed runtime “shortcut model writes” (pressable toggle/set variants, dismiss-by-model patterns) and roving/typeahead coupling.
+  - Components must express policy via action hooks + component-owned headless helpers (`fret-components-ui` / `fret-components-shadcn`).
 - P0: Move **Docking UI** out of `crates/fret-ui` (policy-heavy, hard to optimize) into a dedicated component/app layer crate, while keeping runtime substrate clean.
   - Keep dock **data model + ops + persistence shapes** in `fret-core` (as stable contracts).
   - Keep `fret-ui` responsible only for **generic mechanisms** (event routing, drag routing hooks, overlay roots/layers, viewport embedding).
@@ -62,6 +60,7 @@ These items are intentionally scheduled early because they define “hard-to-cha
   - Contract shape locked (GPUI-aligned): one-shot `request_frame`, `request_animation_frame`, and refcounted RAII `begin_continuous_frames` leases (see ADR 0034).
 - P0: Adopt layout constraints + optional Flex/Grid integration boundary (ADR 0035).
 - P0: Fix declarative composable sizing semantics (fit-content by default, typed size constraints, and a Taffy-backed `Flex` container) so Tailwind/shadcn component composition is viable without per-widget layout hacks. (done; ADR 0057 / MVP 52)
+- P0: Harden declarative Flex/Grid layout performance (persistent Taffy trees + measure memoization). (done; ADR 0076 / MVP 61)
 - P0: Adopt Tailwind layout vocabulary as framework-level `LayoutStyle` semantics (margin, position/inset, grid, aspect ratio) so shadcn-style composition can express common patterns (badge overlays, input icons, simple grids) without bespoke per-widget layout hacks. (ADR 0062)
 - P0: Adopt rounded clipping / `overflow-hidden` semantics as a first-class renderer feature (ADR 0063), so shadcn-style surfaces (Popover/HoverCard/ScrollArea) do not rely on per-component “mask hacks”. (done; MVP 60)
 - P0: Adopt a “behavior reference stack” for component parity without DOM/CSS dependencies:
