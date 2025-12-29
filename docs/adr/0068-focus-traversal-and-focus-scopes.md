@@ -1,6 +1,6 @@
 # ADR 0068: Focus Traversal and Focus Scopes (Tab/Shift+Tab, Modal-Aware)
 
-Status: Proposed
+Status: Accepted
 
 ## Implementation Status (as of 2025-12-29)
 
@@ -9,27 +9,22 @@ The runtime traversal mechanism described here is **largely implemented** in `cr
 - Commands: `focus.next` / `focus.previous` are handled by `UiTree` (`crates/fret-ui/src/tree.rs`).
 - Modal-aware candidate gating: traversal only considers nodes in the **active input layers**
   (modal-barrier aware), and applies a conservative **visibility intersection** filter.
+- Cross-root ordering: active roots are iterated in **reverse paint order** (top → bottom), then a
+  deterministic pre-order traversal is used within each root.
 
 Current implementation entry points:
 
 - `UiTree::dispatch_focus_traversal(...)` and `UiTree::focus_traverse_in_roots(...)`
   (`crates/fret-ui/src/tree.rs`).
 
-Known gaps / mismatches vs this ADR:
+Known gaps / follow-ups:
 
-1) **Cross-root ordering**
-   - Decision: we iterate active roots in **reverse paint order** (top → bottom), then do a
-     deterministic pre-order traversal within each root.
-   - Rationale: focus traversal should stay within the user’s current interaction context, and
-     transient surfaces live “above” the underlay (popover/menu inside dialogs, etc.). Prioritizing
-     the topmost overlay matches Radix/shadcn outcomes in a multi-root world.
-
-2) **Focus scopes are not yet surfaced as a reusable component policy**
+1) **Focus scopes are not yet surfaced as a reusable component policy**
    - The runtime exposes a reusable mechanism (`focus_traverse_in_roots`) intended to be used by
      component-owned focus scopes, but `fret-components-ui` does not yet ship a headless
      `FocusScope` policy wrapper that can trap/restore/initial-focus like Radix.
 
-3) **No scroll-into-view contract**
+2) **No scroll-into-view contract**
    - The conservative “intersect scope bounds” filter is implemented, but we still do not have a
      stable `scroll-into-view` mechanism to make offscreen focus targets visible.
 

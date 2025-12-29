@@ -1,6 +1,14 @@
 # ADR 0074: Component-Owned Interaction Policy and Runtime Action Hooks
 
-Status: Proposed
+Status: Accepted
+
+## Implementation Status (as of 2025-12-29)
+
+The action-hook mechanism and its initial migrations are implemented:
+
+- Runtime provides `UiActionHost` + `ActionCx` and hook plumbing in `crates/fret-ui`.
+- Components use `fret-components-ui::declarative::action_hooks::ActionHooksExt` helpers.
+- Outside-press observer and dismissal are expressed via hooks (ADR 0069) instead of runtime model writes.
 
 ## Context
 
@@ -53,7 +61,7 @@ We standardize terminology so the boundary stays clear in code and docs:
   Enter/Space).
 - **Dismiss request**: a request to close an overlay, with an explicit reason.
 
-Proposed identifiers (used by MVP 68 work):
+Identifiers (locked):
 
 - Host surface for handlers: `UiActionHost`
 - Handler context type: `ActionCx`
@@ -119,13 +127,12 @@ Component code should implement these behaviors via action hooks (ADR 0074):
 
 ## Migration Plan (High-Level)
 
-1) Add action-hook substrate (Experimental) + tests in `fret-ui`.
-2) Implement component-layer helpers in `fret-components-ui`:
+1) Add action-hook substrate (Experimental) + tests in `fret-ui`. (done)
+2) Implement component-layer helpers in `fret-components-ui`: (done)
    - `pressable_toggle(...)`, `pressable_set(...)`, `dismissible(...)`, roving helpers.
-3) Migrate `fret-components-shadcn` usage off runtime shortcut props.
-4) Replace runtime `render_dismissible_root` policy with `fret-components-ui/window_overlays`
-   policy that composes runtime layers + outside-press observer.
-5) Deprecate and remove legacy shortcut props (Compatibility → removed) once no longer used.
+3) Migrate `fret-components-shadcn` usage off runtime shortcut props. (done)
+4) Replace runtime-owned dismissal policy with `fret-components-ui/window_overlays` policy that composes runtime layers + outside-press observer. (done)
+5) Deprecate and remove legacy shortcut props (Compatibility → removed) once no longer used. (done)
 
 ## References
 
