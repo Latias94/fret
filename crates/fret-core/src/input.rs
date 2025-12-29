@@ -350,6 +350,7 @@ pub enum InternalDragKind {
 pub struct InternalDragEvent {
     pub position: Point,
     pub kind: InternalDragKind,
+    pub modifiers: Modifiers,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -1323,6 +1323,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 },
                 fret_core::Event::InternalDrag(e) => {
                     let position = e.position;
+                    let invert_docking = e.modifiers.shift;
                     match e.kind {
                         fret_core::InternalDragKind::Enter | fret_core::InternalDragKind::Over => {
                             if let Some(drag) = dock_drag.as_ref() {
@@ -1377,7 +1378,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     }
 
                                     if !requested_tear_off {
-                                        if !window_bounds.contains(position)
+                                        if invert_docking {
+                                            dock.hover = Some(DockDropTarget::Float {
+                                                window: self.window,
+                                            });
+                                        } else if !window_bounds.contains(position)
                                             || float_zone(dock_bounds).contains(position)
                                         {
                                             dock.hover = Some(DockDropTarget::Float {
@@ -1473,6 +1478,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         }
                                     }
 
+                                    if invert_docking {
+                                        dock.hover = Some(DockDropTarget::Float {
+                                            window: self.window,
+                                        });
+                                    }
+
                                     match dock.hover.clone() {
                                         Some(DockDropTarget::Dock(target)) => {
                                             pending_effects.push(Effect::Dock(DockOp::MovePanel {
@@ -1486,7 +1497,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             invalidate_layout = true;
                                         }
                                         Some(DockDropTarget::Float { .. }) => {
-                                            if allow_tear_off {
+                                            let wants_tear_off = allow_tear_off
+                                                && (!window_bounds.contains(position)
+                                                    || float_zone(dock_bounds).contains(position));
+                                            if wants_tear_off {
                                                 pending_effects.push(Effect::Dock(
                                                     DockOp::RequestFloatPanelToNewWindow {
                                                         source_window: drag.source_window,

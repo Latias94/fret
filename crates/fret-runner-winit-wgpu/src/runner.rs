@@ -2023,7 +2023,11 @@ impl<D: WinitDriver> WinitRunner<D> {
             services,
             window,
             &mut state.user,
-            &Event::InternalDrag(InternalDragEvent { position, kind }),
+            &Event::InternalDrag(InternalDragEvent {
+                position,
+                kind,
+                modifiers: self.modifiers,
+            }),
         );
     }
 

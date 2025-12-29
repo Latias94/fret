@@ -295,6 +295,7 @@ fn dock_space_clears_hover_on_drop_without_drag_session() {
         &Event::InternalDrag(InternalDragEvent {
             position: Point::new(Px(12.0), Px(12.0)),
             kind: InternalDragKind::Drop,
+            modifiers: Modifiers::default(),
         }),
     );
 
@@ -412,6 +413,7 @@ fn dock_tab_drop_outside_window_requests_float() {
         &Event::InternalDrag(InternalDragEvent {
             position: Point::new(Px(-32.0), Px(12.0)),
             kind: InternalDragKind::Drop,
+            modifiers: Modifiers::default(),
         }),
     );
 
@@ -479,6 +481,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_tear_off_disabled() {
         &Event::InternalDrag(InternalDragEvent {
             position: Point::new(Px(-32.0), Px(12.0)),
             kind: InternalDragKind::Drop,
+            modifiers: Modifiers::default(),
         }),
     );
 
@@ -547,6 +550,7 @@ fn dock_tab_drop_outside_routes_to_dock_space() {
         &Event::InternalDrag(InternalDragEvent {
             position: Point::new(Px(-32.0), Px(12.0)),
             kind: InternalDragKind::Drop,
+            modifiers: Modifiers::default(),
         }),
     );
 
