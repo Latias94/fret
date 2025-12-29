@@ -63,6 +63,24 @@ When a `PointerEvent::Down` occurs and there is no pointer capture, the runtime 
 This is the minimal contract needed to express Radix-like dismissal behavior without adding a
 matrix of per-component runtime toggles.
 
+### Presence and close transitions (click-through correctness)
+
+Non-modal overlays commonly animate out (opacity / scale / slide) while remaining mounted.
+
+During this close transition window, the overlay may be:
+
+- `present = true` (still painted), and
+- `open = false` (no longer interactive; close has been requested).
+
+To preserve the “outside press is click-through” guarantee:
+
+- A non-modal overlay that is `present=true` but `open=false` must be **pointer-transparent**.
+  - It must not become the hit-tested target.
+  - It must not receive pointer-down-outside observer events (because it is no longer dismissable).
+
+This ensures underlay widgets can be clicked immediately while a fading surface finishes its out
+transition.
+
 ### Focus restoration
 
 When a non-modal overlay is closed due to click-through outside press, focus may already move to a

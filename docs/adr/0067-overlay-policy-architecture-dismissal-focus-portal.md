@@ -127,6 +127,20 @@ Presence is component-owned:
 - Components may keep an overlay mounted while animating out, but must keep dismissal/focus
   semantics correct during the transition window.
 
+Recommended contract surface for policy-owned presence:
+
+- Treat `open` (user intent) and `present` (mounted-in-tree) as separate signals.
+  - `open` drives interactive behavior (focus, dismissal, pointer affordances).
+  - `present` drives whether the overlay root exists and is painted at all.
+- Initial focus is applied on the **opening edge** (`open: false → true`), not on every frame.
+- Focus restoration should occur when the overlay is **unmounted** (`present: true → false`), so a
+  close animation can complete without prematurely moving focus.
+- Pointer routing during the out-transition depends on modality:
+  - Non-modal overlays should become pointer-transparent while `open=false` but `present=true`
+    (click-through should remain click-through).
+  - Modal overlays must continue to block underlay input while `present=true`, even if `open=false`
+    (the barrier remains authoritative for the duration of the out-transition).
+
 ### 3) Modal barrier pattern (recommended structure)
 
 To align with Flutter/WPF-style modal barriers and Radix outcomes:

@@ -99,6 +99,7 @@ struct ActivePopover {
     root_name: String,
     trigger: GlobalElementId,
     initial_focus: Option<GlobalElementId>,
+    open: bool,
     restore_focus: Option<NodeId>,
 }
 
@@ -107,6 +108,7 @@ struct ActiveModal {
     root_name: String,
     trigger: Option<GlobalElementId>,
     initial_focus: Option<GlobalElementId>,
+    open: bool,
     restore_focus: Option<NodeId>,
 }
 
@@ -533,6 +535,8 @@ pub fn render<H: UiHost>(
         }
         seen_modals.insert(req.id);
 
+        let open_now = app.models().get(req.open).copied().unwrap_or(false);
+
         let root = declarative::render_dismissible_root_with_hooks(
             ui,
             app,
@@ -564,6 +568,7 @@ pub fn render<H: UiHost>(
                     root_name: req.root_name.clone(),
                     trigger: req.trigger,
                     initial_focus: req.initial_focus,
+                    open: false,
                     restore_focus: None,
                 }
             });
@@ -571,18 +576,20 @@ pub fn render<H: UiHost>(
             entry.trigger = req.trigger;
             entry.initial_focus = req.initial_focus;
 
-            // `push_overlay_root_ex` initializes layers as visible; treat freshly created layers as
-            // "not previously visible" so initial focus can be applied.
-            let was_visible = if created {
-                false
-            } else {
-                ui.is_layer_visible(entry.layer)
-            };
             ui.set_layer_visible(entry.layer, true);
-            should_focus_initial = !was_visible;
-            if should_focus_initial {
+            // For modal overlays, `present` is the authority for whether the barrier is active.
+            //
+            // During a close animation we may keep the modal mounted (`present=true`) while
+            // `open=false`. The barrier must continue to block underlay input for the full
+            // duration of the out transition.
+            ui.set_layer_hit_testable(entry.layer, true);
+
+            let opening = open_now && (!entry.open || created);
+            if opening {
+                should_focus_initial = true;
                 entry.restore_focus = restore_focus;
             }
+            entry.open = open_now;
         });
 
         if should_focus_initial {
@@ -615,6 +622,8 @@ pub fn render<H: UiHost>(
         }
         seen_popovers.insert(req.id);
 
+        let open_now = app.models().get(req.open).copied().unwrap_or(false);
+
         let root = declarative::render_dismissible_root_with_hooks(
             ui,
             app,
@@ -646,6 +655,7 @@ pub fn render<H: UiHost>(
                     root_name: req.root_name.clone(),
                     trigger: req.trigger,
                     initial_focus: req.initial_focus,
+                    open: false,
                     restore_focus: None,
                 }
             });
@@ -654,18 +664,15 @@ pub fn render<H: UiHost>(
             entry.initial_focus = req.initial_focus;
             ui.set_layer_wants_pointer_down_outside_events(entry.layer, true);
 
-            // `push_overlay_root_ex` initializes layers as visible; treat freshly created layers as
-            // "not previously visible" so initial focus can be applied.
-            let was_visible = if created {
-                false
-            } else {
-                ui.is_layer_visible(entry.layer)
-            };
             ui.set_layer_visible(entry.layer, true);
-            should_focus_initial = !was_visible;
-            if should_focus_initial {
+            ui.set_layer_hit_testable(entry.layer, open_now);
+
+            let opening = open_now && (!entry.open || created);
+            if opening {
+                should_focus_initial = true;
                 entry.restore_focus = restore_focus;
             }
+            entry.open = open_now;
         });
 
         if should_focus_initial {
@@ -1511,5 +1518,230 @@ mod tests {
             },
         );
         assert_eq!(app.models().get(open).copied(), Some(false));
+    }
+
+    #[test]
+    fn modal_can_remain_present_while_still_blocking_underlay_during_close_animation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_clicked = app.models_mut().insert(false);
+        let overlay_clicked = app.models_mut().insert(false);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(300.0), Px(200.0)),
+        );
+
+        // Base layer contains a full-size pressable we expect NOT to receive the click.
+        begin_frame(&mut app, window);
+        let base = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "base",
+            |cx| {
+                vec![cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st| {
+                        cx.pressable_toggle_bool(underlay_clicked);
+                        vec![]
+                    },
+                )]
+            },
+        );
+        ui.set_root(base);
+
+        // Install a modal layer that is still `present` but `open=false` (closing animation).
+        begin_frame(&mut app, window);
+        let modal_id = GlobalElementId(0xbeef);
+        let modal_children =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-child", |cx| {
+                vec![cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: false,
+                        on_click: None,
+                        ..Default::default()
+                    },
+                    |cx, _st| {
+                        cx.pressable_toggle_bool(overlay_clicked);
+                        vec![]
+                    },
+                )]
+            });
+        request_modal_for_window(
+            &mut app,
+            window,
+            ModalRequest {
+                id: modal_id,
+                root_name: modal_root_name(modal_id),
+                trigger: None,
+                open,
+                present: true,
+                initial_focus: None,
+                children: modal_children,
+            },
+        );
+
+        render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get(underlay_clicked).copied(), Some(false));
+        assert_eq!(app.models().get(overlay_clicked).copied(), Some(true));
+    }
+
+    #[test]
+    fn non_modal_overlay_can_remain_present_while_pointer_transparent_during_close_animation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_clicked = app.models_mut().insert(false);
+        let overlay_clicked = app.models_mut().insert(false);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(300.0), Px(200.0)),
+        );
+
+        // Base layer contains a full-size pressable we expect to receive the click.
+        begin_frame(&mut app, window);
+        let base = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "base",
+            |cx| {
+                vec![cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st| {
+                        cx.pressable_toggle_bool(underlay_clicked);
+                        vec![]
+                    },
+                )]
+            },
+        );
+        ui.set_root(base);
+
+        // Install a non-modal layer that is still `present` but `open=false` (closing animation).
+        begin_frame(&mut app, window);
+        let trigger = GlobalElementId(0xdead);
+        let overlay_children =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "popover-child", |cx| {
+                vec![cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: false,
+                        on_click: None,
+                        ..Default::default()
+                    },
+                    |cx, _st| {
+                        cx.pressable_toggle_bool(overlay_clicked);
+                        vec![]
+                    },
+                )]
+            });
+
+        request_dismissible_popover_for_window(
+            &mut app,
+            window,
+            DismissiblePopoverRequest {
+                id: trigger,
+                root_name: popover_root_name(trigger),
+                trigger,
+                open,
+                present: true,
+                initial_focus: None,
+                children: overlay_children,
+            },
+        );
+
+        render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get(underlay_clicked).copied(), Some(true));
+        assert_eq!(app.models().get(overlay_clicked).copied(), Some(false));
     }
 }
