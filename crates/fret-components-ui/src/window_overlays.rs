@@ -5,12 +5,14 @@
 
 use fret_core::{AppWindowId, Rect};
 use fret_runtime::Model;
+use fret_ui::action::DismissReason;
 use fret_ui::declarative;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::tree::UiLayerId;
 use fret_ui::{ElementCx, UiHost, UiTree};
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct DismissiblePopoverRequest {
@@ -35,10 +37,55 @@ impl std::fmt::Debug for DismissiblePopoverRequest {
     }
 }
 
+#[derive(Clone)]
+pub struct ModalRequest {
+    pub id: GlobalElementId,
+    pub root_name: String,
+    pub trigger: Option<GlobalElementId>,
+    pub open: Model<bool>,
+    pub initial_focus: Option<GlobalElementId>,
+    pub children: Vec<AnyElement>,
+}
+
+impl std::fmt::Debug for ModalRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ModalRequest")
+            .field("id", &self.id)
+            .field("root_name", &self.root_name)
+            .field("trigger", &self.trigger)
+            .field("open", &"<model>")
+            .field("initial_focus", &self.initial_focus)
+            .field("children_len", &self.children.len())
+            .finish()
+    }
+}
+
+#[derive(Clone)]
+pub struct HoverOverlayRequest {
+    pub id: GlobalElementId,
+    pub root_name: String,
+    pub trigger: GlobalElementId,
+    pub children: Vec<AnyElement>,
+}
+
+impl std::fmt::Debug for HoverOverlayRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HoverOverlayRequest")
+            .field("id", &self.id)
+            .field("root_name", &self.root_name)
+            .field("trigger", &self.trigger)
+            .field("children_len", &self.children.len())
+            .finish()
+    }
+}
+
 #[derive(Default)]
 struct WindowOverlayFrame {
     frame_id: fret_core::FrameId,
     popovers: Vec<DismissiblePopoverRequest>,
+    modals: Vec<ModalRequest>,
+    hover_overlays: Vec<HoverOverlayRequest>,
+    tooltips: Vec<TooltipRequest>,
 }
 
 struct ActivePopover {
@@ -48,10 +95,31 @@ struct ActivePopover {
     initial_focus: Option<GlobalElementId>,
 }
 
+struct ActiveModal {
+    layer: UiLayerId,
+    root_name: String,
+    trigger: Option<GlobalElementId>,
+    initial_focus: Option<GlobalElementId>,
+}
+
+struct ActiveTooltip {
+    layer: UiLayerId,
+    root_name: String,
+}
+
+struct ActiveHoverOverlay {
+    layer: UiLayerId,
+    root_name: String,
+    trigger: GlobalElementId,
+}
+
 #[derive(Default)]
 struct WindowOverlays {
     windows: HashMap<AppWindowId, WindowOverlayFrame>,
     popovers: HashMap<(AppWindowId, GlobalElementId), ActivePopover>,
+    modals: HashMap<(AppWindowId, GlobalElementId), ActiveModal>,
+    hover_overlays: HashMap<(AppWindowId, GlobalElementId), ActiveHoverOverlay>,
+    tooltips: HashMap<(AppWindowId, GlobalElementId), ActiveTooltip>,
 }
 
 pub fn begin_frame<H: UiHost>(app: &mut H, window: AppWindowId) {
@@ -61,6 +129,9 @@ pub fn begin_frame<H: UiHost>(app: &mut H, window: AppWindowId) {
         if w.frame_id != frame_id {
             w.frame_id = frame_id;
             w.popovers.clear();
+            w.modals.clear();
+            w.hover_overlays.clear();
+            w.tooltips.clear();
         }
     });
 }
@@ -83,6 +154,58 @@ pub fn request_dismissible_popover_for_window<H: UiHost>(
     });
 }
 
+pub fn request_modal<H: UiHost>(cx: &mut ElementCx<'_, H>, request: ModalRequest) {
+    request_modal_for_window(cx.app, cx.window, request);
+}
+
+pub fn request_modal_for_window<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    request: ModalRequest,
+) {
+    app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        let w = overlays.windows.entry(window).or_default();
+        w.modals.push(request);
+    });
+}
+
+pub fn request_hover_overlay<H: UiHost>(cx: &mut ElementCx<'_, H>, request: HoverOverlayRequest) {
+    request_hover_overlay_for_window(cx.app, cx.window, request);
+}
+
+pub fn request_hover_overlay_for_window<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    request: HoverOverlayRequest,
+) {
+    app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        let w = overlays.windows.entry(window).or_default();
+        w.hover_overlays.push(request);
+    });
+}
+
+#[derive(Debug, Clone)]
+pub struct TooltipRequest {
+    pub id: GlobalElementId,
+    pub root_name: String,
+    pub children: Vec<AnyElement>,
+}
+
+pub fn request_tooltip<H: UiHost>(cx: &mut ElementCx<'_, H>, request: TooltipRequest) {
+    request_tooltip_for_window(cx.app, cx.window, request);
+}
+
+pub fn request_tooltip_for_window<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    request: TooltipRequest,
+) {
+    app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        let w = overlays.windows.entry(window).or_default();
+        w.tooltips.push(request);
+    });
+}
+
 pub fn render<H: UiHost>(
     ui: &mut UiTree<H>,
     app: &mut H,
@@ -90,49 +213,141 @@ pub fn render<H: UiHost>(
     window: AppWindowId,
     bounds: Rect,
 ) {
-    let requests = app.with_global_mut(WindowOverlays::default, |overlays, _app| {
-        overlays
-            .windows
-            .get_mut(&window)
-            .map(|w| std::mem::take(&mut w.popovers))
-            .unwrap_or_default()
-    });
+    let (modal_requests, popover_requests, hover_overlay_requests, tooltip_requests) = app
+        .with_global_mut(WindowOverlays::default, |overlays, _app| {
+            overlays
+                .windows
+                .get_mut(&window)
+                .map(|w| {
+                    (
+                        std::mem::take(&mut w.modals),
+                        std::mem::take(&mut w.popovers),
+                        std::mem::take(&mut w.hover_overlays),
+                        std::mem::take(&mut w.tooltips),
+                    )
+                })
+                .unwrap_or_default()
+        });
 
-    let mut seen: HashSet<GlobalElementId> = HashSet::new();
+    let mut seen_modals: HashSet<GlobalElementId> = HashSet::new();
+    let mut seen_popovers: HashSet<GlobalElementId> = HashSet::new();
+    let mut seen_hover_overlays: HashSet<GlobalElementId> = HashSet::new();
+    let mut seen_tooltips: HashSet<GlobalElementId> = HashSet::new();
 
-    for req in requests {
-        seen.insert(req.id);
+    for req in modal_requests {
+        seen_modals.insert(req.id);
 
-        let root = declarative::render_dismissible_root(
+        let root = declarative::render_dismissible_root_with_hooks(
             ui,
             app,
             services,
             window,
             bounds,
             &req.root_name,
-            req.open,
-            |_cx| req.children,
+            |cx| {
+                let open = req.open;
+                cx.dismissible_on_dismiss_request(Arc::new(
+                    move |host, _cx, _reason: DismissReason| {
+                        let _ = host.models_mut().update(open, |v| *v = false);
+                    },
+                ));
+                req.children
+            },
         );
 
         let key = (window, req.id);
 
         let mut should_focus_initial = false;
         app.with_global_mut(WindowOverlays::default, |overlays, _app| {
-            let entry = overlays
-                .popovers
-                .entry(key)
-                .or_insert_with(|| ActivePopover {
+            let mut created = false;
+            let entry = overlays.modals.entry(key).or_insert_with(|| {
+                created = true;
+                ActiveModal {
+                    layer: ui.push_overlay_root_ex(root, true, true),
+                    root_name: req.root_name.clone(),
+                    trigger: req.trigger,
+                    initial_focus: req.initial_focus,
+                }
+            });
+            entry.root_name = req.root_name.clone();
+            entry.trigger = req.trigger;
+            entry.initial_focus = req.initial_focus;
+
+            // `push_overlay_root_ex` initializes layers as visible; treat freshly created layers as
+            // "not previously visible" so initial focus can be applied.
+            let was_visible = if created {
+                false
+            } else {
+                ui.is_layer_visible(entry.layer)
+            };
+            ui.set_layer_visible(entry.layer, true);
+            should_focus_initial = !was_visible;
+        });
+
+        if should_focus_initial {
+            let focus = app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+                overlays.modals.get(&key).and_then(|p| p.initial_focus)
+            });
+
+            if let Some(focus) = focus
+                && let Some(node) = fret_ui::elements::node_for_element(app, window, focus)
+            {
+                ui.set_focus(Some(node));
+            } else if let Some(node) =
+                ui.first_focusable_descendant_including_declarative(app, window, root)
+            {
+                ui.set_focus(Some(node));
+            }
+        }
+    }
+
+    for req in popover_requests {
+        seen_popovers.insert(req.id);
+
+        let root = declarative::render_dismissible_root_with_hooks(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            &req.root_name,
+            |cx| {
+                let open = req.open;
+                cx.dismissible_on_dismiss_request(Arc::new(
+                    move |host, _cx, _reason: DismissReason| {
+                        let _ = host.models_mut().update(open, |v| *v = false);
+                    },
+                ));
+                req.children
+            },
+        );
+
+        let key = (window, req.id);
+
+        let mut should_focus_initial = false;
+        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+            let mut created = false;
+            let entry = overlays.popovers.entry(key).or_insert_with(|| {
+                created = true;
+                ActivePopover {
                     layer: ui.push_overlay_root_ex(root, false, true),
                     root_name: req.root_name.clone(),
                     trigger: req.trigger,
                     initial_focus: req.initial_focus,
-                });
+                }
+            });
             entry.root_name = req.root_name.clone();
             entry.trigger = req.trigger;
             entry.initial_focus = req.initial_focus;
             ui.set_layer_wants_pointer_down_outside_events(entry.layer, true);
 
-            let was_visible = ui.is_layer_visible(entry.layer);
+            // `push_overlay_root_ex` initializes layers as visible; treat freshly created layers as
+            // "not previously visible" so initial focus can be applied.
+            let was_visible = if created {
+                false
+            } else {
+                ui.is_layer_visible(entry.layer)
+            };
             ui.set_layer_visible(entry.layer, true);
             should_focus_initial = !was_visible;
         });
@@ -146,19 +361,33 @@ pub fn render<H: UiHost>(
                 && let Some(node) = fret_ui::elements::node_for_element(app, window, focus)
             {
                 ui.set_focus(Some(node));
-            } else if let Some(node) = ui.first_focusable_descendant(root) {
+            } else if let Some(node) =
+                ui.first_focusable_descendant_including_declarative(app, window, root)
+            {
                 ui.set_focus(Some(node));
             }
         }
     }
 
-    let to_hide: Vec<(UiLayerId, GlobalElementId)> =
+    let to_hide_popovers: Vec<(UiLayerId, GlobalElementId)> =
+        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+            let mut out: Vec<(UiLayerId, GlobalElementId)> = Vec::new();
+            for ((w, id), active) in overlays.popovers.iter() {
+                if *w != window || seen_popovers.contains(id) {
+                    continue;
+                }
+                out.push((active.layer, active.trigger));
+            }
+            out
+        });
+
+    let to_hide_modals: Vec<(UiLayerId, Option<GlobalElementId>)> =
         app.with_global_mut(WindowOverlays::default, |overlays, _app| {
             overlays
-                .popovers
+                .modals
                 .iter()
                 .filter_map(|((w, id), active)| {
-                    if *w != window || seen.contains(id) {
+                    if *w != window || seen_modals.contains(id) {
                         return None;
                     }
                     Some((active.layer, active.trigger))
@@ -166,7 +395,7 @@ pub fn render<H: UiHost>(
                 .collect()
         });
 
-    for (layer, trigger) in to_hide {
+    for (layer, trigger) in to_hide_popovers {
         let focus = ui.focus();
         if focus.is_some_and(|n| ui.node_layer(n) == Some(layer))
             && let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger)
@@ -177,22 +406,150 @@ pub fn render<H: UiHost>(
             ui.set_layer_visible(layer, false);
         }
     }
+
+    for (layer, trigger) in to_hide_modals {
+        let focus = ui.focus();
+        let focus_in_layer = focus.is_some_and(|n| ui.node_layer(n) == Some(layer));
+
+        if (focus.is_none() || focus_in_layer)
+            && let Some(trigger) = trigger
+            && let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger)
+        {
+            ui.set_layer_visible(layer, false);
+            ui.set_focus(Some(trigger_node));
+        } else {
+            ui.set_layer_visible(layer, false);
+        }
+    }
+
+    for req in hover_overlay_requests {
+        seen_hover_overlays.insert(req.id);
+
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            &req.root_name,
+            |_cx| req.children,
+        );
+
+        let key = (window, req.id);
+        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+            let entry = overlays
+                .hover_overlays
+                .entry(key)
+                .or_insert_with(|| ActiveHoverOverlay {
+                    layer: ui.push_overlay_root_ex(root, false, true),
+                    root_name: req.root_name.clone(),
+                    trigger: req.trigger,
+                });
+            entry.root_name = req.root_name.clone();
+            entry.trigger = req.trigger;
+            ui.set_layer_visible(entry.layer, true);
+        });
+    }
+
+    let to_hide_hover_overlays: Vec<(UiLayerId, GlobalElementId)> =
+        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+            overlays
+                .hover_overlays
+                .iter()
+                .filter_map(|((w, id), active)| {
+                    if *w != window || seen_hover_overlays.contains(id) {
+                        return None;
+                    }
+                    Some((active.layer, active.trigger))
+                })
+                .collect()
+        });
+
+    for (layer, trigger) in to_hide_hover_overlays {
+        let focus = ui.focus();
+        if focus.is_some_and(|n| ui.node_layer(n) == Some(layer))
+            && let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger)
+        {
+            ui.set_layer_visible(layer, false);
+            ui.set_focus(Some(trigger_node));
+        } else {
+            ui.set_layer_visible(layer, false);
+        }
+    }
+
+    for req in tooltip_requests {
+        seen_tooltips.insert(req.id);
+
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            &req.root_name,
+            |_cx| req.children,
+        );
+
+        let key = (window, req.id);
+        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+            let entry = overlays
+                .tooltips
+                .entry(key)
+                .or_insert_with(|| ActiveTooltip {
+                    layer: ui.push_overlay_root_ex(root, false, false),
+                    root_name: req.root_name.clone(),
+                });
+            entry.root_name = req.root_name.clone();
+            ui.set_layer_visible(entry.layer, true);
+        });
+    }
+
+    let to_hide_tooltips: Vec<UiLayerId> =
+        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+            overlays
+                .tooltips
+                .iter()
+                .filter_map(|((w, id), active)| {
+                    if *w != window || seen_tooltips.contains(id) {
+                        return None;
+                    }
+                    Some(active.layer)
+                })
+                .collect()
+        });
+
+    for layer in to_hide_tooltips {
+        ui.set_layer_visible(layer, false);
+    }
 }
 
 pub fn popover_root_name(id: GlobalElementId) -> String {
     format!("window-overlays.popover.{:x}", id.0)
 }
 
+pub fn modal_root_name(id: GlobalElementId) -> String {
+    format!("window-overlays.modal.{:x}", id.0)
+}
+
+pub fn tooltip_root_name(id: GlobalElementId) -> String {
+    format!("window-overlays.tooltip.{:x}", id.0)
+}
+
+pub fn hover_overlay_root_name(id: GlobalElementId) -> String {
+    format!("window-overlays.hover-overlay.{:x}", id.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::declarative::action_hooks::ActionHooksExt;
     use fret_app::App;
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{
         Point, Px, Rect, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle,
     };
-    use fret_ui::element::{ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps};
+    use fret_ui::element::{ContainerProps, LayoutStyle, Length, PositionStyle, PressableProps};
 
     #[derive(Default)]
     struct FakeServices;
@@ -260,11 +617,10 @@ mod tests {
                             layout.size.height = Length::Px(Px(32.0));
                             layout
                         },
-                        toggle_model: Some(open),
-                        a11y: PressableA11y::default(),
                         ..Default::default()
                     },
                     |cx, _st, id| {
+                        cx.pressable_toggle_bool(open);
                         trigger_id = Some(id);
                         vec![cx.container(ContainerProps::default(), |_| Vec::new())]
                     },
@@ -335,6 +691,8 @@ mod tests {
         render(&mut ui, &mut app, &mut services, window, bounds);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
+        assert_eq!(ui.captured(), None);
+
         // Pointer down outside should close (observer pass).
         ui.dispatch_event(
             &mut app,
@@ -344,6 +702,221 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
             }),
+        );
+        assert_eq!(app.models().get(open).copied(), Some(false));
+    }
+
+    #[test]
+    fn dismissible_popover_does_not_close_on_inside_press() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(300.0), Px(200.0)),
+        );
+
+        // First frame: render base to establish stable bounds for the trigger element.
+        let trigger =
+            render_base_with_trigger(&mut ui, &mut app, &mut services, window, bounds, open);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Open via click.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get(open).copied(), Some(true));
+
+        // Second frame: request and render a dismissible popover with a non-pressable child so
+        // the pointer-down bubbles to the root in the normal dispatch path.
+        begin_frame(&mut app, window);
+        let _ = render_base_with_trigger(&mut ui, &mut app, &mut services, window, bounds, open);
+
+        let root_name = popover_root_name(trigger);
+        let children =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, &root_name, |cx| {
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.position = PositionStyle::Absolute;
+                            layout.inset.left = Some(Px(40.0));
+                            layout.inset.top = Some(Px(40.0));
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(80.0));
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    |_| Vec::new(),
+                )]
+            });
+
+        request_dismissible_popover_for_window(
+            &mut app,
+            window,
+            DismissiblePopoverRequest {
+                id: trigger,
+                root_name,
+                trigger,
+                open,
+                initial_focus: None,
+                children,
+            },
+        );
+
+        render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(ui.captured(), None);
+
+        // Pointer down inside the popover content should not close it.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(50.0), Px(50.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get(open).copied(), Some(true));
+    }
+
+    #[test]
+    fn modal_blocks_underlay_click_and_closes_on_escape() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let underlay_clicked = app.models_mut().insert(false);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(300.0), Px(200.0)),
+        );
+
+        // Base layer contains a pressable that increments underlay_clicks.
+        begin_frame(&mut app, window);
+        let base = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "base",
+            |cx| {
+                vec![cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st| {
+                        cx.pressable_toggle_bool(underlay_clicked);
+                        vec![]
+                    },
+                )]
+            },
+        );
+        ui.set_root(base);
+
+        // Install modal layer.
+        begin_frame(&mut app, window);
+        let modal_children =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-child", |cx| {
+                vec![cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(80.0));
+                            layout.size.height = Length::Px(Px(32.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        on_click: None,
+                        ..Default::default()
+                    },
+                    |_cx, _st| vec![],
+                )]
+            });
+        request_modal_for_window(
+            &mut app,
+            window,
+            ModalRequest {
+                id: GlobalElementId(0xabc),
+                root_name: modal_root_name(GlobalElementId(0xabc)),
+                trigger: None,
+                open,
+                initial_focus: None,
+                children: modal_children,
+            },
+        );
+
+        render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Clicking underlay area should not reach base (modal barrier blocks underlay input).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get(underlay_clicked).copied(), Some(false));
+
+        // Escape should close via DismissibleLayer.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Escape,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
         );
         assert_eq!(app.models().get(open).copied(), Some(false));
     }

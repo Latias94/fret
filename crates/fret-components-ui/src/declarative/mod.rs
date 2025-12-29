@@ -1,3 +1,4 @@
+pub mod action_hooks;
 pub mod icon;
 pub mod list;
 pub mod scroll;
