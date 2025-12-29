@@ -774,15 +774,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 drag.start_rect.size,
                             );
                             let rect = Self::clamp_rect_to_bounds(desired, window_bounds);
-                            pending_effects.push(Effect::Dock(DockOp::SetFloatingRect {
+                            cx.app.push_effect(Effect::Dock(DockOp::SetFloatingRect {
                                 window: self.window,
                                 floating: drag.floating,
                                 rect,
                             }));
-                            request_cursor = Some(fret_core::CursorIcon::Move);
-                            invalidate_layout = true;
-                            invalidate_paint = true;
-                            pending_redraws.push(self.window);
+                            cx.set_cursor_icon(fret_core::CursorIcon::Default);
+                            cx.invalidate(cx.node, Invalidation::Layout);
+                            cx.invalidate(cx.node, Invalidation::Paint);
+                            cx.request_redraw();
+                            cx.stop_propagation();
                             return;
                         }
 
@@ -810,7 +811,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     request_cursor = Some(fret_core::CursorIcon::Pointer);
                                 }
                                 FloatingHitKind::TitleBar => {
-                                    request_cursor = Some(fret_core::CursorIcon::Move);
+                                    request_cursor = Some(fret_core::CursorIcon::Default);
                                 }
                                 FloatingHitKind::Body => {}
                             }
@@ -1433,7 +1434,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             } else {
                                                 let rect = self.default_floating_rect_for_panel(
                                                     &drag.panel,
-                                                    *position,
+                                                    position,
                                                     drag.grab_offset,
                                                     window_bounds,
                                                 );
@@ -1449,8 +1450,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             invalidate_layout = true;
                                         }
                                         None => {
-                                            if !window_bounds.contains(*position)
-                                                || float_zone(dock_bounds).contains(*position)
+                                            if !window_bounds.contains(position)
+                                                || float_zone(dock_bounds).contains(position)
                                             {
                                                 if allow_tear_off {
                                                     pending_effects.push(Effect::Dock(
@@ -1467,7 +1468,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     let rect = self
                                                         .default_floating_rect_for_panel(
                                                             &drag.panel,
-                                                            *position,
+                                                            position,
                                                             drag.grab_offset,
                                                             window_bounds,
                                                         );
@@ -1689,134 +1690,59 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .drag()
             .is_some_and(|d| d.dragging && d.payload::<DockPanelDragPayload>().is_some());
 
-        let Some(dock) = cx.app.global_mut::<DockManager>() else {
-            self.paint_empty_state(cx);
-            return;
-        };
-        let Some(root) = dock.graph.window_root(self.window) else {
-            self.paint_empty_state(cx);
-            return;
-        };
-
-        let root_layout = compute_layout_map(&dock.graph, root, dock_bounds);
-
-        let mut floating_layouts: Vec<(
-            fret_core::DockFloatingWindow,
-            FloatingChrome,
-            HashMap<DockNodeId, Rect>,
-        )> = Vec::new();
-        let mut layout_all = root_layout.clone();
-        for floating in dock.graph.floating_windows(self.window) {
-            let chrome = Self::floating_chrome(floating.rect);
-            let layout = compute_layout_map(&dock.graph, floating.floating, chrome.inner);
-            for (k, v) in layout.iter() {
-                layout_all.insert(*k, *v);
-            }
-            floating_layouts.push((*floating, chrome, layout));
-        }
-
-        let hover = dock.hover.clone();
-
-        self.rebuild_tab_titles(cx.services, theme, cx.scale_factor, &*dock, &layout_all);
-
-        dock.clear_viewport_layout_for_window(self.window);
-        for (&node_id, &rect) in layout_all.iter() {
-            let (_tab_bar, content) = split_tab_bar(rect);
-            let target = (|| {
-                let DockNode::Tabs { tabs, active } = dock.graph.node(node_id)?.clone() else {
-                    return None;
-                };
-                let panel_key = tabs.get(active)?;
-                let panel = dock.panel(panel_key)?;
-                panel.viewport.map(|vp| vp.target)
-            })();
-            if let Some(target) = target {
-                dock.set_viewport_content_rect(self.window, target, content);
-            }
-        }
-
-        paint_dock(
-            cx.theme().snapshot(),
-            &*dock,
-            PaintDockParams {
-                window: self.window,
-                layout: &root_layout,
-                tab_titles: &self.tab_titles,
-                hovered_tab: self.hovered_tab,
-                hovered_tab_close: self.hovered_tab_close,
-                pressed_tab_close: self.pressed_tab_close.as_ref().map(|(n, i, _)| (*n, *i)),
-                tab_scroll: &self.tab_scroll,
-                tab_close_glyph: self.tab_close_glyph,
-            },
-            overlay_hooks.as_deref(),
-            cx.scene,
-        );
-
-        let mut paint_panels: Vec<(PanelKey, Rect)> =
-            active_panel_content_bounds(&dock.graph, &root_layout)
-                .into_iter()
-                .collect();
-
-        for (floating, chrome, layout) in &floating_layouts {
-            let border_color = Color {
-                a: 0.85,
-                ..theme.colors.panel_border
+        let paint_panels = {
+            let Some(dock) = cx.app.global_mut::<DockManager>() else {
+                self.paint_empty_state(cx);
+                return;
             };
-            cx.scene.push(SceneOp::Quad {
-                order: fret_core::DrawOrder(0),
-                rect: chrome.outer,
-                background: theme.colors.surface_background,
-                border: Edges::all(DOCK_FLOATING_BORDER),
-                border_color,
-                corner_radii: fret_core::Corners::all(Px(theme.metrics.radius_md.0.max(6.0))),
-            });
-            cx.scene.push(SceneOp::Quad {
-                order: fret_core::DrawOrder(1),
-                rect: chrome.title_bar,
-                background: theme.colors.surface_background,
-                border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
-                corner_radii: fret_core::Corners::all(Px(0.0)),
-            });
+            let Some(root) = dock.graph.window_root(self.window) else {
+                self.paint_empty_state(cx);
+                return;
+            };
 
-            let close_hovered = self.hovered_floating_close == Some(floating.floating);
-            let close_pressed = self.pressed_floating_close == Some(floating.floating);
-            if close_hovered || close_pressed {
-                cx.scene.push(SceneOp::Quad {
-                    order: fret_core::DrawOrder(2),
-                    rect: chrome.close_button,
-                    background: theme.colors.hover_background,
-                    border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
-                    corner_radii: fret_core::Corners::all(Px(theme.metrics.radius_sm.0.max(4.0))),
-                });
+            let root_layout = compute_layout_map(&dock.graph, root, dock_bounds);
+
+            let mut floating_layouts: Vec<(
+                fret_core::DockFloatingWindow,
+                FloatingChrome,
+                HashMap<DockNodeId, Rect>,
+            )> = Vec::new();
+            let mut layout_all = root_layout.clone();
+            for floating in dock.graph.floating_windows(self.window) {
+                let chrome = Self::floating_chrome(floating.rect);
+                let layout = compute_layout_map(&dock.graph, floating.floating, chrome.inner);
+                for (k, v) in layout.iter() {
+                    layout_all.insert(*k, *v);
+                }
+                floating_layouts.push((*floating, chrome, layout));
             }
 
-            if let Some(glyph) = self.tab_close_glyph {
-                let text_x = Px(chrome.close_button.origin.x.0
-                    + (chrome.close_button.size.width.0 - glyph.metrics.size.width.0) * 0.5);
-                let inner_y = chrome.close_button.origin.y.0
-                    + ((chrome.close_button.size.height.0 - glyph.metrics.size.height.0) * 0.5);
-                let text_y = Px(inner_y + glyph.metrics.baseline.0);
-                let color = if close_hovered || close_pressed {
-                    theme.colors.text_primary
-                } else {
-                    theme.colors.text_muted
-                };
-                cx.scene.push(SceneOp::Text {
-                    order: fret_core::DrawOrder(3),
-                    origin: Point::new(text_x, text_y),
-                    text: glyph.blob,
-                    color,
-                });
+            let hover = dock.hover.clone();
+
+            self.rebuild_tab_titles(cx.services, theme, cx.scale_factor, &*dock, &layout_all);
+
+            dock.clear_viewport_layout_for_window(self.window);
+            for (&node_id, &rect) in layout_all.iter() {
+                let (_tab_bar, content) = split_tab_bar(rect);
+                let target = (|| {
+                    let DockNode::Tabs { tabs, active } = dock.graph.node(node_id)?.clone() else {
+                        return None;
+                    };
+                    let panel_key = tabs.get(active)?;
+                    let panel = dock.panel(panel_key)?;
+                    panel.viewport.map(|vp| vp.target)
+                })();
+                if let Some(target) = target {
+                    dock.set_viewport_content_rect(self.window, target, content);
+                }
             }
 
             paint_dock(
-                cx.theme().snapshot(),
+                theme,
                 &*dock,
                 PaintDockParams {
                     window: self.window,
-                    layout,
+                    layout: &root_layout,
                     tab_titles: &self.tab_titles,
                     hovered_tab: self.hovered_tab,
                     hovered_tab_close: self.hovered_tab_close,
@@ -1828,39 +1754,116 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 cx.scene,
             );
 
-            paint_panels.extend(active_panel_content_bounds(&dock.graph, layout));
-        }
+            let mut paint_panels: Vec<(PanelKey, Rect)> =
+                active_panel_content_bounds(&dock.graph, &root_layout)
+                    .into_iter()
+                    .collect();
 
-        paint_split_handles(
-            cx.theme().snapshot(),
-            &dock.graph,
-            &layout_all,
-            self.divider_drag.map(|d| d.split),
-            cx.scale_factor,
-            cx.scene,
-        );
+            for (floating, chrome, layout) in &floating_layouts {
+                let border_color = Color {
+                    a: 0.85,
+                    ..theme.colors.panel_border
+                };
+                cx.scene.push(SceneOp::Quad {
+                    order: fret_core::DrawOrder(0),
+                    rect: chrome.outer,
+                    background: theme.colors.surface_background,
+                    border: Edges::all(DOCK_FLOATING_BORDER),
+                    border_color,
+                    corner_radii: fret_core::Corners::all(Px(theme.metrics.radius_md.0.max(6.0))),
+                });
+                cx.scene.push(SceneOp::Quad {
+                    order: fret_core::DrawOrder(1),
+                    rect: chrome.title_bar,
+                    background: theme.colors.surface_background,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: fret_core::Corners::all(Px(0.0)),
+                });
 
-        if is_dock_dragging {
-            paint_drop_hints(
-                cx.theme().snapshot(),
-                hover.clone(),
+                let close_hovered = self.hovered_floating_close == Some(floating.floating);
+                let close_pressed = self.pressed_floating_close == Some(floating.floating);
+                if close_hovered || close_pressed {
+                    cx.scene.push(SceneOp::Quad {
+                        order: fret_core::DrawOrder(2),
+                        rect: chrome.close_button,
+                        background: theme.colors.hover_background,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: fret_core::Corners::all(Px(theme.metrics.radius_sm.0.max(4.0))),
+                    });
+                }
+
+                if let Some(glyph) = self.tab_close_glyph {
+                    let text_x = Px(chrome.close_button.origin.x.0
+                        + (chrome.close_button.size.width.0 - glyph.metrics.size.width.0) * 0.5);
+                    let inner_y = chrome.close_button.origin.y.0
+                        + ((chrome.close_button.size.height.0 - glyph.metrics.size.height.0) * 0.5);
+                    let text_y = Px(inner_y + glyph.metrics.baseline.0);
+                    let color = if close_hovered || close_pressed {
+                        theme.colors.text_primary
+                    } else {
+                        theme.colors.text_muted
+                    };
+                    cx.scene.push(SceneOp::Text {
+                        order: fret_core::DrawOrder(3),
+                        origin: Point::new(text_x, text_y),
+                        text: glyph.blob,
+                        color,
+                    });
+                }
+
+                paint_dock(
+                    theme,
+                    &*dock,
+                    PaintDockParams {
+                        window: self.window,
+                        layout,
+                        tab_titles: &self.tab_titles,
+                        hovered_tab: self.hovered_tab,
+                        hovered_tab_close: self.hovered_tab_close,
+                        pressed_tab_close: self.pressed_tab_close.as_ref().map(|(n, i, _)| (*n, *i)),
+                        tab_scroll: &self.tab_scroll,
+                        tab_close_glyph: self.tab_close_glyph,
+                    },
+                    overlay_hooks.as_deref(),
+                    cx.scene,
+                );
+
+                paint_panels.extend(active_panel_content_bounds(&dock.graph, layout));
+            }
+
+            paint_split_handles(
+                theme,
+                &dock.graph,
+                &layout_all,
+                self.divider_drag.map(|d| d.split),
+                cx.scale_factor,
+                cx.scene,
+            );
+
+            if is_dock_dragging {
+                paint_drop_hints(
+                    theme,
+                    hover.clone(),
+                    self.window,
+                    cx.bounds,
+                    &layout_all,
+                    cx.scene,
+                );
+            }
+            paint_drop_overlay(
+                theme,
+                hover,
                 self.window,
                 cx.bounds,
                 &layout_all,
+                &self.tab_scroll,
                 cx.scene,
             );
-        }
-        paint_drop_overlay(
-            cx.theme().snapshot(),
-            hover,
-            self.window,
-            cx.bounds,
-            &layout_all,
-            &self.tab_scroll,
-            cx.scene,
-        );
 
-        drop(dock);
+            paint_panels
+        };
 
         let panel_nodes = self.panel_nodes(cx.app);
         for (panel, rect) in paint_panels {
