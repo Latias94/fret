@@ -14,6 +14,7 @@ This file is intentionally kept **short and actionable**.
 Maintain the next MVP items here as a small, high-signal queue. If a task changes a “hard-to-change” contract, update or add an ADR before broadening usage.
 
 - Contract note: the `fret-ui` runtime contract surface is now locked (ADR 0066). New runtime public APIs must name an authoritative reference and land with tests before broadening usage.
+- Execution note: we follow a “foundation-first, component-validated” loop (Plan C). See `docs/foundation-first-workflow.md`.
 
 - MVP 49 (in progress): Make the declarative component authoring model (ADR 0028 + ADR 0039) the primary, end-to-end usable path (not just a state store): `IntoElement` + `Render`/`RenderOnce` + composition ergonomics, plus a clear `render_root(...)` contract (when it must be called, and what it guarantees).
 - MVP 50 (in progress): Consolidate virtualization around composable, declarative row content (GPUI-style). Runtime contract is now TanStack-aligned (ADR 0070); remaining work is migrating surfaces off fixed-schema runtime rows (`VirtualListRow { text/secondary/trailing... }`) and retiring the legacy path where feasible.
@@ -52,7 +53,7 @@ Maintain the next MVP items here as a small, high-signal queue. If a task change
   - Expand semantics roles/flags where needed to keep future accessibility bridge viable (ADR 0033).
   - Lock cmdk-style command palette semantics for accessibility:
     - keep focus in the text input while navigating results,
-    - expose the active result via an `active_descendant` semantics association (ADR 0073),
+    - expose the active result via an `active_descendant` semantics association (ADR 0073; Phase A done, policy wiring next),
     - avoid virtualization until an AT-facing virtualization strategy is defined.
 - MVP 59 (next): Eliminate Tailwind-like “layout no-ops” and harden composition semantics by splitting style patches into `ChromeRefinement` vs `LayoutRefinement`, standardizing token/key vocabulary, and making `merge` semantics match Tailwind-style edge accumulation (e.g. `mt-*` + `ml-*` should compose without dropping edges). Layout refinements must apply only in the declarative path (or explicit layout wrappers), never silently in retained widgets.
 - MVP 55 (next): Expand style patch → layout bridging so Tailwind-like recipes can drive declarative layout without widget-local magic numbers: map additional sizing/flex/overflow knobs into declarative `LayoutStyle` (beyond the current minimal subset).

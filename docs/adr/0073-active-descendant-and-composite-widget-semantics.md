@@ -4,15 +4,19 @@ title: "ADR 0073: Active Descendant for Composite Widgets (Command Palette / Lis
 
 # ADR 0073: Active Descendant for Composite Widgets (Command Palette / Listbox)
 
-Status: Proposed
+Status: Accepted
 
 ## Implementation Status (as of 2025-12-29)
 
-This ADR is **not implemented yet**.
+Phase A (schema + bridge) is **implemented**.
 
 What exists today:
 
 - A semantics snapshot contract and platform bridge boundary (ADR 0033) with roles/flags/actions.
+- `active_descendant: Option<NodeId>` in the semantics schema:
+  - `crates/fret-core/src/semantics.rs`
+  - `crates/fret-ui/src/tree.rs` + `crates/fret-ui/src/widget.rs` (`SemanticsCx::set_active_descendant`)
+  - `crates/fret-platform/src/accessibility.rs` (AccessKit mapping + unit test)
 - Overlay + list semantics tests for several window-scoped overlay surfaces
   (see `docs/a11y-acceptance-checklist.md` and `crates/fret-components-ui/src/window_overlays.rs`).
 - Roving-focus navigation for composite lists is typically implemented by **moving focus** between
@@ -21,9 +25,10 @@ What exists today:
 
 What is missing (core gap):
 
-- The semantics schema does not include an association like `active_descendant`, so a focused
-  `TextField` cannot semantically “point at” the currently highlighted option row without moving
-  focus.
+- Component-layer cmdk-style policy wiring:
+  - keep focus in the text input while navigating results,
+  - update `active_descendant` on the focused input node to point at the highlighted result row,
+  - ensure stable identity for result rows while present.
 
 ## Context
 

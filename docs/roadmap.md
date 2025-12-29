@@ -8,6 +8,8 @@ The runtime contract surface for `crates/fret-ui` is explicitly locked by `docs/
 
 For historical short-horizon execution plans, see `docs/archive/mvp.md` (overview) and `docs/archive/mvp/active-plan.md` (expanded, per-MVP “definition of done”).
 
+For the “foundation-first, component-validated” execution loop (Plan C), see `docs/foundation-first-workflow.md`.
+
 ## Toolchain Baseline
 
 - `wgpu 28.x` currently requires Rust `1.92+` (enforced via `rust-toolchain.toml` and `workspace.package.rust-version`).
@@ -68,7 +70,7 @@ These items are intentionally scheduled early because they define “hard-to-cha
   - APG (keyboard/focus semantics baseline),
   - Radix primitives (dismissal/focus/portal outcomes),
   - Floating UI (placement + collision algorithms),
-  - cmdk (command palette interaction details; implies active-descendant semantics, ADR 0073).
+  - cmdk (command palette interaction details; implies active-descendant semantics, ADR 0073; Phase A implemented).
   - See: `docs/reference-stack-ui-behavior.md`.
 - P0: Adopt observability strategy (tracing + inspector hooks + renderer metrics) (ADR 0036).
 - P0: Adopt workspace/repo boundaries and external `fret-components` strategy (ADR 0037).
@@ -152,8 +154,10 @@ P0 / near-term (schedule as MVPs/refactors):
   reusable resize-handle primitives (planned as MVP 46 in `docs/archive/mvp/active-plan.md`).
 - **Resizable layout primitive**: a reusable split/resize container (panel group) so “dock splits”, “inspector
   sidebars”, and “data table column resize” share hit-testing and cursor behavior (pairs naturally with MVP 46).
-  - Prefer modeling the divider/handle as a real child element that participates in layout (no overlap with content),
-    rather than a pure overlay that can clip focus rings; see gpui-component’s `resize_handle` usage in
+  - Current prototype: runtime-owned panel group with `gap` (layout) + `hit_thickness` (pointer target) and shared
+    drag/min-size behavior across shadcn `Resizable*` and docking splits (ADR 0077).
+  - Follow-up: decide whether handles should become first-class child elements (vs internal painted affordances) once
+    focus rings + a11y semantics are finalized; see gpui-component’s `resize_handle` usage in
     `repo-ref/gpui-component/crates/ui/src/resizable/panel.rs`.
 - **Pointer lock / relative motion** (viewport navigation): a portable effect boundary for “orbit/pan camera”
   interactions where OS cursor constraints differ (desktop vs web); capability-gated and opt-in.
