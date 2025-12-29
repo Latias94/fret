@@ -17,9 +17,11 @@ pub mod button;
 pub mod button_group;
 pub mod card;
 pub mod checkbox;
+pub mod collapsible;
 pub mod context_menu;
 pub mod data_table;
 pub mod dialog;
+pub mod drawer;
 pub mod dropdown_menu;
 pub mod empty;
 pub mod field;
@@ -63,10 +65,15 @@ pub use button_group::{
 };
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
 pub use checkbox::{Checkbox, checkbox};
+pub use collapsible::{Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible};
 pub use context_menu::{ContextMenu, ContextMenuEntry, ContextMenuItem};
 pub use data_table::{DataTable, DataTableRowState};
 pub use dialog::{
     Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+};
+pub use drawer::{
+    Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerSide, DrawerTitle,
+    drawer,
 };
 pub use dropdown_menu::{
     DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem, DropdownMenuSide,

@@ -62,11 +62,11 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 | carousel | `carousel` | Defer | Not editor-critical |
 | chart | `chart` | Defer | Not editor-critical |
 | checkbox | `checkbox` | Present |  |
-| collapsible | `collapsible` | Missing | Headless open/close + a11y semantics |
+| collapsible | `collapsible` | Present | Headless open/close + a11y semantics |
 | command | `command` | Missing | Command palette infra + list navigation |
 | context-menu | `context_menu` | Present | Right click + (macOS) ctrl-click + Shift+F10 |
 | dialog | `dialog` | Present | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
-| drawer | `drawer` | Missing | Usually `sheet` variant; overlay policy |
+| drawer | `drawer` | Present | `sheet` facade (defaults to bottom); overlay policy |
 | dropdown-menu | `dropdown_menu` | Present | Menu navigation + typeahead + dismissible popover infra (ADR 0074) |
 | empty | `empty` | Present |  |
 | field | `field` | Present | Repo-specific “form field” primitives |
