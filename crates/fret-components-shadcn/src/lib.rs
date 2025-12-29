@@ -32,6 +32,7 @@ pub mod form;
 pub mod hover_card;
 pub mod input;
 pub mod input_group;
+pub mod input_otp;
 pub mod item;
 pub mod kbd;
 pub mod label;
@@ -98,6 +99,7 @@ pub use form::{Form, FormControl, FormDescription, FormItem, FormLabel, FormMess
 pub use hover_card::{HoverCard, HoverCardAlign, HoverCardContent, HoverCardTrigger};
 pub use input::{Input, input};
 pub use input_group::{InputGroup, input_group};
+pub use input_otp::{InputOtp, input_otp};
 pub use item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
     ItemMediaVariant, ItemSeparator, ItemSize, ItemTitle, ItemVariant, item_group,
@@ -125,7 +127,9 @@ pub use sidebar::{
     SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 };
 pub use skeleton::Skeleton;
-pub use sonner::{Sonner, Toaster, ToastAction, ToastId, ToastPosition, ToastRequest, ToastVariant};
+pub use sonner::{
+    Sonner, ToastAction, ToastId, ToastPosition, ToastRequest, ToastVariant, Toaster,
+};
 pub use spinner::Spinner;
 pub use switch::{Switch, switch};
 pub use table::{

@@ -83,7 +83,7 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 | hover-card | `hover_card` | Present | Needs tooltip/popover-grade overlay infra for parity |
 | input | `input` | Present |  |
 | input-group | `input_group` | Present | Composition over `input` + slots/icons |
-| input-otp | `input_otp` | Missing | Specialized input; can be layered on text input primitives |
+| input-otp | `input_otp` | Present | Slots rendered over transparent `TextInput`; digits-only clamping; a11y TBD |
 | item | `item` | Present | Repo-specific list/item recipes aligned with shadcn style |
 | kbd | `kbd` | Present |  |
 | label | `label` | Present |  |
