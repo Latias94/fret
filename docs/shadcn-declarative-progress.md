@@ -112,6 +112,14 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 | toggle-group | `toggle_group` | Present |  |
 | tooltip | `tooltip` | Present | Hover intent + placement; rendered via overlay root (not clipped) |
 
+## Non-registry surfaces
+
+These are shadcn-style surfaces referenced by docs/demos but not part of the `registry:ui` baseline:
+
+| Surface | Rust module | Status | Notes |
+| --- | --- | --- | --- |
+| combobox | `combobox` | Present | Search input + popover list; active-descendant semantics are still pending (ADR 0073) |
+
 Notes:
 - “Present” means a declarative module exists and compiles; it may still be below the “Definition of Done” parity bar (keyboard/APG, a11y checklist, tests).
 - Most “Missing” entries were previously implemented as retained widgets and intentionally deleted under the declarative-only boundary. They should come back as declarative components backed by `fret-components-ui` infra + `fret-ui` mechanisms.
