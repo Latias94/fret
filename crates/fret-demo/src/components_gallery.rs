@@ -950,17 +950,6 @@ impl WinitDriver for ComponentsGalleryDriver {
             .paint_all(app, services, bounds, scene, scale_factor);
     }
 
-    fn invalidate_ui_layout(
-        &mut self,
-        _app: &mut App,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        if let Some(root) = state.root {
-            state.ui.invalidate(root, Invalidation::Layout);
-        }
-    }
-
     fn window_create_spec(
         &mut self,
         _app: &mut App,
