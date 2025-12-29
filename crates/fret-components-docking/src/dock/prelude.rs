@@ -21,7 +21,6 @@ pub(super) use fret_ui::retained_bridge::{
 };
 pub(super) use fret_ui::{InternalDragRouteService, UiHost};
 
-pub(super) use super::{
-    DockPanel, DockViewportOverlayHooks, DockViewportOverlayHooksService, ViewportPanel,
-};
+pub(super) use super::services::DockViewportOverlayHooksService;
+pub(super) use super::{DockPanel, DockViewportOverlayHooks, ViewportPanel};
 pub(super) use super::{consts::*, types::*};

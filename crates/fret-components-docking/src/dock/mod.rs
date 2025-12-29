@@ -1,20 +1,21 @@
 use fret_core::geometry::Rect;
 use fret_core::{Color, NodeId, PanelKey, RenderTargetId, Scene, ViewportFit, ViewportMapping};
 use fret_ui::UiHost;
-use std::sync::Arc;
 
 mod consts;
 mod hit_test;
 mod layout;
 mod paint;
 mod prelude;
+mod services;
 mod types;
 mod viewport;
 
 mod manager;
 mod space;
 
-pub use manager::{ActivatePanelOptions, DockManager, DockPanelContentService};
+pub use manager::{ActivatePanelOptions, DockManager};
+pub use services::{DockPanelContentService, DockViewportOverlayHooksService};
 pub use space::DockSpace;
 
 pub struct DockPanel {
@@ -46,25 +47,6 @@ pub trait DockViewportOverlayHooks: Send + Sync + 'static {
         draw_rect: Rect,
         scene: &mut Scene,
     );
-}
-
-#[derive(Default)]
-pub struct DockViewportOverlayHooksService {
-    hooks: Option<Arc<dyn DockViewportOverlayHooks>>,
-}
-
-impl DockViewportOverlayHooksService {
-    pub fn set(&mut self, hooks: Arc<dyn DockViewportOverlayHooks>) {
-        self.hooks = Some(hooks);
-    }
-
-    pub fn clear(&mut self) {
-        self.hooks = None;
-    }
-
-    pub fn hooks(&self) -> Option<Arc<dyn DockViewportOverlayHooks>> {
-        self.hooks.clone()
-    }
 }
 
 pub fn create_dock_space_node<H: UiHost>(

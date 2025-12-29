@@ -3,6 +3,7 @@
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
 use super::prelude::*;
+use super::services::DockFocusRequestService;
 
 pub struct DockManager {
     pub graph: DockGraph,
@@ -15,21 +16,6 @@ pub struct DockManager {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ActivatePanelOptions {
     pub focus: bool,
-}
-
-#[derive(Default)]
-pub(super) struct DockFocusRequestService {
-    per_window: HashMap<fret_core::AppWindowId, PanelKey>,
-}
-
-impl DockFocusRequestService {
-    pub(super) fn request(&mut self, window: fret_core::AppWindowId, panel: PanelKey) {
-        self.per_window.insert(window, panel);
-    }
-
-    pub(super) fn take(&mut self, window: fret_core::AppWindowId) -> Option<PanelKey> {
-        self.per_window.remove(&window)
-    }
 }
 
 impl DockManager {
@@ -96,34 +82,6 @@ impl DockManager {
             }));
         }
         true
-    }
-}
-
-#[derive(Default)]
-pub struct DockPanelContentService {
-    per_window: HashMap<fret_core::AppWindowId, HashMap<PanelKey, NodeId>>,
-}
-
-impl DockPanelContentService {
-    pub fn set(&mut self, window: fret_core::AppWindowId, panel: PanelKey, node: NodeId) {
-        self.per_window
-            .entry(window)
-            .or_default()
-            .insert(panel, node);
-    }
-
-    pub fn get(&self, window: fret_core::AppWindowId, panel: &PanelKey) -> Option<NodeId> {
-        self.per_window
-            .get(&window)
-            .and_then(|m| m.get(panel))
-            .copied()
-    }
-
-    pub fn panel_nodes(&self, window: fret_core::AppWindowId) -> Vec<(PanelKey, NodeId)> {
-        self.per_window
-            .get(&window)
-            .map(|m| m.iter().map(|(k, v)| (k.clone(), *v)).collect())
-            .unwrap_or_default()
     }
 }
 

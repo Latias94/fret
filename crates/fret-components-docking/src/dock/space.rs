@@ -10,11 +10,14 @@ use super::layout::{
     active_panel_content_bounds, compute_layout_map, compute_split_fraction, dock_space_regions,
     float_zone, hidden_bounds, split_tab_bar,
 };
-use super::manager::{DockFocusRequestService, DockManager, DockPanelContentService};
+use super::manager::DockManager;
 use super::paint::{
     PaintDockParams, paint_dock, paint_drop_hints, paint_drop_overlay, paint_split_handles,
 };
 use super::prelude::*;
+use super::services::{
+    DockFocusRequestService, DockPanelContentService, DockViewportOverlayHooksService,
+};
 use super::viewport::{
     ViewportCaptureState, hit_test_active_viewport_panel, viewport_input_from_hit,
     viewport_input_from_hit_clamped,
