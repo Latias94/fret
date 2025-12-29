@@ -10,6 +10,7 @@ mod prelude_core;
 mod prelude_runtime;
 mod prelude_ui;
 mod services;
+mod split_stabilize;
 mod types;
 mod viewport;
 

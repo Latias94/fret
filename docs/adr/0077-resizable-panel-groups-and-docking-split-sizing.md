@@ -1,6 +1,6 @@
 # ADR 0077: Resizable Panel Groups and Docking Split Sizing
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -16,7 +16,7 @@ Reference implementations:
 
 - Dear ImGui docking stores a split tree (`ImGuiDockNode`), and processes splitter interaction as part of a recursive tree update:
   - split nodes store axis + `SizeRef` and update children sizes during drag,
-  - nested splits on the same axis require “lock size once” / touching-node handling to avoid oscillation.
+  - nested splits on the same axis require "lock size once" / touching-node handling to avoid oscillation.
   - Code: `repo-ref/imgui/imgui_internal.h` (`ImGuiDockNode`), `repo-ref/imgui/imgui.cpp` (`DockNodeTreeUpdateSplitter`).
 
 Related ADRs:
@@ -84,7 +84,7 @@ Those are declarative composition surfaces that forward into the runtime primiti
 Tradeoffs / limitations (current):
 
 - Per-handle element nodes are not modeled as first-class children; handles are internal affordances (painted/hit-tested by the runtime primitive).
-- Nested split ergonomics may require additional stabilization (ImGui-style “touching nodes lock” when same-axis nested).
+- Nested split ergonomics may require additional stabilization (ImGui-style "touching nodes lock" when same-axis nested).
 
 ## Implementation Notes (Current Prototype)
 
@@ -92,9 +92,10 @@ Tradeoffs / limitations (current):
 - Declarative surface: `ResizablePanelGroupProps` + `ElementCx::resizable_panel_group(...)`
 - shadcn facade: `crates/fret-components-shadcn/src/resizable.rs`
 - Docking integration: split layout/hit-testing/painting delegates to the same panel-group mechanics via `fret-ui/unstable-retained-bridge`.
+- Docking drag commit: drag updates mutate the app-owned graph for immediate feedback; drag end emits a single atomic `DockOp::SetSplitFractionsMany` transaction.
 
 ## Follow-ups
 
-1. Docking host uses `ResizablePanelGroup` for split rendering (replace ad-hoc split widgets).
-2. Add nested-split stabilization rules (same-axis “touching nodes” lock behavior) if UX issues appear.
+1. Docking host uses `ResizablePanelGroup` for split rendering (replace ad-hoc split widgets). (done)
+2. Add nested-split stabilization rules (same-axis "touching nodes" lock behavior) to avoid ImGui-class oscillation/linked splitters. (done; current docking splits)
 3. Decide whether to promote pixel `preferred_px` hints into dock persistence schema (new layout version) based on feedback.

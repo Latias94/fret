@@ -1,5 +1,6 @@
 use crate::{
-    DockOp, PanelKey,
+    PanelKey,
+    dock_op::DockOp,
     geometry::{Point, Px, Rect, Size},
     ids::{AppWindowId, DockNodeId},
 };
@@ -854,6 +855,13 @@ impl DockGraph {
             }
             DockOp::SetSplitFractions { split, fractions } => {
                 self.update_split_fractions(*split, fractions.clone())
+            }
+            DockOp::SetSplitFractionsMany { updates } => {
+                let mut changed = false;
+                for u in updates {
+                    changed |= self.update_split_fractions(u.split, u.fractions.clone());
+                }
+                changed
             }
             DockOp::SetSplitFractionTwo {
                 split,

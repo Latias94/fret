@@ -23,8 +23,8 @@ pub use dock_layout::{
     DOCK_LAYOUT_VERSION, DockLayout, DockLayoutBuilder, DockLayoutFloatingWindow, DockLayoutNode,
     DockLayoutWindow, DockRect, DockWindowPlacement, EditorDockLayoutSpec,
 };
-pub use dock_op::DockOp;
-pub use geometry::{Corners, Edges, Point, Px, Rect, Size};
+pub use dock_op::{DockOp, SplitFractionsUpdate};
+pub use geometry::{Corners, Edges, Point, Px, Rect, Size, Transform2D};
 pub use ids::{
     AppWindowId, DockNodeId, ExternalDropToken, FontId, FrameId, ImageId, NodeId, PathId,
     RenderTargetId, SvgId, TextBlobId, TickId, TimerToken,

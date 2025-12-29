@@ -95,6 +95,7 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                     }
                     DockOp::SetActiveTab { .. }
                     | DockOp::SetSplitFractions { .. }
+                    | DockOp::SetSplitFractionsMany { .. }
                     | DockOp::SetSplitFractionTwo { .. } => {
                         invalidate_windows(app, dock.graph.windows());
                     }

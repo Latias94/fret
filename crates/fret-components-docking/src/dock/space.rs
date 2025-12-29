@@ -19,6 +19,9 @@ use super::prelude_ui::*;
 use super::services::{
     DockFocusRequestService, DockPanelContentService, DockViewportOverlayHooksService,
 };
+use super::split_stabilize::{
+    SplitSizeLock, apply_same_axis_locks, compute_same_axis_locks_for_split_drag,
+};
 use super::viewport::{
     ViewportCaptureState, hit_test_active_viewport_panel, viewport_input_from_hit,
     viewport_input_from_hit_clamped,
@@ -33,7 +36,7 @@ const DOCK_FLOATING_CLOSE_SIZE: Px = Px(14.0);
 pub struct DockSpace {
     pub window: fret_core::AppWindowId,
     last_bounds: Rect,
-    divider_drag: Option<DividerDragState>,
+    divider_drag: Option<DividerDragSession>,
     floating_drag: Option<FloatingDragState>,
     hovered_floating_close: Option<DockNodeId>,
     pressed_floating_close: Option<DockNodeId>,
@@ -69,6 +72,14 @@ struct FloatingDragState {
     floating: DockNodeId,
     grab_offset: Point,
     start_rect: Rect,
+}
+
+#[derive(Debug, Clone)]
+struct DividerDragSession {
+    handle: DividerDragState,
+    layout_root: DockNodeId,
+    layout_bounds: Rect,
+    locks: Vec<SplitSizeLock>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -643,7 +654,19 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 && let Some(handle) =
                                     hit_test_split_handle(&dock.graph, &layout, *position)
                             {
-                                self.divider_drag = Some(handle);
+                                let locks = compute_same_axis_locks_for_split_drag(
+                                    &dock.graph,
+                                    &layout,
+                                    handle.split,
+                                    handle.axis,
+                                    handle.handle_ix,
+                                );
+                                self.divider_drag = Some(DividerDragSession {
+                                    handle,
+                                    layout_root,
+                                    layout_bounds,
+                                    locks,
+                                });
                                 request_pointer_capture = Some(Some(cx.node));
                                 request_cursor = Some(match handle.axis {
                                     fret_core::Axis::Horizontal => fret_core::CursorIcon::ColResize,
@@ -869,13 +892,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             pending_redraws.push(self.window);
                         }
 
-                        if let Some(divider) = self.divider_drag {
-                            cx.requested_cursor = Some(match divider.axis {
+                        if let Some(divider) = self.divider_drag.as_ref() {
+                            cx.requested_cursor = Some(match divider.handle.axis {
                                 fret_core::Axis::Horizontal => fret_core::CursorIcon::ColResize,
                                 fret_core::Axis::Vertical => fret_core::CursorIcon::RowResize,
                             });
                             let Some((children_len, fractions_now)) =
-                                dock.graph.node(divider.split).and_then(|n| match n {
+                                dock.graph.node(divider.handle.split).and_then(|n| match n {
                                     DockNode::Split {
                                         children,
                                         fractions,
@@ -887,19 +910,26 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 return;
                             };
                             if let Some(next) = resizable::drag_update_fractions(
-                                divider.axis,
-                                divider.bounds,
+                                divider.handle.axis,
+                                divider.handle.bounds,
                                 children_len,
                                 &fractions_now,
-                                divider.handle_ix,
+                                divider.handle.handle_ix,
                                 DOCK_SPLIT_HANDLE_GAP,
                                 DOCK_SPLIT_HANDLE_HIT_THICKNESS,
                                 &[],
-                                divider.grab_offset,
+                                divider.handle.grab_offset,
                                 *position,
                             ) {
-                                dock.graph.update_split_fractions(divider.split, next);
-                                self.divider_drag = Some(divider);
+                                dock.graph
+                                    .update_split_fractions(divider.handle.split, next);
+                                apply_same_axis_locks(
+                                    &mut dock.graph,
+                                    divider.layout_root,
+                                    divider.layout_bounds,
+                                    divider.handle.axis,
+                                    &divider.locks,
+                                );
                                 cx.invalidate(cx.node, Invalidation::Layout);
                                 cx.invalidate(cx.node, Invalidation::Paint);
                             }
@@ -1079,18 +1109,33 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         if *button == fret_core::MouseButton::Left
                             && let Some(divider) = self.divider_drag.take()
                         {
-                            if let Some(DockNode::Split {
-                                children,
-                                fractions,
-                                ..
-                            }) = dock.graph.node(divider.split)
-                                && children.len() >= 2
-                                && children.len() == fractions.len()
+                            let mut seen: std::collections::HashSet<DockNodeId> =
+                                std::collections::HashSet::new();
+                            let mut updates: Vec<fret_core::SplitFractionsUpdate> = Vec::new();
+                            for split in std::iter::once(divider.handle.split)
+                                .chain(divider.locks.iter().map(|l| l.split))
                             {
-                                pending_effects.push(Effect::Dock(DockOp::SetSplitFractions {
-                                    split: divider.split,
-                                    fractions: fractions.clone(),
-                                }));
+                                if !seen.insert(split) {
+                                    continue;
+                                }
+                                if let Some(DockNode::Split {
+                                    children,
+                                    fractions,
+                                    ..
+                                }) = dock.graph.node(split)
+                                    && children.len() >= 2
+                                    && children.len() == fractions.len()
+                                {
+                                    updates.push(fret_core::SplitFractionsUpdate {
+                                        split,
+                                        fractions: fractions.clone(),
+                                    });
+                                }
+                            }
+
+                            if !updates.is_empty() {
+                                pending_effects
+                                    .push(Effect::Dock(DockOp::SetSplitFractionsMany { updates }));
                             }
 
                             request_pointer_capture = Some(None);
@@ -1848,7 +1893,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 theme,
                 &dock.graph,
                 &layout_all,
-                self.divider_drag.map(|d| d.split),
+                self.divider_drag.as_ref().map(|d| d.handle.split),
                 cx.scale_factor,
                 cx.scene,
             );

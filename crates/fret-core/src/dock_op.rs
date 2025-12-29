@@ -88,8 +88,22 @@ pub enum DockOp {
         fractions: Vec<f32>,
     },
 
+    /// Atomically update multiple split nodes' normalized `fractions`.
+    ///
+    /// This is intended for editor-grade splitter drags where a single pointer interaction may
+    /// need to update nested same-axis splits to avoid oscillation.
+    SetSplitFractionsMany {
+        updates: Vec<SplitFractionsUpdate>,
+    },
+
     SetSplitFractionTwo {
         split: DockNodeId,
         first_fraction: f32,
     },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SplitFractionsUpdate {
+    pub split: DockNodeId,
+    pub fractions: Vec<f32>,
 }
