@@ -159,8 +159,7 @@ impl AccordionTrigger {
                         cx.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
                             let value = value.clone();
                             let _ = host.models_mut().update(model, |v| {
-                                let is_same =
-                                    v.as_deref().is_some_and(|cur| cur == value.as_ref());
+                                let is_same = v.as_deref().is_some_and(|cur| cur == value.as_ref());
                                 if is_same {
                                     if collapsible {
                                         *v = None;
@@ -268,8 +267,11 @@ impl AccordionContent {
             .pb(Space::N4)
             .merge(self.chrome);
 
-        let mut props =
-            decl_style::container_props(&theme, chrome, self.layout.merge(LayoutRefinement::default().w_full()));
+        let mut props = decl_style::container_props(
+            &theme,
+            chrome,
+            self.layout.merge(LayoutRefinement::default().w_full()),
+        );
         props.layout.overflow = fret_ui::element::Overflow::Clip;
 
         let children = self.children;
@@ -443,9 +445,11 @@ impl Accordion {
                 items.iter().map(|i| group_disabled || i.disabled).collect();
 
             let tab_stop = match (open_single.as_deref(), open_multi.as_ref()) {
-                (Some(selected), _) => {
-                    roving_focus::active_index_from_str_keys(&values, Some(selected), &disabled_flags)
-                }
+                (Some(selected), _) => roving_focus::active_index_from_str_keys(
+                    &values,
+                    Some(selected),
+                    &disabled_flags,
+                ),
                 (_, Some(selected)) => {
                     let first_open_enabled = values.iter().enumerate().find_map(|(idx, v)| {
                         let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
@@ -472,8 +476,7 @@ impl Accordion {
                 ..Default::default()
             };
 
-            let wrapper =
-                decl_style::container_props(&theme, ChromeRefinement::default(), layout);
+            let wrapper = decl_style::container_props(&theme, ChromeRefinement::default(), layout);
 
             cx.container(wrapper, move |cx| {
                 vec![cx.semantics(
@@ -500,11 +503,9 @@ impl Accordion {
                                 let mut out = Vec::with_capacity(items.len());
 
                                 for (idx, item) in items.into_iter().enumerate() {
-                                    let item_disabled = disabled_flags
-                                        .get(idx)
-                                        .copied()
-                                        .unwrap_or(true)
-                                        || item.trigger.disabled;
+                                    let item_disabled =
+                                        disabled_flags.get(idx).copied().unwrap_or(true)
+                                            || item.trigger.disabled;
                                     let enabled = !item_disabled;
                                     let focusable = tab_stop.is_some_and(|i| i == idx);
                                     let is_open = open_single
@@ -649,16 +650,14 @@ mod tests {
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
                 let item_1 = AccordionItem::new(
                     Arc::from("item-1"),
-                    AccordionTrigger::new(vec![cx.text("Item 1")]).refine_layout(
-                        LayoutRefinement::default().h_px(MetricRef::Px(Px(40.0))),
-                    ),
+                    AccordionTrigger::new(vec![cx.text("Item 1")])
+                        .refine_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(40.0)))),
                     AccordionContent::new(vec![cx.text("Content 1")]),
                 );
                 let item_2 = AccordionItem::new(
                     Arc::from("item-2"),
-                    AccordionTrigger::new(vec![cx.text("Item 2")]).refine_layout(
-                        LayoutRefinement::default().h_px(MetricRef::Px(Px(40.0))),
-                    ),
+                    AccordionTrigger::new(vec![cx.text("Item 2")])
+                        .refine_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(40.0)))),
                     AccordionContent::new(vec![cx.text("Content 2")]),
                 );
 
@@ -774,7 +773,15 @@ mod tests {
             Size::new(Px(800.0), Px(600.0)),
         );
 
-        render_accordion_frame(&mut ui, &mut app, &mut services, window, bounds, open, false);
+        render_accordion_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            false,
+        );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         // Open item-1.

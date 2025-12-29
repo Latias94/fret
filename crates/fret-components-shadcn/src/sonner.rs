@@ -69,7 +69,12 @@ impl Sonner {
         window_overlays::toast_action(host, self.store, window, request)
     }
 
-    pub fn dismiss(self, host: &mut dyn UiActionHost, window: AppWindowId, id: window_overlays::ToastId) -> bool {
+    pub fn dismiss(
+        self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        id: window_overlays::ToastId,
+    ) -> bool {
         window_overlays::dismiss_toast_action(host, self.store, window, id)
     }
 }
