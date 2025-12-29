@@ -34,6 +34,11 @@ Retained-widget authoring is runtime-internal only:
 - `crates/fret-ui`: `UiTree::create_node` is `pub(crate)`.
 - Component crates author via declarative elements (`RenderOnce` / `Render` / `IntoElement`), not `Widget`.
 
+Exception (explicitly gated):
+
+- A dedicated docking crate may depend on a feature-gated, unstable retained-widget substrate for migration purposes.
+  This must remain **off by default** and must not be used by shadcn/tailwind component crates.
+
 ## shadcn/ui v4 Registry Baseline
 
 The upstream reference in `repo-ref/ui` defines 54 `registry:ui` components (`repo-ref/ui/apps/v4/registry.json`).

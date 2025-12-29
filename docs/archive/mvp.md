@@ -22,6 +22,10 @@ Maintain the next MVP items here as a small, high-signal queue. If a task change
   - Replace runtime “shortcut model writes” (pressable toggle/set variants) with component-owned handlers (ADR 0074).
   - Move dismissal policy (Escape / outside press) fully to `fret-components-ui` overlay policy code (ADR 0067/0069/0074).
   - Keep roving/typeahead/menu navigation policies in `fret-components-ui/headless` (MVP 64) rather than runtime props.
+- MVP 69 (next): Docking layering cleanup (B route): move docking UI/policy out of `fret-ui`.
+  - Keep dock graph/ops/persistence in `fret-core` (stable contract).
+  - Add a generic internal-drag routing hook in `fret-ui` so docking can preserve tear-off/cross-window drags.
+  - Move viewport overlay drawing/policy (gizmos, marquee, selection rect) to `fret-editor` / app-layer code (ADR 0027).
 - MVP 66 (next): Make model observation and invalidation propagation (ADR 0051) an "Accepted + tested" contract.
   - Ensure changed-model propagation invalidates all observing nodes across all windows deterministically.
   - Remove remaining "manual invalidate all panels" glue from demo/components once conformance is locked.

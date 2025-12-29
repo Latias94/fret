@@ -46,7 +46,13 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Eliminate remaining **interaction policy leaks** from `crates/fret-ui` so the runtime contract surface stays small and optimizable.
   - Replace runtime “shortcut model writes” (pressable toggle/set variants, dismiss-by-model patterns) with component-owned policy/handlers (ADR 0074).
   - Keep roving/typeahead/menu navigation policies in `crates/fret-components-ui/headless` (MVP 64), not in runtime element props.
+  - Feature-gate any remaining compatibility shortcuts in `fret-ui` so new components cannot accidentally depend on them.
   - Treat this as a gating refactor before scaling shadcn parity work, to avoid repeated contract churn.
+- P0: Move **Docking UI** out of `crates/fret-ui` (policy-heavy, hard to optimize) into a dedicated component/app layer crate, while keeping runtime substrate clean.
+  - Keep dock **data model + ops + persistence shapes** in `fret-core` (as stable contracts).
+  - Keep `fret-ui` responsible only for **generic mechanisms** (event routing, drag routing hooks, overlay roots/layers, viewport embedding).
+  - Move “editor/viewport overlays” (gizmos, marquee, selection rects) into `fret-editor` / app-layer code (ADR 0027).
+  - Provide a minimal, generic internal-drag routing extension point so docking can preserve tear-off / cross-window drag UX without hard-coding dock types into the runtime.
 - P0: Adopt semantics tree + accessibility bridge boundary (A11y-ready infrastructure) (ADR 0033).
 - P0/P1: Lock composite-widget semantics needed for cmdk-style UX without a DOM:
   - active descendant (announce active result while focus remains in the text field) (ADR 0073),

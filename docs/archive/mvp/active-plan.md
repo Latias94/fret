@@ -47,6 +47,12 @@ definitions live in `docs/archive/mvp/reference-plan.md`.
   - Move dismissal policy (Escape / outside press) fully to `fret-components-ui` overlay policy code (ADR 0067/0069/0074).
   - Ensure roving/typeahead/menu navigation remain component-owned headless helpers (MVP 64), not runtime props.
 
+- MVP 69: Docking layering cleanup (B route)
+  - Goal: keep `crates/fret-ui` as substrate; move docking UI/policy into a dedicated component/app layer crate.
+  - Runtime change: add a generic internal-drag routing extension point (no dock-specific types in `fret-ui`).
+  - Migration: move `DockSpace` and related policy-heavy UI code out of `crates/fret-ui/src/dock.rs`.
+  - Split: move viewport overlay drawing/policy (gizmos, marquee, selection rects) to `fret-editor` / app layer (ADR 0027).
+
 - MVP 53: typography v1 (shadcn-friendly)
   - landed: text style expressiveness (weight + line-height + tracking/letter-spacing)
   - landed: text blob caching keys incorporate typography parameters (ADR 0029)
