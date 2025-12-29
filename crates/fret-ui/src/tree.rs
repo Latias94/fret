@@ -3509,6 +3509,53 @@ mod tests {
     }
 
     #[test]
+    fn focus_traversal_prefers_topmost_overlay_root() {
+        #[derive(Default)]
+        struct Focusable;
+
+        impl<H: UiHost> Widget<H> for Focusable {
+            fn is_focusable(&self) -> bool {
+                true
+            }
+
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                cx.available
+            }
+        }
+
+        let mut app = crate::test_host::TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let base_root = ui.create_node(TestStack);
+        let base_focusable = ui.create_node(Focusable);
+        ui.add_child(base_root, base_focusable);
+        ui.set_root(base_root);
+
+        let overlay_root = ui.create_node(TestStack);
+        let overlay_focusable = ui.create_node(Focusable);
+        ui.add_child(overlay_root, overlay_focusable);
+        ui.push_overlay_root(overlay_root, false);
+
+        let mut services = FakeUiServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.set_focus(Some(base_focusable));
+        let _ = ui.dispatch_command(&mut app, &mut services, &CommandId::from("focus.next"));
+        assert_eq!(ui.focus(), Some(overlay_focusable));
+
+        let _ = ui.dispatch_command(&mut app, &mut services, &CommandId::from("focus.next"));
+        assert_eq!(ui.focus(), Some(base_focusable));
+    }
+
+    #[test]
     fn tab_focus_next_runs_when_text_input_not_composing() {
         let mut app = crate::test_host::TestHost::new();
         app.set_global(PlatformCapabilities::default());

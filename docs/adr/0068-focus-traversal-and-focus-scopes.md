@@ -18,12 +18,11 @@ Current implementation entry points:
 Known gaps / mismatches vs this ADR:
 
 1) **Cross-root ordering**
-   - This ADR specifies collecting focusable candidates by iterating active roots in **paint order**
-     (bottom → top), then doing a deterministic pre-order traversal within each root.
-   - The current `active_input_layers()` returns roots in **reverse paint order** (top → bottom) and
-     the default traversal path uses that ordering. We should explicitly decide whether:
-     - to adjust the implementation to match bottom → top, or
-     - to update the ADR to match the chosen ordering rationale (e.g. “topmost overlay first”).
+   - Decision: we iterate active roots in **reverse paint order** (top → bottom), then do a
+     deterministic pre-order traversal within each root.
+   - Rationale: focus traversal should stay within the user’s current interaction context, and
+     transient surfaces live “above” the underlay (popover/menu inside dialogs, etc.). Prioritizing
+     the topmost overlay matches Radix/shadcn outcomes in a multi-root world.
 
 2) **Focus scopes are not yet surfaced as a reusable component policy**
    - The runtime exposes a reusable mechanism (`focus_traverse_in_roots`) intended to be used by
@@ -98,7 +97,7 @@ For MVP, focus traversal uses a conservative candidate set:
 Ordering:
 
 - Candidates are collected in a deterministic order:
-  - traverse active input roots in paint order (bottom -> top),
+  - traverse active input roots in reverse paint order (top -> bottom),
   - within each root, collect focusables in a deterministic pre-order traversal.
 - `focus.next` moves to the next candidate (wraps).
 - `focus.previous` moves to the previous candidate (wraps).
