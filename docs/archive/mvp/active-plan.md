@@ -50,6 +50,7 @@ definitions live in `docs/archive/mvp/reference-plan.md`.
 - MVP 69: Docking layering cleanup (B route)
   - Goal: keep `crates/fret-ui` as substrate; move docking UI/policy into a dedicated component/app layer crate.
   - Runtime change: add a generic internal-drag routing extension point (no dock-specific types in `fret-ui`).
+  - Runtime change: add a feature-gated retained bridge (`fret-ui/unstable-retained-bridge`) to migrate docking UI without a rewrite.
   - Migration: move `DockSpace` and related policy-heavy UI code out of `crates/fret-ui/src/dock.rs`.
   - Split: move viewport overlay drawing/policy (gizmos, marquee, selection rects) to `fret-editor` / app layer (ADR 0027).
 

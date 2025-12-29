@@ -25,6 +25,7 @@ Maintain the next MVP items here as a small, high-signal queue. If a task change
 - MVP 69 (next): Docking layering cleanup (B route): move docking UI/policy out of `fret-ui`.
   - Keep dock graph/ops/persistence in `fret-core` (stable contract).
   - Add a generic internal-drag routing hook in `fret-ui` so docking can preserve tear-off/cross-window drags.
+  - Add a feature-gated retained bridge (`fret-ui/unstable-retained-bridge`) so the docking UI can move without a rewrite.
   - Move viewport overlay drawing/policy (gizmos, marquee, selection rect) to `fret-editor` / app-layer code (ADR 0027).
 - MVP 66 (next): Make model observation and invalidation propagation (ADR 0051) an "Accepted + tested" contract.
   - Ensure changed-model propagation invalidates all observing nodes across all windows deterministically.

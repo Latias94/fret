@@ -38,6 +38,7 @@ Exception (explicitly gated):
 
 - A dedicated docking crate may depend on a feature-gated, unstable retained-widget substrate for migration purposes.
   This must remain **off by default** and must not be used by shadcn/tailwind component crates.
+  - Current gate: `fret-ui/unstable-retained-bridge` (ADR 0075).
 
 ## shadcn/ui v4 Registry Baseline
 

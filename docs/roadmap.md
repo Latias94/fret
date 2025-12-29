@@ -51,6 +51,7 @@ These items are intentionally scheduled early because they define “hard-to-cha
 - P0: Move **Docking UI** out of `crates/fret-ui` (policy-heavy, hard to optimize) into a dedicated component/app layer crate, while keeping runtime substrate clean.
   - Keep dock **data model + ops + persistence shapes** in `fret-core` (as stable contracts).
   - Keep `fret-ui` responsible only for **generic mechanisms** (event routing, drag routing hooks, overlay roots/layers, viewport embedding).
+  - Provide a feature-gated retained bridge (`fret-ui/unstable-retained-bridge`) to migrate docking UI out without a rewrite; treat it as explicitly unstable.
   - Move “editor/viewport overlays” (gizmos, marquee, selection rects) into `fret-editor` / app-layer code (ADR 0027).
   - Provide a minimal, generic internal-drag routing extension point so docking can preserve tear-off / cross-window drag UX without hard-coding dock types into the runtime.
 - P0: Adopt semantics tree + accessibility bridge boundary (A11y-ready infrastructure) (ADR 0033).

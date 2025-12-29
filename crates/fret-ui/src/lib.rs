@@ -9,6 +9,8 @@ pub mod focus_visible;
 pub mod host;
 pub mod overlay_placement;
 pub mod paint;
+#[cfg(feature = "unstable-retained-bridge")]
+pub mod retained_bridge;
 pub type ItemKey = u64;
 #[allow(dead_code)]
 pub(crate) mod resizable_split;
