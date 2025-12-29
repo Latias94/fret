@@ -539,7 +539,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
             (root, dock_bounds)
         }
 
-        let allow_viewport_hover = cx.app.drag().is_none_or(|d| !d.dragging);
         let dock_drag = cx.app.drag().and_then(|d| {
             d.payload::<DockPanelDragPayload>()
                 .map(|p| DockDragSnapshot {
@@ -550,6 +549,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     grab_offset: p.grab_offset,
                 })
         });
+        // While a dock drag session exists (even before it crosses the drag threshold), we must
+        // not forward pointer moves/wheel to embedded viewports in this window. Docking owns the
+        // interaction until the session ends (ADR 0072).
+        let allow_viewport_hover = dock_drag.is_none() && cx.app.drag().is_none_or(|d| !d.dragging);
         let window_bounds = cx
             .app
             .global::<WindowMetricsService>()
@@ -1006,6 +1009,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     } => {
                         let bounds = self.last_bounds;
                         if !bounds.contains(*position) {
+                            return;
+                        }
+                        if dock_drag.is_some() {
                             return;
                         }
                         let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);

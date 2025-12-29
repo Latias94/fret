@@ -16,6 +16,8 @@ This ADR is implemented for the non-modal overlay stack and docking drags:
   fighting docking interaction.
 - While a dock drag session is active, docking suppresses starting competing capture sessions from
   secondary pointer-down events (e.g. viewport capture) in the same window.
+- While a dock drag session is active, docking suppresses forwarding pointer-move and wheel events
+  to embedded viewports in the same window.
 
 ## Context
 
