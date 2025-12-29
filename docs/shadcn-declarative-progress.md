@@ -107,7 +107,7 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 | switch | `switch` | Present |  |
 | table | `table` | Present |  |
 | tabs | `tabs` | Present |  |
-| textarea | `textarea` | Missing | Text input multi-line wrapper over runtime `TextArea` |
+| textarea | `textarea` | Present | Wrapper over declarative `TextArea` (runtime `TextArea` engine); a11y TBD |
 | toggle | `toggle` | Present |  |
 | toggle-group | `toggle_group` | Present |  |
 | tooltip | `tooltip` | Present | Hover intent + placement; rendered via overlay root (not clipped) |

@@ -52,6 +52,7 @@ pub mod spinner;
 pub mod switch;
 pub mod table;
 pub mod tabs;
+pub mod textarea;
 pub mod toggle;
 pub mod toggle_group;
 pub mod tooltip;
@@ -136,6 +137,7 @@ pub use table::{
     Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 };
 pub use tabs::{Tabs, TabsItem, tabs};
+pub use textarea::{Textarea, textarea};
 pub use toggle::{Toggle, ToggleSize, ToggleVariant, toggle};
 pub use toggle_group::{
     ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple, toggle_group_single,
