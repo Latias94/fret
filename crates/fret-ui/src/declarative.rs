@@ -469,6 +469,13 @@ pub(crate) fn with_window_frame<H: UiHost, R>(
     })
 }
 
+fn prepare_window_frame_for_frame(window_frame: &mut WindowFrame, frame_id: FrameId) {
+    if window_frame.frame_id != frame_id {
+        window_frame.frame_id = frame_id;
+        window_frame.instances.clear();
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 struct TextCache {
     blob: Option<fret_core::TextBlobId>,
@@ -3753,33 +3760,31 @@ pub fn render_root<H: UiHost>(
         );
 
         app.with_global_mut(ElementFrame::default, |frame, _app| {
-            let w = frame.windows.entry(window).or_default();
-            if w.frame_id != frame_id {
-                w.frame_id = frame_id;
-                w.instances.clear();
-            }
-            w.instances.insert(
+            let window_frame = frame.windows.entry(window).or_default();
+            prepare_window_frame_for_frame(window_frame, frame_id);
+
+            window_frame.instances.insert(
                 root_node,
                 ElementRecord {
                     element: root_id,
                     instance: ElementInstance::Stack(StackProps::default()),
                 },
             );
-        });
 
-        let mut mounted_children: Vec<NodeId> = Vec::with_capacity(children.len());
-        for child in children {
-            mounted_children.push(mount_element(
-                ui,
-                app,
-                window,
-                root_id,
-                frame_id,
-                window_state,
-                child,
-            ));
-        }
-        ui.set_children(root_node, mounted_children);
+            let mut mounted_children: Vec<NodeId> = Vec::with_capacity(children.len());
+            for child in children {
+                mounted_children.push(mount_element(
+                    ui,
+                    window,
+                    root_id,
+                    frame_id,
+                    window_state,
+                    window_frame,
+                    child,
+                ));
+            }
+            ui.set_children(root_node, mounted_children);
+        });
 
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
@@ -3930,12 +3935,10 @@ fn render_dismissible_root_impl<H: UiHost, F: FnOnce(&mut ElementCx<'_, H>) -> V
         );
 
         app.with_global_mut(ElementFrame::default, |frame, _app| {
-            let w = frame.windows.entry(window).or_default();
-            if w.frame_id != frame_id {
-                w.frame_id = frame_id;
-                w.instances.clear();
-            }
-            w.instances.insert(
+            let window_frame = frame.windows.entry(window).or_default();
+            prepare_window_frame_for_frame(window_frame, frame_id);
+
+            window_frame.instances.insert(
                 root_node,
                 ElementRecord {
                     element: root_id,
@@ -3954,21 +3957,21 @@ fn render_dismissible_root_impl<H: UiHost, F: FnOnce(&mut ElementCx<'_, H>) -> V
                     },
                 },
             );
-        });
 
-        let mut mounted_children: Vec<NodeId> = Vec::with_capacity(children.len());
-        for child in children {
-            mounted_children.push(mount_element(
-                ui,
-                app,
-                window,
-                root_id,
-                frame_id,
-                window_state,
-                child,
-            ));
-        }
-        ui.set_children(root_node, mounted_children);
+            let mut mounted_children: Vec<NodeId> = Vec::with_capacity(children.len());
+            for child in children {
+                mounted_children.push(mount_element(
+                    ui,
+                    window,
+                    root_id,
+                    frame_id,
+                    window_state,
+                    window_frame,
+                    child,
+                ));
+            }
+            ui.set_children(root_node, mounted_children);
+        });
 
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
@@ -4003,11 +4006,11 @@ fn render_dismissible_root_impl<H: UiHost, F: FnOnce(&mut ElementCx<'_, H>) -> V
 
 fn mount_element<H: UiHost>(
     ui: &mut UiTree<H>,
-    app: &mut H,
     window: AppWindowId,
     root_id: GlobalElementId,
     frame_id: fret_core::FrameId,
     window_state: &mut crate::elements::WindowElementState,
+    window_frame: &mut WindowFrame,
     element: AnyElement,
 ) -> NodeId {
     let id = element.id;
@@ -4087,25 +4090,23 @@ fn mount_element<H: UiHost>(
         ElementKind::Scroll(p) => ElementInstance::Scroll(p),
     };
 
-    app.with_global_mut(ElementFrame::default, |frame, _app| {
-        frame.windows.entry(window).or_default().instances.insert(
-            node,
-            ElementRecord {
-                element: id,
-                instance,
-            },
-        );
-    });
+    window_frame.instances.insert(
+        node,
+        ElementRecord {
+            element: id,
+            instance,
+        },
+    );
 
     let mut child_nodes: Vec<NodeId> = Vec::with_capacity(element.children.len());
     for child in element.children {
         child_nodes.push(mount_element(
             ui,
-            app,
             window,
             root_id,
             frame_id,
             window_state,
+            window_frame,
             child,
         ));
     }

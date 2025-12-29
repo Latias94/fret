@@ -555,16 +555,11 @@ impl<H: UiHost> UiTree<H> {
             let (invalidations, requested_focus, requested_capture, stop_propagation, parent) =
                 self.with_widget_mut(node_id, |widget, tree| {
                     let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                    let children: Vec<NodeId> = tree
+                    let (children, bounds) = tree
                         .nodes
                         .get(node_id)
-                        .map(|n| n.children.clone())
-                        .unwrap_or_default();
-                    let bounds = tree
-                        .nodes
-                        .get(node_id)
-                        .map(|n| n.bounds)
-                        .unwrap_or_default();
+                        .map(|n| (n.children.as_slice(), n.bounds))
+                        .unwrap_or((&[][..], Rect::default()));
                     let mut cx = EventCx {
                         app,
                         services: unsafe { &mut *services_ptr },
@@ -1523,16 +1518,11 @@ impl<H: UiHost> UiTree<H> {
                 parent,
             ) = self.with_widget_mut(node_id, |widget, tree| {
                 let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                let children: Vec<NodeId> = tree
+                let (children, bounds) = tree
                     .nodes
                     .get(node_id)
-                    .map(|n| n.children.clone())
-                    .unwrap_or_default();
-                let bounds = tree
-                    .nodes
-                    .get(node_id)
-                    .map(|n| n.bounds)
-                    .unwrap_or_default();
+                    .map(|n| (n.children.as_slice(), n.bounds))
+                    .unwrap_or((&[][..], Rect::default()));
                 let mut cx = EventCx {
                     app,
                     services: unsafe { &mut *services_ptr },
@@ -1728,16 +1718,11 @@ impl<H: UiHost> UiTree<H> {
         loop {
             let (invalidations, parent) = self.with_widget_mut(node_id, |widget, tree| {
                 let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                let children: Vec<NodeId> = tree
+                let (children, bounds) = tree
                     .nodes
                     .get(node_id)
-                    .map(|n| n.children.clone())
-                    .unwrap_or_default();
-                let bounds = tree
-                    .nodes
-                    .get(node_id)
-                    .map(|n| n.bounds)
-                    .unwrap_or_default();
+                    .map(|n| (n.children.as_slice(), n.bounds))
+                    .unwrap_or((&[][..], Rect::default()));
                 let mut observer_ctx = input_ctx.clone();
                 observer_ctx.dispatch_phase = InputDispatchPhase::Observer;
                 let mut cx = EventCx {
