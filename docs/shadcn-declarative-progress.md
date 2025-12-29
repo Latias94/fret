@@ -56,7 +56,7 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 | badge | `badge` | Present |  |
 | breadcrumb | `breadcrumb` | Present |  |
 | button | `button` | Present |  |
-| button-group | `button_group` | Missing | Likely a thin wrapper over `toggle_group` styling |
+| button-group | `button_group` | Present | Thin wrapper over `toggle_group` styling |
 | calendar | `calendar` | Missing | Large surface; likely deferred unless needed |
 | card | `card` | Present |  |
 | carousel | `carousel` | Defer | Not editor-critical |
@@ -73,7 +73,7 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 | form | `form` | Present |  |
 | hover-card | `hover_card` | Present | Needs tooltip/popover-grade overlay infra for parity |
 | input | `input` | Present |  |
-| input-group | `input_group` | Missing | Composition over `input` + slots/icons |
+| input-group | `input_group` | Present | Composition over `input` + slots/icons |
 | input-otp | `input_otp` | Missing | Specialized input; can be layered on text input primitives |
 | item | `item` | Present | Repo-specific list/item recipes aligned with shadcn style |
 | kbd | `kbd` | Present |  |
@@ -86,9 +86,9 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 | progress | `progress` | Present |  |
 | radio-group | `radio_group` | Present |  |
 | resizable | `resizable` | Missing | Splitters/panels; some runtime pieces exist |
-| scroll-area | `scroll_area` | Missing | Likely a declarative wrapper over `Scroll` + styling |
+| scroll-area | `scroll_area` | Present | Declarative wrapper over `Scroll` + styling |
 | select | `select` | Present | Uses `window_overlays` dismissible popover infra |
-| separator | `separator` | Missing | Simple primitive; should be components-ui declarative |
+| separator | `separator` | Present | Simple primitive; declarative-only |
 | sheet | `sheet` | Present | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
 | sidebar | `sidebar` | Present |  |
 | skeleton | `skeleton` | Present |  |

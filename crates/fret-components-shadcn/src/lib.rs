@@ -14,6 +14,7 @@ pub mod avatar;
 pub mod badge;
 pub mod breadcrumb;
 pub mod button;
+pub mod button_group;
 pub mod card;
 pub mod checkbox;
 pub mod context_menu;
@@ -25,6 +26,7 @@ pub mod field;
 pub mod form;
 pub mod hover_card;
 pub mod input;
+pub mod input_group;
 pub mod item;
 pub mod kbd;
 pub mod label;
@@ -32,7 +34,9 @@ pub mod pagination;
 pub mod popover;
 pub mod progress;
 pub mod radio_group;
+pub mod scroll_area;
 pub mod select;
+pub mod separator;
 pub mod sheet;
 pub mod sidebar;
 pub mod skeleton;
@@ -54,6 +58,9 @@ pub use avatar::{Avatar, AvatarFallback, AvatarImage};
 pub use badge::{Badge, BadgeVariant};
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem};
 pub use button::{Button, ButtonSize, ButtonVariant};
+pub use button_group::{
+    ButtonGroup, ButtonGroupItem, ButtonGroupKind, button_group_multiple, button_group_single,
+};
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
 pub use checkbox::{Checkbox, checkbox};
 pub use context_menu::{ContextMenu, ContextMenuEntry, ContextMenuItem};
@@ -72,6 +79,7 @@ pub use field::{
 pub use form::{Form, FormControl, FormDescription, FormItem, FormLabel, FormMessage, form};
 pub use hover_card::{HoverCard, HoverCardAlign, HoverCardContent, HoverCardTrigger};
 pub use input::{Input, input};
+pub use input_group::{InputGroup, input_group};
 pub use item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
     ItemMediaVariant, ItemSeparator, ItemSize, ItemTitle, ItemVariant, item_group,
@@ -87,7 +95,9 @@ pub use popover::{
 };
 pub use progress::{Progress, progress};
 pub use radio_group::{RadioGroup, RadioGroupItem, radio_group};
+pub use scroll_area::{ScrollArea, scroll_area};
 pub use select::{Select, SelectItem, select};
+pub use separator::{Separator, SeparatorOrientation, separator};
 pub use sheet::{
     Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetSide, SheetTitle,
 };
