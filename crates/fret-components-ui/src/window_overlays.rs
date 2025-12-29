@@ -479,7 +479,6 @@ pub fn dismiss_toast_action(
     if let Some(token) = entry.token {
         host.push_effect(Effect::CancelTimer { token });
     }
-    host.request_redraw(window);
     true
 }
 
@@ -514,6 +513,10 @@ pub fn render<H: UiHost>(
     let mut seen_toast_layers: HashSet<GlobalElementId> = HashSet::new();
 
     for req in modal_requests {
+        let open = app.models().get(req.open).copied().unwrap_or(false);
+        if !open {
+            continue;
+        }
         seen_modals.insert(req.id);
 
         let root = declarative::render_dismissible_root_with_hooks(
@@ -581,6 +584,10 @@ pub fn render<H: UiHost>(
     }
 
     for req in popover_requests {
+        let open = app.models().get(req.open).copied().unwrap_or(false);
+        if !open {
+            continue;
+        }
         seen_popovers.insert(req.id);
 
         let root = declarative::render_dismissible_root_with_hooks(
