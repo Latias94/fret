@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{AppWindowId, Axis, DockGraph, DockNode, DockNodeId, PanelKey};
 
 pub const DOCK_LAYOUT_VERSION_V1: u32 = 1;
+pub const DOCK_LAYOUT_VERSION_V2: u32 = 2;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DockLayoutV1 {
@@ -22,11 +23,72 @@ impl DockLayoutV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DockLayoutV2 {
+    pub layout_version: u32,
+    pub windows: Vec<DockLayoutWindowV2>,
+    pub nodes: Vec<DockLayoutNodeV1>,
+}
+
+impl DockLayoutV2 {
+    pub fn new_v2(windows: Vec<DockLayoutWindowV2>, nodes: Vec<DockLayoutNodeV1>) -> Self {
+        Self {
+            layout_version: DOCK_LAYOUT_VERSION_V2,
+            windows,
+            nodes,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DockLayoutWindowV1 {
     pub logical_window_id: String,
     pub root: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub placement: Option<DockWindowPlacementV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DockLayoutWindowV2 {
+    pub logical_window_id: String,
+    pub root: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub placement: Option<DockWindowPlacementV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub floatings: Vec<DockLayoutFloatingWindowV2>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DockLayoutFloatingWindowV2 {
+    /// Root node id within `nodes` for the floating dock tree (tabs/splits).
+    pub root: u32,
+    /// Floating window rect in logical pixels, relative to the host window's inner content origin.
+    pub rect: DockRectV2,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct DockRectV2 {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+}
+
+impl DockRectV2 {
+    pub fn from_rect(rect: crate::Rect) -> Self {
+        Self {
+            x: rect.origin.x.0,
+            y: rect.origin.y.0,
+            w: rect.size.width.0,
+            h: rect.size.height.0,
+        }
+    }
+
+    pub fn to_rect(self) -> crate::Rect {
+        crate::Rect::new(
+            crate::Point::new(crate::Px(self.x), crate::Px(self.y)),
+            crate::Size::new(crate::Px(self.w), crate::Px(self.h)),
+        )
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
