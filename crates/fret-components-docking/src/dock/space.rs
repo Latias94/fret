@@ -3,12 +3,11 @@
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
 use super::hit_test::{
-    hit_test_drop_target, hit_test_split_handle, hit_test_tab, split_children_two,
-    tab_rect_for_index,
+    hit_test_drop_target, hit_test_split_handle, hit_test_tab, tab_rect_for_index,
 };
 use super::layout::{
-    active_panel_content_bounds, compute_layout_map, compute_split_fraction, dock_space_regions,
-    float_zone, hidden_bounds, split_tab_bar,
+    active_panel_content_bounds, compute_layout_map, dock_space_regions, float_zone, hidden_bounds,
+    split_tab_bar,
 };
 use super::manager::DockManager;
 use super::paint::{
@@ -25,6 +24,7 @@ use super::viewport::{
     viewport_input_from_hit_clamped,
 };
 use crate::invalidation::DockInvalidationService;
+use fret_ui::retained_bridge::resizable_panel_group as resizable;
 
 const DOCK_FLOATING_BORDER: Px = Px(1.0);
 const DOCK_FLOATING_TITLE_H: Px = Px(22.0);
@@ -869,36 +869,36 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             pending_redraws.push(self.window);
                         }
 
-                        if let Some(mut divider) = self.divider_drag {
+                        if let Some(divider) = self.divider_drag {
                             cx.requested_cursor = Some(match divider.axis {
                                 fret_core::Axis::Horizontal => fret_core::CursorIcon::ColResize,
                                 fret_core::Axis::Vertical => fret_core::CursorIcon::RowResize,
                             });
-                            let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                            let (layout_root, layout_bounds) = layout_context_for_position(
-                                &dock.graph,
-                                self.window,
-                                root,
-                                dock_bounds,
-                                *position,
-                            );
-                            let layout =
-                                compute_layout_map(&dock.graph, layout_root, layout_bounds);
-                            if let Some((left, right)) =
-                                split_children_two(&dock.graph, divider.split).and_then(|(a, b)| {
-                                    Some((layout.get(&a).copied()?, layout.get(&b).copied()?))
+                            let Some((children_len, fractions_now)) =
+                                dock.graph.node(divider.split).and_then(|n| match n {
+                                    DockNode::Split {
+                                        children,
+                                        fractions,
+                                        ..
+                                    } => Some((children.len(), fractions.clone())),
+                                    _ => None,
                                 })
-                                && let Some(f0) = compute_split_fraction(
-                                    divider.axis,
-                                    divider.bounds,
-                                    left,
-                                    right,
-                                    divider.grab_offset,
-                                    *position,
-                                )
-                            {
-                                dock.graph.update_split_two(divider.split, f0);
-                                divider.fraction = f0;
+                            else {
+                                return;
+                            };
+                            if let Some(next) = resizable::drag_update_fractions(
+                                divider.axis,
+                                divider.bounds,
+                                children_len,
+                                &fractions_now,
+                                divider.handle_ix,
+                                DOCK_SPLIT_HANDLE_GAP,
+                                DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+                                &[],
+                                divider.grab_offset,
+                                *position,
+                            ) {
+                                dock.graph.update_split_fractions(divider.split, next);
                                 self.divider_drag = Some(divider);
                                 cx.invalidate(cx.node, Invalidation::Layout);
                                 cx.invalidate(cx.node, Invalidation::Paint);
@@ -1076,8 +1076,23 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             handled = true;
                         }
 
-                        if *button == fret_core::MouseButton::Left && self.divider_drag.is_some() {
-                            self.divider_drag = None;
+                        if *button == fret_core::MouseButton::Left
+                            && let Some(divider) = self.divider_drag.take()
+                        {
+                            if let Some(DockNode::Split {
+                                children,
+                                fractions,
+                                ..
+                            }) = dock.graph.node(divider.split)
+                                && children.len() >= 2
+                                && children.len() == fractions.len()
+                            {
+                                pending_effects.push(Effect::Dock(DockOp::SetSplitFractions {
+                                    split: divider.split,
+                                    fractions: fractions.clone(),
+                                }));
+                            }
+
                             request_pointer_capture = Some(None);
                             invalidate_layout = true;
                             invalidate_paint = true;
@@ -1156,17 +1171,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 dock.hover = None;
                                 request_pointer_capture = Some(None);
                                 invalidate_paint = true;
-                            }
-
-                            if !released_capture
-                                && *button == fret_core::MouseButton::Left
-                                && let Some(divider) = self.divider_drag.take()
-                            {
-                                pending_effects.push(Effect::Dock(DockOp::SetSplitFractionTwo {
-                                    split: divider.split,
-                                    first_fraction: divider.fraction,
-                                }));
-                                invalidate_layout = true;
                             }
 
                             if !released_capture
@@ -1790,7 +1794,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         background: theme.colors.hover_background,
                         border: Edges::all(Px(0.0)),
                         border_color: Color::TRANSPARENT,
-                        corner_radii: fret_core::Corners::all(Px(theme.metrics.radius_sm.0.max(4.0))),
+                        corner_radii: fret_core::Corners::all(Px(theme
+                            .metrics
+                            .radius_sm
+                            .0
+                            .max(4.0))),
                     });
                 }
 
@@ -1822,7 +1830,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         tab_titles: &self.tab_titles,
                         hovered_tab: self.hovered_tab,
                         hovered_tab_close: self.hovered_tab_close,
-                        pressed_tab_close: self.pressed_tab_close.as_ref().map(|(n, i, _)| (*n, *i)),
+                        pressed_tab_close: self
+                            .pressed_tab_close
+                            .as_ref()
+                            .map(|(n, i, _)| (*n, *i)),
                         tab_scroll: &self.tab_scroll,
                         tab_close_glyph: self.tab_close_glyph,
                     },

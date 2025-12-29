@@ -82,6 +82,12 @@ pub enum DockOp {
         target_tabs: DockNodeId,
     },
 
+    /// Update a split node's normalized `fractions` (length must match `children.len()`).
+    SetSplitFractions {
+        split: DockNodeId,
+        fractions: Vec<f32>,
+    },
+
     SetSplitFractionTwo {
         split: DockNodeId,
         first_fraction: f32,

@@ -3,6 +3,7 @@
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
 use super::prelude_core::*;
+use fret_ui::retained_bridge::resizable_panel_group as resizable;
 
 pub(super) fn compute_layout_map(
     graph: &DockGraph,
@@ -32,58 +33,21 @@ fn compute_layout_map_impl(
             children,
             fractions,
         } => {
-            let count = children.len().min(fractions.len());
+            let count = children.len();
             if count == 0 {
                 return;
             }
-
-            let total: f32 = fractions.iter().take(count).sum();
-            let total = if total <= 0.0 { 1.0 } else { total };
-
-            let axis_len = match axis {
-                fret_core::Axis::Horizontal => bounds.size.width.0,
-                fret_core::Axis::Vertical => bounds.size.height.0,
-            };
-            if !axis_len.is_finite() || axis_len <= 0.0 {
-                return;
-            }
-
-            let gaps = count.saturating_sub(1) as f32;
-            let mut gap = DOCK_SPLIT_HANDLE_GAP.0;
-            if gaps == 0.0 || axis_len <= gap * gaps {
-                gap = 0.0;
-            }
-
-            let available = axis_len - gap * gaps;
-            if !available.is_finite() || available <= 0.0 {
-                return;
-            }
-
-            let mut cursor = 0.0;
-            for i in 0..count {
-                let f = (fractions[i] / total).max(0.0);
-                let (child_axis_len, next_cursor) = if i + 1 == count {
-                    let remaining = (available - cursor).max(0.0);
-                    (remaining, available)
-                } else {
-                    let len = available * f;
-                    (len, cursor + len)
-                };
-
-                let origin_axis = cursor + gap * (i as f32);
-                let child_rect = match axis {
-                    fret_core::Axis::Horizontal => Rect {
-                        origin: Point::new(Px(bounds.origin.x.0 + origin_axis), bounds.origin.y),
-                        size: Size::new(Px(child_axis_len), bounds.size.height),
-                    },
-                    fret_core::Axis::Vertical => Rect {
-                        origin: Point::new(bounds.origin.x, Px(bounds.origin.y.0 + origin_axis)),
-                        size: Size::new(bounds.size.width, Px(child_axis_len)),
-                    },
-                };
-
-                cursor = next_cursor;
-                compute_layout_map_impl(graph, children[i], child_rect, out);
+            let computed = resizable::compute_layout(
+                *axis,
+                bounds,
+                count,
+                fractions,
+                DOCK_SPLIT_HANDLE_GAP,
+                DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+                &[],
+            );
+            for (&child, &rect) in children.iter().zip(computed.panel_rects.iter()) {
+                compute_layout_map_impl(graph, child, rect, out);
             }
         }
         DockNode::Floating { child } => {
@@ -181,105 +145,6 @@ pub(super) fn float_zone(bounds: Rect) -> Rect {
     Rect {
         origin: Point::new(Px(bounds.origin.x.0 + 8.0), Px(bounds.origin.y.0 + 8.0)),
         size: Size::new(size, size),
-    }
-}
-
-fn split_gap(axis: fret_core::Axis, first: Rect, second: Rect) -> f32 {
-    let gap = match axis {
-        fret_core::Axis::Horizontal => second.origin.x.0 - (first.origin.x.0 + first.size.width.0),
-        fret_core::Axis::Vertical => second.origin.y.0 - (first.origin.y.0 + first.size.height.0),
-    };
-    if gap.is_finite() { gap.max(0.0) } else { 0.0 }
-}
-
-pub(super) fn split_handle_center(axis: fret_core::Axis, first: Rect, second: Rect) -> f32 {
-    let gap = split_gap(axis, first, second);
-    match axis {
-        fret_core::Axis::Horizontal => {
-            let start = first.origin.x.0 + first.size.width.0;
-            if gap > 0.0 { start + gap * 0.5 } else { start }
-        }
-        fret_core::Axis::Vertical => {
-            let start = first.origin.y.0 + first.size.height.0;
-            if gap > 0.0 { start + gap * 0.5 } else { start }
-        }
-    }
-}
-
-pub(super) fn split_handle_rect(
-    axis: fret_core::Axis,
-    bounds: Rect,
-    first: Rect,
-    second: Rect,
-    thickness: Px,
-) -> Rect {
-    let gap = split_gap(axis, first, second);
-    if gap > 0.0 {
-        match axis {
-            fret_core::Axis::Horizontal => Rect {
-                origin: Point::new(Px(first.origin.x.0 + first.size.width.0), bounds.origin.y),
-                size: Size::new(Px(gap), bounds.size.height),
-            },
-            fret_core::Axis::Vertical => Rect {
-                origin: Point::new(bounds.origin.x, Px(first.origin.y.0 + first.size.height.0)),
-                size: Size::new(bounds.size.width, Px(gap)),
-            },
-        }
-    } else {
-        let center = split_handle_center(axis, first, second);
-        match axis {
-            fret_core::Axis::Horizontal => Rect {
-                origin: Point::new(Px(center - thickness.0 * 0.5), bounds.origin.y),
-                size: Size::new(thickness, bounds.size.height),
-            },
-            fret_core::Axis::Vertical => Rect {
-                origin: Point::new(bounds.origin.x, Px(center - thickness.0 * 0.5)),
-                size: Size::new(bounds.size.width, thickness),
-            },
-        }
-    }
-}
-
-pub(super) fn compute_split_fraction(
-    axis: fret_core::Axis,
-    bounds: Rect,
-    first: Rect,
-    second: Rect,
-    grab_offset: f32,
-    position: Point,
-) -> Option<f32> {
-    let min_px = 120.0;
-    match axis {
-        fret_core::Axis::Horizontal => {
-            let w = bounds.size.width.0;
-            if !w.is_finite() {
-                return None;
-            }
-            let gap = split_gap(axis, first, second);
-            let avail = w - gap;
-            if !avail.is_finite() || avail <= min_px * 2.0 {
-                return None;
-            }
-            let max_x = (avail - min_px).max(min_px);
-            let anchor = position.x.0 - grab_offset - bounds.origin.x.0;
-            let x = (anchor - gap * 0.5).clamp(min_px, max_x);
-            Some(x / avail)
-        }
-        fret_core::Axis::Vertical => {
-            let h = bounds.size.height.0;
-            if !h.is_finite() {
-                return None;
-            }
-            let gap = split_gap(axis, first, second);
-            let avail = h - gap;
-            if !avail.is_finite() || avail <= min_px * 2.0 {
-                return None;
-            }
-            let max_y = (avail - min_px).max(min_px);
-            let anchor = position.y.0 - grab_offset - bounds.origin.y.0;
-            let y = (anchor - gap * 0.5).clamp(min_px, max_y);
-            Some(y / avail)
-        }
     }
 }
 

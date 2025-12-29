@@ -12,9 +12,14 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
 
 #[derive(Debug, Clone)]
 pub struct ResizablePanelGroupStyle {
+    /// Layout gap between panels in logical px.
+    ///
+    /// This does **not** need to match `hit_thickness`: it is common to keep the visual/layout gap
+    /// small (or zero) while using a larger hit area for usability.
+    pub gap: Px,
     /// Thickness of the handle region in logical px.
     ///
-    /// This region participates in layout as the gap between panels.
+    /// This region is used for hit-testing (and can be larger than `gap`).
     pub hit_thickness: Px,
     /// Visual thickness in *device* pixels (converted using the current scale factor).
     pub paint_device_px: f32,
@@ -27,6 +32,7 @@ pub struct ResizablePanelGroupStyle {
 impl Default for ResizablePanelGroupStyle {
     fn default() -> Self {
         Self {
+            gap: Px(0.0),
             hit_thickness: Px(6.0),
             paint_device_px: 1.0,
             handle_color: Color {
@@ -50,6 +56,9 @@ impl ResizablePanelGroupStyle {
             .unwrap_or(theme.snapshot().colors.panel_border);
 
         Self {
+            gap: theme
+                .metric_by_key("component.resizable.gap")
+                .unwrap_or(Px(0.0)),
             hit_thickness: theme
                 .metric_by_key("component.resizable.hit_thickness")
                 .unwrap_or(Px(6.0)),
@@ -60,6 +69,170 @@ impl ResizablePanelGroupStyle {
             handle_color,
             ..Default::default()
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ResizablePanelGroupLayout {
+    pub panel_rects: Vec<Rect>,
+    pub handle_hit_rects: Vec<Rect>,
+    pub handle_centers: Vec<f32>,
+    pub sizes: Vec<f32>,
+    pub mins: Vec<f32>,
+    pub avail: f32,
+}
+
+fn handle_hit_rect(axis: Axis, bounds: Rect, center: f32, thickness: f32) -> Rect {
+    if thickness <= 0.0 || !thickness.is_finite() {
+        return Rect::default();
+    }
+
+    let axis_origin = match axis {
+        Axis::Horizontal => bounds.origin.x.0,
+        Axis::Vertical => bounds.origin.y.0,
+    };
+    let axis_len = match axis {
+        Axis::Horizontal => bounds.size.width.0,
+        Axis::Vertical => bounds.size.height.0,
+    }
+    .max(0.0);
+
+    let t = thickness.min(axis_len);
+    let max_origin = (axis_origin + axis_len - t).max(axis_origin);
+    let origin_axis = (center - t * 0.5).clamp(axis_origin, max_origin);
+
+    match axis {
+        Axis::Horizontal => Rect::new(
+            fret_core::Point::new(Px(origin_axis), bounds.origin.y),
+            Size::new(Px(t), bounds.size.height),
+        ),
+        Axis::Vertical => Rect::new(
+            fret_core::Point::new(bounds.origin.x, Px(origin_axis)),
+            Size::new(bounds.size.width, Px(t)),
+        ),
+    }
+}
+
+pub(crate) fn fractions_from_sizes(sizes: &[f32], avail: f32) -> Vec<f32> {
+    if avail <= 0.0 {
+        return Vec::new();
+    }
+    let mut next: Vec<f32> = sizes.iter().map(|s| (*s / avail).clamp(0.0, 1.0)).collect();
+    next = BoundResizablePanelGroup::sanitize_fractions(next, sizes.len());
+    next
+}
+
+pub(crate) fn apply_handle_delta(
+    handle_ix: usize,
+    mut delta: f32,
+    sizes: &mut [f32],
+    mins: &[f32],
+) -> f32 {
+    if sizes.len() < 2 || handle_ix + 1 >= sizes.len() {
+        return 0.0;
+    }
+    if mins.len() != sizes.len() {
+        return 0.0;
+    }
+
+    if delta > 0.0 {
+        let mut reducible = 0.0;
+        for k in (handle_ix + 1)..sizes.len() {
+            reducible += (sizes[k] - mins[k]).max(0.0);
+        }
+        if reducible <= 1.0e-6 {
+            return 0.0;
+        }
+        delta = delta.min(reducible);
+        sizes[handle_ix] += delta;
+
+        let mut remaining = delta;
+        for k in (handle_ix + 1)..sizes.len() {
+            if remaining <= 1.0e-6 {
+                break;
+            }
+            let available = (sizes[k] - mins[k]).max(0.0);
+            let take = remaining.min(available);
+            sizes[k] -= take;
+            remaining -= take;
+        }
+        delta - remaining
+    } else if delta < 0.0 {
+        let shrinkable = (sizes[handle_ix] - mins[handle_ix]).max(0.0);
+        if shrinkable <= 1.0e-6 {
+            return 0.0;
+        }
+        delta = delta.max(-shrinkable);
+        sizes[handle_ix] += delta;
+        sizes[handle_ix + 1] -= delta;
+        delta
+    } else {
+        0.0
+    }
+}
+
+pub(crate) fn compute_resizable_panel_group_layout(
+    axis: Axis,
+    bounds: Rect,
+    children_len: usize,
+    fractions: Vec<f32>,
+    gap: Px,
+    hit_thickness: Px,
+    min_px: &[Px],
+) -> ResizablePanelGroupLayout {
+    let gap = gap.0.max(0.0);
+    let hit = hit_thickness.0.max(0.0).max(gap);
+
+    let axis_len = BoundResizablePanelGroup::axis_len(bounds, axis).max(0.0);
+    let total_gap = gap * (children_len.saturating_sub(1) as f32);
+    let avail = (axis_len - total_gap).max(0.0);
+
+    let mins = BoundResizablePanelGroup::effective_min_px_static(children_len, avail, min_px);
+    let fractions = BoundResizablePanelGroup::sanitize_fractions(fractions, children_len);
+    let sizes = BoundResizablePanelGroup::apply_min_constraints(
+        BoundResizablePanelGroup::sizes_from_fractions(&fractions, avail),
+        &mins,
+        avail,
+    );
+
+    let mut panel_rects = Vec::with_capacity(children_len);
+    let mut handle_hit_rects = Vec::with_capacity(children_len.saturating_sub(1));
+    let mut handle_centers = Vec::with_capacity(children_len.saturating_sub(1));
+
+    let mut cursor = BoundResizablePanelGroup::axis_origin(bounds, axis);
+    for i in 0..children_len {
+        let len = sizes.get(i).copied().unwrap_or(0.0).max(0.0);
+        match axis {
+            Axis::Horizontal => {
+                panel_rects.push(Rect::new(
+                    fret_core::Point::new(Px(cursor), bounds.origin.y),
+                    Size::new(Px(len), bounds.size.height),
+                ));
+            }
+            Axis::Vertical => {
+                panel_rects.push(Rect::new(
+                    fret_core::Point::new(bounds.origin.x, Px(cursor)),
+                    Size::new(bounds.size.width, Px(len)),
+                ));
+            }
+        }
+        cursor += len;
+
+        if i + 1 < children_len {
+            let center = cursor + gap * 0.5;
+            handle_centers.push(center);
+            handle_hit_rects.push(handle_hit_rect(axis, bounds, center, hit));
+            cursor += gap;
+        }
+    }
+
+    ResizablePanelGroupLayout {
+        panel_rects,
+        handle_hit_rects,
+        handle_centers,
+        sizes,
+        mins,
+        avail,
     }
 }
 
@@ -155,30 +328,22 @@ impl BoundResizablePanelGroup {
         }
     }
 
-    fn resolved_min_px(&self, count: usize) -> Vec<f32> {
+    pub(crate) fn effective_min_px_static(count: usize, avail: f32, min_px: &[Px]) -> Vec<f32> {
         let default = Px(120.0);
         if count == 0 {
             return Vec::new();
         }
-        if self.min_px.is_empty() {
-            return vec![default.0; count];
-        }
-        if self.min_px.len() == 1 {
-            let v = self.min_px[0].0.max(0.0);
-            return vec![v; count];
-        }
-        if self.min_px.len() == count {
-            return self.min_px.iter().map(|p| p.0.max(0.0)).collect();
-        }
-        let v = self.min_px[0].0.max(0.0);
-        vec![v; count]
-    }
 
-    fn effective_min_px(&self, count: usize, avail: f32) -> Vec<f32> {
-        let mut mins = self.resolved_min_px(count);
-        if mins.is_empty() {
-            return mins;
-        }
+        let mut mins: Vec<f32> = if min_px.is_empty() {
+            vec![default.0; count]
+        } else if min_px.len() == 1 {
+            vec![min_px[0].0.max(0.0); count]
+        } else if min_px.len() == count {
+            min_px.iter().map(|p| p.0.max(0.0)).collect()
+        } else {
+            vec![min_px[0].0.max(0.0); count]
+        };
+
         let sum: f32 = mins.iter().copied().sum();
         if !sum.is_finite() || sum <= 0.0 {
             return mins;
@@ -190,6 +355,10 @@ impl BoundResizablePanelGroup {
             }
         }
         mins
+    }
+
+    fn effective_min_px(&self, count: usize, avail: f32) -> Vec<f32> {
+        Self::effective_min_px_static(count, avail, &self.min_px)
     }
 
     fn sanitize_fractions(mut v: Vec<f32>, count: usize) -> Vec<f32> {
@@ -302,117 +471,28 @@ impl BoundResizablePanelGroup {
         bounds: Rect,
         children_len: usize,
     ) -> (Vec<Rect>, Vec<Rect>, Vec<f32>, Vec<f32>, f32) {
-        let gap = self.style.hit_thickness.0.max(0.0);
-        let axis_len = Self::axis_len(bounds, self.axis).max(0.0);
-        let total_gap = gap * (children_len.saturating_sub(1) as f32);
-        let avail = (axis_len - total_gap).max(0.0);
-
-        let mins = self.effective_min_px(children_len, avail);
         let raw = app.models().get(self.model).cloned().unwrap_or_default();
-        let fractions = Self::sanitize_fractions(raw, children_len);
-        let sizes = Self::apply_min_constraints(
-            Self::sizes_from_fractions(&fractions, avail),
-            &mins,
-            avail,
+        let layout = compute_resizable_panel_group_layout(
+            self.axis,
+            bounds,
+            children_len,
+            raw,
+            self.style.gap,
+            self.style.hit_thickness,
+            &self.min_px,
         );
-
-        let mut panel_rects = Vec::with_capacity(children_len);
-        let mut handle_rects = Vec::with_capacity(children_len.saturating_sub(1));
-        let mut handle_centers = Vec::with_capacity(children_len.saturating_sub(1));
-
-        let mut cursor = Self::axis_origin(bounds, self.axis);
-        for i in 0..children_len {
-            let len = sizes.get(i).copied().unwrap_or(0.0).max(0.0);
-            match self.axis {
-                Axis::Horizontal => {
-                    panel_rects.push(Rect::new(
-                        fret_core::Point::new(Px(cursor), bounds.origin.y),
-                        Size::new(Px(len), bounds.size.height),
-                    ));
-                }
-                Axis::Vertical => {
-                    panel_rects.push(Rect::new(
-                        fret_core::Point::new(bounds.origin.x, Px(cursor)),
-                        Size::new(bounds.size.width, Px(len)),
-                    ));
-                }
-            }
-            cursor += len;
-
-            if i + 1 < children_len && gap > 0.0 {
-                let handle_rect = match self.axis {
-                    Axis::Horizontal => Rect::new(
-                        fret_core::Point::new(Px(cursor), bounds.origin.y),
-                        Size::new(Px(gap), bounds.size.height),
-                    ),
-                    Axis::Vertical => Rect::new(
-                        fret_core::Point::new(bounds.origin.x, Px(cursor)),
-                        Size::new(bounds.size.width, Px(gap)),
-                    ),
-                };
-                handle_centers.push(cursor + gap * 0.5);
-                handle_rects.push(handle_rect);
-                cursor += gap;
-            }
-        }
-
-        (panel_rects, handle_rects, handle_centers, sizes, avail)
+        (
+            layout.panel_rects,
+            layout.handle_hit_rects,
+            layout.handle_centers,
+            layout.sizes,
+            layout.avail,
+        )
     }
 
     fn update_model_sizes<H: UiHost>(&self, app: &mut H, sizes: &[f32], avail: f32) {
-        if avail <= 0.0 {
-            return;
-        }
-        let mut next: Vec<f32> = sizes.iter().map(|s| (*s / avail).clamp(0.0, 1.0)).collect();
-        next = Self::sanitize_fractions(next, sizes.len());
+        let next = fractions_from_sizes(sizes, avail);
         let _ = app.models_mut().update(self.model, |v| *v = next);
-    }
-
-    fn apply_handle_delta(
-        &self,
-        handle_ix: usize,
-        mut delta: f32,
-        sizes: &mut [f32],
-        mins: &[f32],
-    ) -> f32 {
-        if sizes.len() < 2 || handle_ix + 1 >= sizes.len() {
-            return 0.0;
-        }
-
-        if delta > 0.0 {
-            let mut reducible = 0.0;
-            for k in (handle_ix + 1)..sizes.len() {
-                reducible += (sizes[k] - mins[k]).max(0.0);
-            }
-            if reducible <= 1.0e-6 {
-                return 0.0;
-            }
-            delta = delta.min(reducible);
-            sizes[handle_ix] += delta;
-
-            let mut remaining = delta;
-            for k in (handle_ix + 1)..sizes.len() {
-                if remaining <= 1.0e-6 {
-                    break;
-                }
-                let available = (sizes[k] - mins[k]).max(0.0);
-                let take = remaining.min(available);
-                sizes[k] -= take;
-                remaining -= take;
-            }
-            delta - remaining
-        } else if delta < 0.0 {
-            let shrinkable = (sizes[handle_ix] - mins[handle_ix]).max(0.0);
-            if shrinkable <= 1.0e-6 {
-                return 0.0;
-            }
-            delta = delta.max(-shrinkable);
-            sizes[handle_ix] += delta;
-            sizes[handle_ix + 1] -= delta;
-            delta
-        } else {
-            0.0
-        }
     }
 }
 
@@ -451,7 +531,7 @@ impl<H: UiHost> Widget<H> for BoundResizablePanelGroup {
 
                     let mut sizes = self.last_sizes.clone();
                     let actual =
-                        self.apply_handle_delta(drag.handle_ix, desired_delta, &mut sizes, &mins);
+                        apply_handle_delta(drag.handle_ix, desired_delta, &mut sizes, &mins);
                     if actual.abs() > 1.0e-6 {
                         self.update_model_sizes(cx.app, &sizes, avail);
                         cx.invalidate_self(Invalidation::Layout);
@@ -695,6 +775,7 @@ mod tests {
         let mut group = BoundResizablePanelGroup::new(Axis::Horizontal, fractions);
         group.set_style({
             let mut s = ResizablePanelGroupStyle::default();
+            s.gap = Px(0.0);
             s.hit_thickness = Px(10.0);
             s
         });
@@ -713,11 +794,18 @@ mod tests {
         let _ = ui.layout(&mut app, &mut services, root_id, size, 1.0);
         let _ = app.take_effects();
 
-        let axis_len = 600.0;
-        let gap = 10.0;
-        let avail = axis_len - gap * 2.0;
-        // First handle starts after the first panel.
-        let center = avail * 0.33 + 1.0;
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+        let fractions_now = app.models().get(fractions).cloned().unwrap_or_default();
+        let layout = compute_resizable_panel_group_layout(
+            Axis::Horizontal,
+            bounds,
+            3,
+            fractions_now,
+            Px(0.0),
+            Px(10.0),
+            &[],
+        );
+        let center = layout.handle_centers.first().copied().unwrap_or(0.0);
         ui.dispatch_event(
             &mut app,
             &mut services,

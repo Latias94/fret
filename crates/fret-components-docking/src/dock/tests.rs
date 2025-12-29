@@ -1,5 +1,5 @@
 use super::hit_test::hit_test_drop_target;
-use super::layout::{compute_split_fraction, dock_hint_rects, dock_space_regions};
+use super::layout::{dock_hint_rects, dock_space_regions};
 use super::prelude_core::*;
 use super::prelude_runtime::*;
 use super::prelude_ui::*;
@@ -11,6 +11,7 @@ use fret_core::{
 };
 use fret_ui::UiTree;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+use fret_ui::retained_bridge::resizable_panel_group as resizable;
 
 #[derive(Default)]
 struct FakeTextService;
@@ -83,36 +84,45 @@ impl<H: UiHost> Widget<H> for TestStack {
 }
 
 #[test]
-fn compute_split_fraction_handles_small_bounds() {
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(120.0), Px(300.0)),
-    );
-    let first = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(60.0), Px(300.0)));
-    let second = Rect::new(
-        Point::new(Px(60.0), Px(0.0)),
-        Size::new(Px(60.0), Px(300.0)),
-    );
-    let pos = Point::new(Px(60.0), Px(10.0));
-    assert_eq!(
-        compute_split_fraction(fret_core::Axis::Horizontal, bounds, first, second, 0.0, pos),
-        None
-    );
+fn drag_update_fractions_updates_two_panel_split() {
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(300.0), Px(40.0)));
+    let fractions = vec![0.5, 0.5];
+    let next = resizable::drag_update_fractions(
+        fret_core::Axis::Horizontal,
+        bounds,
+        2,
+        &fractions,
+        0,
+        Px(0.0),
+        Px(6.0),
+        &[],
+        0.0,
+        Point::new(Px(200.0), Px(20.0)),
+    )
+    .expect("expected drag to update fractions");
+    assert!(next[0] > 0.5, "expected left to grow, got {next:?}");
 }
 
 #[test]
-fn compute_split_fraction_handles_nan_bounds() {
+fn drag_update_fractions_handles_nan_bounds() {
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(f32::NAN), Px(300.0)),
     );
-    let first = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(0.0), Px(300.0)));
-    let second = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(0.0), Px(300.0)));
-    let pos = Point::new(Px(60.0), Px(10.0));
-    assert_eq!(
-        compute_split_fraction(fret_core::Axis::Horizontal, bounds, first, second, 0.0, pos),
-        None
+    let fractions = vec![0.5, 0.5];
+    let next = resizable::drag_update_fractions(
+        fret_core::Axis::Horizontal,
+        bounds,
+        2,
+        &fractions,
+        0,
+        Px(0.0),
+        Px(6.0),
+        &[],
+        0.0,
+        Point::new(Px(60.0), Px(10.0)),
     );
+    assert!(next.is_none());
 }
 
 #[test]

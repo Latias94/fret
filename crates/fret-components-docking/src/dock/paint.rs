@@ -3,10 +3,11 @@
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
 use super::hit_test::{tab_close_rect, tab_rect_for_index, tab_scroll_for_node};
-use super::layout::{dock_hint_rects, drop_zone_rect, split_handle_center, split_tab_bar};
+use super::layout::{dock_hint_rects, drop_zone_rect, split_tab_bar};
 use super::manager::DockManager;
 use super::prelude_core::*;
 use fret_ui::retained_bridge::ResizeHandle;
+use fret_ui::retained_bridge::resizable_panel_group as resizable;
 
 pub(super) struct PaintDockParams<'a> {
     pub(super) window: fret_core::AppWindowId,
@@ -229,20 +230,26 @@ pub(super) fn paint_split_handles(
     scene: &mut Scene,
 ) {
     for (&node, &bounds) in layout.iter() {
-        let Some(DockNode::Split { axis, children, .. }) = graph.node(node) else {
+        let Some(DockNode::Split {
+            axis,
+            children,
+            fractions,
+        }) = graph.node(node)
+        else {
             continue;
         };
-        if children.len() != 2 {
+        if children.len() < 2 {
             continue;
         }
-        let Some(first) = layout.get(&children[0]).copied() else {
-            continue;
-        };
-        let Some(second) = layout.get(&children[1]).copied() else {
-            continue;
-        };
-
-        let center = split_handle_center(*axis, first, second);
+        let computed = resizable::compute_layout(
+            *axis,
+            bounds,
+            children.len(),
+            fractions,
+            DOCK_SPLIT_HANDLE_GAP,
+            DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+            &[],
+        );
 
         let background = if active == Some(node) {
             theme.colors.focus_ring
@@ -250,21 +257,23 @@ pub(super) fn paint_split_handles(
             theme.colors.panel_border
         };
 
-        ResizeHandle {
+        let handle = ResizeHandle {
             axis: *axis,
             hit_thickness: DOCK_SPLIT_HANDLE_HIT_THICKNESS,
             paint_device_px: 1.0,
+        };
+        for center in computed.handle_centers {
+            handle.paint(
+                scene,
+                // Keep split handle under component focus rings (typically DrawOrder(1)),
+                // while still painting above panel backgrounds (DrawOrder(0)).
+                fret_core::DrawOrder(0),
+                bounds,
+                center,
+                scale_factor,
+                background,
+            );
         }
-        .paint(
-            scene,
-            // Keep split handle under component focus rings (typically DrawOrder(1)),
-            // while still painting above panel backgrounds (DrawOrder(0)).
-            fret_core::DrawOrder(0),
-            bounds,
-            center,
-            scale_factor,
-            background,
-        );
     }
 }
 

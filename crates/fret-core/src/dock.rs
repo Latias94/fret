@@ -348,6 +348,43 @@ impl DockGraph {
         true
     }
 
+    pub fn update_split_fractions(&mut self, split: DockNodeId, mut next: Vec<f32>) -> bool {
+        let Some(DockNode::Split {
+            children,
+            fractions,
+            ..
+        }) = self.nodes.get_mut(split)
+        else {
+            return false;
+        };
+        if children.len() < 2 || next.len() != children.len() {
+            return false;
+        }
+
+        for f in &mut next {
+            if !f.is_finite() {
+                *f = 0.0;
+            }
+            *f = (*f).max(0.0);
+        }
+        let sum: f32 = next.iter().sum();
+        if !sum.is_finite() || sum <= f32::EPSILON {
+            next = vec![1.0 / next.len() as f32; next.len()];
+        } else {
+            for f in &mut next {
+                *f /= sum;
+            }
+            let len = next.len();
+            if len >= 1 {
+                let rest: f32 = next.iter().take(len.saturating_sub(1)).sum();
+                next[len - 1] = (1.0 - rest).clamp(0.0, 1.0);
+            }
+        }
+
+        *fractions = next;
+        true
+    }
+
     pub fn compute_layout(
         &self,
         root: DockNodeId,
@@ -814,6 +851,9 @@ impl DockGraph {
                 let _ = self.remove_window_root(*source_window);
                 let _ = self.window_floatings.remove(source_window);
                 true
+            }
+            DockOp::SetSplitFractions { split, fractions } => {
+                self.update_split_fractions(*split, fractions.clone())
             }
             DockOp::SetSplitFractionTwo {
                 split,

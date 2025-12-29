@@ -20,7 +20,7 @@ pub(super) struct DividerDragState {
     pub(super) split: DockNodeId,
     pub(super) axis: Axis,
     pub(super) bounds: Rect,
-    pub(super) fraction: f32,
+    pub(super) handle_ix: usize,
     pub(super) grab_offset: f32,
 }
 

@@ -39,6 +39,8 @@ Related ADRs:
 - clamping to per-panel minimum sizes,
 - deterministic “push” behavior when expanding a panel (consume size from the following panels).
 
+The primitive supports a small (or zero) layout `gap` while keeping a larger pointer `hit_thickness` for usability.
+
 This primitive is *mechanism-only* and intentionally does not encode docking semantics (tabs, drag-and-drop, persistence).
 
 ### 2) Docking renders split nodes via the resizable primitive
@@ -81,7 +83,7 @@ Those are declarative composition surfaces that forward into the runtime primiti
 
 Tradeoffs / limitations (current):
 
-- Per-handle element nodes are not modeled as first-class children; handles are an internal gap region painted by the runtime primitive.
+- Per-handle element nodes are not modeled as first-class children; handles are internal affordances (painted/hit-tested by the runtime primitive).
 - Nested split ergonomics may require additional stabilization (ImGui-style “touching nodes lock” when same-axis nested).
 
 ## Implementation Notes (Current Prototype)
@@ -89,10 +91,10 @@ Tradeoffs / limitations (current):
 - Runtime primitive: `crates/fret-ui/src/resizable_panel_group.rs`
 - Declarative surface: `ResizablePanelGroupProps` + `ElementCx::resizable_panel_group(...)`
 - shadcn facade: `crates/fret-components-shadcn/src/resizable.rs`
+- Docking integration: split layout/hit-testing/painting delegates to the same panel-group mechanics via `fret-ui/unstable-retained-bridge`.
 
 ## Follow-ups
 
 1. Docking host uses `ResizablePanelGroup` for split rendering (replace ad-hoc split widgets).
 2. Add nested-split stabilization rules (same-axis “touching nodes” lock behavior) if UX issues appear.
 3. Decide whether to promote pixel `preferred_px` hints into dock persistence schema (new layout version) based on feedback.
-

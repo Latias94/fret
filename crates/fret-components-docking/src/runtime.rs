@@ -93,7 +93,9 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                         dock.clear_viewport_layout_for_window(*window);
                         invalidate_windows(app, [*window]);
                     }
-                    DockOp::SetActiveTab { .. } | DockOp::SetSplitFractionTwo { .. } => {
+                    DockOp::SetActiveTab { .. }
+                    | DockOp::SetSplitFractions { .. }
+                    | DockOp::SetSplitFractionTwo { .. } => {
                         invalidate_windows(app, dock.graph.windows());
                     }
                     DockOp::RequestFloatPanelToNewWindow { .. } => unreachable!(),

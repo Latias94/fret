@@ -2,11 +2,9 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
-use super::layout::{
-    dock_drop_edge_thickness, dock_hint_rects, split_handle_center, split_handle_rect,
-    split_tab_bar,
-};
+use super::layout::{dock_drop_edge_thickness, dock_hint_rects, split_tab_bar};
 use super::prelude_core::*;
+use fret_ui::retained_bridge::resizable_panel_group as resizable;
 
 pub(super) fn tab_scroll_for_node(tab_scroll: &HashMap<DockNodeId, Px>, node: DockNodeId) -> Px {
     tab_scroll.get(&node).copied().unwrap_or(Px(0.0))
@@ -138,19 +136,6 @@ fn compute_tab_insert_index(tab_bar: Rect, scroll: Px, tab_count: usize, positio
     idx.clamp(0, tab_count as isize) as usize
 }
 
-pub(super) fn split_children_two(
-    graph: &DockGraph,
-    split: DockNodeId,
-) -> Option<(DockNodeId, DockNodeId)> {
-    let Some(DockNode::Split { children, .. }) = graph.node(split) else {
-        return None;
-    };
-    if children.len() != 2 {
-        return None;
-    }
-    Some((children[0], children[1]))
-}
-
 pub(super) fn hit_test_split_handle(
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
@@ -165,27 +150,27 @@ pub(super) fn hit_test_split_handle(
         else {
             continue;
         };
-        if children.len() != 2 {
+        if children.len() < 2 {
             continue;
         }
         if !bounds.contains(position) {
             continue;
         }
 
-        let Some(left) = layout.get(&children[0]).copied() else {
-            continue;
-        };
-        let Some(right) = layout.get(&children[1]).copied() else {
-            continue;
-        };
-
-        let handle = split_handle_rect(*axis, bounds, left, right, DOCK_SPLIT_HANDLE_HIT_THICKNESS);
-
-        if handle.contains(position) {
-            let total = fractions.iter().take(2).sum::<f32>();
-            let total = if total <= 0.0 { 1.0 } else { total };
-            let f0 = fractions.first().copied().unwrap_or(0.5) / total;
-            let center = split_handle_center(*axis, left, right);
+        let computed = resizable::compute_layout(
+            *axis,
+            bounds,
+            children.len(),
+            fractions,
+            DOCK_SPLIT_HANDLE_GAP,
+            DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+            &[],
+        );
+        for (handle_ix, rect) in computed.handle_hit_rects.iter().enumerate() {
+            if !rect.contains(position) {
+                continue;
+            }
+            let center = *computed.handle_centers.get(handle_ix).unwrap_or(&0.0);
             let grab_offset = match axis {
                 fret_core::Axis::Horizontal => position.x.0 - center,
                 fret_core::Axis::Vertical => position.y.0 - center,
@@ -194,7 +179,7 @@ pub(super) fn hit_test_split_handle(
                 split: node,
                 axis: *axis,
                 bounds,
-                fraction: f0,
+                handle_ix,
                 grab_offset,
             });
         }
