@@ -35,6 +35,7 @@ pub mod input_group;
 pub mod item;
 pub mod kbd;
 pub mod label;
+pub mod menubar;
 pub mod pagination;
 pub mod popover;
 pub mod progress;
@@ -103,6 +104,7 @@ pub use item::{
 };
 pub use kbd::Kbd;
 pub use label::Label;
+pub use menubar::{Menubar, MenubarEntry, MenubarItem, MenubarMenu, menubar};
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
     PaginationLinkSize, PaginationNext, PaginationPrevious,

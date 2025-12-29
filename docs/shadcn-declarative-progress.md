@@ -87,7 +87,7 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 | item | `item` | Present | Repo-specific list/item recipes aligned with shadcn style |
 | kbd | `kbd` | Present |  |
 | label | `label` | Present |  |
-| menubar | `menubar` | Missing | Probably app/editor-owned composition |
+| menubar | `menubar` | Present | Click-to-open; hover switching + richer keyboard policy TBD |
 | native-select | `native_select` | Defer | Can map to `select` + platform-native later |
 | navigation-menu | `navigation_menu` | Defer | Complex; not editor-critical |
 | pagination | `pagination` | Present |  |
