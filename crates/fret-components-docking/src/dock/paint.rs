@@ -5,7 +5,8 @@
 use super::hit_test::{tab_close_rect, tab_rect_for_index, tab_scroll_for_node};
 use super::layout::{dock_hint_rects, drop_zone_rect, split_handle_center, split_tab_bar};
 use super::manager::DockManager;
-use super::prelude::*;
+use super::prelude_core::*;
+use fret_ui::retained_bridge::ResizeHandle;
 
 pub(super) struct PaintDockParams<'a> {
     pub(super) window: fret_core::AppWindowId,

@@ -14,7 +14,9 @@ use super::manager::DockManager;
 use super::paint::{
     PaintDockParams, paint_dock, paint_drop_hints, paint_drop_overlay, paint_split_handles,
 };
-use super::prelude::*;
+use super::prelude_core::*;
+use super::prelude_runtime::*;
+use super::prelude_ui::*;
 use super::services::{
     DockFocusRequestService, DockPanelContentService, DockViewportOverlayHooksService,
 };

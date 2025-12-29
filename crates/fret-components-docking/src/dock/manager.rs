@@ -2,8 +2,10 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
-use super::prelude::*;
+use super::prelude_core::*;
+use super::prelude_runtime::*;
 use super::services::DockFocusRequestService;
+use fret_ui::UiHost;
 
 pub struct DockManager {
     pub graph: DockGraph,

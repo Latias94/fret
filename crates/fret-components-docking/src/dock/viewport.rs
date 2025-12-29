@@ -3,7 +3,7 @@
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
 use super::layout::split_tab_bar;
-use super::prelude::*;
+use super::prelude_core::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(super) struct ViewportHit {

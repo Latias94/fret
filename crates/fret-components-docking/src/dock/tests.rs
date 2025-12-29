@@ -1,6 +1,8 @@
 use super::hit_test::hit_test_drop_target;
 use super::layout::{compute_split_fraction, dock_hint_rects, dock_space_regions};
-use super::prelude::*;
+use super::prelude_core::*;
+use super::prelude_runtime::*;
+use super::prelude_ui::*;
 use super::{DockManager, DockSpace};
 use crate::test_host::TestHost;
 use fret_core::{
