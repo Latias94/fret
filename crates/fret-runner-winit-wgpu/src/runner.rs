@@ -2631,6 +2631,13 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
             WindowEvent::ModifiersChanged(mods) => {
                 self.raw_modifiers = mods.state();
                 self.modifiers = map_modifiers(self.raw_modifiers, self.alt_gr_down);
+
+                if self.app.drag().is_some_and(|d| {
+                    d.cross_window_hover && d.kind == fret_app::DragKind::DockPanel
+                }) {
+                    self.route_internal_drag_hover_from_cursor();
+                    self.drain_effects(event_loop);
+                }
             }
             WindowEvent::Focused(focused) => {
                 if let Some(state) = self.windows.get_mut(app_window) {

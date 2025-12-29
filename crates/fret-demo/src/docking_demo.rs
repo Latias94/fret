@@ -383,6 +383,7 @@ pub fn run() -> anyhow::Result<()> {
     if let Some(settings) = fret_app::SettingsFileV1::load_json_if_exists(".fret/settings.json")
         .context("load .fret/settings.json")?
     {
+        app.set_global(settings.docking_interaction_settings());
         config.text_font_families.ui_sans = settings.fonts.ui_sans;
         config.text_font_families.ui_serif = settings.fonts.ui_serif;
         config.text_font_families.ui_mono = settings.fonts.ui_mono;

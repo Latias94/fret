@@ -48,6 +48,8 @@ impl App {
         // Apps can fully override this by installing their own `KeymapService`.
         app.set_global(default_keymap_service());
 
+        app.set_global(fret_runtime::DockingInteractionSettings::default());
+
         app
     }
 

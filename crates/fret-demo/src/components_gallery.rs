@@ -34,6 +34,7 @@ struct ComponentsGalleryWindowState {
     dialog_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
+    cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
 }
 
@@ -79,6 +80,7 @@ impl ComponentsGalleryDriver {
         let dialog_open = app.models_mut().insert(false);
         let alert_dialog_open = app.models_mut().insert(false);
         let sheet_open = app.models_mut().insert(false);
+        let cmdk_query = app.models_mut().insert(String::new());
         let last_action = app.models_mut().insert(Arc::<str>::from("<none>"));
 
         let mut ui: UiTree<App> = UiTree::new();
@@ -101,6 +103,7 @@ impl ComponentsGalleryDriver {
             dialog_open,
             alert_dialog_open,
             sheet_open,
+            cmdk_query,
             last_action,
         }
     }
@@ -128,6 +131,7 @@ impl ComponentsGalleryDriver {
         let dialog_open = state.dialog_open;
         let alert_dialog_open = state.alert_dialog_open;
         let sheet_open = state.sheet_open;
+        let cmdk_query = state.cmdk_query;
         let last_action = state.last_action;
 
         let root = declarative::render_root(
@@ -609,6 +613,55 @@ impl ComponentsGalleryDriver {
                                             },
                                         );
 
+                                        cx.observe_model(cmdk_query, Invalidation::Layout);
+                                        let query = cx
+                                            .app
+                                            .models()
+                                            .get(cmdk_query)
+                                            .cloned()
+                                            .unwrap_or_default();
+                                        let query = query.trim().to_ascii_lowercase();
+
+                                        let cmdk_items: Vec<shadcn::CommandItem> = [
+                                            ("Open", "open", false),
+                                            ("Save", "save", false),
+                                            ("Close", "close", false),
+                                            ("Settings", "settings", false),
+                                            ("Disabled", "disabled", true),
+                                        ]
+                                        .into_iter()
+                                        .filter(|(label, _, _)| {
+                                            query.is_empty()
+                                                || label.to_ascii_lowercase().contains(&query)
+                                        })
+                                        .map(|(label, id, disabled)| {
+                                            shadcn::CommandItem::new(label)
+                                                .disabled(disabled)
+                                                .on_select(CommandId::new(format!(
+                                                    "gallery.cmdk.select.{id}"
+                                                )))
+                                        })
+                                        .collect();
+
+                                        let mut cmdk_layout = LayoutStyle::default();
+                                        cmdk_layout.size.width = Length::Px(Px(320.0));
+                                        cmdk_layout.size.min_height = Some(Px(180.0));
+                                        cmdk_layout.overflow = Overflow::Clip;
+                                        let cmdk = cx.container(
+                                            ContainerProps {
+                                                layout: cmdk_layout,
+                                                background: Some(theme.colors.panel_background),
+                                                border: Edges::all(Px(1.0)),
+                                                border_color: Some(theme.colors.panel_border),
+                                                ..Default::default()
+                                            },
+                                            move |cx| {
+                                                vec![shadcn::CommandPalette::new(cmdk_query, cmdk_items)
+                                                    .a11y_label("Command palette")
+                                                    .into_element(cx)]
+                                            },
+                                        );
+
                                         vec![
                                             cx.text("overlays: tooltip / dropdown / context-menu / popover / dialog / alert-dialog / sheet"),
                                             overlays,
@@ -618,6 +671,8 @@ impl ComponentsGalleryDriver {
                                                     .as_deref()
                                                     .unwrap_or("<none>")
                                             )),
+                                            cx.text("cmdk: arrows highlight, Enter selects (focus stays in input)"),
+                                            cmdk,
                                         ]
                                     },
                                 ),
@@ -848,6 +903,11 @@ impl WinitDriver for ComponentsGalleryDriver {
             let _ = app.models_mut().update(state.last_action, |v| *v = msg);
         }
 
+        if let Some(item) = command.as_str().strip_prefix("gallery.cmdk.select.") {
+            let msg: Arc<str> = Arc::from(format!("cmdk.select.{item}").into_boxed_str());
+            let _ = app.models_mut().update(state.last_action, |v| *v = msg);
+        }
+
         if command.as_str() == "gallery.context_menu.action" {
             let _ = app.models_mut().update(state.last_action, |v| {
                 *v = Arc::<str>::from("context_menu.action");
@@ -1059,6 +1119,7 @@ pub fn run() -> anyhow::Result<()> {
     if let Some(settings) = fret_app::SettingsFileV1::load_json_if_exists(".fret/settings.json")
         .context("load .fret/settings.json")?
     {
+        app.set_global(settings.docking_interaction_settings());
         config.text_font_families.ui_sans = settings.fonts.ui_sans;
         config.text_font_families.ui_serif = settings.fonts.ui_serif;
         config.text_font_families.ui_mono = settings.fonts.ui_mono;

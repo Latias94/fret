@@ -553,6 +553,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
         // not forward pointer moves/wheel to embedded viewports in this window. Docking owns the
         // interaction until the session ends (ADR 0072).
         let allow_viewport_hover = dock_drag.is_none() && cx.app.drag().is_none_or(|d| !d.dragging);
+        let docking_interaction_settings = cx
+            .app
+            .global::<fret_runtime::DockingInteractionSettings>()
+            .copied()
+            .unwrap_or_default();
         let window_bounds = cx
             .app
             .global::<WindowMetricsService>()
@@ -1323,7 +1328,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 },
                 fret_core::Event::InternalDrag(e) => {
                     let position = e.position;
-                    let invert_docking = e.modifiers.shift;
+                    let wants_dock_previews = docking_interaction_settings
+                        .drag_inversion
+                        .wants_dock_previews(e.modifiers);
+                    let invert_docking = !wants_dock_previews;
                     match e.kind {
                         fret_core::InternalDragKind::Enter | fret_core::InternalDragKind::Over => {
                             if let Some(drag) = dock_drag.as_ref() {

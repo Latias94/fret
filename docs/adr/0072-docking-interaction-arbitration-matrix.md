@@ -18,8 +18,8 @@ This ADR is implemented for the non-modal overlay stack and docking drags:
   secondary pointer-down events (e.g. viewport capture) in the same window.
 - While a dock drag session is active, docking suppresses forwarding pointer-move and wheel events
   to embedded viewports in the same window.
-- Dock drags honor modifier inversion: holding Shift disables docking previews and treats the drop
-  as a float/undock intent (currently hard-coded to Shift; settings plumbing TBD).
+- Dock drags honor modifier inversion: docking preview enable/disable is driven by
+  `fret_runtime::DockingInteractionSettings` (default: dock by default; hold Shift to float).
 
 ## Context
 

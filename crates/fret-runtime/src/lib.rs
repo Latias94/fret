@@ -1,5 +1,6 @@
 pub mod command;
 pub mod commands;
+pub mod docking_settings;
 pub mod drag;
 pub mod effect;
 pub mod input;
@@ -11,6 +12,10 @@ pub mod when_expr;
 
 pub use command::CommandId;
 pub use commands::{CommandMeta, CommandRegistry, CommandScope};
+pub use docking_settings::{
+    DockDragInversionModifier, DockDragInversionPolicy, DockDragInversionSettings,
+    DockingInteractionSettings,
+};
 pub use drag::{DragKind, DragSession};
 pub use effect::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 pub use input::{

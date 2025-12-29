@@ -23,6 +23,7 @@ pub enum SettingsError {
 pub struct SettingsFileV1 {
     pub settings_version: u32,
     pub fonts: FontsSettingsV1,
+    pub docking: DockingSettingsV1,
 }
 
 impl Default for SettingsFileV1 {
@@ -30,6 +31,7 @@ impl Default for SettingsFileV1 {
         Self {
             settings_version: 1,
             fonts: FontsSettingsV1::default(),
+            docking: DockingSettingsV1::default(),
         }
     }
 }
@@ -65,4 +67,95 @@ pub struct FontsSettingsV1 {
     pub ui_serif: Vec<String>,
     /// Ordered candidate families to use as the default monospace font.
     pub ui_mono: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DockingSettingsV1 {
+    pub drag_inversion: DockDragInversionSettingsV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DockDragInversionSettingsV1 {
+    pub modifier: DockDragInversionModifierV1,
+    pub policy: DockDragInversionPolicyV1,
+}
+
+impl Default for DockDragInversionSettingsV1 {
+    fn default() -> Self {
+        Self {
+            modifier: DockDragInversionModifierV1::Shift,
+            policy: DockDragInversionPolicyV1::DockByDefault,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DockDragInversionModifierV1 {
+    None,
+    Shift,
+    Ctrl,
+    Alt,
+    AltGr,
+    Meta,
+}
+
+impl Default for DockDragInversionModifierV1 {
+    fn default() -> Self {
+        Self::Shift
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DockDragInversionPolicyV1 {
+    DockByDefault,
+    DockOnlyWhenModifier,
+}
+
+impl Default for DockDragInversionPolicyV1 {
+    fn default() -> Self {
+        Self::DockByDefault
+    }
+}
+
+impl SettingsFileV1 {
+    pub fn docking_interaction_settings(&self) -> fret_runtime::DockingInteractionSettings {
+        fret_runtime::DockingInteractionSettings {
+            drag_inversion: self.docking.drag_inversion.clone().into(),
+        }
+    }
+}
+
+impl From<DockDragInversionSettingsV1> for fret_runtime::DockDragInversionSettings {
+    fn from(value: DockDragInversionSettingsV1) -> Self {
+        Self {
+            modifier: value.modifier.into(),
+            policy: value.policy.into(),
+        }
+    }
+}
+
+impl From<DockDragInversionModifierV1> for fret_runtime::DockDragInversionModifier {
+    fn from(value: DockDragInversionModifierV1) -> Self {
+        match value {
+            DockDragInversionModifierV1::None => Self::None,
+            DockDragInversionModifierV1::Shift => Self::Shift,
+            DockDragInversionModifierV1::Ctrl => Self::Ctrl,
+            DockDragInversionModifierV1::Alt => Self::Alt,
+            DockDragInversionModifierV1::AltGr => Self::AltGr,
+            DockDragInversionModifierV1::Meta => Self::Meta,
+        }
+    }
+}
+
+impl From<DockDragInversionPolicyV1> for fret_runtime::DockDragInversionPolicy {
+    fn from(value: DockDragInversionPolicyV1) -> Self {
+        match value {
+            DockDragInversionPolicyV1::DockByDefault => Self::DockByDefault,
+            DockDragInversionPolicyV1::DockOnlyWhenModifier => Self::DockOnlyWhenModifier,
+        }
+    }
 }
