@@ -587,7 +587,12 @@ impl DockGraph {
         let _ = self.replace_child_in_node(parent, old, new);
     }
 
-    fn replace_child_in_node(&mut self, parent: DockNodeId, old: DockNodeId, new: DockNodeId) -> bool {
+    fn replace_child_in_node(
+        &mut self,
+        parent: DockNodeId,
+        old: DockNodeId,
+        new: DockNodeId,
+    ) -> bool {
         match self.nodes.get_mut(parent) {
             Some(DockNode::Split { children, .. }) => {
                 for child in children.iter_mut() {
@@ -651,7 +656,9 @@ impl DockGraph {
             };
 
             if matches!(self.nodes.get(parent), Some(DockNode::Floating { .. })) {
-                self.remove_floating_window(window, parent);
+                if self.collect_panels_in_subtree(parent).is_empty() {
+                    let _ = self.remove_floating_window(window, parent);
+                }
                 break;
             }
 
@@ -996,10 +1003,11 @@ mod tests {
         });
         assert!(ok);
         assert_eq!(g.collect_panels_in_window(w).len(), 2);
-        assert!(g.floating_windows(w).iter().any(|f| {
-            g.collect_panels_in_subtree(f.floating)
-                .contains(&panel_b)
-        }));
+        assert!(
+            g.floating_windows(w)
+                .iter()
+                .any(|f| { g.collect_panels_in_subtree(f.floating).contains(&panel_b) })
+        );
         assert!(g.find_panel_in_window(w, &panel_b).is_some());
     }
 
@@ -1031,7 +1039,9 @@ mod tests {
         }));
 
         assert!(g.floating_windows(w).is_empty());
-        let (tabs, _i) = g.find_panel_in_window(w, &panel_b).expect("panel in window");
+        let (tabs, _i) = g
+            .find_panel_in_window(w, &panel_b)
+            .expect("panel in window");
         assert_eq!(tabs, main_tabs);
     }
 }

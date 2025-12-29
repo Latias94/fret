@@ -18,7 +18,7 @@ pub mod window;
 
 pub use capabilities::{ExternalDragPayloadKind, PlatformCapabilities};
 pub use cursor::CursorIcon;
-pub use dock::{Axis, DockGraph, DockNode, DropZone};
+pub use dock::{Axis, DockFloatingWindow, DockGraph, DockNode, DropZone};
 pub use dock_layout::{
     DOCK_LAYOUT_VERSION_V1, DockLayoutBuilder, DockLayoutNodeV1, DockLayoutV1, DockLayoutWindowV1,
     DockWindowPlacementV1, EditorDockLayoutSpec,
