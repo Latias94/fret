@@ -33,6 +33,14 @@ impl TestHost {
     pub(crate) fn take_effects(&mut self) -> Vec<Effect> {
         std::mem::take(&mut self.effects)
     }
+
+    pub(crate) fn flush_effects(&mut self) -> Vec<Effect> {
+        let mut effects = std::mem::take(&mut self.effects);
+        for window in self.redraw.drain() {
+            effects.push(Effect::Redraw(window));
+        }
+        effects
+    }
 }
 
 impl UiHost for TestHost {
