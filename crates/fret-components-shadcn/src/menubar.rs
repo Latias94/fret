@@ -5,14 +5,17 @@ use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::window_overlays;
 use fret_components_ui::{MetricRef, Space};
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
-use fret_runtime::CommandId;
+use fret_core::{
+    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+};
+use fret_runtime::{CommandId, Model};
 use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
     SemanticsProps, SizeStyle, TextProps,
 };
+use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized, inset_rect};
 use fret_ui::{ElementCx, Theme, UiHost};
 
@@ -147,9 +150,20 @@ impl Menubar {
     }
 }
 
+#[derive(Clone, Copy)]
+struct MenubarActive {
+    trigger: GlobalElementId,
+    open: Model<bool>,
+}
+
+#[derive(Default)]
+struct MenubarGroupState {
+    active: Option<Model<Option<MenubarActive>>>,
+}
+
 #[derive(Default)]
 struct MenubarMenuState {
-    open: Option<fret_runtime::Model<bool>>,
+    open: Option<Model<bool>>,
 }
 
 #[derive(Clone)]
@@ -209,8 +223,21 @@ impl MenubarMenu {
         cx: &mut ElementCx<'_, H>,
         entries: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<MenubarEntry>,
     ) -> AnyElement {
+        let group = cx.root_id();
         let key = self.label.clone();
         cx.keyed(key, |cx| {
+            let group_active =
+                cx.with_state_for(group, MenubarGroupState::default, |st| st.active);
+            let group_active = if let Some(group_active) = group_active {
+                group_active
+            } else {
+                let group_active = cx.app.models_mut().insert(None);
+                cx.with_state_for(group, MenubarGroupState::default, |st| {
+                    st.active = Some(group_active);
+                });
+                group_active
+            };
+
             let open = cx.with_state(MenubarMenuState::default, |st| st.open);
             let open = if let Some(open) = open {
                 open
@@ -220,10 +247,10 @@ impl MenubarMenu {
                 open
             };
 
+            cx.observe_model(group_active, Invalidation::Paint);
             cx.observe_model(open, Invalidation::Paint);
 
             let theme = Theme::global(&*cx.app).clone();
-            let is_open = cx.app.models().get(open).copied().unwrap_or(false);
             let enabled = !self.disabled;
 
             let radius = theme.metrics.radius_sm;
@@ -252,10 +279,73 @@ impl MenubarMenu {
                 trigger_layout.size.height = Length::Auto;
                 trigger_layout.size.width = Length::Auto;
 
+                let active_value = cx.app.models().get(group_active).copied().unwrap_or(None);
+                let is_open = cx.app.models().get(open).copied().unwrap_or(false);
+
+                if let Some(active_value) = active_value
+                    && active_value.trigger != trigger_id
+                    && is_open
+                {
+                    let _ = cx.app.models_mut().update(open, |v| *v = false);
+                }
+
+                if let Some(active_value) = active_value
+                    && active_value.trigger == trigger_id
+                    && !is_open
+                {
+                    let _ = cx.app.models_mut().update(group_active, |v| *v = None);
+                }
+
+                if active_value.is_none() && is_open {
+                    let _ = cx.app.models_mut().update(group_active, |v| {
+                        *v = Some(MenubarActive {
+                            trigger: trigger_id,
+                            open,
+                        });
+                    });
+                }
+
+                let active_value = cx.app.models().get(group_active).copied().unwrap_or(None);
+                if enabled
+                    && st.hovered
+                    && !st.pressed
+                    && matches!(active_value, Some(v) if v.trigger != trigger_id)
+                {
+                    if let Some(prev) = active_value {
+                        let _ = cx.app.models_mut().update(prev.open, |v| *v = false);
+                    }
+                    let _ = cx.app.models_mut().update(open, |v| *v = true);
+                    let _ = cx.app.models_mut().update(group_active, |v| {
+                        *v = Some(MenubarActive {
+                            trigger: trigger_id,
+                            open,
+                        });
+                    });
+                }
+
                 cx.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
-                    let _ = host.models_mut().update(open, |v| *v = !*v);
+                    let cur = host.models_mut().get(group_active).copied().unwrap_or(None);
+                    match cur {
+                        Some(cur) if cur.trigger == trigger_id => {
+                            let _ = host.models_mut().update(open, |v| *v = false);
+                            let _ = host.models_mut().update(group_active, |v| *v = None);
+                        }
+                        prev => {
+                            if let Some(prev) = prev {
+                                let _ = host.models_mut().update(prev.open, |v| *v = false);
+                            }
+                            let _ = host.models_mut().update(open, |v| *v = true);
+                            let _ = host.models_mut().update(group_active, |v| {
+                                *v = Some(MenubarActive {
+                                    trigger: trigger_id,
+                                    open,
+                                });
+                            });
+                        }
+                    }
                 }));
 
+                let is_open = cx.app.models().get(open).copied().unwrap_or(false);
                 let trigger_bg = if is_open {
                     Some(bg_open)
                 } else if st.hovered || st.pressed {
@@ -284,6 +374,7 @@ impl MenubarMenu {
                     let side_offset = self.side_offset;
                     let window_margin = self.window_margin;
                     let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
+                    let group_active = group_active;
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                         let Some(anchor) = cx.last_bounds_for_element(trigger_id) else {
@@ -444,6 +535,11 @@ impl MenubarMenu {
                                                                 },
                                                                 move |cx, st| {
                                                                     cx.pressable_set_bool(open, false);
+                                                                    cx.pressable_add_on_activate(
+                                                                        Arc::new(move |host, _cx, _reason| {
+                                                                            let _ = host.models_mut().update(group_active, |v| *v = None);
+                                                                        }),
+                                                                    );
 
                                                                     let mut bg =
                                                                         Color::TRANSPARENT;
@@ -564,4 +660,181 @@ pub fn menubar<H: UiHost>(
     f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     Menubar::new(f(cx)).into_element(cx)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_components_ui::window_overlays;
+    use fret_core::{
+        AppWindowId, Modifiers, MouseButton, MouseButtons, Point, Rect, TextBlobId,
+        TextConstraints, TextMetrics, TextService,
+    };
+    use fret_core::{PathCommand, SvgId, SvgService};
+    use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_ui::tree::UiTree;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: fret_core::Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    fn center(r: fret_core::Rect) -> Point {
+        Point::new(
+            Px(r.origin.x.0 + r.size.width.0 / 2.0),
+            Px(r.origin.y.0 + r.size.height.0 / 2.0),
+        )
+    }
+
+    fn menu_trigger_bounds(snap: &fret_core::SemanticsSnapshot, label: &str) -> Rect {
+        snap.nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some(label))
+            .map(|n| n.bounds)
+            .unwrap_or_else(|| panic!("missing menu trigger {label:?}"))
+    }
+
+    fn menu_trigger_expanded(snap: &fret_core::SemanticsSnapshot, label: &str) -> bool {
+        snap.nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some(label))
+            .map(|n| n.flags.expanded)
+            .unwrap_or(false)
+    }
+
+    fn render_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+    ) {
+        window_overlays::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "menubar", |cx| {
+                vec![menubar(cx, |cx| {
+                    vec![
+                        MenubarMenu::new("File").into_element(cx, |_cx| {
+                            vec![MenubarEntry::Item(MenubarItem::new("New"))]
+                        }),
+                        MenubarMenu::new("Edit").into_element(cx, |_cx| {
+                            vec![MenubarEntry::Item(MenubarItem::new("Undo"))]
+                        }),
+                    ]
+                })]
+            });
+        ui.set_root(root);
+        window_overlays::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    #[test]
+    fn menubar_hover_switches_open_menu() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        // Frame 0: render and locate triggers.
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let file = center(menu_trigger_bounds(&snap0, "File"));
+        let edit = center(menu_trigger_bounds(&snap0, "Edit"));
+
+        // Click "File" to open.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: file,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: file,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        // Frame 1: "File" is expanded.
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(menu_trigger_expanded(snap1, "File"));
+        assert!(!menu_trigger_expanded(snap1, "Edit"));
+
+        // Hover over "Edit" while a menu is open should switch without click.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: edit,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        // Frame 2: switching begins (the hovered menu opens in the same frame).
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap2 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(menu_trigger_expanded(snap2, "Edit"));
+
+        // Frame 3: the previously-open menu is fully closed.
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap3 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(!menu_trigger_expanded(snap3, "File"));
+        assert!(menu_trigger_expanded(snap3, "Edit"));
+    }
 }
