@@ -131,12 +131,7 @@ pub(super) fn hit_test_drop_target(
     None
 }
 
-pub(super) fn compute_tab_insert_index(
-    tab_bar: Rect,
-    scroll: Px,
-    tab_count: usize,
-    position: Point,
-) -> usize {
+fn compute_tab_insert_index(tab_bar: Rect, scroll: Px, tab_count: usize, position: Point) -> usize {
     let rel_x = position.x.0 - tab_bar.origin.x.0 + scroll.0;
     let raw = (rel_x / DOCK_TAB_W.0) + 0.5;
     let idx = raw.floor() as isize;

@@ -14,7 +14,7 @@ pub(super) fn compute_layout_map(
     layout
 }
 
-pub(super) fn compute_layout_map_impl(
+fn compute_layout_map_impl(
     graph: &DockGraph,
     node: DockNodeId,
     bounds: Rect,
@@ -181,7 +181,7 @@ pub(super) fn float_zone(bounds: Rect) -> Rect {
     }
 }
 
-pub(super) fn split_gap(axis: fret_core::Axis, first: Rect, second: Rect) -> f32 {
+fn split_gap(axis: fret_core::Axis, first: Rect, second: Rect) -> f32 {
     let gap = match axis {
         fret_core::Axis::Horizontal => second.origin.x.0 - (first.origin.x.0 + first.size.width.0),
         fret_core::Axis::Vertical => second.origin.y.0 - (first.origin.y.0 + first.size.height.0),

@@ -492,7 +492,7 @@ pub(super) fn paint_drop_hints(
     }
 }
 
-pub(super) fn paint_drop_hint_icon(
+fn paint_drop_hint_icon(
     theme: fret_ui::ThemeSnapshot,
     zone: DropZone,
     hint_rect: Rect,
