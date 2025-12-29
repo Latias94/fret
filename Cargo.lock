@@ -1205,6 +1205,7 @@ dependencies = [
  "anyhow",
  "fret-app",
  "fret-components-app",
+ "fret-components-docking",
  "fret-components-icons",
  "fret-components-shadcn",
  "fret-components-ui",
