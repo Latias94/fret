@@ -817,21 +817,18 @@ pub fn render<H: UiHost>(
                 cx.observe_model(store, Invalidation::Paint);
 
                 let hook_store = store;
-                cx.timer_on_timer_for(
-                    cx.root_id(),
-                    Arc::new(move |host, cx, token| {
-                        let removed = host
-                            .models_mut()
-                            .update(hook_store, |st| st.remove_toast_by_token(token))
-                            .ok()
-                            .flatten()
-                            .is_some();
-                        if removed {
-                            host.request_redraw(cx.window);
-                        }
-                        removed
-                    }),
-                );
+                    cx.timer_on_timer_for(
+                        cx.root_id(),
+                        Arc::new(move |host, _cx, token| {
+                            let removed = host
+                                .models_mut()
+                                .update(hook_store, |st| st.remove_toast_by_token(token))
+                                .ok()
+                                .flatten()
+                                .is_some();
+                            removed
+                        }),
+                    );
 
                 let toasts: Vec<ToastEntry> = cx
                     .app

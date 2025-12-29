@@ -146,7 +146,7 @@ impl ContextMenu {
 
             let open = self.open;
             let pointer_policy = Arc::new(move |host: &mut dyn fret_ui::action::UiActionHost,
-                                           cx: fret_ui::action::ActionCx,
+                                           _cx: fret_ui::action::ActionCx,
                                            down: PointerDownCx| {
                 let is_right_click = down.button == MouseButton::Right;
                 let is_macos_ctrl_click =
@@ -157,7 +157,6 @@ impl ContextMenu {
                 }
 
                 let _ = host.models_mut().update(open, |v| *v = true);
-                host.request_redraw(cx.window);
                 true
             });
 
@@ -169,7 +168,7 @@ impl ContextMenu {
             let key_open = self.open;
             cx.key_on_key_down_for(
                 trigger_id,
-                Arc::new(move |host, cx, down| {
+                Arc::new(move |host, _cx, down| {
                     if down.repeat {
                         return false;
                     }
@@ -178,7 +177,6 @@ impl ContextMenu {
                         return false;
                     }
                     let _ = host.models_mut().update(key_open, |v| *v = true);
-                    host.request_redraw(cx.window);
                     true
                 }),
             );
