@@ -106,6 +106,10 @@ The goal is to enable a staged migration:
 
 - Move viewport overlay shapes/policy (gizmo/marquee/selection) out of docking UI into `fret-editor`
   or app-layer code (ADR 0027 / ADR 0049).
+- Provide an app-owned hook entry point for painting viewport overlays without re-introducing editor
+  policy into docking UI:
+  - `crates/fret-components-docking`: `DockViewportOverlayHooks` + `DockViewportOverlayHooksService`
+  - `crates/fret-editor`: `viewport_overlays` (reference shapes + paint helpers)
 
 ### Exit criteria (clean state)
 

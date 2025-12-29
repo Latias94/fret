@@ -48,7 +48,7 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 
 | Registry name | Rust module | Status | Notes |
 | --- | --- | --- | --- |
-| accordion | `accordion` | Missing | Requires collapsible primitives + keyboard/a11y contracts |
+| accordion | `accordion` | Present | Selection model drives open/close; no animation yet |
 | alert | `alert` | Present |  |
 | alert-dialog | `alert_dialog` | Present | Modal overlay policy; Tab traversal wraps within modal barrier (ADR 0068) |
 | aspect-ratio | `aspect_ratio` | Present |  |

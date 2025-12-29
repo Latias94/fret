@@ -3,6 +3,7 @@ pub mod inspector_protocol;
 pub mod project;
 pub mod property;
 pub mod property_edit;
+pub mod viewport_overlays;
 pub mod viewport_tools;
 
 pub use inspector_edit::{
@@ -22,4 +23,10 @@ pub use viewport_tools::{
     MarqueeSelectInteraction, PanOrbitInteraction, PanOrbitKind, RotateGizmoInteraction,
     TranslateAxisConstraint, TranslateGizmoInteraction, ViewportInteraction,
     ViewportInteractionKind, ViewportToolManager, ViewportToolMode,
+};
+
+pub use viewport_overlays::{
+    ViewportDragLine, ViewportGizmo, ViewportGizmoPart, ViewportMarker, ViewportMarquee,
+    ViewportOverlay, ViewportRotateGizmo, ViewportSelectionRect, paint_viewport_crosshair,
+    paint_viewport_overlay,
 };

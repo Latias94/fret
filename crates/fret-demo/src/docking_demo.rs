@@ -1,15 +1,48 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_components_docking::dock::DockPanelContentService;
-use fret_components_docking::{DockManager, DockPanel};
+use fret_components_docking::{
+    DockManager, DockPanel, DockViewportOverlayHooks, DockViewportOverlayHooksService,
+};
 use fret_components_icons::IconRegistry;
-use fret_core::{AppWindowId, Event, PlatformCapabilities, Rect, Scene, UiServices};
+use fret_core::{
+    AppWindowId, Color, Corners, DrawOrder, Edges, Event, PlatformCapabilities, Rect, Scene,
+    SceneOp, UiServices, geometry::Px,
+};
 use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::{Invalidation, Theme, UiTree};
 use std::sync::Arc;
 use winit::event_loop::EventLoop;
+
+struct DemoViewportOverlayHooks;
+
+impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
+    fn paint(
+        &self,
+        theme: fret_ui::ThemeSnapshot,
+        _window: AppWindowId,
+        _panel: &fret_core::PanelKey,
+        _viewport: fret_components_docking::ViewportPanel,
+        _mapping: fret_core::ViewportMapping,
+        draw_rect: Rect,
+        scene: &mut Scene,
+    ) {
+        let border_color = Color {
+            a: 0.65,
+            ..theme.colors.accent
+        };
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(6),
+            rect: draw_rect,
+            background: Color::TRANSPARENT,
+            border: Edges::all(Px(2.0)),
+            border_color,
+            corner_radii: Corners::all(Px(0.0)),
+        });
+    }
+}
 
 struct DockingDemoWindowState {
     ui: UiTree<App>,
@@ -330,6 +363,9 @@ pub fn run() -> anyhow::Result<()> {
     app.set_global(PlatformCapabilities::default());
     app.with_global_mut(IconRegistry::default, |icons, _app| {
         fret_icons_lucide::register_icons(icons);
+    });
+    app.with_global_mut(DockViewportOverlayHooksService::default, |svc, _app| {
+        svc.set(Arc::new(DemoViewportOverlayHooks));
     });
 
     let mut config = WinitRunnerConfig {

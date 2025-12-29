@@ -9,6 +9,7 @@ use fret_runtime::{CommandId, DragKind, Effect, WindowRequest};
 use std::{
     collections::{HashMap, HashSet},
     hash::{Hash, Hasher},
+    sync::Arc,
 };
 
 use fret_ui::InternalDragRouteService;
@@ -31,6 +32,42 @@ pub struct ViewportPanel {
     pub context_menu_enabled: bool,
 }
 
+/// App/editor-owned viewport overlays (gizmos, marquee, selection, etc.).
+///
+/// Docking UI is policy-heavy already, but viewport overlay *shapes* are editor/app-specific
+/// (ADR 0027 / ADR 0049). This hook keeps docking focused on "viewport embedding" only.
+pub trait DockViewportOverlayHooks: Send + Sync + 'static {
+    fn paint(
+        &self,
+        theme: fret_ui::ThemeSnapshot,
+        window: fret_core::AppWindowId,
+        panel: &PanelKey,
+        viewport: ViewportPanel,
+        mapping: ViewportMapping,
+        draw_rect: Rect,
+        scene: &mut Scene,
+    );
+}
+
+#[derive(Default)]
+pub struct DockViewportOverlayHooksService {
+    hooks: Option<Arc<dyn DockViewportOverlayHooks>>,
+}
+
+impl DockViewportOverlayHooksService {
+    pub fn set(&mut self, hooks: Arc<dyn DockViewportOverlayHooks>) {
+        self.hooks = Some(hooks);
+    }
+
+    pub fn clear(&mut self) {
+        self.hooks = None;
+    }
+
+    pub fn hooks(&self) -> Option<Arc<dyn DockViewportOverlayHooks>> {
+        self.hooks.clone()
+    }
+}
+
 #[derive(Debug, Clone)]
 struct DockPanelDragPayload {
     panel: PanelKey,
@@ -43,20 +80,11 @@ enum DockDropTarget {
     Float { window: fret_core::AppWindowId },
 }
 
-#[derive(Debug, Clone, PartialEq)]
-struct ViewportHover {
-    window: fret_core::AppWindowId,
-    panel: PanelKey,
-    position: Point,
-}
-
 pub struct DockManager {
     pub graph: DockGraph,
     pub panels: HashMap<PanelKey, DockPanel>,
     dock_space_nodes: HashMap<fret_core::AppWindowId, NodeId>,
     hover: Option<DockDropTarget>,
-    viewport_hover: Option<ViewportHover>,
-    viewport_overlays: HashMap<(fret_core::AppWindowId, RenderTargetId), ViewportOverlay>,
     viewport_content_rects: HashMap<(fret_core::AppWindowId, RenderTargetId), Rect>,
 }
 
@@ -183,64 +211,6 @@ impl DockPanelContentService {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ViewportOverlay {
-    pub marquee: Option<ViewportMarquee>,
-    pub drag_line: Option<ViewportDragLine>,
-    pub selection_rect: Option<ViewportSelectionRect>,
-    pub gizmo: Option<ViewportGizmo>,
-    pub rotate_gizmo: Option<ViewportRotateGizmo>,
-    pub marker: Option<ViewportMarker>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ViewportMarquee {
-    pub a_uv: (f32, f32),
-    pub b_uv: (f32, f32),
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ViewportSelectionRect {
-    pub min_uv: (f32, f32),
-    pub max_uv: (f32, f32),
-    pub fill: Color,
-    pub stroke: Color,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ViewportGizmoPart {
-    X,
-    Y,
-    Handle,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ViewportGizmo {
-    pub center_uv: (f32, f32),
-    pub axis_len_px: Px,
-    pub highlight: Option<ViewportGizmoPart>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ViewportRotateGizmo {
-    pub center_uv: (f32, f32),
-    pub radius_px: Px,
-    pub highlight: bool,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ViewportMarker {
-    pub uv: (f32, f32),
-    pub color: Color,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ViewportDragLine {
-    pub a_uv: (f32, f32),
-    pub b_uv: (f32, f32),
-    pub color: Color,
-}
-
 impl Default for DockManager {
     fn default() -> Self {
         Self {
@@ -248,8 +218,6 @@ impl Default for DockManager {
             panels: HashMap::new(),
             dock_space_nodes: HashMap::new(),
             hover: None,
-            viewport_hover: None,
-            viewport_overlays: HashMap::new(),
             viewport_content_rects: HashMap::new(),
         }
     }
@@ -312,107 +280,6 @@ impl DockManager {
             vp.target_px_size = target_px_size;
             panel.viewport = Some(vp);
         }
-    }
-
-    fn upsert_viewport_overlay(
-        &mut self,
-        window: fret_core::AppWindowId,
-        target: RenderTargetId,
-        update: impl FnOnce(&mut ViewportOverlay),
-    ) {
-        let key = (window, target);
-        let mut overlay = self
-            .viewport_overlays
-            .get(&key)
-            .copied()
-            .unwrap_or(ViewportOverlay {
-                marquee: None,
-                drag_line: None,
-                selection_rect: None,
-                gizmo: None,
-                rotate_gizmo: None,
-                marker: None,
-            });
-        update(&mut overlay);
-        if overlay.marquee.is_none()
-            && overlay.drag_line.is_none()
-            && overlay.selection_rect.is_none()
-            && overlay.gizmo.is_none()
-            && overlay.rotate_gizmo.is_none()
-            && overlay.marker.is_none()
-        {
-            self.viewport_overlays.remove(&key);
-        } else {
-            self.viewport_overlays.insert(key, overlay);
-        }
-    }
-
-    pub fn set_viewport_overlay(
-        &mut self,
-        window: fret_core::AppWindowId,
-        target: RenderTargetId,
-        overlay: Option<ViewportOverlay>,
-    ) {
-        let key = (window, target);
-        if let Some(overlay) = overlay {
-            self.viewport_overlays.insert(key, overlay);
-        } else {
-            self.viewport_overlays.remove(&key);
-        }
-    }
-
-    pub fn set_viewport_marquee(
-        &mut self,
-        window: fret_core::AppWindowId,
-        target: RenderTargetId,
-        marquee: Option<ViewportMarquee>,
-    ) {
-        self.upsert_viewport_overlay(window, target, |o| o.marquee = marquee);
-    }
-
-    pub fn set_viewport_drag_line(
-        &mut self,
-        window: fret_core::AppWindowId,
-        target: RenderTargetId,
-        line: Option<ViewportDragLine>,
-    ) {
-        self.upsert_viewport_overlay(window, target, |o| o.drag_line = line);
-    }
-
-    pub fn set_viewport_selection_rect(
-        &mut self,
-        window: fret_core::AppWindowId,
-        target: RenderTargetId,
-        rect: Option<ViewportSelectionRect>,
-    ) {
-        self.upsert_viewport_overlay(window, target, |o| o.selection_rect = rect);
-    }
-
-    pub fn set_viewport_gizmo(
-        &mut self,
-        window: fret_core::AppWindowId,
-        target: RenderTargetId,
-        gizmo: Option<ViewportGizmo>,
-    ) {
-        self.upsert_viewport_overlay(window, target, |o| o.gizmo = gizmo);
-    }
-
-    pub fn set_viewport_rotate_gizmo(
-        &mut self,
-        window: fret_core::AppWindowId,
-        target: RenderTargetId,
-        gizmo: Option<ViewportRotateGizmo>,
-    ) {
-        self.upsert_viewport_overlay(window, target, |o| o.rotate_gizmo = gizmo);
-    }
-
-    pub fn set_viewport_marker(
-        &mut self,
-        window: fret_core::AppWindowId,
-        target: RenderTargetId,
-        marker: Option<ViewportMarker>,
-    ) {
-        self.upsert_viewport_overlay(window, target, |o| o.marker = marker);
     }
 }
 
@@ -1119,11 +986,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
                         if let Some(capture) = self.viewport_capture.as_mut() {
                             let hit = capture.hit.clone();
-                            dock.viewport_hover = Some(ViewportHover {
-                                window: self.window,
-                                panel: hit.panel.clone(),
-                                position: *position,
-                            });
                             let e = viewport_input_from_hit_clamped(
                                 self.window,
                                 hit,
@@ -1146,16 +1008,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     *position,
                                 );
 
-                                let next_hover = hit.as_ref().map(|hit| ViewportHover {
-                                    window: self.window,
-                                    panel: hit.panel.clone(),
-                                    position: *position,
-                                });
-                                if dock.viewport_hover != next_hover || next_hover.is_some() {
-                                    dock.viewport_hover = next_hover;
-                                    pending_redraws.push(self.window);
-                                }
-
                                 if let Some(hit) = hit
                                     && let Some(e) = viewport_input_from_hit(
                                         self.window,
@@ -1168,14 +1020,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     )
                                 {
                                     pending_effects.push(Effect::ViewportInput(e));
+                                    pending_redraws.push(self.window);
                                 }
-                            } else if dock
-                                .viewport_hover
-                                .as_ref()
-                                .is_some_and(|h| h.window == self.window)
-                            {
-                                dock.viewport_hover = None;
-                                pending_redraws.push(self.window);
                             }
                         }
 
@@ -1320,7 +1166,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 pending_redraws.push(self.window);
 
                                 dock.hover = None;
-                                dock.viewport_hover = None;
                                 request_pointer_capture = Some(None);
                                 invalidate_paint = true;
                             }
@@ -1811,6 +1656,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
             }
         }
         if let Some(dock) = cx.app.global::<DockManager>() {
+            let overlay_hooks = cx
+                .app
+                .global::<DockViewportOverlayHooksService>()
+                .and_then(|svc| svc.hooks());
             paint_dock(
                 cx.theme().snapshot(),
                 dock,
@@ -1824,6 +1673,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     tab_scroll: &self.tab_scroll,
                     tab_close_glyph: self.tab_close_glyph,
                 },
+                overlay_hooks.as_deref(),
                 cx.scene,
             );
         }
@@ -2003,6 +1853,7 @@ fn paint_dock(
     theme: fret_ui::ThemeSnapshot,
     dock: &DockManager,
     params: PaintDockParams<'_>,
+    overlay_hooks: Option<&dyn DockViewportOverlayHooks>,
     scene: &mut Scene,
 ) {
     let PaintDockParams {
@@ -2179,14 +2030,10 @@ fn paint_dock(
                     target: vp.target,
                     opacity: 1.0,
                 });
-                if let Some(h) = dock.viewport_hover.as_ref()
-                    && h.window == window
-                    && active_panel.is_some_and(|p| p == &h.panel)
+                if let Some(hooks) = overlay_hooks
+                    && let Some(panel_key) = active_panel
                 {
-                    paint_viewport_crosshair(theme, draw_rect, h.position, scene);
-                }
-                if let Some(overlay) = dock.viewport_overlays.get(&(window, vp.target)) {
-                    paint_viewport_overlay(theme, draw_rect, *overlay, scene);
+                    hooks.paint(theme, window, panel_key, vp, mapping, draw_rect, scene);
                 }
                 scene.push(SceneOp::PopClip);
             } else {
@@ -2200,432 +2047,6 @@ fn paint_dock(
                 });
             }
         }
-    }
-}
-
-fn paint_viewport_crosshair(
-    theme: fret_ui::ThemeSnapshot,
-    content: Rect,
-    position: Point,
-    scene: &mut Scene,
-) {
-    if !content.contains(position) {
-        return;
-    }
-
-    let thickness = Px(1.5);
-    let len = Px(12.0);
-    let x = position.x;
-    let y = position.y;
-
-    let h = Rect {
-        origin: Point::new(Px(x.0 - len.0), Px(y.0 - thickness.0 * 0.5)),
-        size: Size::new(Px(len.0 * 2.0), thickness),
-    };
-    let v = Rect {
-        origin: Point::new(Px(x.0 - thickness.0 * 0.5), Px(y.0 - len.0)),
-        size: Size::new(thickness, Px(len.0 * 2.0)),
-    };
-
-    let color = Color {
-        a: 0.65,
-        ..theme.colors.text_primary
-    };
-
-    for rect in [h, v] {
-        scene.push(SceneOp::Quad {
-            order: fret_core::DrawOrder(5),
-            rect,
-            background: color,
-            border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
-            corner_radii: fret_core::Corners::all(Px(0.0)),
-        });
-    }
-}
-
-fn paint_viewport_overlay(
-    theme: fret_ui::ThemeSnapshot,
-    content: Rect,
-    overlay: ViewportOverlay,
-    scene: &mut Scene,
-) {
-    if let Some(sel) = overlay.selection_rect {
-        paint_viewport_selection_rect(content, sel, scene);
-    }
-    if let Some(gizmo) = overlay.gizmo {
-        paint_viewport_gizmo(theme, content, gizmo, scene);
-    }
-    if let Some(gizmo) = overlay.rotate_gizmo {
-        paint_viewport_rotate_gizmo(theme, content, gizmo, scene);
-    }
-    if let Some(m) = overlay.marquee {
-        paint_viewport_marquee(theme, content, m, scene);
-    }
-    if let Some(line) = overlay.drag_line {
-        paint_viewport_drag_line(content, line, scene);
-    }
-    if let Some(marker) = overlay.marker {
-        paint_viewport_marker(content, marker, scene);
-    }
-}
-
-fn paint_viewport_gizmo(
-    theme: fret_ui::ThemeSnapshot,
-    content: Rect,
-    gizmo: ViewportGizmo,
-    scene: &mut Scene,
-) {
-    let (u, v) = gizmo.center_uv;
-    let x = content.origin.x.0 + content.size.width.0 * u;
-    let y = content.origin.y.0 + content.size.height.0 * v;
-
-    let len = gizmo.axis_len_px;
-    let highlight = gizmo.highlight;
-    let t = Px(2.5);
-    let x_t = if highlight == Some(ViewportGizmoPart::X) {
-        Px(4.0)
-    } else {
-        t
-    };
-    let y_t = if highlight == Some(ViewportGizmoPart::Y) {
-        Px(4.0)
-    } else {
-        t
-    };
-
-    let x_axis = Rect::new(Point::new(Px(x), Px(y - x_t.0 * 0.5)), Size::new(len, x_t));
-    let y_axis = Rect::new(
-        Point::new(Px(x - y_t.0 * 0.5), Px(y - len.0)),
-        Size::new(y_t, len),
-    );
-
-    let x_axis_alpha = if highlight == Some(ViewportGizmoPart::X) {
-        1.0
-    } else {
-        0.85
-    };
-    let y_axis_alpha = if highlight == Some(ViewportGizmoPart::Y) {
-        1.0
-    } else {
-        0.85
-    };
-    let x_color = Color {
-        a: x_axis_alpha,
-        ..theme.colors.viewport_gizmo_x
-    };
-    let y_color = Color {
-        a: y_axis_alpha,
-        ..theme.colors.viewport_gizmo_y
-    };
-
-    scene.push(SceneOp::Quad {
-        order: fret_core::DrawOrder(6),
-        rect: x_axis,
-        background: x_color,
-        border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
-        corner_radii: fret_core::Corners::all(Px(0.0)),
-    });
-    scene.push(SceneOp::Quad {
-        order: fret_core::DrawOrder(6),
-        rect: y_axis,
-        background: y_color,
-        border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
-        corner_radii: fret_core::Corners::all(Px(0.0)),
-    });
-
-    let handle = Px(10.0);
-    let handle_highlight = highlight == Some(ViewportGizmoPart::Handle);
-    let handle_border = if handle_highlight { Px(2.5) } else { Px(1.5) };
-    scene.push(SceneOp::Quad {
-        order: fret_core::DrawOrder(7),
-        rect: Rect::new(
-            Point::new(Px(x - handle.0 * 0.5), Px(y - handle.0 * 0.5)),
-            Size::new(handle, handle),
-        ),
-        background: Color {
-            a: 0.85,
-            ..theme.colors.viewport_gizmo_handle_background
-        },
-        border: Edges::all(handle_border),
-        border_color: Color {
-            a: 0.90,
-            ..theme.colors.viewport_gizmo_handle_border
-        },
-        corner_radii: fret_core::Corners::all(Px(2.0)),
-    });
-}
-
-fn paint_viewport_rotate_gizmo(
-    theme: fret_ui::ThemeSnapshot,
-    content: Rect,
-    gizmo: ViewportRotateGizmo,
-    scene: &mut Scene,
-) {
-    let (u, v) = gizmo.center_uv;
-    let x = content.origin.x.0 + content.size.width.0 * u;
-    let y = content.origin.y.0 + content.size.height.0 * v;
-
-    let r = gizmo.radius_px;
-    let t = if gizmo.highlight { Px(3.0) } else { Px(2.0) };
-    let a = if gizmo.highlight { 0.95 } else { 0.75 };
-    let color = Color {
-        a,
-        ..theme.colors.viewport_rotate_gizmo
-    };
-
-    scene.push(SceneOp::Quad {
-        order: fret_core::DrawOrder(6),
-        rect: Rect::new(
-            Point::new(Px(x - r.0), Px(y - r.0)),
-            Size::new(Px(r.0 * 2.0), Px(r.0 * 2.0)),
-        ),
-        background: Color::TRANSPARENT,
-        border: Edges::all(t),
-        border_color: color,
-        corner_radii: fret_core::Corners::all(r),
-    });
-}
-
-fn paint_viewport_selection_rect(content: Rect, rect: ViewportSelectionRect, scene: &mut Scene) {
-    let (u0, v0) = rect.min_uv;
-    let (u1, v1) = rect.max_uv;
-    let left = content.origin.x.0 + content.size.width.0 * u0.min(u1);
-    let right = content.origin.x.0 + content.size.width.0 * u0.max(u1);
-    let top = content.origin.y.0 + content.size.height.0 * v0.min(v1);
-    let bottom = content.origin.y.0 + content.size.height.0 * v0.max(v1);
-
-    let inner = Rect::new(
-        Point::new(Px(left), Px(top)),
-        Size::new(Px((right - left).max(0.0)), Px((bottom - top).max(0.0))),
-    );
-    if inner.size.width.0 <= 0.0 || inner.size.height.0 <= 0.0 {
-        return;
-    }
-
-    let t = Px(2.0);
-    scene.push(SceneOp::Quad {
-        order: fret_core::DrawOrder(4),
-        rect: inner,
-        background: rect.fill,
-        border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
-        corner_radii: fret_core::Corners::all(Px(0.0)),
-    });
-
-    let top_rect = Rect::new(inner.origin, Size::new(inner.size.width, t));
-    let bottom_rect = Rect::new(
-        Point::new(
-            inner.origin.x,
-            Px(inner.origin.y.0 + inner.size.height.0 - t.0),
-        ),
-        Size::new(inner.size.width, t),
-    );
-    let left_rect = Rect::new(inner.origin, Size::new(t, inner.size.height));
-    let right_rect = Rect::new(
-        Point::new(
-            Px(inner.origin.x.0 + inner.size.width.0 - t.0),
-            inner.origin.y,
-        ),
-        Size::new(t, inner.size.height),
-    );
-    for r in [top_rect, bottom_rect, left_rect, right_rect] {
-        scene.push(SceneOp::Quad {
-            order: fret_core::DrawOrder(5),
-            rect: r,
-            background: rect.stroke,
-            border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
-            corner_radii: fret_core::Corners::all(Px(0.0)),
-        });
-    }
-}
-
-fn paint_viewport_marker(content: Rect, marker: ViewportMarker, scene: &mut Scene) {
-    let (u, v) = marker.uv;
-    let x = content.origin.x.0 + content.size.width.0 * u;
-    let y = content.origin.y.0 + content.size.height.0 * v;
-
-    let t = Px(2.0);
-    let len = Px(10.0);
-    let color = marker.color;
-
-    let h = Rect::new(
-        Point::new(Px(x - len.0), Px(y - t.0 * 0.5)),
-        Size::new(Px(len.0 * 2.0), t),
-    );
-    let v = Rect::new(
-        Point::new(Px(x - t.0 * 0.5), Px(y - len.0)),
-        Size::new(t, Px(len.0 * 2.0)),
-    );
-
-    let shadow = fret_ui::element::ShadowStyle {
-        color: Color {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.35,
-        },
-        offset_x: Px(1.0),
-        offset_y: Px(1.0),
-        spread: Px(0.0),
-        softness: 0,
-        corner_radii: fret_core::Corners::all(Px(0.0)),
-    };
-    fret_ui::paint::paint_shadow(scene, fret_core::DrawOrder(10), h, shadow);
-    fret_ui::paint::paint_shadow(scene, fret_core::DrawOrder(10), v, shadow);
-
-    for rect in [h, v] {
-        scene.push(SceneOp::Quad {
-            order: fret_core::DrawOrder(11),
-            rect,
-            background: color,
-            border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
-            corner_radii: fret_core::Corners::all(Px(0.0)),
-        });
-    }
-
-    let p = Px(7.0);
-    scene.push(SceneOp::Quad {
-        order: fret_core::DrawOrder(12),
-        rect: Rect::new(
-            Point::new(Px(x - p.0 * 0.5), Px(y - p.0 * 0.5)),
-            Size::new(p, p),
-        ),
-        background: Color {
-            r: color.r,
-            g: color.g,
-            b: color.b,
-            a: (color.a * 0.25).min(1.0),
-        },
-        border: Edges::all(Px(1.5)),
-        border_color: color,
-        corner_radii: fret_core::Corners::all(Px(2.0)),
-    });
-}
-
-fn paint_viewport_marquee(
-    theme: fret_ui::ThemeSnapshot,
-    content: Rect,
-    marquee: ViewportMarquee,
-    scene: &mut Scene,
-) {
-    let (au, av) = marquee.a_uv;
-    let (bu, bv) = marquee.b_uv;
-    let x0 = content.origin.x.0 + content.size.width.0 * au;
-    let y0 = content.origin.y.0 + content.size.height.0 * av;
-    let x1 = content.origin.x.0 + content.size.width.0 * bu;
-    let y1 = content.origin.y.0 + content.size.height.0 * bv;
-
-    let left = x0.min(x1);
-    let right = x0.max(x1);
-    let top = y0.min(y1);
-    let bottom = y0.max(y1);
-
-    let rect = Rect::new(
-        Point::new(Px(left), Px(top)),
-        Size::new(Px((right - left).max(0.0)), Px((bottom - top).max(0.0))),
-    );
-    // Render even for very thin drags (so users still see feedback); only skip true clicks.
-    if rect.size.width.0 <= 1.0 && rect.size.height.0 <= 1.0 {
-        return;
-    }
-
-    let fill = Color {
-        a: 0.14,
-        ..theme.colors.accent
-    };
-    let stroke = Color {
-        a: 0.85,
-        ..theme.colors.accent
-    };
-    let t = Px(1.5);
-
-    scene.push(SceneOp::Quad {
-        order: fret_core::DrawOrder(6),
-        rect,
-        background: fill,
-        border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
-        corner_radii: fret_core::Corners::all(Px(0.0)),
-    });
-
-    let top_rect = Rect::new(rect.origin, Size::new(rect.size.width, t));
-    let bottom_rect = Rect::new(
-        Point::new(
-            rect.origin.x,
-            Px(rect.origin.y.0 + rect.size.height.0 - t.0),
-        ),
-        Size::new(rect.size.width, t),
-    );
-    let left_rect = Rect::new(rect.origin, Size::new(t, rect.size.height));
-    let right_rect = Rect::new(
-        Point::new(Px(rect.origin.x.0 + rect.size.width.0 - t.0), rect.origin.y),
-        Size::new(t, rect.size.height),
-    );
-
-    for r in [top_rect, bottom_rect, left_rect, right_rect] {
-        scene.push(SceneOp::Quad {
-            order: fret_core::DrawOrder(7),
-            rect: r,
-            background: stroke,
-            border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
-            corner_radii: fret_core::Corners::all(Px(0.0)),
-        });
-    }
-}
-
-fn paint_viewport_drag_line(content: Rect, line: ViewportDragLine, scene: &mut Scene) {
-    let (au, av) = line.a_uv;
-    let (bu, bv) = line.b_uv;
-    let x0 = content.origin.x.0 + content.size.width.0 * au;
-    let y0 = content.origin.y.0 + content.size.height.0 * av;
-    let x1 = content.origin.x.0 + content.size.width.0 * bu;
-    let y1 = content.origin.y.0 + content.size.height.0 * bv;
-
-    let color = line.color;
-    let t = Px(1.5);
-
-    let h = Rect::new(
-        Point::new(Px(x0.min(x1)), Px(y0 - t.0 * 0.5)),
-        Size::new(Px((x1 - x0).abs().max(0.0)), t),
-    );
-    let v = Rect::new(
-        Point::new(Px(x1 - t.0 * 0.5), Px(y0.min(y1))),
-        Size::new(t, Px((y1 - y0).abs().max(0.0))),
-    );
-
-    for rect in [h, v] {
-        if rect.size.width.0 <= 0.0 || rect.size.height.0 <= 0.0 {
-            continue;
-        }
-        scene.push(SceneOp::Quad {
-            order: fret_core::DrawOrder(8),
-            rect,
-            background: color,
-            border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
-            corner_radii: fret_core::Corners::all(Px(0.0)),
-        });
-    }
-
-    let p = Px(6.0);
-    for (x, y) in [(x0, y0), (x1, y1)] {
-        scene.push(SceneOp::Quad {
-            order: fret_core::DrawOrder(9),
-            rect: Rect::new(
-                Point::new(Px(x - p.0 * 0.5), Px(y - p.0 * 0.5)),
-                Size::new(p, p),
-            ),
-            background: color,
-            border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
-            corner_radii: fret_core::Corners::all(Px(2.0)),
-        });
     }
 }
 

@@ -8,7 +8,8 @@
 pub mod dock;
 
 pub use dock::{
-    ActivatePanelOptions, DockManager, DockPanel, DockSpace, ViewportPanel, create_dock_space_node,
+    ActivatePanelOptions, DockManager, DockPanel, DockSpace, DockViewportOverlayHooks,
+    DockViewportOverlayHooksService, ViewportPanel, create_dock_space_node,
 };
 
 #[cfg(test)]

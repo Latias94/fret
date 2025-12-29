@@ -7,6 +7,7 @@
 //! Note: This crate is now declarative-only. Retained-widget authoring is intentionally not part of
 //! the public component surface (see ADR 0066 / declarative-only migration).
 
+pub mod accordion;
 pub mod alert;
 pub mod alert_dialog;
 pub mod aspect_ratio;
@@ -50,6 +51,10 @@ pub mod toggle;
 pub mod toggle_group;
 pub mod tooltip;
 
+pub use accordion::{
+    Accordion, AccordionContent, AccordionItem, AccordionKind, AccordionTrigger, accordion_multiple,
+    accordion_single,
+};
 pub use alert::{Alert, AlertDescription, AlertTitle, AlertVariant};
 pub use alert_dialog::{
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
