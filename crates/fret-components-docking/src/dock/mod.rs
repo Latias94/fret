@@ -18,6 +18,16 @@ use fret_ui::retained_bridge::{
     CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, ResizeHandle, SemanticsCx, Widget,
 };
 
+mod hit_test;
+mod layout;
+mod paint;
+mod viewport;
+
+use self::hit_test::*;
+use self::layout::*;
+use self::paint::*;
+use self::viewport::*;
+
 pub struct DockPanel {
     pub title: String,
     pub color: Color,
@@ -1650,8 +1660,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
         );
     }
 }
-
-include!("helpers.inc.rs");
 
 #[cfg(test)]
 mod tests {
