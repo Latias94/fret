@@ -313,21 +313,6 @@ struct PreparedTabTitle {
     title_hash: u64,
 }
 
-#[derive(Debug, Clone, Copy)]
-struct PreparedGlyph {
-    blob: TextBlobId,
-    metrics: TextMetrics,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct DockHintGlyphs {
-    center: PreparedGlyph,
-    left: PreparedGlyph,
-    right: PreparedGlyph,
-    top: PreparedGlyph,
-    bottom: PreparedGlyph,
-}
-
 pub struct DockSpace {
     pub window: fret_core::AppWindowId,
     last_bounds: Rect,
@@ -343,17 +328,13 @@ pub struct DockSpace {
     pressed_tab_close: Option<(DockNodeId, usize, PanelKey)>,
     tab_scroll: HashMap<DockNodeId, Px>,
     tab_close_glyph: Option<PreparedTabTitle>,
-    dock_hint_glyphs: Option<DockHintGlyphs>,
     tab_text_style: TextStyle,
     tab_close_style: TextStyle,
-    dock_hint_style: TextStyle,
     empty_state_style: TextStyle,
     last_empty_state_scale_factor: Option<f32>,
     last_empty_state_theme_revision: Option<u64>,
     last_tab_text_scale_factor: Option<f32>,
     last_theme_revision: Option<u64>,
-    last_dock_hint_scale_factor: Option<f32>,
-    last_dock_hint_theme_revision: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -380,7 +361,6 @@ impl DockSpace {
             pressed_tab_close: None,
             tab_scroll: HashMap::new(),
             tab_close_glyph: None,
-            dock_hint_glyphs: None,
             tab_text_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
@@ -389,11 +369,6 @@ impl DockSpace {
             tab_close_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
-                ..Default::default()
-            },
-            dock_hint_style: TextStyle {
-                font: fret_core::FontId::default(),
-                size: Px(18.0),
                 ..Default::default()
             },
             empty_state_style: TextStyle {
@@ -405,8 +380,6 @@ impl DockSpace {
             last_empty_state_theme_revision: None,
             last_tab_text_scale_factor: None,
             last_theme_revision: None,
-            last_dock_hint_scale_factor: None,
-            last_dock_hint_theme_revision: None,
         }
     }
 
@@ -617,53 +590,6 @@ impl DockSpace {
             blob,
             metrics,
             title_hash: 0,
-        });
-    }
-
-    fn rebuild_dock_hint_glyphs(
-        &mut self,
-        services: &mut dyn fret_core::UiServices,
-        theme: fret_ui::ThemeSnapshot,
-        scale_factor: f32,
-    ) {
-        self.dock_hint_style.size = Px((theme.metrics.font_size.0 + 5.0).max(0.0));
-        if self.last_dock_hint_scale_factor == Some(scale_factor)
-            && self.last_dock_hint_theme_revision == Some(theme.revision)
-            && self.dock_hint_glyphs.is_some()
-        {
-            return;
-        }
-        self.last_dock_hint_scale_factor = Some(scale_factor);
-        self.last_dock_hint_theme_revision = Some(theme.revision);
-
-        if let Some(prev) = self.dock_hint_glyphs.take() {
-            for glyph in [prev.center, prev.left, prev.right, prev.top, prev.bottom] {
-                services.text().release(glyph.blob);
-            }
-        }
-
-        let constraints = TextConstraints {
-            max_width: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            scale_factor,
-        };
-
-        let mut prepare = |ch: &str| -> PreparedGlyph {
-            let (blob, metrics) = services
-                .text()
-                .prepare(ch, self.dock_hint_style, constraints);
-            PreparedGlyph { blob, metrics }
-        };
-
-        // Use simple Unicode shapes instead of SVG so we can render with our existing SceneOps.
-        // This keeps the framework lightweight while still providing ImGui-like affordances.
-        self.dock_hint_glyphs = Some(DockHintGlyphs {
-            center: prepare("▣"),
-            left: prepare("◀"),
-            right: prepare("▶"),
-            top: prepare("▲"),
-            bottom: prepare("▼"),
         });
     }
 
@@ -1635,7 +1561,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let theme = cx.theme().snapshot();
         if let Some(dock) = cx.app.global::<DockManager>() {
             self.rebuild_tab_titles(cx.services, theme, cx.scale_factor, dock, &layout);
-            self.rebuild_dock_hint_glyphs(cx.services, theme, cx.scale_factor);
         }
 
         if let Some(dock) = cx.app.global_mut::<DockManager>() {
@@ -1707,7 +1632,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
         if is_dock_dragging {
             paint_drop_hints(
                 cx.theme().snapshot(),
-                self.dock_hint_glyphs,
                 hover.clone(),
                 self.window,
                 cx.bounds,
@@ -2681,7 +2605,6 @@ fn paint_drop_overlay(
 
 fn paint_drop_hints(
     theme: fret_ui::ThemeSnapshot,
-    glyphs: Option<DockHintGlyphs>,
     target: Option<DockDropTarget>,
     _window: fret_core::AppWindowId,
     _bounds: Rect,
@@ -2776,35 +2699,156 @@ fn paint_drop_hints(
             border_color: stroke,
             corner_radii,
         });
+        paint_drop_hint_icon(theme, zone, hint_rect, is_active, scene, order.0 + 1);
+    }
+}
 
-        let Some(glyphs) = glyphs else {
-            continue;
-        };
+fn paint_drop_hint_icon(
+    theme: fret_ui::ThemeSnapshot,
+    zone: DropZone,
+    hint_rect: Rect,
+    is_active: bool,
+    scene: &mut Scene,
+    order: u32,
+) {
+    fn inset(rect: Rect, inset: Px) -> Rect {
+        let w = (rect.size.width.0 - inset.0 * 2.0).max(0.0);
+        let h = (rect.size.height.0 - inset.0 * 2.0).max(0.0);
+        Rect::new(
+            Point::new(Px(rect.origin.x.0 + inset.0), Px(rect.origin.y.0 + inset.0)),
+            Size::new(Px(w), Px(h)),
+        )
+    }
 
-        let glyph = match zone {
-            DropZone::Center => glyphs.center,
-            DropZone::Left => glyphs.left,
-            DropZone::Right => glyphs.right,
-            DropZone::Top => glyphs.top,
-            DropZone::Bottom => glyphs.bottom,
-        };
+    let min_dim = hint_rect.size.width.0.min(hint_rect.size.height.0);
+    let pad = Px((min_dim * 0.18).clamp(6.0, 10.0));
+    let frame = inset(hint_rect, pad);
+    let inner = inset(frame, Px((min_dim * 0.08).clamp(2.0, 4.0)));
 
-        // Center the glyph inside the hint rect (baseline-aligned).
-        let text_x =
-            hint_rect.origin.x.0 + (hint_rect.size.width.0 - glyph.metrics.size.width.0) * 0.5;
-        let text_y = hint_rect.origin.y.0
-            + (hint_rect.size.height.0 - glyph.metrics.size.height.0) * 0.5
-            + glyph.metrics.baseline.0;
+    let stroke = Color {
+        a: if is_active { 0.92 } else { 0.80 },
+        ..theme.colors.text_primary
+    };
+    let base = Color {
+        a: if is_active { 0.16 } else { 0.12 },
+        ..theme.colors.text_primary
+    };
+    let fill = Color {
+        a: if is_active { 0.90 } else { 0.72 },
+        ..theme.colors.text_primary
+    };
 
-        scene.push(SceneOp::Text {
-            order: fret_core::DrawOrder(order.0 + 1),
-            origin: Point::new(Px(text_x), Px(text_y)),
-            text: glyph.blob,
-            color: Color {
-                a: if is_active { 0.98 } else { 0.92 },
-                ..theme.colors.text_primary
-            },
-        });
+    let frame_radius = Px(theme.metrics.radius_sm.0.clamp(2.0, 4.0));
+    scene.push(SceneOp::Quad {
+        order: fret_core::DrawOrder(order),
+        rect: frame,
+        background: Color::TRANSPARENT,
+        border: Edges::all(Px(2.0)),
+        border_color: stroke,
+        corner_radii: fret_core::Corners::all(frame_radius),
+    });
+
+    // Base fill so the highlighted region reads as "target placement" (ImGui-like).
+    scene.push(SceneOp::Quad {
+        order: fret_core::DrawOrder(order + 1),
+        rect: inner,
+        background: base,
+        border: Edges::all(Px(0.0)),
+        border_color: Color::TRANSPARENT,
+        corner_radii: fret_core::Corners::all(Px(0.0)),
+    });
+
+    let split_ratio = 0.42_f32;
+    let tab_ratio = 0.24_f32;
+    let line_thickness = Px((min_dim * 0.04).clamp(1.5, 2.5));
+
+    match zone {
+        DropZone::Center => {
+            let tab_h = Px((inner.size.height.0 * tab_ratio).max(0.0));
+            let tab = Rect::new(inner.origin, Size::new(inner.size.width, tab_h));
+            scene.push(SceneOp::Quad {
+                order: fret_core::DrawOrder(order + 2),
+                rect: tab,
+                background: fill,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: fret_core::Corners::all(Px(0.0)),
+            });
+        }
+        DropZone::Left | DropZone::Right => {
+            let w = Px((inner.size.width.0 * split_ratio).max(0.0));
+            let (highlight, line_x) = if zone == DropZone::Left {
+                (
+                    Rect::new(inner.origin, Size::new(w, inner.size.height)),
+                    Px(inner.origin.x.0 + w.0),
+                )
+            } else {
+                (
+                    Rect::new(
+                        Point::new(Px(inner.origin.x.0 + inner.size.width.0 - w.0), inner.origin.y),
+                        Size::new(w, inner.size.height),
+                    ),
+                    Px(inner.origin.x.0 + inner.size.width.0 - w.0),
+                )
+            };
+            scene.push(SceneOp::Quad {
+                order: fret_core::DrawOrder(order + 2),
+                rect: highlight,
+                background: fill,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: fret_core::Corners::all(Px(0.0)),
+            });
+            let line = Rect::new(
+                Point::new(Px(line_x.0 - line_thickness.0 * 0.5), inner.origin.y),
+                Size::new(line_thickness, inner.size.height),
+            );
+            scene.push(SceneOp::Quad {
+                order: fret_core::DrawOrder(order + 3),
+                rect: line,
+                background: stroke,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: fret_core::Corners::all(Px(0.0)),
+            });
+        }
+        DropZone::Top | DropZone::Bottom => {
+            let h = Px((inner.size.height.0 * split_ratio).max(0.0));
+            let (highlight, line_y) = if zone == DropZone::Top {
+                (
+                    Rect::new(inner.origin, Size::new(inner.size.width, h)),
+                    Px(inner.origin.y.0 + h.0),
+                )
+            } else {
+                (
+                    Rect::new(
+                        Point::new(inner.origin.x, Px(inner.origin.y.0 + inner.size.height.0 - h.0)),
+                        Size::new(inner.size.width, h),
+                    ),
+                    Px(inner.origin.y.0 + inner.size.height.0 - h.0),
+                )
+            };
+            scene.push(SceneOp::Quad {
+                order: fret_core::DrawOrder(order + 2),
+                rect: highlight,
+                background: fill,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: fret_core::Corners::all(Px(0.0)),
+            });
+            let line = Rect::new(
+                Point::new(inner.origin.x, Px(line_y.0 - line_thickness.0 * 0.5)),
+                Size::new(inner.size.width, line_thickness),
+            );
+            scene.push(SceneOp::Quad {
+                order: fret_core::DrawOrder(order + 3),
+                rect: line,
+                background: stroke,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: fret_core::Corners::all(Px(0.0)),
+            });
+        }
     }
 }
 

@@ -3,6 +3,7 @@ use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_components_docking::dock::DockPanelContentService;
 use fret_components_docking::{
     DockManager, DockPanel, DockViewportOverlayHooks, DockViewportOverlayHooksService,
+    handle_dock_before_close_window, handle_dock_op, handle_dock_window_created,
 };
 use fret_components_icons::IconRegistry;
 use fret_core::{
@@ -50,7 +51,9 @@ struct DockingDemoWindowState {
 }
 
 #[derive(Default)]
-struct DockingDemoDriver;
+struct DockingDemoDriver {
+    main_window: Option<AppWindowId>,
+}
 
 impl DockingDemoDriver {
     fn build_ui(_app: &mut App, window: AppWindowId) -> DockingDemoWindowState {
@@ -186,7 +189,9 @@ impl DockingDemoDriver {
 impl WinitDriver for DockingDemoDriver {
     type WindowState = DockingDemoWindowState;
 
-    fn init(&mut self, _app: &mut App, _main_window: AppWindowId) {}
+    fn init(&mut self, _app: &mut App, main_window: AppWindowId) {
+        self.main_window = Some(main_window);
+    }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
         Self::build_ui(app, window)
@@ -233,6 +238,10 @@ impl WinitDriver for DockingDemoDriver {
         state.ui.dispatch_event(app, services, event);
     }
 
+    fn dock_op(&mut self, app: &mut App, op: fret_core::DockOp) {
+        let _ = handle_dock_op(app, op);
+    }
+
     fn render(
         &mut self,
         app: &mut App,
@@ -275,10 +284,18 @@ impl WinitDriver for DockingDemoDriver {
 
     fn window_created(
         &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
+        app: &mut App,
+        request: &fret_app::CreateWindowRequest,
+        new_window: AppWindowId,
     ) {
+        let _ = handle_dock_window_created(app, request, new_window);
+    }
+
+    fn before_close_window(&mut self, app: &mut App, window: AppWindowId) -> bool {
+        if let Some(main_window) = self.main_window {
+            let _ = handle_dock_before_close_window(app, window, main_window);
+        }
+        true
     }
 
     fn accessibility_snapshot(
