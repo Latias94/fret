@@ -1,5 +1,5 @@
 use crate::UiHost;
-use fret_core::{AppWindowId, KeyCode, Modifiers, MouseButton, Point};
+use fret_core::{AppWindowId, KeyCode, Modifiers, MouseButton, Point, TimerToken};
 use fret_runtime::{CommandId, Effect, ModelStore};
 use std::sync::Arc;
 
@@ -48,6 +48,7 @@ pub trait UiActionHost {
     fn models_mut(&mut self) -> &mut ModelStore;
     fn push_effect(&mut self, effect: Effect);
     fn request_redraw(&mut self, window: AppWindowId);
+    fn next_timer_token(&mut self) -> TimerToken;
 
     fn dispatch_command(&mut self, window: Option<AppWindowId>, command: CommandId) {
         self.push_effect(Effect::Command { window, command });
@@ -69,6 +70,10 @@ impl<'a, H: UiHost> UiActionHost for UiActionHostAdapter<'a, H> {
 
     fn request_redraw(&mut self, window: AppWindowId) {
         self.app.request_redraw(window);
+    }
+
+    fn next_timer_token(&mut self) -> TimerToken {
+        self.app.next_timer_token()
     }
 }
 
@@ -99,6 +104,14 @@ pub type OnKeyDown = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, KeyDownCx) -> b
 #[derive(Default)]
 pub(crate) struct KeyActionHooks {
     pub on_key_down: Option<OnKeyDown>,
+}
+
+pub type OnTimer =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, TimerToken) -> bool + 'static>;
+
+#[derive(Default)]
+pub(crate) struct TimerActionHooks {
+    pub on_timer: Option<OnTimer>,
 }
 
 #[derive(Debug, Clone)]

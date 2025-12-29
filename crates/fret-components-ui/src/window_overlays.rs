@@ -3,16 +3,17 @@
 //! This is a small component-layer orchestration helper that installs `UiTree` overlay roots
 //! (ADR 0067) and coordinates dismissal + focus restore rules (ADR 0069).
 
-use fret_core::{AppWindowId, Rect};
-use fret_runtime::Model;
+use fret_core::{AppWindowId, Rect, TimerToken};
+use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::action::DismissReason;
 use fret_ui::declarative;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::tree::UiLayerId;
-use fret_ui::{ElementCx, UiHost, UiTree};
+use fret_ui::{ElementCx, Invalidation, UiHost, UiTree};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(Clone)]
 pub struct DismissiblePopoverRequest {
@@ -86,6 +87,7 @@ struct WindowOverlayFrame {
     modals: Vec<ModalRequest>,
     hover_overlays: Vec<HoverOverlayRequest>,
     tooltips: Vec<TooltipRequest>,
+    toasts: Vec<ToastLayerRequest>,
 }
 
 struct ActivePopover {
@@ -107,6 +109,11 @@ struct ActiveTooltip {
     root_name: String,
 }
 
+struct ActiveToastLayer {
+    layer: UiLayerId,
+    root_name: String,
+}
+
 struct ActiveHoverOverlay {
     layer: UiLayerId,
     root_name: String,
@@ -120,6 +127,7 @@ struct WindowOverlays {
     modals: HashMap<(AppWindowId, GlobalElementId), ActiveModal>,
     hover_overlays: HashMap<(AppWindowId, GlobalElementId), ActiveHoverOverlay>,
     tooltips: HashMap<(AppWindowId, GlobalElementId), ActiveTooltip>,
+    toast_layers: HashMap<(AppWindowId, GlobalElementId), ActiveToastLayer>,
 }
 
 pub fn begin_frame<H: UiHost>(app: &mut H, window: AppWindowId) {
@@ -132,6 +140,7 @@ pub fn begin_frame<H: UiHost>(app: &mut H, window: AppWindowId) {
             w.modals.clear();
             w.hover_overlays.clear();
             w.tooltips.clear();
+            w.toasts.clear();
         }
     });
 }
@@ -206,6 +215,274 @@ pub fn request_tooltip_for_window<H: UiHost>(
     });
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ToastPosition {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+
+impl Default for ToastPosition {
+    fn default() -> Self {
+        Self::BottomRight
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ToastVariant {
+    Default,
+    Destructive,
+}
+
+impl Default for ToastVariant {
+    fn default() -> Self {
+        Self::Default
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ToastAction {
+    pub label: Arc<str>,
+    pub command: CommandId,
+}
+
+#[derive(Debug, Clone)]
+pub struct ToastRequest {
+    pub title: Arc<str>,
+    pub description: Option<Arc<str>>,
+    pub duration: Option<Duration>,
+    pub variant: ToastVariant,
+    pub action: Option<ToastAction>,
+    pub dismissible: bool,
+}
+
+impl ToastRequest {
+    pub fn new(title: impl Into<Arc<str>>) -> Self {
+        Self {
+            title: title.into(),
+            description: None,
+            duration: Some(Duration::from_secs(3)),
+            variant: ToastVariant::default(),
+            action: None,
+            dismissible: true,
+        }
+    }
+
+    pub fn description(mut self, description: impl Into<Arc<str>>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+
+    pub fn duration(mut self, duration: Option<Duration>) -> Self {
+        self.duration = duration;
+        self
+    }
+
+    pub fn variant(mut self, variant: ToastVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
+    pub fn action(mut self, action: ToastAction) -> Self {
+        self.action = Some(action);
+        self
+    }
+
+    pub fn dismissible(mut self, dismissible: bool) -> Self {
+        self.dismissible = dismissible;
+        self
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ToastId(pub u64);
+
+#[derive(Debug, Clone)]
+struct ToastEntry {
+    id: ToastId,
+    title: Arc<str>,
+    description: Option<Arc<str>>,
+    variant: ToastVariant,
+    action: Option<ToastAction>,
+    dismissible: bool,
+    token: Option<TimerToken>,
+}
+
+#[derive(Debug, Default)]
+pub struct ToastStore {
+    next_id: u64,
+    by_window: HashMap<AppWindowId, Vec<ToastEntry>>,
+    by_token: HashMap<TimerToken, (AppWindowId, ToastId)>,
+}
+
+impl ToastStore {
+    fn toasts_for_window(&self, window: AppWindowId) -> &[ToastEntry] {
+        self.by_window.get(&window).map(Vec::as_slice).unwrap_or(&[])
+    }
+
+    fn add_toast(
+        &mut self,
+        window: AppWindowId,
+        request: ToastRequest,
+        token: Option<TimerToken>,
+    ) -> ToastId {
+        if self.next_id == 0 {
+            self.next_id = 1;
+        }
+        let id = ToastId(self.next_id);
+        self.next_id = self.next_id.saturating_add(1);
+
+        if let Some(token) = token {
+            self.by_token.insert(token, (window, id));
+        }
+
+        self.by_window.entry(window).or_default().push(ToastEntry {
+            id,
+            title: request.title,
+            description: request.description,
+            variant: request.variant,
+            action: request.action,
+            dismissible: request.dismissible,
+            token,
+        });
+
+        id
+    }
+
+    fn remove_toast(&mut self, window: AppWindowId, id: ToastId) -> Option<ToastEntry> {
+        let toasts = self.by_window.get_mut(&window)?;
+        let idx = toasts.iter().position(|t| t.id == id)?;
+        let entry = toasts.remove(idx);
+        if let Some(token) = entry.token {
+            self.by_token.remove(&token);
+        }
+        Some(entry)
+    }
+
+    fn remove_toast_by_token(&mut self, token: TimerToken) -> Option<(AppWindowId, ToastEntry)> {
+        let (window, id) = self.by_token.remove(&token)?;
+        let entry = self.remove_toast(window, id)?;
+        Some((window, entry))
+    }
+}
+
+#[derive(Clone)]
+pub struct ToastLayerRequest {
+    pub id: GlobalElementId,
+    pub root_name: String,
+    pub store: Model<ToastStore>,
+    pub position: ToastPosition,
+}
+
+impl std::fmt::Debug for ToastLayerRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ToastLayerRequest")
+            .field("id", &self.id)
+            .field("root_name", &self.root_name)
+            .field("store", &"<model>")
+            .field("position", &self.position)
+            .finish()
+    }
+}
+
+impl ToastLayerRequest {
+    pub fn new(id: GlobalElementId, store: Model<ToastStore>) -> Self {
+        Self {
+            id,
+            root_name: toast_layer_root_name(id),
+            store,
+            position: ToastPosition::default(),
+        }
+    }
+
+    pub fn position(mut self, position: ToastPosition) -> Self {
+        self.position = position;
+        self
+    }
+
+    pub fn root_name(mut self, root_name: impl Into<String>) -> Self {
+        self.root_name = root_name.into();
+        self
+    }
+}
+
+#[derive(Default)]
+struct ToastService {
+    store: Option<Model<ToastStore>>,
+}
+
+pub fn toast_store<H: UiHost>(app: &mut H) -> Model<ToastStore> {
+    app.with_global_mut(ToastService::default, |svc, app| {
+        *svc.store.get_or_insert_with(|| app.models_mut().insert(ToastStore::default()))
+    })
+}
+
+pub fn request_toast_layer<H: UiHost>(cx: &mut ElementCx<'_, H>, request: ToastLayerRequest) {
+    request_toast_layer_for_window(cx.app, cx.window, request);
+}
+
+pub fn request_toast_layer_for_window<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    request: ToastLayerRequest,
+) {
+    app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        let w = overlays.windows.entry(window).or_default();
+        w.toasts.push(request);
+    });
+}
+
+pub fn toast_action(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    store: Model<ToastStore>,
+    window: AppWindowId,
+    request: ToastRequest,
+) -> ToastId {
+    let token = request.duration.filter(|d| d.as_secs_f32() > 0.0).map(|after| {
+        let token = host.next_timer_token();
+        host.push_effect(Effect::SetTimer {
+            window: Some(window),
+            token,
+            after,
+            repeat: None,
+        });
+        token
+    });
+
+    let result = host
+        .models_mut()
+        .update(store, |st| st.add_toast(window, request, token));
+
+    let Ok(id) = result else {
+        if let Some(token) = token {
+            host.push_effect(Effect::CancelTimer { token });
+        }
+        return ToastId(0);
+    };
+
+    host.request_redraw(window);
+    id
+}
+
+pub fn dismiss_toast_action(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    store: Model<ToastStore>,
+    window: AppWindowId,
+    id: ToastId,
+) -> bool {
+    let removed = host.models_mut().update(store, |st| st.remove_toast(window, id)).ok();
+    let Some(entry) = removed.flatten() else {
+        return false;
+    };
+
+    if let Some(token) = entry.token {
+        host.push_effect(Effect::CancelTimer { token });
+    }
+    host.request_redraw(window);
+    true
+}
+
 pub fn render<H: UiHost>(
     ui: &mut UiTree<H>,
     app: &mut H,
@@ -213,7 +490,7 @@ pub fn render<H: UiHost>(
     window: AppWindowId,
     bounds: Rect,
 ) {
-    let (modal_requests, popover_requests, hover_overlay_requests, tooltip_requests) = app
+    let (modal_requests, popover_requests, hover_overlay_requests, tooltip_requests, toast_requests) = app
         .with_global_mut(WindowOverlays::default, |overlays, _app| {
             overlays
                 .windows
@@ -224,6 +501,7 @@ pub fn render<H: UiHost>(
                         std::mem::take(&mut w.popovers),
                         std::mem::take(&mut w.hover_overlays),
                         std::mem::take(&mut w.tooltips),
+                        std::mem::take(&mut w.toasts),
                     )
                 })
                 .unwrap_or_default()
@@ -233,6 +511,7 @@ pub fn render<H: UiHost>(
     let mut seen_popovers: HashSet<GlobalElementId> = HashSet::new();
     let mut seen_hover_overlays: HashSet<GlobalElementId> = HashSet::new();
     let mut seen_tooltips: HashSet<GlobalElementId> = HashSet::new();
+    let mut seen_toast_layers: HashSet<GlobalElementId> = HashSet::new();
 
     for req in modal_requests {
         seen_modals.insert(req.id);
@@ -521,6 +800,257 @@ pub fn render<H: UiHost>(
     for layer in to_hide_tooltips {
         ui.set_layer_visible(layer, false);
     }
+
+    for req in toast_requests {
+        seen_toast_layers.insert(req.id);
+
+        let store = req.store;
+        let position = req.position;
+        let root = declarative::render_dismissible_root_with_hooks(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            &req.root_name,
+            move |cx| {
+                cx.observe_model(store, Invalidation::Paint);
+
+                let hook_store = store;
+                cx.timer_on_timer_for(
+                    cx.root_id(),
+                    Arc::new(move |host, cx, token| {
+                        let removed = host
+                            .models_mut()
+                            .update(hook_store, |st| st.remove_toast_by_token(token))
+                            .ok()
+                            .flatten()
+                            .is_some();
+                        if removed {
+                            host.request_redraw(cx.window);
+                        }
+                        removed
+                    }),
+                );
+
+                let toasts: Vec<ToastEntry> = cx
+                    .app
+                    .models()
+                    .get(store)
+                    .map(|st| st.toasts_for_window(window).to_vec())
+                    .unwrap_or_default();
+
+                if toasts.is_empty() {
+                    return Vec::new();
+                }
+
+                let theme = fret_ui::Theme::global(&*cx.app).clone();
+                let margin = theme.metrics.padding_md;
+                let gap = theme.metrics.padding_sm;
+                let toast_padding = theme.metrics.padding_sm;
+                let radius = theme.metrics.radius_md;
+
+                let mut wrapper_layout = fret_ui::element::LayoutStyle::default();
+                wrapper_layout.position = fret_ui::element::PositionStyle::Absolute;
+                match position {
+                    ToastPosition::TopLeft => {
+                        wrapper_layout.inset.top = Some(margin);
+                        wrapper_layout.inset.left = Some(margin);
+                    }
+                    ToastPosition::TopRight => {
+                        wrapper_layout.inset.top = Some(margin);
+                        wrapper_layout.inset.right = Some(margin);
+                    }
+                    ToastPosition::BottomLeft => {
+                        wrapper_layout.inset.bottom = Some(margin);
+                        wrapper_layout.inset.left = Some(margin);
+                    }
+                    ToastPosition::BottomRight => {
+                        wrapper_layout.inset.bottom = Some(margin);
+                        wrapper_layout.inset.right = Some(margin);
+                    }
+                }
+
+                vec![cx.flex(
+                    fret_ui::element::FlexProps {
+                        layout: wrapper_layout,
+                        direction: fret_core::Axis::Vertical,
+                        gap,
+                        padding: fret_core::Edges::all(fret_core::Px(0.0)),
+                        justify: fret_ui::element::MainAlign::End,
+                        align: fret_ui::element::CrossAlign::End,
+                        wrap: false,
+                    },
+                    move |cx| {
+                        let mut out: Vec<AnyElement> = Vec::with_capacity(toasts.len());
+                        for toast in toasts {
+                            let store = store;
+                            let toast_id = toast.id;
+
+                            let bg = match toast.variant {
+                                ToastVariant::Default => theme.colors.panel_background,
+                                ToastVariant::Destructive => theme.colors.menu_background,
+                            };
+                            let border_color = theme.colors.panel_border;
+                            let fg = theme.colors.text_primary;
+                            let fg_muted = theme.colors.text_muted;
+
+                            let close = toast.dismissible.then(|| {
+                                let close_store = store;
+                                cx.pressable(
+                                    fret_ui::element::PressableProps {
+                                        layout: fret_ui::element::LayoutStyle::default(),
+                                        enabled: true,
+                                        focusable: false,
+                                        on_click: None,
+                                        focus_ring: None,
+                                        a11y: Default::default(),
+                                    },
+                                    move |cx, _st| {
+                                        cx.pressable_add_on_activate(Arc::new(
+                                            move |host, cx, _reason| {
+                                                let _ = dismiss_toast_action(
+                                                    host,
+                                                    close_store,
+                                                    cx.window,
+                                                    toast_id,
+                                                );
+                                            },
+                                        ));
+                                        vec![cx.text("×")]
+                                    },
+                                )
+                            });
+
+                            let action = toast.action.clone().map(|action| {
+                                let action_store = store;
+                                let cmd = action.command;
+                                let label = action.label;
+                                cx.pressable(
+                                    fret_ui::element::PressableProps {
+                                        layout: fret_ui::element::LayoutStyle::default(),
+                                        enabled: true,
+                                        focusable: false,
+                                        on_click: Some(cmd),
+                                        focus_ring: None,
+                                        a11y: Default::default(),
+                                    },
+                                    move |cx, _st| {
+                                        cx.pressable_add_on_activate(Arc::new(
+                                            move |host, cx, _reason| {
+                                                let _ = dismiss_toast_action(
+                                                    host,
+                                                    action_store,
+                                                    cx.window,
+                                                    toast_id,
+                                                );
+                                            },
+                                        ));
+                                        vec![cx.text(label.as_ref())]
+                                    },
+                                )
+                            });
+
+                            let header_row = cx.flex(
+                                fret_ui::element::FlexProps {
+                                    layout: fret_ui::element::LayoutStyle::default(),
+                                    direction: fret_core::Axis::Horizontal,
+                                    gap: theme.metrics.padding_sm,
+                                    padding: fret_core::Edges::all(fret_core::Px(0.0)),
+                                    justify: fret_ui::element::MainAlign::Start,
+                                    align: fret_ui::element::CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                |cx| {
+                                    let mut row: Vec<AnyElement> = Vec::new();
+                                    row.push(cx.text_props(fret_ui::element::TextProps {
+                                        layout: fret_ui::element::LayoutStyle::default(),
+                                        text: toast.title.clone(),
+                                        style: None,
+                                        color: Some(fg),
+                                        wrap: fret_core::TextWrap::None,
+                                        overflow: fret_core::TextOverflow::Clip,
+                                    }));
+                                    if let Some(action) = action {
+                                        row.push(action);
+                                    }
+                                    if let Some(close) = close {
+                                        row.push(close);
+                                    }
+                                    row
+                                },
+                            );
+
+                            let mut toast_children: Vec<AnyElement> = vec![header_row];
+                            if let Some(desc) = toast.description.clone() {
+                                toast_children.push(cx.text_props(fret_ui::element::TextProps {
+                                    layout: fret_ui::element::LayoutStyle::default(),
+                                    text: desc,
+                                    style: None,
+                                    color: Some(fg_muted),
+                                    wrap: fret_core::TextWrap::Word,
+                                    overflow: fret_core::TextOverflow::Clip,
+                                }));
+                            }
+
+                            out.push(cx.container(
+                                fret_ui::element::ContainerProps {
+                                    layout: fret_ui::element::LayoutStyle::default(),
+                                    padding: fret_core::Edges::all(toast_padding),
+                                    background: Some(bg),
+                                    shadow: None,
+                                    border: fret_core::Edges::all(fret_core::Px(1.0)),
+                                    border_color: Some(border_color),
+                                    corner_radii: fret_core::Corners::all(radius),
+                                },
+                                move |_cx| toast_children,
+                            ));
+                        }
+                        out
+                    },
+                )]
+            },
+        );
+
+        let has_toasts = app
+            .models()
+            .get(store)
+            .is_some_and(|st| !st.toasts_for_window(window).is_empty());
+
+        let key = (window, req.id);
+        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+            let entry = overlays
+                .toast_layers
+                .entry(key)
+                .or_insert_with(|| ActiveToastLayer {
+                    layer: ui.push_overlay_root_ex(root, false, true),
+                    root_name: req.root_name.clone(),
+                });
+            entry.root_name = req.root_name.clone();
+
+            ui.set_layer_wants_timer_events(entry.layer, has_toasts);
+            ui.set_layer_visible(entry.layer, has_toasts);
+        });
+    }
+
+    let to_hide_toast_layers: Vec<UiLayerId> =
+        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+            overlays
+                .toast_layers
+                .iter()
+                .filter_map(|((w, id), active)| {
+                    if *w != window || seen_toast_layers.contains(id) {
+                        return None;
+                    }
+                    Some(active.layer)
+                })
+                .collect()
+        });
+
+    for layer in to_hide_toast_layers {
+        ui.set_layer_wants_timer_events(layer, false);
+        ui.set_layer_visible(layer, false);
+    }
 }
 
 pub fn popover_root_name(id: GlobalElementId) -> String {
@@ -537,6 +1067,10 @@ pub fn tooltip_root_name(id: GlobalElementId) -> String {
 
 pub fn hover_overlay_root_name(id: GlobalElementId) -> String {
     format!("window-overlays.hover-overlay.{:x}", id.0)
+}
+
+pub fn toast_layer_root_name(id: GlobalElementId) -> String {
+    format!("window-overlays.toast-layer.{:x}", id.0)
 }
 
 #[cfg(test)]

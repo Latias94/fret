@@ -44,6 +44,7 @@ pub mod separator;
 pub mod sheet;
 pub mod sidebar;
 pub mod skeleton;
+pub mod sonner;
 pub mod spinner;
 pub mod switch;
 pub mod table;
@@ -53,8 +54,8 @@ pub mod toggle_group;
 pub mod tooltip;
 
 pub use accordion::{
-    Accordion, AccordionContent, AccordionItem, AccordionKind, AccordionTrigger, accordion_multiple,
-    accordion_single,
+    Accordion, AccordionContent, AccordionItem, AccordionKind, AccordionTrigger,
+    accordion_multiple, accordion_single,
 };
 pub use alert::{Alert, AlertDescription, AlertTitle, AlertVariant};
 pub use alert_dialog::{
@@ -120,6 +121,7 @@ pub use sidebar::{
     SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 };
 pub use skeleton::Skeleton;
+pub use sonner::{Sonner, Toaster, ToastAction, ToastId, ToastPosition, ToastRequest, ToastVariant};
 pub use spinner::Spinner;
 pub use switch::{Switch, switch};
 pub use table::{

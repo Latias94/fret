@@ -23,8 +23,8 @@ use fret_runtime::{Effect, Model, ModelId};
 
 use crate::action::{
     DismissibleActionHooks, KeyActionHooks, OnActivate, OnDismissRequest, OnKeyDown, OnPointerDown,
-    OnRovingActiveChange, OnRovingTypeahead, PointerActionHooks, PressableActionHooks,
-    RovingActionHooks,
+    OnRovingActiveChange, OnRovingTypeahead, OnTimer, PointerActionHooks, PressableActionHooks,
+    RovingActionHooks, TimerActionHooks,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -565,6 +565,32 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
     pub fn key_clear_on_key_down_for(&mut self, element: GlobalElementId) {
         self.with_state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down = None;
+        });
+    }
+
+    pub fn timer_on_timer_for(&mut self, element: GlobalElementId, handler: OnTimer) {
+        self.with_state_for(element, TimerActionHooks::default, |hooks| {
+            hooks.on_timer = Some(handler);
+        });
+    }
+
+    pub fn timer_add_on_timer_for(&mut self, element: GlobalElementId, handler: OnTimer) {
+        self.with_state_for(element, TimerActionHooks::default, |hooks| {
+            hooks.on_timer = match hooks.on_timer.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, token| {
+                        prev(host, cx, token) || next(host, cx, token)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn timer_clear_on_timer_for(&mut self, element: GlobalElementId) {
+        self.with_state_for(element, TimerActionHooks::default, |hooks| {
+            hooks.on_timer = None;
         });
     }
 
