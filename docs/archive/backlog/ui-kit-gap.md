@@ -119,7 +119,7 @@ optional integration with `@tanstack/react-virtual` / `react-window`. For Fret, 
 
 - Provide a **framework-level virtual list primitive** (`VirtualList`) for performance.
 - Provide **component-level API parity** with shadcn/ui for common app UIs.
-- Track shadcn taxonomy parity separately: `docs/archive/backlog/shadcn-v4-component-parity-todo.md`
+- Track shadcn taxonomy parity separately: `docs/shadcn-declarative-progress.md`
 
 ### P0 (core app UI)
 

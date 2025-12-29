@@ -2,6 +2,14 @@
 
 Tracks the ongoing work to rebuild Fret's shadcn-aligned component surface as a declarative-only API.
 
+## Source of Truth
+
+This file is the canonical tracker for shadcn/ui v4 parity and the declarative-only migration.
+
+Historical documents under `docs/archive/` are kept for context only and may be stale:
+
+- `docs/archive/backlog/shadcn-v4-component-parity-todo.md` (archived)
+
 ## Scope
 
 - `crates/fret-components-shadcn`: shadcn/ui v4 naming + taxonomy surface (recipes).
@@ -94,7 +102,7 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 | sidebar | `sidebar` | Present |  |
 | skeleton | `skeleton` | Present |  |
 | slider | `slider` | Missing | Input primitive; a11y + pointer interaction |
-| sonner | `sonner` | Missing | Toast service + overlay root + timers |
+| sonner | `sonner` | Present | Toast store + overlay layer + timers (no a11y yet) |
 | spinner | `spinner` | Present |  |
 | switch | `switch` | Present |  |
 | table | `table` | Present |  |

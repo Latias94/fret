@@ -167,4 +167,4 @@ Runtime default:
 - ADR 0057: Declarative Layout Style and Flex Semantics: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
 - ADR 0062: Tailwind Layout Primitives: `docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md`
 - Tailwind primitive parity TODO: `docs/archive/backlog/tailwind-primitive-parity-todo.md`
-- shadcn parity TODO: `docs/archive/backlog/shadcn-v4-component-parity-todo.md`
+- shadcn declarative progress (source of truth): `docs/shadcn-declarative-progress.md`
