@@ -551,4 +551,52 @@ fn gpu_affine_clip_conformance() {
             "clip_rrect_capture: expected outside pixel to be transparent, got {outside_axis_aligned:?}"
         );
     }
+
+    // 9) Deep clip stacks must work (exceeds legacy uniform MAX_CLIPS designs).
+    {
+        let transform = rotation_about(center, std::f32::consts::FRAC_PI_4);
+        let mut scene = Scene::default();
+        scene.push(SceneOp::PushTransform { transform });
+
+        for _ in 0..64 {
+            scene.push(SceneOp::PushClipRect {
+                rect: Rect::new(
+                    Point::new(Px(16.0), Px(16.0)),
+                    Size::new(Px(32.0), Px(32.0)),
+                ),
+            });
+        }
+
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(0),
+            rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
+            background: Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            },
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(0.0)),
+        });
+
+        for _ in 0..64 {
+            scene.push(SceneOp::PopClip);
+        }
+        scene.push(SceneOp::PopTransform);
+
+        let pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+        let outside = pixel_rgba(&pixels, size.0, 16, 16);
+        let inside = pixel_rgba(&pixels, size.0, 32, 32);
+
+        assert!(
+            inside[3] > 200,
+            "deep_clip_stack: expected inside pixel to be opaque, got {inside:?}"
+        );
+        assert!(
+            outside[3] < 20,
+            "deep_clip_stack: expected outside pixel to be transparent, got {outside:?}"
+        );
+    }
 }

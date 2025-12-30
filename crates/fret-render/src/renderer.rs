@@ -47,7 +47,7 @@ struct ClipRRectUniform {
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct ViewportUniform {
     viewport_size: [f32; 2],
-    clip_base: u32,
+    clip_head: u32,
     clip_count: u32,
 }
 
@@ -3482,21 +3482,26 @@ impl Renderer {
             .last()
             .expect("scissor stack must be non-empty");
 
-        let mut active_clips: Vec<ClipRRectUniform> = Vec::new();
-        let mut clip_shader_stack: Vec<bool> = Vec::new();
+        #[derive(Clone, Copy)]
+        enum ClipPop {
+            NoShader,
+            Shader { prev_head: u32 },
+        }
 
-        let mut push_uniform_snapshot = |active: &[ClipRRectUniform]| -> u32 {
-            let base = clips.len() as u32;
-            clips.extend_from_slice(active);
+        let mut clip_pop_stack: Vec<ClipPop> = Vec::new();
+        let mut clip_head: u32 = 0;
+        let mut clip_count: u32 = 0;
+
+        let mut push_uniform_snapshot = |clip_head: u32, clip_count: u32| -> u32 {
             let uniform_index = uniforms.len() as u32;
             uniforms.push(ViewportUniform {
                 viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
-                clip_base: base,
-                clip_count: active.len() as u32,
+                clip_head,
+                clip_count,
             });
             uniform_index
         };
-        let mut current_uniform_index: u32 = push_uniform_snapshot(&[]);
+        let mut current_uniform_index: u32 = push_uniform_snapshot(0, 0);
 
         let mut quad_batch: Option<(ScissorRect, u32, u32)> = None;
 
@@ -3638,25 +3643,36 @@ impl Renderer {
                     scissor_stack.push(current_scissor);
 
                     if w <= 0.0 || h <= 0.0 {
-                        clip_shader_stack.push(false);
+                        clip_pop_stack.push(ClipPop::NoShader);
                         continue;
                     }
 
                     let t_px = current_transform_px(&transform_stack);
+                    let is_axis_aligned = t_px.b == 0.0 && t_px.c == 0.0;
+                    if is_axis_aligned {
+                        clip_pop_stack.push(ClipPop::NoShader);
+                        continue;
+                    }
+
                     let Some(inv_px) = t_px.inverse() else {
-                        clip_shader_stack.push(false);
+                        clip_pop_stack.push(ClipPop::NoShader);
                         continue;
                     };
+
                     flush_quad_batch!();
-                    let (inv0, inv1) = transform_rows(inv_px);
-                    active_clips.push(ClipRRectUniform {
+                    let prev_head = if clip_count > 0 { clip_head } else { u32::MAX };
+                    let node_index = clips.len() as u32;
+                    let parent_bits = f32::from_bits(prev_head);
+                    clips.push(ClipRRectUniform {
                         rect: [x, y, w, h],
                         corner_radii: [0.0; 4],
-                        inv0,
-                        inv1,
+                        inv0: [inv_px.a, inv_px.c, inv_px.tx, parent_bits],
+                        inv1: [inv_px.b, inv_px.d, inv_px.ty, 0.0],
                     });
-                    current_uniform_index = push_uniform_snapshot(&active_clips);
-                    clip_shader_stack.push(true);
+                    clip_head = node_index;
+                    clip_count = clip_count.saturating_add(1);
+                    current_uniform_index = push_uniform_snapshot(clip_head, clip_count);
+                    clip_pop_stack.push(ClipPop::Shader { prev_head });
                 }
                 SceneOp::PushClipRRect { rect, corner_radii } => {
                     let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
@@ -3693,25 +3709,37 @@ impl Renderer {
                     scissor_stack.push(current_scissor);
 
                     if w <= 0.0 || h <= 0.0 {
-                        clip_shader_stack.push(false);
+                        clip_pop_stack.push(ClipPop::NoShader);
                         continue;
                     }
 
                     let t_px = current_transform_px(&transform_stack);
+                    let is_axis_aligned = t_px.b == 0.0 && t_px.c == 0.0;
+                    let is_rect = radii.iter().all(|r| *r <= 0.0);
+                    if is_axis_aligned && is_rect {
+                        clip_pop_stack.push(ClipPop::NoShader);
+                        continue;
+                    }
+
                     let Some(inv_px) = t_px.inverse() else {
-                        clip_shader_stack.push(false);
+                        clip_pop_stack.push(ClipPop::NoShader);
                         continue;
                     };
+
                     flush_quad_batch!();
-                    let (inv0, inv1) = transform_rows(inv_px);
-                    active_clips.push(ClipRRectUniform {
+                    let prev_head = if clip_count > 0 { clip_head } else { u32::MAX };
+                    let node_index = clips.len() as u32;
+                    let parent_bits = f32::from_bits(prev_head);
+                    clips.push(ClipRRectUniform {
                         rect: [x, y, w, h],
                         corner_radii: radii,
-                        inv0,
-                        inv1,
+                        inv0: [inv_px.a, inv_px.c, inv_px.tx, parent_bits],
+                        inv1: [inv_px.b, inv_px.d, inv_px.ty, 0.0],
                     });
-                    current_uniform_index = push_uniform_snapshot(&active_clips);
-                    clip_shader_stack.push(true);
+                    clip_head = node_index;
+                    clip_count = clip_count.saturating_add(1);
+                    current_uniform_index = push_uniform_snapshot(clip_head, clip_count);
+                    clip_pop_stack.push(ClipPop::Shader { prev_head });
                 }
                 SceneOp::PopClip => {
                     if scissor_stack.len() > 1 {
@@ -3725,12 +3753,15 @@ impl Renderer {
                         }
                     }
 
-                    if let Some(was_shader_clip) = clip_shader_stack.pop()
-                        && was_shader_clip
-                    {
+                    if let Some(ClipPop::Shader { prev_head }) = clip_pop_stack.pop() {
                         flush_quad_batch!();
-                        active_clips.pop();
-                        current_uniform_index = push_uniform_snapshot(&active_clips);
+                        clip_count = clip_count.saturating_sub(1);
+                        clip_head = if clip_count == 0 || prev_head == u32::MAX {
+                            0
+                        } else {
+                            prev_head
+                        };
+                        current_uniform_index = push_uniform_snapshot(clip_head, clip_count);
                     }
                 }
                 SceneOp::Quad {
@@ -4682,12 +4713,16 @@ struct ClipRRect {
 
 struct Viewport {
   viewport_size: vec2<f32>,
-  clip_base: u32,
+  clip_head: u32,
   clip_count: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
-@group(0) @binding(1) var<storage, read> clip_stack: array<ClipRRect>;
+struct ClipStack {
+  clips: array<ClipRRect>,
+};
+
+@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
 
 struct QuadInstance {
   rect: vec4<f32>,
@@ -4793,8 +4828,13 @@ fn saturate(x: f32) -> f32 {
 
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
+  var idx = viewport.clip_head;
   for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
-    let clip = clip_stack[viewport.clip_base + i];
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let clip = clip_stack.clips[idx];
+    idx = bitcast<u32>(clip.inv0.w);
     let clip_local = vec2<f32>(
       dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
       dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
@@ -4868,12 +4908,16 @@ struct ClipRRect {
 
 struct Viewport {
   viewport_size: vec2<f32>,
-  clip_base: u32,
+  clip_head: u32,
   clip_count: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
-@group(0) @binding(1) var<storage, read> clip_stack: array<ClipRRect>;
+struct ClipStack {
+  clips: array<ClipRRect>,
+};
+
+@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
 
 @group(1) @binding(0) var viewport_sampler: sampler;
 @group(1) @binding(1) var viewport_texture: texture_2d<f32>;
@@ -4928,8 +4972,13 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
+  var idx = viewport.clip_head;
   for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
-    let clip = clip_stack[viewport.clip_base + i];
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let clip = clip_stack.clips[idx];
+    idx = bitcast<u32>(clip.inv0.w);
     let clip_local = vec2<f32>(
       dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
       dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
@@ -4978,12 +5027,16 @@ struct ClipRRect {
 
 struct Viewport {
   viewport_size: vec2<f32>,
-  clip_base: u32,
+  clip_head: u32,
   clip_count: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
-@group(0) @binding(1) var<storage, read> clip_stack: array<ClipRRect>;
+struct ClipStack {
+  clips: array<ClipRRect>,
+};
+
+@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
 
 @group(1) @binding(0) var tex_sampler: sampler;
 @group(1) @binding(1) var tex: texture_2d<f32>;
@@ -5038,8 +5091,13 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
+  var idx = viewport.clip_head;
   for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
-    let clip = clip_stack[viewport.clip_base + i];
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let clip = clip_stack.clips[idx];
+    idx = bitcast<u32>(clip.inv0.w);
     let clip_local = vec2<f32>(
       dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
       dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
@@ -5088,12 +5146,16 @@ struct ClipRRect {
 
 struct Viewport {
   viewport_size: vec2<f32>,
-  clip_base: u32,
+  clip_head: u32,
   clip_count: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
-@group(0) @binding(1) var<storage, read> clip_stack: array<ClipRRect>;
+struct ClipStack {
+  clips: array<ClipRRect>,
+};
+
+@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
 
 struct VsIn {
   @location(0) pos_px: vec2<f32>,
@@ -5143,8 +5205,13 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
+  var idx = viewport.clip_head;
   for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
-    let clip = clip_stack[viewport.clip_base + i];
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let clip = clip_stack.clips[idx];
+    idx = bitcast<u32>(clip.inv0.w);
     let clip_local = vec2<f32>(
       dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
       dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
@@ -5190,12 +5257,16 @@ struct ClipRRect {
 
 struct Viewport {
   viewport_size: vec2<f32>,
-  clip_base: u32,
+  clip_head: u32,
   clip_count: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
-@group(0) @binding(1) var<storage, read> clip_stack: array<ClipRRect>;
+struct ClipStack {
+  clips: array<ClipRRect>,
+};
+
+@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
 
 @group(1) @binding(0) var glyph_sampler: sampler;
 @group(1) @binding(1) var glyph_atlas: texture_2d<f32>;
@@ -5250,8 +5321,13 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
+  var idx = viewport.clip_head;
   for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
-    let clip = clip_stack[viewport.clip_base + i];
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let clip = clip_stack.clips[idx];
+    idx = bitcast<u32>(clip.inv0.w);
     let clip_local = vec2<f32>(
       dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
       dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
@@ -5300,12 +5376,16 @@ struct ClipRRect {
 
 struct Viewport {
   viewport_size: vec2<f32>,
-  clip_base: u32,
+  clip_head: u32,
   clip_count: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
-@group(0) @binding(1) var<storage, read> clip_stack: array<ClipRRect>;
+struct ClipStack {
+  clips: array<ClipRRect>,
+};
+
+@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
 
 @group(1) @binding(0) var mask_sampler: sampler;
 @group(1) @binding(1) var mask_texture: texture_2d<f32>;
@@ -5360,8 +5440,13 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
+  var idx = viewport.clip_head;
   for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
-    let clip = clip_stack[viewport.clip_base + i];
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let clip = clip_stack.clips[idx];
+    idx = bitcast<u32>(clip.inv0.w);
     let clip_local = vec2<f32>(
       dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
       dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
