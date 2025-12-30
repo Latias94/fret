@@ -91,6 +91,15 @@ If accessibility is enabled (ADR 0033), multiline text fields must expose:
 - selection range,
 - IME composition range when preedit is active.
 
+Semantics indexing contract:
+
+- `SemanticsNode.value` for `SemanticsRole::TextField` should represent the **display text** (i.e.
+  while composing, include the inline preedit string).
+- `SemanticsNode.text_selection` and `SemanticsNode.text_composition` are **UTF-8 byte offsets into
+  `value`**.
+- Offsets must be clamped to valid UTF-8 char boundaries.
+- Selection is `(anchor, focus)` to preserve directionality; consumers must handle `anchor > focus`.
+
 ## Conformance checklist (P0)
 
 - Windows Japanese IME: preedit shows inline in multiline input; Tab selects candidate; Enter commits; Escape cancels composition.

@@ -19,6 +19,24 @@ use std::time::{Duration, Instant};
 
 const PENDING_SHORTCUT_TIMEOUT: Duration = Duration::from_millis(1000);
 
+fn validate_semantics_if_enabled(snapshot: &SemanticsSnapshot) {
+    if std::env::var_os("FRET_VALIDATE_SEMANTICS").is_none() {
+        return;
+    }
+
+    if let Err(err) = snapshot.validate() {
+        tracing::error!(
+            node = ?err.node,
+            kind = ?err.kind,
+            "semantics validation failed (set FRET_VALIDATE_SEMANTICS_PANIC=1 to panic)"
+        );
+
+        if std::env::var_os("FRET_VALIDATE_SEMANTICS_PANIC").is_some() {
+            panic!("semantics validation failed: {err:?}");
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 struct CapturedKeystroke {
     chord: KeyChord,
@@ -3122,6 +3140,10 @@ impl<H: UiHost> UiTree<H> {
             captured,
             nodes,
         }));
+
+        if let Some(snapshot) = self.semantics.as_deref() {
+            validate_semantics_if_enabled(snapshot);
+        }
     }
 
     fn node_in_any_layer(&self, node: NodeId, layer_roots: &[NodeId]) -> bool {
