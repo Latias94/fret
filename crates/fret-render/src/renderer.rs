@@ -34,8 +34,6 @@ impl Default for ClearColor {
     }
 }
 
-const MAX_CLIPS: usize = 32;
-
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct ClipRRectUniform {
@@ -49,9 +47,8 @@ struct ClipRRectUniform {
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct ViewportUniform {
     viewport_size: [f32; 2],
+    clip_base: u32,
     clip_count: u32,
-    _pad0: u32,
-    clips: [ClipRRectUniform; MAX_CLIPS],
 }
 
 #[repr(C)]
@@ -805,6 +802,8 @@ pub struct Renderer {
     uniform_bind_group_layout: wgpu::BindGroupLayout,
     uniform_stride: u64,
     uniform_capacity: usize,
+    clip_buffer: wgpu::Buffer,
+    clip_capacity: usize,
 
     quad_pipeline_format: Option<wgpu::TextureFormat>,
     quad_pipeline: Option<wgpu::RenderPipeline>,
@@ -911,6 +910,7 @@ struct SceneEncoding {
     viewport_vertices: Vec<ViewportVertex>,
     text_vertices: Vec<TextVertex>,
     path_vertices: Vec<PathVertex>,
+    clips: Vec<ClipRRectUniform>,
     uniforms: Vec<ViewportUniform>,
     ordered_draws: Vec<OrderedDraw>,
 }
@@ -921,6 +921,7 @@ impl SceneEncoding {
         self.viewport_vertices.clear();
         self.text_vertices.clear();
         self.path_vertices.clear();
+        self.clips.clear();
         self.uniforms.clear();
         self.ordered_draws.clear();
     }
@@ -1720,20 +1721,38 @@ impl Renderer {
         // wgpu requires uniform dynamic offsets to be aligned to 256 bytes.
         let uniform_stride = uniform_size.div_ceil(256) * 256;
         let uniform_capacity = 256usize;
+        let clip_capacity = 1024usize;
+        let clip_entry_size = std::mem::size_of::<ClipRRectUniform>() as u64;
 
         let uniform_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("fret quad uniforms layout"),
-                entries: &[wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: true,
-                        min_binding_size: Some(std::num::NonZeroU64::new(uniform_size).unwrap()),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: true,
+                            min_binding_size: Some(
+                                std::num::NonZeroU64::new(uniform_size).unwrap(),
+                            ),
+                        },
+                        count: None,
                     },
-                    count: None,
-                }],
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: Some(
+                                std::num::NonZeroU64::new(clip_entry_size).unwrap(),
+                            ),
+                        },
+                        count: None,
+                    },
+                ],
             });
 
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -1743,17 +1762,34 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let clip_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret clip stack buffer"),
+            size: clip_entry_size.saturating_mul(clip_capacity as u64).max(4),
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret quad uniforms bind group"),
             layout: &uniform_bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                    buffer: &uniform_buffer,
-                    offset: 0,
-                    size: Some(std::num::NonZeroU64::new(uniform_size).unwrap()),
-                }),
-            }],
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &uniform_buffer,
+                        offset: 0,
+                        size: Some(std::num::NonZeroU64::new(uniform_size).unwrap()),
+                    }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &clip_buffer,
+                        offset: 0,
+                        size: None,
+                    }),
+                },
+            ],
         });
 
         let viewport_bind_group_layout =
@@ -1855,6 +1891,8 @@ impl Renderer {
             uniform_bind_group_layout,
             uniform_stride,
             uniform_capacity,
+            clip_buffer,
+            clip_capacity,
             quad_pipeline_format: None,
             quad_pipeline: None,
             viewport_pipeline_format: None,
@@ -2682,19 +2720,74 @@ impl Renderer {
         let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret uniforms bind group (resized)"),
             layout: &self.uniform_bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                    buffer: &uniform_buffer,
-                    offset: 0,
-                    size: Some(std::num::NonZeroU64::new(uniform_size).unwrap()),
-                }),
-            }],
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &uniform_buffer,
+                        offset: 0,
+                        size: Some(std::num::NonZeroU64::new(uniform_size).unwrap()),
+                    }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &self.clip_buffer,
+                        offset: 0,
+                        size: None,
+                    }),
+                },
+            ],
         });
 
         self.uniform_buffer = uniform_buffer;
         self.uniform_bind_group = uniform_bind_group;
         self.uniform_capacity = new_capacity;
+    }
+
+    fn ensure_clip_capacity(&mut self, device: &wgpu::Device, needed: usize) {
+        if needed <= self.clip_capacity {
+            return;
+        }
+
+        let new_capacity = needed
+            .next_power_of_two()
+            .max(self.clip_capacity.saturating_mul(2).max(1));
+        let clip_entry_size = std::mem::size_of::<ClipRRectUniform>() as u64;
+        let clip_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret clip stack buffer (resized)"),
+            size: clip_entry_size.saturating_mul(new_capacity as u64).max(4),
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
+        let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("fret uniforms bind group (resized clip buffer)"),
+            layout: &self.uniform_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &self.uniform_buffer,
+                        offset: 0,
+                        size: Some(std::num::NonZeroU64::new(uniform_size).unwrap()),
+                    }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &clip_buffer,
+                        offset: 0,
+                        size: None,
+                    }),
+                },
+            ],
+        });
+
+        self.clip_buffer = clip_buffer;
+        self.uniform_bind_group = uniform_bind_group;
+        self.clip_capacity = new_capacity;
     }
 
     pub fn render_scene(
@@ -2774,6 +2867,11 @@ impl Renderer {
                 .copy_from_slice(bytemuck::bytes_of(u));
         }
         queue.write_buffer(&self.uniform_buffer, 0, &uniform_bytes);
+
+        self.ensure_clip_capacity(device, encoding.clips.len().max(1));
+        if !encoding.clips.is_empty() {
+            queue.write_buffer(&self.clip_buffer, 0, bytemuck::cast_slice(&encoding.clips));
+        }
 
         self.prepare_viewport_bind_groups(device, &encoding.ordered_draws);
         self.prepare_image_bind_groups(device, &encoding.ordered_draws);
@@ -3373,6 +3471,7 @@ impl Renderer {
         let viewport_vertices = &mut encoding.viewport_vertices;
         let text_vertices = &mut encoding.text_vertices;
         let path_vertices = &mut encoding.path_vertices;
+        let clips = &mut encoding.clips;
         let uniforms = &mut encoding.uniforms;
         let ordered_draws = &mut encoding.ordered_draws;
 
@@ -3386,13 +3485,18 @@ impl Renderer {
         let mut active_clips: Vec<ClipRRectUniform> = Vec::new();
         let mut clip_shader_stack: Vec<bool> = Vec::new();
 
-        uniforms.push(ViewportUniform {
-            viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
-            clip_count: 0,
-            _pad0: 0,
-            clips: [ClipRRectUniform::zeroed(); MAX_CLIPS],
-        });
-        let mut current_uniform_index: u32 = 0;
+        let mut push_uniform_snapshot = |active: &[ClipRRectUniform]| -> u32 {
+            let base = clips.len() as u32;
+            clips.extend_from_slice(active);
+            let uniform_index = uniforms.len() as u32;
+            uniforms.push(ViewportUniform {
+                viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
+                clip_base: base,
+                clip_count: active.len() as u32,
+            });
+            uniform_index
+        };
+        let mut current_uniform_index: u32 = push_uniform_snapshot(&[]);
 
         let mut quad_batch: Option<(ScissorRect, u32, u32)> = None;
 
@@ -3543,31 +3647,16 @@ impl Renderer {
                         clip_shader_stack.push(false);
                         continue;
                     };
-                    if active_clips.len() < MAX_CLIPS {
-                        flush_quad_batch!();
-                        let (inv0, inv1) = transform_rows(inv_px);
-                        active_clips.push(ClipRRectUniform {
-                            rect: [x, y, w, h],
-                            corner_radii: [0.0; 4],
-                            inv0,
-                            inv1,
-                        });
-
-                        let mut clips = [ClipRRectUniform::zeroed(); MAX_CLIPS];
-                        for (i, clip) in active_clips.iter().enumerate() {
-                            clips[i] = *clip;
-                        }
-                        current_uniform_index = uniforms.len() as u32;
-                        uniforms.push(ViewportUniform {
-                            viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
-                            clip_count: active_clips.len() as u32,
-                            _pad0: 0,
-                            clips,
-                        });
-                        clip_shader_stack.push(true);
-                    } else {
-                        clip_shader_stack.push(false);
-                    }
+                    flush_quad_batch!();
+                    let (inv0, inv1) = transform_rows(inv_px);
+                    active_clips.push(ClipRRectUniform {
+                        rect: [x, y, w, h],
+                        corner_radii: [0.0; 4],
+                        inv0,
+                        inv1,
+                    });
+                    current_uniform_index = push_uniform_snapshot(&active_clips);
+                    clip_shader_stack.push(true);
                 }
                 SceneOp::PushClipRRect { rect, corner_radii } => {
                     let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
@@ -3586,11 +3675,7 @@ impl Renderer {
                             h: 0,
                         })
                     } else {
-                        let t_px = to_physical_px(
-                            *transform_stack
-                                .last()
-                                .expect("transform stack must be non-empty"),
-                        );
+                        let t_px = current_transform_px(&transform_stack);
                         let quad = transform_quad_points_px(t_px, x, y, w, h);
                         let (min_x, min_y, max_x, max_y) = bounds_of_quad_points(&quad);
                         scissor_from_bounds_px(min_x, min_y, max_x, max_y, viewport_size)
@@ -3612,40 +3697,21 @@ impl Renderer {
                         continue;
                     }
 
-                    let t_px = to_physical_px(
-                        *transform_stack
-                            .last()
-                            .expect("transform stack must be non-empty"),
-                    );
+                    let t_px = current_transform_px(&transform_stack);
                     let Some(inv_px) = t_px.inverse() else {
                         clip_shader_stack.push(false);
                         continue;
                     };
-                    if active_clips.len() < MAX_CLIPS {
-                        flush_quad_batch!();
-                        let (inv0, inv1) = transform_rows(inv_px);
-                        active_clips.push(ClipRRectUniform {
-                            rect: [x, y, w, h],
-                            corner_radii: radii,
-                            inv0,
-                            inv1,
-                        });
-
-                        let mut clips = [ClipRRectUniform::zeroed(); MAX_CLIPS];
-                        for (i, clip) in active_clips.iter().enumerate() {
-                            clips[i] = *clip;
-                        }
-                        current_uniform_index = uniforms.len() as u32;
-                        uniforms.push(ViewportUniform {
-                            viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
-                            clip_count: active_clips.len() as u32,
-                            _pad0: 0,
-                            clips,
-                        });
-                        clip_shader_stack.push(true);
-                    } else {
-                        clip_shader_stack.push(false);
-                    }
+                    flush_quad_batch!();
+                    let (inv0, inv1) = transform_rows(inv_px);
+                    active_clips.push(ClipRRectUniform {
+                        rect: [x, y, w, h],
+                        corner_radii: radii,
+                        inv0,
+                        inv1,
+                    });
+                    current_uniform_index = push_uniform_snapshot(&active_clips);
+                    clip_shader_stack.push(true);
                 }
                 SceneOp::PopClip => {
                     if scissor_stack.len() > 1 {
@@ -3664,18 +3730,7 @@ impl Renderer {
                     {
                         flush_quad_batch!();
                         active_clips.pop();
-
-                        let mut clips = [ClipRRectUniform::zeroed(); MAX_CLIPS];
-                        for (i, clip) in active_clips.iter().enumerate() {
-                            clips[i] = *clip;
-                        }
-                        current_uniform_index = uniforms.len() as u32;
-                        uniforms.push(ViewportUniform {
-                            viewport_size: [viewport_size.0 as f32, viewport_size.1 as f32],
-                            clip_count: active_clips.len() as u32,
-                            _pad0: 0,
-                            clips,
-                        });
+                        current_uniform_index = push_uniform_snapshot(&active_clips);
                     }
                 }
                 SceneOp::Quad {
@@ -4618,8 +4673,6 @@ impl fret_core::SvgService for Renderer {
 }
 
 const QUAD_SHADER: &str = r#"
-const MAX_CLIPS: u32 = 32u;
-
 struct ClipRRect {
   rect: vec4<f32>,
   corner_radii: vec4<f32>,
@@ -4629,12 +4682,12 @@ struct ClipRRect {
 
 struct Viewport {
   viewport_size: vec2<f32>,
+  clip_base: u32,
   clip_count: u32,
-  _pad0: u32,
-  clips: array<ClipRRect, MAX_CLIPS>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+@group(0) @binding(1) var<storage, read> clip_stack: array<ClipRRect>;
 
 struct QuadInstance {
   rect: vec4<f32>,
@@ -4740,11 +4793,8 @@ fn saturate(x: f32) -> f32 {
 
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
-  for (var i = 0u; i < MAX_CLIPS; i = i + 1u) {
-    if (i >= viewport.clip_count) {
-      break;
-    }
-    let clip = viewport.clips[i];
+  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+    let clip = clip_stack[viewport.clip_base + i];
     let clip_local = vec2<f32>(
       dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
       dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
@@ -4809,8 +4859,6 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 "#;
 
 const VIEWPORT_SHADER: &str = r#"
-const MAX_CLIPS: u32 = 32u;
-
 struct ClipRRect {
   rect: vec4<f32>,
   corner_radii: vec4<f32>,
@@ -4820,12 +4868,12 @@ struct ClipRRect {
 
 struct Viewport {
   viewport_size: vec2<f32>,
+  clip_base: u32,
   clip_count: u32,
-  _pad0: u32,
-  clips: array<ClipRRect, MAX_CLIPS>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+@group(0) @binding(1) var<storage, read> clip_stack: array<ClipRRect>;
 
 @group(1) @binding(0) var viewport_sampler: sampler;
 @group(1) @binding(1) var viewport_texture: texture_2d<f32>;
@@ -4880,11 +4928,8 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
-  for (var i = 0u; i < MAX_CLIPS; i = i + 1u) {
-    if (i >= viewport.clip_count) {
-      break;
-    }
-    let clip = viewport.clips[i];
+  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+    let clip = clip_stack[viewport.clip_base + i];
     let clip_local = vec2<f32>(
       dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
       dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
@@ -4924,8 +4969,6 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 "#;
 
 const COMPOSITE_PREMUL_SHADER: &str = r#"
-const MAX_CLIPS: u32 = 32u;
-
 struct ClipRRect {
   rect: vec4<f32>,
   corner_radii: vec4<f32>,
@@ -4935,12 +4978,12 @@ struct ClipRRect {
 
 struct Viewport {
   viewport_size: vec2<f32>,
+  clip_base: u32,
   clip_count: u32,
-  _pad0: u32,
-  clips: array<ClipRRect, MAX_CLIPS>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+@group(0) @binding(1) var<storage, read> clip_stack: array<ClipRRect>;
 
 @group(1) @binding(0) var tex_sampler: sampler;
 @group(1) @binding(1) var tex: texture_2d<f32>;
@@ -4995,11 +5038,8 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
-  for (var i = 0u; i < MAX_CLIPS; i = i + 1u) {
-    if (i >= viewport.clip_count) {
-      break;
-    }
-    let clip = viewport.clips[i];
+  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+    let clip = clip_stack[viewport.clip_base + i];
     let clip_local = vec2<f32>(
       dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
       dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
@@ -5039,8 +5079,6 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 "#;
 
 const PATH_SHADER: &str = r#"
-const MAX_CLIPS: u32 = 32u;
-
 struct ClipRRect {
   rect: vec4<f32>,
   corner_radii: vec4<f32>,
@@ -5050,12 +5088,12 @@ struct ClipRRect {
 
 struct Viewport {
   viewport_size: vec2<f32>,
+  clip_base: u32,
   clip_count: u32,
-  _pad0: u32,
-  clips: array<ClipRRect, MAX_CLIPS>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+@group(0) @binding(1) var<storage, read> clip_stack: array<ClipRRect>;
 
 struct VsIn {
   @location(0) pos_px: vec2<f32>,
@@ -5105,11 +5143,8 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
-  for (var i = 0u; i < MAX_CLIPS; i = i + 1u) {
-    if (i >= viewport.clip_count) {
-      break;
-    }
-    let clip = viewport.clips[i];
+  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+    let clip = clip_stack[viewport.clip_base + i];
     let clip_local = vec2<f32>(
       dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
       dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
@@ -5146,8 +5181,6 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 "#;
 
 const TEXT_SHADER: &str = r#"
-const MAX_CLIPS: u32 = 32u;
-
 struct ClipRRect {
   rect: vec4<f32>,
   corner_radii: vec4<f32>,
@@ -5157,12 +5190,12 @@ struct ClipRRect {
 
 struct Viewport {
   viewport_size: vec2<f32>,
+  clip_base: u32,
   clip_count: u32,
-  _pad0: u32,
-  clips: array<ClipRRect, MAX_CLIPS>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+@group(0) @binding(1) var<storage, read> clip_stack: array<ClipRRect>;
 
 @group(1) @binding(0) var glyph_sampler: sampler;
 @group(1) @binding(1) var glyph_atlas: texture_2d<f32>;
@@ -5217,11 +5250,8 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
-  for (var i = 0u; i < MAX_CLIPS; i = i + 1u) {
-    if (i >= viewport.clip_count) {
-      break;
-    }
-    let clip = viewport.clips[i];
+  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+    let clip = clip_stack[viewport.clip_base + i];
     let clip_local = vec2<f32>(
       dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
       dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
@@ -5261,8 +5291,6 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 "#;
 
 const MASK_SHADER: &str = r#"
-const MAX_CLIPS: u32 = 32u;
-
 struct ClipRRect {
   rect: vec4<f32>,
   corner_radii: vec4<f32>,
@@ -5272,12 +5300,12 @@ struct ClipRRect {
 
 struct Viewport {
   viewport_size: vec2<f32>,
+  clip_base: u32,
   clip_count: u32,
-  _pad0: u32,
-  clips: array<ClipRRect, MAX_CLIPS>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+@group(0) @binding(1) var<storage, read> clip_stack: array<ClipRRect>;
 
 @group(1) @binding(0) var mask_sampler: sampler;
 @group(1) @binding(1) var mask_texture: texture_2d<f32>;
@@ -5332,11 +5360,8 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
-  for (var i = 0u; i < MAX_CLIPS; i = i + 1u) {
-    if (i >= viewport.clip_count) {
-      break;
-    }
-    let clip = viewport.clips[i];
+  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+    let clip = clip_stack[viewport.clip_base + i];
     let clip_local = vec2<f32>(
       dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
       dot(clip.inv1.xy, pixel_pos) + clip.inv1.z

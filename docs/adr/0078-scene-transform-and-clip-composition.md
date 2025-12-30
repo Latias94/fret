@@ -107,4 +107,6 @@ Current status:
 
 - `crates/fret-render/tests/affine_clip_conformance.rs` provides a GPU-level conformance check for
   affine transform + clip-local evaluation (may skip in environments without a usable adapter).
+- `fret-render` encodes the active clip stack into a GPU storage buffer to avoid a fixed `MAX_CLIPS`
+  limit while preserving clip-local SDF evaluation for rounded clips.
 - Decide how `PushLayer` should interact with batching and potential offscreen composition.
