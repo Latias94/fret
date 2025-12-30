@@ -54,6 +54,16 @@ pub struct SemanticsNode {
     /// "active item" (e.g. composite widgets using `aria-activedescendant`), this points to that
     /// active descendant node.
     pub active_descendant: Option<NodeId>,
+    /// 1-based position of this node within a logical collection (e.g. listbox/menu items).
+    ///
+    /// This is used to support accessible large/virtualized collections where only a window of
+    /// items is present in the semantics snapshot.
+    pub pos_in_set: Option<u32>,
+    /// Total number of items in the logical collection that this node belongs to.
+    ///
+    /// This is used to support accessible large/virtualized collections where only a window of
+    /// items is present in the semantics snapshot.
+    pub set_size: Option<u32>,
     /// Human-readable name/label for assistive technologies.
     pub label: Option<String>,
     /// Value text, typically for text fields and sliders.

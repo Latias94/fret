@@ -201,6 +201,8 @@ pub struct SemanticsCx<'a, H: UiHost> {
     pub(crate) value: &'a mut Option<String>,
     pub(crate) actions: &'a mut fret_core::SemanticsActions,
     pub(crate) active_descendant: &'a mut Option<NodeId>,
+    pub(crate) pos_in_set: &'a mut Option<u32>,
+    pub(crate) set_size: &'a mut Option<u32>,
 }
 
 impl<'a, H: UiHost> SemanticsCx<'a, H> {
@@ -246,6 +248,19 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
 
     pub fn set_active_descendant(&mut self, node: Option<NodeId>) {
         *self.active_descendant = node;
+    }
+
+    pub fn set_pos_in_set(&mut self, pos_in_set: Option<u32>) {
+        *self.pos_in_set = pos_in_set;
+    }
+
+    pub fn set_set_size(&mut self, set_size: Option<u32>) {
+        *self.set_size = set_size;
+    }
+
+    pub fn set_collection_position(&mut self, pos_in_set: Option<u32>, set_size: Option<u32>) {
+        *self.pos_in_set = pos_in_set;
+        *self.set_size = set_size;
     }
 }
 

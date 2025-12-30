@@ -301,6 +301,13 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
             out.set_active_descendant(to_accesskit_id(active));
         }
 
+        if let Some(pos_in_set) = node.pos_in_set.and_then(|p| usize::try_from(p).ok()) {
+            out.set_position_in_set(pos_in_set);
+        }
+        if let Some(set_size) = node.set_size.and_then(|s| usize::try_from(s).ok()) {
+            out.set_size_of_set(set_size);
+        }
+
         nodes_out.push((to_accesskit_id(node.id), out));
     }
 
@@ -401,6 +408,8 @@ mod tests {
                     bounds,
                     flags: SemanticsFlags::default(),
                     active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
                     label: None,
                     value: None,
                     actions: SemanticsActions::default(),
@@ -415,6 +424,8 @@ mod tests {
                         ..SemanticsFlags::default()
                     },
                     active_descendant: Some(item),
+                    pos_in_set: None,
+                    set_size: None,
                     label: Some("Command input".to_string()),
                     value: None,
                     actions: SemanticsActions {
@@ -430,6 +441,8 @@ mod tests {
                     bounds,
                     flags: SemanticsFlags::default(),
                     active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
                     label: None,
                     value: None,
                     actions: SemanticsActions::default(),
@@ -444,6 +457,8 @@ mod tests {
                         ..SemanticsFlags::default()
                     },
                     active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
                     label: Some("Item 1".to_string()),
                     value: None,
                     actions: SemanticsActions::default(),
@@ -466,5 +481,85 @@ mod tests {
             Some(item_id),
             "focused text field should reference the active descendant"
         );
+    }
+
+    #[test]
+    fn list_item_pos_in_set_and_set_size_are_emitted() {
+        let window = AppWindowId::default();
+        let root = node(1);
+        let list = node(2);
+        let item = node(3);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(10.0), Px(10.0)),
+        );
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root,
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                SemanticsNode {
+                    id: root,
+                    parent: None,
+                    role: SemanticsRole::Window,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    actions: SemanticsActions::default(),
+                },
+                SemanticsNode {
+                    id: list,
+                    parent: Some(root),
+                    role: SemanticsRole::List,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    actions: SemanticsActions::default(),
+                },
+                SemanticsNode {
+                    id: item,
+                    parent: Some(list),
+                    role: SemanticsRole::ListItem,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: Some(57),
+                    set_size: Some(1200),
+                    label: Some("Item 57".to_string()),
+                    value: None,
+                    actions: SemanticsActions::default(),
+                },
+            ],
+        };
+
+        let update = tree_update_from_snapshot(&snapshot, 1.0);
+        let item_id = to_accesskit_id(item);
+
+        let item_node = update
+            .nodes
+            .iter()
+            .find_map(|(id, n)| (*id == item_id).then_some(n))
+            .expect("item node present");
+
+        assert_eq!(item_node.position_in_set(), Some(57));
+        assert_eq!(item_node.size_of_set(), Some(1200));
     }
 }

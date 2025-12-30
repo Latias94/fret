@@ -3042,6 +3042,8 @@ impl<H: UiHost> UiTree<H> {
                 };
 
                 let mut active_descendant: Option<NodeId> = None;
+                let mut pos_in_set: Option<u32> = None;
+                let mut set_size: Option<u32> = None;
                 let mut label: Option<String> = None;
                 let mut value: Option<String> = None;
                 let mut actions = fret_core::SemanticsActions {
@@ -3071,8 +3073,23 @@ impl<H: UiHost> UiTree<H> {
                         value: &mut value,
                         actions: &mut actions,
                         active_descendant: &mut active_descendant,
+                        pos_in_set: &mut pos_in_set,
+                        set_size: &mut set_size,
                     };
                     widget.semantics(&mut cx);
+                }
+
+                if pos_in_set.is_some_and(|p| p == 0) {
+                    pos_in_set = None;
+                }
+                if set_size.is_some_and(|s| s == 0) {
+                    set_size = None;
+                }
+                if let (Some(pos), Some(size)) = (pos_in_set, set_size)
+                    && pos > size
+                {
+                    pos_in_set = None;
+                    set_size = None;
                 }
 
                 nodes.push(SemanticsNode {
@@ -3082,6 +3099,8 @@ impl<H: UiHost> UiTree<H> {
                     bounds,
                     flags,
                     active_descendant,
+                    pos_in_set,
+                    set_size,
                     label,
                     value,
                     actions,
