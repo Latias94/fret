@@ -3598,6 +3598,52 @@ mod tests {
         );
     }
 
+    #[test]
+    fn hit_test_respects_rounded_overflow_clip_under_render_transform() {
+        struct RoundedClipTranslatedWidget {
+            delta: Point,
+        }
+
+        impl<H: UiHost> Widget<H> for RoundedClipTranslatedWidget {
+            fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+                Some(Transform2D::translation(self.delta))
+            }
+
+            fn clips_hit_test(&self, _bounds: Rect) -> bool {
+                true
+            }
+
+            fn clip_hit_test_corner_radii(&self, _bounds: Rect) -> Option<Corners> {
+                Some(Corners::all(Px(20.0)))
+            }
+        }
+
+        let mut app = crate::test_host::TestHost::new();
+        let mut ui = UiTree::new();
+        ui.set_window(AppWindowId::default());
+
+        let node = ui.create_node(RoundedClipTranslatedWidget {
+            delta: Point::new(Px(40.0), Px(0.0)),
+        });
+        ui.set_root(node);
+
+        let mut services = FakeUiServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Inside the visual bounds, but outside the rounded corner arc (after inverse mapping).
+        assert_eq!(ui.hit_test(node, Point::new(Px(41.0), Px(1.0))), None);
+
+        // Inside the rounded rectangle (after inverse mapping).
+        assert_eq!(
+            ui.hit_test(node, Point::new(Px(65.0), Px(25.0))),
+            Some(node)
+        );
+    }
+
     struct CountingPaintWidget {
         paints: Arc<AtomicUsize>,
     }
@@ -3773,6 +3819,148 @@ mod tests {
     }
 
     #[test]
+    fn overlay_render_transform_affects_hit_testing_and_event_coordinates() {
+        struct TransformOverlayRoot {
+            delta: Point,
+        }
+
+        impl<H: UiHost> Widget<H> for TransformOverlayRoot {
+            fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+                Some(Transform2D::translation(self.delta))
+            }
+
+            fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+                false
+            }
+
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                let Some(&child) = cx.children.first() else {
+                    return cx.available;
+                };
+                let child_bounds = Rect::new(cx.bounds.origin, Size::new(Px(10.0), Px(10.0)));
+                let _ = cx.layout_in(child, child_bounds);
+                cx.available
+            }
+
+            fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+                let Some(&child) = cx.children.first() else {
+                    return;
+                };
+                let child_bounds = Rect::new(cx.bounds.origin, Size::new(Px(10.0), Px(10.0)));
+                cx.paint(child, child_bounds);
+            }
+        }
+
+        struct RecordOverlayClicks {
+            clicks: Model<u32>,
+            last_pos: Model<Point>,
+        }
+
+        impl<H: UiHost> Widget<H> for RecordOverlayClicks {
+            fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+                match event {
+                    Event::Pointer(PointerEvent::Down { position, .. }) => {
+                        let _ = cx
+                            .app
+                            .models_mut()
+                            .update(self.last_pos, |p| *p = *position);
+                        cx.stop_propagation();
+                    }
+                    Event::Pointer(PointerEvent::Up { .. }) => {
+                        let _ = cx.app.models_mut().update(self.clicks, |v| *v += 1);
+                        cx.stop_propagation();
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        let window = AppWindowId::default();
+        let mut app = crate::test_host::TestHost::new();
+        let underlay_clicks = app.models_mut().insert(0u32);
+        let overlay_clicks = app.models_mut().insert(0u32);
+        let overlay_last_pos = app.models_mut().insert(Point::new(Px(0.0), Px(0.0)));
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let base = ui.create_node(ClickCounter {
+            clicks: underlay_clicks,
+        });
+        ui.set_root(base);
+
+        let overlay_root = ui.create_node(TransformOverlayRoot {
+            delta: Point::new(Px(40.0), Px(0.0)),
+        });
+        let overlay_leaf = ui.create_node(RecordOverlayClicks {
+            clicks: overlay_clicks,
+            last_pos: overlay_last_pos,
+        });
+        ui.add_child(overlay_root, overlay_leaf);
+        let _layer = ui.push_overlay_root_ex(overlay_root, false, true);
+
+        let mut services = FakeUiServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Click inside the overlay leaf (after overlay transform).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: Point::new(Px(45.0), Px(5.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                position: Point::new(Px(45.0), Px(5.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get(overlay_clicks).copied(), Some(1));
+        assert_eq!(
+            app.models().get(overlay_last_pos).copied(),
+            Some(Point::new(Px(5.0), Px(5.0)))
+        );
+        assert_eq!(
+            app.models().get(underlay_clicks).copied(),
+            Some(0),
+            "expected underlay to not receive clicks when overlay leaf handles them"
+        );
+
+        // Click outside the overlay leaf should reach the underlay.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: Point::new(Px(5.0), Px(5.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                position: Point::new(Px(5.0), Px(5.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get(underlay_clicks).copied(), Some(1));
+    }
+
+    #[test]
     fn render_transform_affects_hit_testing_and_pointer_event_coordinates() {
         struct TransformRoot {
             delta: Point,
@@ -3871,6 +4059,118 @@ mod tests {
         );
 
         assert_eq!(app.models().get(clicks).copied(), Some(1));
+        assert_eq!(
+            app.models().get(last_pos).copied(),
+            Some(Point::new(Px(5.0), Px(5.0)))
+        );
+    }
+
+    #[test]
+    fn nested_render_transforms_compose_for_pointer_event_coordinates() {
+        struct TranslateRoot {
+            delta: Point,
+        }
+
+        impl<H: UiHost> Widget<H> for TranslateRoot {
+            fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+                Some(Transform2D::translation(self.delta))
+            }
+
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                let Some(&child) = cx.children.first() else {
+                    return cx.available;
+                };
+                let child_bounds = Rect::new(cx.bounds.origin, cx.bounds.size);
+                let _ = cx.layout_in(child, child_bounds);
+                cx.available
+            }
+
+            fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+                let Some(&child) = cx.children.first() else {
+                    return;
+                };
+                let child_bounds = Rect::new(cx.bounds.origin, cx.bounds.size);
+                cx.paint(child, child_bounds);
+            }
+        }
+
+        struct ScaleRoot {
+            scale: f32,
+        }
+
+        impl<H: UiHost> Widget<H> for ScaleRoot {
+            fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+                Some(Transform2D::scale_uniform(self.scale))
+            }
+
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                let Some(&child) = cx.children.first() else {
+                    return cx.available;
+                };
+                let child_bounds = Rect::new(cx.bounds.origin, Size::new(Px(10.0), Px(10.0)));
+                let _ = cx.layout_in(child, child_bounds);
+                cx.available
+            }
+
+            fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+                let Some(&child) = cx.children.first() else {
+                    return;
+                };
+                let child_bounds = Rect::new(cx.bounds.origin, Size::new(Px(10.0), Px(10.0)));
+                cx.paint(child, child_bounds);
+            }
+        }
+
+        struct RecordPointerPos {
+            last_pos: Model<Point>,
+        }
+
+        impl<H: UiHost> Widget<H> for RecordPointerPos {
+            fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+                if let Event::Pointer(PointerEvent::Down { position, .. }) = event {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(self.last_pos, |p| *p = *position);
+                    cx.stop_propagation();
+                }
+            }
+        }
+
+        let window = AppWindowId::default();
+        let mut app = crate::test_host::TestHost::new();
+        let last_pos = app.models_mut().insert(Point::new(Px(0.0), Px(0.0)));
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(TranslateRoot {
+            delta: Point::new(Px(40.0), Px(0.0)),
+        });
+        let scale = ui.create_node(ScaleRoot { scale: 2.0 });
+        let leaf = ui.create_node(RecordPointerPos { last_pos });
+        ui.add_child(root, scale);
+        ui.add_child(scale, leaf);
+        ui.set_root(root);
+
+        let mut services = FakeUiServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Leaf local (5,5) -> Scale(2x) -> (10,10) -> Translate(+40,0) -> (50,10).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: Point::new(Px(50.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
         assert_eq!(
             app.models().get(last_pos).copied(),
             Some(Point::new(Px(5.0), Px(5.0)))
