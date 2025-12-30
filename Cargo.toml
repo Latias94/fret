@@ -16,6 +16,7 @@ members = [
     "crates/fret-runner-winit-wgpu",
     "crates/fret-runtime",
     "crates/fret-ui",
+    "crates/fret-ui-app",
 ]
 resolver = "2"
 
