@@ -437,12 +437,21 @@ pub fn set_value_from_action(req: &ActionRequest) -> Option<(fret_core::NodeId, 
 
 pub fn replace_selected_text_from_action(
     req: &ActionRequest,
+    snapshot: &SemanticsSnapshot,
 ) -> Option<(fret_core::NodeId, String)> {
     if req.action != Action::ReplaceSelectedText {
         return None;
     }
 
     let target = parent_from_synthetic_id(req.target).or_else(|| from_accesskit_id(req.target))?;
+    let node = snapshot.nodes.iter().find(|n| n.id == target)?;
+    if node.role != SemanticsRole::TextField || node.value.is_none() {
+        return None;
+    }
+    if node.text_composition.is_some() {
+        return None;
+    }
+
     let data = req.data.as_ref()?;
     match data {
         accesskit::ActionData::Value(v) => Some((target, v.to_string())),
@@ -988,9 +997,84 @@ mod tests {
             target: to_accesskit_id(input),
             data: Some(accesskit::ActionData::Value("x".into())),
         };
-        let (target, value) =
-            replace_selected_text_from_action(&req).expect("decoded replace selected text");
+        let (target, value) = replace_selected_text_from_action(&req, &snapshot)
+            .expect("decoded replace selected text");
         assert_eq!(target, input);
         assert_eq!(value, "x");
+    }
+
+    #[test]
+    fn replace_selected_text_is_rejected_during_composition() {
+        let window = AppWindowId::default();
+        let root = node(1);
+        let input = node(2);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(10.0), Px(10.0)),
+        );
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root,
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus: Some(input),
+            captured: None,
+            nodes: vec![
+                SemanticsNode {
+                    id: root,
+                    parent: None,
+                    role: SemanticsRole::Window,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                },
+                SemanticsNode {
+                    id: input,
+                    parent: Some(root),
+                    role: SemanticsRole::TextField,
+                    bounds,
+                    flags: SemanticsFlags {
+                        focused: true,
+                        ..SemanticsFlags::default()
+                    },
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: Some("he|llo".to_string()),
+                    text_selection: Some((2, 2)),
+                    text_composition: Some((2, 3)),
+                    actions: SemanticsActions {
+                        focus: true,
+                        set_value: true,
+                        ..SemanticsActions::default()
+                    },
+                },
+            ],
+        };
+
+        let req = accesskit::ActionRequest {
+            action: accesskit::Action::ReplaceSelectedText,
+            target: to_accesskit_id(input),
+            data: Some(accesskit::ActionData::Value("x".into())),
+        };
+        assert!(
+            replace_selected_text_from_action(&req, &snapshot).is_none(),
+            "should not mutate text while composing"
+        );
     }
 }

@@ -3310,43 +3310,49 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     continue;
                 }
 
-                if let Some((target, value)) =
-                    fret_platform::accessibility::replace_selected_text_from_action(&req)
-                {
-                    let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
-                    self.driver.accessibility_replace_selected_text(
-                        &mut self.app,
-                        services,
-                        app_window,
-                        &mut state.user,
-                        target,
-                        &value,
-                    );
-                    self.app.request_redraw(app_window);
-                    continue;
-                }
-
                 let snapshot = state.last_accessibility_snapshot.clone().or_else(|| {
                     self.driver
                         .accessibility_snapshot(&mut self.app, app_window, &mut state.user)
                 });
-                if let Some(snapshot) = snapshot
-                    && let Some((target, data)) =
+                if let Some(snapshot) = snapshot {
+                    if let Some((target, value)) =
+                        fret_platform::accessibility::replace_selected_text_from_action(
+                            &req, &snapshot,
+                        )
+                    {
+                        let services =
+                            Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
+                        self.driver.accessibility_replace_selected_text(
+                            &mut self.app,
+                            services,
+                            app_window,
+                            &mut state.user,
+                            target,
+                            &value,
+                        );
+                        self.app.request_redraw(app_window);
+                        continue;
+                    }
+
+                    if let Some((target, data)) =
                         fret_platform::accessibility::set_text_selection_from_action(
                             &req, &snapshot,
                         )
-                {
-                    let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
-                    self.driver.accessibility_set_text_selection(
-                        &mut self.app,
-                        services,
-                        app_window,
-                        &mut state.user,
-                        target,
-                        data.anchor,
-                        data.focus,
-                    );
-                    self.app.request_redraw(app_window);
+                    {
+                        let services =
+                            Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
+                        self.driver.accessibility_set_text_selection(
+                            &mut self.app,
+                            services,
+                            app_window,
+                            &mut state.user,
+                            target,
+                            data.anchor,
+                            data.focus,
+                        );
+                        self.app.request_redraw(app_window);
+                        continue;
+                    }
                 }
             }
         }
