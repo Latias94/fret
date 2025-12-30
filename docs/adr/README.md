@@ -49,6 +49,11 @@ ADR or adding a new ADR) before scaling feature surface area.
   - Decide: drag start/stop precedence, which overlays close/freeze during dock drags, and how modal barriers intentionally block docking/tool input.
   - Implement: `crates/fret-components-docking/src/dock/space.rs`, `crates/fret-components-ui/src/overlay_policy.rs`, `crates/fret-ui/src/tree.rs` (capture + layering).
 
+- **Multi-window degradation policy (single-window platforms)**
+  - Add ADR (proposed): `docs/adr/0084-multi-window-degradation-policy.md`
+  - Decide: how multiple logical `DockLayoutWindow` roots map onto platforms where `ui.multi_window == false` (wasm/mobile), without changing core persistence.
+  - Implement: `crates/fret-components-docking` policy layer (in-window floating) + demo harness.
+
 ### P1 (Lock soon; otherwise behavior will drift)
 
 - **Docking split sizing + resizable primitive contract**
@@ -217,6 +222,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0044-text-editing-state-and-commands.md`
 - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
 - `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
+- `docs/adr/0084-multi-window-degradation-policy.md`
 
 ## Renderer (`fret-render`)
 

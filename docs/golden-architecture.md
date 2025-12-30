@@ -232,6 +232,7 @@ flowchart LR
 
 - ADR 0075 (B-route): `docs/adr/0075-docking-layering-b-route-and-retained-bridge.md`
 - Docking contracts: ADR 0013 / 0017 / 0015 / 0072
+- Single-window platforms (degradation policy): ADR 0084 `docs/adr/0084-multi-window-degradation-policy.md`
 - Viewport tools boundary: ADR 0049 + ADR 0025
 
 **Code entry points**
