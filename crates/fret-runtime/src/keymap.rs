@@ -1,10 +1,7 @@
 use crate::{CommandId, InputContext, KeyChord, Platform, WhenExpr};
 use fret_core::{KeyCode, Modifiers};
 use serde::Deserialize;
-use std::{
-    collections::{HashMap, HashSet},
-    path::Path,
-};
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PlatformFilter {
@@ -48,11 +45,6 @@ pub struct Keymap {
 }
 
 impl Keymap {
-    pub fn from_file(path: &Path) -> Result<Self, KeymapError> {
-        let bytes = std::fs::read(path).map_err(|source| KeymapError::ReadFailed { source })?;
-        Self::from_bytes(&bytes)
-    }
-
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, KeymapError> {
         let parsed: KeymapFileAny =
             serde_json::from_slice(bytes).map_err(|source| KeymapError::ParseFailed { source })?;
