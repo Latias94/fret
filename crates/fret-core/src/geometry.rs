@@ -189,6 +189,31 @@ impl Transform2D {
         }
     }
 
+    pub fn rotation_radians(theta: f32) -> Self {
+        let (sin, cos) = theta.sin_cos();
+        Self {
+            a: cos,
+            b: sin,
+            c: -sin,
+            d: cos,
+            ..Self::IDENTITY
+        }
+    }
+
+    pub fn rotation_degrees(degrees: f32) -> Self {
+        Self::rotation_radians(degrees.to_radians())
+    }
+
+    pub fn rotation_about_radians(theta: f32, center: Point) -> Self {
+        let to_center = Self::translation(center);
+        let from_center = Self::translation(Point::new(Px(-center.x.0), Px(-center.y.0)));
+        to_center * Self::rotation_radians(theta) * from_center
+    }
+
+    pub fn rotation_about_degrees(degrees: f32, center: Point) -> Self {
+        Self::rotation_about_radians(degrees.to_radians(), center)
+    }
+
     /// Matrix composition: `self * rhs`.
     ///
     /// This means: apply `rhs` first, then `self`.
