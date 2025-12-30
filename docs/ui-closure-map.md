@@ -263,7 +263,8 @@ Implementation anchors:
 **Code entry points**
 
 - Docking UI/policy: `crates/fret-components-docking/src/dock/*`
-- Demo harness: `crates/fret-demo/src/docking_demo.rs`
+- Docking demo (baseline): `crates/fret-demo/src/docking_demo.rs`
+- Docking arbitration harness (ADR 0072 conformance): `crates/fret-demo/src/docking_arbitration_demo.rs`
 - Conformance checklist: `docs/docking-arbitration-checklist.md`
 
 **Important portability note**
@@ -303,9 +304,11 @@ This is the “do it now or pay later” list, ordered by expected rewrite cost.
    - Reference: `docs/adr/0073-active-descendant-and-composite-widget-semantics.md`
 
 2. **Docking + overlay + viewport capture conformance**
-   - ADR 0072 has a conformance checklist; ensure we have:
-     - at least one dedicated regression harness (tests or demo checklist),
-     - and explicit “who wins” behavior when multiple interaction sources compete.
+   - Status:
+     - targeted regressions exist in `crates/fret-components-docking/src/dock/tests.rs`,
+     - end-to-end harness exists in `crates/fret-demo/src/docking_arbitration_demo.rs`,
+     - manual checklist lives in `docs/docking-arbitration-checklist.md`.
+   - Remaining: expand coverage for cross-window edge cases (tear-off + drag cancel + modal barrier) and any platform-specific pointer capture quirks.
 
 3. **Transform + clip + hit-testing parity in edge cases**
    - We have `render_transform` closure for paint/hit-test/anchoring (ADR 0083), but we still need
@@ -330,5 +333,5 @@ This is the “do it now or pay later” list, ordered by expected rewrite cost.
 ## Suggested Next Closure Sprints (Bottom-Up)
 
 1. **A11y active-descendant closure** (schema + bridge + cmdk adoption + tests).
-2. **Docking arbitration closure** (demo checklist + targeted tests for conflict cases).
-3. **Transform/clip parity closure** (edge-case tests + renderer conformance linkage).
+2. **Transform/clip parity closure** (edge-case tests + renderer conformance linkage).
+3. **Multi-window degradation policy** (explicit logical-window mapping rules for single-window platforms).

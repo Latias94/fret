@@ -289,6 +289,7 @@ flowchart LR
 
 - Components gallery: `crates/fret-demo/src/components_gallery.rs`
 - Docking demo: `crates/fret-demo/src/docking_demo.rs`
+- Docking arbitration harness (docking + viewport + overlays): `crates/fret-demo/src/docking_arbitration_demo.rs` (validates ADR 0072; see `docs/docking-arbitration-checklist.md`)
 
 **Closure checklist**
 

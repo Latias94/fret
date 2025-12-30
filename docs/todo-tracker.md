@@ -58,30 +58,6 @@ It complements (but does not replace) ADRs:
 
 ## P0 — Docking / Overlays / Viewport Capture
 
-- **Anchored overlays must track visual (post-transform) anchor bounds**
-  - Problem: overlays anchored to an element must follow `render_transform` (ADR 0083), otherwise popovers/tooltips drift under animations/zoomed UI.
-  - ADRs: `docs/adr/0064-overlay-placement-contract.md`, `docs/adr/0083-render-transform-hit-testing.md`
-  - Code (migration): `crates/fret-components-shadcn/src/{popover,tooltip,hover_card,dropdown_menu,menubar,combobox,select,context_menu}.rs`
-  - Runtime hooks: `crates/fret-ui/src/tree.rs` (`record_visual_bounds_for_element`) + `crates/fret-ui/src/elements.rs` (`visual_bounds_for_element`)
-  - Validation: runtime regression in `fret-ui` asserts transforms affect visual bounds; component unit test asserts visual bounds are preferred for anchoring.
-
-- **Lock docking interaction arbitration (dock drag vs overlays vs viewport capture)**
-  - Goal: prevent dismissal/capture conflicts and keep modal blocking rules intentional and consistent.
-  - ADRs: `docs/adr/0072-docking-interaction-arbitration-matrix.md`, `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
-  - Code: `crates/fret-components-docking/src/dock/space.rs`, `crates/fret-ui/src/tree.rs`, `crates/fret-components-ui/src/overlay_policy.rs`
-
-- **Escape cancels cross-window dock drags**
-  - Goal: match editor UX where Escape always cancels an in-progress dock tab drag and clears hover previews.
-  - ADRs: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
-  - Code: `crates/fret-runner-winit-wgpu/src/runner.rs`
-  - Current: the runner consumes `Escape` when a cross-window `DragKind::DockPanel` session is active and cancels drag + hover immediately.
-
-- **Tear-off window movement across mixed-DPI / multi-monitor setups**
-  - Problem: tear-off floating dock windows can become pinned to a monitor edge (or end up partially unreachable) when runner-side position clamping is tied to the window’s current monitor rather than the cursor/target monitor.
-  - ADRs: `docs/adr/0017-multi-window-display-and-dpi.md`, `docs/adr/0072-docking-interaction-arbitration-matrix.md`
-  - Code: `crates/fret-runner-winit-wgpu/src/runner.rs`
-  - Current: the runner clamps tear-off follow movement to the cursor’s monitor with a visibility padding and settles the final window position on mouse release (commit `f89f2a5`).
-
 - **Dock host keep-alive and early submission**
   - Goal: ensure dock hosts remain stable targets and do not "drop" docked content due to conditional submission.
   - ADRs: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`
