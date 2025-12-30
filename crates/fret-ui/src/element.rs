@@ -31,6 +31,7 @@ pub enum ElementKind {
     Container(ContainerProps),
     Semantics(SemanticsProps),
     Opacity(OpacityProps),
+    VisualTransform(VisualTransformProps),
     Pressable(PressableProps),
     PointerRegion(PointerRegionProps),
     RovingFlex(RovingFlexProps),
@@ -50,6 +51,7 @@ pub enum ElementKind {
     Spinner(SpinnerProps),
     HoverRegion(HoverRegionProps),
     Scroll(ScrollProps),
+    Scrollbar(ScrollbarProps),
 }
 
 /// Per-element pointer state for `PointerRegion`.
@@ -289,6 +291,24 @@ impl Default for OpacityProps {
             opacity: 1.0,
         }
     }
+}
+
+/// Paint-only transform wrapper for declarative element subtrees.
+///
+/// This applies a `SceneOp::PushTransform` / `PopTransform` around the subtree during painting,
+/// without affecting layout, hit-testing, or pointer event coordinates.
+///
+/// This is intentionally similar to GPUI's `with_transformation(...)` semantics for elements like
+/// `Svg`: it is useful for spinners and decorative animations, and is cheap to optimize because it
+/// does not require inverse mapping during hit-testing.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct VisualTransformProps {
+    pub layout: LayoutStyle,
+    /// A transform expressed in the element's local coordinate space.
+    ///
+    /// The runtime composes this around the element's bounds origin so that local transforms can be
+    /// expressed in px relative to the element (e.g. rotate around `Point(Px(w/2), Px(h/2))`).
+    pub transform: fret_core::Transform2D,
 }
 
 /// A low-level drop shadow primitive for component-level elevation recipes.
@@ -821,7 +841,6 @@ pub struct VirtualListState {
 #[derive(Debug, Clone)]
 pub struct ScrollProps {
     pub layout: LayoutStyle,
-    pub show_scrollbar: bool,
     pub scroll_handle: Option<crate::scroll::ScrollHandle>,
 }
 
@@ -833,7 +852,6 @@ impl Default for ScrollProps {
         };
         Self {
             layout,
-            show_scrollbar: true,
             scroll_handle: None,
         }
     }
@@ -843,10 +861,70 @@ impl Default for ScrollProps {
 #[derive(Debug, Default, Clone)]
 pub struct ScrollState {
     pub scroll_handle: crate::scroll::ScrollHandle,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ScrollbarStyle {
+    pub thumb: Color,
+    pub thumb_hover: Color,
+    pub thumb_idle_alpha: f32,
+}
+
+impl Default for ScrollbarStyle {
+    fn default() -> Self {
+        Self {
+            thumb: Color {
+                r: 0.35,
+                g: 0.38,
+                b: 0.45,
+                a: 1.0,
+            },
+            thumb_hover: Color {
+                r: 0.45,
+                g: 0.50,
+                b: 0.60,
+                a: 1.0,
+            },
+            thumb_idle_alpha: 0.65,
+        }
+    }
+}
+
+/// A mechanism-only scrollbar primitive.
+///
+/// Component libraries decide when to show/hide scrollbars and resolve theme tokens into this
+/// style. The runtime owns hit-testing, thumb/track interactions, and paints using the resolved
+/// style.
+#[derive(Debug, Clone)]
+pub struct ScrollbarProps {
+    pub layout: LayoutStyle,
+    /// Declarative element id for the associated scroll container, if any.
+    ///
+    /// When provided, the scrollbar will invalidate the target node's layout/paint when the
+    /// scroll handle offset changes (e.g. thumb drag or track paging).
+    pub scroll_target: Option<GlobalElementId>,
+    pub scroll_handle: crate::scroll::ScrollHandle,
+    pub style: ScrollbarStyle,
+}
+
+impl Default for ScrollbarProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            scroll_target: None,
+            scroll_handle: crate::scroll::ScrollHandle::default(),
+            style: ScrollbarStyle::default(),
+        }
+    }
+}
+
+/// Cross-frame element-local state for scrollbars.
+#[derive(Debug, Default, Clone)]
+pub struct ScrollbarState {
     pub dragging_thumb: bool,
     pub drag_start_pointer_y: Px,
     pub drag_start_offset_y: Px,
-    pub hovered_scrollbar: bool,
+    pub hovered: bool,
 }
 
 /// Authoring conversion boundary (ADR 0039).

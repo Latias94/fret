@@ -2,7 +2,7 @@ use crate::UiHost;
 use crate::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, HoverRegionProps, LayoutStyle,
     Length, MainAlign, Overflow, PointerRegionProps, PressableProps, SpacerProps, SpinnerProps,
-    StackProps, TextProps,
+    StackProps, TextProps, VisualTransformProps,
 };
 use crate::elements::{ElementCx, GlobalElementId, NodeEntry};
 use crate::text_input::BoundTextInput;
@@ -15,7 +15,7 @@ use crate::{
 use fret_core::{
     AppWindowId, Color, CursorIcon, DrawOrder, Edges, Event, FontId, FrameId, MouseButton, NodeId,
     Point, Px, Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow,
-    TextStyle,
+    TextStyle, Transform2D,
 };
 use fret_runtime::Effect;
 use std::collections::HashMap;
@@ -30,20 +30,6 @@ use taffy::{
     },
     tree::NodeId as TaffyNodeId,
 };
-
-fn scrollbar_track_rect(bounds: Rect, scrollbar_w: Px) -> Option<Rect> {
-    let w = Px(scrollbar_w.0.max(0.0).min(bounds.size.width.0.max(0.0)));
-    if w.0 <= 0.0 || bounds.size.height.0 <= 0.0 {
-        return None;
-    }
-    Some(Rect::new(
-        fret_core::Point::new(
-            Px(bounds.origin.x.0 + bounds.size.width.0 - w.0),
-            bounds.origin.y,
-        ),
-        Size::new(w, bounds.size.height),
-    ))
-}
 
 fn scrollbar_thumb_rect(track: Rect, viewport_h: Px, content_h: Px, offset_y: Px) -> Option<Rect> {
     let viewport_h = Px(viewport_h.0.max(0.0));
@@ -198,6 +184,7 @@ pub(crate) enum ElementInstance {
     Container(ContainerProps),
     Semantics(crate::element::SemanticsProps),
     Opacity(crate::element::OpacityProps),
+    VisualTransform(VisualTransformProps),
     Pressable(PressableProps),
     PointerRegion(PointerRegionProps),
     DismissibleLayer(DismissibleLayerProps),
@@ -216,6 +203,7 @@ pub(crate) enum ElementInstance {
     Spinner(SpinnerProps),
     HoverRegion(HoverRegionProps),
     Scroll(crate::element::ScrollProps),
+    Scrollbar(crate::element::ScrollbarProps),
 }
 
 #[derive(Debug, Clone)]
@@ -271,6 +259,7 @@ fn layout_style_for_node<H: UiHost>(app: &mut H, window: AppWindowId, node: Node
             ElementInstance::Container(p) => p.layout,
             ElementInstance::Semantics(p) => p.layout,
             ElementInstance::Opacity(p) => p.layout,
+            ElementInstance::VisualTransform(p) => p.layout,
             ElementInstance::Pressable(p) => p.layout,
             ElementInstance::PointerRegion(p) => p.layout,
             ElementInstance::DismissibleLayer(p) => p.layout,
@@ -289,6 +278,7 @@ fn layout_style_for_node<H: UiHost>(app: &mut H, window: AppWindowId, node: Node
             ElementInstance::Spinner(p) => p.layout,
             ElementInstance::HoverRegion(p) => p.layout,
             ElementInstance::Scroll(p) => p.layout,
+            ElementInstance::Scrollbar(p) => p.layout,
         })
         .unwrap_or_default()
 }
@@ -466,6 +456,20 @@ pub(crate) fn with_window_frame<H: UiHost, R>(
     })
 }
 
+fn node_for_element_in_window_frame<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> Option<NodeId> {
+    with_window_frame(app, window, |window_frame| {
+        let window_frame = window_frame?;
+        window_frame
+            .instances
+            .iter()
+            .find_map(|(&node, record)| (record.element == element).then_some(node))
+    })
+}
+
 fn prepare_window_frame_for_frame(window_frame: &mut WindowFrame, frame_id: FrameId) {
     if window_frame.frame_id != frame_id {
         window_frame.frame_id = frame_id;
@@ -612,7 +616,6 @@ struct ElementHostWidget {
     is_text_input: bool,
     clips_hit_test: bool,
     clip_hit_test_corner_radii: Option<fret_core::Corners>,
-    scrollbar_hit_rect: Option<Rect>,
     text_input: Option<BoundTextInput>,
     text_area: Option<crate::text_area::BoundTextArea>,
     resizable_panel_group: Option<crate::resizable_panel_group::BoundResizablePanelGroup>,
@@ -981,13 +984,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         self.hit_testable
     }
 
-    fn hit_test_children(&self, _bounds: Rect, position: Point) -> bool {
+    fn hit_test_children(&self, _bounds: Rect, _position: Point) -> bool {
         if !self.hit_test_children {
-            return false;
-        }
-        if let Some(rect) = self.scrollbar_hit_rect
-            && rect.contains(position)
-        {
             return false;
         }
         true
@@ -1189,10 +1187,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 let Event::Pointer(pe) = event else {
                     return;
                 };
-                let external_handle = props.scroll_handle.clone();
                 match pe {
                     fret_core::PointerEvent::Wheel { delta, .. } => {
-                        if let Some(handle) = external_handle.as_ref() {
+                        if let Some(handle) = props.scroll_handle.as_ref() {
                             let prev = handle.offset();
                             handle.set_offset(Point::new(prev.x, Px(prev.y.0 - delta.y.0)));
                         } else {
@@ -1214,17 +1211,38 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         cx.request_redraw();
                         cx.stop_propagation();
                     }
+                    _ => {}
+                }
+            }
+            ElementInstance::Scrollbar(props) => {
+                let Event::Pointer(pe) = event else {
+                    return;
+                };
+
+                let handle = props.scroll_handle.clone();
+                let scroll_target = props.scroll_target;
+                match pe {
+                    fret_core::PointerEvent::Wheel { delta, .. } => {
+                        let prev = handle.offset();
+                        handle.set_offset(Point::new(prev.x, Px(prev.y.0 - delta.y.0)));
+
+                        if let Some(target) = scroll_target
+                            && let Some(node) =
+                                node_for_element_in_window_frame(&mut *cx.app, window, target)
+                        {
+                            cx.invalidate(node, Invalidation::Layout);
+                            cx.invalidate(node, Invalidation::Paint);
+                        }
+
+                        cx.invalidate_self(Invalidation::Layout);
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                    }
                     fret_core::PointerEvent::Move { position, .. } => {
                         let mut needs_layout = false;
                         let mut needs_paint = false;
-                        let mut should_stop = false;
 
-                        let scrollbar_w = props.show_scrollbar.then(|| {
-                            let theme = cx.theme();
-                            theme
-                                .metric_by_key("metric.scrollbar.width")
-                                .unwrap_or(theme.metrics.scrollbar_width)
-                        });
                         let bounds = cx.bounds;
                         let position = *position;
 
@@ -1232,34 +1250,27 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             &mut *cx.app,
                             window,
                             self.element,
-                            crate::element::ScrollState::default,
+                            crate::element::ScrollbarState::default,
                             |state| {
-                                let handle =
-                                    external_handle.as_ref().unwrap_or(&state.scroll_handle);
                                 let viewport_h = Px(handle.viewport_size().height.0.max(0.0));
                                 let content_h = Px(handle.content_size().height.0.max(0.0));
                                 let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
 
-                                let track =
-                                    scrollbar_w.and_then(|w| scrollbar_track_rect(bounds, w));
-                                let hovered = track.is_some_and(|t| t.contains(position));
-
-                                if state.hovered_scrollbar != hovered && !state.dragging_thumb {
-                                    state.hovered_scrollbar = hovered;
+                                let hovered = bounds.contains(position);
+                                if state.hovered != hovered && !state.dragging_thumb {
+                                    state.hovered = hovered;
                                     needs_paint = true;
                                 }
 
                                 if state.dragging_thumb && max_offset.0 > 0.0 {
-                                    if let Some(track) = track
-                                        && let Some(thumb) = scrollbar_thumb_rect(
-                                            track,
-                                            viewport_h,
-                                            content_h,
-                                            state.drag_start_offset_y,
-                                        )
-                                    {
+                                    if let Some(thumb) = scrollbar_thumb_rect(
+                                        bounds,
+                                        viewport_h,
+                                        content_h,
+                                        state.drag_start_offset_y,
+                                    ) {
                                         let max_thumb_y =
-                                            (track.size.height.0 - thumb.size.height.0).max(0.0);
+                                            (bounds.size.height.0 - thumb.size.height.0).max(0.0);
                                         if max_thumb_y > 0.0 {
                                             let delta_y =
                                                 position.y.0 - state.drag_start_pointer_y.0;
@@ -1274,25 +1285,26 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                                 needs_layout = true;
                                                 needs_paint = true;
                                             }
-                                            state.hovered_scrollbar = true;
-                                            should_stop = true;
+                                            state.hovered = true;
                                         }
                                     }
-                                } else if hovered {
-                                    should_stop = true;
                                 }
                             },
                         );
 
                         if needs_layout {
                             cx.invalidate_self(Invalidation::Layout);
+                            if let Some(target) = scroll_target
+                                && let Some(node) =
+                                    node_for_element_in_window_frame(&mut *cx.app, window, target)
+                            {
+                                cx.invalidate(node, Invalidation::Layout);
+                                cx.invalidate(node, Invalidation::Paint);
+                            }
                         }
                         if needs_paint {
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
-                        }
-                        if should_stop {
-                            cx.stop_propagation();
                         }
                     }
                     fret_core::PointerEvent::Down {
@@ -1301,32 +1313,19 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         if *button != MouseButton::Left {
                             return;
                         }
-                        cx.request_focus(cx.node);
 
-                        if !props.show_scrollbar {
-                            return;
-                        }
-
-                        let mut did_handle = false;
-                        let mut did_start_drag = false;
-
-                        let scrollbar_w = {
-                            let theme = cx.theme();
-                            theme
-                                .metric_by_key("metric.scrollbar.width")
-                                .unwrap_or(theme.metrics.scrollbar_width)
-                        };
                         let bounds = cx.bounds;
                         let position = *position;
 
+                        let mut did_handle = false;
+                        let mut did_start_drag = false;
+                        let mut did_change_offset = false;
                         crate::elements::with_element_state(
                             &mut *cx.app,
                             window,
                             self.element,
-                            crate::element::ScrollState::default,
+                            crate::element::ScrollbarState::default,
                             |state| {
-                                let handle =
-                                    external_handle.as_ref().unwrap_or(&state.scroll_handle);
                                 let viewport_h = Px(handle.viewport_size().height.0.max(0.0));
                                 let content_h = Px(handle.content_size().height.0.max(0.0));
                                 let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
@@ -1334,15 +1333,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                     return;
                                 }
 
-                                let Some(track) = scrollbar_track_rect(bounds, scrollbar_w) else {
-                                    return;
-                                };
-                                if !track.contains(position) {
-                                    return;
-                                }
-
                                 let Some(thumb) = scrollbar_thumb_rect(
-                                    track,
+                                    bounds,
                                     viewport_h,
                                     content_h,
                                     handle.offset().y,
@@ -1351,27 +1343,30 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                 };
 
                                 did_handle = true;
-                                state.hovered_scrollbar = true;
+                                state.hovered = true;
 
                                 if thumb.contains(position) {
                                     state.dragging_thumb = true;
                                     state.drag_start_pointer_y = position.y;
                                     state.drag_start_offset_y = handle.offset().y;
                                     did_start_drag = true;
-                                } else {
+                                } else if bounds.contains(position) {
                                     // Page to the click position (center the thumb on the pointer).
                                     let max_thumb_y =
-                                        (track.size.height.0 - thumb.size.height.0).max(0.0);
+                                        (bounds.size.height.0 - thumb.size.height.0).max(0.0);
                                     if max_thumb_y > 0.0 {
-                                        let click_y = (position.y.0 - track.origin.y.0)
-                                            .clamp(0.0, track.size.height.0);
+                                        let click_y = (position.y.0 - bounds.origin.y.0)
+                                            .clamp(0.0, bounds.size.height.0);
                                         let thumb_top = (click_y - thumb.size.height.0 * 0.5)
                                             .clamp(0.0, max_thumb_y);
                                         let t = thumb_top / max_thumb_y;
                                         let next = Px((max_offset.0 * t).clamp(0.0, max_offset.0));
                                         let prev = handle.offset();
                                         handle.set_offset(Point::new(prev.x, next));
+                                        did_change_offset = true;
                                     }
+                                } else {
+                                    did_handle = false;
                                 }
                             },
                         );
@@ -1379,6 +1374,18 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         if did_handle {
                             if did_start_drag {
                                 cx.capture_pointer(cx.node);
+                            }
+                            if did_change_offset {
+                                if let Some(target) = scroll_target
+                                    && let Some(node) = node_for_element_in_window_frame(
+                                        &mut *cx.app,
+                                        window,
+                                        target,
+                                    )
+                                {
+                                    cx.invalidate(node, Invalidation::Layout);
+                                    cx.invalidate(node, Invalidation::Paint);
+                                }
                             }
                             cx.invalidate_self(Invalidation::Layout);
                             cx.invalidate_self(Invalidation::Paint);
@@ -1396,7 +1403,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             &mut *cx.app,
                             window,
                             self.element,
-                            crate::element::ScrollState::default,
+                            crate::element::ScrollbarState::default,
                             |state| {
                                 if state.dragging_thumb {
                                     did_handle = true;
@@ -2193,6 +2200,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             | ElementInstance::HoverRegion(_)
             | ElementInstance::Spinner(_)
             | ElementInstance::Opacity(_)
+            | ElementInstance::VisualTransform(_)
             | ElementInstance::Scroll(_) => {
                 cx.set_role(SemanticsRole::Generic);
             }
@@ -2224,6 +2232,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::Semantics(_) => false,
             ElementInstance::DismissibleLayer(_) => false,
             ElementInstance::Opacity(_) => false,
+            ElementInstance::VisualTransform(_) => false,
             ElementInstance::Spinner(_) => false,
             _ => true,
         };
@@ -2232,6 +2241,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::PointerRegion(_) => true,
             ElementInstance::Semantics(_) => true,
             ElementInstance::DismissibleLayer(_) => true,
+            ElementInstance::VisualTransform(_) => true,
             ElementInstance::Spinner(_) => false,
             _ => true,
         };
@@ -2248,6 +2258,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::Container(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Semantics(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Opacity(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::VisualTransform(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Pressable(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::PointerRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::DismissibleLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -2263,6 +2274,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             // These primitives are always hit-test clipped by their own bounds (they are not
             // intended as overflow-visible containers).
             ElementInstance::VirtualList(_)
+            | ElementInstance::Scrollbar(_)
             | ElementInstance::Image(_)
             | ElementInstance::SvgIcon(_)
             | ElementInstance::Spinner(_)
@@ -2283,7 +2295,6 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             }
             _ => None,
         };
-        self.scrollbar_hit_rect = None;
 
         let is_flex = matches!(&instance, ElementInstance::Flex(_));
         let is_roving_flex = matches!(&instance, ElementInstance::RovingFlex(_));
@@ -2420,6 +2431,29 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 }
                 desired
             }
+            ElementInstance::VisualTransform(props) => {
+                // Probe within the available height budget so measurement passes do not observe an
+                // artificially "infinite" viewport (important for scroll/virtualized children).
+                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let mut max_child = Size::new(Px(0.0), Px(0.0));
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    if layout_style.position == crate::element::PositionStyle::Absolute {
+                        continue;
+                    }
+                    let child_size = cx.layout_in(child, probe_bounds);
+                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
+                }
+
+                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let base = Rect::new(cx.bounds.origin, desired);
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
+                }
+                desired
+            }
             ElementInstance::DismissibleLayer(props) => {
                 let desired = clamp_to_constraints(cx.available, props.layout, cx.available);
                 let base = cx.bounds;
@@ -2432,7 +2466,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             ElementInstance::Stack(props) => {
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
-                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let probe_available =
+                    clamp_to_constraints(cx.available, props.layout, cx.available);
+                let probe_bounds = Rect::new(cx.bounds.origin, probe_available);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
@@ -3306,9 +3342,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 }
 
                 let desired = clamp_to_constraints(max_child, props.layout, cx.available);
-                let viewport_h = Px(desired.height.0.max(0.0));
                 let content_h = Px(max_child.height.0.max(0.0));
-                let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
 
                 // Avoid mutating the imperative handle during "probe" layout passes that use an
                 // effectively-unbounded available height (e.g. Stack/Pressable measuring with
@@ -3332,24 +3366,6 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     },
                 );
 
-                if props.show_scrollbar && max_offset.0 > 0.0 {
-                    let theme = cx.theme();
-                    let scrollbar_w = theme
-                        .metric_by_key("metric.scrollbar.width")
-                        .unwrap_or(theme.metrics.scrollbar_width);
-                    let w = Px(scrollbar_w.0.max(0.0).min(desired.width.0.max(0.0)));
-                    if w.0 > 0.0 {
-                        let track = Rect::new(
-                            fret_core::Point::new(
-                                Px(cx.bounds.origin.x.0 + desired.width.0.max(0.0) - w.0),
-                                cx.bounds.origin.y,
-                            ),
-                            Size::new(w, desired.height),
-                        );
-                        self.scrollbar_hit_rect = Some(track);
-                    }
-                }
-
                 let shifted = Rect::new(
                     fret_core::Point::new(
                         cx.bounds.origin.x,
@@ -3362,6 +3378,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 }
 
                 desired
+            }
+            ElementInstance::Scrollbar(props) => {
+                clamp_to_constraints(cx.available, props.layout, cx.available)
             }
         }
     }
@@ -3434,6 +3453,35 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
                 if opacity < 1.0 {
                     cx.scene.push(SceneOp::PopOpacity);
+                }
+            }
+            ElementInstance::VisualTransform(props) => {
+                let local = props.transform;
+                let is_finite = local.a.is_finite()
+                    && local.b.is_finite()
+                    && local.c.is_finite()
+                    && local.d.is_finite()
+                    && local.tx.is_finite()
+                    && local.ty.is_finite();
+
+                let needs_push = is_finite && local != Transform2D::IDENTITY;
+                if needs_push {
+                    let origin = cx.bounds.origin;
+                    let to_origin = Transform2D::translation(origin);
+                    let from_origin =
+                        Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)));
+                    let transform = to_origin * local * from_origin;
+                    cx.scene.push(SceneOp::PushTransform { transform });
+                }
+
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+
+                if needs_push {
+                    cx.scene.push(SceneOp::PopTransform);
                 }
             }
             ElementInstance::DismissibleLayer(props) => {
@@ -3787,74 +3835,56 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 if clip {
                     cx.scene.push(SceneOp::PopClip);
                 }
+            }
+            ElementInstance::Scrollbar(props) => {
+                let handle = props.scroll_handle.clone();
+                let (hovered, dragging) = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::ScrollbarState::default,
+                    |state| (state.hovered, state.dragging_thumb),
+                );
 
-                if props.show_scrollbar {
-                    let external_handle = props.scroll_handle.clone();
-                    let (internal_handle, hovered, dragging) = crate::elements::with_element_state(
-                        &mut *cx.app,
-                        window,
-                        self.element,
-                        crate::element::ScrollState::default,
-                        |state| {
-                            (
-                                state.scroll_handle.clone(),
-                                state.hovered_scrollbar,
-                                state.dragging_thumb,
-                            )
-                        },
-                    );
-                    let handle = external_handle.as_ref().unwrap_or(&internal_handle);
-                    let offset_y = handle.offset().y;
-                    let viewport_h = handle.viewport_size().height;
-                    let content_h = handle.content_size().height;
-                    let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
-                    if max_offset.0 > 0.0 {
-                        let theme = cx.theme();
-                        let scrollbar_w = theme
-                            .metric_by_key("metric.scrollbar.width")
-                            .unwrap_or(theme.metrics.scrollbar_width);
-                        if let Some(track) = scrollbar_track_rect(cx.bounds, scrollbar_w)
-                            && let Some(thumb) =
-                                scrollbar_thumb_rect(track, viewport_h, content_h, offset_y)
-                        {
-                            let thumb_color = if hovered || dragging {
-                                theme
-                                    .color_by_key("scrollbar.thumb.hover.background")
-                                    .unwrap_or(
-                                        theme
-                                            .color_by_key("scrollbar.thumb.background")
-                                            .unwrap_or(theme.colors.scrollbar_thumb_hover),
-                                    )
-                            } else {
-                                theme
-                                    .color_by_key("scrollbar.thumb.background")
-                                    .unwrap_or(theme.colors.scrollbar_thumb)
-                            };
-                            let mut bg = thumb_color;
-                            if !(hovered || dragging) {
-                                bg.a *= 0.65;
-                            }
-
-                            let inset = 1.0f32.min(thumb.size.width.0 * 0.25);
-                            let rect = Rect::new(
-                                fret_core::Point::new(Px(thumb.origin.x.0 + inset), thumb.origin.y),
-                                Size::new(
-                                    Px((thumb.size.width.0 - inset * 2.0).max(0.0)),
-                                    thumb.size.height,
-                                ),
-                            );
-
-                            cx.scene.push(SceneOp::Quad {
-                                order: DrawOrder(20_000),
-                                rect,
-                                background: bg,
-                                border: Edges::all(Px(0.0)),
-                                border_color: Color::TRANSPARENT,
-                                corner_radii: fret_core::Corners::all(Px(999.0)),
-                            });
-                        }
-                    }
+                let offset_y = handle.offset().y;
+                let viewport_h = handle.viewport_size().height;
+                let content_h = handle.content_size().height;
+                let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
+                if max_offset.0 <= 0.0 {
+                    return;
                 }
+
+                let Some(thumb) = scrollbar_thumb_rect(cx.bounds, viewport_h, content_h, offset_y)
+                else {
+                    return;
+                };
+
+                let mut bg = if hovered || dragging {
+                    props.style.thumb_hover
+                } else {
+                    props.style.thumb
+                };
+                if !(hovered || dragging) {
+                    bg.a *= props.style.thumb_idle_alpha.clamp(0.0, 1.0);
+                }
+
+                let inset = 1.0f32.min(thumb.size.width.0 * 0.25);
+                let rect = Rect::new(
+                    fret_core::Point::new(Px(thumb.origin.x.0 + inset), thumb.origin.y),
+                    Size::new(
+                        Px((thumb.size.width.0 - inset * 2.0).max(0.0)),
+                        thumb.size.height,
+                    ),
+                );
+
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(20_000),
+                    rect,
+                    background: bg,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: fret_core::Corners::all(Px(999.0)),
+                });
             }
         }
     }
@@ -3900,7 +3930,6 @@ pub fn render_root<H: UiHost>(
                     is_text_input: false,
                     clips_hit_test: true,
                     clip_hit_test_corner_radii: None,
-                    scrollbar_hit_rect: None,
                     text_input: None,
                     text_area: None,
                     resizable_panel_group: None,
@@ -4041,7 +4070,6 @@ fn render_dismissible_root_impl<H: UiHost, F: FnOnce(&mut ElementCx<'_, H>) -> V
                     is_text_input: false,
                     clips_hit_test: true,
                     clip_hit_test_corner_radii: None,
-                    scrollbar_hit_rect: None,
                     text_input: None,
                     text_area: None,
                     resizable_panel_group: None,
@@ -4149,7 +4177,6 @@ fn mount_element<H: UiHost>(
                 is_text_input: false,
                 clips_hit_test: true,
                 clip_hit_test_corner_radii: None,
-                scrollbar_hit_rect: None,
                 text_input: None,
                 text_area: None,
                 resizable_panel_group: None,
@@ -4180,6 +4207,7 @@ fn mount_element<H: UiHost>(
         ElementKind::Container(p) => ElementInstance::Container(p),
         ElementKind::Semantics(p) => ElementInstance::Semantics(p),
         ElementKind::Opacity(p) => ElementInstance::Opacity(p),
+        ElementKind::VisualTransform(p) => ElementInstance::VisualTransform(p),
         ElementKind::Pressable(p) => ElementInstance::Pressable(p),
         ElementKind::PointerRegion(p) => ElementInstance::PointerRegion(p),
         ElementKind::RovingFlex(p) => ElementInstance::RovingFlex(p),
@@ -4215,6 +4243,7 @@ fn mount_element<H: UiHost>(
         ElementKind::Spinner(p) => ElementInstance::Spinner(p),
         ElementKind::HoverRegion(p) => ElementInstance::HoverRegion(p),
         ElementKind::Scroll(p) => ElementInstance::Scroll(p),
+        ElementKind::Scrollbar(p) => ElementInstance::Scrollbar(p),
     };
 
     window_frame.instances.insert(
@@ -4257,7 +4286,7 @@ mod tests {
     use crate::widget::{LayoutCx, PaintCx, Widget};
     use fret_core::{
         AppWindowId, Color, Modifiers, MouseButton, MouseButtons, NodeId, Point, Px, Rect, Scene,
-        SceneOp, Size, TextConstraints, TextMetrics, TextService, TextStyle,
+        SceneOp, Size, TextConstraints, TextMetrics, TextService, TextStyle, Transform2D,
     };
     use fret_runtime::{CommandId, Effect};
 
@@ -4446,6 +4475,118 @@ mod tests {
         ));
         assert!(matches!(scene.ops()[1], SceneOp::Quad { .. }));
         assert!(matches!(scene.ops()[2], SceneOp::PopOpacity));
+    }
+
+    #[test]
+    fn visual_transform_element_emits_transform_stack_ops() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(80.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "visual-transform-element-emits-ops",
+            |cx| {
+                vec![cx.visual_transform(
+                    Transform2D::translation(Point::new(Px(10.0), Px(0.0))),
+                    |cx| {
+                        let mut props = crate::element::ContainerProps::default();
+                        props.layout.size.width = Length::Fill;
+                        props.layout.size.height = Length::Fill;
+                        props.background = Some(Color {
+                            r: 1.0,
+                            g: 0.0,
+                            b: 0.0,
+                            a: 1.0,
+                        });
+                        vec![cx.container(props, |_| Vec::new())]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        assert_eq!(scene.ops_len(), 3);
+        assert!(matches!(
+            scene.ops()[0],
+            SceneOp::PushTransform { transform } if (transform.tx - 10.0).abs() < 1e-6
+        ));
+        assert!(matches!(scene.ops()[1], SceneOp::Quad { .. }));
+        assert!(matches!(scene.ops()[2], SceneOp::PopTransform));
+    }
+
+    #[test]
+    fn visual_transform_does_not_affect_hit_testing() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(80.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "visual-transform-hit-test",
+            |cx| {
+                let transform = Transform2D::translation(Point::new(Px(50.0), Px(0.0)));
+                vec![cx.visual_transform(transform, |cx| {
+                    let mut props = crate::element::PressableProps::default();
+                    props.layout.size.width = Length::Px(Px(20.0));
+                    props.layout.size.height = Length::Px(Px(20.0));
+                    vec![cx.pressable(props, |_cx, _state| Vec::new())]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let transform_node = ui.children(root)[0];
+        let pressable_node = ui.children(transform_node)[0];
+        let pressable_bounds = ui
+            .debug_node_bounds(pressable_node)
+            .expect("pressable bounds");
+
+        let original_hit_pos = Point::new(
+            Px(pressable_bounds.origin.x.0 + 2.0),
+            Px(pressable_bounds.origin.y.0 + 2.0),
+        );
+        assert_eq!(
+            ui.debug_hit_test(original_hit_pos).hit,
+            Some(pressable_node)
+        );
+
+        let translated_hit_pos = Point::new(
+            Px(pressable_bounds.origin.x.0 + 52.0),
+            Px(pressable_bounds.origin.y.0 + 2.0),
+        );
+        assert_ne!(
+            ui.debug_hit_test(translated_hit_pos).hit,
+            Some(pressable_node)
+        );
     }
 
     #[test]
@@ -6631,6 +6772,7 @@ mod tests {
             Size::new(Px(120.0), Px(40.0)),
         );
         let mut text = FakeTextService::default();
+        let scroll_handle = crate::scroll::ScrollHandle::default();
 
         let root = render_root(
             &mut ui,
@@ -6640,31 +6782,76 @@ mod tests {
             bounds,
             "mvp-scrollbar-drag",
             |cx| {
-                let mut p = crate::element::ScrollProps::default();
-                p.layout.size.height = crate::element::Length::Px(Px(20.0));
-                vec![cx.scroll(p, |cx| {
-                    vec![cx.column(
-                        crate::element::ColumnProps {
-                            gap: Px(0.0),
-                            ..Default::default()
-                        },
-                        |cx| vec![cx.text("a"), cx.text("b"), cx.text("c")],
-                    )]
-                })]
+                let scroll_handle = scroll_handle.clone();
+
+                let mut stack_layout = crate::element::LayoutStyle::default();
+                stack_layout.size.width = crate::element::Length::Fill;
+                stack_layout.size.height = crate::element::Length::Px(Px(20.0));
+
+                vec![cx.stack_props(
+                    crate::element::StackProps {
+                        layout: stack_layout,
+                    },
+                    |cx| {
+                        let mut scroll_layout = crate::element::LayoutStyle::default();
+                        scroll_layout.size.width = crate::element::Length::Fill;
+                        scroll_layout.size.height = crate::element::Length::Fill;
+                        scroll_layout.overflow = crate::element::Overflow::Clip;
+
+                        let scroll = cx.scroll(
+                            crate::element::ScrollProps {
+                                layout: scroll_layout,
+                                scroll_handle: Some(scroll_handle.clone()),
+                            },
+                            |cx| {
+                                vec![cx.column(
+                                    crate::element::ColumnProps {
+                                        gap: Px(0.0),
+                                        ..Default::default()
+                                    },
+                                    |cx| vec![cx.text("a"), cx.text("b"), cx.text("c")],
+                                )]
+                            },
+                        );
+
+                        let mut scrollbar_layout = crate::element::LayoutStyle::default();
+                        scrollbar_layout.position = crate::element::PositionStyle::Absolute;
+                        scrollbar_layout.inset = crate::element::InsetStyle {
+                            top: Some(Px(0.0)),
+                            right: Some(Px(0.0)),
+                            bottom: Some(Px(0.0)),
+                            left: None,
+                        };
+                        scrollbar_layout.size.width = crate::element::Length::Px(Px(10.0));
+
+                        let scrollbar = cx.scrollbar(crate::element::ScrollbarProps {
+                            layout: scrollbar_layout,
+                            scroll_target: Some(scroll.id),
+                            scroll_handle: scroll_handle.clone(),
+                            style: crate::element::ScrollbarStyle::default(),
+                        });
+
+                        vec![scroll, scrollbar]
+                    },
+                )]
             },
         );
         ui.set_root(root);
         ui.layout_all(&mut app, &mut text, bounds, 1.0);
 
-        let scroll_node = ui.children(root)[0];
+        let stack_node = ui.children(root)[0];
+        let scroll_node = ui.children(stack_node)[0];
+        let scrollbar_node = ui.children(stack_node)[1];
         let column_node = ui.children(scroll_node)[0];
         let before = ui.debug_node_bounds(column_node).expect("column bounds");
 
         // Click/drag the scrollbar thumb down (thumb starts at the top at offset=0).
-        let scroll_bounds = ui.debug_node_bounds(scroll_node).expect("scroll bounds");
+        let scrollbar_bounds = ui
+            .debug_node_bounds(scrollbar_node)
+            .expect("scrollbar bounds");
         let down_pos = fret_core::Point::new(
-            Px(scroll_bounds.origin.x.0 + scroll_bounds.size.width.0 - 1.0),
-            Px(scroll_bounds.origin.y.0 + 2.0),
+            Px(scrollbar_bounds.origin.x.0 + 1.0),
+            Px(scrollbar_bounds.origin.y.0 + 2.0),
         );
         let move_pos = fret_core::Point::new(down_pos.x, Px(down_pos.y.0 + 8.0));
         ui.dispatch_event(
@@ -6681,7 +6868,10 @@ mod tests {
             &mut text,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
                 position: move_pos,
-                buttons: fret_core::MouseButtons::default(),
+                buttons: fret_core::MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
@@ -6694,6 +6884,14 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
+
+        assert!(
+            scroll_handle.offset().y.0 > 0.01,
+            "expected thumb drag to update scroll handle offset, got {:?}",
+            scroll_handle.offset().y
+        );
+
+        ui.invalidate(scroll_node, Invalidation::Layout);
 
         ui.layout_all(&mut app, &mut text, bounds, 1.0);
         let after = ui

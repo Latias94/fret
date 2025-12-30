@@ -15,9 +15,9 @@ use crate::UiHost;
 use crate::element::{
     AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverRegionProps,
     ImageProps, LayoutStyle, OpacityProps, PointerRegionProps, PressableProps, PressableState,
-    ResizablePanelGroupProps, RowProps, ScrollProps, SpacerProps, SpinnerProps, StackProps,
-    SvgIconProps, TextAreaProps, TextInputProps, TextProps, VirtualListOptions, VirtualListProps,
-    VirtualListState,
+    ResizablePanelGroupProps, RowProps, ScrollProps, ScrollbarProps, SpacerProps, SpinnerProps,
+    StackProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, VirtualListOptions,
+    VirtualListProps, VirtualListState, VisualTransformProps,
 };
 use crate::widget::Invalidation;
 use fret_runtime::{Effect, Model, ModelId};
@@ -489,6 +489,34 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             let id = cx.root_id();
             let children = f(cx);
             AnyElement::new(id, ElementKind::Opacity(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn visual_transform(
+        &mut self,
+        transform: fret_core::Transform2D,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.visual_transform_props(
+            VisualTransformProps {
+                layout: LayoutStyle::default(),
+                transform,
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn visual_transform_props(
+        &mut self,
+        props: VisualTransformProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::VisualTransform(props), children)
         })
     }
 
@@ -1021,6 +1049,14 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             let id = cx.root_id();
             let children = f(cx);
             AnyElement::new(id, ElementKind::Scroll(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn scrollbar(&mut self, props: ScrollbarProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::Scrollbar(props), Vec::new())
         })
     }
 
