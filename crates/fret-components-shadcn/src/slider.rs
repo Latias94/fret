@@ -195,10 +195,21 @@ pub fn slider<H: UiHost>(
         let mut semantics_layout = root_layout;
         semantics_layout.size.height = Length::Px(Px(root_h));
 
+        let value = cx
+            .app
+            .models()
+            .get(model)
+            .and_then(|values| values.first())
+            .copied()
+            .unwrap_or(min);
+        let t = norm_value(value, min, max);
+        let a11y_value = fmt_a11y_value(value);
+
         let semantics = SemanticsProps {
             layout: semantics_layout,
             role: SemanticsRole::Slider,
             label: a11y_label.clone(),
+            value: Some(a11y_value),
             disabled,
             ..Default::default()
         };
@@ -210,118 +221,159 @@ pub fn slider<H: UiHost>(
         let model_on_down = model;
         let model_on_move = model;
 
-        let on_down = Arc::new(
-            move |host: &mut dyn UiPointerActionHost, cx: ActionCx, down: PointerDownCx| {
-                if down.button != MouseButton::Left {
-                    return false;
-                }
+        cx.semantics_with_id(semantics, |cx, semantics_id| {
+            let on_down = Arc::new(
+                move |host: &mut dyn UiPointerActionHost, cx: ActionCx, down: PointerDownCx| {
+                    if down.button != MouseButton::Left {
+                        return false;
+                    }
 
-                host.set_cursor_icon(CursorIcon::Pointer);
-                host.capture_pointer();
+                    host.request_focus(semantics_id);
+                    host.set_cursor_icon(CursorIcon::Pointer);
+                    host.capture_pointer();
 
-                let bounds = host.bounds();
-                update_slider_model(
-                    host,
-                    model_on_down,
-                    bounds,
-                    down.position.x,
-                    min_value,
-                    max_value,
-                    step_value,
-                    thumb_size,
-                );
-                host.request_redraw(cx.window);
-                true
-            },
-        );
+                    let bounds = host.bounds();
+                    update_slider_model(
+                        host,
+                        model_on_down,
+                        bounds,
+                        down.position.x,
+                        min_value,
+                        max_value,
+                        step_value,
+                        thumb_size,
+                    );
+                    host.request_redraw(cx.window);
+                    true
+                },
+            );
 
-        let on_move = Arc::new(
-            move |host: &mut dyn UiPointerActionHost, cx: ActionCx, mv: PointerMoveCx| {
-                host.set_cursor_icon(CursorIcon::Pointer);
-                if !mv.buttons.left {
-                    return false;
-                }
+            let on_move = Arc::new(
+                move |host: &mut dyn UiPointerActionHost, cx: ActionCx, mv: PointerMoveCx| {
+                    host.set_cursor_icon(CursorIcon::Pointer);
+                    if !mv.buttons.left {
+                        return false;
+                    }
 
-                let bounds = host.bounds();
-                update_slider_model(
-                    host,
-                    model_on_move,
-                    bounds,
-                    mv.position.x,
-                    min_value,
-                    max_value,
-                    step_value,
-                    thumb_size,
-                );
-                host.request_redraw(cx.window);
-                true
-            },
-        );
+                    let bounds = host.bounds();
+                    update_slider_model(
+                        host,
+                        model_on_move,
+                        bounds,
+                        mv.position.x,
+                        min_value,
+                        max_value,
+                        step_value,
+                        thumb_size,
+                    );
+                    host.request_redraw(cx.window);
+                    true
+                },
+            );
 
-        let on_up = Arc::new(
-            move |host: &mut dyn UiPointerActionHost, cx: ActionCx, up: PointerUpCx| {
-                if up.button != MouseButton::Left {
-                    return false;
-                }
-                host.release_pointer_capture();
-                host.request_redraw(cx.window);
-                true
-            },
-        );
+            let on_up = Arc::new(
+                move |host: &mut dyn UiPointerActionHost, cx: ActionCx, up: PointerUpCx| {
+                    if up.button != MouseButton::Left {
+                        return false;
+                    }
+                    host.release_pointer_capture();
+                    host.request_redraw(cx.window);
+                    true
+                },
+            );
 
-        let value = cx
-            .app
-            .models()
-            .get(model)
-            .and_then(|values| values.first())
-            .copied()
-            .unwrap_or(min);
-        let t = norm_value(value, min, max);
+            let model_on_key = model;
+            cx.key_on_key_down_for(
+                semantics_id,
+                Arc::new(move |host, cx, down| {
+                    if down.repeat
+                        || down.modifiers.alt
+                        || down.modifiers.ctrl
+                        || down.modifiers.meta
+                    {
+                        return false;
+                    }
 
-        let track_top = (root_h - style.track_height.0.max(0.0)) * 0.5;
-        let thumb_top = (root_h - style.thumb_size.0.max(0.0)) * 0.5;
-        let thumb_r = Px(style.thumb_size.0.max(0.0) * 0.5);
+                    let step = if step_value.is_finite() && step_value > 0.0 {
+                        step_value
+                    } else {
+                        1.0
+                    };
 
-        let root_container = ContainerProps {
-            layout: semantics_layout,
-            padding: Edges::all(Px(0.0)),
-            background: None,
-            shadow: None,
-            border: Edges::all(Px(0.0)),
-            border_color: None,
-            corner_radii: Corners::all(Px(0.0)),
-        };
+                    let cur = host
+                        .models_mut()
+                        .get(model_on_key)
+                        .and_then(|v| v.first())
+                        .copied()
+                        .unwrap_or(min_value);
 
-        let track = ContainerProps {
-            layout: LayoutStyle {
-                position: PositionStyle::Absolute,
-                inset: fret_ui::element::InsetStyle {
-                    left: Some(thumb_r),
-                    right: Some(thumb_r),
-                    top: Some(Px(track_top)),
+                    let next = match down.key {
+                        fret_core::KeyCode::ArrowLeft | fret_core::KeyCode::ArrowDown => cur - step,
+                        fret_core::KeyCode::ArrowRight | fret_core::KeyCode::ArrowUp => cur + step,
+                        fret_core::KeyCode::Home => min_value,
+                        fret_core::KeyCode::End => max_value,
+                        _ => return false,
+                    };
+
+                    let v = snap_value(next, min_value, max_value, step);
+                    let mut values = host
+                        .models_mut()
+                        .get(model_on_key)
+                        .cloned()
+                        .unwrap_or_default();
+                    if values.is_empty() {
+                        values.push(min_value);
+                    }
+                    values[0] = v;
+                    let _ = host.models_mut().update(model_on_key, |dst| *dst = values);
+                    host.request_redraw(cx.window);
+                    true
+                }),
+            );
+
+            let track_top = (root_h - style.track_height.0.max(0.0)) * 0.5;
+            let thumb_top = (root_h - style.thumb_size.0.max(0.0)) * 0.5;
+            let thumb_r = Px(style.thumb_size.0.max(0.0) * 0.5);
+
+            let root_container = ContainerProps {
+                layout: semantics_layout,
+                padding: Edges::all(Px(0.0)),
+                background: None,
+                shadow: None,
+                border: Edges::all(Px(0.0)),
+                border_color: None,
+                corner_radii: Corners::all(Px(0.0)),
+            };
+
+            let track = ContainerProps {
+                layout: LayoutStyle {
+                    position: PositionStyle::Absolute,
+                    inset: fret_ui::element::InsetStyle {
+                        left: Some(thumb_r),
+                        right: Some(thumb_r),
+                        top: Some(Px(track_top)),
+                        ..Default::default()
+                    },
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Px(style.track_height),
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                size: fret_ui::element::SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Px(style.track_height),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            padding: Edges::all(Px(0.0)),
-            background: Some(style.track_background),
-            shadow: None,
-            border: style.track_border,
-            border_color: Some(style.track_border_color),
-            corner_radii: Corners::all(Px(style.track_height.0.max(0.0) * 0.5)),
-        };
+                padding: Edges::all(Px(0.0)),
+                background: Some(style.track_background),
+                shadow: None,
+                border: style.track_border,
+                border_color: Some(style.track_border_color),
+                corner_radii: Corners::all(Px(style.track_height.0.max(0.0) * 0.5)),
+            };
 
-        let pointer = PointerRegionProps {
-            layout: semantics_layout,
-            enabled: !disabled,
-        };
+            let pointer = PointerRegionProps {
+                layout: semantics_layout,
+                enabled: !disabled,
+            };
 
-        cx.semantics(semantics, |cx| {
             vec![cx.pointer_region(pointer, |cx| {
                 cx.pointer_region_on_pointer_down(on_down);
                 cx.pointer_region_on_pointer_move(on_move);
@@ -390,6 +442,17 @@ pub fn slider<H: UiHost>(
             })]
         })
     })
+}
+
+fn fmt_a11y_value(value: f32) -> Arc<str> {
+    if !value.is_finite() {
+        return Arc::from("NaN");
+    }
+    let rounded = value.round();
+    if (value - rounded).abs() < 1e-4 {
+        return Arc::from(format!("{}", rounded as i64).into_boxed_str());
+    }
+    Arc::from(format!("{value:.2}").into_boxed_str())
 }
 
 fn norm_value(v: f32, min: f32, max: f32) -> f32 {
