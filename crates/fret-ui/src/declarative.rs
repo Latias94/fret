@@ -2055,6 +2055,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 cx.set_disabled(!props.enabled);
                 cx.set_focusable(props.enabled);
                 cx.set_invokable(props.enabled);
+                cx.set_collection_position(props.a11y.pos_in_set, props.a11y.set_size);
             }
             ElementInstance::VirtualList(_) => {
                 cx.set_role(SemanticsRole::List);

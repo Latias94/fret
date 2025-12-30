@@ -387,6 +387,8 @@ pub struct PressableA11y {
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,
+    pub pos_in_set: Option<u32>,
+    pub set_size: Option<u32>,
 }
 
 #[derive(Debug, Clone, Copy, Default)]

@@ -5,6 +5,7 @@ use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 use std::sync::Arc;
 
+use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::cmdk_selection;
 use fret_components_ui::headless::roving_focus;
@@ -663,6 +664,7 @@ impl CommandPalette {
             let mut key_counts: HashMap<RowKey, u32> = HashMap::new();
 
             let active_idx = cx.app.models().get(active).copied().unwrap_or(None);
+            let item_count = items.len();
             let rows: Vec<AnyElement> = items
                 .into_iter()
                 .enumerate()
@@ -696,7 +698,8 @@ impl CommandPalette {
                                     label: Some(label.clone()),
                                     selected,
                                     ..Default::default()
-                                },
+                                }
+                                .with_collection_position(idx, item_count),
                                 ..Default::default()
                             },
                             move |cx, st| {
@@ -1244,6 +1247,8 @@ mod tests {
 
         assert_eq!(active_node.role, SemanticsRole::ListItem);
         assert_eq!(active_node.label.as_deref(), Some("Beta"));
+        assert_eq!(active_node.pos_in_set, Some(2));
+        assert_eq!(active_node.set_size, Some(2));
         assert!(
             active_node.flags.selected,
             "highlighted row should be selected"
@@ -1337,5 +1342,7 @@ mod tests {
 
         assert_eq!(active_node.role, SemanticsRole::ListItem);
         assert_eq!(active_node.label.as_deref(), Some("Beta"));
+        assert_eq!(active_node.pos_in_set, Some(2));
+        assert_eq!(active_node.set_size, Some(3));
     }
 }
