@@ -57,6 +57,8 @@ Runtime plumbing is in `crates/fret-ui/src/action.rs` and exposed via `ElementCx
 - `ElementCx::roving_on_active_change(...)`
 - `ElementCx::roving_on_typeahead(...)`
 - `ElementCx::pointer_region_on_pointer_down(...)` (for context menus, drag start, etc.)
+- `ElementCx::pointer_region_on_pointer_move(...)` (for drag interactions and pointer capture streams)
+- `ElementCx::pointer_region_on_pointer_up(...)` (for drag end / release semantics)
 - `ElementCx::key_on_key_down_for(...)` (for keyboard-invoked context menus, custom key handling, etc.)
 
 Component-layer convenience helpers live in:

@@ -25,8 +25,9 @@ use fret_runtime::{Effect, Model, ModelId};
 use crate::action::OnHoverChange;
 use crate::action::{
     DismissibleActionHooks, KeyActionHooks, OnActivate, OnDismissRequest, OnKeyDown, OnPointerDown,
-    OnRovingActiveChange, OnRovingTypeahead, OnTimer, PointerActionHooks, PressableActionHooks,
-    PressableHoverActionHooks, RovingActionHooks, TimerActionHooks,
+    OnPointerMove, OnPointerUp, OnRovingActiveChange, OnRovingTypeahead, OnTimer,
+    PointerActionHooks, PressableActionHooks, PressableHoverActionHooks, RovingActionHooks,
+    TimerActionHooks,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -599,6 +600,8 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             cx.pointer_region_clear_on_pointer_down();
+            cx.pointer_region_clear_on_pointer_move();
+            cx.pointer_region_clear_on_pointer_up();
             let children = f(cx);
             AnyElement::new(id, ElementKind::PointerRegion(props), children)
         })
@@ -631,6 +634,66 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
     pub fn pointer_region_clear_on_pointer_down(&mut self) {
         self.with_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_down = None;
+        });
+    }
+
+    /// Register a component-owned pointer move handler for the current pointer region element.
+    ///
+    /// This hook is invoked when the pointer region receives `PointerEvent::Move` events via
+    /// normal hit-testing or pointer capture.
+    pub fn pointer_region_on_pointer_move(&mut self, handler: OnPointerMove) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_move = Some(handler);
+        });
+    }
+
+    pub fn pointer_region_add_on_pointer_move(&mut self, handler: OnPointerMove) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_move = match hooks.on_pointer_move.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, mv| {
+                        prev(host, cx, mv) || next(host, cx, mv)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pointer_region_clear_on_pointer_move(&mut self) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_move = None;
+        });
+    }
+
+    /// Register a component-owned pointer up handler for the current pointer region element.
+    ///
+    /// This hook is invoked when the pointer region receives `PointerEvent::Up` events via
+    /// normal hit-testing or pointer capture.
+    pub fn pointer_region_on_pointer_up(&mut self, handler: OnPointerUp) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_up = Some(handler);
+        });
+    }
+
+    pub fn pointer_region_add_on_pointer_up(&mut self, handler: OnPointerUp) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_up = match hooks.on_pointer_up.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, up| {
+                        prev(host, cx, up) || next(host, cx, up)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pointer_region_clear_on_pointer_up(&mut self) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_up = None;
         });
     }
 

@@ -1643,59 +1643,194 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     return;
                 }
 
-                let Event::Pointer(fret_core::PointerEvent::Down {
-                    position,
-                    button,
-                    modifiers,
-                }) = event
-                else {
-                    return;
-                };
+                struct PointerHookHost<'a, H: UiHost> {
+                    app: &'a mut H,
+                    node: NodeId,
+                    input_ctx: &'a fret_runtime::InputContext,
+                    requested_capture: &'a mut Option<Option<NodeId>>,
+                    requested_cursor: &'a mut Option<fret_core::CursorIcon>,
+                }
 
-                let hook = crate::elements::with_element_state(
-                    &mut *cx.app,
-                    window,
-                    self.element,
-                    crate::action::PointerActionHooks::default,
-                    |hooks| hooks.on_pointer_down.clone(),
-                );
+                impl<H: UiHost> action::UiActionHost for PointerHookHost<'_, H> {
+                    fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+                        self.app.models_mut()
+                    }
 
-                let Some(h) = hook else {
-                    return;
-                };
+                    fn push_effect(&mut self, effect: Effect) {
+                        self.app.push_effect(effect);
+                    }
 
-                let down = action::PointerDownCx {
-                    position: *position,
-                    button: *button,
-                    modifiers: *modifiers,
-                };
+                    fn request_redraw(&mut self, window: AppWindowId) {
+                        self.app.request_redraw(window);
+                    }
 
-                crate::elements::with_element_state(
-                    &mut *cx.app,
-                    window,
-                    self.element,
-                    crate::element::PointerRegionState::default,
-                    |state| {
-                        state.last_down = Some(down);
-                    },
-                );
+                    fn next_timer_token(&mut self) -> fret_core::TimerToken {
+                        self.app.next_timer_token()
+                    }
+                }
 
-                let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
-                let handled = h(
-                    &mut host,
-                    action::ActionCx {
-                        window,
-                        target: self.element,
-                    },
-                    down,
-                );
+                impl<H: UiHost> action::UiPointerActionHost for PointerHookHost<'_, H> {
+                    fn capture_pointer(&mut self) {
+                        *self.requested_capture = Some(Some(self.node));
+                    }
 
-                cx.invalidate_self(Invalidation::Layout);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
+                    fn release_pointer_capture(&mut self) {
+                        *self.requested_capture = Some(None);
+                    }
 
-                if handled {
-                    cx.stop_propagation();
+                    fn set_cursor_icon(&mut self, icon: fret_core::CursorIcon) {
+                        if !self.input_ctx.caps.ui.cursor_icons {
+                            return;
+                        }
+                        *self.requested_cursor = Some(icon);
+                    }
+                }
+
+                match event {
+                    Event::Pointer(fret_core::PointerEvent::Down {
+                        position,
+                        button,
+                        modifiers,
+                    }) => {
+                        let hook = crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::action::PointerActionHooks::default,
+                            |hooks| hooks.on_pointer_down.clone(),
+                        );
+
+                        let Some(h) = hook else {
+                            return;
+                        };
+
+                        let down = action::PointerDownCx {
+                            position: *position,
+                            button: *button,
+                            modifiers: *modifiers,
+                        };
+
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::element::PointerRegionState::default,
+                            |state| {
+                                state.last_down = Some(down);
+                            },
+                        );
+
+                        let mut host = PointerHookHost {
+                            app: &mut *cx.app,
+                            node: cx.node,
+                            input_ctx: &cx.input_ctx,
+                            requested_capture: &mut cx.requested_capture,
+                            requested_cursor: &mut cx.requested_cursor,
+                        };
+                        let handled = h(
+                            &mut host,
+                            action::ActionCx {
+                                window,
+                                target: self.element,
+                            },
+                            down,
+                        );
+
+                        if handled {
+                            cx.stop_propagation();
+                        }
+                    }
+                    Event::Pointer(fret_core::PointerEvent::Move {
+                        position,
+                        buttons,
+                        modifiers,
+                    }) => {
+                        let hook = crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::action::PointerActionHooks::default,
+                            |hooks| hooks.on_pointer_move.clone(),
+                        );
+
+                        let Some(h) = hook else {
+                            return;
+                        };
+
+                        let mv = action::PointerMoveCx {
+                            position: *position,
+                            buttons: *buttons,
+                            modifiers: *modifiers,
+                        };
+
+                        let mut host = PointerHookHost {
+                            app: &mut *cx.app,
+                            node: cx.node,
+                            input_ctx: &cx.input_ctx,
+                            requested_capture: &mut cx.requested_capture,
+                            requested_cursor: &mut cx.requested_cursor,
+                        };
+                        let handled = h(
+                            &mut host,
+                            action::ActionCx {
+                                window,
+                                target: self.element,
+                            },
+                            mv,
+                        );
+
+                        if handled {
+                            cx.stop_propagation();
+                        }
+                    }
+                    Event::Pointer(fret_core::PointerEvent::Up {
+                        position,
+                        button,
+                        modifiers,
+                    }) => {
+                        let was_captured = cx.captured == Some(cx.node);
+
+                        let hook = crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::action::PointerActionHooks::default,
+                            |hooks| hooks.on_pointer_up.clone(),
+                        );
+
+                        let up = action::PointerUpCx {
+                            position: *position,
+                            button: *button,
+                            modifiers: *modifiers,
+                        };
+
+                        if let Some(h) = hook {
+                            let mut host = PointerHookHost {
+                                app: &mut *cx.app,
+                                node: cx.node,
+                                input_ctx: &cx.input_ctx,
+                                requested_capture: &mut cx.requested_capture,
+                                requested_cursor: &mut cx.requested_cursor,
+                            };
+                            let handled = h(
+                                &mut host,
+                                action::ActionCx {
+                                    window,
+                                    target: self.element,
+                                },
+                                up,
+                            );
+
+                            if handled {
+                                cx.stop_propagation();
+                            }
+                        }
+
+                        if was_captured {
+                            cx.release_pointer_capture();
+                        }
+                    }
+                    _ => {}
                 }
             }
             ElementInstance::RovingFlex(props) => {
@@ -4780,6 +4915,134 @@ mod tests {
             .copied()
             .unwrap_or(f32::NAN);
         assert!((v - 100.0).abs() < 0.01, "expected slider=100, got {v}");
+    }
+
+    #[test]
+    fn declarative_pointer_region_can_capture_and_receive_move_up() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(60.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let counter = app.models_mut().insert(0u32);
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "pointer-region-capture-move-up",
+            |cx| {
+                let counter_down = counter;
+                let counter_move = counter;
+                let counter_up = counter;
+
+                let on_down = Arc::new(
+                    move |host: &mut dyn crate::action::UiPointerActionHost,
+                          cx: crate::action::ActionCx,
+                          down: crate::action::PointerDownCx| {
+                        if down.button != MouseButton::Left {
+                            return false;
+                        }
+                        host.capture_pointer();
+                        let _ = host
+                            .models_mut()
+                            .update(counter_down, |v| *v = v.saturating_add(1));
+                        host.request_redraw(cx.window);
+                        true
+                    },
+                );
+
+                let on_move = Arc::new(
+                    move |host: &mut dyn crate::action::UiPointerActionHost,
+                          _cx: crate::action::ActionCx,
+                          _mv: crate::action::PointerMoveCx| {
+                        let _ = host
+                            .models_mut()
+                            .update(counter_move, |v| *v = v.saturating_add(10));
+                        true
+                    },
+                );
+
+                let on_up = Arc::new(
+                    move |host: &mut dyn crate::action::UiPointerActionHost,
+                          cx: crate::action::ActionCx,
+                          up: crate::action::PointerUpCx| {
+                        if up.button == MouseButton::Left {
+                            host.release_pointer_capture();
+                        }
+                        let _ = host
+                            .models_mut()
+                            .update(counter_up, |v| *v = v.saturating_add(100));
+                        host.request_redraw(cx.window);
+                        true
+                    },
+                );
+
+                let mut props = crate::element::PointerRegionProps::default();
+                props.layout.size.width = Length::Fill;
+                props.layout.size.height = Length::Fill;
+
+                vec![cx.pointer_region(props, |cx| {
+                    cx.pointer_region_on_pointer_down(on_down);
+                    cx.pointer_region_on_pointer_move(on_move);
+                    cx.pointer_region_on_pointer_up(on_up);
+                    Vec::new()
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let region = ui.children(root)[0];
+        let region_bounds = ui.debug_node_bounds(region).expect("pointer region bounds");
+
+        let inside = Point::new(
+            Px(region_bounds.origin.x.0 + 5.0),
+            Px(region_bounds.origin.y.0 + 5.0),
+        );
+        let outside = Point::new(Px(region_bounds.origin.x.0 + 250.0), inside.y);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: inside,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: outside,
+                buttons: fret_core::MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: outside,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get(counter).copied(), Some(111));
     }
 
     #[test]

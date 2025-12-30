@@ -146,7 +146,7 @@ impl ContextMenu {
             let trigger_id = trigger.id;
 
             let open = self.open;
-            let pointer_policy = Arc::new(move |host: &mut dyn fret_ui::action::UiActionHost,
+            let pointer_policy = Arc::new(move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                                            _cx: fret_ui::action::ActionCx,
                                            down: PointerDownCx| {
                 let is_right_click = down.button == MouseButton::Right;

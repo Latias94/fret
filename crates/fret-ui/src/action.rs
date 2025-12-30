@@ -1,5 +1,5 @@
 use crate::UiHost;
-use fret_core::{AppWindowId, KeyCode, Modifiers, MouseButton, Point, TimerToken};
+use fret_core::{AppWindowId, CursorIcon, KeyCode, Modifiers, MouseButton, Point, TimerToken};
 use fret_runtime::{CommandId, Effect, ModelStore};
 use std::sync::Arc;
 
@@ -32,6 +32,22 @@ pub struct PointerDownCx {
     pub modifiers: Modifiers,
 }
 
+/// Pointer move payload for component-owned pointer handlers.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PointerMoveCx {
+    pub position: Point,
+    pub buttons: fret_core::MouseButtons,
+    pub modifiers: Modifiers,
+}
+
+/// Pointer up payload for component-owned pointer handlers.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PointerUpCx {
+    pub position: Point,
+    pub button: MouseButton,
+    pub modifiers: Modifiers,
+}
+
 /// Key down payload for component-owned key handlers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct KeyDownCx {
@@ -53,6 +69,16 @@ pub trait UiActionHost {
     fn dispatch_command(&mut self, window: Option<AppWindowId>, command: CommandId) {
         self.push_effect(Effect::Command { window, command });
     }
+}
+
+/// Extra runtime-provided operations available during pointer event hooks.
+///
+/// This is intentionally separate from `UiActionHost` because pointer capture and cursor updates
+/// are mediated by the UI runtime (`UiTree`), not by the app host (`UiHost`).
+pub trait UiPointerActionHost: UiActionHost {
+    fn capture_pointer(&mut self);
+    fn release_pointer_capture(&mut self);
+    fn set_cursor_icon(&mut self, icon: CursorIcon);
 }
 
 pub struct UiActionHostAdapter<'a, H: UiHost> {
@@ -99,11 +125,19 @@ pub(crate) struct DismissibleActionHooks {
 }
 
 pub type OnPointerDown =
-    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, PointerDownCx) -> bool + 'static>;
+    Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerDownCx) -> bool + 'static>;
+
+pub type OnPointerMove =
+    Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerMoveCx) -> bool + 'static>;
+
+pub type OnPointerUp =
+    Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerUpCx) -> bool + 'static>;
 
 #[derive(Default)]
 pub(crate) struct PointerActionHooks {
     pub on_pointer_down: Option<OnPointerDown>,
+    pub on_pointer_move: Option<OnPointerMove>,
+    pub on_pointer_up: Option<OnPointerUp>,
 }
 
 pub type OnKeyDown = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, KeyDownCx) -> bool + 'static>;
