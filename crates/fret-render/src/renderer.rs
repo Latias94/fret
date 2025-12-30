@@ -3610,7 +3610,9 @@ impl Renderer {
                         opacity_stack.pop();
                     }
                 }
-                SceneOp::PushLayer { .. } | SceneOp::PopLayer => {}
+                SceneOp::PushLayer { .. } | SceneOp::PopLayer => {
+                    flush_quad_batch!();
+                }
                 SceneOp::PushClipRect { rect } => {
                     let (x, y, w, h) = rect_to_pixels(*rect, scale_factor);
                     let new_scissor = if w <= 0.0 || h <= 0.0 {
