@@ -1973,7 +1973,7 @@ mod tests {
 
     fn event_cx<'a>(
         app: &'a mut TestHost,
-        services: &'a mut FakeTextService,
+        services: &'a mut dyn fret_core::UiServices,
         node: fret_core::NodeId,
         window: fret_core::AppWindowId,
         bounds: Rect,
@@ -2151,5 +2151,153 @@ mod tests {
         area.event(&mut cx, &Event::ClipboardText("a\r\nb\rc".to_string()));
 
         assert_eq!(area.text(), "a\nb\nc");
+    }
+
+    #[derive(Default)]
+    struct YTextService {}
+
+    impl TextService for YTextService {
+        fn prepare(
+            &mut self,
+            text: &str,
+            _style: TextStyle,
+            _constraints: TextConstraints,
+        ) -> (fret_core::TextBlobId, TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(text.len() as f32), Px(1000.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn caret_rect(
+            &mut self,
+            _blob: fret_core::TextBlobId,
+            index: usize,
+            _affinity: CaretAffinity,
+        ) -> Rect {
+            Rect::new(
+                Point::new(Px(0.0), Px(index as f32)),
+                Size::new(Px(1.0), Px(10.0)),
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for YTextService {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for YTextService {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            false
+        }
+    }
+
+    #[test]
+    fn ime_cursor_area_reflects_scroll_offset_in_paint_space() {
+        let window = AppWindowId::default();
+        let node = fret_core::NodeId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        );
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = YTextService::default();
+
+        let mut area = TextArea::new("hello");
+        area.caret = 50;
+        area.selection_anchor = 50;
+        area.ensure_caret_visible = false;
+        area.last_content_height = Px(1000.0);
+        area.last_viewport_height = Px(200.0);
+        area.last_bounds = bounds;
+
+        fn paint_once(
+            area: &mut TextArea,
+            app: &mut TestHost,
+            services: &mut YTextService,
+            node: fret_core::NodeId,
+            window: fret_core::AppWindowId,
+            bounds: Rect,
+        ) -> Rect {
+            let mut scene = Scene::default();
+            let mut observe_model = |_id, _inv| {};
+            let mut paint_child = |_child: fret_core::NodeId, _bounds: Rect| {};
+            let child_bounds = |_child: fret_core::NodeId| None;
+
+            let mut cx = crate::widget::PaintCx {
+                app,
+                node,
+                window: Some(window),
+                focus: Some(node),
+                children: &[],
+                bounds,
+                scale_factor: 1.0,
+                services,
+                observe_model: &mut observe_model,
+                scene: &mut scene,
+                paint_child: &mut paint_child,
+                child_bounds: &child_bounds,
+            };
+
+            area.paint(&mut cx);
+
+            app.take_effects()
+                .into_iter()
+                .find_map(|e| match e {
+                    Effect::ImeSetCursorArea { rect, .. } => Some(rect),
+                    _ => None,
+                })
+                .expect("expected an IME cursor area effect")
+        }
+
+        let y0 = paint_once(&mut area, &mut app, &mut services, node, window, bounds)
+            .origin
+            .y
+            .0;
+
+        {
+            let mut cx = event_cx(&mut app, &mut services, node, window, bounds);
+            area.event(
+                &mut cx,
+                &Event::Pointer(fret_core::PointerEvent::Wheel {
+                    position: Point::new(Px(0.0), Px(0.0)),
+                    delta: Point::new(Px(0.0), Px(-10.0)),
+                    modifiers: fret_core::Modifiers::default(),
+                }),
+            );
+        }
+
+        let y1 = paint_once(&mut area, &mut app, &mut services, node, window, bounds)
+            .origin
+            .y
+            .0;
+
+        assert!(
+            (y1 - (y0 - 10.0)).abs() < 0.001,
+            "expected IME cursor area to move with scroll offset"
+        );
     }
 }
