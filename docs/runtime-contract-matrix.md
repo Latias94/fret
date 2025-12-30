@@ -6,6 +6,10 @@ exists, and which mature ecosystem reference we align with.
 It is intentionally **mechanism-only**: component policies and UI recipes belong in
 `crates/fret-components-ui` and `crates/fret-components-shadcn`.
 
+For a closure-oriented, module-by-module index (contracts → code → tests → demos), see:
+
+- `docs/ui-closure-map.md`
+
 ## Layering (GPUI mapping)
 
 - `gpui` (runtime substrate) ≈ `crates/fret-ui`

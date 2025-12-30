@@ -157,6 +157,7 @@ Each section below answers:
 - Virtualization: ADR 0070 + 0047
 - Text input: ADR 0044/0045/0046/0071 + ADR 0012/0043 for IME arbitration
 - Semantics / A11y boundary: ADR 0033 / 0073 + `docs/a11y-acceptance-checklist.md`
+- UI closure map (this subsystem): `docs/ui-closure-map.md`
 
 **Code entry points**
 
