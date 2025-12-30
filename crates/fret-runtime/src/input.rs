@@ -142,6 +142,13 @@ fn key_label(key: KeyCode) -> &'static str {
         KeyCode::Insert => "Insert",
         KeyCode::Delete => "Delete",
 
+        KeyCode::CapsLock => "CapsLock",
+
+        KeyCode::ShiftLeft | KeyCode::ShiftRight => "Shift",
+        KeyCode::ControlLeft | KeyCode::ControlRight => "Ctrl",
+        KeyCode::AltLeft | KeyCode::AltRight => "Alt",
+        KeyCode::SuperLeft | KeyCode::SuperRight => "Super",
+
         KeyCode::Digit0 => "0",
         KeyCode::Digit1 => "1",
         KeyCode::Digit2 => "2",
@@ -204,6 +211,23 @@ fn key_label(key: KeyCode) -> &'static str {
         KeyCode::F10 => "F10",
         KeyCode::F11 => "F11",
         KeyCode::F12 => "F12",
+
+        KeyCode::Numpad0 => "Num0",
+        KeyCode::Numpad1 => "Num1",
+        KeyCode::Numpad2 => "Num2",
+        KeyCode::Numpad3 => "Num3",
+        KeyCode::Numpad4 => "Num4",
+        KeyCode::Numpad5 => "Num5",
+        KeyCode::Numpad6 => "Num6",
+        KeyCode::Numpad7 => "Num7",
+        KeyCode::Numpad8 => "Num8",
+        KeyCode::Numpad9 => "Num9",
+        KeyCode::NumpadAdd => "Num+",
+        KeyCode::NumpadSubtract => "Num-",
+        KeyCode::NumpadMultiply => "Num*",
+        KeyCode::NumpadDivide => "Num/",
+        KeyCode::NumpadDecimal => "Num.",
+        KeyCode::NumpadEnter => "NumEnter",
 
         _ => "Unknown",
     }
