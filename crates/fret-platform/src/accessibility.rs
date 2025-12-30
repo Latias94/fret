@@ -7,13 +7,17 @@ use std::{
     },
 };
 
-use accesskit::{Action, ActionRequest, Node, NodeId, Rect, Role, Toggled, Tree, TreeUpdate};
+use accesskit::{
+    Action, ActionRequest, Node, NodeId, Rect, Role, TextPosition, TextSelection, Toggled, Tree,
+    TreeUpdate,
+};
 use accesskit_winit::Adapter;
 use fret_core::{SemanticsNode, SemanticsRole, SemanticsSnapshot};
 use slotmap::{Key, KeyData};
 use winit::{event::WindowEvent, event_loop::ActiveEventLoop, window::Window};
 
 const ROOT_ID: NodeId = NodeId(0);
+const SYNTHETIC_TEXT_RUN_BIT: u64 = 1 << 63;
 
 fn to_accesskit_id(node: fret_core::NodeId) -> NodeId {
     NodeId(node.data().as_ffi().wrapping_add(1))
@@ -26,6 +30,17 @@ fn from_accesskit_id(node: NodeId) -> Option<fret_core::NodeId> {
     Some(fret_core::NodeId::from(KeyData::from_ffi(
         node.0.wrapping_sub(1),
     )))
+}
+
+fn text_run_id_for(node: fret_core::NodeId) -> NodeId {
+    NodeId(to_accesskit_id(node).0 | SYNTHETIC_TEXT_RUN_BIT)
+}
+
+fn parent_from_synthetic_id(node: NodeId) -> Option<fret_core::NodeId> {
+    if (node.0 & SYNTHETIC_TEXT_RUN_BIT) == 0 {
+        return None;
+    }
+    from_accesskit_id(NodeId(node.0 & !SYNTHETIC_TEXT_RUN_BIT))
 }
 
 pub struct WinitAccessibility {
@@ -222,6 +237,28 @@ fn collect_reachable(
     seen
 }
 
+fn utf8_character_lengths(value: &str) -> Vec<u8> {
+    value.chars().map(|c| c.len_utf8() as u8).collect()
+}
+
+fn byte_to_character_index(value: &str, byte_offset: u32) -> usize {
+    let target = byte_offset.min(value.len() as u32);
+    let mut offset: u32 = 0;
+    let mut index: usize = 0;
+    for c in value.chars() {
+        let len = c.len_utf8() as u32;
+        if offset + len > target {
+            break;
+        }
+        offset += len;
+        index += 1;
+        if offset == target {
+            break;
+        }
+    }
+    index
+}
+
 pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64) -> TreeUpdate {
     let visible_roots = choose_visible_roots(snapshot);
     let children = build_children_index(&snapshot.nodes);
@@ -247,14 +284,41 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         let mut out = Node::new(map_role(node.role));
         out.set_bounds(px_rect_to_accesskit(node.bounds, scale_factor));
 
-        if let Some(children) = children.get(&node.id) {
-            out.set_children(
-                children
-                    .iter()
-                    .copied()
-                    .map(to_accesskit_id)
-                    .collect::<Vec<_>>(),
-            );
+        let mut out_children: Vec<NodeId> = children
+            .get(&node.id)
+            .map(|c| c.iter().copied().map(to_accesskit_id).collect())
+            .unwrap_or_default();
+
+        let mut synthetic_text_run: Option<(NodeId, Node)> = None;
+        if node.role == SemanticsRole::TextField
+            && let Some(value) = node.value.as_ref()
+        {
+            let run_id = text_run_id_for(node.id);
+            out_children.push(run_id);
+
+            let mut run = Node::new(Role::TextRun);
+            run.set_bounds(px_rect_to_accesskit(node.bounds, scale_factor));
+            run.set_value(value.clone());
+            run.set_character_lengths(utf8_character_lengths(value));
+
+            if let Some((anchor, focus)) = node.text_selection {
+                out.set_text_selection(TextSelection {
+                    anchor: TextPosition {
+                        node: run_id,
+                        character_index: byte_to_character_index(value, anchor),
+                    },
+                    focus: TextPosition {
+                        node: run_id,
+                        character_index: byte_to_character_index(value, focus),
+                    },
+                });
+            }
+
+            synthetic_text_run = Some((run_id, run));
+        }
+
+        if !out_children.is_empty() {
+            out.set_children(out_children);
         }
 
         if node.flags.disabled {
@@ -309,6 +373,9 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         }
 
         nodes_out.push((to_accesskit_id(node.id), out));
+        if let Some((id, run)) = synthetic_text_run {
+            nodes_out.push((id, run));
+        }
     }
 
     let focus = snapshot
@@ -332,14 +399,14 @@ pub fn focus_target_from_action(req: &ActionRequest) -> Option<fret_core::NodeId
     if req.action != Action::Focus {
         return None;
     }
-    from_accesskit_id(req.target)
+    parent_from_synthetic_id(req.target).or_else(|| from_accesskit_id(req.target))
 }
 
 pub fn invoke_target_from_action(req: &ActionRequest) -> Option<fret_core::NodeId> {
     if req.action != Action::Click {
         return None;
     }
-    from_accesskit_id(req.target)
+    parent_from_synthetic_id(req.target).or_else(|| from_accesskit_id(req.target))
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -353,7 +420,7 @@ pub fn set_value_from_action(req: &ActionRequest) -> Option<(fret_core::NodeId, 
         return None;
     }
 
-    let target = from_accesskit_id(req.target)?;
+    let target = parent_from_synthetic_id(req.target).or_else(|| from_accesskit_id(req.target))?;
     let data = req.data.as_ref()?;
     match data {
         accesskit::ActionData::Value(v) => Some((target, SetValueData::Text(v.to_string()))),
@@ -364,7 +431,7 @@ pub fn set_value_from_action(req: &ActionRequest) -> Option<(fret_core::NodeId, 
 
 #[cfg(test)]
 mod tests {
-    use super::{to_accesskit_id, tree_update_from_snapshot};
+    use super::{text_run_id_for, to_accesskit_id, tree_update_from_snapshot};
     use fret_core::{
         AppWindowId, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole,
         SemanticsRoot, SemanticsSnapshot,
@@ -412,6 +479,8 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    text_selection: None,
+                    text_composition: None,
                     actions: SemanticsActions::default(),
                 },
                 SemanticsNode {
@@ -428,6 +497,8 @@ mod tests {
                     set_size: None,
                     label: Some("Command input".to_string()),
                     value: None,
+                    text_selection: None,
+                    text_composition: None,
                     actions: SemanticsActions {
                         focus: true,
                         set_value: true,
@@ -445,6 +516,8 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    text_selection: None,
+                    text_composition: None,
                     actions: SemanticsActions::default(),
                 },
                 SemanticsNode {
@@ -461,6 +534,8 @@ mod tests {
                     set_size: None,
                     label: Some("Item 1".to_string()),
                     value: None,
+                    text_selection: None,
+                    text_composition: None,
                     actions: SemanticsActions::default(),
                 },
             ],
@@ -519,6 +594,8 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    text_selection: None,
+                    text_composition: None,
                     actions: SemanticsActions::default(),
                 },
                 SemanticsNode {
@@ -532,6 +609,8 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    text_selection: None,
+                    text_composition: None,
                     actions: SemanticsActions::default(),
                 },
                 SemanticsNode {
@@ -545,6 +624,8 @@ mod tests {
                     set_size: Some(1200),
                     label: Some("Item 57".to_string()),
                     value: None,
+                    text_selection: None,
+                    text_composition: None,
                     actions: SemanticsActions::default(),
                 },
             ],
@@ -561,5 +642,101 @@ mod tests {
 
         assert_eq!(item_node.position_in_set(), Some(57));
         assert_eq!(item_node.size_of_set(), Some(1200));
+    }
+
+    #[test]
+    fn text_field_emits_synthetic_text_run_and_text_selection() {
+        let window = AppWindowId::default();
+        let root = node(1);
+        let input = node(2);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(10.0), Px(10.0)),
+        );
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root,
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus: Some(input),
+            captured: None,
+            nodes: vec![
+                SemanticsNode {
+                    id: root,
+                    parent: None,
+                    role: SemanticsRole::Window,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                },
+                SemanticsNode {
+                    id: input,
+                    parent: Some(root),
+                    role: SemanticsRole::TextField,
+                    bounds,
+                    flags: SemanticsFlags {
+                        focused: true,
+                        ..SemanticsFlags::default()
+                    },
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: Some("Search".to_string()),
+                    value: Some("hello".to_string()),
+                    text_selection: Some((1, 4)),
+                    text_composition: None,
+                    actions: SemanticsActions {
+                        focus: true,
+                        set_value: true,
+                        ..SemanticsActions::default()
+                    },
+                },
+            ],
+        };
+
+        let update = tree_update_from_snapshot(&snapshot, 1.0);
+        let input_id = to_accesskit_id(input);
+        let run_id = text_run_id_for(input);
+
+        let input_node = update
+            .nodes
+            .iter()
+            .find_map(|(id, n)| (*id == input_id).then_some(n))
+            .expect("input node present");
+        let run_node = update
+            .nodes
+            .iter()
+            .find_map(|(id, n)| (*id == run_id).then_some(n))
+            .expect("text run node present");
+
+        assert!(
+            input_node.children().contains(&run_id),
+            "text field should include synthetic text run child"
+        );
+        assert_eq!(run_node.value(), Some("hello"));
+        assert!(
+            !run_node.character_lengths().is_empty(),
+            "text run should include character lengths for selection"
+        );
+
+        let selection = input_node.text_selection().expect("selection present");
+        assert_eq!(selection.anchor.node, run_id);
+        assert_eq!(selection.anchor.character_index, 1);
+        assert_eq!(selection.focus.node, run_id);
+        assert_eq!(selection.focus.character_index, 4);
     }
 }
