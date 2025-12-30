@@ -1,0 +1,150 @@
+---
+title: Docking Interaction Arbitration Checklist (ADR 0072)
+---
+
+# Docking Interaction Arbitration Checklist (ADR 0072)
+
+This is a **manual + automated conformance checklist** for:
+
+- docking interactions (tab drag, split drag, floating window drag),
+- non-modal overlays (popover/menu-style click-through surfaces),
+- viewport tool capture (camera drags, gizmos, marquee),
+- and their arbitration rules.
+
+Source of truth:
+
+- `docs/adr/0072-docking-interaction-arbitration-matrix.md`
+
+This checklist is intentionally short and is meant to be used while iterating on docking and
+viewport tooling, to avoid late rewrites and accidental behavior drift.
+
+---
+
+## How to run the current demos
+
+- Docking demo: `cargo run -p fret-demo --bin docking_demo`
+- Components overlays demo: `cargo run -p fret-demo --bin components_gallery`
+
+Note: today we do **not** have a single demo that combines docking + a real viewport surface +
+shadcn overlays in the same window. Until we add that harness, some items below are validated by
+unit tests only.
+
+---
+
+## Conformance checklist (P0)
+
+These items are copied from ADR 0072 and expanded into concrete steps.
+
+### 1) Dock drag does not trigger "outside press" dismissal while dragging
+
+**Goal**
+
+- While a dock drag session is active, click-through outside press observers must not fight the drag.
+
+**Manual steps (needs combined demo)**
+
+1. Open a non-modal overlay (popover/menu) in the same window.
+2. Start a dock tab drag (do not release yet).
+3. Move the pointer and click on underlay content.
+
+**Expected**
+
+- No "outside press" dismissal side effects are triggered mid-drag.
+- The drag remains the owner of the pointer session.
+
+References:
+
+- ADR 0069 (`outside press observer`): `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
+
+### 2) Starting a dock drag closes/suspends non-modal overlays in the same window
+
+**Goal**
+
+- Docking interactions should not leave stale popovers/menus open in the same window.
+
+**Manual steps (needs combined demo)**
+
+1. Open a popover/menu (non-modal).
+2. Start a dock drag on a tab bar.
+
+**Expected**
+
+- The overlay closes or becomes non-interactive/pointer-transparent until the drag ends.
+- Focus is not forced to change in a way that breaks the drag.
+
+### 3) Modal dialogs block docking and viewport input consistently
+
+**Goal**
+
+- Modal barriers must make underlay docking/viewport content inert (pointer + keyboard + semantics).
+
+**Manual steps**
+
+1. In `components_gallery`, open a modal (`Dialog` / `AlertDialog` / `Sheet`).
+2. Try to interact with underlay content.
+
+**Expected**
+
+- Underlay does not receive input while modal barrier is active.
+
+References:
+
+- ADR 0011 (`multi-root overlays`): `docs/adr/0011-overlays-and-multi-root.md`
+- ADR 0067 (`overlay policy split`): `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
+
+### 4) Viewport tool capture and dock drag capture do not conflict
+
+**Goal**
+
+- A single pointer session cannot be owned by both viewport capture and dock drag.
+
+**Automated coverage (unit tests)**
+
+- Dock drag suppresses viewport hover + wheel forwarding:
+  - `crates/fret-components-docking/src/dock/tests.rs`
+- Viewport capture continues to emit clamped pointer moves even when leaving the viewport:
+  - `crates/fret-components-docking/src/dock/tests.rs`
+
+**Manual steps (needs viewport demo)**
+
+1. Start a viewport drag (camera orbit / marquee).
+2. While dragging, attempt to start a dock tab drag or split drag.
+
+**Expected**
+
+- The active session remains the owner; no competing capture session starts.
+
+References:
+
+- ADR 0072: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
+- Viewport input boundary: `docs/adr/0025-viewport-input-forwarding.md`
+
+### 5) Escape cancels dock drag and restores pre-drag overlay/focus state safely
+
+**Goal**
+
+- Escape cancels the cross-window dock drag session.
+- Focus/overlays do not end up in a broken state.
+
+**Manual steps**
+
+1. Start a dock tab drag.
+2. Press Escape.
+
+**Expected**
+
+- Drag session ends (no dock op committed).
+- Window focus/overlays are restored safely (no forced focus changes mid-cancel).
+
+---
+
+## Next recommended harness (P0)
+
+Add a dedicated demo that combines:
+
+- one dock space with at least one real viewport panel (generates `Effect::ViewportInput`),
+- a non-modal overlay trigger (popover/menu),
+- and a modal dialog trigger,
+
+so that ADR 0072 can be validated end-to-end in one window.
+

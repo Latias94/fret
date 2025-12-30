@@ -264,6 +264,7 @@ Implementation anchors:
 
 - Docking UI/policy: `crates/fret-components-docking/src/dock/*`
 - Demo harness: `crates/fret-demo/src/docking_demo.rs`
+- Conformance checklist: `docs/docking-arbitration-checklist.md`
 
 **Important portability note**
 
