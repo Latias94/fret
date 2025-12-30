@@ -5,6 +5,7 @@ use fret_ui::Invalidation;
 use fret_ui::element::{ContainerProps, FlexProps, Length, SizeStyle, TextInputProps};
 use fret_ui::{ElementCx, Theme, UiHost};
 
+use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::icon;
 use crate::declarative::style as decl_style;
 use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
@@ -136,10 +137,10 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
                     out.push(cx.pressable(
                         fret_ui::element::PressableProps {
                             layout: right_layout,
-                            on_click: Some(clear_command),
                             ..Default::default()
                         },
                         |cx, _st| {
+                            cx.pressable_dispatch_command(clear_command.clone());
                             vec![cx.flex(
                                 FlexProps {
                                     layout: decl_style::layout_style(

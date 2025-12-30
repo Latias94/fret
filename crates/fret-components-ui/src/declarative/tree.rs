@@ -9,6 +9,7 @@ use fret_ui::element::{
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
 
+use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::stack;
 use crate::{
     Items, Justify, MetricRef, Size, Space, TreeEntry, TreeItemId, TreeRowRenderer, TreeRowState,
@@ -214,12 +215,12 @@ pub fn tree_view_with_renderer<H: UiHost>(
                     let toggle_cmd = entry
                         .has_children
                         .then(|| CommandId::new(format!("tree.toggle.{}", entry.id)));
+                    let select_cmd =
+                        enabled.then(|| CommandId::new(format!("tree.select.{}", entry.id)));
 
                     cx.pressable(
                         PressableProps {
                             enabled,
-                            on_click: enabled
-                                .then(|| CommandId::new(format!("tree.select.{}", entry.id))),
                             a11y: PressableA11y {
                                 role: Some(SemanticsRole::TreeItem),
                                 label: Some(entry.label.clone()),
@@ -229,6 +230,7 @@ pub fn tree_view_with_renderer<H: UiHost>(
                             ..Default::default()
                         },
                         |cx, st| {
+                            cx.pressable_dispatch_command_opt(select_cmd);
                             let row_bg = if bg.is_some() {
                                 bg
                             } else if enabled && st.pressed {
@@ -267,7 +269,6 @@ pub fn tree_view_with_renderer<H: UiHost>(
                                                 out.push(cx.pressable(
                                                     PressableProps {
                                                         enabled: toggle_cmd.is_some(),
-                                                        on_click: toggle_cmd.clone(),
                                                         a11y: PressableA11y {
                                                             role: Some(SemanticsRole::Button),
                                                             label: Some(Arc::from("Toggle")),
@@ -276,7 +277,12 @@ pub fn tree_view_with_renderer<H: UiHost>(
                                                         },
                                                         ..Default::default()
                                                     },
-                                                    |cx, _st| vec![cx.text(glyph.as_ref())],
+                                                    |cx, _st| {
+                                                        cx.pressable_dispatch_command_opt(
+                                                            toggle_cmd,
+                                                        );
+                                                        vec![cx.text(glyph.as_ref())]
+                                                    },
                                                 ));
                                             } else {
                                                 out.push(cx.spacer(SpacerProps {

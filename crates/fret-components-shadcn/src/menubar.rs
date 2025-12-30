@@ -358,7 +358,6 @@ impl MenubarMenu {
                     layout: trigger_layout,
                     enabled,
                     focusable: true,
-                    on_click: None,
                     focus_ring: Some(ring),
                     a11y: PressableA11y {
                         role: Some(SemanticsRole::MenuItem),
@@ -519,7 +518,6 @@ impl MenubarMenu {
                                                                     },
                                                                     enabled: item_enabled,
                                                                     focusable,
-                                                                    on_click: command,
                                                                     focus_ring: Some(item_ring),
                                                                     a11y: PressableA11y {
                                                                         role: Some(
@@ -534,6 +532,7 @@ impl MenubarMenu {
                                                                     ..Default::default()
                                                                 },
                                                                 move |cx, st| {
+                                                                    cx.pressable_dispatch_command_opt(command);
                                                                     cx.pressable_set_bool(open, false);
                                                                     cx.pressable_add_on_activate(
                                                                         Arc::new(move |host, _cx, _reason| {

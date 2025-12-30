@@ -5,6 +5,7 @@ use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 use std::sync::Arc;
 
+use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::cmdk_selection;
@@ -400,7 +401,6 @@ impl CommandList {
                                         layout: item_layout,
                                         enabled,
                                         focusable,
-                                        on_click: command,
                                         focus_ring: Some(ring),
                                         a11y: PressableA11y {
                                             role: Some(SemanticsRole::ListItem),
@@ -410,6 +410,7 @@ impl CommandList {
                                         ..Default::default()
                                     },
                                     move |cx, st| {
+                                        cx.pressable_dispatch_command_opt(command);
                                         let hovered = st.hovered && !st.pressed;
                                         let pressed = st.pressed;
 
@@ -691,7 +692,6 @@ impl CommandPalette {
                                 layout: item_layout,
                                 enabled,
                                 focusable: false,
-                                on_click: command,
                                 focus_ring: None,
                                 a11y: PressableA11y {
                                     role: Some(SemanticsRole::ListItem),
@@ -703,6 +703,7 @@ impl CommandPalette {
                                 ..Default::default()
                             },
                             move |cx, st| {
+                                cx.pressable_dispatch_command_opt(command);
                                 if enabled {
                                     let active = active;
                                     cx.pressable_on_hover_change(Arc::new(

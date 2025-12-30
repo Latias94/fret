@@ -1,14 +1,10 @@
 use fret_components_ui::LayoutRefinement;
 use fret_components_ui::declarative::style as decl_style;
-use fret_core::{Color, Corners, Edges, Px};
+use fret_components_ui::recipes::resizable as resizable_recipe;
+use fret_core::{Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ContainerProps, Length, ResizablePanelGroupProps, SizeStyle};
 use fret_ui::{ElementCx, ResizablePanelGroupStyle, Theme, UiHost};
-
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
-}
 
 #[derive(Clone)]
 pub struct ResizablePanel {
@@ -190,9 +186,8 @@ fn resizable_panel_group_with_entries<H: UiHost>(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
-    let mut style = style.unwrap_or_else(|| ResizablePanelGroupStyle::from_theme(&theme));
-    // Use a slightly softer default alpha to match shadcn-ish dividers.
-    style.handle_color = alpha_mul(style.handle_color, 0.9);
+    let style =
+        style.unwrap_or_else(|| resizable_recipe::default_resizable_panel_group_style(&theme));
 
     let mut panels: Vec<ResizablePanel> = Vec::new();
     let mut saw_handles = false;

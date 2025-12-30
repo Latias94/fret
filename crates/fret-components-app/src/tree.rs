@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_components_ui::declarative::action_hooks::ActionHooksExt;
 use fret_components_ui::tree::TreeEntry;
 use fret_components_ui::{TreeRowRenderer, TreeRowState};
 use fret_core::SemanticsRole;
@@ -37,7 +38,6 @@ impl<H: UiHost> TreeRowRenderer<H> for AppTreeRowRenderer {
         out.push(cx.pressable(
             PressableProps {
                 enabled: !state.disabled,
-                on_click: (!state.disabled).then_some(cmd),
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::Button),
                     label: Some(Arc::from("Row action")),
@@ -46,7 +46,10 @@ impl<H: UiHost> TreeRowRenderer<H> for AppTreeRowRenderer {
                 },
                 ..Default::default()
             },
-            |cx, _st| vec![cx.text("...")],
+            |cx, _st| {
+                cx.pressable_dispatch_command(cmd.clone());
+                vec![cx.text("...")]
+            },
         ));
 
         out

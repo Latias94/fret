@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
@@ -549,11 +550,13 @@ impl Item {
                 PressableProps {
                     layout,
                     enabled,
-                    on_click,
                     focus_ring: Some(focus_ring),
                     ..Default::default()
                 },
-                move |cx, st| content(cx, st.hovered, st.pressed),
+                move |cx, st| {
+                    cx.pressable_dispatch_command_opt(on_click);
+                    content(cx, st.hovered, st.pressed)
+                },
             )
         } else {
             cx.container(

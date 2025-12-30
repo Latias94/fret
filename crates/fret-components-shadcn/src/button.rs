@@ -282,7 +282,6 @@ impl Button {
                     layout: pressable_layout,
                     enabled: !disabled,
                     focusable: true,
-                    on_click: command,
                     focus_ring: Some(decl_style::focus_ring(&theme, radius)),
                     a11y: PressableA11y {
                         label: Some(a11y_label.clone()),
@@ -291,6 +290,7 @@ impl Button {
                     ..Default::default()
                 },
                 move |cx, st| {
+                    cx.pressable_dispatch_command_opt(command);
                     if let Some(model) = toggle_model {
                         cx.pressable_toggle_bool(model);
                     }

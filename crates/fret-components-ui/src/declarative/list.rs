@@ -5,6 +5,7 @@ use fret_ui::element::{AnyElement, ContainerProps, PressableProps, SpacerProps};
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
 
+use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::stack;
 use crate::{Items, Justify, MetricRef, Size, Space};
 
@@ -103,10 +104,10 @@ pub fn list_virtualized<H: UiHost>(
                     cx.pressable(
                         PressableProps {
                             enabled,
-                            on_click: cmd,
                             ..Default::default()
                         },
                         |cx, st| {
+                            cx.pressable_dispatch_command_opt(cmd);
                             let is_selected = selected == Some(i);
                             let bg = if is_selected || (enabled && st.pressed) {
                                 Some(row_active)

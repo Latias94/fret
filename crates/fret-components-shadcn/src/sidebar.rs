@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_components_icons::IconId;
+use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::icon as decl_icon;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
@@ -419,7 +420,6 @@ impl SidebarMenuButton {
 
         let pressable = PressableProps {
             enabled: !self.disabled,
-            on_click: self.on_click.clone(),
             focus_ring: Some(ring),
             layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
             ..Default::default()
@@ -430,8 +430,10 @@ impl SidebarMenuButton {
         let active = self.active;
         let disabled = self.disabled;
         let collapsed = self.collapsed;
+        let on_click = self.on_click.clone();
 
         cx.pressable(pressable, move |cx, st| {
+            cx.pressable_dispatch_command_opt(on_click);
             let theme = Theme::global(&*cx.app).clone();
 
             let bg = if active || st.hovered || st.pressed {

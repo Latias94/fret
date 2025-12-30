@@ -265,7 +265,6 @@ impl Tabs {
                                     layout: trigger_layout,
                                     enabled: !item_disabled,
                                     focusable: tab_stop,
-                                    on_click: None,
                                     focus_ring: Some(ring),
                                     a11y: PressableA11y {
                                         role: Some(SemanticsRole::Tab),

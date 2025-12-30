@@ -138,7 +138,6 @@ impl Switch {
                     layout: pressable_layout,
                     enabled: !disabled,
                     focusable: true,
-                    on_click,
                     focus_ring: Some(ring),
                     a11y: PressableA11y {
                         role: Some(fret_core::SemanticsRole::Switch),
@@ -149,6 +148,7 @@ impl Switch {
                     ..Default::default()
                 },
                 move |cx, st| {
+                    cx.pressable_dispatch_command_opt(on_click);
                     cx.pressable_toggle_bool(model);
 
                     let theme = Theme::global(&*cx.app).clone();

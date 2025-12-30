@@ -1,3 +1,4 @@
+use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{LayoutRefinement, MetricRef, Radius, Size as ComponentSize, Space};
 use fret_core::{Color, Corners, Edges, Px};
@@ -318,11 +319,13 @@ impl PaginationLink {
             PressableProps {
                 layout,
                 enabled,
-                on_click: self.command,
                 focus_ring: Some(focus_ring),
                 ..Default::default()
             },
-            move |cx, st| content(cx, st.hovered, st.pressed),
+            move |cx, st| {
+                cx.pressable_dispatch_command_opt(self.command);
+                content(cx, st.hovered, st.pressed)
+            },
         )
     }
 }

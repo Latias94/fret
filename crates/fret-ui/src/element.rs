@@ -317,7 +317,6 @@ pub struct PressableProps {
     /// When `false`, the node can still be focused programmatically (e.g. roving focus),
     /// but it is skipped by the default focus traversal.
     pub focusable: bool,
-    pub on_click: Option<CommandId>,
     pub focus_ring: Option<RingStyle>,
     pub a11y: PressableA11y,
 }
@@ -327,8 +326,7 @@ impl std::fmt::Debug for PressableProps {
         let mut out = f.debug_struct("PressableProps");
         out.field("layout", &self.layout)
             .field("enabled", &self.enabled)
-            .field("focusable", &self.focusable)
-            .field("on_click", &self.on_click);
+            .field("focusable", &self.focusable);
 
         out.field("focus_ring", &self.focus_ring)
             .field("a11y", &self.a11y)
@@ -342,7 +340,6 @@ impl Default for PressableProps {
             layout: LayoutStyle::default(),
             enabled: true,
             focusable: true,
-            on_click: None,
             focus_ring: None,
             a11y: PressableA11y::default(),
         }

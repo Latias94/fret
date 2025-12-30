@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::{MetricRef, Space};
 use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
@@ -158,17 +159,12 @@ impl BreadcrumbItem {
                     return breadcrumb_link_text(cx, self.label, base_style, muted, fg, false);
                 };
 
-                cx.pressable(
-                    PressableProps {
-                        on_click: Some(command),
-                        ..Default::default()
-                    },
-                    move |cx, st| {
-                        vec![breadcrumb_link_text(
-                            cx, self.label, base_style, muted, fg, st.hovered,
-                        )]
-                    },
-                )
+                cx.pressable(PressableProps::default(), move |cx, st| {
+                    cx.pressable_dispatch_command(command.clone());
+                    vec![breadcrumb_link_text(
+                        cx, self.label, base_style, muted, fg, st.hovered,
+                    )]
+                })
             }
         }
     }

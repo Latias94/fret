@@ -242,7 +242,6 @@ pub fn combobox<H: UiHost>(
                 layout: trigger_layout,
                 enabled,
                 focusable: true,
-                on_click: None,
                 focus_ring: Some(ring),
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::ComboBox),
@@ -520,7 +519,6 @@ pub fn combobox<H: UiHost>(
                                                                             },
                                                                             enabled: !item_disabled,
                                                                             focusable: tab_stop,
-                                                                            on_click: None,
                                                                             focus_ring: Some(item_ring),
                                                                             a11y: PressableA11y {
                                                                                 role: Some(

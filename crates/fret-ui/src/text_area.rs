@@ -244,24 +244,10 @@ impl TextArea {
             self.style.padding_y = theme.metrics.padding_md;
             self.style.background = theme.colors.panel_background;
             self.style.border_color = theme.colors.panel_border;
-            self.style.focus_ring = Some(crate::element::RingStyle {
-                placement: crate::element::RingPlacement::Outset,
-                width: theme
-                    .metric_by_key("component.ring.width")
-                    .unwrap_or(Px(2.0)),
-                offset: theme
-                    .metric_by_key("component.ring.offset")
-                    .unwrap_or(Px(2.0)),
-                color: theme
-                    .color_by_key("ring")
-                    .unwrap_or(theme.colors.focus_ring),
-                offset_color: Some(
-                    theme
-                        .color_by_key("ring-offset-background")
-                        .unwrap_or(theme.colors.surface_background),
-                ),
-                corner_radii: Corners::all(theme.metrics.radius_md),
-            });
+            // Focus ring styling is intentionally component-owned (recipes) rather than
+            // runtime-owned to keep `fret-ui` mechanism-only (ADR 0066). Component libraries can
+            // set `TextAreaStyle.focus_ring` explicitly when desired.
+            self.style.focus_ring = None;
             self.style.corner_radii = Corners::all(theme.metrics.radius_md);
             self.style.text_color = theme.colors.text_primary;
             self.style.selection_color = theme.colors.selection_background;

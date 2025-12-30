@@ -127,7 +127,6 @@ impl Checkbox {
                     layout: pressable_layout,
                     enabled: !disabled,
                     focusable: true,
-                    on_click,
                     focus_ring: Some(decl_style::focus_ring(&theme, radius)),
                     a11y: PressableA11y {
                         role: Some(fret_core::SemanticsRole::Checkbox),
@@ -138,6 +137,7 @@ impl Checkbox {
                     ..Default::default()
                 },
                 move |cx, st| {
+                    cx.pressable_dispatch_command_opt(on_click);
                     cx.pressable_toggle_bool(model);
 
                     let theme = Theme::global(&*cx.app).clone();

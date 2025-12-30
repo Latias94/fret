@@ -722,14 +722,14 @@ pub fn render<H: UiHost>(
         let focus = ui.focus();
         if focus.is_some_and(|n| ui.node_layer(n) == Some(layer)) {
             ui.set_layer_visible(layer, false);
-            if let Some(node) = restore_focus
+            // Prefer resolving the trigger at restore time to avoid relying on potentially stale
+            // `NodeId` snapshots across frames.
+            if let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger) {
+                ui.set_focus(Some(trigger_node));
+            } else if let Some(node) = restore_focus
                 && ui.node_layer(node).is_some()
             {
                 ui.set_focus(Some(node));
-            } else if let Some(trigger_node) =
-                fret_ui::elements::node_for_element(app, window, trigger)
-            {
-                ui.set_focus(Some(trigger_node));
             }
         } else {
             ui.set_layer_visible(layer, false);
@@ -742,15 +742,17 @@ pub fn render<H: UiHost>(
 
         if focus.is_none() || focus_in_layer {
             ui.set_layer_visible(layer, false);
-            if let Some(node) = restore_focus
-                && ui.node_layer(node).is_some()
-            {
-                ui.set_focus(Some(node));
-            } else if let Some(trigger) = trigger
+            // Prefer resolving the trigger at restore time to avoid relying on potentially stale
+            // `NodeId` snapshots across frames.
+            if let Some(trigger) = trigger
                 && let Some(trigger_node) =
                     fret_ui::elements::node_for_element(app, window, trigger)
             {
                 ui.set_focus(Some(trigger_node));
+            } else if let Some(node) = restore_focus
+                && ui.node_layer(node).is_some()
+            {
+                ui.set_focus(Some(node));
             }
         } else {
             ui.set_layer_visible(layer, false);
@@ -959,7 +961,6 @@ pub fn render<H: UiHost>(
                                         layout: fret_ui::element::LayoutStyle::default(),
                                         enabled: true,
                                         focusable: false,
-                                        on_click: None,
                                         focus_ring: None,
                                         a11y: Default::default(),
                                     },
@@ -988,11 +989,15 @@ pub fn render<H: UiHost>(
                                         layout: fret_ui::element::LayoutStyle::default(),
                                         enabled: true,
                                         focusable: false,
-                                        on_click: Some(cmd),
                                         focus_ring: None,
                                         a11y: Default::default(),
                                     },
                                     move |cx, _st| {
+                                        cx.pressable_add_on_activate(Arc::new(
+                                            move |host, cx, _reason| {
+                                                host.dispatch_command(Some(cx.window), cmd.clone());
+                                            },
+                                        ));
                                         cx.pressable_add_on_activate(Arc::new(
                                             move |host, cx, _reason| {
                                                 let _ = dismiss_toast_action(
@@ -1462,7 +1467,6 @@ mod tests {
                         },
                         enabled: true,
                         focusable: true,
-                        on_click: None,
                         ..Default::default()
                     },
                     |_cx, _st| vec![],
@@ -1583,7 +1587,6 @@ mod tests {
                         },
                         enabled: true,
                         focusable: false,
-                        on_click: None,
                         ..Default::default()
                     },
                     |cx, _st| {
@@ -1695,7 +1698,6 @@ mod tests {
                         },
                         enabled: true,
                         focusable: false,
-                        on_click: None,
                         ..Default::default()
                     },
                     |cx, _st| {

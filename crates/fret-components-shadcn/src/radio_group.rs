@@ -227,7 +227,6 @@ impl RadioGroup {
                                         layout: pressable_layout,
                                         enabled: item_enabled,
                                         focusable: tab_stop,
-                                        on_click: None,
                                         focus_ring: Some(ring_style),
                                         a11y: PressableA11y {
                                             role: Some(SemanticsRole::ListItem),

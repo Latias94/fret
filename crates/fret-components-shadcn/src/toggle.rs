@@ -242,7 +242,6 @@ impl Toggle {
                 layout: pressable_layout,
                 enabled: !disabled,
                 focusable: true,
-                on_click,
                 focus_ring: Some(ring),
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::Button),
@@ -253,6 +252,7 @@ impl Toggle {
                 ..Default::default()
             },
             move |cx, state| {
+                cx.pressable_dispatch_command_opt(on_click);
                 cx.pressable_toggle_bool(model);
 
                 let on = cx.app.models().get(model).copied().unwrap_or(false);

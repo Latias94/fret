@@ -364,7 +364,6 @@ impl ContextMenu {
                                                                 },
                                                                 enabled: !disabled,
                                                                 focusable: !disabled,
-                                                                on_click: command,
                                                                 focus_ring: Some(ring),
                                                                 a11y: PressableA11y {
                                                                     role: Some(SemanticsRole::MenuItem),
@@ -378,6 +377,7 @@ impl ContextMenu {
                                                                 ..Default::default()
                                                             },
                                                             move |cx, st| {
+                                                                cx.pressable_dispatch_command_opt(command);
                                                                 if !disabled {
                                                                     cx.pressable_set_bool(open, false);
                                                                 }

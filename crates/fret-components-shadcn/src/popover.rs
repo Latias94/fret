@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
+use fret_components_ui::declarative::presence;
 use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::headless::presence::FadePresence;
 use fret_components_ui::window_overlays;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_core::{
     Edges, FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
 };
-use fret_runtime::{Effect, Model};
+use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
@@ -124,21 +124,7 @@ impl Popover {
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
 
-            #[derive(Default)]
-            struct PresenceState {
-                tick: u64,
-                presence: FadePresence,
-            }
-
-            let presence = cx.with_state(PresenceState::default, |st| {
-                st.tick = st.tick.saturating_add(1);
-                st.presence.update(is_open, st.tick)
-            });
-
-            if presence.animating {
-                cx.app.push_effect(Effect::RequestAnimationFrame(cx.window));
-                cx.app.request_redraw(cx.window);
-            }
+            let presence = presence::fade_presence(cx, is_open, 4);
 
             if presence.present {
                 let overlay_root_name = window_overlays::popover_root_name(trigger_id);

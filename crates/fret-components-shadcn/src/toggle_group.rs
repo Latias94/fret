@@ -340,7 +340,6 @@ impl ToggleGroup {
                                     ),
                                     enabled,
                                     focusable,
-                                    on_click: None,
                                     focus_ring: Some(ring),
                                     a11y: PressableA11y {
                                         role: Some(SemanticsRole::Button),

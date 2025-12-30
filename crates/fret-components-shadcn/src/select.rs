@@ -181,7 +181,6 @@ pub fn select<H: UiHost>(
                 layout: trigger_layout,
                 enabled,
                 focusable: true,
-                on_click: None,
                 focus_ring: Some(ring),
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::ComboBox),
@@ -329,11 +328,10 @@ pub fn select<H: UiHost>(
                                                                     },
                                                                     enabled: !item_disabled,
                                                                     focusable: tab_stop,
-                                                                    on_click: None,
                                                                     focus_ring: Some(item_ring),
-                                                                     a11y: PressableA11y {
-                                                                         role: Some(SemanticsRole::ListItem),
-                                                                         label: Some(item.label.clone()),
+                                                                    a11y: PressableA11y {
+                                                                        role: Some(SemanticsRole::ListItem),
+                                                                        label: Some(item.label.clone()),
                                                                          selected: is_selected,
                                                                          ..Default::default()
                                                                     }

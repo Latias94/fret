@@ -56,16 +56,12 @@ impl ResizablePanelGroupStyle {
             .unwrap_or(theme.snapshot().colors.panel_border);
 
         Self {
-            gap: theme
-                .metric_by_key("component.resizable.gap")
-                .unwrap_or(Px(0.0)),
-            hit_thickness: theme
-                .metric_by_key("component.resizable.hit_thickness")
-                .unwrap_or(Px(6.0)),
-            paint_device_px: theme
-                .metric_by_key("component.resizable.paint_device_px")
-                .map(|p| p.0.max(1.0))
-                .unwrap_or(1.0),
+            // Note: this runtime crate intentionally avoids reading component-layer extension tokens
+            // (e.g. `component.*`). Component libraries should resolve their own chrome and pass an
+            // explicit `ResizablePanelGroupStyle` when needed.
+            gap: Px(0.0),
+            hit_thickness: Px(6.0),
+            paint_device_px: 1.0,
             handle_color,
             ..Default::default()
         }

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
 use fret_core::geometry::Edges;
@@ -245,12 +246,12 @@ impl TableRow {
         };
         let pressable = PressableProps {
             enabled,
-            on_click,
             layout: pressable_layout,
             ..Default::default()
         };
 
         cx.pressable(pressable, move |cx, state| {
+            cx.pressable_dispatch_command_opt(on_click);
             let theme = Theme::global(&*cx.app).clone();
 
             let mut hover_bg = muted_bg(&theme);

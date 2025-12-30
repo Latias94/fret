@@ -142,7 +142,6 @@ impl AccordionTrigger {
                 layout: pressable_layout,
                 enabled,
                 focusable,
-                on_click: None,
                 focus_ring: Some(decl_style::focus_ring(&theme, radius)),
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::Button),

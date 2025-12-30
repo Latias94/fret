@@ -1,3 +1,4 @@
+use fret_runtime::CommandId;
 use fret_runtime::Model;
 use fret_ui::ElementCx;
 use fret_ui::UiHost;
@@ -14,6 +15,10 @@ use std::sync::Arc;
 /// These helpers keep common interaction policies out of `crates/fret-ui` while remaining easy to
 /// use in declarative authoring code.
 pub trait ActionHooksExt {
+    fn pressable_dispatch_command(&mut self, command: CommandId);
+
+    fn pressable_dispatch_command_opt(&mut self, command: Option<CommandId>);
+
     fn pressable_toggle_bool(&mut self, model: Model<bool>);
 
     fn pressable_set_bool(&mut self, model: Model<bool>, value: bool);
@@ -38,6 +43,19 @@ pub trait ActionHooksExt {
 }
 
 impl<H: UiHost> ActionHooksExt for ElementCx<'_, H> {
+    fn pressable_dispatch_command(&mut self, command: CommandId) {
+        self.pressable_add_on_activate(Arc::new(move |host, acx, _reason| {
+            host.dispatch_command(Some(acx.window), command.clone());
+        }));
+    }
+
+    fn pressable_dispatch_command_opt(&mut self, command: Option<CommandId>) {
+        let Some(command) = command else {
+            return;
+        };
+        self.pressable_dispatch_command(command);
+    }
+
     fn pressable_toggle_bool(&mut self, model: Model<bool>) {
         self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
             let _ = host.models_mut().update(model, |v| *v = !*v);

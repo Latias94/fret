@@ -1537,9 +1537,6 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                         ActivateReason::Pointer,
                                     );
                                 }
-                                if let Some(command) = props.on_click.clone() {
-                                    cx.dispatch_command(command);
-                                }
                             }
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
@@ -1610,9 +1607,6 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                 },
                                 ActivateReason::Keyboard,
                             );
-                        }
-                        if let Some(command) = props.on_click.clone() {
-                            cx.dispatch_command(command);
                         }
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
@@ -6301,13 +6295,15 @@ mod tests {
             bounds,
             "pressable-keyboard",
             |cx| {
-                vec![cx.pressable(
-                    crate::element::PressableProps {
-                        on_click: Some(cmd.clone()),
-                        ..Default::default()
-                    },
-                    |cx, _state| vec![cx.text("ok")],
-                )]
+                vec![
+                    cx.pressable(crate::element::PressableProps::default(), |cx, _state| {
+                        let cmd = cmd.clone();
+                        cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
+                            host.dispatch_command(Some(acx.window), cmd.clone());
+                        }));
+                        vec![cx.text("ok")]
+                    }),
+                ]
             },
         );
         ui.set_root(root);
@@ -7502,10 +7498,13 @@ mod tests {
                 vec![cx.pressable(
                     crate::element::PressableProps {
                         enabled: true,
-                        on_click: Some(command.clone()),
                         ..Default::default()
                     },
                     |cx, _state| {
+                        let command = command.clone();
+                        cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
+                            host.dispatch_command(Some(acx.window), command.clone());
+                        }));
                         vec![cx.container(
                             crate::element::ContainerProps {
                                 padding: fret_core::Edges::all(Px(4.0)),
