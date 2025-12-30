@@ -116,7 +116,7 @@ It complements (but does not replace) ADRs:
   - ADRs: `docs/adr/0003-platform-boundary.md`
   - Code: `crates/fret-platform/src/*`, `crates/fret-runner-winit-wgpu/src/runner.rs`
 
-- **Decide whether `fret-platform::winit::WinitWindows` is part of the intended surface**
-  - Problem: `crates/fret-platform/src/winit.rs` defines a window registry that is currently unused by `fret-runner-winit-wgpu`; decide whether to (a) use it, (b) keep it as internal scaffolding, or (c) remove it to avoid parallel window-tracking implementations.
+- **Decide whether `fret-platform` remains "a11y-only" or grows into a broader platform IO boundary**
+  - Problem: `crates/fret-platform` currently only contains the AccessKit bridge (`crates/fret-platform/src/accessibility.rs`), while window lifecycle, event translation, and effect draining live in `fret-runner-winit-wgpu`; decide whether we want a single platform IO substrate crate to avoid duplicated registries and translation logic as backends grow (winit/web/etc).
   - ADRs: `docs/adr/0003-platform-boundary.md`
-  - Code: `crates/fret-platform/src/winit.rs`, `crates/fret-runner-winit-wgpu/src/runner.rs`
+  - Code: `crates/fret-platform/src/accessibility.rs`, `crates/fret-runner-winit-wgpu/src/runner.rs`
