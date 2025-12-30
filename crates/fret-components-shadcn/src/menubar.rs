@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
+use fret_components_ui::overlay;
 use fret_components_ui::window_overlays;
 use fret_components_ui::{MetricRef, Space};
 use fret_core::{
@@ -16,7 +17,7 @@ use fret_ui::element::{
     SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized, inset_rect};
+use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementCx, Theme, UiHost};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -376,10 +377,10 @@ impl MenubarMenu {
                     let group_active = group_active;
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                        let Some(anchor) = crate::overlay_anchor::anchor_bounds_for_element(cx, trigger_id) else {
+                        let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id) else {
                             return Vec::new();
                         };
-                        let outer = inset_rect(cx.bounds, Edges::all(window_margin));
+                        let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
                         let estimated = fret_core::Size::new(Px(240.0), Px(220.0));
 
                         let placed = anchored_panel_bounds_sized(

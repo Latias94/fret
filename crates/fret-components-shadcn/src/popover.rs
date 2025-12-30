@@ -2,18 +2,17 @@ use std::sync::Arc;
 
 use fret_components_ui::declarative::presence;
 use fret_components_ui::declarative::style as decl_style;
+use fret_components_ui::overlay;
 use fret_components_ui::window_overlays;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
-use fret_core::{
-    Edges, FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
     PositionStyle, SemanticsProps, SizeStyle, TextProps,
 };
-use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized, inset_rect};
+use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementCx, Theme, UiHost};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -139,7 +138,7 @@ impl Popover {
 
                 let opacity = presence.opacity;
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                    let anchor = crate::overlay_anchor::anchor_bounds_for_element(cx, trigger_id);
+                    let anchor = overlay::anchor_bounds_for_element(cx, trigger_id);
                     let Some(anchor) = anchor else {
                         return Vec::new();
                     };
@@ -147,7 +146,7 @@ impl Popover {
                     let content = content(cx);
                     let content_id = content.id;
 
-                    let outer = inset_rect(cx.bounds, Edges::all(window_margin));
+                    let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
 
                     let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
                     let estimated = Size::new(Px(256.0), Px(160.0));

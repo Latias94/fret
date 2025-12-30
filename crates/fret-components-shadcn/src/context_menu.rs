@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_components_ui::declarative::style as decl_style;
+use fret_components_ui::overlay;
 use fret_components_ui::window_overlays;
 use fret_components_ui::{MetricRef, Space};
 use fret_core::{
@@ -15,7 +16,7 @@ use fret_ui::element::{
     Overflow, PointerRegionProps, PointerRegionState, PositionStyle, PressableA11y, PressableProps,
     RovingFlexProps, RovingFocusProps, SemanticsProps, SizeStyle, TextProps,
 };
-use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized, inset_rect};
+use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
 
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
@@ -196,7 +197,7 @@ impl ContextMenu {
 
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                     let trigger_bounds =
-                        crate::overlay_anchor::anchor_bounds_for_element(cx, trigger_id);
+                        overlay::anchor_bounds_for_element(cx, trigger_id);
                     let anchor = anchor_point.or_else(|| trigger_bounds.map(|r| r.origin));
                     let Some(anchor) = anchor else {
                         return Vec::new();
@@ -218,7 +219,7 @@ impl ContextMenu {
                     let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
                     let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
 
-                    let outer = inset_rect(cx.bounds, Edges::all(window_margin));
+                    let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
 
                     let estimated = Size::new(Px(220.0), Px(200.0));
 

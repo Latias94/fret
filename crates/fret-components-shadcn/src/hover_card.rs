@@ -1,8 +1,9 @@
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::hover_intent::{HoverIntentConfig, HoverIntentState};
+use fret_components_ui::overlay;
 use fret_components_ui::window_overlays;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
-use fret_core::{Edges, Px, Size};
+use fret_core::{Px, Size};
 use fret_runtime::Effect;
 use fret_ui::element::{AnyElement, HoverRegionProps, InsetStyle, LayoutStyle, PositionStyle};
 use fret_ui::{ElementCx, Theme, UiHost, overlay_placement};
@@ -156,7 +157,7 @@ impl HoverCard {
             let overlay_root_name = window_overlays::hover_overlay_root_name(hover_card_id);
 
             let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                let anchor = crate::overlay_anchor::anchor_bounds_for_element(cx, trigger_id);
+                let anchor = overlay::anchor_bounds_for_element(cx, trigger_id);
                 let Some(anchor) = anchor else {
                     cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
                         st.overlay_hovered = false;
@@ -168,7 +169,7 @@ impl HoverCard {
                 let estimated_size = Size::new(Px(256.0), Px(120.0));
                 let content_size = last_content_size.unwrap_or(estimated_size);
 
-                let outer = overlay_placement::inset_rect(cx.bounds, Edges::all(window_margin));
+                let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
 
                 let align = match align {
                     HoverCardAlign::Start => overlay_placement::Align::Start,

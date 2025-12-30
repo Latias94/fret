@@ -1,15 +1,16 @@
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::hover_intent::{HoverIntentConfig, HoverIntentState};
+use fret_components_ui::overlay;
 use fret_components_ui::window_overlays;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 use std::sync::Arc;
 
-use fret_core::{Edges, Px, Size, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Px, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Effect;
 use fret_ui::element::{
     AnyElement, HoverRegionProps, InsetStyle, LayoutStyle, PositionStyle, TextProps,
 };
-use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized, inset_rect};
+use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementCx, Theme, UiHost};
 
 fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
@@ -167,7 +168,7 @@ impl Tooltip {
             let overlay_root_name = window_overlays::tooltip_root_name(tooltip_id);
 
             let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                let anchor = crate::overlay_anchor::anchor_bounds_for_element(cx, trigger_id);
+                let anchor = overlay::anchor_bounds_for_element(cx, trigger_id);
                 let Some(anchor) = anchor else {
                     return Vec::new();
                 };
@@ -176,7 +177,7 @@ impl Tooltip {
                 let estimated_size = Size::new(Px(240.0), Px(44.0));
                 let content_size = last_content_size.unwrap_or(estimated_size);
 
-                let outer = inset_rect(cx.bounds, Edges::all(window_margin));
+                let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
 
                 let align = match align {
                     TooltipAlign::Start => Align::Start,

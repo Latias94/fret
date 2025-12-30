@@ -37,7 +37,6 @@ pub mod item;
 pub mod kbd;
 pub mod label;
 pub mod menubar;
-mod overlay_anchor;
 pub mod pagination;
 pub mod popover;
 pub mod progress;

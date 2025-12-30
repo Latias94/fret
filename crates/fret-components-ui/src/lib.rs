@@ -9,6 +9,7 @@
 
 pub mod declarative;
 pub mod headless;
+pub mod overlay;
 pub mod recipes;
 pub mod tree;
 pub mod window_overlays;

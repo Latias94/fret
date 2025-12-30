@@ -7,6 +7,7 @@ use fret_components_ui::declarative::icon as decl_icon;
 use fret_components_ui::declarative::scroll as decl_scroll;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
+use fret_components_ui::overlay;
 use fret_components_ui::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_components_ui::window_overlays;
 use fret_components_ui::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
@@ -256,7 +257,7 @@ pub fn combobox<H: UiHost>(
 
             if is_open
                 && enabled
-                && let Some(anchor) = crate::overlay_anchor::anchor_bounds_for_element(cx, trigger_id)
+                && let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id)
             {
                 let outer = cx.bounds;
 
