@@ -710,6 +710,26 @@ impl WinitDriver for DockingArbitrationDriver {
             value,
         );
     }
+
+    fn accessibility_set_text_selection(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        _window: AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+        anchor: u32,
+        focus: u32,
+    ) {
+        fret_ui_app::accessibility_actions::set_text_selection(
+            &mut state.ui,
+            app,
+            services,
+            target,
+            anchor,
+            focus,
+        );
+    }
 }
 
 pub fn run() -> anyhow::Result<()> {

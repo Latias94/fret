@@ -248,6 +248,10 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
         self.actions.set_value = editable;
     }
 
+    pub fn set_text_selection_supported(&mut self, supported: bool) {
+        self.actions.set_text_selection = supported;
+    }
+
     pub fn set_disabled(&mut self, disabled: bool) {
         self.flags.disabled = disabled;
     }

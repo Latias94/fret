@@ -722,11 +722,24 @@ pub trait WinitDriver {
         _value: f64,
     ) {
     }
+
+    fn accessibility_set_text_selection(
+        &mut self,
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _target: fret_core::NodeId,
+        _anchor: u32,
+        _focus: u32,
+    ) {
+    }
 }
 
 struct WindowRuntime<S> {
     window: Arc<Window>,
     accessibility: Option<fret_platform::accessibility::WinitAccessibility>,
+    last_accessibility_snapshot: Option<std::sync::Arc<fret_core::SemanticsSnapshot>>,
     surface: SurfaceState<'static>,
     scene: Scene,
     cursor_pos: Point,
@@ -1166,6 +1179,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             WindowRuntime {
                 window,
                 accessibility,
+                last_accessibility_snapshot: None,
                 surface,
                 scene: Scene::default(),
                 cursor_pos: Point::new(Px(0.0), Px(0.0)),
@@ -3149,6 +3163,9 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                         state.window.scale_factor(),
                     );
                     a11y.update_if_active(|| update);
+                    state.last_accessibility_snapshot = Some(snapshot);
+                } else {
+                    state.last_accessibility_snapshot = None;
                 }
 
                 let engine_frame = self.driver.record_engine_frame(
@@ -3278,6 +3295,30 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                             );
                         }
                     }
+                    self.app.request_redraw(app_window);
+                    continue;
+                }
+
+                let snapshot = state.last_accessibility_snapshot.clone().or_else(|| {
+                    self.driver
+                        .accessibility_snapshot(&mut self.app, app_window, &mut state.user)
+                });
+                if let Some(snapshot) = snapshot
+                    && let Some((target, data)) =
+                        fret_platform::accessibility::set_text_selection_from_action(
+                            &req, &snapshot,
+                        )
+                {
+                    let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
+                    self.driver.accessibility_set_text_selection(
+                        &mut self.app,
+                        services,
+                        app_window,
+                        &mut state.user,
+                        target,
+                        data.anchor,
+                        data.focus,
+                    );
                     self.app.request_redraw(app_window);
                 }
             }

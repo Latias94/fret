@@ -578,6 +578,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         cx.set_role(SemanticsRole::TextField);
         cx.set_focusable(true);
         cx.set_value_editable(true);
+        cx.set_text_selection_supported(true);
 
         let (value, text_selection, text_composition) = if self.is_ime_composing()
             && let (Some(prefix), Some(suffix)) =
@@ -615,6 +616,22 @@ impl<H: UiHost> Widget<H> for TextInput {
         let focused = self.is_focused(cx);
 
         match event {
+            Event::SetTextSelection { anchor, focus } => {
+                if !focused {
+                    return;
+                }
+                self.clear_ime_composition();
+                self.ime_replace_range = None;
+
+                let a = Self::clamp_to_boundary(self.text(), *anchor as usize);
+                let b = Self::clamp_to_boundary(self.text(), *focus as usize);
+                self.selection_anchor = a;
+                self.caret = b;
+
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                cx.stop_propagation();
+            }
             Event::Pointer(fret_core::PointerEvent::Down {
                 button, position, ..
             }) => {

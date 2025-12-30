@@ -373,6 +373,14 @@ pub enum Event {
         modifiers: Modifiers,
     },
     TextInput(String),
+    /// Sets the current selection (or caret when `anchor == focus`) in UTF-8 byte offsets
+    /// within the focused widget's text buffer (ADR 0071).
+    ///
+    /// This event is primarily intended for accessibility and automation backends.
+    SetTextSelection {
+        anchor: u32,
+        focus: u32,
+    },
     /// Clipboard text payload delivered to the focused widget (typically as the result of a paste request).
     ClipboardText(String),
     /// Window close button / OS close request was triggered.

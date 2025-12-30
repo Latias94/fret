@@ -348,6 +348,9 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         if node.actions.set_value {
             out.add_action(Action::SetValue);
         }
+        if node.actions.set_text_selection && node.value.is_some() {
+            out.add_action(Action::SetTextSelection);
+        }
 
         if let Some(label) = node.label.as_ref() {
             match node.role {
@@ -429,9 +432,66 @@ pub fn set_value_from_action(req: &ActionRequest) -> Option<(fret_core::NodeId, 
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SetTextSelectionData {
+    pub anchor: u32,
+    pub focus: u32,
+}
+
+fn character_index_to_byte_offset(value: &str, character_index: usize) -> u32 {
+    let mut byte_offset: u32 = 0;
+    let mut i: usize = 0;
+    for ch in value.chars() {
+        if i >= character_index {
+            break;
+        }
+        byte_offset = byte_offset.saturating_add(ch.len_utf8() as u32);
+        i += 1;
+    }
+    byte_offset.min(value.len() as u32)
+}
+
+fn text_selection_target_from_position(pos: &TextPosition) -> Option<fret_core::NodeId> {
+    parent_from_synthetic_id(pos.node).or_else(|| from_accesskit_id(pos.node))
+}
+
+pub fn set_text_selection_from_action(
+    req: &ActionRequest,
+    snapshot: &SemanticsSnapshot,
+) -> Option<(fret_core::NodeId, SetTextSelectionData)> {
+    if req.action != Action::SetTextSelection {
+        return None;
+    }
+
+    let target = parent_from_synthetic_id(req.target).or_else(|| from_accesskit_id(req.target))?;
+    let data = req.data.as_ref()?;
+    let accesskit::ActionData::SetTextSelection(sel) = data else {
+        return None;
+    };
+
+    let node = snapshot.nodes.iter().find(|n| n.id == target)?;
+    let value = node.value.as_deref()?;
+    if node.text_composition.is_some() {
+        return None;
+    }
+
+    let anchor_target = text_selection_target_from_position(&sel.anchor)?;
+    let focus_target = text_selection_target_from_position(&sel.focus)?;
+    if anchor_target != target || focus_target != target {
+        return None;
+    }
+
+    let anchor = character_index_to_byte_offset(value, sel.anchor.character_index);
+    let focus = character_index_to_byte_offset(value, sel.focus.character_index);
+
+    Some((target, SetTextSelectionData { anchor, focus }))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{text_run_id_for, to_accesskit_id, tree_update_from_snapshot};
+    use super::{
+        set_text_selection_from_action, text_run_id_for, to_accesskit_id, tree_update_from_snapshot,
+    };
     use fret_core::{
         AppWindowId, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole,
         SemanticsRoot, SemanticsSnapshot,
@@ -738,5 +798,93 @@ mod tests {
         assert_eq!(selection.anchor.character_index, 1);
         assert_eq!(selection.focus.node, run_id);
         assert_eq!(selection.focus.character_index, 4);
+    }
+
+    #[test]
+    fn set_text_selection_action_converts_character_indices_to_utf8_bytes() {
+        let window = AppWindowId::default();
+        let root = node(1);
+        let input = node(2);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(10.0), Px(10.0)),
+        );
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root,
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus: Some(input),
+            captured: None,
+            nodes: vec![
+                SemanticsNode {
+                    id: root,
+                    parent: None,
+                    role: SemanticsRole::Window,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                },
+                SemanticsNode {
+                    id: input,
+                    parent: Some(root),
+                    role: SemanticsRole::TextField,
+                    bounds,
+                    flags: SemanticsFlags {
+                        focused: true,
+                        ..SemanticsFlags::default()
+                    },
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: Some("a😀b".to_string()),
+                    text_selection: Some((0, 0)),
+                    text_composition: None,
+                    actions: SemanticsActions {
+                        focus: true,
+                        set_text_selection: true,
+                        ..SemanticsActions::default()
+                    },
+                },
+            ],
+        };
+
+        let req = accesskit::ActionRequest {
+            action: accesskit::Action::SetTextSelection,
+            target: to_accesskit_id(input),
+            data: Some(accesskit::ActionData::SetTextSelection(
+                accesskit::TextSelection {
+                    anchor: accesskit::TextPosition {
+                        node: text_run_id_for(input),
+                        character_index: 1,
+                    },
+                    focus: accesskit::TextPosition {
+                        node: text_run_id_for(input),
+                        character_index: 2,
+                    },
+                },
+            )),
+        };
+
+        let (target, data) =
+            set_text_selection_from_action(&req, &snapshot).expect("decoded selection");
+        assert_eq!(target, input);
+        assert_eq!(data.anchor, 1);
+        assert_eq!(data.focus, 5);
     }
 }

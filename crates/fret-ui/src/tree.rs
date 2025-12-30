@@ -3070,6 +3070,7 @@ impl<H: UiHost> UiTree<H> {
                     focus: is_focusable || is_text_input,
                     invoke: false,
                     set_value: is_text_input,
+                    set_text_selection: is_text_input,
                 };
 
                 // Preserve a stable-ish order: visit children in declared order.

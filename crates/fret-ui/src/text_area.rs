@@ -621,6 +621,7 @@ impl<H: UiHost> Widget<H> for TextArea {
         cx.set_role(SemanticsRole::TextField);
         cx.set_focusable(true);
         cx.set_value_editable(true);
+        cx.set_text_selection_supported(true);
 
         let (value, text_selection, text_composition) = if self.is_ime_composing()
             && let Some(layout_text) = self.layout_text()
@@ -654,7 +655,25 @@ impl<H: UiHost> Widget<H> for TextArea {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme());
+        let focused = cx.focus == Some(cx.node);
         match event {
+            Event::SetTextSelection { anchor, focus } => {
+                if !focused {
+                    return;
+                }
+                self.clear_preedit();
+                self.ime_replace_range = None;
+
+                let a = Self::clamp_to_boundary(self.text(), *anchor as usize);
+                let b = Self::clamp_to_boundary(self.text(), *focus as usize);
+                self.selection_anchor = a;
+                self.caret = b;
+                self.ensure_caret_visible = true;
+
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                cx.stop_propagation();
+            }
             Event::Pointer(fret_core::PointerEvent::Wheel { delta, .. }) => {
                 self.offset_y = Px((self.offset_y.0 - delta.y.0).max(0.0));
                 self.clamp_offset(self.last_content_height, self.last_viewport_height);

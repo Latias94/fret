@@ -45,3 +45,15 @@ pub fn set_value_numeric(
 ) {
     set_value_text(ui, app, services, target, &value.to_string());
 }
+
+pub fn set_text_selection(
+    ui: &mut UiTree,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    target: NodeId,
+    anchor: u32,
+    focus: u32,
+) {
+    ui.set_focus(Some(target));
+    ui.dispatch_event(app, services, &Event::SetTextSelection { anchor, focus });
+}

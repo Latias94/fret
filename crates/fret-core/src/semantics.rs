@@ -30,6 +30,7 @@ pub struct SemanticsActions {
     pub focus: bool,
     pub invoke: bool,
     pub set_value: bool,
+    pub set_text_selection: bool,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
