@@ -30,6 +30,26 @@ use crate::error::RunnerError;
 
 type WindowAnchor = fret_core::WindowAnchor;
 
+fn validate_scene_if_enabled(scene: &Scene) {
+    if std::env::var_os("FRET_VALIDATE_SCENE").is_none() {
+        return;
+    }
+
+    if let Err(err) = scene.validate() {
+        error!(
+            index = err.index,
+            op = ?err.op,
+            kind = ?err.kind,
+            error = %err,
+            "scene validation failed (set FRET_VALIDATE_SCENE_PANIC=1 to panic)"
+        );
+
+        if std::env::var_os("FRET_VALIDATE_SCENE_PANIC").is_some() {
+            panic!("scene validation failed: {err}");
+        }
+    }
+}
+
 #[cfg(target_os = "windows")]
 mod win32 {
     use super::MonitorRectF64;
@@ -3113,6 +3133,8 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     renderer as &mut dyn fret_core::UiServices,
                     &mut state.scene,
                 );
+
+                validate_scene_if_enabled(&state.scene);
 
                 if let Some(a11y) = state.accessibility.as_mut()
                     && a11y.is_active()
