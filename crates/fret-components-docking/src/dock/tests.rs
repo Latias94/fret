@@ -85,6 +85,87 @@ impl<H: UiHost> Widget<H> for TestStack {
     }
 }
 
+struct DockViewportHarness {
+    window: AppWindowId,
+    target: fret_core::RenderTargetId,
+    root: fret_core::NodeId,
+    ui: UiTree<TestHost>,
+    app: TestHost,
+    text: FakeTextService,
+}
+
+impl DockViewportHarness {
+    fn new() -> Self {
+        let window = AppWindowId::default();
+        let target = fret_core::RenderTargetId::default();
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node_retained(DockSpace::new(window));
+        ui.set_root(root);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            let panel_key = PanelKey::new("core.viewport");
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![panel_key.clone()],
+                active: 0,
+            });
+            dock.graph.set_window_root(window, tabs);
+            dock.panels.insert(
+                panel_key,
+                DockPanel {
+                    title: "Viewport".to_string(),
+                    color: Color::TRANSPARENT,
+                    viewport: Some(super::ViewportPanel {
+                        target,
+                        target_px_size: (320, 240),
+                        fit: fret_core::ViewportFit::Stretch,
+                        context_menu_enabled: true,
+                    }),
+                },
+            );
+        });
+
+        Self {
+            window,
+            target,
+            root,
+            ui,
+            app,
+            text: FakeTextService,
+        }
+    }
+
+    fn layout(&mut self) {
+        let size = Size::new(Px(800.0), Px(600.0));
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+        let _ = self
+            .ui
+            .layout(&mut self.app, &mut self.text, self.root, size, 1.0);
+        let mut scene = Scene::default();
+        self.ui.paint(
+            &mut self.app,
+            &mut self.text,
+            self.root,
+            bounds,
+            &mut scene,
+            1.0,
+        );
+    }
+
+    fn viewport_point(&self) -> Point {
+        let rect = self
+            .app
+            .global::<DockManager>()
+            .and_then(|dock| dock.viewport_content_rect(self.window, self.target))
+            .expect("expected viewport content rect to be recorded during paint");
+        Point::new(Px(rect.origin.x.0 + 10.0), Px(rect.origin.y.0 + 10.0))
+    }
+}
+
 #[test]
 fn drag_update_fractions_updates_two_panel_split() {
     let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(300.0), Px(40.0)));
@@ -302,6 +383,108 @@ fn dock_space_clears_hover_on_drop_without_drag_session() {
 
     let hover = app.global::<DockManager>().and_then(|d| d.hover.clone());
     assert!(hover.is_none(), "dock hover should be cleared on drop");
+}
+
+#[test]
+fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    harness.app.begin_cross_window_drag_with_kind(
+        DragKind::DockPanel,
+        harness.window,
+        Point::new(Px(12.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.viewport"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+        },
+    );
+
+    let position = harness.viewport_point();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+        }),
+    );
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Wheel {
+            position,
+            delta: Point::new(Px(0.0), Px(12.0)),
+            modifiers: Modifiers::default(),
+        }),
+    );
+
+    let effects = harness.app.take_effects();
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "dock drag must suppress viewport hover/wheel forwarding (ADR 0072), got: {effects:?}",
+    );
+}
+
+#[test]
+fn viewport_capture_emits_clamped_pointer_moves_outside_draw_rect() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let down_pos = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: down_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    let outside = Point::new(Px(-50.0), Px(-50.0));
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: outside,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+        }),
+    );
+
+    let effects = harness.app.take_effects();
+    let Some(Effect::ViewportInput(input)) = effects
+        .iter()
+        .find(|e| matches!(e, Effect::ViewportInput(_)))
+    else {
+        panic!("expected a ViewportInput effect during viewport capture, got: {effects:?}");
+    };
+
+    assert_eq!(
+        input.kind,
+        ViewportInputKind::PointerMove {
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+        }
+    );
+    assert_eq!(input.uv, (0.0, 0.0), "expected clamped uv at top-left");
+    assert_eq!(
+        input.target_px,
+        (0, 0),
+        "expected clamped target_px at top-left"
+    );
 }
 
 #[test]
