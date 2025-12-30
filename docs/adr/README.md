@@ -23,11 +23,6 @@ ADR or adding a new ADR) before scaling feature surface area.
 
 ### P0 (Lock before scaling the UI kit)
 
-- **Scene layer semantics v1 (marker-only; no implicit offscreen)**
-  - Add ADR (proposed): `docs/adr/0079-scene-layers-marker-only-v1.md`
-  - Decide: whether `PushLayer` is a marker-only range (recommended) or a stronger compositing primitive.
-  - Implement: `crates/fret-render/src/renderer.rs` (batch boundaries only), `crates/fret-ui` (overlay/root tagging).
-
 - **Default font stack + fallback policy v1**
   - Update: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`
   - Decide: default font alias (system UI font), configurable fallback lists (UI/CJK/emoji), and missing-glyph behavior (fallback vs tofu).

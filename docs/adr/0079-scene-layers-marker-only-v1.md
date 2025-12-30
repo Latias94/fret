@@ -1,6 +1,6 @@
 # ADR 0079: Scene Layers (Marker-only v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -71,3 +71,6 @@ However, producers must continue to rely on **scene op order** for correctness.
   not required, but “must not reorder” is).
 - Define explicit isolated group/effect ops if needed (opacity groups, filters, backdrop blur).
 
+Current status:
+
+- `fret-render` treats `PushLayer / PopLayer` as batch boundaries only (no semantic change).
