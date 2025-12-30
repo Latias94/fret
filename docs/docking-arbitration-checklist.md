@@ -23,11 +23,8 @@ viewport tooling, to avoid late rewrites and accidental behavior drift.
 ## How to run the current demos
 
 - Docking demo: `cargo run -p fret-demo --bin docking_demo`
+- Docking arbitration demo (combined harness): `cargo run -p fret-demo --bin docking_arbitration_demo`
 - Components overlays demo: `cargo run -p fret-demo --bin components_gallery`
-
-Note: today we do **not** have a single demo that combines docking + a real viewport surface +
-shadcn overlays in the same window. Until we add that harness, some items below are validated by
-unit tests only.
 
 ---
 
@@ -138,13 +135,14 @@ References:
 
 ---
 
-## Next recommended harness (P0)
+## Harness status (P0)
 
-Add a dedicated demo that combines:
+Status: implemented in `fret-demo` as `docking_arbitration_demo`.
+
+The harness combines:
 
 - one dock space with at least one real viewport panel (generates `Effect::ViewportInput`),
 - a non-modal overlay trigger (popover/menu),
 - and a modal dialog trigger,
 
 so that ADR 0072 can be validated end-to-end in one window.
-
