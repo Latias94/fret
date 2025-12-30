@@ -3046,6 +3046,8 @@ impl<H: UiHost> UiTree<H> {
                 let mut set_size: Option<u32> = None;
                 let mut label: Option<String> = None;
                 let mut value: Option<String> = None;
+                let mut text_selection: Option<(u32, u32)> = None;
+                let mut text_composition: Option<(u32, u32)> = None;
                 let mut actions = fret_core::SemanticsActions {
                     focus: is_focusable || is_text_input,
                     invoke: false,
@@ -3071,6 +3073,8 @@ impl<H: UiHost> UiTree<H> {
                         flags: &mut flags,
                         label: &mut label,
                         value: &mut value,
+                        text_selection: &mut text_selection,
+                        text_composition: &mut text_composition,
                         actions: &mut actions,
                         active_descendant: &mut active_descendant,
                         pos_in_set: &mut pos_in_set,
@@ -3103,6 +3107,8 @@ impl<H: UiHost> UiTree<H> {
                     set_size,
                     label,
                     value,
+                    text_selection,
+                    text_composition,
                     actions,
                 });
             }

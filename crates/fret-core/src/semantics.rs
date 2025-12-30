@@ -68,6 +68,15 @@ pub struct SemanticsNode {
     pub label: Option<String>,
     /// Value text, typically for text fields and sliders.
     pub value: Option<String>,
+    /// Text selection in UTF-8 byte offsets within `value` (ADR 0071).
+    ///
+    /// This is `(anchor, focus)` to preserve selection direction for assistive technologies.
+    pub text_selection: Option<(u32, u32)>,
+    /// IME composition range in UTF-8 byte offsets within `value` (ADR 0071).
+    ///
+    /// This is a best-effort signal for accessibility and may be omitted by implementations that
+    /// cannot represent composition distinctly.
+    pub text_composition: Option<(u32, u32)>,
     /// Supported actions for assistive technologies and automation.
     pub actions: SemanticsActions,
 }

@@ -199,6 +199,8 @@ pub struct SemanticsCx<'a, H: UiHost> {
     pub(crate) flags: &'a mut SemanticsFlags,
     pub(crate) label: &'a mut Option<String>,
     pub(crate) value: &'a mut Option<String>,
+    pub(crate) text_selection: &'a mut Option<(u32, u32)>,
+    pub(crate) text_composition: &'a mut Option<(u32, u32)>,
     pub(crate) actions: &'a mut fret_core::SemanticsActions,
     pub(crate) active_descendant: &'a mut Option<NodeId>,
     pub(crate) pos_in_set: &'a mut Option<u32>,
@@ -216,6 +218,22 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
 
     pub fn set_value(&mut self, value: impl Into<String>) {
         *self.value = Some(value.into());
+    }
+
+    pub fn set_text_selection(&mut self, anchor: u32, focus: u32) {
+        *self.text_selection = Some((anchor, focus));
+    }
+
+    pub fn clear_text_selection(&mut self) {
+        *self.text_selection = None;
+    }
+
+    pub fn set_text_composition(&mut self, start: u32, end: u32) {
+        *self.text_composition = Some((start, end));
+    }
+
+    pub fn clear_text_composition(&mut self) {
+        *self.text_composition = None;
     }
 
     pub fn set_focusable(&mut self, focusable: bool) {

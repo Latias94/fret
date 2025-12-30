@@ -454,6 +454,19 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
     }
 
     #[track_caller]
+    pub fn semantics_with_id(
+        &mut self,
+        props: crate::element::SemanticsProps,
+        f: impl FnOnce(&mut Self, GlobalElementId) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx, id);
+            AnyElement::new(id, ElementKind::Semantics(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn opacity(
         &mut self,
         opacity: f32,

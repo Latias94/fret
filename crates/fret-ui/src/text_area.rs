@@ -621,7 +621,35 @@ impl<H: UiHost> Widget<H> for TextArea {
         cx.set_role(SemanticsRole::TextField);
         cx.set_focusable(true);
         cx.set_value_editable(true);
-        cx.set_value(self.text().to_string());
+
+        let (value, text_selection, text_composition) = if self.is_ime_composing()
+            && let Some(layout_text) = self.layout_text()
+        {
+            let caret_display = self.caret_display_index();
+            (
+                layout_text,
+                Some((caret_display, caret_display)),
+                Some((self.caret, self.caret.saturating_add(self.preedit.len()))),
+            )
+        } else {
+            (
+                self.text().to_string(),
+                Some((self.selection_anchor, self.caret)),
+                None,
+            )
+        };
+
+        cx.set_value(value);
+        if let Some((anchor, focus)) = text_selection {
+            cx.set_text_selection(anchor as u32, focus as u32);
+        } else {
+            cx.clear_text_selection();
+        }
+        if let Some((start, end)) = text_composition {
+            cx.set_text_composition(start as u32, end as u32);
+        } else {
+            cx.clear_text_composition();
+        }
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {

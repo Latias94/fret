@@ -165,6 +165,12 @@ impl TextInput {
         !self.preedit.is_empty() || self.preedit_cursor.is_some()
     }
 
+    fn preedit_cursor_end(&self) -> usize {
+        self.preedit_cursor
+            .map(|(_, end)| end.min(self.preedit.len()))
+            .unwrap_or(self.preedit.len())
+    }
+
     fn clear_ime_composition(&mut self) {
         self.preedit.clear();
         self.preedit_cursor = None;
@@ -572,7 +578,37 @@ impl<H: UiHost> Widget<H> for TextInput {
         cx.set_role(SemanticsRole::TextField);
         cx.set_focusable(true);
         cx.set_value_editable(true);
-        cx.set_value(self.text().to_string());
+
+        let (value, text_selection, text_composition) = if self.is_ime_composing()
+            && let (Some(prefix), Some(suffix)) =
+                (self.text.get(..self.caret), self.text.get(self.caret..))
+        {
+            let value = format!("{prefix}{}{suffix}", self.preedit);
+            let caret_display = self.caret + self.preedit_cursor_end();
+            (
+                value,
+                Some((caret_display as u32, caret_display as u32)),
+                Some((self.caret as u32, (self.caret + self.preedit.len()) as u32)),
+            )
+        } else {
+            (
+                self.text().to_string(),
+                Some((self.selection_anchor as u32, self.caret as u32)),
+                None,
+            )
+        };
+
+        cx.set_value(value);
+        if let Some((anchor, focus)) = text_selection {
+            cx.set_text_selection(anchor, focus);
+        } else {
+            cx.clear_text_selection();
+        }
+        if let Some((start, end)) = text_composition {
+            cx.set_text_composition(start, end);
+        } else {
+            cx.clear_text_composition();
+        }
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {

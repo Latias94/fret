@@ -1628,9 +1628,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
                 struct PointerHookHost<'a, H: UiHost> {
                     app: &'a mut H,
+                    window: AppWindowId,
                     node: NodeId,
                     bounds: Rect,
                     input_ctx: &'a fret_runtime::InputContext,
+                    requested_focus: &'a mut Option<NodeId>,
                     requested_capture: &'a mut Option<Option<NodeId>>,
                     requested_cursor: &'a mut Option<fret_core::CursorIcon>,
                 }
@@ -1656,6 +1658,17 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 impl<H: UiHost> action::UiPointerActionHost for PointerHookHost<'_, H> {
                     fn bounds(&self) -> Rect {
                         self.bounds
+                    }
+
+                    fn request_focus(&mut self, target: crate::GlobalElementId) {
+                        let Some(node) = crate::elements::with_window_state(
+                            &mut *self.app,
+                            self.window,
+                            |window_state| window_state.node_entry(target).map(|e| e.node),
+                        ) else {
+                            return;
+                        };
+                        *self.requested_focus = Some(node);
                     }
 
                     fn capture_pointer(&mut self) {
@@ -1710,9 +1723,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
                         let mut host = PointerHookHost {
                             app: &mut *cx.app,
+                            window,
                             node: cx.node,
                             bounds: cx.bounds,
                             input_ctx: &cx.input_ctx,
+                            requested_focus: &mut cx.requested_focus,
                             requested_capture: &mut cx.requested_capture,
                             requested_cursor: &mut cx.requested_cursor,
                         };
@@ -1754,9 +1769,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
                         let mut host = PointerHookHost {
                             app: &mut *cx.app,
+                            window,
                             node: cx.node,
                             bounds: cx.bounds,
                             input_ctx: &cx.input_ctx,
+                            requested_focus: &mut cx.requested_focus,
                             requested_capture: &mut cx.requested_capture,
                             requested_cursor: &mut cx.requested_cursor,
                         };
@@ -1797,9 +1814,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         if let Some(h) = hook {
                             let mut host = PointerHookHost {
                                 app: &mut *cx.app,
+                                window,
                                 node: cx.node,
                                 bounds: cx.bounds,
                                 input_ctx: &cx.input_ctx,
+                                requested_focus: &mut cx.requested_focus,
                                 requested_capture: &mut cx.requested_capture,
                                 requested_cursor: &mut cx.requested_cursor,
                             };
@@ -2072,6 +2091,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 cx.set_role(props.role);
                 if let Some(label) = props.label.as_ref() {
                     cx.set_label(label.as_ref().to_string());
+                }
+                if let Some(value) = props.value.as_ref() {
+                    cx.set_value(value.as_ref().to_string());
                 }
                 if props.disabled {
                     cx.set_disabled(true);
@@ -4919,6 +4941,90 @@ mod tests {
         );
 
         assert_eq!(app.models().get(counter).copied(), Some(111));
+    }
+
+    #[test]
+    fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(60.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "pointer-region-can-request-focus-other-element",
+            |cx| {
+                vec![cx.semantics(
+                    crate::element::SemanticsProps {
+                        role: fret_core::SemanticsRole::Slider,
+                        label: Some(Arc::from("focus-target")),
+                        ..Default::default()
+                    },
+                    |cx| {
+                        let target = cx.root_id();
+
+                        vec![cx.pointer_region(
+                            crate::element::PointerRegionProps {
+                                layout: crate::element::LayoutStyle {
+                                    size: crate::element::SizeStyle {
+                                        width: crate::element::Length::Fill,
+                                        height: crate::element::Length::Fill,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                enabled: true,
+                            },
+                            |cx| {
+                                cx.pointer_region_on_pointer_down(Arc::new(
+                                    move |host, _cx, down| {
+                                        if down.button != MouseButton::Left {
+                                            return false;
+                                        }
+                                        host.request_focus(target);
+                                        true
+                                    },
+                                ));
+                                vec![]
+                            },
+                        )]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let semantics_node = ui.children(root)[0];
+        let pointer_node = ui.children(semantics_node)[0];
+        let pointer_bounds = ui.debug_node_bounds(pointer_node).expect("pointer bounds");
+        let position = Point::new(
+            Px(pointer_bounds.origin.x.0 + 2.0),
+            Px(pointer_bounds.origin.y.0 + 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(ui.focus(), Some(semantics_node));
     }
 
     #[test]
