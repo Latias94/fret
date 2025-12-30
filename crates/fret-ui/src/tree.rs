@@ -197,6 +197,7 @@ impl<H: UiHost> Node<H> {
         }
     }
 
+    #[cfg(test)]
     fn new_for_element(element: GlobalElementId, widget: impl Widget<H> + 'static) -> Self {
         Self {
             element: Some(element),
@@ -893,6 +894,7 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.insert(Node::new(widget))
     }
 
+    #[cfg(test)]
     pub(crate) fn create_node_for_element(
         &mut self,
         element: GlobalElementId,
