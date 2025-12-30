@@ -351,6 +351,9 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         if node.actions.set_text_selection && node.value.is_some() {
             out.add_action(Action::SetTextSelection);
         }
+        if node.actions.set_value && node.role == SemanticsRole::TextField && node.value.is_some() {
+            out.add_action(Action::ReplaceSelectedText);
+        }
 
         if let Some(label) = node.label.as_ref() {
             match node.role {
@@ -419,7 +422,7 @@ pub enum SetValueData {
 }
 
 pub fn set_value_from_action(req: &ActionRequest) -> Option<(fret_core::NodeId, SetValueData)> {
-    if !matches!(req.action, Action::SetValue | Action::ReplaceSelectedText) {
+    if req.action != Action::SetValue {
         return None;
     }
 
@@ -428,6 +431,21 @@ pub fn set_value_from_action(req: &ActionRequest) -> Option<(fret_core::NodeId, 
     match data {
         accesskit::ActionData::Value(v) => Some((target, SetValueData::Text(v.to_string()))),
         accesskit::ActionData::NumericValue(v) => Some((target, SetValueData::Numeric(*v))),
+        _ => None,
+    }
+}
+
+pub fn replace_selected_text_from_action(
+    req: &ActionRequest,
+) -> Option<(fret_core::NodeId, String)> {
+    if req.action != Action::ReplaceSelectedText {
+        return None;
+    }
+
+    let target = parent_from_synthetic_id(req.target).or_else(|| from_accesskit_id(req.target))?;
+    let data = req.data.as_ref()?;
+    match data {
+        accesskit::ActionData::Value(v) => Some((target, v.to_string())),
         _ => None,
     }
 }
@@ -490,7 +508,8 @@ pub fn set_text_selection_from_action(
 #[cfg(test)]
 mod tests {
     use super::{
-        set_text_selection_from_action, text_run_id_for, to_accesskit_id, tree_update_from_snapshot,
+        replace_selected_text_from_action, set_text_selection_from_action, text_run_id_for,
+        to_accesskit_id, tree_update_from_snapshot,
     };
     use fret_core::{
         AppWindowId, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole,
@@ -886,5 +905,92 @@ mod tests {
         assert_eq!(target, input);
         assert_eq!(data.anchor, 1);
         assert_eq!(data.focus, 5);
+    }
+
+    #[test]
+    fn replace_selected_text_action_is_decoded() {
+        let window = AppWindowId::default();
+        let root = node(1);
+        let input = node(2);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(10.0), Px(10.0)),
+        );
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root,
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus: Some(input),
+            captured: None,
+            nodes: vec![
+                SemanticsNode {
+                    id: root,
+                    parent: None,
+                    role: SemanticsRole::Window,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                },
+                SemanticsNode {
+                    id: input,
+                    parent: Some(root),
+                    role: SemanticsRole::TextField,
+                    bounds,
+                    flags: SemanticsFlags {
+                        focused: true,
+                        ..SemanticsFlags::default()
+                    },
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: Some("hello".to_string()),
+                    text_selection: Some((0, 5)),
+                    text_composition: None,
+                    actions: SemanticsActions {
+                        focus: true,
+                        set_value: true,
+                        ..SemanticsActions::default()
+                    },
+                },
+            ],
+        };
+
+        let update = tree_update_from_snapshot(&snapshot, 1.0);
+        let input_id = to_accesskit_id(input);
+        let input_node = update
+            .nodes
+            .iter()
+            .find_map(|(id, n)| (*id == input_id).then_some(n))
+            .expect("input node present");
+        assert!(
+            input_node.supports_action(accesskit::Action::ReplaceSelectedText),
+            "text field should expose ReplaceSelectedText when editable"
+        );
+
+        let req = accesskit::ActionRequest {
+            action: accesskit::Action::ReplaceSelectedText,
+            target: to_accesskit_id(input),
+            data: Some(accesskit::ActionData::Value("x".into())),
+        };
+        let (target, value) =
+            replace_selected_text_from_action(&req).expect("decoded replace selected text");
+        assert_eq!(target, input);
+        assert_eq!(value, "x");
     }
 }

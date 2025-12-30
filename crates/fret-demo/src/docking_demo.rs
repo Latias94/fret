@@ -372,6 +372,24 @@ impl WinitDriver for DockingDemoDriver {
             focus,
         );
     }
+
+    fn accessibility_replace_selected_text(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        _window: AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+        value: &str,
+    ) {
+        fret_ui_app::accessibility_actions::replace_selected_text(
+            &mut state.ui,
+            app,
+            services,
+            target,
+            value,
+        );
+    }
 }
 
 pub fn run() -> anyhow::Result<()> {

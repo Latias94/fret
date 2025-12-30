@@ -734,6 +734,17 @@ pub trait WinitDriver {
         _focus: u32,
     ) {
     }
+
+    fn accessibility_replace_selected_text(
+        &mut self,
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _target: fret_core::NodeId,
+        _value: &str,
+    ) {
+    }
 }
 
 struct WindowRuntime<S> {
@@ -3295,6 +3306,22 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                             );
                         }
                     }
+                    self.app.request_redraw(app_window);
+                    continue;
+                }
+
+                if let Some((target, value)) =
+                    fret_platform::accessibility::replace_selected_text_from_action(&req)
+                {
+                    let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
+                    self.driver.accessibility_replace_selected_text(
+                        &mut self.app,
+                        services,
+                        app_window,
+                        &mut state.user,
+                        target,
+                        &value,
+                    );
                     self.app.request_redraw(app_window);
                     continue;
                 }

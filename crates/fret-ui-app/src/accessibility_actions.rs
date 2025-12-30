@@ -57,3 +57,14 @@ pub fn set_text_selection(
     ui.set_focus(Some(target));
     ui.dispatch_event(app, services, &Event::SetTextSelection { anchor, focus });
 }
+
+pub fn replace_selected_text(
+    ui: &mut UiTree,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    target: NodeId,
+    value: &str,
+) {
+    ui.set_focus(Some(target));
+    ui.dispatch_event(app, services, &Event::TextInput(value.to_string()));
+}
