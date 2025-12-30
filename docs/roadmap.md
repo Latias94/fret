@@ -89,6 +89,10 @@ These items are intentionally scheduled early because they define “hard-to-cha
   - Implemented as MVP 46 (prototype; see `docs/archive/mvp/active-plan.md`).
 - P0: Renderer must preserve `Scene.ops` ordering across primitive kinds (ADR 0009).
 - P0: Multi-root overlays (menus, drag previews, popups, modals) must be first-class (ADR 0011).
+- P0: Lock anchored overlay geometry under `render_transform` (ADR 0083) so popovers/tooltips track what the user sees.
+  - Migrate component anchors to use `visual_bounds_for_element` (not layout-only bounds).
+  - Keep a runtime-level regression test in `fret-ui`, plus a small component-level unit test guarding anchor selection (visual vs layout) to prevent drift.
+  - References: `docs/adr/0064-overlay-placement-contract.md`, `docs/adr/0083-render-transform-hit-testing.md`.
 - P0: Keyboard/IME split: physical keys for shortcuts, text input for editing (ADR 0012).
 - P0: Canonical physical key representation for shortcuts + keymap persistence (ADR 0018).
 - P0: Shortcut arbitration + AltGr semantics + pending bindings (avoid keymap/API breaking changes) (ADR 0043).

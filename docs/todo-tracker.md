@@ -58,6 +58,13 @@ It complements (but does not replace) ADRs:
 
 ## P0 — Docking / Overlays / Viewport Capture
 
+- **Anchored overlays must track visual (post-transform) anchor bounds**
+  - Problem: overlays anchored to an element must follow `render_transform` (ADR 0083), otherwise popovers/tooltips drift under animations/zoomed UI.
+  - ADRs: `docs/adr/0064-overlay-placement-contract.md`, `docs/adr/0083-render-transform-hit-testing.md`
+  - Code (migration): `crates/fret-components-shadcn/src/{popover,tooltip,hover_card,dropdown_menu,menubar,combobox,select,context_menu}.rs`
+  - Runtime hooks: `crates/fret-ui/src/tree.rs` (`record_visual_bounds_for_element`) + `crates/fret-ui/src/elements.rs` (`visual_bounds_for_element`)
+  - Validation: runtime regression in `fret-ui` asserts transforms affect visual bounds; component unit test asserts visual bounds are preferred for anchoring.
+
 - **Lock docking interaction arbitration (dock drag vs overlays vs viewport capture)**
   - Goal: prevent dismissal/capture conflicts and keep modal blocking rules intentional and consistent.
   - ADRs: `docs/adr/0072-docking-interaction-arbitration-matrix.md`, `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
