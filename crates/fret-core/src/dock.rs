@@ -1074,6 +1074,119 @@ impl DockGraph {
 
         imported_any
     }
+
+    /// Import a dock layout for a set of known windows, degrading any unmapped logical windows
+    /// into in-window floating containers inside `fallback_window`.
+    ///
+    /// This enables loading multi-window layouts on platforms that do not support multiple OS
+    /// windows (wasm/mobile). The extra logical windows become floating dock containers rendered
+    /// by the dock host in `fallback_window`.
+    pub fn import_layout_for_windows_with_fallback_floatings(
+        &mut self,
+        layout: &crate::DockLayout,
+        windows: &[(AppWindowId, String)],
+        fallback_window: AppWindowId,
+    ) -> bool {
+        use std::collections::HashMap;
+
+        if layout.layout_version != crate::DOCK_LAYOUT_VERSION {
+            return false;
+        }
+
+        fn offset_rect(rect: Rect, delta: Point) -> Rect {
+            Rect::new(
+                Point::new(
+                    Px(rect.origin.x.0 + delta.x.0),
+                    Px(rect.origin.y.0 + delta.y.0),
+                ),
+                rect.size,
+            )
+        }
+
+        fn rect_for_unmapped_window(w: &crate::DockLayoutWindow, index: usize) -> Rect {
+            let default_w = 640.0;
+            let default_h = 480.0;
+            let (w_px, h_px) = w
+                .placement
+                .as_ref()
+                .map(|p| (p.width as f32, p.height as f32))
+                .unwrap_or((default_w, default_h));
+
+            let width = w_px.clamp(240.0, 1400.0);
+            let height = h_px.clamp(180.0, 1000.0);
+
+            let stagger = (index as f32).min(12.0) * 24.0;
+            Rect::new(
+                Point::new(Px(32.0 + stagger), Px(32.0 + stagger)),
+                Size::new(Px(width), Px(height)),
+            )
+        }
+
+        let mut by_logical: HashMap<&str, AppWindowId> = HashMap::new();
+        for (window, logical_id) in windows {
+            by_logical.insert(logical_id.as_str(), *window);
+        }
+
+        // Clear and re-import all floating windows for `fallback_window` so the resulting state is
+        // deterministic when this method is used as a "load persisted layout" entry point.
+        self.floating_windows_mut(fallback_window).clear();
+
+        let mut imported_any = false;
+        let mut unmapped_index: usize = 0;
+
+        for w in &layout.windows {
+            if let Some(window) = by_logical.get(w.logical_window_id.as_str()).copied() {
+                let Some(root) = self.import_subtree_from_layout(layout, w.root) else {
+                    continue;
+                };
+                self.set_window_root(window, root);
+
+                self.floating_windows_mut(window).clear();
+                for f in &w.floatings {
+                    let Some(child) = self.import_subtree_from_layout(layout, f.root) else {
+                        continue;
+                    };
+                    let floating = self.insert_node(DockNode::Floating { child });
+                    self.floating_windows_mut(window).push(DockFloatingWindow {
+                        floating,
+                        rect: f.rect.to_rect(),
+                    });
+                }
+
+                imported_any = true;
+                continue;
+            }
+
+            // Unmapped logical window: import it as a floating container inside `fallback_window`.
+            let Some(child) = self.import_subtree_from_layout(layout, w.root) else {
+                continue;
+            };
+            let window_rect = rect_for_unmapped_window(w, unmapped_index);
+            let floating = self.insert_node(DockNode::Floating { child });
+            self.floating_windows_mut(fallback_window)
+                .push(DockFloatingWindow {
+                    floating,
+                    rect: window_rect,
+                });
+
+            for f in &w.floatings {
+                let Some(child) = self.import_subtree_from_layout(layout, f.root) else {
+                    continue;
+                };
+                let floating = self.insert_node(DockNode::Floating { child });
+                self.floating_windows_mut(fallback_window)
+                    .push(DockFloatingWindow {
+                        floating,
+                        rect: offset_rect(f.rect.to_rect(), window_rect.origin),
+                    });
+            }
+
+            unmapped_index = unmapped_index.saturating_add(1);
+            imported_any = true;
+        }
+
+        imported_any
+    }
 }
 
 #[cfg(test)]
@@ -1199,5 +1312,58 @@ mod tests {
         assert_eq!(floatings.len(), 2);
         assert_eq!(floatings[0].rect, rect(10.0, 20.0, 300.0, 200.0));
         assert_eq!(floatings[1].rect, rect(40.0, 60.0, 200.0, 120.0));
+    }
+
+    #[test]
+    fn import_layout_degrades_unmapped_windows_into_floating_containers() {
+        let window_a = window(1);
+        let panel_a = PanelKey::new("test.a");
+        let panel_b = PanelKey::new("test.b");
+
+        let layout = crate::DockLayout::new(
+            vec![
+                crate::DockLayoutWindow {
+                    logical_window_id: "main".to_string(),
+                    root: 1,
+                    placement: None,
+                    floatings: Vec::new(),
+                },
+                crate::DockLayoutWindow {
+                    logical_window_id: "extra".to_string(),
+                    root: 2,
+                    placement: Some(crate::DockWindowPlacement {
+                        width: 400,
+                        height: 300,
+                        x: None,
+                        y: None,
+                        monitor_hint: None,
+                    }),
+                    floatings: Vec::new(),
+                },
+            ],
+            vec![
+                crate::DockLayoutNode::Tabs {
+                    id: 1,
+                    tabs: vec![panel_a.clone()],
+                    active: 0,
+                },
+                crate::DockLayoutNode::Tabs {
+                    id: 2,
+                    tabs: vec![panel_b.clone()],
+                    active: 0,
+                },
+            ],
+        );
+
+        let mut g = DockGraph::new();
+        assert!(g.import_layout_for_windows_with_fallback_floatings(
+            &layout,
+            &[(window_a, "main".to_string())],
+            window_a
+        ));
+
+        assert!(g.find_panel_in_window(window_a, &panel_a).is_some());
+        assert!(g.find_panel_in_window(window_a, &panel_b).is_some());
+        assert_eq!(g.floating_windows(window_a).len(), 1);
     }
 }

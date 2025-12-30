@@ -50,6 +50,8 @@ Implementation guidance:
   emitting `CreateWindowKind::DockFloating` when `ui.multi_window == false`.
 - If a tear-off request still occurs (e.g. loading a persisted multi-window layout), the host must
   render the additional logical window roots as in-window virtual windows instead of failing.
+  - Contract helper: `DockGraph::import_layout_for_windows_with_fallback_floatings` can import
+    unmapped logical windows into a fallback window as floating containers.
 
 ### 3) Input, focus, and modality remain window-absolute
 
