@@ -8,7 +8,7 @@ use fret_runtime::{CommandId, Model};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::{ResizablePanelGroupStyle, SliderStyle, SvgSource, TextAreaStyle, TextInputStyle};
+use crate::{ResizablePanelGroupStyle, SvgSource, TextAreaStyle, TextInputStyle};
 
 /// Declarative element tree node (ephemeral per frame), keyed by a stable `GlobalElementId`.
 ///
@@ -41,7 +41,6 @@ pub enum ElementKind {
     Text(TextProps),
     TextInput(TextInputProps),
     TextArea(TextAreaProps),
-    Slider(SliderProps),
     ResizablePanelGroup(ResizablePanelGroupProps),
     VirtualList(VirtualListProps),
     Flex(FlexProps),
@@ -590,48 +589,6 @@ impl std::fmt::Debug for TextAreaProps {
             .field("chrome", &self.chrome)
             .field("text_style", &self.text_style)
             .field("min_height", &self.min_height)
-            .finish()
-    }
-}
-
-#[derive(Clone)]
-pub struct SliderProps {
-    pub layout: LayoutStyle,
-    pub model: Model<Vec<f32>>,
-    pub a11y_label: Option<std::sync::Arc<str>>,
-    pub min: f32,
-    pub max: f32,
-    pub step: f32,
-    pub enabled: bool,
-    pub chrome: SliderStyle,
-}
-
-impl SliderProps {
-    pub fn new(model: Model<Vec<f32>>) -> Self {
-        Self {
-            layout: LayoutStyle::default(),
-            model,
-            a11y_label: None,
-            min: 0.0,
-            max: 100.0,
-            step: 1.0,
-            enabled: true,
-            chrome: SliderStyle::default(),
-        }
-    }
-}
-
-impl std::fmt::Debug for SliderProps {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SliderProps")
-            .field("layout", &self.layout)
-            .field("model", &"<model>")
-            .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
-            .field("min", &self.min)
-            .field("max", &self.max)
-            .field("step", &self.step)
-            .field("enabled", &self.enabled)
-            .field("chrome", &self.chrome)
             .finish()
     }
 }

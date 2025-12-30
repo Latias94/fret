@@ -17,8 +17,6 @@ pub(crate) mod resizable_split;
 #[allow(dead_code)]
 pub(crate) mod resize_handle;
 pub mod scroll;
-#[allow(dead_code)]
-pub(crate) mod slider;
 mod svg_source;
 #[cfg(test)]
 mod test_host;
@@ -45,7 +43,6 @@ pub use elements::{ElementCx, ElementRuntime, GlobalElementId};
 pub use host::UiHost;
 pub use resizable_panel_group::ResizablePanelGroupStyle;
 pub use scroll::{ScrollHandle, ScrollStrategy, VirtualListScrollHandle};
-pub use slider::SliderStyle;
 pub use svg_source::SvgSource;
 pub use text_area::TextAreaStyle;
 pub use text_input_style::TextInputStyle;

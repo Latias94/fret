@@ -101,7 +101,7 @@ Status below uses Rust module naming (hyphenated names normalized to `_`).
 | sheet | `sheet` | Present | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
 | sidebar | `sidebar` | Present |  |
 | skeleton | `skeleton` | Present |  |
-| slider | `slider` | Present | Runtime `Slider` engine + shadcn wrapper; a11y TBD |
+| slider | `slider` | Present | Declarative composition over primitives (PointerRegion hooks + bounds); a11y TBD |
 | sonner | `sonner` | Present | Toast store + overlay layer + timers (no a11y yet) |
 | spinner | `spinner` | Present |  |
 | switch | `switch` | Present |  |
