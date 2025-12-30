@@ -69,6 +69,31 @@ For pointer-position-bearing events (`PointerEvent`, `ExternalDragEvent`, `Inter
 - For `PointerEvent::Wheel`, `delta` is mapped as a vector (translation ignored) through the same
   inverse transform matrix.
 
+### 5) Cross-frame geometry queries (anchored overlays)
+
+Anchored overlays (popover/menu/tooltip) must be able to track the **visual** geometry of an anchor
+element across frames, including any ancestor `render_transform` effects, without converting
+`render_transform` into a layout concern.
+
+The runtime therefore exposes **two** distinct geometry queries for declarative elements:
+
+- **Layout bounds** (authoritative for layout): `bounds_for_element(...)`
+- **Visual bounds** (post-transform AABB, for overlays): `visual_bounds_for_element(...)`
+
+Rules:
+
+- `visual_bounds_for_element` MUST include the **composed** render transforms along the path from
+  the element node to the window root (i.e. ancestor transforms apply to descendants).
+- Visual bounds MUST be an **axis-aligned bounding box** (AABB) in window-local logical pixels.
+- `bounds_for_element` MUST remain layout-only (untransformed) and MUST NOT be repurposed to “track
+  transforms”.
+
+This makes the contract explicit:
+
+- Layout stays stable and cacheable.
+- Overlays can anchor to what the user actually sees (ADR 0064) without introducing layout-time
+  transform semantics.
+
 ## Consequences
 
 - Components can safely use transforms for interactive content without breaking hit-testing or
@@ -82,8 +107,14 @@ For pointer-position-bearing events (`PointerEvent`, `ExternalDragEvent`, `Inter
   are currently replayed via translation (ADR 0055) which can break transforms whose meaning depends
   on position/time.
 
+- If paint caching remains translation-only, it must not replay subtrees in a way that invalidates
+  `visual_bounds_for_element` (and thus anchored overlays). If necessary, the runtime may conservatively
+  disable caching for subtrees that contain render transforms until a transform-aware replay strategy
+  is introduced.
+
 ## References
 
 - Scene state stack: `docs/adr/0019-scene-state-stack-and-layers.md`
 - Transform + clip semantics: `docs/adr/0078-scene-transform-and-clip-composition.md`
 - Runtime contract surface: `docs/adr/0066-fret-ui-runtime-contract-surface.md`
+- Overlay placement contract: `docs/adr/0064-overlay-placement-contract.md`
