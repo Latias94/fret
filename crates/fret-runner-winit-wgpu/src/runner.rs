@@ -2596,6 +2596,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
         self.main_window = Some(main_window);
         self.driver.init(&mut self.app, main_window);
         self.app.request_redraw(main_window);
+        self.drain_effects(event_loop);
     }
 
     fn window_event(
