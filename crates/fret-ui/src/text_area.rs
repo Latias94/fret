@@ -1952,4 +1952,149 @@ mod tests {
             "expected preedit to be cleared on commit (otherwise cursor area jumps)"
         );
     }
+
+    fn event_cx<'a>(
+        app: &'a mut TestHost,
+        services: &'a mut FakeTextService,
+        node: fret_core::NodeId,
+        window: fret_core::AppWindowId,
+        bounds: Rect,
+    ) -> EventCx<'a, TestHost> {
+        EventCx {
+            app,
+            services,
+            node,
+            window: Some(window),
+            input_ctx: fret_runtime::InputContext {
+                caps: PlatformCapabilities::default(),
+                ..Default::default()
+            },
+            children: &[],
+            focus: Some(node),
+            captured: None,
+            bounds,
+            invalidations: Vec::new(),
+            requested_focus: None,
+            requested_capture: None,
+            requested_cursor: None,
+            stop_propagation: false,
+        }
+    }
+
+    #[test]
+    fn ime_commit_normalizes_newlines_to_lf() {
+        let window = AppWindowId::default();
+        let node = fret_core::NodeId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        );
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let mut area = TextArea::default();
+        let mut cx = event_cx(&mut app, &mut services, node, window, bounds);
+
+        area.event(
+            &mut cx,
+            &Event::Ime(fret_core::ImeEvent::Commit("a\r\nb\rc".to_string())),
+        );
+
+        assert_eq!(area.text(), "a\nb\nc");
+        assert!(area.preedit.is_empty());
+        assert!(area.preedit_cursor.is_none());
+    }
+
+    #[test]
+    fn ime_commit_replaces_selection_and_clears_it() {
+        let window = AppWindowId::default();
+        let node = fret_core::NodeId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        );
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let mut area = TextArea::new("hello world");
+        area.caret = 5;
+        area.selection_anchor = 0;
+
+        let mut cx = event_cx(&mut app, &mut services, node, window, bounds);
+
+        area.event(
+            &mut cx,
+            &Event::Ime(fret_core::ImeEvent::Commit("yo".to_string())),
+        );
+
+        assert_eq!(area.text(), "yo world");
+        assert_eq!(area.caret, 2);
+        assert_eq!(area.selection_anchor, 2);
+        assert!(area.preedit.is_empty());
+    }
+
+    #[test]
+    fn preedit_does_not_mutate_buffer_until_commit() {
+        let window = AppWindowId::default();
+        let node = fret_core::NodeId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        );
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let mut area = TextArea::new("abc");
+        area.caret = 1;
+        area.selection_anchor = 1;
+
+        let mut cx = event_cx(&mut app, &mut services, node, window, bounds);
+
+        area.event(
+            &mut cx,
+            &Event::Ime(fret_core::ImeEvent::Preedit {
+                text: "ZZ".to_string(),
+                cursor: Some((0, 2)),
+            }),
+        );
+
+        assert_eq!(area.text(), "abc");
+        assert_eq!(area.preedit, "ZZ");
+
+        area.event(
+            &mut cx,
+            &Event::Ime(fret_core::ImeEvent::Commit("ZZ".to_string())),
+        );
+
+        assert_eq!(area.text(), "aZZbc");
+        assert!(area.preedit.is_empty());
+        assert!(area.preedit_cursor.is_none());
+    }
+
+    #[test]
+    fn clipboard_text_normalizes_newlines_to_lf() {
+        let window = AppWindowId::default();
+        let node = fret_core::NodeId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        );
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let mut area = TextArea::default();
+        let mut cx = event_cx(&mut app, &mut services, node, window, bounds);
+
+        area.event(&mut cx, &Event::ClipboardText("a\r\nb\rc".to_string()));
+
+        assert_eq!(area.text(), "a\nb\nc");
+    }
 }
