@@ -4268,6 +4268,89 @@ mod tests {
     }
 
     #[test]
+    fn non_invertible_render_transform_is_ignored_for_paint_and_visual_bounds() {
+        struct NonInvertibleRoot {
+            delta: Point,
+        }
+
+        impl<H: UiHost> Widget<H> for NonInvertibleRoot {
+            fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+                let t = Transform2D::translation(self.delta);
+                // A singular scale makes the transform non-invertible; ADR 0083 requires treating
+                // such transforms as `None` to keep paint/hit-testing consistent.
+                let s = Transform2D::scale_uniform(0.0);
+                Some(t * s)
+            }
+
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                let Some(&child) = cx.children.first() else {
+                    return cx.available;
+                };
+                let child_bounds = Rect::new(cx.bounds.origin, Size::new(Px(10.0), Px(10.0)));
+                let _ = cx.layout_in(child, child_bounds);
+                cx.available
+            }
+
+            fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+                let Some(&child) = cx.children.first() else {
+                    return;
+                };
+                let child_bounds = Rect::new(cx.bounds.origin, Size::new(Px(10.0), Px(10.0)));
+                cx.paint(child, child_bounds);
+            }
+        }
+
+        struct ElementLeaf;
+
+        impl<H: UiHost> Widget<H> for ElementLeaf {
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                cx.available
+            }
+        }
+
+        let window = AppWindowId::default();
+        let mut app = crate::test_host::TestHost::new();
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let element = crate::elements::GlobalElementId(456);
+
+        let root = ui.create_node(NonInvertibleRoot {
+            delta: Point::new(Px(40.0), Px(0.0)),
+        });
+        let leaf = ui.create_node_for_element(element, ElementLeaf);
+        ui.add_child(root, leaf);
+        ui.set_root(root);
+
+        let mut services = FakeUiServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        assert!(
+            !scene
+                .ops()
+                .iter()
+                .any(|op| matches!(op, SceneOp::PushTransform { .. })),
+            "non-invertible render transforms must not emit scene transform ops"
+        );
+
+        // `visual_bounds_for_element` is defined as a cross-frame query: the "last frame" value is
+        // made visible after `prepare_window_for_frame` advances the window element state.
+        app.advance_frame();
+
+        let visual = crate::elements::visual_bounds_for_element(&mut app, window, element)
+            .expect("expected visual bounds to be recorded during paint");
+        assert_eq!(visual.origin, Point::new(Px(0.0), Px(0.0)));
+        assert_eq!(visual.size, Size::new(Px(10.0), Px(10.0)));
+    }
+
+    #[test]
     fn outside_press_observer_must_not_capture_pointer_or_break_click_through() {
         struct CaptureOnPointerDownOutside;
 

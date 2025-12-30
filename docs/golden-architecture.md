@@ -169,6 +169,21 @@ Each section below answers:
 - `crates/fret-ui/src/scroll.rs`, `crates/fret-ui/src/virtual_list.rs`
 - `crates/fret-ui/src/text_input.rs`, `crates/fret-ui/src/text_area.rs`
 
+**Validation anchors**
+
+- Runtime conformance suite: `cargo nextest run -p fret-ui` (most tests live in `crates/fret-ui/src/tree.rs`)
+- RenderTransform closure (hit testing + event coordinates + visual bounds):
+  - `crates/fret-ui/src/tree.rs` (`render_transform_affects_hit_testing_and_pointer_event_coordinates`)
+  - `crates/fret-ui/src/tree.rs` (`nested_render_transforms_compose_for_pointer_event_coordinates`)
+  - `crates/fret-ui/src/tree.rs` (`hit_test_respects_rounded_overflow_clip_under_render_transform`)
+  - `crates/fret-ui/src/tree.rs` (`overlay_render_transform_affects_hit_testing_and_event_coordinates`)
+  - `crates/fret-ui/src/tree.rs` (`visual_bounds_for_element_includes_ancestor_render_transform`)
+  - `crates/fret-ui/src/tree.rs` (`non_invertible_render_transform_is_ignored_for_paint_and_visual_bounds`)
+- Anchored placement solver invariants:
+  - `crates/fret-ui/src/overlay_placement.rs` (`keeps_bottom_when_it_fits`)
+  - `crates/fret-ui/src/overlay_placement.rs` (`flips_from_bottom_to_top_when_bottom_overflows`)
+  - `crates/fret-ui/src/overlay_placement.rs` (`sized_variant_prefers_side_with_less_main_axis_overflow`)
+
 **Subsystem index (UI — find things fast)**
 
 ```mermaid

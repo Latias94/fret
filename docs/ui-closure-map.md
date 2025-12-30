@@ -89,6 +89,15 @@ Implementation anchors:
 - `crates/fret-ui/src/elements.rs` (`visual_bounds_for_element`, last-frame geometry)
 - Component anchoring: `crates/fret-components-shadcn/src/overlay_anchor.rs`
 
+Validation anchors:
+
+- `crates/fret-ui/src/tree.rs` (`render_transform_affects_hit_testing_and_pointer_event_coordinates`)
+- `crates/fret-ui/src/tree.rs` (`nested_render_transforms_compose_for_pointer_event_coordinates`)
+- `crates/fret-ui/src/tree.rs` (`hit_test_respects_rounded_overflow_clip_under_render_transform`)
+- `crates/fret-ui/src/tree.rs` (`overlay_render_transform_affects_hit_testing_and_event_coordinates`)
+- `crates/fret-ui/src/tree.rs` (`visual_bounds_for_element_includes_ancestor_render_transform`)
+- `crates/fret-ui/src/tree.rs` (`non_invertible_render_transform_is_ignored_for_paint_and_visual_bounds`)
+
 ---
 
 ## Subsystem Map (Contracts → Code → Validation)
@@ -313,10 +322,10 @@ This is the “do it now or pay later” list, ordered by expected rewrite cost.
    - Remaining: expand coverage for cross-window edge cases (tear-off + drag cancel + modal barrier) and any platform-specific pointer capture quirks.
 
 3. **Transform + clip + hit-testing parity in edge cases**
-   - We have `render_transform` closure for paint/hit-test/anchoring (ADR 0083), but we still need
-     targeted tests for:
-     - rounded clip under transforms (hit-test parity),
-     - deeply nested transforms + multi-root overlays.
+   - Baseline parity tests exist (including rounded overflow clip under `render_transform`), but we still need to harden:
+     - deeper clip stacks under mixed transforms (including scale + non-axis-aligned cases),
+     - multi-root overlay edge cases (barriers + outside press + transformed overlays),
+     - and explicit coverage for rotation/shear transforms if we intend to support them in v1.
 
 ### P1 (important, but can stage)
 

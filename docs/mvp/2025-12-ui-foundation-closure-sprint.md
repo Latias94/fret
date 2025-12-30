@@ -60,8 +60,8 @@ components, overlays, and viewport tooling.
   - `docs/adr/0063-rounded-clipping-and-soft-clip-masks.md`
   - `docs/adr/0083-render-transform-hit-testing.md`
 - Required validation:
-  - targeted `fret-ui` tests for rounded clip under transforms (hit-testing parity),
-  - deep stack coverage across multi-root overlays,
+  - baseline `fret-ui` parity tests (rounded overflow clip under `render_transform`, overlay transforms, nested transforms),
+  - incremental hardening for deeper stacks across multi-root overlays,
   - renderer conformance linkage (deep transform/clip stacks).
 
 ### 4) A11y / semantics closure for composite widgets (Not closed)
@@ -95,4 +95,3 @@ on platforms without multi-window (single-window “floating overlays” vs “t
 - New public runtime surface area in `crates/fret-ui` without an accepted ADR and tests.
 - Large new UI kits; use `fret-components-*` to validate policies.
 - Arrow rendering / advanced overlay visuals until transform/clip parity is closed.
-
