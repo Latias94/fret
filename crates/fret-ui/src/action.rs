@@ -76,6 +76,7 @@ pub trait UiActionHost {
 /// This is intentionally separate from `UiActionHost` because pointer capture and cursor updates
 /// are mediated by the UI runtime (`UiTree`), not by the app host (`UiHost`).
 pub trait UiPointerActionHost: UiActionHost {
+    fn bounds(&self) -> fret_core::Rect;
     fn capture_pointer(&mut self);
     fn release_pointer_capture(&mut self);
     fn set_cursor_icon(&mut self, icon: CursorIcon);

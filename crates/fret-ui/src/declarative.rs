@@ -1646,6 +1646,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 struct PointerHookHost<'a, H: UiHost> {
                     app: &'a mut H,
                     node: NodeId,
+                    bounds: Rect,
                     input_ctx: &'a fret_runtime::InputContext,
                     requested_capture: &'a mut Option<Option<NodeId>>,
                     requested_cursor: &'a mut Option<fret_core::CursorIcon>,
@@ -1670,6 +1671,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 }
 
                 impl<H: UiHost> action::UiPointerActionHost for PointerHookHost<'_, H> {
+                    fn bounds(&self) -> Rect {
+                        self.bounds
+                    }
+
                     fn capture_pointer(&mut self) {
                         *self.requested_capture = Some(Some(self.node));
                     }
@@ -1723,6 +1728,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         let mut host = PointerHookHost {
                             app: &mut *cx.app,
                             node: cx.node,
+                            bounds: cx.bounds,
                             input_ctx: &cx.input_ctx,
                             requested_capture: &mut cx.requested_capture,
                             requested_cursor: &mut cx.requested_cursor,
@@ -1766,6 +1772,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         let mut host = PointerHookHost {
                             app: &mut *cx.app,
                             node: cx.node,
+                            bounds: cx.bounds,
                             input_ctx: &cx.input_ctx,
                             requested_capture: &mut cx.requested_capture,
                             requested_cursor: &mut cx.requested_cursor,
@@ -1808,6 +1815,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             let mut host = PointerHookHost {
                                 app: &mut *cx.app,
                                 node: cx.node,
+                                bounds: cx.bounds,
                                 input_ctx: &cx.input_ctx,
                                 requested_capture: &mut cx.requested_capture,
                                 requested_cursor: &mut cx.requested_cursor,
