@@ -16,15 +16,15 @@ The goal is to validate that:
 
 ## Quick start (run the harness)
 
-Run the shadcn gallery harness:
+Run the demo harness (shadcn gallery):
 
 ```bash
-cargo run -p fret-demo --bin shadcn_gallery
+cargo run -p fret-demo
 ```
 
 Notes:
 
-- The shadcn gallery requests a semantics snapshot every frame (`crates/fret-demo/src/shadcn_gallery.rs`).
+- The demo requests a semantics snapshot every frame (`crates/fret-demo/src/components_gallery.rs`).
 - The desktop runner enables AccessKit integration by default via `WinitRunnerConfig.accessibility_enabled`.
 
 ## What to test (high signal checks)
@@ -43,6 +43,7 @@ Expected semantics outcomes:
 
 - Popover root is `List`.
 - Items are exposed as `ListItem` with correct `disabled/selected` flags.
+- Items include `pos_in_set` / `set_size` so AT can announce “Item X of Y” (ADR 0085).
 
 ### 2) Context menu
 
@@ -57,6 +58,7 @@ Expected semantics outcomes:
 
 - Context menu root is `Menu`.
 - Items are exposed as `MenuItem` with correct `disabled/selected/expanded` flags.
+- Items include `pos_in_set` / `set_size` so AT can announce “Item X of Y” (ADR 0085).
 
 ### 3) Combobox (typeahead + popover list)
 
@@ -73,6 +75,7 @@ Expected semantics outcomes:
 - Combobox surface role is `ComboBox` (not only `TextField`).
 - `value` reflects the current input text.
 - `expanded` tracks whether the popover request exists for this owner.
+- List items include `pos_in_set` / `set_size` so AT can announce “Item X of Y” (ADR 0085).
 
 ## Recommended tooling (platform-specific)
 
@@ -88,23 +91,24 @@ Expected semantics outcomes:
 
 ## Regression tests (keep these green)
 
-These tests cover the “AT Invoke” paths by focusing the a11y child nodes and sending `Space`:
+Collection position metadata checks:
 
-- Popover list item invoke closes overlay and sets result:
-  - `crates/fret-components-ui/src/window_overlays.rs` (`popover_a11y_invoke_list_item_sets_result_and_closes`)
-- Context menu item invoke closes overlay and dispatches command:
-  - `crates/fret-components-ui/src/window_overlays.rs` (`context_menu_a11y_invoke_menu_item_dispatches_command_and_closes`)
+- cmdk list items:
+  - `crates/fret-components-shadcn/src/command.rs` (`cmdk_arrow_moves_highlight_while_focus_stays_in_input`)
+- Select popover items:
+  - `crates/fret-components-shadcn/src/select.rs` (`select_popover_items_have_collection_position_metadata`)
+- Context menu items (separator excluded from count):
+  - `crates/fret-components-shadcn/src/context_menu.rs` (`context_menu_items_have_collection_position_metadata_excluding_separators`)
 
-Semantics presence checks:
+Platform mapping check (AccessKit):
 
-- `crates/fret-components-ui/src/window_overlays.rs` (`popover_semantics_exposes_list_items`)
-- `crates/fret-components-ui/src/window_overlays.rs` (`context_menu_semantics_exposes_menu_items`)
-- `crates/fret-components-ui/src/window_overlays.rs` (`combobox_semantics_role_and_expanded_follow_popover`)
+- `crates/fret-platform/src/accessibility.rs` (`list_item_pos_in_set_and_set_size_are_emitted`)
 
 Run:
 
 ```bash
-cargo nextest run -p fret-components-ui
+cargo nextest run -p fret-components-shadcn
+cargo nextest run -p fret-platform
 ```
 
 ## Known limitations / follow-ups
@@ -113,4 +117,5 @@ cargo nextest run -p fret-components-ui
   relationships (ARIA `controls/owns/activedescendant`-style linkage). If parity needs it, extend
   `fret-core` semantics schema behind an ADR + tests.
 - Overlay item a11y nodes use a fixed slot pool (currently 256). Very long menus/lists will expose
-  only the first N items to AT until a virtualized a11y contract is defined.
+  only the first N items to AT. ADR 0085 defines a virtualized collection contract, but the runtime
+  still needs to implement virtualization + incremental semantics exposure.

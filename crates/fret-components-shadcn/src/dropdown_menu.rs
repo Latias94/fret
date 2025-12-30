@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
+use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::window_overlays;
 use fret_components_ui::{MetricRef, Space};
@@ -168,6 +169,10 @@ impl DropdownMenu {
                     };
 
                     let entries = entries(cx);
+                    let item_count = entries
+                        .iter()
+                        .filter(|e| matches!(e, DropdownMenuEntry::Item(_)))
+                        .count();
                     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries
                         .iter()
                         .map(|e| match e {
@@ -273,6 +278,7 @@ impl DropdownMenu {
                                             let mut out: Vec<AnyElement> =
                                                 Vec::with_capacity(entries.len());
 
+                                            let mut item_ix: usize = 0;
                                             for entry in entries.clone() {
                                                 match entry {
                                                     DropdownMenuEntry::Separator => {
@@ -294,6 +300,9 @@ impl DropdownMenu {
                                                         ));
                                                     }
                                                     DropdownMenuEntry::Item(item) => {
+                                                        let collection_index = item_ix;
+                                                        item_ix = item_ix.saturating_add(1);
+
                                                         let label = item.label.clone();
                                                         let a11y_label = item
                                                             .a11y_label
@@ -320,7 +329,11 @@ impl DropdownMenu {
                                                                     role: Some(SemanticsRole::MenuItem),
                                                                     label: a11y_label,
                                                                     ..Default::default()
-                                                                },
+                                                                }
+                                                                .with_collection_position(
+                                                                    collection_index,
+                                                                    item_count,
+                                                                ),
                                                                 ..Default::default()
                                                             },
                                                             move |cx, st| {

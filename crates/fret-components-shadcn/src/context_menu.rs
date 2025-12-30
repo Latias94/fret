@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
+use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::window_overlays;
 use fret_components_ui::{MetricRef, Space};
@@ -202,6 +203,10 @@ impl ContextMenu {
                     };
 
                     let entries = entries(cx);
+                    let item_count = entries
+                        .iter()
+                        .filter(|e| matches!(e, ContextMenuEntry::Item(_)))
+                        .count();
                     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries
                         .iter()
                         .map(|e| match e {
@@ -314,6 +319,7 @@ impl ContextMenu {
                                             let mut out: Vec<AnyElement> =
                                                 Vec::with_capacity(entries.len());
 
+                                            let mut item_ix: usize = 0;
                                             for entry in entries.clone() {
                                                 match entry {
                                                     ContextMenuEntry::Separator => {
@@ -335,6 +341,9 @@ impl ContextMenu {
                                                         ));
                                                     }
                                                     ContextMenuEntry::Item(item) => {
+                                                        let collection_index = item_ix;
+                                                        item_ix = item_ix.saturating_add(1);
+
                                                         let label = item.label.clone();
                                                         let a11y_label = item
                                                             .a11y_label
@@ -361,7 +370,11 @@ impl ContextMenu {
                                                                     role: Some(SemanticsRole::MenuItem),
                                                                     label: a11y_label,
                                                                     ..Default::default()
-                                                                },
+                                                                }
+                                                                .with_collection_position(
+                                                                    collection_index,
+                                                                    item_count,
+                                                                ),
                                                                 ..Default::default()
                                                             },
                                                             move |cx, st| {
@@ -441,5 +454,149 @@ impl ContextMenu {
 
             trigger
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, FrameId, PathCommand, PathConstraints, PathId, PathMetrics};
+    use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
+    use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
+    use fret_core::{TextStyle, UiServices};
+    use fret_ui::tree::UiTree;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    fn render_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_components_ui::window_overlays::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "context-menu",
+            |cx| {
+                vec![ContextMenu::new(open).into_element(
+                    cx,
+                    |cx| {
+                        cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        )
+                    },
+                    |_cx| {
+                        vec![
+                            ContextMenuEntry::Item(ContextMenuItem::new("Alpha")),
+                            ContextMenuEntry::Separator,
+                            ContextMenuEntry::Item(ContextMenuItem::new("Beta")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Gamma")),
+                        ]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        fret_components_ui::window_overlays::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    #[test]
+    fn context_menu_items_have_collection_position_metadata_excluding_separators() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        // First frame: establish stable trigger bounds.
+        let _ = render_frame(&mut ui, &mut app, &mut services, window, bounds, open);
+
+        let _ = app.models_mut().update(open, |v| *v = true);
+
+        // Second frame: open the menu and verify item metadata.
+        let _ = render_frame(&mut ui, &mut app, &mut services, window, bounds, open);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let beta = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Beta"))
+            .expect("Beta menu item");
+        assert_eq!(beta.pos_in_set, Some(2));
+        assert_eq!(beta.set_size, Some(3));
     }
 }

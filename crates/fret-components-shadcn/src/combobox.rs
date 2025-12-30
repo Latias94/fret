@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret_components_icons::ids;
 use fret_components_ui::declarative::action_hooks::ActionHooksExt;
+use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_components_ui::declarative::icon as decl_icon;
 use fret_components_ui::declarative::scroll as decl_scroll;
 use fret_components_ui::declarative::style as decl_style;
@@ -482,6 +483,7 @@ pub fn combobox<H: UiHost>(
 
                                                                 let mut out =
                                                                     Vec::with_capacity(filtered.len());
+                                                                let item_count = filtered.len();
                                                                 for (idx, item) in filtered
                                                                     .iter()
                                                                     .cloned()
@@ -529,7 +531,11 @@ pub fn combobox<H: UiHost>(
                                                                                 ),
                                                                                 selected: is_selected,
                                                                                 ..Default::default()
-                                                                            },
+                                                                            }
+                                                                            .with_collection_position(
+                                                                                idx,
+                                                                                item_count,
+                                                                            ),
                                                                             ..Default::default()
                                                                         },
                                                                         move |cx, st, _id| {

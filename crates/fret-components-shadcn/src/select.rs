@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret_components_icons::ids;
 use fret_components_ui::declarative::action_hooks::ActionHooksExt;
+use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_components_ui::declarative::icon as decl_icon;
 use fret_components_ui::declarative::scroll as decl_scroll;
 use fret_components_ui::declarative::style as decl_style;
@@ -308,6 +309,7 @@ pub fn select<H: UiHost>(
                                                     );
 
                                                     let mut out = Vec::with_capacity(items.len());
+                                                    let item_count = items.len();
                                                     for (idx, item) in items.iter().cloned().enumerate() {
                                                         let item_disabled = disabled.get(idx).copied().unwrap_or(true);
                                                         let tab_stop = active.is_some_and(|a| a == idx);
@@ -329,15 +331,16 @@ pub fn select<H: UiHost>(
                                                                     focusable: tab_stop,
                                                                     on_click: None,
                                                                     focus_ring: Some(item_ring),
-                                                                    a11y: PressableA11y {
-                                                                        role: Some(SemanticsRole::ListItem),
-                                                                        label: Some(item.label.clone()),
-                                                                        selected: is_selected,
-                                                                        ..Default::default()
-                                                                    },
-                                                                    ..Default::default()
-                                                                },
-                                                                |cx, st, id| {
+                                                                     a11y: PressableA11y {
+                                                                         role: Some(SemanticsRole::ListItem),
+                                                                         label: Some(item.label.clone()),
+                                                                         selected: is_selected,
+                                                                         ..Default::default()
+                                                                    }
+                                                                    .with_collection_position(idx, item_count),
+                                                                     ..Default::default()
+                                                                 },
+                                                                 |cx, st, id| {
                                                                     let _ = id;
 
                                                                     cx.pressable_set_option_arc_str(
@@ -456,4 +459,144 @@ pub fn select<H: UiHost>(
             (props, children)
         })
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, FrameId, PathCommand, PathConstraints, PathId, PathMetrics};
+    use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
+    use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
+    use fret_core::{TextStyle, UiServices};
+    use fret_ui::tree::UiTree;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    fn render_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        open: Model<bool>,
+        items: Vec<SelectItem>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_components_ui::window_overlays::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "select", |cx| {
+                vec![Select::new(model, open).items(items).into_element(cx)]
+            });
+        ui.set_root(root);
+        fret_components_ui::window_overlays::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    #[test]
+    fn select_popover_items_have_collection_position_metadata() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+            SelectItem::new("gamma", "Gamma"),
+        ];
+
+        // First frame: establish stable trigger bounds.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(open, |v| *v = true);
+
+        // Second frame: open the popover and verify item metadata.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            items,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let beta = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListItem && n.label.as_deref() == Some("Beta"))
+            .expect("Beta list item");
+        assert_eq!(beta.pos_in_set, Some(2));
+        assert_eq!(beta.set_size, Some(3));
+    }
 }
