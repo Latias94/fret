@@ -119,6 +119,7 @@ pub struct TextArea {
     preedit: String,
     preedit_cursor: Option<(usize, usize)>,
     preedit_rects: Vec<Rect>,
+    ime_replace_range: Option<(usize, usize)>,
 
     caret: usize,
     selection_anchor: usize,
@@ -166,6 +167,7 @@ impl Default for TextArea {
             preedit: String::new(),
             preedit_cursor: None,
             preedit_rects: Vec::new(),
+            ime_replace_range: None,
             caret: 0,
             selection_anchor: 0,
             affinity: CaretAffinity::Downstream,
@@ -198,6 +200,7 @@ impl TextArea {
         self.ensure_caret_visible = true;
         self.preedit.clear();
         self.preedit_cursor = None;
+        self.ime_replace_range = None;
         self.text_dirty = true;
         self.preferred_x = None;
     }
@@ -297,6 +300,7 @@ impl TextArea {
         }
         self.preedit.clear();
         self.preedit_cursor = None;
+        self.ime_replace_range = None;
         self.affinity = CaretAffinity::Downstream;
         self.text_dirty = true;
     }
@@ -842,6 +846,10 @@ impl<H: UiHost> Widget<H> for TextArea {
                         self.last_ime_commit_tick = Some(tick);
                         self.last_ime_commit_text = Some(committed.clone());
 
+                        if let Some((start, end)) = self.ime_replace_range.take() {
+                            self.selection_anchor = start;
+                            self.caret = end;
+                        }
                         self.replace_selection(&committed);
                         self.clear_preedit();
                         self.ensure_caret_visible = true;
@@ -852,9 +860,19 @@ impl<H: UiHost> Widget<H> for TextArea {
                         if text.is_empty() && cursor.is_none() {
                             self.clear_preedit();
                         } else {
+                            let starting = !self.is_ime_composing();
+                            if starting {
+                                let (start, end) = self.selection_range();
+                                if start != end {
+                                    self.ime_replace_range = Some((start, end));
+                                    self.caret = start;
+                                    self.selection_anchor = start;
+                                } else {
+                                    self.ime_replace_range = None;
+                                }
+                            }
                             self.preedit = text.clone();
                             self.preedit_cursor = *cursor;
-                            self.selection_anchor = self.caret;
                             self.affinity = CaretAffinity::Downstream;
                             self.text_dirty = true;
                         }
@@ -2075,6 +2093,43 @@ mod tests {
         assert_eq!(area.text(), "aZZbc");
         assert!(area.preedit.is_empty());
         assert!(area.preedit_cursor.is_none());
+    }
+
+    #[test]
+    fn ime_commit_replaces_original_selection_after_preedit_starts() {
+        let window = AppWindowId::default();
+        let node = fret_core::NodeId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        );
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let mut area = TextArea::new("hello world");
+        area.caret = 5;
+        area.selection_anchor = 0;
+
+        let mut cx = event_cx(&mut app, &mut services, node, window, bounds);
+
+        area.event(
+            &mut cx,
+            &Event::Ime(fret_core::ImeEvent::Preedit {
+                text: "yo".to_string(),
+                cursor: Some((0, 2)),
+            }),
+        );
+
+        area.event(
+            &mut cx,
+            &Event::Ime(fret_core::ImeEvent::Commit("yo".to_string())),
+        );
+
+        assert_eq!(area.text(), "yo world");
+        assert!(area.preedit.is_empty());
+        assert!(area.ime_replace_range.is_none());
     }
 
     #[test]

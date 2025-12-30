@@ -17,6 +17,7 @@ pub struct TextInput {
     selection_anchor: usize,
     preedit: String,
     preedit_cursor: Option<(usize, usize)>,
+    ime_replace_range: Option<(usize, usize)>,
     style: TextStyle,
     text_blob: Option<fret_core::TextBlobId>,
     text_metrics: Option<TextMetrics>,
@@ -52,6 +53,7 @@ impl TextInput {
             selection_anchor: 0,
             preedit: String::new(),
             preedit_cursor: None,
+            ime_replace_range: None,
             style: TextStyle {
                 font: FontId::default(),
                 size: Px(13.0),
@@ -166,6 +168,7 @@ impl TextInput {
     fn clear_ime_composition(&mut self) {
         self.preedit.clear();
         self.preedit_cursor = None;
+        self.ime_replace_range = None;
     }
 
     fn queue_release_all_text_blobs(&mut self) {
@@ -777,15 +780,33 @@ impl<H: UiHost> Widget<H> for TextInput {
                         self.last_ime_commit_tick = Some(tick);
                         self.last_ime_commit_text = Some(text.clone());
 
+                        if let Some((start, end)) = self.ime_replace_range.take() {
+                            self.selection_anchor = start;
+                            self.caret = end;
+                        }
                         self.replace_selection(text);
                         self.clear_ime_composition();
                         cx.invalidate_self(Invalidation::Layout);
                         cx.request_redraw();
                     }
                     ImeEvent::Preedit { text, cursor } => {
-                        self.preedit = text.clone();
-                        self.preedit_cursor = *cursor;
-                        self.selection_anchor = self.caret;
+                        if text.is_empty() && cursor.is_none() {
+                            self.clear_ime_composition();
+                        } else {
+                            let starting = !self.is_ime_composing();
+                            if starting {
+                                let (start, end) = self.selection_range();
+                                if start != end {
+                                    self.ime_replace_range = Some((start, end));
+                                    self.caret = start;
+                                    self.selection_anchor = start;
+                                } else {
+                                    self.ime_replace_range = None;
+                                }
+                            }
+                            self.preedit = text.clone();
+                            self.preedit_cursor = *cursor;
+                        }
                         cx.invalidate_self(Invalidation::Layout);
                         cx.request_redraw();
                     }
@@ -1336,6 +1357,34 @@ mod tests {
         }
     }
 
+    fn event_cx<'a>(
+        app: &'a mut TestHost,
+        services: &'a mut FakeTextService,
+        node: fret_core::NodeId,
+        window: fret_core::AppWindowId,
+        bounds: Rect,
+    ) -> crate::widget::EventCx<'a, TestHost> {
+        crate::widget::EventCx {
+            app,
+            services,
+            node,
+            window: Some(window),
+            input_ctx: fret_runtime::InputContext {
+                caps: PlatformCapabilities::default(),
+                ..Default::default()
+            },
+            children: &[],
+            focus: Some(node),
+            captured: None,
+            bounds,
+            invalidations: Vec::new(),
+            requested_focus: None,
+            requested_capture: None,
+            requested_cursor: None,
+            stop_propagation: false,
+        }
+    }
+
     #[test]
     fn text_input_hover_sets_text_cursor_effect() {
         let window = AppWindowId::default();
@@ -1378,6 +1427,37 @@ mod tests {
             )),
             "expected a text cursor effect when hovering a text input"
         );
+    }
+
+    #[test]
+    fn ime_commit_replaces_original_selection_after_preedit_starts() {
+        let window = AppWindowId::default();
+        let node = fret_core::NodeId::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let mut input = TextInput::new();
+        input.text = "hello world".to_string();
+        input.caret = 5;
+        input.selection_anchor = 0;
+
+        let mut cx = event_cx(&mut app, &mut services, node, window, bounds);
+
+        input.event(
+            &mut cx,
+            &Event::Ime(ImeEvent::Preedit {
+                text: "yo".to_string(),
+                cursor: Some((0, 2)),
+            }),
+        );
+        input.event(&mut cx, &Event::Ime(ImeEvent::Commit("yo".to_string())));
+
+        assert_eq!(input.text, "yo world");
+        assert!(input.ime_replace_range.is_none());
+        assert!(!input.is_ime_composing());
     }
 
     #[derive(Default)]
