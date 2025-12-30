@@ -3,13 +3,14 @@ use std::sync::Arc;
 use fret_components_icons::IconId;
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::icon as decl_icon;
+use fret_components_ui::declarative::scroll as decl_scroll;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 use fret_core::{Color, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, MainAlign, Overflow, PressableProps, RingStyle, ScrollProps,
-    SpacerProps, TextProps,
+    AnyElement, CrossAlign, FlexProps, MainAlign, Overflow, PressableProps, RingStyle, SpacerProps,
+    TextProps,
 };
 use fret_ui::{ElementCx, Theme, UiHost};
 
@@ -217,14 +218,13 @@ impl SidebarContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let mut props = ScrollProps::default();
-        props.layout.size.height = fret_ui::element::Length::Fill;
+        let mut layout = LayoutRefinement::default().h_full();
         if self.collapsed {
-            props.layout.overflow = Overflow::Clip;
+            layout = layout.overflow_hidden();
         }
 
         let children = self.children;
-        cx.scroll(props, move |cx| {
+        decl_scroll::overflow_scrollbar(cx, layout, move |cx| {
             let gap = decl_style::space(&theme, Space::N2);
             let col = FlexProps {
                 direction: fret_core::Axis::Vertical,
