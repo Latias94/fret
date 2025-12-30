@@ -23,6 +23,11 @@ ADR or adding a new ADR) before scaling feature surface area.
 
 ### P0 (Lock before scaling the UI kit)
 
+- **Virtualized accessibility contract for large collections**
+  - Add ADR (proposed): `docs/adr/0085-virtualized-accessibility-and-collection-semantics.md`
+  - Decide: semantics metadata (`pos_in_set`/`set_size`), active-descendant + virtualization rules, and layering boundaries.
+  - Implement: `crates/fret-core/src/semantics.rs`, `crates/fret-ui/src/widget.rs` + `crates/fret-ui/src/tree.rs`, `crates/fret-platform/src/accessibility.rs`, component surfaces (virtualized lists/overlays).
+
 - **Default font stack + fallback policy v1**
   - Update: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`
   - Decide: default font alias (system UI font), configurable fallback lists (UI/CJK/emoji), and missing-glyph behavior (fallback vs tofu).

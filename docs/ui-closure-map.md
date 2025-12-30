@@ -301,7 +301,9 @@ This is the “do it now or pay later” list, ordered by expected rewrite cost.
      - combobox/listbox variants that keep focus in the input,
      - menu/list keyboard navigation that does not fight semantics reachability under modal barriers,
      - and explicit constraints when virtualization is involved.
-   - Reference: `docs/adr/0073-active-descendant-and-composite-widget-semantics.md`
+    - Reference: `docs/adr/0073-active-descendant-and-composite-widget-semantics.md`
+   - Virtualized collections decision gate:
+     - `docs/adr/0085-virtualized-accessibility-and-collection-semantics.md`
 
 2. **Docking + overlay + viewport capture conformance**
    - Status:
