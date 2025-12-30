@@ -1242,7 +1242,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 && *button == fret_core::MouseButton::Left
                                 && let Some(drag) = dock_drag.as_ref()
                             {
-                                let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off;
+                                let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off
+                                    && cx.input_ctx.caps.ui.multi_window;
 
                                 if drag.dragging {
                                     match dock.hover.clone() {
@@ -1350,7 +1351,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 update_drag = Some((position, dragging));
 
                                 if dragging {
-                                    let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off;
+                                    let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off
+                                        && cx.input_ctx.caps.ui.multi_window;
                                     let margin = Px(10.0);
                                     let requested_tear_off = allow_tear_off
                                         && drag.source_window == self.window
@@ -1448,7 +1450,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 }
 
                                 if dragging {
-                                    let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off;
+                                    let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off
+                                        && cx.input_ctx.caps.ui.multi_window;
                                     if !window_bounds.contains(position)
                                         || float_zone(dock_bounds).contains(position)
                                     {

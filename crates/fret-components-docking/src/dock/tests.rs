@@ -681,6 +681,75 @@ fn dock_tab_drop_outside_window_floats_in_window_when_tear_off_disabled() {
 }
 
 #[test]
+fn dock_tab_drop_outside_window_floats_in_window_when_multi_window_is_disabled() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    let mut caps = PlatformCapabilities::default();
+    caps.ui.multi_window = false;
+    caps.ui.window_tear_off = true;
+    app.set_global(caps);
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.hierarchy")],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+        dock.panels.insert(
+            PanelKey::new("core.hierarchy"),
+            DockPanel {
+                title: "Hierarchy".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+    });
+
+    app.begin_cross_window_drag_with_kind(
+        DragKind::DockPanel,
+        window,
+        Point::new(Px(24.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.hierarchy"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+        },
+    );
+    if let Some(drag) = app.drag_mut() {
+        drag.dragging = true;
+    }
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: Point::new(Px(-32.0), Px(12.0)),
+            kind: InternalDragKind::Drop,
+            modifiers: Modifiers::default(),
+        }),
+    );
+
+    let effects = app.take_effects();
+    assert!(
+        effects.iter().any(|e| matches!(
+            e,
+            Effect::Dock(DockOp::FloatPanelInWindow { panel, .. })
+                if *panel == PanelKey::new("core.hierarchy")
+        )),
+        "expected an in-window float effect when multi-window is disabled"
+    );
+}
+
+#[test]
 fn dock_tab_drop_outside_routes_to_dock_space() {
     let window = AppWindowId::default();
 

@@ -138,6 +138,7 @@ Cons:
   - add a demo harness that runs docking with `ui.multi_window=false` and validates:
     - tear-off becomes in-window float,
     - drag arbitration (ADR 0072) still holds.
+  - Suggested harness: `cargo run -p fret-demo --bin docking_arbitration_demo` with `FRET_SINGLE_WINDOW=1` (see `docs/docking-arbitration-checklist.md`).
 
 ## References
 

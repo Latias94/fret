@@ -500,7 +500,15 @@ pub fn run() -> anyhow::Result<()> {
 
     let event_loop = EventLoop::new().context("create winit event loop")?;
     let mut app = App::new();
-    app.set_global(PlatformCapabilities::default());
+    let mut caps = PlatformCapabilities::default();
+    if std::env::var("FRET_SINGLE_WINDOW")
+        .ok()
+        .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+    {
+        caps.ui.multi_window = false;
+        caps.ui.window_tear_off = true;
+    }
+    app.set_global(caps);
     app.with_global_mut(IconRegistry::default, |icons, _app| {
         fret_icons_lucide::register_icons(icons);
     });

@@ -16,6 +16,51 @@ fn invalidate_windows<H: UiHost>(app: &mut H, windows: impl IntoIterator<Item = 
     DockInvalidationService::bump_windows(app, windows);
 }
 
+fn clamp_rect_to_bounds(rect: fret_core::Rect, bounds: fret_core::Rect) -> fret_core::Rect {
+    let mut out = rect;
+    if bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0 {
+        let min_x = bounds.origin.x.0;
+        let min_y = bounds.origin.y.0;
+        let max_x = bounds.origin.x.0 + (bounds.size.width.0 - out.size.width.0).max(0.0);
+        let max_y = bounds.origin.y.0 + (bounds.size.height.0 - out.size.height.0).max(0.0);
+        out.origin.x = fret_core::Px(out.origin.x.0.clamp(min_x, max_x.max(min_x)));
+        out.origin.y = fret_core::Px(out.origin.y.0.clamp(min_y, max_y.max(min_y)));
+    }
+    out
+}
+
+fn default_in_window_float_rect<H: UiHost>(
+    app: &H,
+    target_window: AppWindowId,
+    anchor: Option<fret_core::WindowAnchor>,
+) -> fret_core::Rect {
+    let bounds = app
+        .global::<fret_core::WindowMetricsService>()
+        .and_then(|svc| svc.inner_bounds(target_window))
+        .unwrap_or_else(|| {
+            fret_core::Rect::new(
+                fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+                fret_core::Size::new(fret_core::Px(960.0), fret_core::Px(720.0)),
+            )
+        });
+
+    let size = fret_core::Size::new(fret_core::Px(480.0), fret_core::Px(360.0));
+
+    let origin = if let Some(anchor) = anchor {
+        fret_core::Point::new(
+            fret_core::Px(anchor.position.x.0 - size.width.0 * 0.25),
+            fret_core::Px(anchor.position.y.0 - size.height.0 * 0.25),
+        )
+    } else {
+        fret_core::Point::new(
+            fret_core::Px(bounds.size.width.0 * 0.5 - size.width.0 * 0.5),
+            fret_core::Px(bounds.size.height.0 * 0.5 - size.height.0 * 0.5),
+        )
+    };
+
+    clamp_rect_to_bounds(fret_core::Rect::new(origin, size), bounds)
+}
+
 /// Handle a docking transaction emitted by the UI layer.
 ///
 /// Call this from your runner/driver when consuming `Effect::Dock(op)`.
@@ -26,6 +71,22 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
             panel,
             anchor,
         } => {
+            if let Some(caps) = app.global::<fret_core::PlatformCapabilities>()
+                && !caps.ui.multi_window
+            {
+                let target_window = anchor.map(|a| a.window).unwrap_or(source_window);
+                let rect = default_in_window_float_rect(app, target_window, anchor);
+                return handle_dock_op(
+                    app,
+                    DockOp::FloatPanelInWindow {
+                        source_window,
+                        panel,
+                        target_window,
+                        rect,
+                    },
+                );
+            }
+
             app.push_effect(Effect::Window(WindowRequest::Create(CreateWindowRequest {
                 kind: CreateWindowKind::DockFloating {
                     source_window,
@@ -195,6 +256,7 @@ mod tests {
         let panel = PanelKey::new("test.panel");
 
         let mut app = TestHost::new();
+        app.set_global(fret_core::PlatformCapabilities::default());
         app.set_global(DockManager::default());
 
         app.with_global_mut(DockManager::default, |dock, _app| {
@@ -250,6 +312,57 @@ mod tests {
         assert!(
             dock.graph.find_panel_in_window(window_a, &panel).is_none(),
             "expected panel to be removed from the source window"
+        );
+    }
+
+    #[test]
+    fn request_float_degrades_to_in_window_when_multi_window_is_disabled() {
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let panel = PanelKey::new("test.panel");
+
+        let mut app = TestHost::new();
+        let mut caps = fret_core::PlatformCapabilities::default();
+        caps.ui.multi_window = false;
+        caps.ui.window_tear_off = true;
+        app.set_global(caps);
+        app.set_global(DockManager::default());
+
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            dock.insert_panel(
+                panel.clone(),
+                crate::DockPanel {
+                    title: "Panel".to_string(),
+                    color: fret_core::Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![panel.clone()],
+                active: 0,
+            });
+            dock.graph.set_window_root(window_a, tabs);
+        });
+
+        let op = DockOp::RequestFloatPanelToNewWindow {
+            source_window: window_a,
+            panel: panel.clone(),
+            anchor: None,
+        };
+        assert!(handle_dock_op(&mut app, op));
+
+        let effects = app.take_effects();
+        assert!(
+            !effects
+                .iter()
+                .any(|e| matches!(e, Effect::Window(WindowRequest::Create(_)))),
+            "expected no OS window creation effect when multi-window is disabled"
+        );
+
+        let dock = app.global::<DockManager>().expect("dock manager exists");
+        assert_eq!(dock.graph.floating_windows(window_a).len(), 1);
+        assert!(
+            dock.graph.find_panel_in_window(window_a, &panel).is_some(),
+            "expected panel to remain in window, inside a floating container"
         );
     }
 }
