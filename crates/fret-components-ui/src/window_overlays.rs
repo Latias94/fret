@@ -737,25 +737,21 @@ pub fn render<H: UiHost>(
     }
 
     for (layer, trigger, restore_focus) in to_hide_modals {
-        let focus = ui.focus();
-        let focus_in_layer = focus.is_some_and(|n| ui.node_layer(n) == Some(layer));
+        // Modals should restore focus deterministically on close (Radix-style): underlay focus
+        // changes cannot happen while the barrier is installed, so it's safe to always restore on
+        // unmount.
+        ui.set_layer_visible(layer, false);
 
-        if focus.is_none() || focus_in_layer {
-            ui.set_layer_visible(layer, false);
-            // Prefer resolving the trigger at restore time to avoid relying on potentially stale
-            // `NodeId` snapshots across frames.
-            if let Some(trigger) = trigger
-                && let Some(trigger_node) =
-                    fret_ui::elements::node_for_element(app, window, trigger)
-            {
-                ui.set_focus(Some(trigger_node));
-            } else if let Some(node) = restore_focus
-                && ui.node_layer(node).is_some()
-            {
-                ui.set_focus(Some(node));
-            }
-        } else {
-            ui.set_layer_visible(layer, false);
+        // Prefer resolving the trigger at restore time to avoid relying on potentially stale
+        // `NodeId` snapshots across frames.
+        if let Some(trigger) = trigger
+            && let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger)
+        {
+            ui.set_focus(Some(trigger_node));
+        } else if let Some(node) = restore_focus
+            && ui.node_layer(node).is_some()
+        {
+            ui.set_focus(Some(node));
         }
     }
 
