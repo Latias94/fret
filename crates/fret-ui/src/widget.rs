@@ -1,7 +1,7 @@
 use crate::{Theme, UiHost};
 use fret_core::{
     AppWindowId, Corners, Event, NodeId, Point, Rect, Scene, SemanticsFlags, SemanticsRole, Size,
-    UiServices,
+    Transform2D, UiServices,
 };
 use fret_runtime::{CommandId, Effect, InputContext, Model, ModelId};
 
@@ -255,6 +255,21 @@ pub trait Widget<H: UiHost> {
         false
     }
     fn cleanup_resources(&mut self, _services: &mut dyn UiServices) {}
+    /// Optional affine transform applied to both paint and input for the subtree rooted at this node.
+    ///
+    /// This is a "render transform" (not a layout transform):
+    /// - Layout bounds remain authoritative for measurement and positioning.
+    /// - The transform is expressed in the same coordinate space as `bounds` (logical px, window-local).
+    /// - Hit-testing and pointer event positions are mapped through the inverse transform so input stays
+    ///   consistent with the rendered output.
+    ///
+    /// Notes:
+    /// - If the transform is not invertible, hit-testing and pointer event mapping fall back to the
+    ///   untransformed behavior.
+    /// - Paint caching may be disabled for nodes that return a transform, depending on runtime policy.
+    fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+        None
+    }
     /// Whether hit-testing should be clipped to `bounds`.
     ///
     /// When `false`, children can receive pointer input even if they are positioned outside the

@@ -5,7 +5,8 @@ use crate::{
 use fret_core::PlatformCapabilities;
 use fret_core::{
     AppWindowId, Corners, Event, FrameId, KeyCode, NodeId, Point, PointerEvent, Px, Rect, Scene,
-    SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, UiServices,
+    SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, Transform2D,
+    UiServices,
 };
 use fret_runtime::{
     CommandId, Effect, InputContext, InputDispatchPhase, KeyChord, KeymapService, ModelId, Platform,
@@ -550,6 +551,69 @@ impl<H: UiHost> UiTree<H> {
         let services_ptr: *mut dyn UiServices = services;
 
         let (active_roots, _barrier_root) = self.active_input_layers();
+        if event_position(event).is_some() {
+            let chain = self.build_mapped_event_chain(start, event);
+            for (node_id, event_for_node) in chain {
+                let (invalidations, requested_focus, requested_capture, stop_propagation) = self
+                    .with_widget_mut(node_id, |widget, tree| {
+                        let (children, bounds) = tree
+                            .nodes
+                            .get(node_id)
+                            .map(|n| (n.children.as_slice(), n.bounds))
+                            .unwrap_or((&[][..], Rect::default()));
+                        let mut cx = EventCx {
+                            app,
+                            services: unsafe { &mut *services_ptr },
+                            node: node_id,
+                            window: tree.window,
+                            input_ctx: input_ctx.clone(),
+                            children,
+                            focus: tree.focus,
+                            captured: tree.captured,
+                            bounds,
+                            invalidations: Vec::new(),
+                            requested_focus: None,
+                            requested_capture: None,
+                            requested_cursor: None,
+                            stop_propagation: false,
+                        };
+                        widget.event(&mut cx, &event_for_node);
+                        (
+                            cx.invalidations,
+                            cx.requested_focus,
+                            cx.requested_capture,
+                            cx.stop_propagation,
+                        )
+                    });
+
+                for (id, inv) in invalidations {
+                    self.mark_invalidation(id, inv);
+                }
+
+                if let Some(focus) = requested_focus
+                    && self.focus != Some(focus)
+                    && self.node_in_any_layer(focus, &active_roots)
+                {
+                    if let Some(prev) = self.focus {
+                        self.mark_invalidation(prev, Invalidation::Paint);
+                    }
+                    self.focus = Some(focus);
+                    self.mark_invalidation(focus, Invalidation::Paint);
+                }
+
+                if let Some(capture) = requested_capture
+                    && capture.is_none_or(|n| self.node_in_any_layer(n, &active_roots))
+                {
+                    self.captured = capture;
+                }
+
+                if self.captured.is_some() || stop_propagation {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         let mut node_id = start;
         loop {
             let (invalidations, requested_focus, requested_capture, stop_propagation, parent) =
@@ -1579,87 +1643,169 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        loop {
-            let (
-                invalidations,
-                requested_focus,
-                requested_capture,
-                requested_cursor,
-                stop_propagation,
-                parent,
-            ) = self.with_widget_mut(node_id, |widget, tree| {
-                let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                let (children, bounds) = tree
-                    .nodes
-                    .get(node_id)
-                    .map(|n| (n.children.as_slice(), n.bounds))
-                    .unwrap_or((&[][..], Rect::default()));
-                let mut cx = EventCx {
-                    app,
-                    services: unsafe { &mut *services_ptr },
-                    node: node_id,
-                    window: tree.window,
-                    input_ctx: input_ctx.clone(),
-                    children,
-                    focus: tree.focus,
-                    captured: tree.captured,
-                    bounds,
-                    invalidations: Vec::new(),
-                    requested_focus: None,
-                    requested_capture: None,
-                    requested_cursor: None,
-                    stop_propagation: false,
-                };
-                widget.event(&mut cx, event);
-                (
-                    cx.invalidations,
-                    cx.requested_focus,
-                    cx.requested_capture,
-                    cx.requested_cursor,
-                    cx.stop_propagation,
-                    parent,
-                )
-            });
+        if event_position(event).is_some() {
+            let chain = self.build_mapped_event_chain(node_id, event);
+            for (node_id, event_for_node) in chain {
+                let (
+                    invalidations,
+                    requested_focus,
+                    requested_capture,
+                    requested_cursor,
+                    stop_propagation,
+                ) = self.with_widget_mut(node_id, |widget, tree| {
+                    let (children, bounds) = tree
+                        .nodes
+                        .get(node_id)
+                        .map(|n| (n.children.as_slice(), n.bounds))
+                        .unwrap_or((&[][..], Rect::default()));
+                    let mut cx = EventCx {
+                        app,
+                        services: unsafe { &mut *services_ptr },
+                        node: node_id,
+                        window: tree.window,
+                        input_ctx: input_ctx.clone(),
+                        children,
+                        focus: tree.focus,
+                        captured: tree.captured,
+                        bounds,
+                        invalidations: Vec::new(),
+                        requested_focus: None,
+                        requested_capture: None,
+                        requested_cursor: None,
+                        stop_propagation: false,
+                    };
+                    widget.event(&mut cx, &event_for_node);
+                    (
+                        cx.invalidations,
+                        cx.requested_focus,
+                        cx.requested_capture,
+                        cx.requested_cursor,
+                        cx.stop_propagation,
+                    )
+                });
 
-            if !invalidations.is_empty() || requested_focus.is_some() || requested_capture.is_some()
-            {
-                needs_redraw = true;
-            }
-
-            for (id, inv) in invalidations {
-                self.mark_invalidation(id, inv);
-            }
-
-            if let Some(focus) = requested_focus
-                && self.focus != Some(focus)
-            {
-                if let Some(prev) = self.focus {
-                    self.mark_invalidation(prev, Invalidation::Paint);
+                if !invalidations.is_empty()
+                    || requested_focus.is_some()
+                    || requested_capture.is_some()
+                {
+                    needs_redraw = true;
                 }
-                self.focus = Some(focus);
-                self.mark_invalidation(focus, Invalidation::Paint);
+
+                for (id, inv) in invalidations {
+                    self.mark_invalidation(id, inv);
+                }
+
+                if let Some(focus) = requested_focus
+                    && self.focus != Some(focus)
+                {
+                    if let Some(prev) = self.focus {
+                        self.mark_invalidation(prev, Invalidation::Paint);
+                    }
+                    self.focus = Some(focus);
+                    self.mark_invalidation(focus, Invalidation::Paint);
+                }
+
+                if let Some(capture) = requested_capture {
+                    self.captured = capture;
+                }
+
+                if requested_cursor.is_some() && cursor_choice.is_none() {
+                    cursor_choice = requested_cursor;
+                }
+
+                if stop_propagation {
+                    stop_propagation_requested = true;
+                }
+
+                if self.captured.is_some() || stop_propagation {
+                    break;
+                }
             }
+        } else {
+            loop {
+                let (
+                    invalidations,
+                    requested_focus,
+                    requested_capture,
+                    requested_cursor,
+                    stop_propagation,
+                    parent,
+                ) = self.with_widget_mut(node_id, |widget, tree| {
+                    let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                    let (children, bounds) = tree
+                        .nodes
+                        .get(node_id)
+                        .map(|n| (n.children.as_slice(), n.bounds))
+                        .unwrap_or((&[][..], Rect::default()));
+                    let mut cx = EventCx {
+                        app,
+                        services: unsafe { &mut *services_ptr },
+                        node: node_id,
+                        window: tree.window,
+                        input_ctx: input_ctx.clone(),
+                        children,
+                        focus: tree.focus,
+                        captured: tree.captured,
+                        bounds,
+                        invalidations: Vec::new(),
+                        requested_focus: None,
+                        requested_capture: None,
+                        requested_cursor: None,
+                        stop_propagation: false,
+                    };
+                    widget.event(&mut cx, event);
+                    (
+                        cx.invalidations,
+                        cx.requested_focus,
+                        cx.requested_capture,
+                        cx.requested_cursor,
+                        cx.stop_propagation,
+                        parent,
+                    )
+                });
 
-            if let Some(capture) = requested_capture {
-                self.captured = capture;
-            };
+                if !invalidations.is_empty()
+                    || requested_focus.is_some()
+                    || requested_capture.is_some()
+                {
+                    needs_redraw = true;
+                }
 
-            if requested_cursor.is_some() && cursor_choice.is_none() {
-                cursor_choice = requested_cursor;
+                for (id, inv) in invalidations {
+                    self.mark_invalidation(id, inv);
+                }
+
+                if let Some(focus) = requested_focus
+                    && self.focus != Some(focus)
+                {
+                    if let Some(prev) = self.focus {
+                        self.mark_invalidation(prev, Invalidation::Paint);
+                    }
+                    self.focus = Some(focus);
+                    self.mark_invalidation(focus, Invalidation::Paint);
+                }
+
+                if let Some(capture) = requested_capture {
+                    self.captured = capture;
+                };
+
+                if requested_cursor.is_some() && cursor_choice.is_none() {
+                    cursor_choice = requested_cursor;
+                }
+
+                if stop_propagation {
+                    stop_propagation_requested = true;
+                }
+
+                if self.captured.is_some() || stop_propagation {
+                    break;
+                }
+
+                node_id = match parent {
+                    Some(parent) => parent,
+                    None => break,
+                };
             }
-
-            if stop_propagation {
-                stop_propagation_requested = true;
-            }
-
-            if self.captured.is_some() || stop_propagation {
-                break;
-            }
-
-            node_id = match parent {
-                Some(parent) => parent,
-                None => break,
-            };
         }
 
         if defer_keydown_shortcuts_until_after_dispatch
@@ -1784,6 +1930,48 @@ impl<H: UiHost> UiTree<H> {
         event: &Event,
     ) {
         let services_ptr: *mut dyn UiServices = services;
+
+        if event_position(event).is_some() {
+            let chain = self.build_mapped_event_chain(start, event);
+            for (node_id, event_for_node) in chain {
+                let (invalidations, _parent) = self.with_widget_mut(node_id, |widget, tree| {
+                    let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                    let (children, bounds) = tree
+                        .nodes
+                        .get(node_id)
+                        .map(|n| (n.children.as_slice(), n.bounds))
+                        .unwrap_or((&[][..], Rect::default()));
+                    let mut observer_ctx = input_ctx.clone();
+                    observer_ctx.dispatch_phase = InputDispatchPhase::Observer;
+                    let mut cx = EventCx {
+                        app,
+                        services: unsafe { &mut *services_ptr },
+                        node: node_id,
+                        window: tree.window,
+                        input_ctx: observer_ctx,
+                        children,
+                        focus: tree.focus,
+                        captured: tree.captured,
+                        bounds,
+                        invalidations: Vec::new(),
+                        requested_focus: None,
+                        requested_capture: None,
+                        requested_cursor: None,
+                        stop_propagation: false,
+                    };
+                    widget.event(&mut cx, &event_for_node);
+
+                    // Observer dispatch must not mutate routing state (capture/focus/propagation). It
+                    // exists to allow click-through outside-press policies, not to intercept input.
+                    (cx.invalidations, parent)
+                });
+
+                for (id, inv) in invalidations {
+                    self.mark_invalidation(id, inv);
+                }
+            }
+            return;
+        }
 
         let mut node_id = start;
         loop {
@@ -2317,7 +2505,8 @@ impl<H: UiHost> UiTree<H> {
 
         let theme_revision = Theme::global(&*app).revision();
         let key = PaintCacheKey::new(bounds, sf, theme_revision);
-        let cache_enabled = self.paint_cache_enabled();
+        let cache_enabled =
+            self.paint_cache_enabled() && self.node_render_transform(node).is_none();
 
         if cache_enabled && !invalidated {
             if let Some(prev) = prev_cache
@@ -2387,7 +2576,21 @@ impl<H: UiHost> UiTree<H> {
                 paint_child: &mut paint_child,
                 child_bounds: &child_bounds,
             };
+            let transform = widget.render_transform(bounds);
+            let pushed_transform = if let Some(transform) = transform
+                && transform.inverse().is_some()
+            {
+                cx.scene.push(SceneOp::PushTransform { transform });
+                true
+            } else {
+                false
+            };
+
             widget.paint(&mut cx);
+
+            if pushed_transform {
+                cx.scene.push(SceneOp::PopTransform);
+            }
         });
         let end = scene.ops_len();
 
@@ -2422,6 +2625,14 @@ impl<H: UiHost> UiTree<H> {
     fn hit_test_node(&self, node: NodeId, position: Point) -> Option<NodeId> {
         let n = self.nodes.get(node)?;
         let widget = n.widget.as_ref();
+        let position = if let Some(w) = widget
+            && let Some(t) = w.render_transform(n.bounds)
+            && let Some(inv) = t.inverse()
+        {
+            inv.apply_point(position)
+        } else {
+            position
+        };
         let clips_hit_test = widget.map(|w| w.clips_hit_test(n.bounds)).unwrap_or(true);
         if clips_hit_test {
             if !n.bounds.contains(position) {
@@ -2454,6 +2665,104 @@ impl<H: UiHost> UiTree<H> {
                 .map(|w| w.hit_test(n.bounds, position))
                 .unwrap_or(true);
         hit.then_some(node)
+    }
+
+    fn node_render_transform(&self, node: NodeId) -> Option<Transform2D> {
+        let n = self.nodes.get(node)?;
+        let w = n.widget.as_ref()?;
+        let t = w.render_transform(n.bounds)?;
+        t.inverse().is_some().then_some(t)
+    }
+
+    fn apply_vector(t: Transform2D, v: Point) -> Point {
+        Point::new(Px(t.a * v.x.0 + t.c * v.y.0), Px(t.b * v.x.0 + t.d * v.y.0))
+    }
+
+    fn event_with_mapped_position(event: &Event, position: Point, delta: Option<Point>) -> Event {
+        match event {
+            Event::Pointer(e) => {
+                let e = match e {
+                    PointerEvent::Move {
+                        buttons, modifiers, ..
+                    } => PointerEvent::Move {
+                        position,
+                        buttons: *buttons,
+                        modifiers: *modifiers,
+                    },
+                    PointerEvent::Down {
+                        button, modifiers, ..
+                    } => PointerEvent::Down {
+                        position,
+                        button: *button,
+                        modifiers: *modifiers,
+                    },
+                    PointerEvent::Up {
+                        button, modifiers, ..
+                    } => PointerEvent::Up {
+                        position,
+                        button: *button,
+                        modifiers: *modifiers,
+                    },
+                    PointerEvent::Wheel { modifiers, .. } => PointerEvent::Wheel {
+                        position,
+                        delta: delta.unwrap_or(Point::new(Px(0.0), Px(0.0))),
+                        modifiers: *modifiers,
+                    },
+                };
+                Event::Pointer(e)
+            }
+            Event::ExternalDrag(e) => Event::ExternalDrag(fret_core::ExternalDragEvent {
+                position,
+                kind: e.kind.clone(),
+            }),
+            Event::InternalDrag(e) => Event::InternalDrag(fret_core::InternalDragEvent {
+                position,
+                kind: e.kind.clone(),
+                modifiers: e.modifiers,
+            }),
+            _ => event.clone(),
+        }
+    }
+
+    fn build_mapped_event_chain(&self, start: NodeId, event: &Event) -> Vec<(NodeId, Event)> {
+        let Some(pos) = event_position(event) else {
+            return vec![(start, event.clone())];
+        };
+
+        let mut chain: Vec<NodeId> = Vec::new();
+        let mut cur = Some(start);
+        while let Some(id) = cur {
+            chain.push(id);
+            cur = self.nodes.get(id).and_then(|n| n.parent);
+        }
+
+        let mut nodes_root_to_leaf = chain.clone();
+        nodes_root_to_leaf.reverse();
+
+        let mut mapped_pos = pos;
+        let mut mapped_delta = match event {
+            Event::Pointer(PointerEvent::Wheel { delta, .. }) => Some(*delta),
+            _ => None,
+        };
+
+        let mut out: Vec<(NodeId, Event)> = Vec::with_capacity(chain.len());
+        for &node in &nodes_root_to_leaf {
+            if let Some(t) = self.node_render_transform(node)
+                && let Some(inv) = t.inverse()
+            {
+                mapped_pos = inv.apply_point(mapped_pos);
+                if let Some(d) = mapped_delta {
+                    mapped_delta = Some(Self::apply_vector(inv, d));
+                }
+            }
+            out.push((
+                node,
+                Self::event_with_mapped_position(event, mapped_pos, mapped_delta),
+            ));
+        }
+
+        out.reverse();
+        out
     }
 
     fn point_in_rounded_rect(bounds: Rect, radii: Corners, position: Point) -> bool {
@@ -3395,6 +3704,111 @@ mod tests {
 
         let value = app.models().get(clicks).copied().unwrap_or(0);
         assert_eq!(value, 1);
+    }
+
+    #[test]
+    fn render_transform_affects_hit_testing_and_pointer_event_coordinates() {
+        struct TransformRoot {
+            delta: Point,
+        }
+
+        impl<H: UiHost> Widget<H> for TransformRoot {
+            fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+                Some(Transform2D::translation(self.delta))
+            }
+
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                let Some(&child) = cx.children.first() else {
+                    return cx.available;
+                };
+                let child_bounds = Rect::new(cx.bounds.origin, Size::new(Px(10.0), Px(10.0)));
+                let _ = cx.layout_in(child, child_bounds);
+                cx.available
+            }
+
+            fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+                let Some(&child) = cx.children.first() else {
+                    return;
+                };
+                let child_bounds = Rect::new(cx.bounds.origin, Size::new(Px(10.0), Px(10.0)));
+                cx.paint(child, child_bounds);
+            }
+        }
+
+        struct RecordPointerPos {
+            clicks: Model<u32>,
+            last_pos: Model<Point>,
+        }
+
+        impl<H: UiHost> Widget<H> for RecordPointerPos {
+            fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+                match event {
+                    Event::Pointer(PointerEvent::Down { position, .. }) => {
+                        let _ = cx
+                            .app
+                            .models_mut()
+                            .update(self.last_pos, |p| *p = *position);
+                        cx.stop_propagation();
+                    }
+                    Event::Pointer(PointerEvent::Up { .. }) => {
+                        let _ = cx.app.models_mut().update(self.clicks, |v| *v += 1);
+                        cx.stop_propagation();
+                    }
+                    _ => {}
+                }
+            }
+
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                cx.available
+            }
+        }
+
+        let window = AppWindowId::default();
+        let mut app = crate::test_host::TestHost::new();
+        let clicks = app.models_mut().insert(0u32);
+        let last_pos = app.models_mut().insert(Point::new(Px(0.0), Px(0.0)));
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(TransformRoot {
+            delta: Point::new(Px(40.0), Px(0.0)),
+        });
+        let child = ui.create_node(RecordPointerPos { clicks, last_pos });
+        ui.add_child(root, child);
+        ui.set_root(root);
+
+        let mut services = FakeUiServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: Point::new(Px(45.0), Px(5.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                position: Point::new(Px(45.0), Px(5.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get(clicks).copied(), Some(1));
+        assert_eq!(
+            app.models().get(last_pos).copied(),
+            Some(Point::new(Px(5.0), Px(5.0)))
+        );
     }
 
     #[test]
