@@ -16,6 +16,17 @@ fn invalidate_windows<H: UiHost>(app: &mut H, windows: impl IntoIterator<Item = 
     DockInvalidationService::bump_windows(app, windows);
 }
 
+/// Request docking layout invalidation for the provided windows.
+///
+/// This is a small app-layer integration hook: it bumps the internal invalidation models that the
+/// dock host observes, forcing a layout pass on the next frame.
+pub fn request_dock_invalidation<H: UiHost>(
+    app: &mut H,
+    windows: impl IntoIterator<Item = AppWindowId>,
+) {
+    invalidate_windows(app, windows);
+}
+
 fn clamp_rect_to_bounds(rect: fret_core::Rect, bounds: fret_core::Rect) -> fret_core::Rect {
     let mut out = rect;
     if bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0 {

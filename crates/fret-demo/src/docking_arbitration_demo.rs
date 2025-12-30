@@ -16,7 +16,7 @@ use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRu
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::{Invalidation, Theme, UiTree};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use winit::event_loop::EventLoop;
 
@@ -64,9 +64,60 @@ struct DockingArbitrationWindowState {
 #[derive(Default)]
 struct DockingArbitrationDriver {
     main_window: Option<AppWindowId>,
+    pending_layout: Option<fret_core::DockLayout>,
+    restore: Option<DockLayoutRestoreState>,
+    logical_windows: HashMap<AppWindowId, String>,
+    next_logical_window_ix: u32,
+}
+
+struct DockLayoutRestoreState {
+    layout: fret_core::DockLayout,
+    pending_logical_window_ids: HashSet<String>,
 }
 
 impl DockingArbitrationDriver {
+    const DOCK_LAYOUT_PATH: &'static str = ".fret/layout.json";
+    const MAIN_LOGICAL_WINDOW_ID: &'static str = "main";
+
+    fn new(pending_layout: Option<fret_core::DockLayout>) -> Self {
+        let mut next_logical_window_ix = 1;
+        if let Some(layout) = &pending_layout {
+            for w in &layout.windows {
+                let Some(suffix) = w.logical_window_id.strip_prefix("floating-") else {
+                    continue;
+                };
+                let Ok(ix) = suffix.parse::<u32>() else {
+                    continue;
+                };
+                next_logical_window_ix = next_logical_window_ix.max(ix.saturating_add(1));
+            }
+        }
+        Self {
+            main_window: None,
+            pending_layout,
+            restore: None,
+            logical_windows: HashMap::new(),
+            next_logical_window_ix,
+        }
+    }
+
+    fn alloc_floating_logical_window_id(&mut self) -> String {
+        let reserved = self.restore.as_ref().map(|r| &r.pending_logical_window_ids);
+
+        loop {
+            let logical = format!("floating-{}", self.next_logical_window_ix);
+            self.next_logical_window_ix = self.next_logical_window_ix.saturating_add(1);
+
+            if self.logical_windows.values().any(|v| v == &logical) {
+                continue;
+            }
+            if reserved.is_some_and(|r| r.contains(&logical)) {
+                continue;
+            }
+            return logical;
+        }
+    }
+
     fn build_ui(app: &mut App, window: AppWindowId) -> DockingArbitrationWindowState {
         let popover_open = app.models_mut().insert(false);
         let dialog_open = app.models_mut().insert(false);
@@ -121,6 +172,143 @@ impl DockingArbitrationDriver {
             });
             dock.graph.set_window_root(window, tabs);
         });
+    }
+
+    fn apply_layout_if_ready(&mut self, app: &mut App) {
+        let Some(main_window) = self.main_window else {
+            return;
+        };
+        let Some(restore) = self.restore.as_mut() else {
+            return;
+        };
+        if !restore.pending_logical_window_ids.is_empty() {
+            return;
+        }
+
+        let mut windows: Vec<(AppWindowId, String)> = self
+            .logical_windows
+            .iter()
+            .map(|(w, id)| (*w, id.clone()))
+            .collect();
+        windows.sort_by(|a, b| a.1.cmp(&b.1));
+
+        app.with_global_mut(DockManager::default, |dock, app| {
+            let changed = dock
+                .graph
+                .import_layout_for_windows(&restore.layout, &windows);
+            if changed {
+                fret_components_docking::runtime::request_dock_invalidation(
+                    app,
+                    dock.graph.windows(),
+                );
+                for w in dock.graph.windows() {
+                    app.request_redraw(w);
+                }
+            }
+        });
+
+        self.restore = None;
+        app.request_redraw(main_window);
+    }
+
+    fn try_restore_layout_on_init(&mut self, app: &mut App, main_window: AppWindowId) {
+        let Some(layout) = self.pending_layout.take() else {
+            return;
+        };
+
+        let multi_window = app
+            .global::<PlatformCapabilities>()
+            .map(|c| c.ui.multi_window)
+            .unwrap_or(true);
+
+        if !multi_window {
+            app.with_global_mut(DockManager::default, |dock, app| {
+                let changed = dock
+                    .graph
+                    .import_layout_for_windows_with_fallback_floatings(
+                        &layout,
+                        &[(main_window, Self::MAIN_LOGICAL_WINDOW_ID.to_string())],
+                        main_window,
+                    );
+                if changed {
+                    fret_components_docking::runtime::request_dock_invalidation(app, [main_window]);
+                    app.request_redraw(main_window);
+                }
+            });
+            return;
+        }
+
+        // Multi-window restore (best-effort): create OS windows for non-main logical windows, then
+        // import the full layout once all windows exist. Until then, main window can still render
+        // a default dock graph.
+        let mut pending: HashSet<String> = HashSet::new();
+        for w in &layout.windows {
+            if w.logical_window_id == Self::MAIN_LOGICAL_WINDOW_ID {
+                continue;
+            }
+            pending.insert(w.logical_window_id.clone());
+            app.push_effect(Effect::Window(WindowRequest::Create(
+                fret_app::CreateWindowRequest {
+                    kind: CreateWindowKind::DockRestore {
+                        logical_window_id: w.logical_window_id.clone(),
+                    },
+                    anchor: None,
+                },
+            )));
+        }
+        self.restore = Some(DockLayoutRestoreState {
+            layout,
+            pending_logical_window_ids: pending,
+        });
+        self.apply_layout_if_ready(app);
+    }
+
+    fn save_layout_on_exit(&mut self, app: &mut App) {
+        let Some(main_window) = self.main_window else {
+            return;
+        };
+
+        let mut windows: Vec<(AppWindowId, String)> = self
+            .logical_windows
+            .iter()
+            .map(|(w, id)| (*w, id.clone()))
+            .collect();
+        windows.sort_by(|a, b| a.1.cmp(&b.1));
+
+        let Some(metrics) = app.global::<fret_core::WindowMetricsService>() else {
+            return;
+        };
+
+        let placements: HashMap<AppWindowId, fret_core::DockWindowPlacement> = windows
+            .iter()
+            .filter_map(|(window, _logical_window_id)| {
+                let size = metrics.inner_size(*window)?;
+                let width = (size.width.0.max(1.0).round() as u32).max(1);
+                let height = (size.height.0.max(1.0).round() as u32).max(1);
+                Some((
+                    *window,
+                    fret_core::DockWindowPlacement {
+                        width,
+                        height,
+                        x: None,
+                        y: None,
+                        monitor_hint: None,
+                    },
+                ))
+            })
+            .collect();
+
+        let layout = app.with_global_mut(DockManager::default, |dock, _app| {
+            dock.graph
+                .export_layout_with_placement(&windows, |window| placements.get(&window).cloned())
+        });
+
+        let file = fret_app::DockLayoutFileV1 { layout };
+        if let Err(err) = file.save_json(Self::DOCK_LAYOUT_PATH) {
+            tracing::warn!("failed to save dock layout: {err}");
+        } else {
+            app.request_redraw(main_window);
+        }
     }
 
     fn render_dock(
@@ -296,8 +484,11 @@ impl DockingArbitrationDriver {
 impl WinitDriver for DockingArbitrationDriver {
     type WindowState = DockingArbitrationWindowState;
 
-    fn init(&mut self, _app: &mut App, main_window: AppWindowId) {
+    fn init(&mut self, app: &mut App, main_window: AppWindowId) {
         self.main_window = Some(main_window);
+        self.logical_windows
+            .insert(main_window, Self::MAIN_LOGICAL_WINDOW_ID.to_string());
+        self.try_restore_layout_on_init(app, main_window);
     }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
@@ -398,10 +589,23 @@ impl WinitDriver for DockingArbitrationDriver {
                 format!("fret-demo docking_arbitration_demo — {}", panel.kind.0),
                 winit::dpi::LogicalSize::new(720.0, 520.0),
             )),
-            CreateWindowKind::DockRestore { logical_window_id } => Some(WindowCreateSpec::new(
-                format!("fret-demo docking_arbitration_demo — {logical_window_id}"),
-                winit::dpi::LogicalSize::new(980.0, 720.0),
-            )),
+            CreateWindowKind::DockRestore { logical_window_id } => {
+                let mut size = winit::dpi::LogicalSize::new(980.0, 720.0);
+                if let Some(restore) = &self.restore
+                    && let Some(window) = restore
+                        .layout
+                        .windows
+                        .iter()
+                        .find(|w| w.logical_window_id == logical_window_id.as_str())
+                    && let Some(p) = &window.placement
+                {
+                    size = winit::dpi::LogicalSize::new(p.width as f64, p.height as f64);
+                }
+                Some(WindowCreateSpec::new(
+                    format!("fret-demo docking_arbitration_demo — {logical_window_id}"),
+                    size,
+                ))
+            }
         }
     }
 
@@ -411,10 +615,30 @@ impl WinitDriver for DockingArbitrationDriver {
         request: &fret_app::CreateWindowRequest,
         new_window: AppWindowId,
     ) {
-        let _ = handle_dock_window_created(app, request, new_window);
+        match &request.kind {
+            CreateWindowKind::DockFloating { .. } => {
+                let _ = handle_dock_window_created(app, request, new_window);
+                let logical = self.alloc_floating_logical_window_id();
+                self.logical_windows.insert(new_window, logical);
+            }
+            CreateWindowKind::DockRestore { logical_window_id } => {
+                self.logical_windows
+                    .insert(new_window, logical_window_id.clone());
+                if let Some(restore) = self.restore.as_mut() {
+                    restore.pending_logical_window_ids.remove(logical_window_id);
+                }
+                self.apply_layout_if_ready(app);
+            }
+        }
     }
 
     fn before_close_window(&mut self, app: &mut App, window: AppWindowId) -> bool {
+        if Some(window) == self.main_window {
+            self.save_layout_on_exit(app);
+        } else {
+            self.logical_windows.remove(&window);
+        }
+
         if let Some(main_window) = self.main_window {
             let _ = handle_dock_before_close_window(app, window, main_window);
         }
@@ -531,7 +755,15 @@ pub fn run() -> anyhow::Result<()> {
         config.text_font_families.ui_mono = settings.fonts.ui_mono;
     }
 
-    let driver = DockingArbitrationDriver::default();
+    let pending_layout =
+        fret_app::DockLayoutFileV1::load_json_if_exists(DockingArbitrationDriver::DOCK_LAYOUT_PATH)
+            .map(|v| v.map(|f| f.layout))
+            .unwrap_or_else(|err| {
+                tracing::warn!("failed to load dock layout: {err}");
+                None
+            });
+
+    let driver = DockingArbitrationDriver::new(pending_layout);
     let mut runner = WinitRunner::new(config, app, driver);
     event_loop.run_app(&mut runner)?;
     Ok(())

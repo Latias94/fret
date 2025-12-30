@@ -1,4 +1,5 @@
 pub mod app;
+pub mod dock_layout_file;
 pub mod drag;
 pub mod keymap;
 pub mod menu;
@@ -24,3 +25,5 @@ pub use settings::{
     DockDragInversionModifierV1, DockDragInversionPolicyV1, DockDragInversionSettingsV1,
     DockingSettingsV1, FontsSettingsV1, SettingsError, SettingsFileV1,
 };
+
+pub use dock_layout_file::{DockLayoutError, DockLayoutFileV1};
