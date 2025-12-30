@@ -1,19 +1,22 @@
+use fret_components_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvg};
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{ColorRef, LayoutRefinement, MetricRef};
-use fret_core::Px;
-use fret_ui::element::{AnyElement, SpinnerProps};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_core::{Point, Px, Transform2D};
+use fret_runtime::Effect;
+use fret_ui::element::{AnyElement, Length, SvgIconProps, VisualTransformProps};
+use fret_ui::{ElementCx, SvgSource, Theme, UiHost};
 
 /// shadcn/ui `Spinner` (v4).
 ///
-/// Upstream uses a spinning lucide icon (`Loader2Icon` + `animate-spin`). Fret does not currently
-/// support arbitrary transforms on text/image primitives, so the baseline implementation renders a
-/// dot-ring spinner with frame-driven animation.
+/// Upstream uses a spinning lucide icon (`Loader2Icon` + `animate-spin`). In Fret, we implement
+/// this via a paint-only `VisualTransform` wrapper around an `SvgIcon`, and request animation
+/// frames while the spinner is rendered.
 #[derive(Debug, Clone)]
 pub struct Spinner {
     layout: LayoutRefinement,
     color: Option<ColorRef>,
-    dot_count: u8,
+    icon: IconId,
+    /// Rotation speed in radians per frame. (`0.0` disables animation.)
     speed: f32,
 }
 
@@ -28,8 +31,8 @@ impl Spinner {
         Self {
             layout: LayoutRefinement::default(),
             color: None,
-            dot_count: 12,
-            speed: 0.2,
+            icon: IconId::new_static("lucide.loader-circle"),
+            speed: 0.12,
         }
     }
 
@@ -43,12 +46,12 @@ impl Spinner {
         self
     }
 
-    pub fn dot_count(mut self, dots: u8) -> Self {
-        self.dot_count = dots;
+    pub fn icon(mut self, icon: IconId) -> Self {
+        self.icon = icon;
         self
     }
 
-    /// Phase increment per frame, in dot steps. (`0.0` disables animation.)
+    /// Rotation speed in radians per frame. (`0.0` disables animation.)
     pub fn speed(mut self, speed: f32) -> Self {
         self.speed = speed;
         self
@@ -69,11 +72,31 @@ impl Spinner {
             .or_else(|| theme.color_by_key("muted-foreground"))
             .unwrap_or(theme.colors.text_muted);
 
-        cx.spinner_props(SpinnerProps {
-            layout,
-            color: Some(color),
-            dot_count: self.dot_count,
-            speed: self.speed,
+        let svg: SvgSource =
+            cx.app
+                .with_global_mut(IconRegistry::default, |icons, _app| {
+                    match icons.resolve_svg(&self.icon) {
+                        Some(ResolvedSvg::Static(bytes)) => SvgSource::Static(bytes),
+                        Some(ResolvedSvg::Bytes(bytes)) => SvgSource::Bytes(bytes.clone()),
+                        None => SvgSource::Static(MISSING_ICON_SVG),
+                    }
+                });
+
+        let mut center = Point::new(Px(8.0), Px(8.0));
+        if let (Length::Px(w), Length::Px(h)) = (layout.size.width, layout.size.height) {
+            center = Point::new(Px(w.0 * 0.5), Px(h.0 * 0.5));
+        }
+
+        let angle = cx.app.frame_id().0 as f32 * self.speed;
+        if self.speed != 0.0 {
+            cx.app.push_effect(Effect::RequestAnimationFrame(cx.window));
+        }
+        let transform = Transform2D::rotation_about_radians(angle, center);
+
+        cx.visual_transform_props(VisualTransformProps { layout, transform }, |cx| {
+            let mut props = SvgIconProps::new(svg);
+            props.color = color;
+            vec![cx.svg_icon_props(props)]
         })
     }
 }
