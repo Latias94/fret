@@ -43,6 +43,40 @@ impl SceneRecording {
     }
 
     pub fn validate(&self) -> Result<(), SceneValidationError> {
+        fn px_is_finite(px: crate::Px) -> bool {
+            px.0.is_finite()
+        }
+
+        fn point_is_finite(p: Point) -> bool {
+            px_is_finite(p.x) && px_is_finite(p.y)
+        }
+
+        fn rect_is_finite(r: Rect) -> bool {
+            point_is_finite(r.origin) && px_is_finite(r.size.width) && px_is_finite(r.size.height)
+        }
+
+        fn corners_is_finite(c: Corners) -> bool {
+            px_is_finite(c.top_left)
+                && px_is_finite(c.top_right)
+                && px_is_finite(c.bottom_right)
+                && px_is_finite(c.bottom_left)
+        }
+
+        fn edges_is_finite(e: Edges) -> bool {
+            px_is_finite(e.top)
+                && px_is_finite(e.right)
+                && px_is_finite(e.bottom)
+                && px_is_finite(e.left)
+        }
+
+        fn color_is_finite(c: Color) -> bool {
+            c.r.is_finite() && c.g.is_finite() && c.b.is_finite() && c.a.is_finite()
+        }
+
+        fn uv_is_finite(uv: UvRect) -> bool {
+            uv.u0.is_finite() && uv.v0.is_finite() && uv.u1.is_finite() && uv.v1.is_finite()
+        }
+
         let mut transform_depth: usize = 0;
         let mut opacity_depth: usize = 0;
         let mut layer_depth: usize = 0;
@@ -110,6 +144,20 @@ impl SceneRecording {
                     layer_depth = layer_depth.saturating_sub(1);
                 }
                 SceneOp::PushClipRect { .. } | SceneOp::PushClipRRect { .. } => {
+                    let ok = match op {
+                        SceneOp::PushClipRect { rect } => rect_is_finite(rect),
+                        SceneOp::PushClipRRect { rect, corner_radii } => {
+                            rect_is_finite(rect) && corners_is_finite(corner_radii)
+                        }
+                        _ => unreachable!(),
+                    };
+                    if !ok {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
                     clip_depth = clip_depth.saturating_add(1);
                 }
                 SceneOp::PopClip => {
@@ -122,15 +170,116 @@ impl SceneRecording {
                     }
                     clip_depth = clip_depth.saturating_sub(1);
                 }
-                SceneOp::Quad { .. }
-                | SceneOp::Image { .. }
-                | SceneOp::ImageRegion { .. }
-                | SceneOp::MaskImage { .. }
-                | SceneOp::SvgMaskIcon { .. }
-                | SceneOp::SvgImage { .. }
-                | SceneOp::Text { .. }
-                | SceneOp::Path { .. }
-                | SceneOp::ViewportSurface { .. } => {}
+                SceneOp::Quad {
+                    rect,
+                    background,
+                    border,
+                    border_color,
+                    corner_radii,
+                    ..
+                } => {
+                    if !rect_is_finite(rect)
+                        || !color_is_finite(background)
+                        || !edges_is_finite(border)
+                        || !color_is_finite(border_color)
+                        || !corners_is_finite(corner_radii)
+                    {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                }
+                SceneOp::Image { rect, opacity, .. } => {
+                    if !rect_is_finite(rect) || !opacity.is_finite() {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                }
+                SceneOp::ImageRegion {
+                    rect, uv, opacity, ..
+                } => {
+                    if !rect_is_finite(rect) || !uv_is_finite(uv) || !opacity.is_finite() {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                }
+                SceneOp::MaskImage {
+                    rect,
+                    uv,
+                    color,
+                    opacity,
+                    ..
+                } => {
+                    if !rect_is_finite(rect)
+                        || !uv_is_finite(uv)
+                        || !color_is_finite(color)
+                        || !opacity.is_finite()
+                    {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                }
+                SceneOp::SvgMaskIcon {
+                    rect,
+                    color,
+                    opacity,
+                    ..
+                } => {
+                    if !rect_is_finite(rect) || !color_is_finite(color) || !opacity.is_finite() {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                }
+                SceneOp::SvgImage { rect, opacity, .. } => {
+                    if !rect_is_finite(rect) || !opacity.is_finite() {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                }
+                SceneOp::Text { origin, color, .. } => {
+                    if !point_is_finite(origin) || !color_is_finite(color) {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                }
+                SceneOp::Path { origin, color, .. } => {
+                    if !point_is_finite(origin) || !color_is_finite(color) {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                }
+                SceneOp::ViewportSurface { rect, opacity, .. } => {
+                    if !rect_is_finite(rect) || !opacity.is_finite() {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                }
             }
         }
 
@@ -377,6 +526,7 @@ pub enum SceneValidationErrorKind {
     ClipUnderflow,
     NonFiniteTransform,
     NonFiniteOpacity,
+    NonFiniteOpData,
     UnbalancedTransformStack { remaining: usize },
     UnbalancedOpacityStack { remaining: usize },
     UnbalancedLayerStack { remaining: usize },
@@ -770,6 +920,29 @@ mod tests {
             scene.validate(),
             Err(SceneValidationError {
                 kind: SceneValidationErrorKind::NonFiniteTransform,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_nonfinite_draw_op_data() {
+        let mut scene = Scene::default();
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(0),
+            rect: Rect::new(
+                Point::new(Px(f32::NAN), Px(0.0)),
+                Size::new(Px(10.0), Px(10.0)),
+            ),
+            background: Color::TRANSPARENT,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(0.0)),
+        });
+        assert!(matches!(
+            scene.validate(),
+            Err(SceneValidationError {
+                kind: SceneValidationErrorKind::NonFiniteOpData,
                 ..
             })
         ));

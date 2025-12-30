@@ -55,6 +55,40 @@ pub struct DockGraph {
     window_floatings: HashMap<AppWindowId, Vec<DockFloatingWindow>>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DockOpApplyError {
+    pub kind: DockOpApplyErrorKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DockOpApplyErrorKind {
+    UnsupportedOp,
+    TabsNodeNotFound {
+        tabs: DockNodeId,
+    },
+    NodeIsNotTabs {
+        node: DockNodeId,
+    },
+    ActiveOutOfBounds {
+        tabs: DockNodeId,
+        active: usize,
+        len: usize,
+    },
+    PanelNotFound {
+        window: AppWindowId,
+        panel: PanelKey,
+    },
+    OperationFailed,
+}
+
+impl std::fmt::Display for DockOpApplyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "dock op apply error: {:?}", self.kind)
+    }
+}
+
+impl std::error::Error for DockOpApplyError {}
+
 impl DockGraph {
     pub fn new() -> Self {
         Self::default()
@@ -791,6 +825,49 @@ impl DockGraph {
         }
     }
 
+    pub fn apply_op_checked(&mut self, op: &DockOp) -> Result<bool, DockOpApplyError> {
+        match op {
+            DockOp::SetActiveTab { tabs, active } => {
+                let Some(node) = self.nodes.get(*tabs) else {
+                    return Err(DockOpApplyError {
+                        kind: DockOpApplyErrorKind::TabsNodeNotFound { tabs: *tabs },
+                    });
+                };
+                let DockNode::Tabs { tabs: list, .. } = node else {
+                    return Err(DockOpApplyError {
+                        kind: DockOpApplyErrorKind::NodeIsNotTabs { node: *tabs },
+                    });
+                };
+                if *active >= list.len() {
+                    return Err(DockOpApplyError {
+                        kind: DockOpApplyErrorKind::ActiveOutOfBounds {
+                            tabs: *tabs,
+                            active: *active,
+                            len: list.len(),
+                        },
+                    });
+                }
+                Ok(self.set_active_tab(*tabs, *active))
+            }
+            DockOp::ClosePanel { window, panel } => {
+                if self.close_panel(*window, panel.clone()) {
+                    Ok(true)
+                } else {
+                    Err(DockOpApplyError {
+                        kind: DockOpApplyErrorKind::PanelNotFound {
+                            window: *window,
+                            panel: panel.clone(),
+                        },
+                    })
+                }
+            }
+            DockOp::RequestFloatPanelToNewWindow { .. } => Err(DockOpApplyError {
+                kind: DockOpApplyErrorKind::UnsupportedOp,
+            }),
+            _ => Ok(self.apply_op(op)),
+        }
+    }
+
     pub fn apply_op(&mut self, op: &DockOp) -> bool {
         match op {
             DockOp::SetActiveTab { tabs, active } => self.set_active_tab(*tabs, *active),
@@ -999,9 +1076,15 @@ impl DockGraph {
             graph: &mut DockGraph,
             by_id: &HashMap<u32, &DockLayoutNode>,
             id: u32,
+            visiting: &mut HashMap<u32, ()>,
         ) -> Option<DockNodeId> {
+            if visiting.contains_key(&id) {
+                return None;
+            }
+            visiting.insert(id, ());
+
             let node = by_id.get(&id)?;
-            match node {
+            let out = match node {
                 DockLayoutNode::Tabs { tabs, active, .. } => {
                     Some(graph.insert_node(DockNode::Tabs {
                         tabs: tabs.clone(),
@@ -1016,7 +1099,7 @@ impl DockGraph {
                 } => {
                     let mut child_nodes: Vec<DockNodeId> = Vec::new();
                     for child in children {
-                        child_nodes.push(build(graph, by_id, *child)?);
+                        child_nodes.push(build(graph, by_id, *child, visiting)?);
                     }
                     Some(graph.insert_node(DockNode::Split {
                         axis: *axis,
@@ -1024,10 +1107,85 @@ impl DockGraph {
                         fractions: fractions.clone(),
                     }))
                 }
-            }
+            };
+
+            visiting.remove(&id);
+            out
         }
 
-        build(self, &by_id, root)
+        let mut visiting: HashMap<u32, ()> = HashMap::new();
+        build(self, &by_id, root, &mut visiting)
+    }
+
+    pub fn import_subtree_from_layout_checked(
+        &mut self,
+        layout: &crate::DockLayout,
+        root: u32,
+    ) -> Result<DockNodeId, crate::DockLayoutValidationError> {
+        use crate::DockLayoutNode;
+        use std::collections::HashMap;
+
+        layout.validate()?;
+
+        let mut by_id: HashMap<u32, &DockLayoutNode> = HashMap::new();
+        for node in &layout.nodes {
+            let id = match node {
+                DockLayoutNode::Split { id, .. } => *id,
+                DockLayoutNode::Tabs { id, .. } => *id,
+            };
+            by_id.insert(id, node);
+        }
+
+        let mut built: HashMap<u32, DockNodeId> = HashMap::new();
+        fn build_checked(
+            graph: &mut DockGraph,
+            by_id: &HashMap<u32, &DockLayoutNode>,
+            built: &mut HashMap<u32, DockNodeId>,
+            id: u32,
+        ) -> DockNodeId {
+            if let Some(&node) = built.get(&id) {
+                return node;
+            }
+
+            let node = by_id
+                .get(&id)
+                .copied()
+                .expect("layout.validate ensures node id exists");
+
+            let out = match node {
+                DockLayoutNode::Tabs { tabs, active, .. } => graph.insert_node(DockNode::Tabs {
+                    tabs: tabs.clone(),
+                    active: *active,
+                }),
+                DockLayoutNode::Split {
+                    axis,
+                    children,
+                    fractions,
+                    ..
+                } => {
+                    let mut child_nodes: Vec<DockNodeId> = Vec::new();
+                    for child in children {
+                        child_nodes.push(build_checked(graph, by_id, built, *child));
+                    }
+                    graph.insert_node(DockNode::Split {
+                        axis: *axis,
+                        children: child_nodes,
+                        fractions: fractions.clone(),
+                    })
+                }
+            };
+
+            built.insert(id, out);
+            out
+        }
+
+        if !by_id.contains_key(&root) {
+            return Err(crate::DockLayoutValidationError {
+                kind: crate::DockLayoutValidationErrorKind::MissingNodeId { id: root },
+            });
+        }
+
+        Ok(build_checked(self, &by_id, &mut built, root))
     }
 
     pub fn import_layout_for_windows(
@@ -1073,6 +1231,45 @@ impl DockGraph {
         }
 
         imported_any
+    }
+
+    pub fn import_layout_for_windows_checked(
+        &mut self,
+        layout: &crate::DockLayout,
+        windows: &[(AppWindowId, String)],
+    ) -> Result<bool, crate::DockLayoutValidationError> {
+        use std::collections::HashMap;
+
+        layout.validate()?;
+
+        let mut by_logical: HashMap<&str, AppWindowId> = HashMap::new();
+        for (window, logical_id) in windows {
+            by_logical.insert(logical_id.as_str(), *window);
+        }
+
+        let mut imported_any = false;
+        for w in &layout.windows {
+            let Some(window) = by_logical.get(w.logical_window_id.as_str()).copied() else {
+                continue;
+            };
+
+            let root = self.import_subtree_from_layout_checked(layout, w.root)?;
+            self.set_window_root(window, root);
+
+            self.floating_windows_mut(window).clear();
+            for f in &w.floatings {
+                let child = self.import_subtree_from_layout_checked(layout, f.root)?;
+                let floating = self.insert_node(DockNode::Floating { child });
+                self.floating_windows_mut(window).push(DockFloatingWindow {
+                    floating,
+                    rect: f.rect.to_rect(),
+                });
+            }
+
+            imported_any = true;
+        }
+
+        Ok(imported_any)
     }
 
     /// Import a dock layout for a set of known windows, degrading any unmapped logical windows
@@ -1186,6 +1383,100 @@ impl DockGraph {
         }
 
         imported_any
+    }
+
+    pub fn import_layout_for_windows_with_fallback_floatings_checked(
+        &mut self,
+        layout: &crate::DockLayout,
+        windows: &[(AppWindowId, String)],
+        fallback_window: AppWindowId,
+    ) -> Result<bool, crate::DockLayoutValidationError> {
+        use std::collections::HashMap;
+
+        layout.validate()?;
+
+        fn offset_rect(rect: Rect, delta: Point) -> Rect {
+            Rect::new(
+                Point::new(
+                    Px(rect.origin.x.0 + delta.x.0),
+                    Px(rect.origin.y.0 + delta.y.0),
+                ),
+                rect.size,
+            )
+        }
+
+        fn rect_for_unmapped_window(w: &crate::DockLayoutWindow, index: usize) -> Rect {
+            let default_w = 640.0;
+            let default_h = 480.0;
+            let (w_px, h_px) = w
+                .placement
+                .as_ref()
+                .map(|p| (p.width as f32, p.height as f32))
+                .unwrap_or((default_w, default_h));
+
+            let width = w_px.clamp(240.0, 1400.0);
+            let height = h_px.clamp(180.0, 1000.0);
+
+            let stagger = (index as f32).min(12.0) * 24.0;
+            Rect::new(
+                Point::new(Px(32.0 + stagger), Px(32.0 + stagger)),
+                Size::new(Px(width), Px(height)),
+            )
+        }
+
+        let mut by_logical: HashMap<&str, AppWindowId> = HashMap::new();
+        for (window, logical_id) in windows {
+            by_logical.insert(logical_id.as_str(), *window);
+        }
+
+        self.floating_windows_mut(fallback_window).clear();
+
+        let mut imported_any = false;
+        let mut unmapped_index: usize = 0;
+
+        for w in &layout.windows {
+            if let Some(window) = by_logical.get(w.logical_window_id.as_str()).copied() {
+                let root = self.import_subtree_from_layout_checked(layout, w.root)?;
+                self.set_window_root(window, root);
+
+                self.floating_windows_mut(window).clear();
+                for f in &w.floatings {
+                    let child = self.import_subtree_from_layout_checked(layout, f.root)?;
+                    let floating = self.insert_node(DockNode::Floating { child });
+                    self.floating_windows_mut(window).push(DockFloatingWindow {
+                        floating,
+                        rect: f.rect.to_rect(),
+                    });
+                }
+
+                imported_any = true;
+                continue;
+            }
+
+            let child = self.import_subtree_from_layout_checked(layout, w.root)?;
+            let window_rect = rect_for_unmapped_window(w, unmapped_index);
+            let floating = self.insert_node(DockNode::Floating { child });
+            self.floating_windows_mut(fallback_window)
+                .push(DockFloatingWindow {
+                    floating,
+                    rect: window_rect,
+                });
+
+            for f in &w.floatings {
+                let child = self.import_subtree_from_layout_checked(layout, f.root)?;
+                let floating = self.insert_node(DockNode::Floating { child });
+                self.floating_windows_mut(fallback_window)
+                    .push(DockFloatingWindow {
+                        floating,
+                        rect: offset_rect(f.rect.to_rect(), window_rect.origin),
+                    });
+            }
+
+            unmapped_index = unmapped_index.saturating_add(1);
+            imported_any = true;
+        }
+
+        Ok(imported_any)
     }
 }
 

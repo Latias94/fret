@@ -18,10 +18,13 @@ pub mod window;
 
 pub use capabilities::{ExternalDragPayloadKind, PlatformCapabilities};
 pub use cursor::CursorIcon;
-pub use dock::{Axis, DockFloatingWindow, DockGraph, DockNode, DropZone};
+pub use dock::{
+    Axis, DockFloatingWindow, DockGraph, DockNode, DockOpApplyError, DockOpApplyErrorKind, DropZone,
+};
 pub use dock_layout::{
     DOCK_LAYOUT_VERSION, DockLayout, DockLayoutBuilder, DockLayoutFloatingWindow, DockLayoutNode,
-    DockLayoutWindow, DockRect, DockWindowPlacement, EditorDockLayoutSpec,
+    DockLayoutValidationError, DockLayoutValidationErrorKind, DockLayoutWindow, DockRect,
+    DockWindowPlacement, EditorDockLayoutSpec,
 };
 pub use dock_op::{DockOp, SplitFractionsUpdate};
 pub use geometry::{Corners, Edges, Point, Px, Rect, Size, Transform2D};

@@ -19,7 +19,239 @@ impl DockLayout {
             nodes,
         }
     }
+
+    pub fn validate(&self) -> Result<(), DockLayoutValidationError> {
+        use std::collections::HashMap;
+
+        if self.layout_version != DOCK_LAYOUT_VERSION {
+            return Err(DockLayoutValidationError {
+                kind: DockLayoutValidationErrorKind::UnsupportedVersion {
+                    expected: DOCK_LAYOUT_VERSION,
+                    found: self.layout_version,
+                },
+            });
+        }
+
+        let mut by_id: HashMap<u32, &DockLayoutNode> = HashMap::new();
+        for node in &self.nodes {
+            let id = match node {
+                DockLayoutNode::Split { id, .. } => *id,
+                DockLayoutNode::Tabs { id, .. } => *id,
+            };
+            if by_id.insert(id, node).is_some() {
+                return Err(DockLayoutValidationError {
+                    kind: DockLayoutValidationErrorKind::DuplicateNodeId { id },
+                });
+            }
+        }
+
+        for (id, node) in &by_id {
+            match node {
+                DockLayoutNode::Tabs { tabs, active, .. } => {
+                    if tabs.is_empty() {
+                        return Err(DockLayoutValidationError {
+                            kind: DockLayoutValidationErrorKind::EmptyTabs { id: *id },
+                        });
+                    }
+                    if *active >= tabs.len() {
+                        return Err(DockLayoutValidationError {
+                            kind: DockLayoutValidationErrorKind::TabsActiveOutOfBounds {
+                                id: *id,
+                                active: *active,
+                                len: tabs.len(),
+                            },
+                        });
+                    }
+                }
+                DockLayoutNode::Split {
+                    children,
+                    fractions,
+                    ..
+                } => {
+                    if children.is_empty() {
+                        return Err(DockLayoutValidationError {
+                            kind: DockLayoutValidationErrorKind::EmptySplitChildren { id: *id },
+                        });
+                    }
+                    if children.len() != fractions.len() {
+                        return Err(DockLayoutValidationError {
+                            kind: DockLayoutValidationErrorKind::SplitFractionsLenMismatch {
+                                id: *id,
+                                children_len: children.len(),
+                                fractions_len: fractions.len(),
+                            },
+                        });
+                    }
+                    for (index, f) in fractions.iter().copied().enumerate() {
+                        if !f.is_finite() {
+                            return Err(DockLayoutValidationError {
+                                kind: DockLayoutValidationErrorKind::SplitNonFiniteFraction {
+                                    id: *id,
+                                    index,
+                                    value: f,
+                                },
+                            });
+                        }
+                        if f < 0.0 {
+                            return Err(DockLayoutValidationError {
+                                kind: DockLayoutValidationErrorKind::SplitNegativeFraction {
+                                    id: *id,
+                                    index,
+                                    value: f,
+                                },
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        for node in by_id.values() {
+            if let DockLayoutNode::Split { children, .. } = node {
+                for child in children {
+                    if !by_id.contains_key(child) {
+                        return Err(DockLayoutValidationError {
+                            kind: DockLayoutValidationErrorKind::MissingNodeId { id: *child },
+                        });
+                    }
+                }
+            }
+        }
+
+        #[derive(Clone, Copy, PartialEq, Eq)]
+        enum Mark {
+            Visiting,
+            Done,
+        }
+        let mut marks: HashMap<u32, Mark> = HashMap::new();
+
+        for start in by_id.keys().copied() {
+            if marks.contains_key(&start) {
+                continue;
+            }
+
+            #[derive(Clone, Copy)]
+            enum Step {
+                Enter(u32),
+                Exit(u32),
+            }
+
+            let mut stack: Vec<Step> = vec![Step::Enter(start)];
+            while let Some(step) = stack.pop() {
+                match step {
+                    Step::Enter(id) => {
+                        if marks.get(&id) == Some(&Mark::Done) {
+                            continue;
+                        }
+                        if marks.get(&id) == Some(&Mark::Visiting) {
+                            return Err(DockLayoutValidationError {
+                                kind: DockLayoutValidationErrorKind::CycleDetected { id },
+                            });
+                        }
+                        marks.insert(id, Mark::Visiting);
+                        stack.push(Step::Exit(id));
+
+                        if let Some(DockLayoutNode::Split { children, .. }) = by_id.get(&id) {
+                            for child in children.iter().rev().copied() {
+                                stack.push(Step::Enter(child));
+                            }
+                        }
+                    }
+                    Step::Exit(id) => {
+                        marks.insert(id, Mark::Done);
+                    }
+                }
+            }
+        }
+
+        for w in &self.windows {
+            if !by_id.contains_key(&w.root) {
+                return Err(DockLayoutValidationError {
+                    kind: DockLayoutValidationErrorKind::WindowRootMissing {
+                        logical_window_id: w.logical_window_id.clone(),
+                        root: w.root,
+                    },
+                });
+            }
+            for f in &w.floatings {
+                if !by_id.contains_key(&f.root) {
+                    return Err(DockLayoutValidationError {
+                        kind: DockLayoutValidationErrorKind::FloatingRootMissing {
+                            logical_window_id: w.logical_window_id.clone(),
+                            root: f.root,
+                        },
+                    });
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DockLayoutValidationError {
+    pub kind: DockLayoutValidationErrorKind,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum DockLayoutValidationErrorKind {
+    UnsupportedVersion {
+        expected: u32,
+        found: u32,
+    },
+    DuplicateNodeId {
+        id: u32,
+    },
+    MissingNodeId {
+        id: u32,
+    },
+    CycleDetected {
+        id: u32,
+    },
+    EmptyTabs {
+        id: u32,
+    },
+    TabsActiveOutOfBounds {
+        id: u32,
+        active: usize,
+        len: usize,
+    },
+    EmptySplitChildren {
+        id: u32,
+    },
+    SplitFractionsLenMismatch {
+        id: u32,
+        children_len: usize,
+        fractions_len: usize,
+    },
+    SplitNonFiniteFraction {
+        id: u32,
+        index: usize,
+        value: f32,
+    },
+    SplitNegativeFraction {
+        id: u32,
+        index: usize,
+        value: f32,
+    },
+    WindowRootMissing {
+        logical_window_id: String,
+        root: u32,
+    },
+    FloatingRootMissing {
+        logical_window_id: String,
+        root: u32,
+    },
+}
+
+impl std::fmt::Display for DockLayoutValidationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "dock layout validation error: {:?}", self.kind)
+    }
+}
+
+impl std::error::Error for DockLayoutValidationError {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DockLayoutWindow {
@@ -219,5 +451,91 @@ mod tests {
         );
         let graph = DockLayoutBuilder::default_editor_layout(window, spec);
         assert!(graph.window_root(window).is_some());
+    }
+
+    #[test]
+    fn validate_rejects_duplicate_node_ids() {
+        let layout = DockLayout {
+            layout_version: DOCK_LAYOUT_VERSION,
+            windows: vec![DockLayoutWindow {
+                logical_window_id: "main".into(),
+                root: 1,
+                placement: None,
+                floatings: Vec::new(),
+            }],
+            nodes: vec![
+                DockLayoutNode::Tabs {
+                    id: 1,
+                    tabs: vec![PanelKey::new("core.a")],
+                    active: 0,
+                },
+                DockLayoutNode::Tabs {
+                    id: 1,
+                    tabs: vec![PanelKey::new("core.b")],
+                    active: 0,
+                },
+            ],
+        };
+
+        let err = layout.validate().expect_err("duplicate ids should fail");
+        assert!(matches!(
+            err.kind,
+            DockLayoutValidationErrorKind::DuplicateNodeId { id: 1 }
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_cycles() {
+        let layout = DockLayout {
+            layout_version: DOCK_LAYOUT_VERSION,
+            windows: vec![DockLayoutWindow {
+                logical_window_id: "main".into(),
+                root: 1,
+                placement: None,
+                floatings: Vec::new(),
+            }],
+            nodes: vec![DockLayoutNode::Split {
+                id: 1,
+                axis: Axis::Horizontal,
+                children: vec![1],
+                fractions: vec![1.0],
+            }],
+        };
+
+        let err = layout.validate().expect_err("cycles should fail");
+        assert!(matches!(
+            err.kind,
+            DockLayoutValidationErrorKind::CycleDetected { id: 1 }
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_tabs_active_out_of_bounds() {
+        let layout = DockLayout {
+            layout_version: DOCK_LAYOUT_VERSION,
+            windows: vec![DockLayoutWindow {
+                logical_window_id: "main".into(),
+                root: 1,
+                placement: None,
+                floatings: Vec::new(),
+            }],
+            nodes: vec![DockLayoutNode::Tabs {
+                id: 1,
+                tabs: vec![PanelKey::new("core.a")],
+                active: 2,
+            }],
+        };
+
+        let err = layout
+            .validate()
+            .expect_err("active out of bounds should fail");
+        assert!(matches!(
+            err.kind,
+            DockLayoutValidationErrorKind::TabsActiveOutOfBounds {
+                id: 1,
+                active: 2,
+                len: 1
+            }
+        ));
     }
 }
