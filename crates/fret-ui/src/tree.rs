@@ -1,5 +1,6 @@
 use crate::{
     Theme, UiHost, declarative,
+    elements::GlobalElementId,
     widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
 use fret_core::PlatformCapabilities;
@@ -169,6 +170,7 @@ struct UiLayer {
 
 struct Node<H: UiHost> {
     widget: Option<Box<dyn Widget<H>>>,
+    element: Option<GlobalElementId>,
     parent: Option<NodeId>,
     children: Vec<NodeId>,
     bounds: Rect,
@@ -181,6 +183,7 @@ impl<H: UiHost> Node<H> {
     fn new(widget: impl Widget<H> + 'static) -> Self {
         Self {
             widget: Some(Box::new(widget)),
+            element: None,
             parent: None,
             children: Vec::new(),
             bounds: Rect::default(),
@@ -191,6 +194,13 @@ impl<H: UiHost> Node<H> {
                 hit_test: true,
             },
             paint_cache: None,
+        }
+    }
+
+    fn new_for_element(element: GlobalElementId, widget: impl Widget<H> + 'static) -> Self {
+        Self {
+            element: Some(element),
+            ..Self::new(widget)
         }
     }
 }
@@ -881,6 +891,14 @@ impl<H: UiHost> UiTree<H> {
 
     pub(crate) fn create_node(&mut self, widget: impl Widget<H> + 'static) -> NodeId {
         self.nodes.insert(Node::new(widget))
+    }
+
+    pub(crate) fn create_node_for_element(
+        &mut self,
+        element: GlobalElementId,
+        widget: impl Widget<H> + 'static,
+    ) -> NodeId {
+        self.nodes.insert(Node::new_for_element(element, widget))
     }
 
     pub fn set_base_root(&mut self, root: NodeId) -> UiLayerId {
@@ -2312,7 +2330,15 @@ impl<H: UiHost> UiTree<H> {
         scene: &mut Scene,
         scale_factor: f32,
     ) {
-        self.paint_node(app, services, root, bounds, scene, scale_factor);
+        self.paint_node(
+            app,
+            services,
+            root,
+            bounds,
+            scene,
+            scale_factor,
+            Transform2D::IDENTITY,
+        );
     }
 
     pub fn cleanup_subtree(&mut self, services: &mut dyn UiServices, root: NodeId) {
@@ -2467,10 +2493,21 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scene: &mut Scene,
         scale_factor: f32,
+        accumulated_transform: Transform2D,
     ) {
         if self.debug_enabled {
             self.debug_stats.paint_nodes = self.debug_stats.paint_nodes.saturating_add(1);
         }
+
+        if let Some(n) = self.nodes.get_mut(node) {
+            n.bounds = bounds;
+        }
+
+        let local_transform = self.node_render_transform(node);
+        let current_transform = match local_transform {
+            Some(t) => accumulated_transform.compose(t),
+            None => accumulated_transform,
+        };
 
         let tree_ref: *const UiTree<H> = self as *const UiTree<H>;
         let tree_ptr: *mut UiTree<H> = self;
@@ -2478,6 +2515,7 @@ impl<H: UiHost> UiTree<H> {
         let services_ptr: *mut dyn UiServices = services;
         let scene_ptr: *mut Scene = scene;
         let sf = scale_factor;
+        let child_accumulated_transform = current_transform;
         let mut paint_child = move |child: NodeId, bounds: Rect| {
             unsafe {
                 (&mut *tree_ptr).paint_node(
@@ -2487,6 +2525,7 @@ impl<H: UiHost> UiTree<H> {
                     bounds,
                     &mut *scene_ptr,
                     sf,
+                    child_accumulated_transform,
                 )
             };
         };
@@ -2494,14 +2533,17 @@ impl<H: UiHost> UiTree<H> {
             unsafe { (&*tree_ref).nodes.get(child).map(|n| n.bounds) }
         };
 
-        if let Some(n) = self.nodes.get_mut(node) {
-            n.bounds = bounds;
-        }
-
         let (invalidated, prev_cache) = match self.nodes.get(node) {
             Some(n) => (n.invalidation.paint, n.paint_cache),
             None => return,
         };
+
+        if let Some(window) = self.window
+            && let Some(element) = self.nodes.get(node).and_then(|n| n.element)
+        {
+            let visual = rect_aabb_transformed(bounds, current_transform);
+            crate::elements::record_visual_bounds_for_element(app, window, element, visual);
+        }
 
         let theme_revision = Theme::global(&*app).revision();
         let key = PaintCacheKey::new(bounds, sf, theme_revision);
@@ -3095,6 +3137,28 @@ fn pointer_position(pe: &PointerEvent) -> Point {
         | PointerEvent::Up { position, .. }
         | PointerEvent::Wheel { position, .. } => *position,
     }
+}
+
+fn rect_aabb_transformed(rect: Rect, t: Transform2D) -> Rect {
+    let x0 = rect.origin.x.0;
+    let y0 = rect.origin.y.0;
+    let x1 = x0 + rect.size.width.0;
+    let y1 = y0 + rect.size.height.0;
+
+    let p00 = t.apply_point(Point::new(Px(x0), Px(y0)));
+    let p10 = t.apply_point(Point::new(Px(x1), Px(y0)));
+    let p01 = t.apply_point(Point::new(Px(x0), Px(y1)));
+    let p11 = t.apply_point(Point::new(Px(x1), Px(y1)));
+
+    let min_x = p00.x.0.min(p10.x.0).min(p01.x.0).min(p11.x.0);
+    let max_x = p00.x.0.max(p10.x.0).max(p01.x.0).max(p11.x.0);
+    let min_y = p00.y.0.min(p10.y.0).min(p01.y.0).min(p11.y.0);
+    let max_y = p00.y.0.max(p10.y.0).max(p01.y.0).max(p11.y.0);
+
+    Rect::new(
+        Point::new(Px(min_x), Px(min_y)),
+        Size::new(Px((max_x - min_x).max(0.0)), Px((max_y - min_y).max(0.0))),
+    )
 }
 
 fn event_position(event: &Event) -> Option<Point> {
@@ -3809,6 +3873,77 @@ mod tests {
             app.models().get(last_pos).copied(),
             Some(Point::new(Px(5.0), Px(5.0)))
         );
+    }
+
+    #[test]
+    fn visual_bounds_for_element_includes_ancestor_render_transform() {
+        struct TransformRoot {
+            delta: Point,
+        }
+
+        impl<H: UiHost> Widget<H> for TransformRoot {
+            fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+                Some(Transform2D::translation(self.delta))
+            }
+
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                let Some(&child) = cx.children.first() else {
+                    return cx.available;
+                };
+                let child_bounds = Rect::new(cx.bounds.origin, Size::new(Px(10.0), Px(10.0)));
+                let _ = cx.layout_in(child, child_bounds);
+                cx.available
+            }
+
+            fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+                let Some(&child) = cx.children.first() else {
+                    return;
+                };
+                let child_bounds = Rect::new(cx.bounds.origin, Size::new(Px(10.0), Px(10.0)));
+                cx.paint(child, child_bounds);
+            }
+        }
+
+        struct ElementLeaf;
+
+        impl<H: UiHost> Widget<H> for ElementLeaf {
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                cx.available
+            }
+        }
+
+        let window = AppWindowId::default();
+        let mut app = crate::test_host::TestHost::new();
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let element = crate::elements::GlobalElementId(123);
+
+        let root = ui.create_node(TransformRoot {
+            delta: Point::new(Px(40.0), Px(0.0)),
+        });
+        let leaf = ui.create_node_for_element(element, ElementLeaf);
+        ui.add_child(root, leaf);
+        ui.set_root(root);
+
+        let mut services = FakeUiServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        // `visual_bounds_for_element` is defined as a cross-frame query: the "last frame" value is
+        // made visible after `prepare_window_for_frame` advances the window element state.
+        app.advance_frame();
+
+        let visual = crate::elements::visual_bounds_for_element(&mut app, window, element)
+            .expect("expected visual bounds to be recorded during paint");
+        assert_eq!(visual.origin, Point::new(Px(40.0), Px(0.0)));
+        assert_eq!(visual.size, Size::new(Px(10.0), Px(10.0)));
     }
 
     #[test]

@@ -75,6 +75,8 @@ pub struct WindowElementState {
     root_bounds: HashMap<GlobalElementId, Rect>,
     prev_bounds: HashMap<GlobalElementId, Rect>,
     cur_bounds: HashMap<GlobalElementId, Rect>,
+    prev_visual_bounds: HashMap<GlobalElementId, Rect>,
+    cur_visual_bounds: HashMap<GlobalElementId, Rect>,
     hovered_pressable: Option<GlobalElementId>,
     pressed_pressable: Option<GlobalElementId>,
     hovered_hover_region: Option<GlobalElementId>,
@@ -113,6 +115,9 @@ impl WindowElementState {
 
         std::mem::swap(&mut self.prev_bounds, &mut self.cur_bounds);
         self.cur_bounds.clear();
+
+        std::mem::swap(&mut self.prev_visual_bounds, &mut self.cur_visual_bounds);
+        self.cur_visual_bounds.clear();
     }
 
     pub(crate) fn node_entry(&self, id: GlobalElementId) -> Option<NodeEntry> {
@@ -141,6 +146,14 @@ impl WindowElementState {
 
     pub(crate) fn last_bounds(&self, element: GlobalElementId) -> Option<Rect> {
         self.prev_bounds.get(&element).copied()
+    }
+
+    pub(crate) fn record_visual_bounds(&mut self, element: GlobalElementId, bounds: Rect) {
+        self.cur_visual_bounds.insert(element, bounds);
+    }
+
+    pub(crate) fn last_visual_bounds(&self, element: GlobalElementId) -> Option<Rect> {
+        self.prev_visual_bounds.get(&element).copied()
     }
 
     pub(crate) fn wants_continuous_frames(&self) -> bool {
@@ -230,6 +243,15 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
     /// borrowed window state, avoiding re-entrant `UiHost::with_global_mut` leases.
     pub fn last_bounds_for_element(&self, element: GlobalElementId) -> Option<Rect> {
         self.window_state.last_bounds(element)
+    }
+
+    /// Returns the last frame's **visual** bounds (post-`render_transform` AABB) for a declarative
+    /// element, if available.
+    ///
+    /// This is intended for anchored overlay policies that must track render transforms (ADR 0083)
+    /// without mixing layout transforms into the layout solver.
+    pub fn last_visual_bounds_for_element(&self, element: GlobalElementId) -> Option<Rect> {
+        self.window_state.last_visual_bounds(element)
     }
 
     /// Returns the last recorded root bounds for the element's root, if available.
@@ -1463,6 +1485,19 @@ pub fn bounds_for_element<H: UiHost>(
     with_window_state(app, window, |st| st.last_bounds(element))
 }
 
+/// Returns the last frame's **visual** bounds (post-`render_transform` AABB) for a declarative
+/// element, if available.
+///
+/// This is a cross-frame geometry query intended for component-layer anchored overlay policies
+/// that must track render transforms (ADR 0083) while keeping layout authoritative.
+pub fn visual_bounds_for_element<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> Option<Rect> {
+    with_window_state(app, window, |st| st.last_visual_bounds(element))
+}
+
 pub(crate) fn record_bounds_for_element<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
@@ -1470,6 +1505,15 @@ pub(crate) fn record_bounds_for_element<H: UiHost>(
     bounds: Rect,
 ) {
     with_window_state(app, window, |st| st.record_bounds(element, bounds));
+}
+
+pub(crate) fn record_visual_bounds_for_element<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+    bounds: Rect,
+) {
+    with_window_state(app, window, |st| st.record_visual_bounds(element, bounds));
 }
 
 fn derive_child_id(parent: GlobalElementId, callsite: u64, child_salt: u64) -> GlobalElementId {
