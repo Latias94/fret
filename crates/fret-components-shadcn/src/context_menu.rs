@@ -194,7 +194,8 @@ impl ContextMenu {
                 let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
 
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                    let trigger_bounds = cx.last_bounds_for_element(trigger_id);
+                    let trigger_bounds =
+                        crate::overlay_anchor::anchor_bounds_for_element(cx, trigger_id);
                     let anchor = anchor_point.or_else(|| trigger_bounds.map(|r| r.origin));
                     let Some(anchor) = anchor else {
                         return Vec::new();

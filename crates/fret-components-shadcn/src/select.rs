@@ -195,7 +195,7 @@ pub fn select<H: UiHost>(
 
             if is_open
                 && enabled
-                && let Some(anchor) = fret_ui::elements::bounds_for_element(cx.app, cx.window, trigger_id)
+                && let Some(anchor) = crate::overlay_anchor::anchor_bounds_for_element(cx, trigger_id)
             {
                     let outer = cx.bounds;
 

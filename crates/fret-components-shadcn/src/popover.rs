@@ -153,7 +153,7 @@ impl Popover {
 
                 let opacity = presence.opacity;
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                    let anchor = cx.last_bounds_for_element(trigger_id);
+                    let anchor = crate::overlay_anchor::anchor_bounds_for_element(cx, trigger_id);
                     let Some(anchor) = anchor else {
                         return Vec::new();
                     };

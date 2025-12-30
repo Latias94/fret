@@ -156,7 +156,7 @@ impl HoverCard {
             let overlay_root_name = window_overlays::hover_overlay_root_name(hover_card_id);
 
             let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                let anchor = cx.last_bounds_for_element(trigger_id);
+                let anchor = crate::overlay_anchor::anchor_bounds_for_element(cx, trigger_id);
                 let Some(anchor) = anchor else {
                     cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
                         st.overlay_hovered = false;

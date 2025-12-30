@@ -377,7 +377,7 @@ impl MenubarMenu {
                     let group_active = group_active;
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                        let Some(anchor) = cx.last_bounds_for_element(trigger_id) else {
+                        let Some(anchor) = crate::overlay_anchor::anchor_bounds_for_element(cx, trigger_id) else {
                             return Vec::new();
                         };
                         let outer = inset_rect(cx.bounds, Edges::all(window_margin));
