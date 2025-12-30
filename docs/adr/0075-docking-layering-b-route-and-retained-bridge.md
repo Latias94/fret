@@ -7,9 +7,9 @@ Status: Accepted (foundation + migration plan)
 Docking is an "editor-grade UX" capability, but it is also one of the easiest places for
 application/editor-specific policy to leak into the UI runtime.
 
-We currently have docking UI and viewport overlay details implemented in `crates/fret-ui` via a
-retained-widget implementation (`DockSpace` in `crates/fret-ui/src/dock.rs`). This is convenient
-early on, but it conflicts with:
+We previously had docking UI and viewport overlay details implemented in `crates/fret-ui` via a
+retained-widget implementation (`DockSpace` lived in `crates/fret-ui/src/dock.rs`). This was
+convenient early on, but it conflicts with:
 
 - ADR 0027: framework scope vs editor app responsibilities
 - ADR 0066: keep `fret-ui` as a small, optimizable contract surface
@@ -94,7 +94,7 @@ The goal is to enable a staged migration:
 ### Stage 1 (move docking UI out)
 
 - Create `crates/fret-components-docking`.
-- Move `DockSpace` and related UI/policy code out of `crates/fret-ui/src/dock.rs`.
+- Move `DockSpace` and related UI/policy code out of `crates/fret-ui/src/dock.rs` (done; now in `crates/fret-components-docking/src/dock/space.rs`).
 - Register internal drag routing via `InternalDragRouteService`.
 
 ### Stage 2 (thin the runtime further)

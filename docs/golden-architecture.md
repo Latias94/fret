@@ -1,0 +1,288 @@
+# Fret Golden Architecture (Module Closure Index)
+
+This document is the **navigation layer** for the repository:
+
+- ADRs (`docs/adr/`) remain the **source of truth** for contracts.
+- This file makes the architecture **actionable** by mapping each module to:
+  - the authoritative docs/ADRs to read,
+  - the code entry points,
+  - the validation anchors (tests / demos),
+  - and the “closure checklist” to prevent late rewrites.
+
+If you are new, read `docs/README.md` first, then use this file as your always-open index.
+
+---
+
+## How We “Close” A Module (Bottom-Up Loop)
+
+For each module, we consider it “closed enough to scale” when:
+
+1. **Contract is explicit**: ADR(s) are `Accepted` (or an explicit decision gate exists).
+2. **Implementation matches contract**: code follows layering rules and determinism invariants.
+3. **Validation exists**: at least one unit/integration test (or a stable demo harness when UI behavior is hard to test).
+4. **Observability exists**: logs/debug hooks exist to diagnose drift.
+5. **No backdoor dependencies**: no accidental `winit`/`wgpu` bleed into contract crates.
+
+---
+
+## System Layering (What Depends On What)
+
+**Contracts (portable):**
+
+- `crates/fret-core` — IDs, geometry, events, scene ops, docking graph/ops/persistence shapes, semantics schema.
+
+**Runtime boundary (portable host services):**
+
+- `crates/fret-runtime` — `UiHost`, `Effect`, `InputContext`, keymap/when, model store/registry types.
+
+**Default integrated runtime:**
+
+- `crates/fret-app` — default `UiHost` implementation (`App`), models/effects/commands, settings loading.
+
+**UI substrate (mechanism-only):**
+
+- `crates/fret-ui` — tree/layout/paint, routing/focus/capture, overlays substrate + placement solver, scroll/virtualization, text input.
+
+**Component layer (policy-heavy):**
+
+- `crates/fret-components-ui` — headless policies + composition helpers (action hooks, overlays policy, tokens/recipes infra).
+- `crates/fret-components-shadcn` — shadcn/ui v4-aligned component surface (recipes, variants, behaviors).
+- `crates/fret-components-docking` — docking UI + interaction policy (B-route; policy outside runtime).
+
+**Backends (not portable):**
+
+- `crates/fret-render` — wgpu renderer implementation for `fret-core::Scene`.
+- `crates/fret-platform` — accessibility bridge + platform helpers (desktop/winit today).
+- `crates/fret-runner-winit-wgpu` — concrete desktop runner wiring winit + renderer + effect draining.
+
+**Ergonomics + demos:**
+
+- `crates/fret-ui-app` — convenience layer binding `fret-ui` to `fret-app::App` (integrated app ergonomics).
+- `crates/fret-demo` — end-to-end harnesses.
+- `crates/fret` — facade crate (re-exports).
+
+Hard rules: see `docs/dependency-policy.md` and ADR 0037.
+
+---
+
+## Module Index
+
+Each section below answers:
+
+- What is the module responsible for?
+- Which ADRs define the “hard-to-change” contracts?
+- Where to start reading code?
+- What must be validated before scaling?
+
+### `fret-core` (Portable Contracts)
+
+**Read first**
+
+- `docs/dependency-policy.md`
+- ADR 0002 (`display list / scene ops`): `docs/adr/0002-display-list.md`
+- ADR 0004 (`resource handles`): `docs/adr/0004-resource-handles.md`
+- ADR 0013 (`docking ops/persistence`): `docs/adr/0013-docking-ops-and-persistence.md`
+- ADR 0019 (`scene state stack/layers`): `docs/adr/0019-scene-state-stack-and-layers.md`
+- ADR 0078/0079 (`scene transform/clip + layer markers`): `docs/adr/0078-scene-transform-and-clip-composition.md`, `docs/adr/0079-scene-layers-marker-only-v1.md`
+- ADR 0080 (`vector path contract`): `docs/adr/0080-vector-path-contract.md`
+
+**Code entry points**
+
+- `crates/fret-core/src/lib.rs`
+- `crates/fret-core/src/scene.rs`
+- `crates/fret-core/src/dock.rs`, `crates/fret-core/src/dock_op.rs`, `crates/fret-core/src/dock_layout.rs`
+- `crates/fret-core/src/semantics.rs`
+- `crates/fret-core/src/input.rs`
+
+**Closure checklist (P0)**
+
+- Scene ordering invariants are testable (renderer conformance + UI-level invariants).
+- Docking model + ops are stable and serializable (layout versioning stays explicit).
+- Event payloads remain portable (no `PathBuf` / no backend types).
+
+### `fret-runtime` (Host Boundary)
+
+**Read first**
+
+- ADR 0052: `docs/adr/0052-ui-host-runtime-boundary.md`
+- ADR 0001 (effects): `docs/adr/0001-app-effects.md`
+- ADR 0022 (when expressions): `docs/adr/0022-when-expressions.md`
+- ADR 0054 (capabilities): `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
+
+**Code entry points**
+
+- `crates/fret-runtime/src/ui_host.rs`
+- `crates/fret-runtime/src/effect.rs`
+- `crates/fret-runtime/src/input.rs`
+- `crates/fret-runtime/src/when_expr.rs`
+
+**Closure checklist (P0)**
+
+- `UiHost` stays small and portable (no backend types; prefer `Effect`).
+- Capability gates are used for enable/disable, not ad-hoc widget branching.
+
+### `fret-app` (Default Integrated Runtime)
+
+**Read first**
+
+- ADR 0031 (models + leasing): `docs/adr/0031-app-owned-models-and-leasing-updates.md`
+- ADR 0034 (timers/scheduling): `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
+- ADR 0023 (command metadata): `docs/adr/0023-command-metadata-menus-and-palette.md`
+- ADR 0014 (settings files): `docs/adr/0014-settings-and-configuration-files.md`
+
+**Code entry points**
+
+- `crates/fret-app/src/app.rs`
+- `crates/fret-app/src/ui_host.rs`
+- `crates/fret-app/src/settings.rs`
+
+**Closure checklist (P0)**
+
+- Effects draining is deterministic and bounded.
+- Settings schema versioning is explicit and migrations are planned.
+
+### `fret-ui` (Mechanism-Only Runtime Substrate)
+
+**Read first**
+
+- Contract surface lock: ADR 0066 `docs/adr/0066-fret-ui-runtime-contract-surface.md`
+- Declarative model: ADR 0028 `docs/adr/0028-declarative-elements-and-element-state.md`
+- Authoring ergonomics: ADR 0039 `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
+- Action hooks: ADR 0074 `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md` + `docs/action-hooks.md`
+- Overlays: ADR 0011 / 0067 / 0069 (`multi-root`, `policy architecture`, `outside press`)
+- Placement: ADR 0064 `docs/adr/0064-overlay-placement-contract.md`
+- Virtualization: ADR 0070 + 0047
+- Text input: ADR 0044/0045/0046/0071 + ADR 0012/0043 for IME arbitration
+
+**Code entry points**
+
+- `crates/fret-ui/src/tree.rs` (routing + focus/capture + layers + paint cache)
+- `crates/fret-ui/src/elements.rs`, `crates/fret-ui/src/declarative.rs`
+- `crates/fret-ui/src/action.rs` (action hook substrate)
+- `crates/fret-ui/src/overlay_placement.rs`
+- `crates/fret-ui/src/scroll.rs`, `crates/fret-ui/src/virtual_list.rs`
+- `crates/fret-ui/src/text_input.rs`, `crates/fret-ui/src/text_area.rs`
+
+**Closure checklist (P0)**
+
+- No policy leaks: shadcn/Radix/APG “outcomes” are implemented in components via hooks.
+- Determinism: hit testing + paint + semantics snapshots remain consistent across overlay roots.
+- Performance: layout/paint invalidation is explicit and test-covered for key edge cases.
+
+### `fret-components-ui` (Headless Policies + Composition Helpers)
+
+**Read first**
+
+- `docs/foundation-first-workflow.md`
+- `docs/action-hooks.md`
+- ADR 0074 (policy migration) and ADR 0066 (runtime stays small)
+
+**Code entry points**
+
+- `crates/fret-components-ui/src/declarative/action_hooks.rs`
+- `crates/fret-components-ui/src/window_overlays/*`
+
+**Closure checklist (P0)**
+
+- Policy is testable without a runner (unit/integration tests).
+- Overlay dismissal/focus-restore rules are centralized here (not in runtime).
+
+### `fret-components-shadcn` (shadcn/ui v4 Surface)
+
+**Read first**
+
+- `docs/shadcn-declarative-progress.md`
+- Upstream reference: `repo-ref/ui` (registry + recipes) and `repo-ref/primitives`
+
+**Closure checklist (P0)**
+
+- Components validate runtime mechanisms (popover/menu/cmdk are “acceptance tests” for focus, overlays, semantics).
+
+### `fret-components-docking` (Docking UI + Policy)
+
+**Read first**
+
+- ADR 0075 (B-route): `docs/adr/0075-docking-layering-b-route-and-retained-bridge.md`
+- Docking contracts: ADR 0013 / 0017 / 0015 / 0072
+- Viewport tools boundary: ADR 0049 + ADR 0025
+
+**Code entry points**
+
+- `crates/fret-components-docking/src/dock/space.rs` (DockSpace UI)
+- `crates/fret-components-docking/src/dock/manager.rs` (DockManager + ops integration)
+- `crates/fret-components-docking/src/dock/viewport.rs` (viewport hit mapping → `ViewportInputEvent`)
+- `crates/fret-components-docking/src/dock/mod.rs` (`DockViewportOverlayHooks`)
+
+**Closure checklist (P0)**
+
+- Cross-window drag + overlays + viewport capture arbitration is locked (ADR 0072).
+- Keep-alive / early submission / programmatic close have tests or stable demo harness coverage.
+
+### `fret-render` (wgpu Renderer)
+
+**Read first**
+
+- ADR 0009 (ordering/batching): `docs/adr/0009-renderer-ordering-and-batching.md`
+- ADR 0030 (shape semantics over SDF): `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
+- ADR 0029 (text pipeline): `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
+- Scene transform/clip: ADR 0078/0079
+
+**Code entry points**
+
+- `crates/fret-render/src/renderer.rs`
+- `crates/fret-render/src/text.rs`
+
+**Closure checklist (P0)**
+
+- Scene validation + renderer conformance tests cover transforms/clips/layers.
+- Text caching keys include all configuration that affects glyph output (font stack, locale, etc.).
+
+### `fret-platform` + `fret-runner-winit-wgpu` (Desktop Backend)
+
+**Read first**
+
+- ADR 0003 (platform boundary): `docs/adr/0003-platform-boundary.md`
+- ADR 0054 (capabilities): `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
+- ADR 0041/0053 (DnD + payload portability)
+
+**Code entry points**
+
+- Runner: `crates/fret-runner-winit-wgpu/src/runner.rs`
+- Accessibility bridge: `crates/fret-platform/src/accessibility.rs`
+
+**Closure checklist (P0)**
+
+- Single authority for window registry and event translation (avoid duplicated registries).
+- Effect execution is centralized and deterministic.
+
+### `fret-demo` (Stable Harnesses)
+
+**Code entry points**
+
+- Components gallery: `crates/fret-demo/src/components_gallery.rs`
+- Docking demo: `crates/fret-demo/src/docking_demo.rs`
+
+**Closure checklist**
+
+- Each “hard-to-test” behavior has a stable demo surface (and a short manual checklist if needed).
+
+---
+
+## Reference Sources (repo-ref)
+
+Pinned references are documented in `docs/repo-ref.md`. The typical mapping is:
+
+- GPUI/Zed substrate patterns: `repo-ref/zed`, `repo-ref/gpui-component`
+- shadcn/Radix outcomes: `repo-ref/ui`, `repo-ref/primitives`
+- placement vocabulary: `repo-ref/floating-ui`
+- virtualization vocabulary: `repo-ref/virtual` (TanStack) + `repo-ref/virtualizer` (Rust engine)
+- docking UX vocabulary: `repo-ref/imgui`, `repo-ref/dear-imgui-rs`
+
+---
+
+## Quick Drift Checks (Useful Commands)
+
+- Find stale docking entry points in docs: `rg -n "fret-ui/src/dock\\.rs" docs -S`
+- Validate workspace health: `cargo nextest run --workspace`
+- Validate layering: `rg -n "use winit|use wgpu" crates/fret-core crates/fret-ui crates/fret-runtime -S`
+

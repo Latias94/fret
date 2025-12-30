@@ -122,7 +122,8 @@ Use:
   - selection marquee: left-drag
   - navigation stub: right-drag orbit, middle-drag pan (drag thresholded so right-click context menu still works)
 - Overlay rendering path (framework-owned hosting, editor-owned state):
-  - host: `crates/fret-ui/src/dock.rs` (`DockManager::set_viewport_overlay`, `paint_viewport_marquee`)
+  - host: `crates/fret-components-docking/src/dock/mod.rs` (`DockViewportOverlayHooks`)
+  - editor/app-owned overlay painting: `crates/fret-editor/src/viewport_overlays.rs` (e.g. `paint_viewport_marquee`)
 
 ## References
 

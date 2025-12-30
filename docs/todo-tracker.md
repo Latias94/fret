@@ -61,7 +61,7 @@ It complements (but does not replace) ADRs:
 - **Lock docking interaction arbitration (dock drag vs overlays vs viewport capture)**
   - Goal: prevent dismissal/capture conflicts and keep modal blocking rules intentional and consistent.
   - ADRs: `docs/adr/0072-docking-interaction-arbitration-matrix.md`, `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
-  - Code: `crates/fret-ui/src/dock.rs`, `crates/fret-ui/src/tree.rs`, `crates/fret-components-ui/src/overlay_policy.rs`
+  - Code: `crates/fret-components-docking/src/dock/space.rs`, `crates/fret-ui/src/tree.rs`, `crates/fret-components-ui/src/overlay_policy.rs`
 
 - **Escape cancels cross-window dock drags**
   - Goal: match editor UX where Escape always cancels an in-progress dock tab drag and clears hover previews.
@@ -78,12 +78,12 @@ It complements (but does not replace) ADRs:
 - **Dock host keep-alive and early submission**
   - Goal: ensure dock hosts remain stable targets and do not "drop" docked content due to conditional submission.
   - ADRs: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`
-  - Code: `crates/fret-ui/src/dock.rs`, runner/driver UI build order.
+  - Code: `crates/fret-components-docking/src/dock/space.rs`, `crates/fret-components-docking/src/dock/manager.rs`, runner/driver UI build order.
 
 - **Programmatic close without one-frame tab "hole"**
   - Goal: add a `DockOp`/notify pattern so closing tabs from commands does not produce a transient no-selection/flicker.
   - ADRs: `docs/adr/0013-docking-ops-and-persistence.md`
-  - Code: `crates/fret-ui/src/dock.rs`, app integration applying `DockOp` + invalidation.
+  - Code: `crates/fret-components-docking/src/dock/space.rs`, app integration applying `DockOp` + invalidation.
 
 ## P0 - Scheduling / Render Lifecycle
 

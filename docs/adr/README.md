@@ -42,12 +42,12 @@ ADR or adding a new ADR) before scaling feature surface area.
   - Update: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`
   - Decide: what it means for a dock host to be "kept alive" when collapsed/hidden, and the required ordering constraints for building docking targets.
   - Decide: the `DockOp` pattern that avoids one-frame "holes" when closing tabs programmatically (ImGui `SetTabItemClosed`-class issue).
-  - Implement: `crates/fret-ui/src/dock.rs`, app integration points applying `DockOp` + invalidation.
+  - Implement: `crates/fret-components-docking/src/dock/space.rs`, `crates/fret-components-docking/src/dock/manager.rs`, app integration points applying `DockOp` + invalidation.
 
 - **Docking drag vs overlays vs viewport capture: arbitration matrix**
   - Add ADR (proposed): `docs/adr/0072-docking-interaction-arbitration-matrix.md`
   - Decide: drag start/stop precedence, which overlays close/freeze during dock drags, and how modal barriers intentionally block docking/tool input.
-  - Implement: `crates/fret-ui/src/dock.rs`, `crates/fret-components-ui/src/overlay_policy.rs`, `crates/fret-ui/src/tree.rs` (capture + layering).
+  - Implement: `crates/fret-components-docking/src/dock/space.rs`, `crates/fret-components-ui/src/overlay_policy.rs`, `crates/fret-ui/src/tree.rs` (capture + layering).
 
 ### P1 (Lock soon; otherwise behavior will drift)
 
@@ -117,10 +117,11 @@ These anchors are intentionally few; use `rg` to drill down from them.
 
 - App/effects/models: `crates/fret-app/src/app.rs`
 - Desktop runner (winit + wgpu): `crates/fret-runner-winit-wgpu/src/runner.rs`
-- UI runtime + docking widget: `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/dock.rs`
+- UI runtime (retained tree prototype): `crates/fret-ui/src/tree.rs`
+- Docking UI (`DockSpace`, policy-heavy): `crates/fret-components-docking/src/dock/space.rs`
 - Core contracts (IDs, dock graph, scene ops): `crates/fret-core/src/lib.rs`
 - Renderer (quads/SDF/text hooks): `crates/fret-render/src/renderer.rs`
-- Demo (end-to-end wiring): `crates/fret-demo/src/components_gallery.rs`, `crates/fret-demo/src/shadcn_gallery.rs`
+- Demo (end-to-end wiring): `crates/fret-demo/src/components_gallery.rs`, `crates/fret-demo/src/docking_demo.rs`
 
 ## Current Focus (“Decide Early”)
 

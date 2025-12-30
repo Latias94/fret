@@ -11,7 +11,7 @@ These directories are **not** build dependencies of Fret; they exist to avoid â€
 
 ## Dependency Sources (Crates in `Cargo.lock`)
 
-This repository does not currently vendor crate dependency sources under `repo-ref/` (e.g. no `repo-ref/winit`).
+This repository does not currently vendor crate dependency sources under `repo-ref/` (for example, we do not keep a pinned checkout for crates like `winit`).
 
 When you need to cite or inspect dependency behavior:
 
@@ -37,6 +37,7 @@ As a baseline, this workspace currently has:
 - `repo-ref/ui` (shadcn/ui): `ccafdaf7`
 - `repo-ref/vello`: `48f38536`
 - `repo-ref/virtual`: `de8c12f`
+- `repo-ref/virtualizer`: `686f973`
 - `repo-ref/zed`: `2cad6c8ef1`
 - `repo-ref/makepad`: `b40b9af49`
 
@@ -127,6 +128,13 @@ and the collision/flip/shift mental model; we do not copy the JS runtime.
 Where to look:
 
 - `repo-ref/floating-ui/packages/` (algorithms and docs sources)
+
+## `virtualizer` (Rust virtualization engine reference)
+
+This is a Rust, UI-agnostic virtualization engine inspired by TanStack Virtual. It is useful as a
+code-level reference when validating our `VirtualList` algorithms and invariants:
+
+- `repo-ref/virtualizer`
 
 ## ImGui / Dear ImGui (Docking + multi-viewport vocabulary)
 
