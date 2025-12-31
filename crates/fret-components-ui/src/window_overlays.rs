@@ -4,7 +4,7 @@
 //! (ADR 0067) and coordinates dismissal + focus restore rules (ADR 0069).
 
 use fret_core::{AppWindowId, NodeId, Rect, TimerToken};
-use fret_runtime::{CommandId, DragKind, Effect, Model};
+use fret_runtime::{CommandId, DragKind, Effect, FrameId, Model};
 use fret_ui::action::DismissReason;
 use fret_ui::action::UiActionHostExt;
 use fret_ui::declarative;
@@ -87,7 +87,7 @@ impl std::fmt::Debug for HoverOverlayRequest {
 
 #[derive(Default)]
 struct WindowOverlayFrame {
-    frame_id: fret_core::FrameId,
+    frame_id: FrameId,
     popovers: Vec<DismissiblePopoverRequest>,
     modals: Vec<ModalRequest>,
     hover_overlays: Vec<HoverOverlayRequest>,
@@ -897,7 +897,7 @@ pub fn render<H: UiHost>(
 
     for (layer, trigger, restore_focus) in to_hide_popovers {
         let focus = ui.focus();
-        if focus.is_some_and(|n| ui.node_layer(n) == Some(layer)) {
+        if focus.is_none() || focus.is_some_and(|n| ui.node_layer(n) == Some(layer)) {
             OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
             // Prefer resolving the trigger at restore time to avoid relying on potentially stale
             // `NodeId` snapshots across frames.
@@ -1942,5 +1942,144 @@ mod tests {
 
         assert_eq!(app.models().get_copied(&underlay_clicked), Some(true));
         assert_eq!(app.models().get_copied(&overlay_clicked), Some(false));
+    }
+
+    #[test]
+    fn non_modal_overlay_does_not_request_outside_press_observer_while_closing() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(300.0), Px(200.0)),
+        );
+
+        // Base root (required so the window exists and rendering can proceed).
+        begin_frame(&mut app, window);
+        let base = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "base",
+            |_| Vec::new(),
+        );
+        ui.set_root(base);
+
+        // Install a non-modal layer that is still `present` but `open=false` (closing animation).
+        begin_frame(&mut app, window);
+        let trigger = GlobalElementId(0xdead);
+        request_dismissible_popover_for_window(
+            &mut app,
+            window,
+            DismissiblePopoverRequest {
+                id: trigger,
+                root_name: popover_root_name(trigger),
+                trigger,
+                open,
+                present: true,
+                initial_focus: None,
+                children: Vec::new(),
+            },
+        );
+
+        render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let layer = app
+            .with_global_mut(WindowOverlays::default, |overlays, _app| {
+                overlays.popovers.get(&(window, trigger)).map(|p| p.layer)
+            })
+            .expect("popover layer");
+
+        let info = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == layer)
+            .expect("popover debug layer info");
+
+        assert_eq!(info.visible, true);
+        assert_eq!(info.blocks_underlay_input, false);
+        assert_eq!(info.hit_testable, false);
+        assert_eq!(info.wants_pointer_down_outside_events, false);
+    }
+
+    #[test]
+    fn non_modal_overlay_restores_focus_when_focus_is_missing_on_unmount() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(300.0), Px(200.0)),
+        );
+
+        // First frame: render base to establish stable bounds for the trigger element.
+        let trigger = render_base_with_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Second frame: request and render a dismissible popover (open=true).
+        begin_frame(&mut app, window);
+        let _ = render_base_with_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+        request_dismissible_popover_for_window(
+            &mut app,
+            window,
+            DismissiblePopoverRequest {
+                id: trigger,
+                root_name: popover_root_name(trigger),
+                trigger,
+                open: open.clone(),
+                present: true,
+                initial_focus: None,
+                children: Vec::new(),
+            },
+        );
+        render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.set_focus(None);
+
+        // Third frame: do not request the popover (present=false / unmounted), and expect focus to
+        // be restored to the trigger since focus is missing.
+        begin_frame(&mut app, window);
+        let _ = render_base_with_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+        render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+        assert_eq!(ui.focus(), Some(trigger_node));
     }
 }
