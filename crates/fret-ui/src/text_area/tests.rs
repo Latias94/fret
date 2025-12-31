@@ -593,3 +593,58 @@ fn ime_cursor_area_reflects_scroll_offset_in_paint_space() {
         "expected IME cursor area to move with scroll offset"
     );
 }
+
+#[test]
+fn semantics_value_and_composition_include_inline_preedit() {
+    let window = AppWindowId::default();
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TextArea::new("abc"));
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let _ = app.take_effects();
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::SetTextSelection { anchor: 1, focus: 1 },
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Ime(fret_core::ImeEvent::Preedit {
+            text: "ZZ".to_string(),
+            cursor: Some((0, 1)),
+        }),
+    );
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    snap.validate().expect("valid semantics snapshot");
+
+    let node = snap
+        .nodes
+        .iter()
+        .find(|n| n.id == root)
+        .expect("text area node");
+
+    assert_eq!(node.role, fret_core::SemanticsRole::TextField);
+    assert_eq!(node.value.as_deref(), Some("aZZbc"));
+    assert_eq!(node.text_selection, Some((2, 2)));
+    assert_eq!(node.text_composition, Some((1, 3)));
+}
