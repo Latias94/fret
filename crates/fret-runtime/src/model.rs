@@ -1,9 +1,10 @@
 use std::{
     any::Any,
+    cell::RefCell,
     collections::HashSet,
     marker::PhantomData,
-    panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
-    sync::{Arc, Mutex, Weak},
+    panic::{AssertUnwindSafe, Location, catch_unwind, resume_unwind},
+    rc::{Rc, Weak},
 };
 
 use slotmap::SlotMap;
@@ -31,7 +32,7 @@ impl<T> Model<T> {
 
     pub fn downgrade(&self) -> WeakModel<T> {
         WeakModel {
-            store: Arc::downgrade(&self.store.inner),
+            store: Rc::downgrade(&self.store.inner),
             id: self.id,
             _phantom: PhantomData,
         }
@@ -225,9 +226,8 @@ pub trait ModelHost {
     }
 }
 
-#[derive(Clone, Default)]
 pub struct ModelStore {
-    inner: Arc<ModelStoreInner>,
+    inner: Rc<ModelStoreInner>,
     // Models are main-thread only. Enforce this at compile time by making the store (and all
     // derived handles) `!Send` + `!Sync`.
     _not_send: PhantomData<std::rc::Rc<()>>,
@@ -235,7 +235,7 @@ pub struct ModelStore {
 
 #[derive(Default)]
 struct ModelStoreInner {
-    state: Mutex<ModelStoreState>,
+    state: RefCell<ModelStoreState>,
 }
 
 #[derive(Default)]
@@ -250,6 +250,10 @@ struct ModelEntry {
     revision: u64,
     strong: u64,
     pending_drop: bool,
+    #[cfg(debug_assertions)]
+    leased_at: Option<&'static Location<'static>>,
+    #[cfg(debug_assertions)]
+    leased_type: Option<&'static str>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -292,16 +296,17 @@ impl<T: Any> Drop for ModelLease<T> {
 }
 
 impl ModelStore {
-    fn lock_state(&self) -> std::sync::MutexGuard<'_, ModelStoreState> {
-        match self.inner.state.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => poisoned.into_inner(),
-        }
+    fn state(&self) -> std::cell::Ref<'_, ModelStoreState> {
+        self.inner.state.borrow()
+    }
+
+    fn state_mut(&self) -> std::cell::RefMut<'_, ModelStoreState> {
+        self.inner.state.borrow_mut()
     }
 
     #[cfg(test)]
     fn state_lock_is_held_for_tests(&self) -> bool {
-        self.inner.state.try_lock().is_err()
+        self.inner.state.try_borrow_mut().is_err()
     }
 
     fn mark_changed_locked(state: &mut ModelStoreState, id: ModelId) {
@@ -310,8 +315,17 @@ impl ModelStore {
         }
     }
 
+    #[cfg(debug_assertions)]
+    fn debug_lease_info(&self, id: ModelId) -> Option<(&'static str, &'static Location<'static>)> {
+        let state = self.state();
+        let entry = state.storage.get(id)?;
+        let leased_at = entry.leased_at?;
+        let leased_type = entry.leased_type.unwrap_or("<unknown>");
+        Some((leased_type, leased_at))
+    }
+
     fn inc_strong(&self, id: ModelId) {
-        let mut state = self.lock_state();
+        let mut state = self.state_mut();
         let Some(entry) = state.storage.get_mut(id) else {
             return;
         };
@@ -325,7 +339,7 @@ impl ModelStore {
         // and dropping those handles re-enters the store to decrement refcounts. Holding the lock
         // while dropping would deadlock.
         let removed = {
-            let mut state = self.lock_state();
+            let mut state = self.state_mut();
             let should_remove_now = {
                 let Some(entry) = state.storage.get_mut(id) else {
                     return;
@@ -348,7 +362,7 @@ impl ModelStore {
     }
 
     fn upgrade_strong(&self, id: ModelId) -> bool {
-        let mut state = self.lock_state();
+        let mut state = self.state_mut();
         let Some(entry) = state.storage.get_mut(id) else {
             return false;
         };
@@ -360,18 +374,22 @@ impl ModelStore {
     }
 
     pub fn take_changed_models(&mut self) -> Vec<ModelId> {
-        let mut state = self.lock_state();
+        let mut state = self.state_mut();
         state.changed_dedup.clear();
         std::mem::take(&mut state.changed)
     }
 
     pub fn insert<T: Any>(&mut self, value: T) -> Model<T> {
-        let mut state = self.lock_state();
+        let mut state = self.state_mut();
         let id = state.storage.insert(ModelEntry {
             value: Some(Box::new(value)),
             revision: 0,
             strong: 1,
             pending_drop: false,
+            #[cfg(debug_assertions)]
+            leased_at: None,
+            #[cfg(debug_assertions)]
+            leased_type: None,
         });
         Model {
             store: self.clone(),
@@ -409,7 +427,18 @@ impl ModelStore {
             Ok(v) => Some(v),
             Err(ModelUpdateError::NotFound) => None,
             Err(ModelUpdateError::AlreadyLeased) => {
-                panic!("model is currently leased: id={:?}", model.id)
+                #[cfg(debug_assertions)]
+                if let Some((ty, at)) = self.debug_lease_info(model.id) {
+                    panic!(
+                        "model is currently leased: id={:?} type={} leased_at={}:{}:{}",
+                        model.id,
+                        ty,
+                        at.file(),
+                        at.line(),
+                        at.column()
+                    );
+                }
+                panic!("model is currently leased: id={:?}", model.id);
             }
             Err(ModelUpdateError::TypeMismatch) => panic!("model type mismatch: id={:?}", model.id),
         }
@@ -420,14 +449,25 @@ impl ModelStore {
             Ok(v) => Some(v),
             Err(ModelUpdateError::NotFound) => None,
             Err(ModelUpdateError::AlreadyLeased) => {
-                panic!("model is currently leased: id={:?}", model.id)
+                #[cfg(debug_assertions)]
+                if let Some((ty, at)) = self.debug_lease_info(model.id) {
+                    panic!(
+                        "model is currently leased: id={:?} type={} leased_at={}:{}:{}",
+                        model.id,
+                        ty,
+                        at.file(),
+                        at.line(),
+                        at.column()
+                    );
+                }
+                panic!("model is currently leased: id={:?}", model.id);
             }
             Err(ModelUpdateError::TypeMismatch) => panic!("model type mismatch: id={:?}", model.id),
         }
     }
 
     pub fn revision<T: Any>(&self, model: &Model<T>) -> Option<u64> {
-        let state = self.lock_state();
+        let state = self.state();
         state.storage.get(model.id).map(|e| e.revision)
     }
 
@@ -456,15 +496,22 @@ impl ModelStore {
         }
     }
 
+    #[track_caller]
     fn lease_shared<T: Any>(&self, model: &Model<T>) -> Result<ModelLease<T>, ModelUpdateError> {
+        let caller = Location::caller();
         let boxed = {
-            let mut state = self.lock_state();
+            let mut state = self.state_mut();
             let entry = state
                 .storage
                 .get_mut(model.id)
                 .ok_or(ModelUpdateError::NotFound)?;
             if entry.strong == 0 {
                 return Err(ModelUpdateError::NotFound);
+            }
+            #[cfg(debug_assertions)]
+            if entry.value.is_some() {
+                entry.leased_at = Some(caller);
+                entry.leased_type = Some(std::any::type_name::<T>());
             }
             entry.value.take().ok_or(ModelUpdateError::AlreadyLeased)?
         };
@@ -476,11 +523,16 @@ impl ModelStore {
                 dirty: false,
             }),
             Err(boxed) => {
-                let mut state = self.lock_state();
+                let mut state = self.state_mut();
                 if let Some(entry) = state.storage.get_mut(model.id)
                     && entry.value.is_none()
                 {
                     entry.value = Some(boxed);
+                    #[cfg(debug_assertions)]
+                    {
+                        entry.leased_at = None;
+                        entry.leased_type = None;
+                    }
                 }
                 Err(ModelUpdateError::TypeMismatch)
             }
@@ -498,11 +550,16 @@ impl ModelStore {
 
         // Same lock-drop rule as `dec_strong`: do not drop removed values while holding the lock.
         let removed = {
-            let mut state = self.lock_state();
+            let mut state = self.state_mut();
             let (mark_dirty, should_remove) = {
                 let entry = state.storage.get_mut(lease.id).expect("leased id exists");
                 assert!(entry.value.is_none(), "model entry should be leased");
                 entry.value = Some(value);
+                #[cfg(debug_assertions)]
+                {
+                    entry.leased_at = None;
+                    entry.leased_type = None;
+                }
                 if lease.dirty {
                     entry.revision = entry.revision.saturating_add(1);
                     // NOTE: `entry` holds a mutable borrow of `state`, so defer the `mark_changed` call.
@@ -532,6 +589,20 @@ impl ModelStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn lease_markers_are_set_and_cleared() {
+        let mut store = ModelStore::default();
+        let model = store.insert(123_u32);
+        let id = model.id();
+
+        let mut lease = store.lease(&model).unwrap();
+        assert!(store.debug_lease_info(id).is_some());
+
+        store.end_lease(&mut lease);
+        assert!(store.debug_lease_info(id).is_none());
+    }
 
     #[test]
     fn read_does_not_hold_store_lock_while_running_user_code() {
@@ -594,9 +665,9 @@ mod tests {
         let model = store.insert(123_u32);
         let id = model.id();
 
-        assert!(store.lock_state().storage.contains_key(id));
+        assert!(store.state().storage.contains_key(id));
         drop(model);
-        assert!(!store.lock_state().storage.contains_key(id));
+        assert!(!store.state().storage.contains_key(id));
     }
 
     #[test]
@@ -607,20 +678,20 @@ mod tests {
 
         let model2 = model.clone();
         {
-            let state = store.lock_state();
+            let state = store.state();
             let entry = state.storage.get(id).unwrap();
             assert_eq!(entry.strong, 2);
         }
 
         drop(model);
         {
-            let state = store.lock_state();
+            let state = store.state();
             let entry = state.storage.get(id).unwrap();
             assert_eq!(entry.strong, 1);
         }
 
         drop(model2);
-        assert!(!store.lock_state().storage.contains_key(id));
+        assert!(!store.state().storage.contains_key(id));
     }
 
     #[test]
@@ -633,7 +704,7 @@ mod tests {
         drop(model);
 
         {
-            let state = store.lock_state();
+            let state = store.state();
             let entry = state.storage.get(id).unwrap();
             assert_eq!(entry.strong, 0);
             assert!(entry.value.is_none());
@@ -641,6 +712,24 @@ mod tests {
         }
 
         store.end_lease(&mut lease);
-        assert!(!store.lock_state().storage.contains_key(id));
+        assert!(!store.state().storage.contains_key(id));
+    }
+}
+
+impl Clone for ModelStore {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            _not_send: PhantomData,
+        }
+    }
+}
+
+impl Default for ModelStore {
+    fn default() -> Self {
+        Self {
+            inner: Rc::new(ModelStoreInner::default()),
+            _not_send: PhantomData,
+        }
     }
 }
