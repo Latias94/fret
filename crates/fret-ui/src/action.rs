@@ -1,6 +1,6 @@
 use crate::UiHost;
-use fret_core::{AppWindowId, CursorIcon, KeyCode, Modifiers, MouseButton, Point, TimerToken};
-use fret_runtime::{CommandId, Effect, Model, ModelStore, WeakModel};
+use fret_core::{AppWindowId, CursorIcon, KeyCode, Modifiers, MouseButton, Point};
+use fret_runtime::{CommandId, Effect, Model, ModelStore, TimerToken, WeakModel};
 use std::any::Any;
 use std::sync::Arc;
 

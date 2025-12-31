@@ -61,11 +61,11 @@ impl TimeHost for App {
         App::frame_id(self)
     }
 
-    fn next_timer_token(&mut self) -> fret_core::TimerToken {
+    fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
         App::next_timer_token(self)
     }
 
-    fn next_clipboard_token(&mut self) -> fret_core::ClipboardToken {
+    fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
         App::next_clipboard_token(self)
     }
 }

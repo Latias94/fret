@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::{ClipboardToken, FileDialogToken, TimerToken};
+use crate::{ClipboardToken, ExternalDropToken, FileDialogToken, TimerToken};
 use fret_core::{AppWindowId, CursorIcon, FileDialogOptions, Rect, WindowAnchor};
 
 use crate::CommandId;
@@ -22,10 +22,10 @@ pub enum Effect {
     },
     ExternalDropReadAll {
         window: AppWindowId,
-        token: fret_core::ExternalDropToken,
+        token: ExternalDropToken,
     },
     ExternalDropRelease {
-        token: fret_core::ExternalDropToken,
+        token: ExternalDropToken,
     },
     OpenUrl {
         url: String,

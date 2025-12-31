@@ -4,8 +4,8 @@ use std::{
     panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
 };
 
-use fret_core::{AppWindowId, NodeId, TimerToken};
-use fret_runtime::{FrameId, TickId};
+use fret_core::{AppWindowId, NodeId};
+use fret_runtime::{ClipboardToken, FrameId, TickId, TimerToken};
 
 use crate::drag::DragKind;
 use crate::drag::DragSession;
@@ -265,8 +265,8 @@ impl App {
         token
     }
 
-    pub fn next_clipboard_token(&mut self) -> fret_core::ClipboardToken {
-        let token = fret_core::ClipboardToken(self.next_clipboard_token);
+    pub fn next_clipboard_token(&mut self) -> ClipboardToken {
+        let token = ClipboardToken(self.next_clipboard_token);
         self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
         token
     }

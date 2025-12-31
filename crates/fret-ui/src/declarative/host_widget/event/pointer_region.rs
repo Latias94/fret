@@ -36,7 +36,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             self.app.request_redraw(window);
         }
 
-        fn next_timer_token(&mut self) -> fret_core::TimerToken {
+        fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
             self.app.next_timer_token()
         }
     }

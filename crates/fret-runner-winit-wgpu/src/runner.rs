@@ -12,7 +12,7 @@ use fret_runtime::{
 };
 use fret_core::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
-    ExternalDropToken, InternalDragEvent, InternalDragKind, Modifiers, MouseButton, Point, Px,
+    InternalDragEvent, InternalDragKind, Modifiers, MouseButton, Point, Px,
     Rect, Scene, Size, UiServices,
     ViewportInputEvent, WindowMetricsService,
 };
@@ -798,7 +798,7 @@ struct WindowRuntime<S> {
     ime_allowed: bool,
     cursor_icon: fret_core::CursorIcon,
     external_drag_files: Vec<std::path::PathBuf>,
-    external_drag_token: Option<ExternalDropToken>,
+    external_drag_token: Option<fret_runtime::ExternalDropToken>,
     user: S,
 }
 
@@ -839,7 +839,7 @@ pub struct WinitRunner<D: WinitDriver> {
     frame_id: FrameId,
 
     raf_windows: HashSet<fret_core::AppWindowId>,
-    timers: HashMap<fret_core::TimerToken, TimerEntry>,
+    timers: HashMap<fret_runtime::TimerToken, TimerEntry>,
     clipboard: WinitClipboard,
     open_url: WinitOpenUrl,
     file_dialog: WinitFileDialog,
@@ -1317,7 +1317,7 @@ impl<D: WinitDriver> WinitRunner<D> {
     }
 
     fn external_drag_files(
-        token: ExternalDropToken,
+        token: fret_runtime::ExternalDropToken,
         paths: &[std::path::PathBuf],
     ) -> ExternalDragFiles {
         let files = paths
@@ -1711,7 +1711,7 @@ impl<D: WinitDriver> WinitRunner<D> {
 
     fn fire_due_timers(&mut self, now: Instant) -> bool {
         let mut fired_any = false;
-        let mut due: Vec<fret_core::TimerToken> = Vec::new();
+        let mut due: Vec<fret_runtime::TimerToken> = Vec::new();
         for (token, entry) in &self.timers {
             if entry.deadline <= now {
                 due.push(*token);

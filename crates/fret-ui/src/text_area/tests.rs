@@ -439,7 +439,7 @@ fn clipboard_text_normalizes_newlines_to_lf() {
     let mut area = TextArea::default();
     let mut cx = event_cx(&mut app, &mut services, node, window, bounds);
 
-    let token = fret_core::ClipboardToken(1);
+    let token = fret_runtime::ClipboardToken(1);
     area.pending_clipboard_token = Some(token);
     area.event(
         &mut cx,

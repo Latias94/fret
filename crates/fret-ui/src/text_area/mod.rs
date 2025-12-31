@@ -162,7 +162,7 @@ pub struct TextArea {
     last_bounds: Rect,
     last_sent_cursor: Option<Rect>,
     ime_deduper: crate::text_edit::ime::Deduper,
-    pending_clipboard_token: Option<fret_core::ClipboardToken>,
+    pending_clipboard_token: Option<fret_runtime::ClipboardToken>,
 }
 
 impl Default for TextArea {

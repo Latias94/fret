@@ -14,7 +14,7 @@ pub(super) struct PendingShortcut {
     pub(super) focus: Option<NodeId>,
     pub(super) barrier_root: Option<NodeId>,
     pub(super) fallback: Option<CommandId>,
-    pub(super) timer: Option<fret_core::TimerToken>,
+    pub(super) timer: Option<fret_runtime::TimerToken>,
     pub(super) capture_next_text_input_key: Option<KeyCode>,
 }
 
