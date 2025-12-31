@@ -68,14 +68,8 @@ impl<H: UiHost> Widget<H> for TextArea {
                     return;
                 }
                 self.clear_preedit();
-                self.ime_replace_range = None;
-
-                let a =
-                    crate::text_edit::utf8::clamp_to_char_boundary(self.text(), *anchor as usize);
-                let b =
-                    crate::text_edit::utf8::clamp_to_char_boundary(self.text(), *focus as usize);
-                self.selection_anchor = a;
-                self.caret = b;
+                self.edit_state()
+                    .set_selection_char_clamped(*anchor as usize, *focus as usize);
                 self.ensure_caret_visible = true;
 
                 cx.invalidate_self(Invalidation::Paint);
@@ -390,8 +384,7 @@ impl<H: UiHost> Widget<H> for TextArea {
             }
             "text.paste" => self.request_clipboard_paste(cx),
             "text.move_left" => {
-                self.caret = crate::text_edit::utf8::prev_char_boundary(&self.text, self.caret);
-                self.selection_anchor = self.caret;
+                let _ = self.edit_state().move_left(false);
                 self.affinity = CaretAffinity::Downstream;
                 self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
@@ -399,8 +392,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.move_right" => {
-                self.caret = crate::text_edit::utf8::next_char_boundary(&self.text, self.caret);
-                self.selection_anchor = self.caret;
+                let _ = self.edit_state().move_right(false);
                 self.affinity = CaretAffinity::Downstream;
                 self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
@@ -408,8 +400,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.move_word_left" => {
-                self.caret = crate::text_edit::utf8::move_word_left(&self.text, self.caret);
-                self.selection_anchor = self.caret;
+                let _ = self.edit_state().move_word_left(false);
                 self.affinity = CaretAffinity::Downstream;
                 self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
@@ -417,8 +408,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.move_word_right" => {
-                self.caret = crate::text_edit::utf8::move_word_right(&self.text, self.caret);
-                self.selection_anchor = self.caret;
+                let _ = self.edit_state().move_word_right(false);
                 self.affinity = CaretAffinity::Downstream;
                 self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
@@ -482,7 +472,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.select_left" => {
-                self.caret = crate::text_edit::utf8::prev_char_boundary(&self.text, self.caret);
+                let _ = self.edit_state().move_left(true);
                 self.affinity = CaretAffinity::Downstream;
                 self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
@@ -490,7 +480,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.select_right" => {
-                self.caret = crate::text_edit::utf8::next_char_boundary(&self.text, self.caret);
+                let _ = self.edit_state().move_right(true);
                 self.affinity = CaretAffinity::Downstream;
                 self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
@@ -498,7 +488,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.select_word_left" => {
-                self.caret = crate::text_edit::utf8::move_word_left(&self.text, self.caret);
+                let _ = self.edit_state().move_word_left(true);
                 self.affinity = CaretAffinity::Downstream;
                 self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
@@ -506,7 +496,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.select_word_right" => {
-                self.caret = crate::text_edit::utf8::move_word_right(&self.text, self.caret);
+                let _ = self.edit_state().move_word_right(true);
                 self.affinity = CaretAffinity::Downstream;
                 self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);

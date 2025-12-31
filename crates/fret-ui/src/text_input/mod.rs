@@ -364,15 +364,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                 if !focused {
                     return;
                 }
-                self.clear_ime_composition();
-                self.ime_replace_range = None;
-
-                let a =
-                    crate::text_edit::utf8::clamp_to_char_boundary(self.text(), *anchor as usize);
-                let b =
-                    crate::text_edit::utf8::clamp_to_char_boundary(self.text(), *focus as usize);
-                self.selection_anchor = a;
-                self.caret = b;
+                let mut edit = self.edit_state();
+                edit.clear_ime_composition();
+                edit.set_selection_char_clamped(*anchor as usize, *focus as usize);
 
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
@@ -470,44 +464,32 @@ impl<H: UiHost> Widget<H> for TextInput {
                             cx.request_redraw();
                         }
                         fret_core::KeyCode::ArrowLeft => {
-                            let next = if modifiers.ctrl || modifiers.alt {
-                                crate::text_edit::utf8::move_word_left(&self.text, self.caret)
+                            let extend = modifiers.shift;
+                            if modifiers.ctrl || modifiers.alt {
+                                let _ = self.edit_state().move_word_left(extend);
                             } else {
-                                crate::text_edit::utf8::prev_char_boundary(&self.text, self.caret)
-                            };
-                            self.caret = next;
-                            if !modifiers.shift {
-                                self.selection_anchor = self.caret;
+                                let _ = self.edit_state().move_left(extend);
                             }
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
                         }
                         fret_core::KeyCode::ArrowRight => {
-                            let next = if modifiers.ctrl || modifiers.alt {
-                                crate::text_edit::utf8::move_word_right(&self.text, self.caret)
+                            let extend = modifiers.shift;
+                            if modifiers.ctrl || modifiers.alt {
+                                let _ = self.edit_state().move_word_right(extend);
                             } else {
-                                crate::text_edit::utf8::next_char_boundary(&self.text, self.caret)
-                            };
-                            self.caret = next;
-                            if !modifiers.shift {
-                                self.selection_anchor = self.caret;
+                                let _ = self.edit_state().move_right(extend);
                             }
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
                         }
                         fret_core::KeyCode::Home => {
-                            self.caret = 0;
-                            if !modifiers.shift {
-                                self.selection_anchor = self.caret;
-                            }
+                            let _ = self.edit_state().move_home(modifiers.shift);
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
                         }
                         fret_core::KeyCode::End => {
-                            self.caret = self.text.len();
-                            if !modifiers.shift {
-                                self.selection_anchor = self.caret;
-                            }
+                            let _ = self.edit_state().move_end(modifiers.shift);
                             cx.invalidate_self(Invalidation::Paint);
                             cx.request_redraw();
                         }
@@ -626,105 +608,97 @@ impl<H: UiHost> Widget<H> for TextInput {
                 true
             }
             "text.move_left" => {
-                self.caret = crate::text_edit::utf8::prev_char_boundary(&self.text, self.caret);
-                self.selection_anchor = self.caret;
+                let _ = self.edit_state().move_left(false);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.move_right" => {
-                self.caret = crate::text_edit::utf8::next_char_boundary(&self.text, self.caret);
-                self.selection_anchor = self.caret;
+                let _ = self.edit_state().move_right(false);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.move_word_left" => {
-                self.caret = crate::text_edit::utf8::move_word_left(&self.text, self.caret);
-                self.selection_anchor = self.caret;
+                let _ = self.edit_state().move_word_left(false);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.move_word_right" => {
-                self.caret = crate::text_edit::utf8::move_word_right(&self.text, self.caret);
-                self.selection_anchor = self.caret;
+                let _ = self.edit_state().move_word_right(false);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.move_home" => {
-                self.caret = 0;
-                self.selection_anchor = self.caret;
+                let _ = self.edit_state().move_home(false);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.move_end" => {
-                self.caret = self.text.len();
-                self.selection_anchor = self.caret;
+                let _ = self.edit_state().move_end(false);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.move_up" => {
-                self.caret = 0;
-                self.selection_anchor = self.caret;
+                let _ = self.edit_state().move_home(false);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.move_down" => {
-                self.caret = self.text.len();
-                self.selection_anchor = self.caret;
+                let _ = self.edit_state().move_end(false);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.select_left" => {
-                self.caret = crate::text_edit::utf8::prev_char_boundary(&self.text, self.caret);
+                let _ = self.edit_state().move_left(true);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.select_right" => {
-                self.caret = crate::text_edit::utf8::next_char_boundary(&self.text, self.caret);
+                let _ = self.edit_state().move_right(true);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.select_word_left" => {
-                self.caret = crate::text_edit::utf8::move_word_left(&self.text, self.caret);
+                let _ = self.edit_state().move_word_left(true);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.select_word_right" => {
-                self.caret = crate::text_edit::utf8::move_word_right(&self.text, self.caret);
+                let _ = self.edit_state().move_word_right(true);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.select_home" => {
-                self.caret = 0;
+                let _ = self.edit_state().move_home(true);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.select_end" => {
-                self.caret = self.text.len();
+                let _ = self.edit_state().move_end(true);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.select_up" => {
-                self.caret = 0;
+                let _ = self.edit_state().move_home(true);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.select_down" => {
-                self.caret = self.text.len();
+                let _ = self.edit_state().move_end(true);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true

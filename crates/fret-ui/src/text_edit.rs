@@ -198,12 +198,70 @@ pub(crate) mod state {
             self.clamp_indexes();
         }
 
+        pub(crate) fn set_selection_char_clamped(&mut self, selection_anchor: usize, caret: usize) {
+            *self.selection_anchor = selection_anchor;
+            *self.caret = caret;
+            self.clamp_indexes();
+        }
+
+        pub(crate) fn move_home(&mut self, extend_selection: bool) -> bool {
+            self.clamp_indexes();
+            self.move_caret_to(0, extend_selection)
+        }
+
+        pub(crate) fn move_end(&mut self, extend_selection: bool) -> bool {
+            self.clamp_indexes();
+            self.move_caret_to(self.text.len(), extend_selection)
+        }
+
+        pub(crate) fn move_left(&mut self, extend_selection: bool) -> bool {
+            self.clamp_indexes();
+            let next = utf8::prev_char_boundary(self.text, *self.caret);
+            self.move_caret_to(next, extend_selection)
+        }
+
+        pub(crate) fn move_right(&mut self, extend_selection: bool) -> bool {
+            self.clamp_indexes();
+            let next = utf8::next_char_boundary(self.text, *self.caret);
+            self.move_caret_to(next, extend_selection)
+        }
+
+        pub(crate) fn move_word_left(&mut self, extend_selection: bool) -> bool {
+            self.clamp_indexes();
+            let next = utf8::move_word_left(self.text, *self.caret);
+            self.move_caret_to(next, extend_selection)
+        }
+
+        pub(crate) fn move_word_right(&mut self, extend_selection: bool) -> bool {
+            self.clamp_indexes();
+            let next = utf8::move_word_right(self.text, *self.caret);
+            self.move_caret_to(next, extend_selection)
+        }
+
         pub(crate) fn has_selection(&self) -> bool {
             buffer::has_selection(*self.selection_anchor, *self.caret)
         }
 
-        fn clear_ime_state(&mut self) {
+        pub(crate) fn clear_ime_composition(&mut self) {
             ime::clear_state(self.preedit, self.preedit_cursor, self.ime_replace_range);
+        }
+
+        fn move_caret_to(&mut self, next: usize, extend_selection: bool) -> bool {
+            let had_selection = self.has_selection();
+
+            if next == *self.caret {
+                if !extend_selection && had_selection {
+                    *self.selection_anchor = *self.caret;
+                    return true;
+                }
+                return false;
+            }
+
+            *self.caret = next;
+            if !extend_selection {
+                *self.selection_anchor = *self.caret;
+            }
+            true
         }
 
         pub(crate) fn replace_selection(&mut self, insert: &str) -> bool {
@@ -214,7 +272,7 @@ pub(crate) mod state {
             }
 
             buffer::replace_selection(self.text, self.caret, self.selection_anchor, insert);
-            self.clear_ime_state();
+            self.clear_ime_composition();
             true
         }
 
@@ -223,7 +281,7 @@ pub(crate) mod state {
             if !buffer::delete_selection_if_any(self.text, self.caret, self.selection_anchor) {
                 return false;
             }
-            self.clear_ime_state();
+            self.clear_ime_composition();
             true
         }
 
@@ -240,7 +298,7 @@ pub(crate) mod state {
             self.text.replace_range(prev..*self.caret, "");
             *self.caret = prev;
             *self.selection_anchor = *self.caret;
-            self.clear_ime_state();
+            self.clear_ime_composition();
             true
         }
 
@@ -256,7 +314,7 @@ pub(crate) mod state {
             let next = utf8::next_char_boundary(self.text, *self.caret);
             self.text.replace_range(*self.caret..next, "");
             *self.selection_anchor = *self.caret;
-            self.clear_ime_state();
+            self.clear_ime_composition();
             true
         }
 
@@ -273,7 +331,7 @@ pub(crate) mod state {
             self.text.replace_range(prev..*self.caret, "");
             *self.caret = prev;
             *self.selection_anchor = *self.caret;
-            self.clear_ime_state();
+            self.clear_ime_composition();
             true
         }
 
@@ -289,7 +347,7 @@ pub(crate) mod state {
             let next = utf8::move_word_right(self.text, *self.caret);
             self.text.replace_range(*self.caret..next, "");
             *self.selection_anchor = *self.caret;
-            self.clear_ime_state();
+            self.clear_ime_composition();
             true
         }
     }
