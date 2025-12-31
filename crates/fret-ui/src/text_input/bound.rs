@@ -80,13 +80,13 @@ impl BoundTextInput {
     }
 
     fn sync_from_model<H: UiHost>(&mut self, app: &H, force: bool) {
-        let revision = app.models().revision(self.model);
+        let revision = app.models().revision(&self.model);
         if revision == self.last_revision {
             return;
         }
         self.last_revision = revision;
 
-        let Some(text) = app.models().get(self.model) else {
+        let Some(text) = app.models().get_cloned(&self.model) else {
             return;
         };
 
@@ -100,11 +100,11 @@ impl BoundTextInput {
         let text = self.input.text().to_string();
         if app
             .models_mut()
-            .update(self.model, move |v| *v = text)
+            .update(&self.model, move |v| *v = text)
             .is_ok()
         {
             self.dirty_since_sync = false;
-            self.last_revision = app.models().revision(self.model);
+            self.last_revision = app.models().revision(&self.model);
         }
     }
 }

@@ -7,13 +7,19 @@ pub(super) fn handle_text_input<H: UiHost>(
     props: crate::element::TextInputProps,
     event: &Event,
 ) {
-    if this.text_input.is_none() {
-        this.text_input = Some(BoundTextInput::new(props.model));
+    let model = props.model.clone();
+    let model_id = model.id();
+    match this.text_input.as_mut() {
+        None => {
+            this.text_input = Some(BoundTextInput::new(model.clone()));
+        }
+        Some(input) => {
+            if input.model_id() != model_id {
+                input.set_model(model);
+            }
+        }
     }
     let input = this.text_input.as_mut().expect("text input");
-    if input.model_id() != props.model.id() {
-        input.set_model(props.model);
-    }
     input.set_chrome_style(props.chrome);
     input.set_text_style(props.text_style);
     input.set_submit_command(props.submit_command);
@@ -27,13 +33,19 @@ pub(super) fn handle_text_area<H: UiHost>(
     props: crate::element::TextAreaProps,
     event: &Event,
 ) {
-    if this.text_area.is_none() {
-        this.text_area = Some(crate::text_area::BoundTextArea::new(props.model));
+    let model = props.model.clone();
+    let model_id = model.id();
+    match this.text_area.as_mut() {
+        None => {
+            this.text_area = Some(crate::text_area::BoundTextArea::new(model.clone()));
+        }
+        Some(area) => {
+            if area.model_id() != model_id {
+                area.set_model(model);
+            }
+        }
     }
     let area = this.text_area.as_mut().expect("text area");
-    if area.model_id() != props.model.id() {
-        area.set_model(props.model);
-    }
     area.set_style(props.chrome);
     area.set_text_style(props.text_style);
     area.set_min_height(props.min_height);
@@ -46,18 +58,26 @@ pub(super) fn handle_resizable_panel_group<H: UiHost>(
     props: crate::element::ResizablePanelGroupProps,
     event: &Event,
 ) {
-    if this.resizable_panel_group.is_none() {
-        this.resizable_panel_group = Some(
-            crate::resizable_panel_group::BoundResizablePanelGroup::new(props.axis, props.model),
-        );
+    let model = props.model.clone();
+    let model_id = model.id();
+    match this.resizable_panel_group.as_mut() {
+        None => {
+            this.resizable_panel_group =
+                Some(crate::resizable_panel_group::BoundResizablePanelGroup::new(
+                    props.axis,
+                    model.clone(),
+                ));
+        }
+        Some(group) => {
+            if group.model_id() != model_id {
+                group.set_model(model);
+            }
+        }
     }
     let group = this
         .resizable_panel_group
         .as_mut()
         .expect("resizable panel group");
-    if group.model_id() != props.model.id() {
-        group.set_model(props.model);
-    }
     group.set_axis(props.axis);
     group.set_enabled(props.enabled);
     group.set_min_px(props.min_px.clone());

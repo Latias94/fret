@@ -341,12 +341,14 @@ impl ElementHostWidget {
                 clamp_to_constraints(metrics.size, props.layout, cx.available)
             }
             ElementInstance::TextInput(props) => {
+                let model = props.model.clone();
+                let model_id = model.id();
                 if self.text_input.is_none() {
-                    self.text_input = Some(BoundTextInput::new(props.model));
+                    self.text_input = Some(BoundTextInput::new(model.clone()));
                 }
                 let input = self.text_input.as_mut().expect("text input");
-                if input.model_id() != props.model.id() {
-                    input.set_model(props.model);
+                if input.model_id() != model_id {
+                    input.set_model(model);
                 }
                 input.set_chrome_style(props.chrome);
                 input.set_text_style(props.text_style);
@@ -357,12 +359,14 @@ impl ElementHostWidget {
                 clamp_to_constraints(desired, props.layout, cx.available)
             }
             ElementInstance::TextArea(props) => {
+                let model = props.model.clone();
+                let model_id = model.id();
                 if self.text_area.is_none() {
-                    self.text_area = Some(crate::text_area::BoundTextArea::new(props.model));
+                    self.text_area = Some(crate::text_area::BoundTextArea::new(model.clone()));
                 }
                 let area = self.text_area.as_mut().expect("text area");
-                if area.model_id() != props.model.id() {
-                    area.set_model(props.model);
+                if area.model_id() != model_id {
+                    area.set_model(model);
                 }
                 area.set_style(props.chrome);
                 area.set_text_style(props.text_style);
@@ -372,19 +376,21 @@ impl ElementHostWidget {
                 clamp_to_constraints(desired, props.layout, cx.available)
             }
             ElementInstance::ResizablePanelGroup(props) => {
+                let model = props.model.clone();
+                let model_id = model.id();
                 if self.resizable_panel_group.is_none() {
                     self.resizable_panel_group =
                         Some(crate::resizable_panel_group::BoundResizablePanelGroup::new(
                             props.axis,
-                            props.model,
+                            model.clone(),
                         ));
                 }
                 let group = self
                     .resizable_panel_group
                     .as_mut()
                     .expect("resizable panel group");
-                if group.model_id() != props.model.id() {
-                    group.set_model(props.model);
+                if group.model_id() != model_id {
+                    group.set_model(model);
                 }
                 group.set_axis(props.axis);
                 group.set_enabled(props.enabled);
