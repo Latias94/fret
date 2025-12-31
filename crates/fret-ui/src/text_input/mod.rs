@@ -571,13 +571,6 @@ impl<H: UiHost> Widget<H> for TextInput {
                 cx.request_redraw();
                 true
             }
-            "text.select_all" => {
-                self.selection_anchor = 0;
-                self.caret = self.text.len();
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
             "text.copy" => {
                 let (a, b) = self.selection_range();
                 if a != b {
@@ -607,42 +600,6 @@ impl<H: UiHost> Widget<H> for TextInput {
                 cx.app.push_effect(Effect::ClipboardGetText { window });
                 true
             }
-            "text.move_left" => {
-                let _ = self.edit_state().move_left(false);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.move_right" => {
-                let _ = self.edit_state().move_right(false);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.move_word_left" => {
-                let _ = self.edit_state().move_word_left(false);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.move_word_right" => {
-                let _ = self.edit_state().move_word_right(false);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.move_home" => {
-                let _ = self.edit_state().move_home(false);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.move_end" => {
-                let _ = self.edit_state().move_end(false);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
             "text.move_up" => {
                 let _ = self.edit_state().move_home(false);
                 cx.invalidate_self(Invalidation::Paint);
@@ -651,42 +608,6 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             "text.move_down" => {
                 let _ = self.edit_state().move_end(false);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.select_left" => {
-                let _ = self.edit_state().move_left(true);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.select_right" => {
-                let _ = self.edit_state().move_right(true);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.select_word_left" => {
-                let _ = self.edit_state().move_word_left(true);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.select_word_right" => {
-                let _ = self.edit_state().move_word_right(true);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.select_home" => {
-                let _ = self.edit_state().move_home(true);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.select_end" => {
-                let _ = self.edit_state().move_end(true);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -703,39 +624,27 @@ impl<H: UiHost> Widget<H> for TextInput {
                 cx.request_redraw();
                 true
             }
-            "text.delete_backward" => {
-                if !self.is_ime_composing() {
-                    let _ = self.edit_state().delete_backward_char();
+            _ => {
+                let is_ime_composing = self.is_ime_composing();
+                let outcome = crate::text_edit::commands::apply_basic(
+                    &mut self.edit_state(),
+                    command.as_str(),
+                    is_ime_composing,
+                );
+                if !outcome.handled {
+                    return false;
+                }
+
+                if outcome.invalidate_layout {
                     cx.invalidate_self(Invalidation::Layout);
+                } else if outcome.invalidate_paint {
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                if outcome.invalidate_layout || outcome.invalidate_paint {
                     cx.request_redraw();
                 }
                 true
             }
-            "text.delete_forward" => {
-                if !self.is_ime_composing() {
-                    let _ = self.edit_state().delete_forward_char();
-                    cx.invalidate_self(Invalidation::Layout);
-                    cx.request_redraw();
-                }
-                true
-            }
-            "text.delete_word_backward" => {
-                if !self.is_ime_composing() {
-                    let _ = self.edit_state().delete_word_backward();
-                    cx.invalidate_self(Invalidation::Layout);
-                    cx.request_redraw();
-                }
-                true
-            }
-            "text.delete_word_forward" => {
-                if !self.is_ime_composing() {
-                    let _ = self.edit_state().delete_word_forward();
-                    cx.invalidate_self(Invalidation::Layout);
-                    cx.request_redraw();
-                }
-                true
-            }
-            _ => false,
         }
     }
 

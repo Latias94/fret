@@ -198,6 +198,20 @@ pub(crate) mod state {
             self.clamp_indexes();
         }
 
+        pub(crate) fn select_all(&mut self) -> bool {
+            self.clamp_indexes();
+
+            let next_anchor = 0;
+            let next_caret = self.text.len();
+            if *self.selection_anchor == next_anchor && *self.caret == next_caret {
+                return false;
+            }
+
+            *self.selection_anchor = next_anchor;
+            *self.caret = next_caret;
+            true
+        }
+
         pub(crate) fn set_selection_char_clamped(&mut self, selection_anchor: usize, caret: usize) {
             *self.selection_anchor = selection_anchor;
             *self.caret = caret;
@@ -349,6 +363,94 @@ pub(crate) mod state {
             *self.selection_anchor = *self.caret;
             self.clear_ime_composition();
             true
+        }
+    }
+}
+
+pub(crate) mod commands {
+    use super::state::TextEditState;
+
+    #[derive(Debug, Default, Clone, Copy)]
+    pub(crate) struct Outcome {
+        pub(crate) handled: bool,
+        pub(crate) invalidate_paint: bool,
+        pub(crate) invalidate_layout: bool,
+    }
+
+    impl Outcome {
+        fn paint(changed: bool) -> Self {
+            Self {
+                handled: true,
+                invalidate_paint: changed,
+                invalidate_layout: false,
+            }
+        }
+
+        fn layout(changed: bool) -> Self {
+            Self {
+                handled: true,
+                invalidate_paint: false,
+                invalidate_layout: changed,
+            }
+        }
+
+        fn noop_handled() -> Self {
+            Self {
+                handled: true,
+                invalidate_paint: false,
+                invalidate_layout: false,
+            }
+        }
+    }
+
+    pub(crate) fn apply_basic(
+        edit: &mut TextEditState<'_>,
+        command: &str,
+        is_ime_composing: bool,
+    ) -> Outcome {
+        match command {
+            "text.select_all" => Outcome::paint(edit.select_all()),
+            "text.move_left" => Outcome::paint(edit.move_left(false)),
+            "text.move_right" => Outcome::paint(edit.move_right(false)),
+            "text.move_word_left" => Outcome::paint(edit.move_word_left(false)),
+            "text.move_word_right" => Outcome::paint(edit.move_word_right(false)),
+            "text.move_home" => Outcome::paint(edit.move_home(false)),
+            "text.move_end" => Outcome::paint(edit.move_end(false)),
+            "text.select_left" => Outcome::paint(edit.move_left(true)),
+            "text.select_right" => Outcome::paint(edit.move_right(true)),
+            "text.select_word_left" => Outcome::paint(edit.move_word_left(true)),
+            "text.select_word_right" => Outcome::paint(edit.move_word_right(true)),
+            "text.select_home" => Outcome::paint(edit.move_home(true)),
+            "text.select_end" => Outcome::paint(edit.move_end(true)),
+            "text.delete_backward" => {
+                if is_ime_composing {
+                    Outcome::noop_handled()
+                } else {
+                    Outcome::layout(edit.delete_backward_char())
+                }
+            }
+            "text.delete_forward" => {
+                if is_ime_composing {
+                    Outcome::noop_handled()
+                } else {
+                    Outcome::layout(edit.delete_forward_char())
+                }
+            }
+            "text.delete_word_backward" => {
+                if is_ime_composing {
+                    Outcome::noop_handled()
+                } else {
+                    Outcome::layout(edit.delete_word_backward())
+                }
+            }
+            "text.delete_word_forward" => {
+                if is_ime_composing {
+                    Outcome::noop_handled()
+                } else {
+                    Outcome::layout(edit.delete_word_forward())
+                }
+            }
+            _ => Outcome::default(),
         }
     }
 }

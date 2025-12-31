@@ -351,15 +351,6 @@ impl<H: UiHost> Widget<H> for TextArea {
                 cx.request_redraw();
                 true
             }
-            "text.select_all" => {
-                self.selection_anchor = 0;
-                self.caret = self.text.len();
-                self.affinity = CaretAffinity::Downstream;
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
             "text.copy" => {
                 let (a, b) = self.selection_range();
                 if a != b {
@@ -383,38 +374,6 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.paste" => self.request_clipboard_paste(cx),
-            "text.move_left" => {
-                let _ = self.edit_state().move_left(false);
-                self.affinity = CaretAffinity::Downstream;
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.move_right" => {
-                let _ = self.edit_state().move_right(false);
-                self.affinity = CaretAffinity::Downstream;
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.move_word_left" => {
-                let _ = self.edit_state().move_word_left(false);
-                self.affinity = CaretAffinity::Downstream;
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.move_word_right" => {
-                let _ = self.edit_state().move_word_right(false);
-                self.affinity = CaretAffinity::Downstream;
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
             "text.move_home" => {
                 hit_test_line(self, cx, false);
                 self.selection_anchor = self.caret;
@@ -466,38 +425,6 @@ impl<H: UiHost> Widget<H> for TextArea {
                 self.selection_anchor = self.caret;
                 self.affinity = hit.affinity;
                 self.preferred_x = Some(x);
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.select_left" => {
-                let _ = self.edit_state().move_left(true);
-                self.affinity = CaretAffinity::Downstream;
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.select_right" => {
-                let _ = self.edit_state().move_right(true);
-                self.affinity = CaretAffinity::Downstream;
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.select_word_left" => {
-                let _ = self.edit_state().move_word_left(true);
-                self.affinity = CaretAffinity::Downstream;
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.select_word_right" => {
-                let _ = self.edit_state().move_word_right(true);
-                self.affinity = CaretAffinity::Downstream;
                 self.ensure_caret_visible = true;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
@@ -555,55 +482,40 @@ impl<H: UiHost> Widget<H> for TextArea {
                 cx.request_redraw();
                 true
             }
-            "text.delete_backward" => {
-                if !self.edit_state().delete_backward_char() {
+            _ => {
+                let is_ime_composing = self.is_ime_composing();
+                let outcome = crate::text_edit::commands::apply_basic(
+                    &mut self.edit_state(),
+                    cmd,
+                    is_ime_composing,
+                );
+                if !outcome.handled {
+                    return false;
+                }
+
+                let is_navigation = cmd.starts_with("text.move")
+                    || cmd.starts_with("text.select")
+                    || cmd == "text.select_all";
+
+                if outcome.invalidate_layout {
+                    self.clear_preedit();
+                    self.affinity = CaretAffinity::Downstream;
+                    self.text_dirty = true;
+                    self.ensure_caret_visible = true;
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
                     return true;
                 }
-                self.clear_preedit();
-                self.affinity = CaretAffinity::Downstream;
-                self.text_dirty = true;
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Layout);
-                cx.request_redraw();
-                true
-            }
-            "text.delete_forward" => {
-                if !self.edit_state().delete_forward_char() {
-                    return true;
+
+                if outcome.invalidate_paint || is_navigation {
+                    self.affinity = CaretAffinity::Downstream;
+                    self.ensure_caret_visible = true;
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
                 }
-                self.clear_preedit();
-                self.affinity = CaretAffinity::Downstream;
-                self.text_dirty = true;
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Layout);
-                cx.request_redraw();
+
                 true
             }
-            "text.delete_word_backward" => {
-                if !self.edit_state().delete_word_backward() {
-                    return true;
-                }
-                self.clear_preedit();
-                self.affinity = CaretAffinity::Downstream;
-                self.text_dirty = true;
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Layout);
-                cx.request_redraw();
-                true
-            }
-            "text.delete_word_forward" => {
-                if !self.edit_state().delete_word_forward() {
-                    return true;
-                }
-                self.clear_preedit();
-                self.affinity = CaretAffinity::Downstream;
-                self.text_dirty = true;
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Layout);
-                cx.request_redraw();
-                true
-            }
-            _ => false,
         }
     }
 
