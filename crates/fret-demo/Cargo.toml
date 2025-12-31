@@ -12,6 +12,7 @@ fret-components-shadcn = { path = "../fret-components-shadcn" }
 fret-components-ui = { path = "../fret-components-ui" }
 fret-icons-lucide = { path = "../fret-icons-lucide" }
 fret-core = { path = "../fret-core" }
+fret-runtime = { path = "../fret-runtime" }
 fret-runner-winit-wgpu = { path = "../fret-runner-winit-wgpu" }
 fret-app = { path = "../fret-app" }
 fret-ui-app = { path = "../fret-ui-app" }

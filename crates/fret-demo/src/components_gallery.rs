@@ -5,9 +5,9 @@ use fret_components_icons::IconRegistry;
 use fret_components_shadcn as shadcn;
 use fret_components_ui::tree::{TreeItem, TreeItemId, TreeState};
 use fret_core::{
-    AppWindowId, Edges, Event, KeyCode, PlatformCapabilities, Px, Rect, Scene, SemanticsRole,
-    UiServices,
+    AppWindowId, Edges, Event, KeyCode, Px, Rect, Scene, SemanticsRole, UiServices,
 };
+use fret_runtime::PlatformCapabilities;
 use fret_runner_winit_wgpu::{
     RunnerUserEvent, WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig,
 };

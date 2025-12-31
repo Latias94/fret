@@ -1,4 +1,5 @@
-use fret_core::{KeyCode, Modifiers, PlatformCapabilities};
+use crate::PlatformCapabilities;
+use fret_core::{KeyCode, Modifiers};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Platform {

@@ -7,9 +7,10 @@ use fret_components_docking::{
 };
 use fret_components_icons::IconRegistry;
 use fret_core::{
-    AppWindowId, Color, Corners, DrawOrder, Edges, Event, PlatformCapabilities, Rect, Scene,
-    SceneOp, UiServices, geometry::Px,
+    AppWindowId, Color, Corners, DrawOrder, Edges, Event, Rect, Scene, SceneOp, UiServices,
+    geometry::Px,
 };
+use fret_runtime::PlatformCapabilities;
 use fret_runner_winit_wgpu::{
     RunnerUserEvent, WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig,
 };

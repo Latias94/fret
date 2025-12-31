@@ -1,5 +1,5 @@
 use crate::InputContext;
-use fret_core::capabilities::{CapabilityValueKind, capability_key_kind};
+use crate::capabilities::{CapabilityValueKind, capability_key_kind};
 
 #[derive(Debug, Clone)]
 pub struct WhenExpr(Expr);
@@ -360,7 +360,7 @@ fn expr_to_value(expr: Expr) -> Result<Value, String> {
 mod tests {
     use super::WhenExpr;
     use crate::InputContext;
-    use fret_core::ExternalDragPayloadKind;
+    use crate::ExternalDragPayloadKind;
 
     #[test]
     fn when_expr_can_eval_capability_bools() {

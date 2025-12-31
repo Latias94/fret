@@ -5,9 +5,9 @@ use crate::tree::UiTree;
 use crate::widget::{LayoutCx, Widget};
 use fret_core::{
     AppWindowId, Axis, Event, PathCommand, PathConstraints, PathMetrics, PathService, PathStyle,
-    PlatformCapabilities, Point, Px, Size, TextConstraints, TextMetrics, TextService, TextStyle,
+    Point, Px, Size, TextConstraints, TextMetrics, TextService, TextStyle,
 };
-use fret_runtime::Effect;
+use fret_runtime::{Effect, PlatformCapabilities};
 
 #[derive(Default)]
 struct FakeUiServices;

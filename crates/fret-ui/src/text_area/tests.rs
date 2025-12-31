@@ -3,10 +3,10 @@ use crate::UiTree;
 use crate::test_host::TestHost;
 use crate::widget::Widget;
 use fret_core::{
-    AppWindowId, CaretAffinity, Event, PlatformCapabilities, Point, Px, Rect, Scene, Size,
-    TextConstraints, TextMetrics, TextService, TextStyle,
+    AppWindowId, CaretAffinity, Event, Point, Px, Rect, Scene, Size, TextConstraints, TextMetrics,
+    TextService, TextStyle,
 };
-use fret_runtime::Effect;
+use fret_runtime::{Effect, PlatformCapabilities};
 
 #[derive(Default)]
 struct FakeTextService {}

@@ -477,7 +477,7 @@ mod tests {
         fn prepare(
             &mut self,
             _text: &str,
-            _style: CoreTextStyle,
+            _style: &CoreTextStyle,
             _constraints: TextConstraints,
         ) -> (TextBlobId, TextMetrics) {
             (

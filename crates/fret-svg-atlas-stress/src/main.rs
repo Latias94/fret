@@ -1,9 +1,9 @@
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::SvgService as _;
 use fret_core::{
-    AppWindowId, Color, Event, KeyCode, PlatformCapabilities, Point, Px, Rect, Scene, Size, SvgFit,
-    UiServices,
+    AppWindowId, Color, Event, KeyCode, Point, Px, Rect, Scene, Size, SvgFit, UiServices,
 };
+use fret_runtime::PlatformCapabilities;
 use fret_render::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 use fret_runner_winit_wgpu::{
     RunnerUserEvent, WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig,

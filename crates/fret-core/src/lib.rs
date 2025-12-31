@@ -1,4 +1,3 @@
-pub mod capabilities;
 pub mod cursor;
 pub mod dock;
 pub mod dock_layout;
@@ -18,7 +17,6 @@ pub mod vector_path;
 pub mod viewport;
 pub mod window;
 
-pub use capabilities::{ExternalDragPayloadKind, PlatformCapabilities, ShellCapabilities};
 pub use cursor::CursorIcon;
 pub use dock::{
     Axis, DockFloatingWindow, DockGraph, DockNode, DockOpApplyError, DockOpApplyErrorKind, DropZone,

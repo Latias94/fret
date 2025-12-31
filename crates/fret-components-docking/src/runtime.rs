@@ -7,7 +7,9 @@
 //! - complete the float by updating the graph once the OS window exists
 
 use fret_core::{AppWindowId, DockOp};
-use fret_runtime::{CreateWindowKind, CreateWindowRequest, Effect, UiHost, WindowRequest};
+use fret_runtime::{
+    CreateWindowKind, CreateWindowRequest, Effect, PlatformCapabilities, UiHost, WindowRequest,
+};
 
 use crate::DockManager;
 use crate::invalidation::DockInvalidationService;
@@ -82,7 +84,7 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
             panel,
             anchor,
         } => {
-            if let Some(caps) = app.global::<fret_core::PlatformCapabilities>()
+            if let Some(caps) = app.global::<PlatformCapabilities>()
                 && !caps.ui.multi_window
             {
                 let target_window = anchor.map(|a| a.window).unwrap_or(source_window);
@@ -267,7 +269,7 @@ mod tests {
         let panel = PanelKey::new("test.panel");
 
         let mut app = TestHost::new();
-        app.set_global(fret_core::PlatformCapabilities::default());
+        app.set_global(PlatformCapabilities::default());
         app.set_global(DockManager::default());
 
         app.with_global_mut(DockManager::default, |dock, _app| {
@@ -332,7 +334,7 @@ mod tests {
         let panel = PanelKey::new("test.panel");
 
         let mut app = TestHost::new();
-        let mut caps = fret_core::PlatformCapabilities::default();
+        let mut caps = PlatformCapabilities::default();
         caps.ui.multi_window = false;
         caps.ui.window_tear_off = true;
         app.set_global(caps);

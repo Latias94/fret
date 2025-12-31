@@ -7,10 +7,10 @@ use super::split_stabilize::{apply_same_axis_locks, compute_same_axis_locks_for_
 use super::{DockManager, DockSpace};
 use crate::test_host::TestHost;
 use fret_core::{
-    AppWindowId, Event, InternalDragEvent, InternalDragKind, Modifiers, PlatformCapabilities,
-    Point, Px, Scene, SceneOp, Size, TextBlobId, TextConstraints, TextMetrics, TextService,
-    TextStyle,
+    AppWindowId, Event, InternalDragEvent, InternalDragKind, Modifiers, Point, Px, Scene, SceneOp,
+    Size, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle,
 };
+use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
@@ -22,7 +22,7 @@ impl TextService for FakeTextService {
     fn prepare(
         &mut self,
         _text: &str,
-        _style: TextStyle,
+        _style: &TextStyle,
         _constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
         (

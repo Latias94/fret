@@ -1,3 +1,4 @@
+pub mod capabilities;
 pub mod command;
 pub mod commands;
 pub mod docking_settings;
@@ -10,6 +11,7 @@ pub mod model;
 pub mod ui_host;
 pub mod when_expr;
 
+pub use capabilities::{ExternalDragPayloadKind, PlatformCapabilities, ShellCapabilities};
 pub use command::CommandId;
 pub use commands::{CommandMeta, CommandRegistry, CommandScope};
 pub use docking_settings::{

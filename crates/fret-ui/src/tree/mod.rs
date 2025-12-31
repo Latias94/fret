@@ -3,7 +3,6 @@ use crate::{
     elements::GlobalElementId,
     widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
-use fret_core::PlatformCapabilities;
 use fret_core::{
     AppWindowId, Corners, Event, FrameId, KeyCode, NodeId, Point, PointerEvent, Px, Rect, Scene,
     SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, Transform2D,
@@ -11,6 +10,7 @@ use fret_core::{
 };
 use fret_runtime::{
     CommandId, Effect, InputContext, InputDispatchPhase, KeyChord, KeymapService, ModelId, Platform,
+    PlatformCapabilities,
 };
 use slotmap::SlotMap;
 use std::any::TypeId;
