@@ -1,10 +1,10 @@
-use fret_runtime::CommandId;
-use fret_runtime::Model;
+use fret_runtime::{CommandId, Model, WeakModel};
+use fret_ui::action::RovingTypeaheadCx;
+use fret_ui::action::UiActionHostExt;
 use fret_ui::ElementCx;
 use fret_ui::UiHost;
-use fret_ui::action::RovingTypeaheadCx;
 
-use crate::headless::typeahead::{TypeaheadBuffer, match_prefix_arc_str};
+use crate::headless::typeahead::{match_prefix_arc_str, TypeaheadBuffer};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -21,19 +21,39 @@ pub trait ActionHooksExt {
 
     fn pressable_toggle_bool(&mut self, model: &Model<bool>);
 
+    fn pressable_toggle_bool_weak(&mut self, model: &WeakModel<bool>);
+
     fn pressable_set_bool(&mut self, model: &Model<bool>, value: bool);
+
+    fn pressable_set_bool_weak(&mut self, model: &WeakModel<bool>, value: bool);
 
     fn pressable_set_arc_str(&mut self, model: &Model<Arc<str>>, value: Arc<str>);
 
+    fn pressable_set_arc_str_weak(&mut self, model: &WeakModel<Arc<str>>, value: Arc<str>);
+
     fn pressable_set_option_arc_str(&mut self, model: &Model<Option<Arc<str>>>, value: Arc<str>);
+
+    fn pressable_set_option_arc_str_weak(
+        &mut self,
+        model: &WeakModel<Option<Arc<str>>>,
+        value: Arc<str>,
+    );
 
     fn pressable_toggle_vec_arc_str(&mut self, model: &Model<Vec<Arc<str>>>, value: Arc<str>);
 
     fn dismissible_close_bool(&mut self, open: &Model<bool>);
 
+    fn dismissible_close_bool_weak(&mut self, open: &WeakModel<bool>);
+
     fn roving_select_option_arc_str(
         &mut self,
         model: &Model<Option<Arc<str>>>,
+        values: Arc<[Arc<str>]>,
+    );
+
+    fn roving_select_option_arc_str_weak(
+        &mut self,
+        model: &WeakModel<Option<Arc<str>>>,
         values: Arc<[Arc<str>]>,
     );
 
@@ -63,10 +83,24 @@ impl<H: UiHost> ActionHooksExt for ElementCx<'_, H> {
         }));
     }
 
+    fn pressable_toggle_bool_weak(&mut self, model: &WeakModel<bool>) {
+        let model = model.clone();
+        self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
+            let _ = host.update_weak_model(&model, |v| *v = !*v);
+        }));
+    }
+
     fn pressable_set_bool(&mut self, model: &Model<bool>, value: bool) {
         let model = model.clone();
         self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
             let _ = host.models_mut().update(&model, |v| *v = value);
+        }));
+    }
+
+    fn pressable_set_bool_weak(&mut self, model: &WeakModel<bool>, value: bool) {
+        let model = model.clone();
+        self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
+            let _ = host.update_weak_model(&model, |v| *v = value);
         }));
     }
 
@@ -78,11 +112,31 @@ impl<H: UiHost> ActionHooksExt for ElementCx<'_, H> {
         }));
     }
 
+    fn pressable_set_arc_str_weak(&mut self, model: &WeakModel<Arc<str>>, value: Arc<str>) {
+        let model = model.clone();
+        self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
+            let value = value.clone();
+            let _ = host.update_weak_model(&model, |v| *v = value);
+        }));
+    }
+
     fn pressable_set_option_arc_str(&mut self, model: &Model<Option<Arc<str>>>, value: Arc<str>) {
         let model = model.clone();
         self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
             let value = Some(value.clone());
             let _ = host.models_mut().update(&model, |v| *v = value);
+        }));
+    }
+
+    fn pressable_set_option_arc_str_weak(
+        &mut self,
+        model: &WeakModel<Option<Arc<str>>>,
+        value: Arc<str>,
+    ) {
+        let model = model.clone();
+        self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
+            let value = Some(value.clone());
+            let _ = host.update_weak_model(&model, |v| *v = value);
         }));
     }
 
@@ -104,6 +158,13 @@ impl<H: UiHost> ActionHooksExt for ElementCx<'_, H> {
         let open = open.clone();
         self.dismissible_add_on_dismiss_request(Arc::new(move |host, _cx, _reason| {
             let _ = host.models_mut().update(&open, |v| *v = false);
+        }));
+    }
+
+    fn dismissible_close_bool_weak(&mut self, open: &WeakModel<bool>) {
+        let open = open.clone();
+        self.dismissible_add_on_dismiss_request(Arc::new(move |host, _cx, _reason| {
+            let _ = host.update_weak_model(&open, |v| *v = false);
         }));
     }
 
@@ -131,6 +192,47 @@ impl<H: UiHost> ActionHooksExt for ElementCx<'_, H> {
                         };
                         let next = Some(value);
                         let _ = host.models_mut().update(&model, |v| *v = next);
+                    },
+                );
+
+                RovingSelectOptionArcStrState {
+                    values: values_cell,
+                    handler,
+                }
+            },
+            |state| {
+                *state.values.borrow_mut() = values.clone();
+                state.handler.clone()
+            },
+        );
+
+        self.roving_add_on_active_change(handler);
+    }
+
+    fn roving_select_option_arc_str_weak(
+        &mut self,
+        model: &WeakModel<Option<Arc<str>>>,
+        values: Arc<[Arc<str>]>,
+    ) {
+        let model = model.clone();
+        struct RovingSelectOptionArcStrState {
+            values: Rc<RefCell<Arc<[Arc<str>]>>>,
+            handler: fret_ui::action::OnRovingActiveChange,
+        }
+
+        let handler = self.with_state(
+            || {
+                let values_cell: Rc<RefCell<Arc<[Arc<str>]>>> =
+                    Rc::new(RefCell::new(values.clone()));
+                let values_read = values_cell.clone();
+                let handler: fret_ui::action::OnRovingActiveChange = Arc::new(
+                    move |host: &mut dyn fret_ui::action::UiActionHost, _cx, idx| {
+                        let values = values_read.borrow();
+                        let Some(value) = values.get(idx).cloned() else {
+                            return;
+                        };
+                        let next = Some(value);
+                        let _ = host.update_weak_model(&model, |v| *v = next);
                     },
                 );
 

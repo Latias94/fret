@@ -83,6 +83,7 @@ Prefer `ElementCx` helpers that combine “observe + read”:
 Prefer a component-layer helper:
 
 - `ActionHooksExt::pressable_toggle_bool(model)`
+- If the handler should not keep the model alive: `ActionHooksExt::pressable_toggle_bool_weak(model.downgrade())`
 
 This attaches a `pressable_on_activate` hook, rather than using runtime shortcut fields.
 
@@ -118,6 +119,7 @@ callback is intentionally responsible for keeping the model alive.
 Prefer capturing `WeakModel<T>` and upgrading opportunistically, e.g. via:
 
 - `fret_ui::action::UiActionHostExt::update_weak_model(...)`
+- `ActionHooksExt::*_weak(...)` helpers in `crates/fret-components-ui`
 
 ## Transitional APIs
 
