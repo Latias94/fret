@@ -326,9 +326,11 @@ mod tests {
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{
-        Point, Px, Rect, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle,
+        Event, KeyCode, Modifiers, Point, Px, Rect, TextBlobId, TextConstraints, TextMetrics,
+        TextService, TextStyle,
     };
     use fret_runtime::CommandId;
+    use fret_runtime::Effect;
     use fret_ui::element::{LayoutStyle, Length, PressableProps};
 
     #[derive(Default)]
@@ -373,6 +375,31 @@ mod tests {
 
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
             true
+        }
+    }
+
+    fn dispatch_keydown_and_apply_commands(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        key: KeyCode,
+        modifiers: Modifiers,
+    ) {
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::KeyDown {
+                key,
+                modifiers,
+                repeat: false,
+            },
+        );
+
+        for effect in app.flush_effects() {
+            let Effect::Command { command, .. } = effect else {
+                continue;
+            };
+            let _ = ui.dispatch_command(app, services, &command);
         }
     }
 
@@ -578,5 +605,125 @@ mod tests {
         assert_eq!(ui.focus(), Some(modal_a_node));
         assert_ne!(ui.focus(), Some(underlay_a_node));
         assert_ne!(ui.focus(), Some(underlay_b_node));
+    }
+
+    #[test]
+    fn modal_tab_keydown_cycles_focus_within_modal() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(300.0), Px(200.0)),
+        );
+
+        let open = app.models_mut().insert(true);
+        let mut modal_a: Option<GlobalElementId> = None;
+        let mut modal_b: Option<GlobalElementId> = None;
+
+        // Base root is required so the window exists and input dispatch can proceed.
+        OverlayController::begin_frame(&mut app, window);
+        let base = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "base",
+            |_| Vec::new(),
+        );
+        ui.set_root(base);
+
+        // Request a modal with two focusables. We'll drive Tab/Shift+Tab via KeyDown events.
+        OverlayController::begin_frame(&mut app, window);
+        let modal_children =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-child", |cx| {
+                vec![
+                    cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(80.0));
+                                layout.size.height = Length::Px(Px(32.0));
+                                layout
+                            },
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |_cx, _st, id| {
+                            modal_a = Some(id);
+                            Vec::new()
+                        },
+                    ),
+                    cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(80.0));
+                                layout.size.height = Length::Px(Px(32.0));
+                                layout
+                            },
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |_cx, _st, id| {
+                            modal_b = Some(id);
+                            Vec::new()
+                        },
+                    ),
+                ]
+            });
+
+        let modal_a = modal_a.expect("modal a id");
+        let modal_b = modal_b.expect("modal b id");
+
+        let mut req = OverlayRequest::modal(
+            GlobalElementId(0x1234),
+            None,
+            open,
+            OverlayPresence::instant(true),
+            modal_children,
+        );
+        req.initial_focus = Some(modal_a);
+        OverlayController::request_for_window(&mut app, window, req);
+
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let modal_a_node =
+            fret_ui::elements::node_for_element(&mut app, window, modal_a).expect("modal a");
+        let modal_b_node =
+            fret_ui::elements::node_for_element(&mut app, window, modal_b).expect("modal b");
+
+        assert_eq!(ui.focus(), Some(modal_a_node));
+
+        // Tab => focus.next
+        dispatch_keydown_and_apply_commands(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::Tab,
+            Modifiers::default(),
+        );
+        assert_eq!(ui.focus(), Some(modal_b_node));
+
+        // Tab => wraps within modal
+        dispatch_keydown_and_apply_commands(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::Tab,
+            Modifiers::default(),
+        );
+        assert_eq!(ui.focus(), Some(modal_a_node));
+
+        // Shift+Tab => focus.previous
+        let mut mods = Modifiers::default();
+        mods.shift = true;
+        dispatch_keydown_and_apply_commands(&mut ui, &mut app, &mut services, KeyCode::Tab, mods);
+        assert_eq!(ui.focus(), Some(modal_b_node));
     }
 }
