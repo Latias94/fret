@@ -8,9 +8,9 @@ use std::{
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
-    ExternalDropToken, InternalDragEvent, InternalDragKind, Modifiers, MouseButton,
-    PlatformCapabilities, Point, Px, Rect, Scene, Size, UiServices, ViewportInputEvent,
-    WindowMetricsService,
+    ExternalDragPayloadKind, ExternalDropToken, InternalDragEvent, InternalDragKind, Modifiers,
+    MouseButton, PlatformCapabilities, Point, Px, Rect, Scene, Size, UiServices,
+    ViewportInputEvent, WindowMetricsService,
 };
 use fret_platform_winit::accessibility;
 use fret_platform_winit::clipboard::WinitClipboard;
@@ -1069,7 +1069,7 @@ impl<D: WinitDriver> WinitRunner<D> {
 
     pub fn new(config: WinitRunnerConfig, app: App, driver: D) -> Self {
         let mut app = app;
-        let caps = match app.global::<PlatformCapabilities>().cloned() {
+        let requested = match app.global::<PlatformCapabilities>().cloned() {
             Some(caps) => caps,
             None => {
                 let caps = PlatformCapabilities::default();
@@ -1077,6 +1077,10 @@ impl<D: WinitDriver> WinitRunner<D> {
                 caps
             }
         };
+        let caps = Self::effective_platform_capabilities(&config, &requested);
+        if caps != requested {
+            app.set_global(caps.clone());
+        }
         tracing::info!(caps = ?caps, "platform capabilities");
 
         let raw_modifiers = ModifiersState::empty();
@@ -1111,6 +1115,123 @@ impl<D: WinitDriver> WinitRunner<D> {
             internal_drag_hover_pos: None,
             external_drop: WinitExternalDrop::default(),
         }
+    }
+
+    fn backend_platform_capabilities(_config: &WinitRunnerConfig) -> PlatformCapabilities {
+        let mut caps = PlatformCapabilities::default();
+
+        #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+        {
+            caps.ui.multi_window = true;
+            caps.ui.window_tear_off = true;
+            caps.ui.cursor_icons = true;
+
+            caps.clipboard.text = true;
+            caps.clipboard.files = false;
+
+            caps.dnd.external = true;
+            // The portable external drag contract is token-based (ADR 0053).
+            caps.dnd.external_payload = ExternalDragPayloadKind::FileToken;
+
+            caps.ime.enabled = true;
+            caps.ime.set_cursor_area = true;
+
+            caps.fs.real_paths = true;
+            caps.fs.file_dialogs = true;
+
+            caps.shell.open_url = true;
+
+            caps.gfx.wgpu = true;
+            caps.gfx.webgpu = false;
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            caps.ui.multi_window = false;
+            caps.ui.window_tear_off = false;
+            caps.ui.cursor_icons = false;
+
+            caps.clipboard.text = false;
+            caps.clipboard.files = false;
+
+            caps.dnd.external = false;
+            caps.dnd.external_payload = ExternalDragPayloadKind::None;
+
+            caps.ime.enabled = true;
+            caps.ime.set_cursor_area = false;
+
+            caps.fs.real_paths = false;
+            caps.fs.file_dialogs = false;
+
+            caps.shell.open_url = true;
+
+            caps.gfx.wgpu = false;
+            caps.gfx.webgpu = true;
+        }
+
+        #[cfg(any(target_os = "android", target_os = "ios"))]
+        {
+            caps.ui.multi_window = false;
+            caps.ui.window_tear_off = false;
+            caps.ui.cursor_icons = false;
+
+            caps.clipboard.text = true;
+            caps.clipboard.files = false;
+
+            caps.dnd.external = false;
+            caps.dnd.external_payload = ExternalDragPayloadKind::None;
+
+            caps.ime.enabled = true;
+            caps.ime.set_cursor_area = true;
+
+            caps.fs.real_paths = false;
+            caps.fs.file_dialogs = false;
+
+            caps.shell.open_url = true;
+
+            caps.gfx.wgpu = true;
+            caps.gfx.webgpu = false;
+        }
+
+        caps
+    }
+
+    fn effective_platform_capabilities(
+        config: &WinitRunnerConfig,
+        requested: &PlatformCapabilities,
+    ) -> PlatformCapabilities {
+        let available = Self::backend_platform_capabilities(config);
+        let mut caps = requested.clone();
+
+        caps.ui.multi_window &= available.ui.multi_window;
+        caps.ui.window_tear_off &= available.ui.window_tear_off;
+        caps.ui.cursor_icons &= available.ui.cursor_icons;
+
+        caps.clipboard.text &= available.clipboard.text;
+        caps.clipboard.files &= available.clipboard.files;
+
+        caps.dnd.external &= available.dnd.external;
+        caps.dnd.external_payload =
+            match (caps.dnd.external_payload, available.dnd.external_payload) {
+                (ExternalDragPayloadKind::None, _) => ExternalDragPayloadKind::None,
+                (_, ExternalDragPayloadKind::None) => ExternalDragPayloadKind::None,
+                (requested, available) if requested == available => requested,
+                // Narrow to the backend's portable contract if the requested mode isn't supported.
+                (_, available) => available,
+            };
+
+        caps.ime.enabled &= available.ime.enabled;
+        caps.ime.set_cursor_area &= available.ime.set_cursor_area;
+
+        caps.fs.real_paths &= available.fs.real_paths;
+        caps.fs.file_dialogs &= available.fs.file_dialogs;
+
+        caps.shell.open_url &= available.shell.open_url;
+
+        caps.gfx.wgpu &= available.gfx.wgpu;
+        caps.gfx.webgpu &= available.gfx.webgpu;
+
+        caps
     }
 
     /// Sets the event-loop proxy used to deliver asynchronous platform completions back into the
