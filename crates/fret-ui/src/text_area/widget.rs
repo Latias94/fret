@@ -415,13 +415,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                     self.selection_anchor = self.caret;
                 }
 
-                let delta = crate::text_edit::commands::MultilineUiDelta {
-                    handled: true,
-                    invalidate_paint: true,
-                    ensure_caret_visible: true,
-                    ..Default::default()
-                };
-                self.apply_multiline_ui_delta(cx, delta);
+                self.apply_multiline_ui_delta(cx, Self::nav_paint_delta());
                 true
             }
             "text.move_up" | "text.move_down" | "text.select_up" | "text.select_down" => {
@@ -451,13 +445,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 self.affinity = hit.affinity;
                 self.preferred_x = Some(x);
 
-                let delta = crate::text_edit::commands::MultilineUiDelta {
-                    handled: true,
-                    invalidate_paint: true,
-                    ensure_caret_visible: true,
-                    ..Default::default()
-                };
-                self.apply_multiline_ui_delta(cx, delta);
+                self.apply_multiline_ui_delta(cx, Self::nav_paint_delta());
                 true
             }
             _ => {
