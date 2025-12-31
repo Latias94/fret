@@ -1,7 +1,9 @@
 use std::time::Duration;
 
 use crate::{ClipboardToken, ExternalDropToken, FileDialogToken, TimerToken};
-use fret_core::{AppWindowId, CursorIcon, FileDialogOptions, Rect, WindowAnchor};
+use fret_core::{
+    AppWindowId, CursorIcon, ExternalDropReadLimits, FileDialogOptions, Rect, WindowAnchor,
+};
 
 use crate::CommandId;
 
@@ -24,6 +26,11 @@ pub enum Effect {
         window: AppWindowId,
         token: ExternalDropToken,
     },
+    ExternalDropReadAllWithLimits {
+        window: AppWindowId,
+        token: ExternalDropToken,
+        limits: ExternalDropReadLimits,
+    },
     ExternalDropRelease {
         token: ExternalDropToken,
     },
@@ -37,6 +44,11 @@ pub enum Effect {
     FileDialogReadAll {
         window: AppWindowId,
         token: FileDialogToken,
+    },
+    FileDialogReadAllWithLimits {
+        window: AppWindowId,
+        token: FileDialogToken,
+        limits: ExternalDropReadLimits,
     },
     FileDialogRelease {
         token: FileDialogToken,

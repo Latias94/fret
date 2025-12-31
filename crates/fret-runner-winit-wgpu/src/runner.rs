@@ -7,14 +7,10 @@ use std::{
 };
 
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
-use fret_runtime::{
-    ExternalDragPayloadKind, FrameId, PlatformCapabilities, PlatformCompletion, TickId,
-};
 use fret_core::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
-    InternalDragEvent, InternalDragKind, Modifiers, MouseButton, Point, Px,
-    Rect, Scene, Size, UiServices,
-    ViewportInputEvent, WindowMetricsService,
+    InternalDragEvent, InternalDragKind, Modifiers, MouseButton, Point, Px, Rect, Scene, Size,
+    UiServices, ViewportInputEvent, WindowMetricsService,
 };
 use fret_platform_winit::accessibility;
 use fret_platform_winit::clipboard::WinitClipboard;
@@ -22,6 +18,9 @@ use fret_platform_winit::external_drop::WinitExternalDrop;
 use fret_platform_winit::file_dialog::WinitFileDialog;
 use fret_platform_winit::open_url::WinitOpenUrl;
 use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
+use fret_runtime::{
+    ExternalDragPayloadKind, FrameId, PlatformCapabilities, PlatformCompletion, TickId,
+};
 use slotmap::SlotMap;
 use tracing::error;
 use winit::{
@@ -1868,6 +1867,32 @@ impl<D: WinitDriver> WinitRunner<D> {
                         };
                         self.deliver_window_event_now(window, &Event::ExternalDropData(event));
                     }
+                    Effect::ExternalDropReadAllWithLimits {
+                        window,
+                        token,
+                        limits,
+                    } => {
+                        let cap = fret_platform::external_drop::ExternalDropReadLimits {
+                            max_total_bytes: self.config.external_drop_max_total_bytes,
+                            max_file_bytes: self.config.external_drop_max_file_bytes,
+                            max_files: self.config.external_drop_max_files,
+                        };
+                        let limits = limits.capped_by(cap);
+
+                        if let Some(paths) = self.external_drop.paths(token).map(|p| p.to_vec()) {
+                            if self.spawn_platform_completion_task(window, move || {
+                                let event = WinitExternalDrop::read_paths(token, paths, limits);
+                                PlatformCompletion::ExternalDropData(event)
+                            }) {
+                                continue;
+                            }
+                        }
+
+                        let Some(event) = self.external_drop.read_all(token, limits) else {
+                            continue;
+                        };
+                        self.deliver_window_event_now(window, &Event::ExternalDropData(event));
+                    }
                     Effect::ExternalDropRelease { token } => {
                         self.external_drop.release(token);
                     }
@@ -1925,6 +1950,43 @@ impl<D: WinitDriver> WinitRunner<D> {
                             max_file_bytes: self.config.file_dialog_max_file_bytes,
                             max_files: self.config.file_dialog_max_files,
                         };
+
+                        if let Some(paths) = self.file_dialog.paths(token).map(|p| p.to_vec()) {
+                            if self.spawn_platform_completion_task(window, move || {
+                                let data = WinitFileDialog::read_paths(token, paths, limits);
+                                PlatformCompletion::FileDialogData(data)
+                            }) {
+                                continue;
+                            }
+                        }
+
+                        let Some(data) = self.file_dialog.read_all(token, limits) else {
+                            continue;
+                        };
+                        self.deliver_platform_completion_now(
+                            window,
+                            PlatformCompletion::FileDialogData(data),
+                        );
+                    }
+                    Effect::FileDialogReadAllWithLimits {
+                        window,
+                        token,
+                        limits,
+                    } => {
+                        let caps = self
+                            .app
+                            .global::<PlatformCapabilities>()
+                            .cloned()
+                            .unwrap_or_default();
+                        if !caps.fs.file_dialogs {
+                            continue;
+                        }
+                        let cap = fret_platform::external_drop::ExternalDropReadLimits {
+                            max_total_bytes: self.config.file_dialog_max_total_bytes,
+                            max_file_bytes: self.config.file_dialog_max_file_bytes,
+                            max_files: self.config.file_dialog_max_files,
+                        };
+                        let limits = limits.capped_by(cap);
 
                         if let Some(paths) = self.file_dialog.paths(token).map(|p| p.to_vec()) {
                             if self.spawn_platform_completion_task(window, move || {
