@@ -567,8 +567,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                     return;
                 }
                 if !self.is_ime_composing() {
-                    let sanitized = text.replace(['\n', '\r'], " ");
-                    if !sanitized.is_empty() {
+                    if let Some(sanitized) =
+                        crate::text_edit::clipboard::normalize_single_line(text.as_str())
+                    {
                         self.replace_selection(&sanitized);
                         cx.invalidate_self(Invalidation::Layout);
                         cx.request_redraw();

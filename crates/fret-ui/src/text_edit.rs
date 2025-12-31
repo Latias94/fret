@@ -1,5 +1,37 @@
 use fret_core::{ImeEvent, TickId};
 
+pub(crate) mod normalize {
+    pub(crate) fn newlines_to_lf(text: &str) -> String {
+        text.replace("\r\n", "\n").replace('\r', "\n")
+    }
+}
+
+pub(crate) mod clipboard {
+    use super::normalize;
+
+    pub(crate) fn normalize_single_line(text: &str) -> Option<String> {
+        if text.is_empty() {
+            return None;
+        }
+
+        Some(text.replace(['\n', '\r'], " "))
+    }
+
+    pub(crate) fn normalize_multiline(text: &str) -> Option<String> {
+        if text.is_empty() {
+            return None;
+        }
+
+        let normalized = if text.contains('\r') {
+            normalize::newlines_to_lf(text)
+        } else {
+            text.to_string()
+        };
+
+        Some(normalized)
+    }
+}
+
 pub(crate) mod utf8 {
     pub(crate) fn clamp_to_char_boundary(text: &str, idx: usize) -> usize {
         if idx >= text.len() {
@@ -193,10 +225,6 @@ pub(crate) mod ime {
         *ime_replace_range = None;
     }
 
-    fn normalize_newlines_to_lf(text: &str) -> String {
-        text.replace("\r\n", "\n").replace('\r', "\n")
-    }
-
     pub(crate) fn compose_text_at_caret(text: &str, caret: usize, insert: &str) -> Option<String> {
         let prefix = text.get(..caret)?;
         let suffix = text.get(caret..)?;
@@ -262,7 +290,7 @@ pub(crate) mod ime {
             }
             ImeEvent::Commit(text_in) => {
                 let committed = if normalize_newlines && text_in.contains('\r') {
-                    normalize_newlines_to_lf(text_in)
+                    super::normalize::newlines_to_lf(text_in)
                 } else {
                     text_in.clone()
                 };

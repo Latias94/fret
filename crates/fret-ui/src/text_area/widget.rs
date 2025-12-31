@@ -261,8 +261,9 @@ impl<H: UiHost> Widget<H> for TextArea {
                     return;
                 }
                 self.clear_preedit();
-                let normalized = text.replace("\r\n", "\n").replace('\r', "\n");
-                if !normalized.is_empty() {
+                if let Some(normalized) =
+                    crate::text_edit::clipboard::normalize_multiline(text.as_str())
+                {
                     self.replace_selection(&normalized);
                     self.ensure_caret_visible = true;
                     cx.invalidate_self(Invalidation::Layout);
