@@ -1,6 +1,6 @@
 use fret_components_ui::declarative::style as decl_style;
+use fret_components_ui::declarative::scheduling;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
-use fret_runtime::Effect;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementCx, Theme, UiHost};
 
@@ -72,9 +72,8 @@ impl Skeleton {
             let phase = t * 0.12;
             let v = 0.75 + 0.25 * phase.sin(); // [0.5, 1.0]
             alpha_mul *= v;
-
-            cx.app.push_effect(Effect::RequestAnimationFrame(cx.window));
         }
+        scheduling::set_continuous_frames(cx, self.animate_pulse);
         bg.a = (bg.a * alpha_mul).clamp(0.0, 1.0);
 
         let chrome = ChromeRefinement::default()

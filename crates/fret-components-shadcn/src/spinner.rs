@@ -1,8 +1,8 @@
 use fret_components_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvg};
+use fret_components_ui::declarative::scheduling;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{ColorRef, LayoutRefinement, MetricRef};
 use fret_core::{Point, Px, Transform2D};
-use fret_runtime::Effect;
 use fret_ui::element::{AnyElement, Length, SvgIconProps, VisualTransformProps};
 use fret_ui::{ElementCx, SvgSource, Theme, UiHost};
 
@@ -88,9 +88,7 @@ impl Spinner {
         }
 
         let angle = cx.app.frame_id().0 as f32 * self.speed;
-        if self.speed != 0.0 {
-            cx.app.push_effect(Effect::RequestAnimationFrame(cx.window));
-        }
+        scheduling::set_continuous_frames(cx, self.speed != 0.0);
         let transform = Transform2D::rotation_about_radians(angle, center);
 
         cx.visual_transform_props(VisualTransformProps { layout, transform }, |cx| {

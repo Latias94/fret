@@ -1,10 +1,10 @@
 use fret_components_ui::declarative::style as decl_style;
+use fret_components_ui::declarative::scheduling;
 use fret_components_ui::headless::hover_intent::{HoverIntentConfig, HoverIntentState};
 use fret_components_ui::overlay;
 use fret_components_ui::window_overlays;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 use fret_core::{Px, Size};
-use fret_runtime::Effect;
 use fret_ui::element::{AnyElement, HoverRegionProps, InsetStyle, LayoutStyle, PositionStyle};
 use fret_ui::{ElementCx, Theme, UiHost, overlay_placement};
 
@@ -141,10 +141,7 @@ impl HoverCard {
                 state.update(hovered, frame.0, cfg)
             });
 
-            if update.wants_continuous_ticks {
-                cx.app.push_effect(Effect::RequestAnimationFrame(cx.window));
-                cx.app.request_redraw(cx.window);
-            }
+            scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
 
             let out = vec![trigger];
             if !update.open {
