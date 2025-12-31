@@ -1,0 +1,72 @@
+use fret_core::{Edges, Px, Rect, Size};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Side {
+    Top,
+    Bottom,
+    Left,
+    Right,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Align {
+    Start,
+    Center,
+    End,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum LayoutDirection {
+    #[default]
+    Ltr,
+    Rtl,
+}
+
+/// Offset configuration inspired by Floating UI's `offset()` middleware.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct Offset {
+    /// Distance along the placement side axis (the "gap" between anchor and panel).
+    pub main_axis: Px,
+    /// Distance along the alignment axis (skidding).
+    pub cross_axis: Px,
+    /// Optional skidding override for aligned placements (Start/End).
+    ///
+    /// When present and `align != Center`, this overrides `cross_axis` and flips sign for `End`.
+    /// For vertical placements (Top/Bottom), the direction is also flipped under RTL.
+    pub alignment_axis: Option<Px>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct AnchoredPanelOptions {
+    pub direction: LayoutDirection,
+    pub offset: Offset,
+    pub arrow: Option<ArrowOptions>,
+}
+
+/// Arrow positioning options inspired by Floating UI's `arrow()` middleware.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ArrowOptions {
+    /// Arrow element size (in the same coordinate space as `outer`/`anchor`/`content`).
+    pub size: Size,
+    /// Padding between the arrow and the floating element edges (useful for rounded corners).
+    pub padding: Edges,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ArrowLayout {
+    /// Which side of the floating panel the arrow should attach to.
+    pub side: Side,
+    /// Offset along the arrow's axis inside the floating panel (x for Top/Bottom, y for Left/Right).
+    pub offset: Px,
+    /// The alignment-axis translation applied to the panel to keep the arrow pointing at the anchor
+    /// when the anchor is too small (Radix/Floating behavior).
+    pub alignment_offset: Px,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AnchoredPanelLayout {
+    pub rect: Rect,
+    pub side: Side,
+    pub align: Align,
+    pub arrow: Option<ArrowLayout>,
+}
