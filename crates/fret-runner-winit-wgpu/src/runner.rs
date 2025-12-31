@@ -3015,10 +3015,10 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                         services,
                         app_window,
                         &mut state.user,
-                        &Event::WindowMoved {
+                        &Event::WindowMoved(fret_core::WindowLogicalPosition {
                             x: logical.x.round() as i32,
                             y: logical.y.round() as i32,
-                        },
+                        }),
                     );
                 }
                 self.drain_effects(event_loop);

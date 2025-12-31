@@ -60,4 +60,4 @@ pub use vector_path::{
     StrokeStyle,
 };
 pub use viewport::{ViewportFit, ViewportMapped, ViewportMapping};
-pub use window::{WindowAnchor, WindowMetricsService};
+pub use window::{WindowAnchor, WindowLogicalPosition, WindowMetricsService};

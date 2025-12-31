@@ -2,6 +2,15 @@ use std::collections::HashMap;
 
 use crate::{AppWindowId, Point, Rect, Size};
 
+/// Window position in screen space, expressed in **logical pixels** (see ADR 0017).
+///
+/// This is intended for best-effort window placement persistence and multi-window orchestration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WindowLogicalPosition {
+    pub x: i32,
+    pub y: i32,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct WindowAnchor {
     pub window: AppWindowId,

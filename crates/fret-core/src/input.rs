@@ -1,6 +1,6 @@
 use crate::{
     AppWindowId, ClipboardToken, ExternalDropToken, FileDialogDataEvent, FileDialogSelection,
-    RenderTargetId, TimerToken,
+    RenderTargetId, TimerToken, WindowLogicalPosition,
     geometry::{Point, Px},
 };
 
@@ -420,10 +420,7 @@ pub enum Event {
     /// (e.g. unsaved-changes confirmation) and decide whether to emit `WindowRequest::Close`.
     WindowCloseRequested,
     WindowScaleFactorChanged(f32),
-    WindowMoved {
-        x: i32,
-        y: i32,
-    },
+    WindowMoved(WindowLogicalPosition),
     WindowResized {
         width: Px,
         height: Px,
