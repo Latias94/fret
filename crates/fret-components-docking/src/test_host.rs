@@ -5,7 +5,8 @@ use std::{
 
 use fret_core::{AppWindowId, FrameId, Point, TickId, TimerToken};
 use fret_runtime::{
-    CommandRegistry, DragKind, DragSession, Effect, ModelHost, ModelId, ModelStore, UiHost,
+    CommandRegistry, CommandsHost, DragHost, DragKind, DragSession, Effect, EffectSink,
+    GlobalsHost, ModelHost, ModelId, ModelStore, ModelsHost, TimeHost,
 };
 
 #[derive(Default)]
@@ -21,9 +22,98 @@ pub(crate) struct TestHost {
     next_timer_token: u64,
 }
 
+#[allow(dead_code)]
 impl TestHost {
     pub(crate) fn new() -> Self {
         Self::default()
+    }
+
+    pub(crate) fn set_global<T: Any>(&mut self, value: T) {
+        GlobalsHost::set_global(self, value);
+    }
+
+    pub(crate) fn global<T: Any>(&self) -> Option<&T> {
+        GlobalsHost::global(self)
+    }
+
+    pub(crate) fn global_mut<T: Any>(&mut self) -> Option<&mut T> {
+        GlobalsHost::global_mut(self)
+    }
+
+    pub(crate) fn with_global_mut<T: Any, R>(
+        &mut self,
+        init: impl FnOnce() -> T,
+        f: impl FnOnce(&mut T, &mut Self) -> R,
+    ) -> R {
+        GlobalsHost::with_global_mut(self, init, f)
+    }
+
+    pub(crate) fn models(&self) -> &ModelStore {
+        ModelHost::models(self)
+    }
+
+    pub(crate) fn models_mut(&mut self) -> &mut ModelStore {
+        ModelHost::models_mut(self)
+    }
+
+    pub(crate) fn take_changed_models(&mut self) -> Vec<ModelId> {
+        ModelsHost::take_changed_models(self)
+    }
+
+    pub(crate) fn commands(&self) -> &CommandRegistry {
+        CommandsHost::commands(self)
+    }
+
+    pub(crate) fn request_redraw(&mut self, window: AppWindowId) {
+        EffectSink::request_redraw(self, window);
+    }
+
+    pub(crate) fn push_effect(&mut self, effect: Effect) {
+        EffectSink::push_effect(self, effect);
+    }
+
+    pub(crate) fn tick_id(&self) -> TickId {
+        TimeHost::tick_id(self)
+    }
+
+    pub(crate) fn frame_id(&self) -> FrameId {
+        TimeHost::frame_id(self)
+    }
+
+    pub(crate) fn next_timer_token(&mut self) -> TimerToken {
+        TimeHost::next_timer_token(self)
+    }
+
+    pub(crate) fn drag(&self) -> Option<&DragSession> {
+        DragHost::drag(self)
+    }
+
+    pub(crate) fn drag_mut(&mut self) -> Option<&mut DragSession> {
+        DragHost::drag_mut(self)
+    }
+
+    pub(crate) fn cancel_drag(&mut self) {
+        DragHost::cancel_drag(self)
+    }
+
+    pub(crate) fn begin_drag_with_kind<T: Any>(
+        &mut self,
+        kind: DragKind,
+        source_window: AppWindowId,
+        start: Point,
+        payload: T,
+    ) {
+        DragHost::begin_drag_with_kind(self, kind, source_window, start, payload)
+    }
+
+    pub(crate) fn begin_cross_window_drag_with_kind<T: Any>(
+        &mut self,
+        kind: DragKind,
+        source_window: AppWindowId,
+        start: Point,
+        payload: T,
+    ) {
+        DragHost::begin_cross_window_drag_with_kind(self, kind, source_window, start, payload)
     }
 
     #[allow(dead_code)]
@@ -36,7 +126,7 @@ impl TestHost {
     }
 }
 
-impl UiHost for TestHost {
+impl GlobalsHost for TestHost {
     fn set_global<T: Any>(&mut self, value: T) {
         self.globals.insert(TypeId::of::<T>(), Box::new(value));
     }
@@ -107,23 +197,21 @@ impl UiHost for TestHost {
         drop(guard);
         result
     }
+}
 
-    fn models(&self) -> &ModelStore {
-        &self.models
-    }
-
-    fn models_mut(&mut self) -> &mut ModelStore {
-        &mut self.models
-    }
-
+impl ModelsHost for TestHost {
     fn take_changed_models(&mut self) -> Vec<ModelId> {
         self.models.take_changed_models()
     }
+}
 
+impl CommandsHost for TestHost {
     fn commands(&self) -> &CommandRegistry {
         &self.commands
     }
+}
 
+impl EffectSink for TestHost {
     fn request_redraw(&mut self, window: AppWindowId) {
         self.redraw.insert(window);
     }
@@ -134,7 +222,9 @@ impl UiHost for TestHost {
             effect => self.effects.push(effect),
         }
     }
+}
 
+impl TimeHost for TestHost {
     fn tick_id(&self) -> TickId {
         self.tick_id
     }
@@ -148,7 +238,9 @@ impl UiHost for TestHost {
         self.next_timer_token = self.next_timer_token.saturating_add(1);
         token
     }
+}
 
+impl DragHost for TestHost {
     fn drag(&self) -> Option<&DragSession> {
         self.drag.as_ref()
     }

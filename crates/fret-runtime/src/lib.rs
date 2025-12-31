@@ -25,5 +25,5 @@ pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};
 pub use keymap::{DefaultKeybinding, Keymap, KeymapService, PlatformFilter};
 pub use menu::{Menu, MenuBar, MenuItem};
 pub use model::{Model, ModelCx, ModelHost, ModelId, ModelStore, ModelUpdateError};
-pub use ui_host::UiHost;
+pub use ui_host::{CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost, UiHost};
 pub use when_expr::WhenExpr;

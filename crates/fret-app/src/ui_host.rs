@@ -1,11 +1,14 @@
 use std::any::Any;
 
 use fret_core::{AppWindowId, Point};
-use fret_runtime::{DragKind, DragSession, Effect, UiHost};
+use fret_runtime::{
+    CommandsHost, DragHost, DragKind, DragSession, Effect, EffectSink, GlobalsHost, ModelsHost,
+    TimeHost,
+};
 
 use crate::App;
 
-impl UiHost for App {
+impl GlobalsHost for App {
     fn set_global<T: Any>(&mut self, value: T) {
         App::set_global(self, value);
     }
@@ -25,23 +28,21 @@ impl UiHost for App {
     ) -> R {
         App::with_global_mut(self, init, f)
     }
+}
 
-    fn models(&self) -> &fret_runtime::ModelStore {
-        App::models(self)
-    }
-
-    fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
-        App::models_mut(self)
-    }
-
+impl ModelsHost for App {
     fn take_changed_models(&mut self) -> Vec<fret_runtime::ModelId> {
         App::take_changed_models(self)
     }
+}
 
+impl CommandsHost for App {
     fn commands(&self) -> &fret_runtime::CommandRegistry {
         App::commands(self)
     }
+}
 
+impl EffectSink for App {
     fn request_redraw(&mut self, window: AppWindowId) {
         App::request_redraw(self, window);
     }
@@ -49,7 +50,9 @@ impl UiHost for App {
     fn push_effect(&mut self, effect: Effect) {
         App::push_effect(self, effect);
     }
+}
 
+impl TimeHost for App {
     fn tick_id(&self) -> fret_core::TickId {
         App::tick_id(self)
     }
@@ -61,7 +64,9 @@ impl UiHost for App {
     fn next_timer_token(&mut self) -> fret_core::TimerToken {
         App::next_timer_token(self)
     }
+}
 
+impl DragHost for App {
     fn drag(&self) -> Option<&DragSession> {
         App::drag(self)
     }
