@@ -1,4 +1,5 @@
 use crate::InputContext;
+use fret_core::capabilities::{CapabilityValueKind, capability_key_kind};
 
 #[derive(Debug, Clone)]
 pub struct WhenExpr(Expr);
@@ -14,9 +15,43 @@ impl WhenExpr {
         Ok(Self(expr))
     }
 
+    pub fn validate(&self) -> Result<(), WhenExprValidationError> {
+        self.0.validate_bool_expr()
+    }
+
     pub fn eval(&self, ctx: &InputContext) -> bool {
         self.0.eval(ctx)
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WhenValueKind {
+    Bool,
+    Str,
+}
+
+impl From<CapabilityValueKind> for WhenValueKind {
+    fn from(value: CapabilityValueKind) -> Self {
+        match value {
+            CapabilityValueKind::Bool => Self::Bool,
+            CapabilityValueKind::Str => Self::Str,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum WhenExprValidationError {
+    #[error("unknown identifier: {name}")]
+    UnknownIdentifier { name: String },
+    #[error("identifier must be boolean in this context: {name}")]
+    IdentifierNotBool { name: String },
+    #[error("string literal is not a boolean expression")]
+    StrUsedAsBool,
+    #[error("type mismatch in comparison: left={left:?} right={right:?}")]
+    ComparisonTypeMismatch {
+        left: WhenValueKind,
+        right: WhenValueKind,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -38,6 +73,33 @@ enum Value {
 }
 
 impl Expr {
+    fn validate_bool_expr(&self) -> Result<(), WhenExprValidationError> {
+        match self {
+            Expr::Bool(_) => Ok(()),
+            Expr::Str(_) => Err(WhenExprValidationError::StrUsedAsBool),
+            Expr::Ident(name) => match ident_kind(name)? {
+                WhenValueKind::Bool => Ok(()),
+                WhenValueKind::Str => {
+                    Err(WhenExprValidationError::IdentifierNotBool { name: name.clone() })
+                }
+            },
+            Expr::Not(e) => e.validate_bool_expr(),
+            Expr::And(a, b) | Expr::Or(a, b) => {
+                a.validate_bool_expr()?;
+                b.validate_bool_expr()?;
+                Ok(())
+            }
+            Expr::Eq(a, b, _) => {
+                let left = value_kind(a)?;
+                let right = value_kind(b)?;
+                if left != right {
+                    return Err(WhenExprValidationError::ComparisonTypeMismatch { left, right });
+                }
+                Ok(())
+            }
+        }
+    }
+
     fn eval(&self, ctx: &InputContext) -> bool {
         match self {
             Expr::Bool(v) => *v,
@@ -63,6 +125,30 @@ impl Expr {
 enum Lit {
     Bool(bool),
     Str(String),
+}
+
+fn ident_kind(name: &str) -> Result<WhenValueKind, WhenExprValidationError> {
+    match name {
+        "ui.has_modal" | "focus.is_text_input" => return Ok(WhenValueKind::Bool),
+        "platform" => return Ok(WhenValueKind::Str),
+        _ => {}
+    }
+
+    let key = name.strip_prefix("cap.").unwrap_or(name);
+    match capability_key_kind(key) {
+        Some(kind) => Ok(kind.into()),
+        None => Err(WhenExprValidationError::UnknownIdentifier {
+            name: name.to_string(),
+        }),
+    }
+}
+
+fn value_kind(v: &Value) -> Result<WhenValueKind, WhenExprValidationError> {
+    match v {
+        Value::Bool(_) => Ok(WhenValueKind::Bool),
+        Value::Str(_) => Ok(WhenValueKind::Str),
+        Value::Ident(id) => ident_kind(id),
+    }
 }
 
 fn eval_value(ctx: &InputContext, v: &Value) -> Option<Lit> {
@@ -304,5 +390,29 @@ mod tests {
                 .unwrap()
                 .eval(&ctx)
         );
+    }
+
+    #[test]
+    fn when_expr_validation_rejects_unknown_identifier() {
+        let expr = WhenExpr::parse("ui.multi_windo").unwrap();
+        assert!(expr.validate().is_err());
+    }
+
+    #[test]
+    fn when_expr_validation_rejects_string_key_used_as_bool() {
+        let expr = WhenExpr::parse("dnd.external_payload").unwrap();
+        assert!(expr.validate().is_err());
+    }
+
+    #[test]
+    fn when_expr_validation_rejects_type_mismatched_comparison() {
+        let expr = WhenExpr::parse("ui.multi_window == \"true\"").unwrap();
+        assert!(expr.validate().is_err());
+    }
+
+    #[test]
+    fn when_expr_validation_accepts_valid_expressions() {
+        let expr = WhenExpr::parse("cap.ui.multi_window && platform != \"web\"").unwrap();
+        expr.validate().unwrap();
     }
 }

@@ -1,5 +1,64 @@
 use serde::{Deserialize, Serialize};
 
+pub mod keys {
+    pub const UI_MULTI_WINDOW: &str = "ui.multi_window";
+    pub const UI_WINDOW_TEAR_OFF: &str = "ui.window_tear_off";
+    pub const UI_CURSOR_ICONS: &str = "ui.cursor_icons";
+
+    pub const CLIPBOARD_TEXT: &str = "clipboard.text";
+    pub const CLIPBOARD_FILES: &str = "clipboard.files";
+
+    pub const DND_EXTERNAL: &str = "dnd.external";
+    pub const DND_EXTERNAL_PAYLOAD: &str = "dnd.external_payload";
+
+    pub const IME: &str = "ime";
+    pub const IME_ENABLED: &str = "ime.enabled";
+    pub const IME_SET_CURSOR_AREA: &str = "ime.set_cursor_area";
+
+    pub const FS_REAL_PATHS: &str = "fs.real_paths";
+    pub const FS_FILE_DIALOGS: &str = "fs.file_dialogs";
+
+    pub const SHELL_OPEN_URL: &str = "shell.open_url";
+
+    pub const GFX_WEBGPU: &str = "gfx.webgpu";
+    pub const GFX_WGPU: &str = "gfx.wgpu";
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CapabilityValueKind {
+    Bool,
+    Str,
+}
+
+pub const KNOWN_BOOL_CAPABILITY_KEYS: &[&str] = &[
+    keys::UI_MULTI_WINDOW,
+    keys::UI_WINDOW_TEAR_OFF,
+    keys::UI_CURSOR_ICONS,
+    keys::CLIPBOARD_TEXT,
+    keys::CLIPBOARD_FILES,
+    keys::DND_EXTERNAL,
+    keys::IME,
+    keys::IME_ENABLED,
+    keys::IME_SET_CURSOR_AREA,
+    keys::FS_REAL_PATHS,
+    keys::FS_FILE_DIALOGS,
+    keys::SHELL_OPEN_URL,
+    keys::GFX_WEBGPU,
+    keys::GFX_WGPU,
+];
+
+pub const KNOWN_STR_CAPABILITY_KEYS: &[&str] = &[keys::DND_EXTERNAL_PAYLOAD];
+
+pub fn capability_key_kind(key: &str) -> Option<CapabilityValueKind> {
+    if KNOWN_BOOL_CAPABILITY_KEYS.iter().any(|&k| k == key) {
+        return Some(CapabilityValueKind::Bool);
+    }
+    if KNOWN_STR_CAPABILITY_KEYS.iter().any(|&k| k == key) {
+        return Some(CapabilityValueKind::Str);
+    }
+    None
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum ExternalDragPayloadKind {
@@ -118,27 +177,51 @@ impl Default for PlatformCapabilities {
 impl PlatformCapabilities {
     pub fn bool_key(&self, key: &str) -> Option<bool> {
         match key {
-            "ui.multi_window" => Some(self.ui.multi_window),
-            "ui.window_tear_off" => Some(self.ui.window_tear_off),
-            "ui.cursor_icons" => Some(self.ui.cursor_icons),
-            "clipboard.text" => Some(self.clipboard.text),
-            "clipboard.files" => Some(self.clipboard.files),
-            "dnd.external" => Some(self.dnd.external),
-            "ime" | "ime.enabled" => Some(self.ime.enabled),
-            "ime.set_cursor_area" => Some(self.ime.set_cursor_area),
-            "fs.real_paths" => Some(self.fs.real_paths),
-            "fs.file_dialogs" => Some(self.fs.file_dialogs),
-            "shell.open_url" => Some(self.shell.open_url),
-            "gfx.webgpu" => Some(self.gfx.webgpu),
-            "gfx.wgpu" => Some(self.gfx.wgpu),
+            keys::UI_MULTI_WINDOW => Some(self.ui.multi_window),
+            keys::UI_WINDOW_TEAR_OFF => Some(self.ui.window_tear_off),
+            keys::UI_CURSOR_ICONS => Some(self.ui.cursor_icons),
+            keys::CLIPBOARD_TEXT => Some(self.clipboard.text),
+            keys::CLIPBOARD_FILES => Some(self.clipboard.files),
+            keys::DND_EXTERNAL => Some(self.dnd.external),
+            keys::IME | keys::IME_ENABLED => Some(self.ime.enabled),
+            keys::IME_SET_CURSOR_AREA => Some(self.ime.set_cursor_area),
+            keys::FS_REAL_PATHS => Some(self.fs.real_paths),
+            keys::FS_FILE_DIALOGS => Some(self.fs.file_dialogs),
+            keys::SHELL_OPEN_URL => Some(self.shell.open_url),
+            keys::GFX_WEBGPU => Some(self.gfx.webgpu),
+            keys::GFX_WGPU => Some(self.gfx.wgpu),
             _ => None,
         }
     }
 
     pub fn str_key(&self, key: &str) -> Option<&'static str> {
         match key {
-            "dnd.external_payload" => Some(self.dnd.external_payload.as_str()),
+            keys::DND_EXTERNAL_PAYLOAD => Some(self.dnd.external_payload.as_str()),
             _ => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn capability_key_kind_matches_platform_capabilities_accessors() {
+        let caps = PlatformCapabilities::default();
+
+        for &key in KNOWN_BOOL_CAPABILITY_KEYS {
+            assert!(caps.bool_key(key).is_some(), "bool_key must accept {key}");
+            assert_eq!(capability_key_kind(key), Some(CapabilityValueKind::Bool));
+        }
+
+        for &key in KNOWN_STR_CAPABILITY_KEYS {
+            assert!(caps.str_key(key).is_some(), "str_key must accept {key}");
+            assert_eq!(capability_key_kind(key), Some(CapabilityValueKind::Str));
+        }
+
+        assert_eq!(capability_key_kind("does.not.exist"), None);
+        assert_eq!(caps.bool_key("does.not.exist"), None);
+        assert_eq!(caps.str_key("does.not.exist"), None);
     }
 }

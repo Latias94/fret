@@ -44,14 +44,47 @@ pub struct Keymap {
     bindings: Vec<Binding>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WhenValidationMode {
+    Strict,
+    Lenient,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct KeymapLoadOptions {
+    pub when_validation: WhenValidationMode,
+}
+
+impl Default for KeymapLoadOptions {
+    fn default() -> Self {
+        Self {
+            when_validation: WhenValidationMode::Strict,
+        }
+    }
+}
+
 impl Keymap {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, KeymapError> {
+        Self::from_bytes_with_options(bytes, KeymapLoadOptions::default())
+    }
+
+    pub fn from_bytes_with_options(
+        bytes: &[u8],
+        options: KeymapLoadOptions,
+    ) -> Result<Self, KeymapError> {
         let parsed: KeymapFileAny =
             serde_json::from_slice(bytes).map_err(|source| KeymapError::ParseFailed { source })?;
-        Self::from_any(parsed)
+        Self::from_any(parsed, options)
     }
 
     pub fn from_v1(file: KeymapFileV1) -> Result<Self, KeymapError> {
+        Self::from_v1_with_options(file, KeymapLoadOptions::default())
+    }
+
+    pub fn from_v1_with_options(
+        file: KeymapFileV1,
+        options: KeymapLoadOptions,
+    ) -> Result<Self, KeymapError> {
         if file.keymap_version != 1 {
             return Err(KeymapError::UnsupportedVersion(file.keymap_version));
         }
@@ -75,10 +108,7 @@ impl Keymap {
             let chord = parse_keys(index, b.keys)?;
 
             let when = if let Some(when) = b.when.as_deref() {
-                Some(
-                    WhenExpr::parse(when)
-                        .map_err(|e| KeymapError::WhenParseFailed { index, error: e })?,
-                )
+                Some(parse_when(index, when, options.when_validation)?)
             } else {
                 None
             };
@@ -96,7 +126,7 @@ impl Keymap {
         Ok(out)
     }
 
-    fn from_any(file: KeymapFileAny) -> Result<Self, KeymapError> {
+    fn from_any(file: KeymapFileAny, options: KeymapLoadOptions) -> Result<Self, KeymapError> {
         match file.keymap_version {
             1 => {
                 let mut out = Keymap::empty();
@@ -122,10 +152,7 @@ impl Keymap {
                     let chord = parse_keys(index, keys)?;
 
                     let when = if let Some(when) = b.when.as_deref() {
-                        Some(
-                            WhenExpr::parse(when)
-                                .map_err(|e| KeymapError::WhenParseFailed { index, error: e })?,
-                        )
+                        Some(parse_when(index, when, options.when_validation)?)
                     } else {
                         None
                     };
@@ -172,10 +199,7 @@ impl Keymap {
                     }
 
                     let when = if let Some(when) = b.when.as_deref() {
-                        Some(
-                            WhenExpr::parse(when)
-                                .map_err(|e| KeymapError::WhenParseFailed { index, error: e })?,
-                        )
+                        Some(parse_when(index, when, options.when_validation)?)
                     } else {
                         None
                     };
@@ -363,6 +387,19 @@ fn parse_keys(index: usize, keys: KeySpecV1) -> Result<KeyChord, KeymapError> {
     Ok(KeyChord::new(key, mods))
 }
 
+fn parse_when(index: usize, when: &str, mode: WhenValidationMode) -> Result<WhenExpr, KeymapError> {
+    let expr =
+        WhenExpr::parse(when).map_err(|e| KeymapError::WhenParseFailed { index, error: e })?;
+    if mode == WhenValidationMode::Strict {
+        expr.validate()
+            .map_err(|e| KeymapError::WhenValidationFailed {
+                index,
+                error: e.to_string(),
+            })?;
+    }
+    Ok(expr)
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum KeymapError {
     #[error("failed to read keymap file")]
@@ -381,6 +418,8 @@ pub enum KeymapError {
     EmptyKeys { index: usize },
     #[error("failed to parse when at binding[{index}]: {error}")]
     WhenParseFailed { index: usize, error: String },
+    #[error("invalid when expression at binding[{index}]: {error}")]
+    WhenValidationFailed { index: usize, error: String },
 }
 
 #[derive(Debug, Deserialize)]
@@ -422,4 +461,49 @@ struct BindingAny {
 enum KeysAny {
     Single(KeySpecV1),
     Sequence(Vec<KeySpecV1>),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn keymap_rejects_unknown_when_identifiers() {
+        let bytes = br#"{
+            "keymap_version": 1,
+            "bindings": [
+                {
+                    "command": "test.command",
+                    "keys": { "mods": [], "key": "KeyA" },
+                    "when": "ui.multi_windo"
+                }
+            ]
+        }"#;
+
+        let err = Keymap::from_bytes(bytes).unwrap_err();
+        assert!(matches!(
+            err,
+            KeymapError::WhenValidationFailed { index: 0, .. }
+        ));
+    }
+
+    #[test]
+    fn keymap_rejects_string_keys_used_as_boolean_when() {
+        let bytes = br#"{
+            "keymap_version": 1,
+            "bindings": [
+                {
+                    "command": "test.command",
+                    "keys": { "mods": [], "key": "KeyA" },
+                    "when": "dnd.external_payload"
+                }
+            ]
+        }"#;
+
+        let err = Keymap::from_bytes(bytes).unwrap_err();
+        assert!(matches!(
+            err,
+            KeymapError::WhenValidationFailed { index: 0, .. }
+        ));
+    }
 }
