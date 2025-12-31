@@ -139,6 +139,186 @@ struct WindowOverlays {
     toast_layers: HashMap<(AppWindowId, GlobalElementId), ActiveToastLayer>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OverlayLayerKind {
+    Modal,
+    NonModalDismissible,
+    Hover,
+    Tooltip,
+    Toast,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct OverlayLayerState {
+    /// Whether the layer should be visible/painted.
+    present: bool,
+    /// Whether the overlay content should be interactive.
+    ///
+    /// For non-modal overlays this controls hit-testing and outside-press dismissal participation.
+    /// For modal overlays, barrier semantics are driven by `present` (see `OverlayLayerKind::Modal`).
+    interactive: bool,
+    /// Whether this layer wants timer events (e.g. toast expiration).
+    wants_timer_events: bool,
+}
+
+impl OverlayLayerState {
+    fn hidden() -> Self {
+        Self {
+            present: false,
+            interactive: false,
+            wants_timer_events: false,
+        }
+    }
+
+    fn modal(present: bool, interactive: bool) -> Self {
+        Self {
+            present,
+            interactive,
+            wants_timer_events: false,
+        }
+    }
+
+    fn non_modal_dismissible(present: bool, interactive: bool) -> Self {
+        Self {
+            present,
+            interactive,
+            wants_timer_events: false,
+        }
+    }
+
+    fn tooltip(present: bool) -> Self {
+        Self {
+            present,
+            interactive: false,
+            wants_timer_events: false,
+        }
+    }
+
+    fn hover(present: bool) -> Self {
+        Self {
+            present,
+            interactive: present,
+            wants_timer_events: false,
+        }
+    }
+
+    fn toast(present: bool, wants_timer_events: bool) -> Self {
+        Self {
+            present,
+            interactive: present,
+            wants_timer_events,
+        }
+    }
+}
+
+fn apply_overlay_layer_state<H: UiHost>(
+    ui: &mut UiTree<H>,
+    layer: UiLayerId,
+    kind: OverlayLayerKind,
+    st: OverlayLayerState,
+) {
+    ui.set_layer_wants_timer_events(layer, st.wants_timer_events);
+
+    match kind {
+        OverlayLayerKind::NonModalDismissible => {
+            ui.set_layer_visible(layer, st.present);
+            ui.set_layer_hit_testable(layer, st.interactive);
+            ui.set_layer_wants_pointer_down_outside_events(layer, st.interactive);
+        }
+        OverlayLayerKind::Modal => {
+            ui.set_layer_visible(layer, st.present);
+            // Modal barrier semantics are authoritative while the layer is present:
+            // the barrier must keep blocking underlay input even when the modal is closing.
+            ui.set_layer_hit_testable(layer, st.present);
+            ui.set_layer_wants_pointer_down_outside_events(layer, false);
+        }
+        OverlayLayerKind::Tooltip => {
+            ui.set_layer_visible(layer, st.present);
+            ui.set_layer_hit_testable(layer, false);
+            ui.set_layer_wants_pointer_down_outside_events(layer, false);
+        }
+        OverlayLayerKind::Hover => {
+            ui.set_layer_visible(layer, st.present);
+            ui.set_layer_hit_testable(layer, st.interactive);
+            ui.set_layer_wants_pointer_down_outside_events(layer, false);
+        }
+        OverlayLayerKind::Toast => {
+            ui.set_layer_visible(layer, st.present);
+            ui.set_layer_hit_testable(layer, st.interactive);
+            ui.set_layer_wants_pointer_down_outside_events(layer, false);
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct OverlayLayer {
+    kind: OverlayLayerKind,
+    state: OverlayLayerState,
+}
+
+impl OverlayLayer {
+    fn new(kind: OverlayLayerKind, state: OverlayLayerState) -> Self {
+        Self { kind, state }
+    }
+
+    fn hidden(kind: OverlayLayerKind) -> Self {
+        Self::new(kind, OverlayLayerState::hidden())
+    }
+
+    fn hide_modal() -> Self {
+        Self::hidden(OverlayLayerKind::Modal)
+    }
+
+    fn hide_non_modal_dismissible() -> Self {
+        Self::hidden(OverlayLayerKind::NonModalDismissible)
+    }
+
+    fn hide_hover() -> Self {
+        Self::hidden(OverlayLayerKind::Hover)
+    }
+
+    fn hide_tooltip() -> Self {
+        Self::hidden(OverlayLayerKind::Tooltip)
+    }
+
+    fn hide_toast() -> Self {
+        Self::hidden(OverlayLayerKind::Toast)
+    }
+
+    fn modal(present: bool, interactive: bool) -> Self {
+        Self::new(
+            OverlayLayerKind::Modal,
+            OverlayLayerState::modal(present, interactive),
+        )
+    }
+
+    fn non_modal_dismissible(present: bool, interactive: bool) -> Self {
+        Self::new(
+            OverlayLayerKind::NonModalDismissible,
+            OverlayLayerState::non_modal_dismissible(present, interactive),
+        )
+    }
+
+    fn tooltip(present: bool) -> Self {
+        Self::new(OverlayLayerKind::Tooltip, OverlayLayerState::tooltip(present))
+    }
+
+    fn hover(present: bool) -> Self {
+        Self::new(OverlayLayerKind::Hover, OverlayLayerState::hover(present))
+    }
+
+    fn toast(present: bool, wants_timer_events: bool) -> Self {
+        Self::new(
+            OverlayLayerKind::Toast,
+            OverlayLayerState::toast(present, wants_timer_events),
+        )
+    }
+
+    fn apply<H: UiHost>(self, ui: &mut UiTree<H>, layer: UiLayerId) {
+        apply_overlay_layer_state(ui, layer, self.kind, self.state);
+    }
+}
+
 pub fn begin_frame<H: UiHost>(app: &mut H, window: AppWindowId) {
     let frame_id = app.frame_id();
     app.with_global_mut(WindowOverlays::default, |overlays, _app| {
@@ -578,13 +758,8 @@ pub fn render<H: UiHost>(
             entry.trigger = req.trigger;
             entry.initial_focus = req.initial_focus;
 
-            ui.set_layer_visible(entry.layer, true);
             // For modal overlays, `present` is the authority for whether the barrier is active.
-            //
-            // During a close animation we may keep the modal mounted (`present=true`) while
-            // `open=false`. The barrier must continue to block underlay input for the full
-            // duration of the out transition.
-            ui.set_layer_hit_testable(entry.layer, true);
+            OverlayLayer::modal(true, open_now).apply(ui, entry.layer);
 
             let opening = open_now && (!entry.open || created);
             if opening {
@@ -664,10 +839,10 @@ pub fn render<H: UiHost>(
             entry.root_name = req.root_name.clone();
             entry.trigger = req.trigger;
             entry.initial_focus = req.initial_focus;
-            ui.set_layer_wants_pointer_down_outside_events(entry.layer, true);
-
-            ui.set_layer_visible(entry.layer, true);
-            ui.set_layer_hit_testable(entry.layer, open_now);
+            // Non-modal overlays are click-through during close transitions:
+            // when `present=true` but `open=false`, they must not participate in hit-testing or
+            // the outside-press observer pass.
+            OverlayLayer::non_modal_dismissible(true, open_now).apply(ui, entry.layer);
 
             let opening = open_now && (!entry.open || created);
             if opening {
@@ -723,7 +898,7 @@ pub fn render<H: UiHost>(
     for (layer, trigger, restore_focus) in to_hide_popovers {
         let focus = ui.focus();
         if focus.is_some_and(|n| ui.node_layer(n) == Some(layer)) {
-            ui.set_layer_visible(layer, false);
+            OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
             // Prefer resolving the trigger at restore time to avoid relying on potentially stale
             // `NodeId` snapshots across frames.
             if let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger) {
@@ -734,7 +909,7 @@ pub fn render<H: UiHost>(
                 ui.set_focus(Some(node));
             }
         } else {
-            ui.set_layer_visible(layer, false);
+            OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
         }
     }
 
@@ -742,7 +917,7 @@ pub fn render<H: UiHost>(
         // Modals should restore focus deterministically on close (Radix-style): underlay focus
         // changes cannot happen while the barrier is installed, so it's safe to always restore on
         // unmount.
-        ui.set_layer_visible(layer, false);
+        OverlayLayer::hide_modal().apply(ui, layer);
 
         // Prefer resolving the trigger at restore time to avoid relying on potentially stale
         // `NodeId` snapshots across frames.
@@ -786,7 +961,7 @@ pub fn render<H: UiHost>(
                 });
             entry.root_name = req.root_name.clone();
             entry.trigger = req.trigger;
-            ui.set_layer_visible(entry.layer, true);
+            OverlayLayer::hover(true).apply(ui, entry.layer);
         });
     }
 
@@ -809,10 +984,10 @@ pub fn render<H: UiHost>(
         if focus.is_some_and(|n| ui.node_layer(n) == Some(layer))
             && let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger)
         {
-            ui.set_layer_visible(layer, false);
+            OverlayLayer::hide_hover().apply(ui, layer);
             ui.set_focus(Some(trigger_node));
         } else {
-            ui.set_layer_visible(layer, false);
+            OverlayLayer::hide_hover().apply(ui, layer);
         }
     }
 
@@ -839,7 +1014,7 @@ pub fn render<H: UiHost>(
                     root_name: req.root_name.clone(),
                 });
             entry.root_name = req.root_name.clone();
-            ui.set_layer_visible(entry.layer, true);
+            OverlayLayer::tooltip(true).apply(ui, entry.layer);
         });
     }
 
@@ -858,7 +1033,7 @@ pub fn render<H: UiHost>(
         });
 
     for layer in to_hide_tooltips {
-        ui.set_layer_visible(layer, false);
+        OverlayLayer::hide_tooltip().apply(ui, layer);
     }
 
     for req in toast_requests {
@@ -1088,9 +1263,7 @@ pub fn render<H: UiHost>(
                     root_name: req.root_name.clone(),
                 });
             entry.root_name = req.root_name.clone();
-
-            ui.set_layer_wants_timer_events(entry.layer, has_toasts);
-            ui.set_layer_visible(entry.layer, has_toasts);
+            OverlayLayer::toast(has_toasts, has_toasts).apply(ui, entry.layer);
         });
     }
 
@@ -1109,8 +1282,7 @@ pub fn render<H: UiHost>(
         });
 
     for layer in to_hide_toast_layers {
-        ui.set_layer_wants_timer_events(layer, false);
-        ui.set_layer_visible(layer, false);
+        OverlayLayer::hide_toast().apply(ui, layer);
     }
 }
 
