@@ -1,11 +1,12 @@
-use fret_core::{Color, Corners, Edges, Px};
+use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::CommandId;
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, ContainerProps, PressableProps, SpacerProps};
+use fret_ui::element::{AnyElement, ContainerProps, PressableA11y, PressableProps, SpacerProps};
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
 
 use crate::declarative::action_hooks::ActionHooksExt;
+use crate::declarative::collection_semantics::CollectionSemanticsExt as _;
 use crate::declarative::stack;
 use crate::{Items, Justify, MetricRef, Size, Space};
 
@@ -86,6 +87,7 @@ pub fn list_virtualized<H: UiHost>(
 
     let mut options = fret_ui::element::VirtualListOptions::new(row_h, overscan);
     options.items_revision = items_revision;
+    let set_size = len;
 
     cx.container(
         ContainerProps {
@@ -100,15 +102,21 @@ pub fn list_virtualized<H: UiHost>(
                 cx.virtual_list_keyed(len, options, scroll_handle, key_at, |cx, i| {
                     let cmd = on_select(i);
                     let enabled = cmd.is_some();
+                    let is_selected = selected == Some(i);
 
                     cx.pressable(
                         PressableProps {
                             enabled,
+                            a11y: PressableA11y {
+                                role: Some(SemanticsRole::ListItem),
+                                selected: is_selected,
+                                ..Default::default()
+                            }
+                            .with_collection_position(i, set_size),
                             ..Default::default()
                         },
                         |cx, st| {
                             cx.pressable_dispatch_command_opt(cmd);
-                            let is_selected = selected == Some(i);
                             let bg = if is_selected || (enabled && st.pressed) {
                                 Some(row_active)
                             } else if enabled && st.hovered {
@@ -185,4 +193,142 @@ pub fn list_from_strings<H: UiHost>(
             out
         },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, PathCommand, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics,
+        TextService, TextStyle,
+    };
+    use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_core::{Point, Px, Rect};
+    use fret_runtime::CommandId;
+    use fret_ui::ThemeConfig;
+    use fret_ui::{Theme, UiTree};
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: fret_core::Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn list_virtualized_stamps_collection_semantics_on_rows() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::global_mut(&mut app).apply_config(&ThemeConfig {
+            name: "Test".to_string(),
+            ..ThemeConfig::default()
+        });
+
+        let selection = app.models_mut().insert(Some(1usize));
+        let scroll_handle = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let render =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| -> fret_core::NodeId {
+            fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "test",
+                |cx| {
+                    vec![list_virtualized(
+                        cx,
+                        Some(selection),
+                        Size::Medium,
+                        None,
+                        3,
+                        2,
+                        &scroll_handle,
+                        0,
+                        |i| i as u64,
+                        |_i| Some(CommandId::new("noop")),
+                        |cx, i| vec![cx.text(format!("Item {i}"))],
+                    )]
+                },
+            )
+        };
+
+        // VirtualList computes the visible window based on viewport metrics populated during layout,
+        // so it takes two frames for the first set of rows to mount.
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let items = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::ListItem)
+            .collect::<Vec<_>>();
+
+        assert_eq!(items.len(), 3);
+        for (index, node) in items.iter().enumerate() {
+            assert_eq!(node.pos_in_set, Some((index + 1) as u32));
+            assert_eq!(node.set_size, Some(3));
+        }
+
+        assert!(
+            items[1].flags.selected,
+            "selected row should set semantics selected flag"
+        );
+    }
 }
