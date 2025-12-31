@@ -1,0 +1,244 @@
+use super::*;
+
+impl<H: UiHost> UiTree<H> {
+    pub fn paint_all(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        bounds: Rect,
+        scene: &mut Scene,
+        scale_factor: f32,
+    ) {
+        let started = self.debug_enabled.then_some(Instant::now());
+        if self.debug_enabled {
+            self.debug_stats.frame_id = app.frame_id();
+            self.debug_stats.paint_nodes = 0;
+            self.debug_stats.paint_nodes_performed = 0;
+            self.debug_stats.paint_cache_hits = 0;
+            self.debug_stats.paint_cache_misses = 0;
+            self.debug_stats.paint_cache_replayed_ops = 0;
+            self.debug_stats.focus = self.focus;
+            self.debug_stats.captured = self.captured;
+        }
+
+        // Keep IME enabled state in sync even if focus is set programmatically and no input event
+        // has been dispatched yet (ADR 0012).
+        let focus_is_text_input = self.focus_is_text_input();
+        self.set_ime_allowed(app, focus_is_text_input);
+
+        let cache_enabled = self.paint_cache_enabled();
+        if cache_enabled {
+            self.paint_cache.begin_frame();
+        } else {
+            self.paint_cache.invalidate_recording();
+        }
+
+        let roots: Vec<NodeId> = self
+            .visible_layers_in_paint_order()
+            .map(|layer| self.layers[layer].root)
+            .collect();
+        for root in roots {
+            self.paint(app, services, root, bounds, scene, scale_factor);
+        }
+
+        if cache_enabled {
+            self.paint_cache.finish_frame();
+            if self.debug_enabled {
+                self.debug_stats.paint_cache_hits = self.paint_cache.hits;
+                self.debug_stats.paint_cache_misses = self.paint_cache.misses;
+                self.debug_stats.paint_cache_replayed_ops = self.paint_cache.replayed_ops;
+            }
+        }
+
+        if let Some(started) = started {
+            self.debug_stats.paint_time = started.elapsed();
+        }
+    }
+
+    pub fn paint(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        root: NodeId,
+        bounds: Rect,
+        scene: &mut Scene,
+        scale_factor: f32,
+    ) {
+        self.paint_node(
+            app,
+            services,
+            root,
+            bounds,
+            scene,
+            scale_factor,
+            Transform2D::IDENTITY,
+        );
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn paint_node(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        node: NodeId,
+        bounds: Rect,
+        scene: &mut Scene,
+        scale_factor: f32,
+        accumulated_transform: Transform2D,
+    ) {
+        if self.debug_enabled {
+            self.debug_stats.paint_nodes = self.debug_stats.paint_nodes.saturating_add(1);
+        }
+
+        if let Some(n) = self.nodes.get_mut(node) {
+            n.bounds = bounds;
+        }
+
+        let local_transform = self.node_render_transform(node);
+        let current_transform = match local_transform {
+            Some(t) => accumulated_transform.compose(t),
+            None => accumulated_transform,
+        };
+
+        let tree_ref: *const UiTree<H> = self as *const UiTree<H>;
+        let tree_ptr: *mut UiTree<H> = self;
+        let app_ptr: *mut H = app;
+        let services_ptr: *mut dyn UiServices = services;
+        let scene_ptr: *mut Scene = scene;
+        let sf = scale_factor;
+        let child_accumulated_transform = current_transform;
+        let mut paint_child = move |child: NodeId, bounds: Rect| {
+            unsafe {
+                (&mut *tree_ptr).paint_node(
+                    &mut *app_ptr,
+                    &mut *services_ptr,
+                    child,
+                    bounds,
+                    &mut *scene_ptr,
+                    sf,
+                    child_accumulated_transform,
+                )
+            };
+        };
+        let child_bounds = move |child: NodeId| -> Option<Rect> {
+            unsafe { (&*tree_ref).nodes.get(child).map(|n| n.bounds) }
+        };
+
+        let (invalidated, prev_cache) = match self.nodes.get(node) {
+            Some(n) => (n.invalidation.paint, n.paint_cache),
+            None => return,
+        };
+
+        if let Some(window) = self.window
+            && let Some(element) = self.nodes.get(node).and_then(|n| n.element)
+        {
+            let visual = rect_aabb_transformed(bounds, current_transform);
+            crate::elements::record_visual_bounds_for_element(app, window, element, visual);
+        }
+
+        let theme_revision = Theme::global(&*app).revision();
+        let key = PaintCacheKey::new(bounds, sf, theme_revision);
+        let cache_enabled =
+            self.paint_cache_enabled() && self.node_render_transform(node).is_none();
+
+        if cache_enabled && !invalidated {
+            if let Some(prev) = prev_cache
+                && prev.generation == self.paint_cache.source_generation
+                && prev.key == key
+            {
+                let start = scene.ops_len();
+                let range = prev.start as usize..prev.end as usize;
+                if range.start <= range.end && range.end <= self.paint_cache.prev_ops.len() {
+                    let delta = Point::new(
+                        bounds.origin.x - prev.origin.x,
+                        bounds.origin.y - prev.origin.y,
+                    );
+                    scene.replay_ops_translated(&self.paint_cache.prev_ops[range.clone()], delta);
+                    let end = scene.ops_len();
+
+                    if let Some(n) = self.nodes.get_mut(node) {
+                        n.paint_cache = Some(PaintCacheEntry {
+                            generation: self.paint_cache.target_generation,
+                            key,
+                            origin: bounds.origin,
+                            start: start as u32,
+                            end: end as u32,
+                        });
+                        n.invalidation.paint = false;
+                    }
+
+                    self.paint_cache.hits = self.paint_cache.hits.saturating_add(1);
+                    self.paint_cache.replayed_ops = self
+                        .paint_cache
+                        .replayed_ops
+                        .saturating_add((end - start) as u32);
+                    return;
+                }
+            }
+            self.paint_cache.misses = self.paint_cache.misses.saturating_add(1);
+        }
+
+        let mut observations: Vec<(ModelId, Invalidation)> = Vec::new();
+        let mut observe_model = |model: ModelId, inv: Invalidation| {
+            observations.push((model, inv));
+        };
+
+        if self.debug_enabled {
+            self.debug_stats.paint_nodes_performed =
+                self.debug_stats.paint_nodes_performed.saturating_add(1);
+        }
+
+        let start = scene.ops_len();
+        self.with_widget_mut(node, |widget, tree| {
+            let children: Vec<NodeId> = tree
+                .nodes
+                .get(node)
+                .map(|n| n.children.clone())
+                .unwrap_or_default();
+            let mut cx = PaintCx {
+                app,
+                node,
+                window: tree.window,
+                focus: tree.focus,
+                children: &children,
+                bounds,
+                scale_factor: sf,
+                services: unsafe { &mut *services_ptr },
+                observe_model: &mut observe_model,
+                scene,
+                paint_child: &mut paint_child,
+                child_bounds: &child_bounds,
+            };
+            let transform = widget.render_transform(bounds);
+            let pushed_transform = if let Some(transform) = transform
+                && transform.inverse().is_some()
+            {
+                cx.scene.push(SceneOp::PushTransform { transform });
+                true
+            } else {
+                false
+            };
+
+            widget.paint(&mut cx);
+
+            if pushed_transform {
+                cx.scene.push(SceneOp::PopTransform);
+            }
+        });
+        let end = scene.ops_len();
+
+        self.observed_in_paint.record(node, observations);
+        if let Some(n) = self.nodes.get_mut(node) {
+            n.invalidation.paint = false;
+            if cache_enabled {
+                n.paint_cache = Some(PaintCacheEntry {
+                    generation: self.paint_cache.target_generation,
+                    key,
+                    origin: bounds.origin,
+                    start: start as u32,
+                    end: end as u32,
+                });
+            }
+        }
+    }
+}
