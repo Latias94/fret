@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
-use fret_components_ui::declarative::presence;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
-use fret_components_ui::window_overlays;
-use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_components_ui::{
+    ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence, OverlayRequest,
+    Radius, Space,
+};
 use fret_core::{FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -121,10 +122,11 @@ impl Popover {
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
 
-            let presence = presence::fade_presence(cx, is_open, 4);
+            let presence = OverlayController::fade_presence(cx, is_open, 4);
+            let overlay_presence = OverlayPresence::from_fade(is_open, presence);
 
-            if presence.present {
-                let overlay_root_name = window_overlays::popover_root_name(trigger_id);
+            if overlay_presence.present {
+                let overlay_root_name = format!("window-overlays.popover.{:x}", trigger_id.0);
                 let align = self.align;
                 let side = self.side;
                 let side_offset = self.side_offset;
@@ -218,18 +220,16 @@ impl Popover {
                     Some(trigger_id)
                 };
 
-                window_overlays::request_dismissible_popover(
-                    cx,
-                    window_overlays::DismissiblePopoverRequest {
-                        id: trigger_id,
-                        root_name: overlay_root_name,
-                        trigger: trigger_id,
-                        open: self.open,
-                        present: true,
-                        initial_focus,
-                        children: overlay_children,
-                    },
+                let mut request = OverlayRequest::dismissible_popover(
+                    trigger_id,
+                    trigger_id,
+                    self.open,
+                    overlay_presence,
+                    overlay_children,
                 );
+                request.root_name = Some(overlay_root_name);
+                request.initial_focus = initial_focus;
+                OverlayController::request(cx, request);
             }
 
             trigger
@@ -469,7 +469,7 @@ mod tests {
         underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
         popover_focus_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
     ) -> fret_ui::elements::GlobalElementId {
-        window_overlays::begin_frame(app, window);
+        OverlayController::begin_frame(app, window);
 
         let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
 
@@ -544,7 +544,7 @@ mod tests {
             });
 
         ui.set_root(root);
-        window_overlays::render(ui, app, services, window, bounds);
+        OverlayController::render(ui, app, services, window, bounds);
         trigger_id.expect("trigger id")
     }
 
