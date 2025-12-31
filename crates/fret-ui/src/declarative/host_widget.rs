@@ -5,6 +5,19 @@ mod layout;
 mod paint;
 mod semantics;
 
+#[derive(Debug, Default, Clone)]
+struct TextCache {
+    blob: Option<fret_core::TextBlobId>,
+    metrics: Option<TextMetrics>,
+    prepared_scale_factor_bits: Option<u32>,
+    last_text: Option<std::sync::Arc<str>>,
+    last_style: Option<TextStyle>,
+    last_wrap: Option<fret_core::TextWrap>,
+    last_overflow: Option<TextOverflow>,
+    last_width: Option<Px>,
+    last_theme_revision: Option<u64>,
+}
+
 pub(super) struct ElementHostWidget {
     element: GlobalElementId,
     text_cache: TextCache,
