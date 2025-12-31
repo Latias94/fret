@@ -338,6 +338,23 @@ pub struct ExternalDropReadError {
     pub message: String,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct ExternalDropReadLimits {
+    pub max_total_bytes: u64,
+    pub max_file_bytes: u64,
+    pub max_files: usize,
+}
+
+impl ExternalDropReadLimits {
+    pub fn capped_by(self, cap: ExternalDropReadLimits) -> ExternalDropReadLimits {
+        ExternalDropReadLimits {
+            max_total_bytes: self.max_total_bytes.min(cap.max_total_bytes),
+            max_file_bytes: self.max_file_bytes.min(cap.max_file_bytes),
+            max_files: self.max_files.min(cap.max_files),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum InternalDragKind {
     Enter,

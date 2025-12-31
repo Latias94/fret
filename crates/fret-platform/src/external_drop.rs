@@ -4,14 +4,9 @@
 //! the backend captures an OS drop payload and assigns an opaque `ExternalDropToken`.
 //! The UI can later request reading the payload via effects.
 
-use fret_core::{ExternalDropDataEvent, ExternalDropToken};
+pub use fret_core::ExternalDropReadLimits;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ExternalDropReadLimits {
-    pub max_total_bytes: u64,
-    pub max_file_bytes: u64,
-    pub max_files: usize,
-}
+use fret_core::{ExternalDropDataEvent, ExternalDropToken};
 
 pub trait ExternalDropProvider {
     fn read_all(
