@@ -347,10 +347,16 @@ impl<H: UiHost> Widget<H> for TextArea {
                 self.text.clear();
                 self.caret = 0;
                 self.selection_anchor = 0;
-                self.affinity = CaretAffinity::Downstream;
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Layout);
-                cx.request_redraw();
+                let delta = crate::text_edit::commands::MultilineUiDelta {
+                    handled: true,
+                    invalidate_layout: true,
+                    clear_preedit: true,
+                    text_dirty: true,
+                    reset_affinity: true,
+                    ensure_caret_visible: true,
+                    ..Default::default()
+                };
+                self.apply_multiline_ui_delta(cx, delta);
                 true
             }
             "text.copy" => {
@@ -378,22 +384,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                     cx.app.push_effect(Effect::ClipboardSetText { text });
                 }
                 let delta = crate::text_edit::commands::multiline_ui_delta(cmd, result.outcome);
-                if delta.invalidate_layout {
-                    if delta.clear_preedit {
-                        self.clear_preedit();
-                    }
-                    if delta.reset_affinity {
-                        self.affinity = CaretAffinity::Downstream;
-                    }
-                    if delta.text_dirty {
-                        self.text_dirty = true;
-                    }
-                    if delta.ensure_caret_visible {
-                        self.ensure_caret_visible = true;
-                    }
-                    cx.invalidate_self(Invalidation::Layout);
-                    cx.request_redraw();
-                }
+                self.apply_multiline_ui_delta(cx, delta);
                 true
             }
             "text.paste" => {
@@ -528,23 +519,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                     return false;
                 }
 
-                if delta.invalidate_layout {
-                    self.clear_preedit();
-                    self.text_dirty = true;
-                    self.affinity = CaretAffinity::Downstream;
-                    self.ensure_caret_visible = true;
-                    cx.invalidate_self(Invalidation::Layout);
-                    cx.request_redraw();
-                    return true;
-                }
-
-                if delta.invalidate_paint {
-                    self.affinity = CaretAffinity::Downstream;
-                    self.ensure_caret_visible = true;
-                    cx.invalidate_self(Invalidation::Paint);
-                    cx.request_redraw();
-                }
-
+                self.apply_multiline_ui_delta(cx, delta);
                 true
             }
         }

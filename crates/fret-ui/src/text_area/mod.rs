@@ -8,7 +8,32 @@ use fret_core::{
 use fret_runtime::Effect;
 
 use crate::widget::{CommandCx, EventCx};
-use crate::{Theme, UiHost};
+use crate::{Invalidation, Theme, UiHost};
+
+trait TextAreaUiCx {
+    fn invalidate_self(&mut self, kind: Invalidation);
+    fn request_redraw(&mut self);
+}
+
+impl<'a, H: UiHost> TextAreaUiCx for EventCx<'a, H> {
+    fn invalidate_self(&mut self, kind: Invalidation) {
+        EventCx::invalidate_self(self, kind);
+    }
+
+    fn request_redraw(&mut self) {
+        EventCx::request_redraw(self);
+    }
+}
+
+impl<'a, H: UiHost> TextAreaUiCx for CommandCx<'a, H> {
+    fn invalidate_self(&mut self, kind: Invalidation) {
+        CommandCx::invalidate_self(self, kind);
+    }
+
+    fn request_redraw(&mut self) {
+        CommandCx::request_redraw(self);
+    }
+}
 
 mod bound;
 mod widget;
@@ -394,6 +419,37 @@ impl TextArea {
     fn clamp_offset(&mut self, content_height: Px, viewport_height: Px) {
         let max = Px((content_height.0 - viewport_height.0).max(0.0));
         self.offset_y = Px(self.offset_y.0.clamp(0.0, max.0));
+    }
+
+    fn apply_multiline_ui_delta(
+        &mut self,
+        cx: &mut impl TextAreaUiCx,
+        delta: crate::text_edit::commands::MultilineUiDelta,
+    ) {
+        if !delta.handled {
+            return;
+        }
+
+        if delta.clear_preedit {
+            self.clear_preedit();
+        }
+        if delta.text_dirty {
+            self.text_dirty = true;
+        }
+        if delta.reset_affinity {
+            self.affinity = CaretAffinity::Downstream;
+        }
+        if delta.ensure_caret_visible {
+            self.ensure_caret_visible = true;
+        }
+
+        if delta.invalidate_layout {
+            cx.invalidate_self(Invalidation::Layout);
+            cx.request_redraw();
+        } else if delta.invalidate_paint {
+            cx.invalidate_self(Invalidation::Paint);
+            cx.request_redraw();
+        }
     }
 
     fn scrollbar_geometry(&self, bounds: Rect) -> Option<(Rect, Rect)> {
