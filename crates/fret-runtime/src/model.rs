@@ -87,7 +87,7 @@ impl<T> std::fmt::Debug for Model<T> {
 
 impl<T> PartialEq for Model<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
+        Rc::ptr_eq(&self.store.inner, &other.store.inner) && self.id == other.id
     }
 }
 
@@ -95,6 +95,7 @@ impl<T> Eq for Model<T> {}
 
 impl<T> std::hash::Hash for Model<T> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        (Rc::as_ptr(&self.store.inner) as usize).hash(state);
         self.id.hash(state);
     }
 }
@@ -125,6 +126,21 @@ pub struct WeakModel<T> {
 impl<T> std::fmt::Debug for WeakModel<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WeakModel").field("id", &self.id).finish()
+    }
+}
+
+impl<T> PartialEq for WeakModel<T> {
+    fn eq(&self, other: &Self) -> bool {
+        Weak::ptr_eq(&self.store, &other.store) && self.id == other.id
+    }
+}
+
+impl<T> Eq for WeakModel<T> {}
+
+impl<T> std::hash::Hash for WeakModel<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        (Weak::as_ptr(&self.store) as usize).hash(state);
+        self.id.hash(state);
     }
 }
 
@@ -845,6 +861,26 @@ mod tests {
 
         store.end_lease(&mut lease);
         assert!(!store.state().storage.contains_key(id));
+    }
+
+    #[test]
+    fn model_equality_and_hash_are_scoped_to_the_store() {
+        let mut store_a = ModelStore::default();
+        let mut store_b = ModelStore::default();
+
+        let a = store_a.insert(1u32);
+        let b = store_b.insert(1u32);
+
+        assert_ne!(a, b);
+
+        let mut set = std::collections::HashSet::new();
+        set.insert(a.clone());
+        set.insert(b.clone());
+        assert_eq!(set.len(), 2);
+
+        let weak_a = a.downgrade();
+        let weak_b = b.downgrade();
+        assert_ne!(weak_a, weak_b);
     }
 }
 
