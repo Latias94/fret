@@ -96,7 +96,7 @@ impl Default for PlatformCapabilities {
             },
             dnd: DndCapabilities {
                 external: true,
-                external_payload: ExternalDragPayloadKind::FilePath,
+                external_payload: ExternalDragPayloadKind::FileToken,
             },
             ime: ImeCapabilities {
                 enabled: true,
