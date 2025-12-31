@@ -4,7 +4,7 @@ title: "ADR 0071: Multiline Text Input + IME Composition Contract (Caret/Selecti
 
 # ADR 0071: Multiline Text Input + IME Composition Contract (Caret/Selection/Preedit)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -106,6 +106,15 @@ Semantics indexing contract:
 - Candidate window is positioned near caret (not at a fixed screen corner) while composing.
 - Scrolling: caret rect and candidate positioning remain correct after scrolling within a multiline field.
 - Selection replacement: selecting a range then committing IME replaces the selection and clears it.
+
+## Conformance notes
+
+The current implementation is covered by regression tests:
+
+- Semantics: composing `value` includes inline preedit and `text_selection`/`text_composition` are byte
+  offsets into that display value (`crates/fret-ui/src/text_area/tests.rs`).
+- Shortcut arbitration: Tab focus traversal is suppressed while composing in `TextArea`, reserving
+  Tab/Enter/Escape/etc for the platform IME path (ADR 0012) (`crates/fret-ui/src/tree/tests/semantics_focus_shortcuts.rs`).
 
 ## Non-Goals
 
