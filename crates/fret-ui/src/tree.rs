@@ -17,58 +17,13 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-const PENDING_SHORTCUT_TIMEOUT: Duration = Duration::from_millis(1000);
+mod paint_cache;
+mod semantics;
+mod shortcuts;
 
-fn validate_semantics_if_enabled(snapshot: &SemanticsSnapshot) {
-    if std::env::var_os("FRET_VALIDATE_SEMANTICS").is_none() {
-        return;
-    }
-
-    if let Err(err) = snapshot.validate() {
-        tracing::error!(
-            node = ?err.node,
-            kind = ?err.kind,
-            "semantics validation failed (set FRET_VALIDATE_SEMANTICS_PANIC=1 to panic)"
-        );
-
-        if std::env::var_os("FRET_VALIDATE_SEMANTICS_PANIC").is_some() {
-            panic!("semantics validation failed: {err:?}");
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-struct CapturedKeystroke {
-    chord: KeyChord,
-    text: Option<String>,
-}
-
-#[derive(Debug, Default, Clone)]
-struct PendingShortcut {
-    keystrokes: Vec<CapturedKeystroke>,
-    focus: Option<NodeId>,
-    barrier_root: Option<NodeId>,
-    fallback: Option<CommandId>,
-    timer: Option<fret_core::TimerToken>,
-    capture_next_text_input_key: Option<KeyCode>,
-}
-
-struct PointerDownOutsideParams<'a> {
-    input_ctx: &'a InputContext,
-    active_layer_roots: &'a [NodeId],
-    base_root: NodeId,
-    hit: Option<NodeId>,
-    event: &'a Event,
-}
-
-struct KeydownShortcutParams<'a> {
-    input_ctx: &'a InputContext,
-    barrier_root: Option<NodeId>,
-    focus_is_text_input: bool,
-    key: KeyCode,
-    modifiers: fret_core::Modifiers,
-    repeat: bool,
-}
+pub use paint_cache::PaintCachePolicy;
+use paint_cache::{PaintCacheEntry, PaintCacheKey, PaintCacheState};
+use shortcuts::{KeydownShortcutParams, PendingShortcut, PointerDownOutsideParams};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct InvalidationFlags {
@@ -97,77 +52,6 @@ impl InvalidationFlags {
         self.layout = false;
         self.paint = false;
         self.hit_test = false;
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct PaintCacheKey {
-    width_bits: u32,
-    height_bits: u32,
-    scale_factor_bits: u32,
-    theme_revision: u64,
-}
-
-impl PaintCacheKey {
-    fn new(bounds: Rect, scale_factor: f32, theme_revision: u64) -> Self {
-        Self {
-            width_bits: bounds.size.width.0.to_bits(),
-            height_bits: bounds.size.height.0.to_bits(),
-            scale_factor_bits: scale_factor.to_bits(),
-            theme_revision,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-struct PaintCacheEntry {
-    generation: u64,
-    key: PaintCacheKey,
-    origin: Point,
-    start: u32,
-    end: u32,
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum PaintCachePolicy {
-    /// Enable caching unless the UI is in an inspection/probe mode (e.g. picking, semantics).
-    #[default]
-    Auto,
-    /// Always enable caching.
-    Enabled,
-    /// Always disable caching.
-    Disabled,
-}
-
-#[derive(Debug, Default)]
-struct PaintCacheState {
-    generation: u64,
-    prev_ops: Vec<SceneOp>,
-    prev_fingerprint: u64,
-    source_generation: u64,
-    target_generation: u64,
-    hits: u32,
-    misses: u32,
-    replayed_ops: u32,
-}
-
-impl PaintCacheState {
-    fn begin_frame(&mut self) {
-        self.source_generation = self.generation;
-        self.target_generation = self.generation.saturating_add(1);
-        self.hits = 0;
-        self.misses = 0;
-        self.replayed_ops = 0;
-    }
-
-    fn finish_frame(&mut self) {
-        self.generation = self.target_generation;
-    }
-
-    fn invalidate_recording(&mut self) {
-        self.prev_ops.clear();
-        self.prev_fingerprint = 0;
-        self.generation = self.generation.saturating_add(1);
     }
 }
 
@@ -402,147 +286,6 @@ impl<H: UiHost> Default for UiTree<H> {
 }
 
 impl<H: UiHost> UiTree<H> {
-    fn should_defer_keydown_shortcut_matching_to_text_input(
-        key: KeyCode,
-        modifiers: fret_core::Modifiers,
-        focus_is_text_input: bool,
-    ) -> bool {
-        if !focus_is_text_input {
-            return false;
-        }
-        if modifiers.ctrl || modifiers.alt || modifiers.meta {
-            return false;
-        }
-        matches!(
-            key,
-            KeyCode::Tab
-                | KeyCode::Space
-                | KeyCode::Enter
-                | KeyCode::NumpadEnter
-                | KeyCode::Escape
-                | KeyCode::ArrowUp
-                | KeyCode::ArrowDown
-                | KeyCode::ArrowLeft
-                | KeyCode::ArrowRight
-                | KeyCode::Backspace
-                | KeyCode::Delete
-                | KeyCode::Home
-                | KeyCode::End
-                | KeyCode::PageUp
-                | KeyCode::PageDown
-        )
-    }
-
-    fn handle_keydown_shortcuts(
-        &mut self,
-        app: &mut H,
-        services: &mut dyn UiServices,
-        params: KeydownShortcutParams<'_>,
-    ) -> bool {
-        if self.replaying_pending_shortcut {
-            // Pending shortcut replay bypasses shortcut matching and sequence state.
-            return false;
-        }
-
-        if params.repeat {
-            // Allow key-repeat only for explicitly repeatable commands (e.g. text editing).
-            if let Some(service) = app.global::<KeymapService>() {
-                let chord = KeyChord::new(params.key, params.modifiers);
-                if let Some(command) = service.keymap.resolve(params.input_ctx, chord)
-                    && app
-                        .commands()
-                        .get(command.clone())
-                        .is_some_and(|m| m.repeatable)
-                {
-                    self.suppress_text_input_until_key_up = Some(params.key);
-                    app.push_effect(Effect::Command {
-                        window: self.window,
-                        command,
-                    });
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        let Some(service) = app.global::<KeymapService>() else {
-            return false;
-        };
-
-        let chord = KeyChord::new(params.key, params.modifiers);
-
-        if !self.pending_shortcut.keystrokes.is_empty() {
-            self.pending_shortcut
-                .keystrokes
-                .push(CapturedKeystroke { chord, text: None });
-
-            let sequence: Vec<KeyChord> = self
-                .pending_shortcut
-                .keystrokes
-                .iter()
-                .map(|s| s.chord)
-                .collect();
-            let matched = service.keymap.match_sequence(params.input_ctx, &sequence);
-
-            if matched.has_continuation {
-                self.pending_shortcut.fallback = matched.exact.and_then(|c| c);
-                self.pending_shortcut.focus = self.focus;
-                self.pending_shortcut.barrier_root = params.barrier_root;
-                self.pending_shortcut.capture_next_text_input_key = (params.focus_is_text_input
-                    && !params.modifiers.ctrl
-                    && !params.modifiers.meta)
-                    .then_some(params.key);
-                self.suppress_text_input_until_key_up = Some(params.key);
-                self.schedule_pending_shortcut_timeout(app);
-                return true;
-            }
-
-            if let Some(Some(command)) = matched.exact {
-                self.clear_pending_shortcut(app);
-                self.suppress_text_input_until_key_up = Some(params.key);
-                app.push_effect(Effect::Command {
-                    window: self.window,
-                    command,
-                });
-                return true;
-            }
-
-            let pending = std::mem::take(&mut self.pending_shortcut);
-            if let Some(token) = pending.timer {
-                app.push_effect(Effect::CancelTimer { token });
-            }
-            self.replay_captured_keystrokes(app, services, params.input_ctx, pending.keystrokes);
-            return true;
-        }
-
-        let matched = service
-            .keymap
-            .match_sequence(params.input_ctx, std::slice::from_ref(&chord));
-        if matched.has_continuation {
-            self.pending_shortcut.keystrokes = vec![CapturedKeystroke { chord, text: None }];
-            self.pending_shortcut.focus = self.focus;
-            self.pending_shortcut.barrier_root = params.barrier_root;
-            self.pending_shortcut.fallback = matched.exact.and_then(|c| c);
-            self.pending_shortcut.capture_next_text_input_key =
-                (params.focus_is_text_input && !params.modifiers.ctrl && !params.modifiers.meta)
-                    .then_some(params.key);
-            self.suppress_text_input_until_key_up = Some(params.key);
-            self.schedule_pending_shortcut_timeout(app);
-            return true;
-        }
-
-        if let Some(command) = service.keymap.resolve(params.input_ctx, chord) {
-            self.suppress_text_input_until_key_up = Some(params.key);
-            app.push_effect(Effect::Command {
-                window: self.window,
-                command,
-            });
-            return true;
-        }
-
-        false
-    }
-
     fn set_ime_allowed(&mut self, app: &mut H, enabled: bool) {
         if self.ime_allowed == enabled {
             return;
@@ -826,74 +569,6 @@ impl<H: UiHost> UiTree<H> {
             active_layer_roots: active_roots,
             barrier_root,
         }
-    }
-
-    fn clear_pending_shortcut(&mut self, app: &mut H) {
-        if let Some(token) = self.pending_shortcut.timer.take() {
-            app.push_effect(Effect::CancelTimer { token });
-        }
-        self.pending_shortcut = PendingShortcut::default();
-    }
-
-    fn schedule_pending_shortcut_timeout(&mut self, app: &mut H) {
-        if self.pending_shortcut.keystrokes.is_empty() {
-            return;
-        }
-
-        if let Some(token) = self.pending_shortcut.timer.take() {
-            app.push_effect(Effect::CancelTimer { token });
-        }
-        let token = app.next_timer_token();
-        self.pending_shortcut.timer = Some(token);
-        app.push_effect(Effect::SetTimer {
-            window: self.window,
-            token,
-            after: PENDING_SHORTCUT_TIMEOUT,
-            repeat: None,
-        });
-    }
-
-    fn replay_captured_keystrokes(
-        &mut self,
-        app: &mut H,
-        services: &mut dyn UiServices,
-        ctx: &InputContext,
-        keystrokes: Vec<CapturedKeystroke>,
-    ) {
-        let prev = self.replaying_pending_shortcut;
-        self.replaying_pending_shortcut = true;
-
-        for stroke in keystrokes {
-            if let Some(service) = app.global::<KeymapService>()
-                && let Some(command) = service.keymap.resolve(ctx, stroke.chord)
-            {
-                app.push_effect(Effect::Command {
-                    window: self.window,
-                    command,
-                });
-                continue;
-            }
-
-            let down = Event::KeyDown {
-                key: stroke.chord.key,
-                modifiers: stroke.chord.mods,
-                repeat: false,
-            };
-            self.dispatch_event(app, services, &down);
-
-            if let Some(text) = stroke.text {
-                let event = Event::TextInput(text);
-                self.dispatch_event(app, services, &event);
-            }
-
-            let up = Event::KeyUp {
-                key: stroke.chord.key,
-                modifiers: stroke.chord.mods,
-            };
-            self.dispatch_event(app, services, &up);
-        }
-
-        self.replaying_pending_shortcut = prev;
     }
 
     pub fn set_window(&mut self, window: AppWindowId) {
@@ -2505,6 +2180,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn paint_node(
         &mut self,
         app: &mut H,
@@ -3143,7 +2819,7 @@ impl<H: UiHost> UiTree<H> {
         }));
 
         if let Some(snapshot) = self.semantics.as_deref() {
-            validate_semantics_if_enabled(snapshot);
+            semantics::validate_semantics_if_enabled(snapshot);
         }
     }
 

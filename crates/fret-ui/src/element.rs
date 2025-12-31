@@ -895,7 +895,7 @@ impl Default for ScrollbarStyle {
 /// Component libraries decide when to show/hide scrollbars and resolve theme tokens into this
 /// style. The runtime owns hit-testing, thumb/track interactions, and paints using the resolved
 /// style.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ScrollbarProps {
     pub layout: LayoutStyle,
     /// Declarative element id for the associated scroll container, if any.
@@ -905,17 +905,6 @@ pub struct ScrollbarProps {
     pub scroll_target: Option<GlobalElementId>,
     pub scroll_handle: crate::scroll::ScrollHandle,
     pub style: ScrollbarStyle,
-}
-
-impl Default for ScrollbarProps {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle::default(),
-            scroll_target: None,
-            scroll_handle: crate::scroll::ScrollHandle::default(),
-            style: ScrollbarStyle::default(),
-        }
-    }
 }
 
 /// Cross-frame element-local state for scrollbars.

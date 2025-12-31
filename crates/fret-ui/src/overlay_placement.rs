@@ -430,17 +430,17 @@ fn apply_cross_axis_offset(
     let rtl = options.direction == LayoutDirection::Rtl;
 
     let mut cross = options.offset.cross_axis.0;
-    if align != Align::Center {
-        if let Some(axis) = options.offset.alignment_axis {
-            let mut v = axis.0;
-            if align == Align::End {
-                v *= -1.0;
-            }
-            if is_vertical && rtl {
-                v *= -1.0;
-            }
-            cross = v;
+    if align != Align::Center
+        && let Some(axis) = options.offset.alignment_axis
+    {
+        let mut v = axis.0;
+        if align == Align::End {
+            v *= -1.0;
         }
+        if is_vertical && rtl {
+            v *= -1.0;
+        }
+        cross = v;
     }
 
     if !cross.is_finite() || cross == 0.0 {
