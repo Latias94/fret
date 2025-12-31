@@ -1,3 +1,10 @@
+use fret_core::{Event, KeyCode, Size, TextStyle};
+use fret_runtime::{CommandId, Model};
+
+use super::TextInput;
+use crate::widget::{EventCx, LayoutCx, PaintCx, Widget};
+use crate::{Invalidation, TextInputStyle, UiHost};
+
 pub struct BoundTextInput {
     model: Model<String>,
     last_revision: Option<u64>,
