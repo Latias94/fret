@@ -7,7 +7,7 @@ use std::{
 };
 
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
-use fret_runtime::{ExternalDragPayloadKind, PlatformCapabilities};
+use fret_runtime::{ExternalDragPayloadKind, PlatformCapabilities, PlatformCompletion};
 use fret_core::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
     ExternalDropToken, InternalDragEvent, InternalDragKind, Modifiers, MouseButton, Point, Px,
@@ -45,7 +45,7 @@ type WindowAnchor = fret_core::WindowAnchor;
 pub enum RunnerUserEvent {
     PlatformCompletion {
         window: fret_core::AppWindowId,
-        completion: fret_core::PlatformCompletion,
+        completion: PlatformCompletion,
     },
 }
 
@@ -1264,7 +1264,7 @@ impl<D: WinitDriver> WinitRunner<D> {
 
     fn spawn_platform_completion_task<F>(&self, window: fret_core::AppWindowId, task: F) -> bool
     where
-        F: FnOnce() -> fret_core::PlatformCompletion + Send + 'static,
+        F: FnOnce() -> PlatformCompletion + Send + 'static,
     {
         let Some(proxy) = self.event_loop_proxy.clone() else {
             return false;
@@ -1290,25 +1290,25 @@ impl<D: WinitDriver> WinitRunner<D> {
     fn deliver_platform_completion_now(
         &mut self,
         window: fret_core::AppWindowId,
-        completion: fret_core::PlatformCompletion,
+        completion: PlatformCompletion,
     ) {
         match completion {
-            fret_core::PlatformCompletion::ClipboardText { token, text } => {
+            PlatformCompletion::ClipboardText { token, text } => {
                 self.deliver_window_event_now(window, &Event::ClipboardText { token, text });
             }
-            fret_core::PlatformCompletion::ClipboardTextUnavailable { token } => {
+            PlatformCompletion::ClipboardTextUnavailable { token } => {
                 self.deliver_window_event_now(window, &Event::ClipboardTextUnavailable { token });
             }
-            fret_core::PlatformCompletion::ExternalDropData(data) => {
+            PlatformCompletion::ExternalDropData(data) => {
                 self.deliver_window_event_now(window, &Event::ExternalDropData(data));
             }
-            fret_core::PlatformCompletion::FileDialogSelection(selection) => {
+            PlatformCompletion::FileDialogSelection(selection) => {
                 self.deliver_window_event_now(window, &Event::FileDialogSelection(selection));
             }
-            fret_core::PlatformCompletion::FileDialogData(data) => {
+            PlatformCompletion::FileDialogData(data) => {
                 self.deliver_window_event_now(window, &Event::FileDialogData(data));
             }
-            fret_core::PlatformCompletion::FileDialogCanceled => {
+            PlatformCompletion::FileDialogCanceled => {
                 self.deliver_window_event_now(window, &Event::FileDialogCanceled);
             }
         }
@@ -1855,7 +1855,7 @@ impl<D: WinitDriver> WinitRunner<D> {
                         if let Some(paths) = self.external_drop.paths(token).map(|p| p.to_vec()) {
                             if self.spawn_platform_completion_task(window, move || {
                                 let event = WinitExternalDrop::read_paths(token, paths, limits);
-                                fret_core::PlatformCompletion::ExternalDropData(event)
+                                PlatformCompletion::ExternalDropData(event)
                             }) {
                                 continue;
                             }
@@ -1895,13 +1895,13 @@ impl<D: WinitDriver> WinitRunner<D> {
                             Ok(Some(selection)) => {
                                 self.deliver_platform_completion_now(
                                     window,
-                                    fret_core::PlatformCompletion::FileDialogSelection(selection),
+                                    PlatformCompletion::FileDialogSelection(selection),
                                 );
                             }
                             Ok(None) => {
                                 self.deliver_platform_completion_now(
                                     window,
-                                    fret_core::PlatformCompletion::FileDialogCanceled,
+                                    PlatformCompletion::FileDialogCanceled,
                                 );
                             }
                             Err(err) => {
@@ -1927,7 +1927,7 @@ impl<D: WinitDriver> WinitRunner<D> {
                         if let Some(paths) = self.file_dialog.paths(token).map(|p| p.to_vec()) {
                             if self.spawn_platform_completion_task(window, move || {
                                 let data = WinitFileDialog::read_paths(token, paths, limits);
-                                fret_core::PlatformCompletion::FileDialogData(data)
+                                PlatformCompletion::FileDialogData(data)
                             }) {
                                 continue;
                             }
@@ -1938,7 +1938,7 @@ impl<D: WinitDriver> WinitRunner<D> {
                         };
                         self.deliver_platform_completion_now(
                             window,
-                            fret_core::PlatformCompletion::FileDialogData(data),
+                            PlatformCompletion::FileDialogData(data),
                         );
                     }
                     Effect::FileDialogRelease { token } => {

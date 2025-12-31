@@ -7,7 +7,6 @@ pub mod geometry;
 pub mod ids;
 pub mod input;
 pub mod panels;
-pub mod platform_completion;
 pub mod scene;
 pub mod semantics;
 pub mod services;
@@ -42,7 +41,6 @@ pub use input::{
 };
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputKind};
 pub use panels::{PanelKey, PanelKind};
-pub use platform_completion::PlatformCompletion;
 pub use scene::{
     Color, DrawOrder, Scene, SceneOp, SceneRecording, SceneValidationError,
     SceneValidationErrorKind, UvRect,

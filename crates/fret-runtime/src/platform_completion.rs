@@ -3,7 +3,7 @@
 //! This type is intentionally narrower than `Event` so platform backends can only inject
 //! completion results (e.g. clipboard reads, external-drop reads) into the UI event stream.
 
-use crate::{ClipboardToken, ExternalDropDataEvent, FileDialogDataEvent, FileDialogSelection};
+use fret_core::{ClipboardToken, ExternalDropDataEvent, FileDialogDataEvent, FileDialogSelection};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PlatformCompletion {
@@ -14,3 +14,4 @@ pub enum PlatformCompletion {
     FileDialogData(FileDialogDataEvent),
     FileDialogCanceled,
 }
+
