@@ -109,3 +109,39 @@ Cons:
   - `Model<T>`, `WeakModel<T>`, `ModelStore` refcounts, `pending_drop`, and lease end removal.
 - Re-exports: `crates/fret-runtime/src/lib.rs`
 
+## Practical Guidance (Non-Contractual)
+
+### Reading models during UI rendering
+
+In `fret-ui`, model invalidation is opt-in: elements must **observe** the model id they depend on
+so the runtime can invalidate layout/paint caches when the model changes.
+
+Preferred patterns:
+
+- Use `ElementCx` helpers that combine “observe + read”:
+  - `cx.get_model_copied(&model, Invalidation::Paint)`
+  - `cx.get_model_cloned(&model, Invalidation::Layout)`
+  - `cx.read_model_ref(&model, Invalidation::Layout, |value| ...)`
+  - `cx.read_model(&model, Invalidation::Layout, |app, value| ...)`
+
+This keeps component code from accidentally reading models without registering observation.
+
+### Long-lived callbacks: prefer `WeakModel<T>`
+
+If a closure can outlive the UI surface that originally created it (timers, async tasks, detached
+overlay policies), prefer holding `WeakModel<T>` and upgrading when needed:
+
+```rust
+let weak = model.downgrade();
+let handler = Arc::new(move |host: &mut dyn UiActionHost, _cx, _token| {
+    let Some(model) = weak.upgrade() else {
+        return false; // model is gone
+    };
+
+    let _ = host.models_mut().update(&model, |state| {
+        state.tick();
+    });
+
+    true
+});
+```

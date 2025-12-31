@@ -4,7 +4,7 @@ use std::panic::Location;
 use std::sync::Arc;
 
 use fret_core::{AppWindowId, FrameId, NodeId, Px, Rect};
-use fret_runtime::{Effect, Model, ModelId};
+use fret_runtime::{Effect, Model, ModelId, ModelUpdateError};
 
 use crate::action::OnHoverChange;
 use crate::action::{
@@ -190,6 +190,42 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
 
     pub fn observe_model<T>(&mut self, model: &Model<T>, invalidation: Invalidation) {
         self.observe_model_id(model.id(), invalidation);
+    }
+
+    pub fn read_model<T: Any, R>(
+        &mut self,
+        model: &Model<T>,
+        invalidation: Invalidation,
+        f: impl FnOnce(&mut H, &T) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        self.observe_model(model, invalidation);
+        model.read(&mut *self.app, f)
+    }
+
+    pub fn read_model_ref<T: Any, R>(
+        &mut self,
+        model: &Model<T>,
+        invalidation: Invalidation,
+        f: impl FnOnce(&T) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        self.observe_model(model, invalidation);
+        self.app.models().read(model, f)
+    }
+
+    pub fn get_model_copied<T: Any + Copy>(
+        &mut self,
+        model: &Model<T>,
+        invalidation: Invalidation,
+    ) -> Option<T> {
+        self.read_model_ref(model, invalidation, |v| *v).ok()
+    }
+
+    pub fn get_model_cloned<T: Any + Clone>(
+        &mut self,
+        model: &Model<T>,
+        invalidation: Invalidation,
+    ) -> Option<T> {
+        self.read_model_ref(model, invalidation, Clone::clone).ok()
     }
 
     pub fn observe_model_id(&mut self, model: ModelId, invalidation: Invalidation) {
