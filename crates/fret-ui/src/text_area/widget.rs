@@ -1,9 +1,9 @@
-use super::TextArea;
+use super::{PreparedKey, TextArea};
 use crate::widget::{CommandCx, EventCx, LayoutCx, PaintCx, Widget};
 use crate::{Invalidation, UiHost};
 use fret_core::{
     CaretAffinity, Color, Corners, DrawOrder, Edges, Event, ImeEvent, MouseButton, Px, Rect,
-    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
+    SceneOp, SemanticsRole, Size, TextConstraints, TextOverflow,
 };
 use fret_runtime::Effect;
 

@@ -3,13 +3,13 @@
 //! This lives in the runtime crate because it needs platform hooks and hard-to-change editing
 //! semantics (ADR 0012 / ADR 0071).
 use fret_core::{
-    CaretAffinity, Color, Corners, DrawOrder, Edges, Event, ImeEvent, MouseButton, Px, Rect,
-    SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
+    CaretAffinity, Color, Corners, Edges, Px, Rect, Size, TextConstraints, TextMetrics, TextStyle,
+    TextWrap,
 };
-use fret_runtime::{Effect, Model};
+use fret_runtime::Effect;
 
-use crate::widget::{CommandCx, EventCx, LayoutCx, PaintCx, Widget};
-use crate::{Invalidation, Theme, UiHost};
+use crate::widget::{CommandCx, EventCx};
+use crate::{Theme, UiHost};
 
 mod bound;
 mod widget;
