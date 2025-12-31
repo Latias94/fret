@@ -288,16 +288,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                     &mut self.ime_replace_range,
                 );
                 if result != crate::text_edit::ime::ApplyResult::Noop {
-                    let delta = crate::text_edit::commands::MultilineUiDelta {
-                        handled: true,
-                        invalidate_layout: true,
-                        clear_preedit: false,
-                        text_dirty: true,
-                        reset_affinity: true,
-                        ensure_caret_visible: true,
-                        ..Default::default()
-                    };
-                    self.apply_multiline_ui_delta(cx, delta);
+                    self.apply_multiline_ui_delta(cx, Self::edit_layout_delta(false));
                 }
             }
             _ => {}
@@ -354,16 +345,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 self.text.clear();
                 self.caret = 0;
                 self.selection_anchor = 0;
-                let delta = crate::text_edit::commands::MultilineUiDelta {
-                    handled: true,
-                    invalidate_layout: true,
-                    clear_preedit: true,
-                    text_dirty: true,
-                    reset_affinity: true,
-                    ensure_caret_visible: true,
-                    ..Default::default()
-                };
-                self.apply_multiline_ui_delta(cx, delta);
+                self.apply_multiline_ui_delta(cx, Self::edit_layout_delta(true));
                 true
             }
             "text.copy" => {

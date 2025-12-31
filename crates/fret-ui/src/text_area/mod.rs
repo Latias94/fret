@@ -461,6 +461,18 @@ impl TextArea {
         }
     }
 
+    fn edit_layout_delta(clear_preedit: bool) -> crate::text_edit::commands::MultilineUiDelta {
+        crate::text_edit::commands::MultilineUiDelta {
+            handled: true,
+            invalidate_layout: true,
+            clear_preedit,
+            text_dirty: true,
+            reset_affinity: true,
+            ensure_caret_visible: true,
+            ..Default::default()
+        }
+    }
+
     fn scrollbar_geometry(&self, bounds: Rect) -> Option<(Rect, Rect)> {
         let viewport_h = self.last_viewport_height;
         if viewport_h.0 <= 0.0 {
