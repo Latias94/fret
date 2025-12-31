@@ -1,4 +1,9 @@
-use std::{any::Any, collections::HashSet, marker::PhantomData};
+use std::{
+    any::Any,
+    collections::HashSet,
+    marker::PhantomData,
+    panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
+};
 
 use slotmap::SlotMap;
 
@@ -80,9 +85,19 @@ pub trait ModelHost {
         model: Model<T>,
         f: impl FnOnce(&mut Self, &T) -> R,
     ) -> Result<R, ModelUpdateError> {
-        let lease = self.models_mut().lease(model)?;
-        let value = lease.value_ref();
-        Ok(f(self, value))
+        let mut lease = self.models_mut().lease(model)?;
+        let result = if cfg!(panic = "unwind") {
+            catch_unwind(AssertUnwindSafe(|| f(self, lease.value_ref())))
+        } else {
+            Ok(f(self, lease.value_ref()))
+        };
+
+        self.models_mut().end_lease(&mut lease);
+
+        match result {
+            Ok(value) => Ok(value),
+            Err(panic) => resume_unwind(panic),
+        }
     }
 
     fn model_revision<T: Any>(&self, model: Model<T>) -> Option<u64> {
@@ -95,12 +110,29 @@ pub trait ModelHost {
         f: impl FnOnce(&mut T, &mut ModelCx<'_, Self>) -> R,
     ) -> Result<R, ModelUpdateError> {
         let mut lease = self.models_mut().lease(model)?;
-        let result = {
-            let mut cx = ModelCx { host: self };
-            f(lease.value_mut(), &mut cx)
+        let result = if cfg!(panic = "unwind") {
+            catch_unwind(AssertUnwindSafe(|| {
+                let mut cx = ModelCx { host: self };
+                f(lease.value_mut(), &mut cx)
+            }))
+        } else {
+            Ok({
+                let mut cx = ModelCx { host: self };
+                f(lease.value_mut(), &mut cx)
+            })
         };
-        lease.mark_dirty();
-        Ok(result)
+
+        match result {
+            Ok(value) => {
+                lease.mark_dirty();
+                self.models_mut().end_lease(&mut lease);
+                Ok(value)
+            }
+            Err(panic) => {
+                self.models_mut().end_lease(&mut lease);
+                resume_unwind(panic)
+            }
+        }
     }
 }
 
@@ -132,8 +164,7 @@ pub enum ModelUpdateError {
     TypeMismatch,
 }
 
-struct ModelLease<T: Any> {
-    store: *mut ModelStore,
+pub struct ModelLease<T: Any> {
     id: ModelId,
     value: Option<Box<T>>,
     dirty: bool,
@@ -159,19 +190,8 @@ impl<T: Any> ModelLease<T> {
 
 impl<T: Any> Drop for ModelLease<T> {
     fn drop(&mut self) {
-        let Some(value) = self.value.take() else {
-            return;
-        };
-
-        unsafe {
-            let store = &mut *self.store;
-            let entry = store.storage.get_mut(self.id).expect("leased id exists");
-            assert!(entry.value.is_none(), "model entry should be leased");
-            entry.value = Some(value);
-            if self.dirty {
-                entry.revision = entry.revision.saturating_add(1);
-                store.mark_changed(self.id);
-            }
+        if self.value.is_some() && !std::thread::panicking() {
+            panic!("ModelLease must be ended with ModelStore::end_lease");
         }
     }
 }
@@ -217,12 +237,26 @@ impl ModelStore {
         f: impl FnOnce(&mut T) -> R,
     ) -> Result<R, ModelUpdateError> {
         let mut lease = self.lease(model)?;
-        let result = f(lease.value_mut());
-        lease.mark_dirty();
-        Ok(result)
+        let result = if cfg!(panic = "unwind") {
+            catch_unwind(AssertUnwindSafe(|| f(lease.value_mut())))
+        } else {
+            Ok(f(lease.value_mut()))
+        };
+
+        match result {
+            Ok(value) => {
+                lease.mark_dirty();
+                self.end_lease(&mut lease);
+                Ok(value)
+            }
+            Err(panic) => {
+                self.end_lease(&mut lease);
+                resume_unwind(panic)
+            }
+        }
     }
 
-    fn lease<T: Any>(&mut self, model: Model<T>) -> Result<ModelLease<T>, ModelUpdateError> {
+    pub fn lease<T: Any>(&mut self, model: Model<T>) -> Result<ModelLease<T>, ModelUpdateError> {
         let boxed = {
             let entry = self
                 .storage
@@ -233,7 +267,6 @@ impl ModelStore {
 
         match boxed.downcast::<T>() {
             Ok(value) => Ok(ModelLease {
-                store: self as *mut ModelStore,
                 id: model.id,
                 value: Some(value),
                 dirty: false,
@@ -246,6 +279,20 @@ impl ModelStore {
                 }
                 Err(ModelUpdateError::TypeMismatch)
             }
+        }
+    }
+
+    pub fn end_lease<T: Any>(&mut self, lease: &mut ModelLease<T>) {
+        let Some(value) = lease.value.take() else {
+            return;
+        };
+
+        let entry = self.storage.get_mut(lease.id).expect("leased id exists");
+        assert!(entry.value.is_none(), "model entry should be leased");
+        entry.value = Some(value);
+        if lease.dirty {
+            entry.revision = entry.revision.saturating_add(1);
+            self.mark_changed(lease.id);
         }
     }
 }
