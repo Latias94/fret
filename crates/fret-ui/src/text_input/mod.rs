@@ -572,32 +572,48 @@ impl<H: UiHost> Widget<H> for TextInput {
                 true
             }
             "text.copy" => {
-                let (a, b) = self.selection_range();
-                if a != b {
-                    cx.app.push_effect(Effect::ClipboardSetText {
-                        text: self.text[a..b].to_string(),
-                    });
+                let result = crate::text_edit::commands::apply_clipboard(
+                    &mut self.edit_state(),
+                    command.as_str(),
+                    cx.window.is_some(),
+                );
+                if let Some(crate::text_edit::commands::ClipboardRequest::SetText { text }) =
+                    result.request
+                {
+                    cx.app.push_effect(Effect::ClipboardSetText { text });
                 }
                 true
             }
             "text.cut" => {
-                let (a, b) = self.selection_range();
-                if a != b {
-                    cx.app.push_effect(Effect::ClipboardSetText {
-                        text: self.text[a..b].to_string(),
-                    });
-                    self.delete_selection_if_any();
-                    self.clear_ime_composition();
+                let result = crate::text_edit::commands::apply_clipboard(
+                    &mut self.edit_state(),
+                    command.as_str(),
+                    cx.window.is_some(),
+                );
+                if let Some(crate::text_edit::commands::ClipboardRequest::SetText { text }) =
+                    result.request
+                {
+                    cx.app.push_effect(Effect::ClipboardSetText { text });
+                }
+                if result.outcome.invalidate_layout {
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
                 true
             }
             "text.paste" => {
-                let Some(window) = cx.window else {
-                    return true;
-                };
-                cx.app.push_effect(Effect::ClipboardGetText { window });
+                let result = crate::text_edit::commands::apply_clipboard(
+                    &mut self.edit_state(),
+                    command.as_str(),
+                    cx.window.is_some(),
+                );
+                if let Some(crate::text_edit::commands::ClipboardRequest::GetText) = result.request
+                {
+                    let Some(window) = cx.window else {
+                        return true;
+                    };
+                    cx.app.push_effect(Effect::ClipboardGetText { window });
+                }
                 true
             }
             "text.move_up" => {

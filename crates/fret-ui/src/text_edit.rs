@@ -198,6 +198,18 @@ pub(crate) mod state {
             self.clamp_indexes();
         }
 
+        pub(crate) fn selection_range(&self) -> (usize, usize) {
+            buffer::selection_range(*self.selection_anchor, *self.caret)
+        }
+
+        pub(crate) fn selected_text_owned(&self) -> Option<String> {
+            let (a, b) = self.selection_range();
+            if a == b {
+                return None;
+            }
+            Some(self.text.get(a..b)?.to_string())
+        }
+
         pub(crate) fn select_all(&mut self) -> bool {
             self.clamp_indexes();
 
@@ -451,6 +463,48 @@ pub(crate) mod commands {
                 }
             }
             _ => Outcome::default(),
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    pub(crate) enum ClipboardRequest {
+        GetText,
+        SetText { text: String },
+    }
+
+    #[derive(Debug, Default, Clone)]
+    pub(crate) struct ClipboardOutcome {
+        pub(crate) outcome: Outcome,
+        pub(crate) request: Option<ClipboardRequest>,
+    }
+
+    pub(crate) fn apply_clipboard(
+        edit: &mut TextEditState<'_>,
+        command: &str,
+        window_available: bool,
+    ) -> ClipboardOutcome {
+        match command {
+            "text.copy" => ClipboardOutcome {
+                outcome: Outcome::noop_handled(),
+                request: edit
+                    .selected_text_owned()
+                    .map(|text| ClipboardRequest::SetText { text }),
+            },
+            "text.cut" => {
+                let request = edit
+                    .selected_text_owned()
+                    .map(|text| ClipboardRequest::SetText { text });
+                let changed = edit.delete_selection_if_any();
+                ClipboardOutcome {
+                    outcome: Outcome::layout(changed),
+                    request,
+                }
+            }
+            "text.paste" => ClipboardOutcome {
+                outcome: Outcome::noop_handled(),
+                request: window_available.then_some(ClipboardRequest::GetText),
+            },
+            _ => ClipboardOutcome::default(),
         }
     }
 }

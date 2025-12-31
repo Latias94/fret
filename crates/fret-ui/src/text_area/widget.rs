@@ -352,28 +352,51 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.copy" => {
-                let (a, b) = self.selection_range();
-                if a != b {
-                    cx.app.push_effect(Effect::ClipboardSetText {
-                        text: self.text[a..b].to_string(),
-                    });
+                let result = crate::text_edit::commands::apply_clipboard(
+                    &mut self.edit_state(),
+                    cmd,
+                    cx.window.is_some(),
+                );
+                if let Some(crate::text_edit::commands::ClipboardRequest::SetText { text }) =
+                    result.request
+                {
+                    cx.app.push_effect(Effect::ClipboardSetText { text });
                 }
                 true
             }
             "text.cut" => {
-                let (a, b) = self.selection_range();
-                if a != b {
-                    cx.app.push_effect(Effect::ClipboardSetText {
-                        text: self.text[a..b].to_string(),
-                    });
-                    self.delete_selection_if_any();
+                let result = crate::text_edit::commands::apply_clipboard(
+                    &mut self.edit_state(),
+                    cmd,
+                    cx.window.is_some(),
+                );
+                if let Some(crate::text_edit::commands::ClipboardRequest::SetText { text }) =
+                    result.request
+                {
+                    cx.app.push_effect(Effect::ClipboardSetText { text });
+                }
+                if result.outcome.invalidate_layout {
+                    self.clear_preedit();
+                    self.affinity = CaretAffinity::Downstream;
+                    self.text_dirty = true;
                     self.ensure_caret_visible = true;
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
                 true
             }
-            "text.paste" => self.request_clipboard_paste(cx),
+            "text.paste" => {
+                let result = crate::text_edit::commands::apply_clipboard(
+                    &mut self.edit_state(),
+                    cmd,
+                    cx.window.is_some(),
+                );
+                if let Some(crate::text_edit::commands::ClipboardRequest::GetText) = result.request
+                {
+                    return self.request_clipboard_paste(cx);
+                }
+                true
+            }
             "text.move_home" => {
                 hit_test_line(self, cx, false);
                 self.selection_anchor = self.caret;
