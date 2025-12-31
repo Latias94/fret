@@ -441,6 +441,12 @@ pub struct WinitRunnerConfig {
     pub external_drop_max_file_bytes: u64,
     /// Upper bound for number of files processed per `Effect::ExternalDropReadAll`.
     pub external_drop_max_files: usize,
+    /// Upper bound for total bytes read via `Effect::FileDialogReadAll` for a single token.
+    pub file_dialog_max_total_bytes: u64,
+    /// Upper bound for a single file read via `Effect::FileDialogReadAll`.
+    pub file_dialog_max_file_bytes: u64,
+    /// Upper bound for number of files processed per `Effect::FileDialogReadAll`.
+    pub file_dialog_max_files: usize,
     /// Soft upper bound for total GPU memory used by renderer-internal SVG raster caches.
     ///
     /// This is used for `SceneOp::SvgMaskIcon` and `SceneOp::SvgImage` rasterizations.
@@ -487,6 +493,9 @@ impl Default for WinitRunnerConfig {
             external_drop_max_total_bytes: 64 * 1024 * 1024,
             external_drop_max_file_bytes: 32 * 1024 * 1024,
             external_drop_max_files: 128,
+            file_dialog_max_total_bytes: 64 * 1024 * 1024,
+            file_dialog_max_file_bytes: 32 * 1024 * 1024,
+            file_dialog_max_files: 128,
             svg_raster_budget_bytes: 64 * 1024 * 1024,
             path_msaa_samples: 4,
             accessibility_enabled: true,
@@ -1892,9 +1901,9 @@ impl<D: WinitDriver> WinitRunner<D> {
                             continue;
                         }
                         let limits = fret_platform::external_drop::ExternalDropReadLimits {
-                            max_total_bytes: self.config.external_drop_max_total_bytes,
-                            max_file_bytes: self.config.external_drop_max_file_bytes,
-                            max_files: self.config.external_drop_max_files,
+                            max_total_bytes: self.config.file_dialog_max_total_bytes,
+                            max_file_bytes: self.config.file_dialog_max_file_bytes,
+                            max_files: self.config.file_dialog_max_files,
                         };
 
                         if let Some(paths) = self.file_dialog.paths(token).map(|p| p.to_vec()) {
