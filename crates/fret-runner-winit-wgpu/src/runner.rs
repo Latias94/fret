@@ -37,9 +37,9 @@ type WindowAnchor = fret_core::WindowAnchor;
 
 #[derive(Debug, Clone)]
 pub enum RunnerUserEvent {
-    WindowEvent {
+    PlatformCompletion {
         window: fret_core::AppWindowId,
-        event: fret_core::Event,
+        completion: fret_core::PlatformCompletion,
     },
 }
 
@@ -1113,17 +1113,17 @@ impl<D: WinitDriver> WinitRunner<D> {
         self.event_loop_proxy = Some(proxy);
     }
 
-    fn spawn_window_event_task<F>(&self, window: fret_core::AppWindowId, task: F) -> bool
+    fn spawn_platform_completion_task<F>(&self, window: fret_core::AppWindowId, task: F) -> bool
     where
-        F: FnOnce() -> Event + Send + 'static,
+        F: FnOnce() -> fret_core::PlatformCompletion + Send + 'static,
     {
         let Some(proxy) = self.event_loop_proxy.clone() else {
             return false;
         };
 
         std::thread::spawn(move || {
-            let event = task();
-            let _ = proxy.send_event(RunnerUserEvent::WindowEvent { window, event });
+            let completion = task();
+            let _ = proxy.send_event(RunnerUserEvent::PlatformCompletion { window, completion });
         });
 
         true
@@ -1673,9 +1673,9 @@ impl<D: WinitDriver> WinitRunner<D> {
                         };
 
                         if let Some(paths) = self.external_drop.paths(token).map(|p| p.to_vec()) {
-                            if self.spawn_window_event_task(window, move || {
+                            if self.spawn_platform_completion_task(window, move || {
                                 let event = WinitExternalDrop::read_paths(token, paths, limits);
-                                Event::ExternalDropData(event)
+                                fret_core::PlatformCompletion::ExternalDropData(event)
                             }) {
                                 continue;
                             }
@@ -2605,10 +2605,18 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
 
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: RunnerUserEvent) {
         match event {
-            RunnerUserEvent::WindowEvent { window, event } => {
-                self.deliver_window_event_now(window, &event);
-                self.drain_effects(event_loop);
-            }
+            RunnerUserEvent::PlatformCompletion { window, completion } => match completion {
+                fret_core::PlatformCompletion::ClipboardText(text) => {
+                    let event = Event::ClipboardText(text);
+                    self.deliver_window_event_now(window, &event);
+                    self.drain_effects(event_loop);
+                }
+                fret_core::PlatformCompletion::ExternalDropData(data) => {
+                    let event = Event::ExternalDropData(data);
+                    self.deliver_window_event_now(window, &event);
+                    self.drain_effects(event_loop);
+                }
+            },
         }
     }
 
