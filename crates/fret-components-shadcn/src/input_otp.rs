@@ -1,5 +1,6 @@
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_components_ui::recipes::input::{resolve_input_chrome, InputTokenKeys};
 use fret_components_ui::{
     ChromeRefinement, LayoutRefinement, MetricRef, Size as ComponentSize, Space,
 };
@@ -7,7 +8,6 @@ use fret_core::{
     Axis, Color, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     PositionStyle, SizeStyle, TextInputProps, TextProps,
@@ -118,10 +118,9 @@ impl InputOtp {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        cx.observe_model(&self.model, Invalidation::Paint);
 
         let length = self.length;
-        let mut value = cx.app.models().get_cloned(&self.model).unwrap_or_default();
+        let mut value = cx.watch_model(&self.model).cloned().unwrap_or_default();
         let sanitized = sanitize_otp(&value, length, self.numeric_only);
         if sanitized != value {
             let next = sanitized.clone();

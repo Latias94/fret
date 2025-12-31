@@ -1,8 +1,8 @@
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 use fret_core::{Edges, Px};
 use fret_runtime::Model;
-use fret_ui::Invalidation;
 use fret_ui::element::{AnyElement, LayoutStyle, Length};
 use fret_ui::{ElementCx, Theme, UiHost};
 
@@ -52,8 +52,6 @@ impl Progress {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            cx.observe_model(&self.model, Invalidation::Paint);
-
             let theme = Theme::global(&*cx.app).clone();
             let height = theme
                 .metric_by_key("component.progress.height")
@@ -76,7 +74,7 @@ impl Progress {
                 .or_else(|| theme.color_by_key("input"))
                 .unwrap_or(theme.colors.panel_border);
 
-            let v = cx.app.models().get_copied(&self.model).unwrap_or(self.min);
+            let v = cx.watch_model(&self.model).copied().unwrap_or(self.min);
             let t = self.normalized(v);
 
             let base_layout = LayoutRefinement::default()

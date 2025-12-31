@@ -3,11 +3,11 @@ use std::sync::Arc;
 use fret_components_icons::ids;
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::icon as decl_icon;
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_runtime::{CommandId, Model};
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableA11y, PressableProps,
@@ -101,9 +101,7 @@ impl Checkbox {
             let model = self.model;
 
             let theme = Theme::global(&*cx.app).clone();
-            let checked = cx
-                .get_model_copied(&model, Invalidation::Paint)
-                .unwrap_or(false);
+            let checked = cx.watch_model(&model).copied().unwrap_or(false);
 
             let size = checkbox_size(&theme);
             let radius = checkbox_radius(&theme);
@@ -142,9 +140,7 @@ impl Checkbox {
                     cx.pressable_toggle_bool(&model);
 
                     let theme = Theme::global(&*cx.app).clone();
-                    let checked = cx
-                        .get_model_copied(&model, Invalidation::Paint)
-                        .unwrap_or(false);
+                    let checked = cx.watch_model(&model).copied().unwrap_or(false);
 
                     let mut bg = if checked { bg_on } else { Color::TRANSPARENT };
                     let border_color = if checked { bg_on } else { border };

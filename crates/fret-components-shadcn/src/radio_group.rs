@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt;
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::{MetricRef, Space};
@@ -8,7 +9,6 @@ use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, SizeStyle,
@@ -145,8 +145,6 @@ impl RadioGroup {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            cx.observe_model(&self.model, Invalidation::Paint);
-
             let theme = Theme::global(&*cx.app).clone();
             let gap_y = row_gap(&theme);
             let gap_x = label_gap(&theme);
@@ -173,7 +171,7 @@ impl RadioGroup {
                     ..Default::default()
                 },
                 move |cx| {
-                    let selected: Option<Arc<str>> = cx.app.models().get_cloned(&model).flatten();
+                    let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().flatten();
 
                     let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
                     let disabled: Vec<bool> =

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt;
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
@@ -8,7 +9,6 @@ use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableA11y, PressableProps,
     RovingFlexProps, RovingFocusProps, SemanticsProps, TextProps,
@@ -163,13 +163,11 @@ impl Tabs {
         let chrome = self.chrome;
         let layout = self.layout;
 
-        cx.observe_model(&model, Invalidation::Layout);
-
         let theme = Theme::global(&*cx.app).clone();
         let gap = tabs_gap(&theme);
         let text_style = tabs_trigger_text_style(&theme);
 
-        let selected: Option<Arc<str>> = cx.app.models().get_cloned(&model).flatten();
+        let selected: Option<Arc<str>> = cx.watch_model(&model).layout().cloned().flatten();
 
         let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
         let disabled_flags: Vec<bool> = items.iter().map(|i| tabs_disabled || i.disabled).collect();

@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space,
 };
 use fret_core::{Color, Edges, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::{CommandId, Model};
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableA11y, PressableProps,
     TextProps,
@@ -191,10 +191,8 @@ impl Toggle {
         let chrome = self.chrome;
         let layout = self.layout;
 
-        cx.observe_model(&model, Invalidation::Paint);
-
         let theme = Theme::global(&*cx.app).clone();
-        let on_now = cx.app.models().get_copied(&model).unwrap_or(false);
+        let on_now = cx.watch_model(&model).copied().unwrap_or(false);
 
         let radius = size.control_radius(&theme);
         let ring = decl_style::focus_ring(&theme, radius);
@@ -255,7 +253,7 @@ impl Toggle {
                 cx.pressable_dispatch_command_opt(on_click);
                 cx.pressable_toggle_bool(&model);
 
-                let on = cx.app.models().get_copied(&model).unwrap_or(false);
+                let on = cx.watch_model(&model).copied().unwrap_or(false);
                 let hovered = state.hovered && !state.pressed;
                 let pressed = state.pressed;
 

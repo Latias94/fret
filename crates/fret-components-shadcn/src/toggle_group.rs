@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt;
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, MainAlign, PressableA11y, PressableProps, RovingFlexProps,
     RovingFocusProps,
@@ -195,14 +195,8 @@ impl ToggleGroup {
         let theme = Theme::global(&*cx.app).clone();
 
         let (selected_single, selected_multi) = match &model {
-            ToggleGroupModel::Single(m) => {
-                cx.observe_model(m, Invalidation::Layout);
-                (cx.app.models().get_cloned(m).flatten(), None)
-            }
-            ToggleGroupModel::Multiple(m) => {
-                cx.observe_model(m, Invalidation::Layout);
-                (None, cx.app.models().get_cloned(m))
-            }
+            ToggleGroupModel::Single(m) => (cx.watch_model(m).layout().cloned().flatten(), None),
+            ToggleGroupModel::Multiple(m) => (None, cx.watch_model(m).layout().cloned()),
         };
 
         let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
