@@ -88,6 +88,13 @@ P1 (implemented) adds:
 
 - `cx.observe_global::<T>(Invalidation::Layout | Paint | HitTest)`
 
+Ergonomics note (non-contractual):
+
+- To reduce bugs where a widget reads a model but forgets to register observation, higher layers may
+  provide “observe + read” helpers/wrappers (e.g. `ElementCx::read_model_ref(...)` in `fret-ui`, or
+  component-layer sugar in `fret-components-ui`). These helpers must remain semantically explicit
+  about the invalidation strength and must not introduce implicit “track all reads” behavior in P0.
+
 Semantics:
 
 - Observations are registered during `layout` and/or `paint`.

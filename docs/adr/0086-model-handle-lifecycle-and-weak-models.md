@@ -127,6 +127,16 @@ Preferred patterns:
 
 This keeps component code from accidentally reading models without registering observation.
 
+As an optional convenience layer for component code, `fret-components-ui` provides a small wrapper
+API that lets you choose invalidation once and then read:
+
+```rust
+use fret_components_ui::declarative::model_watch::ModelWatchExt;
+
+let is_open = cx.watch_model(&open).copied().unwrap_or(false);
+let label = cx.watch_model(&label).layout().cloned().unwrap_or_default();
+```
+
 ### Long-lived callbacks: prefer `WeakModel<T>`
 
 If a closure can outlive the UI surface that originally created it (timers, async tasks, detached
