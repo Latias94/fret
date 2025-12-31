@@ -57,7 +57,7 @@ impl TimeHost for App {
         App::tick_id(self)
     }
 
-    fn frame_id(&self) -> fret_core::FrameId {
+    fn frame_id(&self) -> fret_runtime::FrameId {
         App::frame_id(self)
     }
 

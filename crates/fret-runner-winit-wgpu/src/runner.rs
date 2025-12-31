@@ -7,7 +7,9 @@ use std::{
 };
 
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
-use fret_runtime::{ExternalDragPayloadKind, PlatformCapabilities, PlatformCompletion, TickId};
+use fret_runtime::{
+    ExternalDragPayloadKind, FrameId, PlatformCapabilities, PlatformCompletion, TickId,
+};
 use fret_core::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
     ExternalDropToken, InternalDragEvent, InternalDragKind, Modifiers, MouseButton, Point, Px,
@@ -588,7 +590,7 @@ pub trait WinitDriver {
         renderer: &mut Renderer,
         scale_factor: f32,
         tick_id: TickId,
-        frame_id: fret_core::FrameId,
+        frame_id: FrameId,
     ) -> EngineFrameUpdate {
         EngineFrameUpdate {
             target_updates: Vec::new(),
@@ -615,7 +617,7 @@ pub trait WinitDriver {
         _renderer: &mut Renderer,
         _scale_factor: f32,
         _tick_id: TickId,
-        _frame_id: fret_core::FrameId,
+        _frame_id: FrameId,
     ) -> Vec<wgpu::CommandBuffer> {
         Vec::new()
     }
@@ -834,7 +836,7 @@ pub struct WinitRunner<D: WinitDriver> {
     dock_tearoff_follow: Option<DockTearoffFollow>,
 
     tick_id: TickId,
-    frame_id: fret_core::FrameId,
+    frame_id: FrameId,
 
     raf_windows: HashSet<fret_core::AppWindowId>,
     timers: HashMap<fret_core::TimerToken, TimerEntry>,
@@ -1124,7 +1126,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             left_mouse_down: false,
             dock_tearoff_follow: None,
             tick_id: TickId::default(),
-            frame_id: fret_core::FrameId::default(),
+            frame_id: FrameId::default(),
             raf_windows: HashSet::new(),
             timers: HashMap::new(),
             clipboard: WinitClipboard::default(),

@@ -13,11 +13,11 @@ pub(super) use crate::text_input::BoundTextInput;
 pub(super) use crate::tree::UiTree;
 pub(super) use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget};
 pub(super) use fret_core::{
-    AppWindowId, Color, CursorIcon, DrawOrder, Edges, Event, FontId, FrameId, MouseButton, NodeId,
+    AppWindowId, Color, CursorIcon, DrawOrder, Edges, Event, FontId, MouseButton, NodeId,
     Point, Px, Rect, SceneOp, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow,
     TextStyle, Transform2D,
 };
-pub(super) use fret_runtime::Effect;
+pub(super) use fret_runtime::{Effect, FrameId};
 pub(super) use std::collections::HashMap;
 pub(super) use taffy::{
     TaffyTree,

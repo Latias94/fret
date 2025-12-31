@@ -30,6 +30,7 @@ pub use keymap::{DefaultKeybinding, Keymap, KeymapService, PlatformFilter};
 pub use menu::{Menu, MenuBar, MenuItem};
 pub use model::{Model, ModelCx, ModelHost, ModelId, ModelStore, ModelUpdateError, WeakModel};
 pub use platform_completion::PlatformCompletion;
+pub use fret_core::FrameId;
 pub use time::TickId;
 pub use ui_host::{CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost, UiHost};
 pub use when_expr::WhenExpr;

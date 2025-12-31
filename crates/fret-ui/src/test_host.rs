@@ -3,8 +3,8 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-use fret_core::{AppWindowId, ClipboardToken, FrameId, Point, TimerToken};
-use fret_runtime::TickId;
+use fret_core::{AppWindowId, ClipboardToken, Point, TimerToken};
+use fret_runtime::{FrameId, TickId};
 use fret_runtime::{
     CommandRegistry, CommandsHost, DragHost, DragKind, DragSession, Effect, EffectSink,
     GlobalsHost, ModelHost, ModelId, ModelStore, ModelsHost, TimeHost,

@@ -275,7 +275,7 @@ fn mount_element<H: UiHost>(
     ui: &mut UiTree<H>,
     _window: AppWindowId,
     root_id: GlobalElementId,
-    frame_id: fret_core::FrameId,
+    frame_id: fret_runtime::FrameId,
     window_state: &mut crate::elements::WindowElementState,
     window_frame: &mut WindowFrame,
     element: AnyElement,

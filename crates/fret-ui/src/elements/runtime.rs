@@ -5,8 +5,8 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
-use fret_core::{AppWindowId, FrameId, NodeId, Rect};
-use fret_runtime::ModelId;
+use fret_core::{AppWindowId, NodeId, Rect};
+use fret_runtime::{FrameId, ModelId};
 
 use crate::widget::Invalidation;
 
