@@ -328,6 +328,8 @@ mod tests {
     use fret_core::{
         Point, Px, Rect, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle,
     };
+    use fret_runtime::CommandId;
+    use fret_ui::element::{LayoutStyle, Length, PressableProps};
 
     #[derive(Default)]
     struct FakeServices;
@@ -425,5 +427,156 @@ mod tests {
             layers.iter().any(|l| l.wants_timer_events),
             "expected at least one layer to request timer events when toasts exist"
         );
+    }
+
+    #[test]
+    fn modal_focus_traversal_is_scoped_to_modal_layer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(300.0), Px(200.0)),
+        );
+
+        let mut underlay_a: Option<GlobalElementId> = None;
+        let mut underlay_b: Option<GlobalElementId> = None;
+
+        // Base root with two focusable pressables (underlay).
+        OverlayController::begin_frame(&mut app, window);
+        let base = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "base",
+            |cx| {
+                vec![
+                    cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(80.0));
+                                layout.size.height = Length::Px(Px(32.0));
+                                layout
+                            },
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |_cx, _st, id| {
+                            underlay_a = Some(id);
+                            Vec::new()
+                        },
+                    ),
+                    cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(80.0));
+                                layout.size.height = Length::Px(Px(32.0));
+                                layout
+                            },
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |_cx, _st, id| {
+                            underlay_b = Some(id);
+                            Vec::new()
+                        },
+                    ),
+                ]
+            },
+        );
+        ui.set_root(base);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let underlay_a = underlay_a.expect("underlay a id");
+        let underlay_b = underlay_b.expect("underlay b id");
+        let underlay_a_node =
+            fret_ui::elements::node_for_element(&mut app, window, underlay_a).expect("underlay a");
+        let underlay_b_node =
+            fret_ui::elements::node_for_element(&mut app, window, underlay_b).expect("underlay b");
+
+        // Request a modal with two focusable pressables (modal layer).
+        let open = app.models_mut().insert(true);
+        let mut modal_a: Option<GlobalElementId> = None;
+        let mut modal_b: Option<GlobalElementId> = None;
+
+        OverlayController::begin_frame(&mut app, window);
+        let modal_children =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-child", |cx| {
+                vec![
+                    cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(80.0));
+                                layout.size.height = Length::Px(Px(32.0));
+                                layout
+                            },
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |_cx, _st, id| {
+                            modal_a = Some(id);
+                            Vec::new()
+                        },
+                    ),
+                    cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(80.0));
+                                layout.size.height = Length::Px(Px(32.0));
+                                layout
+                            },
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |_cx, _st, id| {
+                            modal_b = Some(id);
+                            Vec::new()
+                        },
+                    ),
+                ]
+            });
+
+        let modal_a = modal_a.expect("modal a id");
+        let modal_b = modal_b.expect("modal b id");
+
+        let mut req = OverlayRequest::modal(
+            GlobalElementId(0x1234),
+            None,
+            open,
+            OverlayPresence::instant(true),
+            modal_children,
+        );
+        req.initial_focus = Some(modal_a);
+        OverlayController::request_for_window(&mut app, window, req);
+
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let modal_a_node =
+            fret_ui::elements::node_for_element(&mut app, window, modal_a).expect("modal a");
+        let modal_b_node =
+            fret_ui::elements::node_for_element(&mut app, window, modal_b).expect("modal b");
+
+        assert_eq!(ui.focus(), Some(modal_a_node));
+
+        // Focus traversal must be scoped to the modal layer while the barrier is installed.
+        let _ = ui.dispatch_command(&mut app, &mut services, &CommandId::from("focus.next"));
+        assert_eq!(ui.focus(), Some(modal_b_node));
+        assert_ne!(ui.focus(), Some(underlay_a_node));
+        assert_ne!(ui.focus(), Some(underlay_b_node));
+
+        let _ = ui.dispatch_command(&mut app, &mut services, &CommandId::from("focus.next"));
+        assert_eq!(ui.focus(), Some(modal_a_node));
+        assert_ne!(ui.focus(), Some(underlay_a_node));
+        assert_ne!(ui.focus(), Some(underlay_b_node));
     }
 }
