@@ -214,30 +214,6 @@ impl TextInput {
         crate::text_edit::buffer::has_selection(self.selection_anchor, self.caret)
     }
 
-    fn clamp_to_boundary(text: &str, idx: usize) -> usize {
-        crate::text_edit::utf8::clamp_to_char_boundary(text, idx)
-    }
-
-    fn prev_boundary(text: &str, idx: usize) -> usize {
-        crate::text_edit::utf8::prev_char_boundary(text, idx)
-    }
-
-    fn next_boundary(text: &str, idx: usize) -> usize {
-        crate::text_edit::utf8::next_char_boundary(text, idx)
-    }
-
-    fn is_word_char(ch: char) -> bool {
-        crate::text_edit::utf8::is_word_char(ch)
-    }
-
-    fn move_word_left(text: &str, idx: usize) -> usize {
-        crate::text_edit::utf8::move_word_left(text, idx)
-    }
-
-    fn move_word_right(text: &str, idx: usize) -> usize {
-        crate::text_edit::utf8::move_word_right(text, idx)
-    }
-
     fn replace_selection(&mut self, insert: &str) {
         crate::text_edit::buffer::replace_selection(
             &mut self.text,
@@ -389,8 +365,10 @@ impl<H: UiHost> Widget<H> for TextInput {
                 self.clear_ime_composition();
                 self.ime_replace_range = None;
 
-                let a = Self::clamp_to_boundary(self.text(), *anchor as usize);
-                let b = Self::clamp_to_boundary(self.text(), *focus as usize);
+                let a =
+                    crate::text_edit::utf8::clamp_to_char_boundary(self.text(), *anchor as usize);
+                let b =
+                    crate::text_edit::utf8::clamp_to_char_boundary(self.text(), *focus as usize);
                 self.selection_anchor = a;
                 self.caret = b;
 
@@ -481,7 +459,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                     match key {
                         fret_core::KeyCode::Backspace => {
                             if !self.delete_selection_if_any() {
-                                let prev = Self::prev_boundary(&self.text, self.caret);
+                                let prev = crate::text_edit::utf8::prev_char_boundary(
+                                    &self.text, self.caret,
+                                );
                                 self.text.replace_range(prev..self.caret, "");
                                 self.caret = prev;
                                 self.selection_anchor = self.caret;
@@ -491,7 +471,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                         }
                         fret_core::KeyCode::Delete => {
                             if !self.delete_selection_if_any() && self.caret < self.text.len() {
-                                let next = Self::next_boundary(&self.text, self.caret);
+                                let next = crate::text_edit::utf8::next_char_boundary(
+                                    &self.text, self.caret,
+                                );
                                 self.text.replace_range(self.caret..next, "");
                             }
                             cx.invalidate_self(Invalidation::Layout);
@@ -499,9 +481,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                         }
                         fret_core::KeyCode::ArrowLeft => {
                             let next = if modifiers.ctrl || modifiers.alt {
-                                Self::move_word_left(&self.text, self.caret)
+                                crate::text_edit::utf8::move_word_left(&self.text, self.caret)
                             } else {
-                                Self::prev_boundary(&self.text, self.caret)
+                                crate::text_edit::utf8::prev_char_boundary(&self.text, self.caret)
                             };
                             self.caret = next;
                             if !modifiers.shift {
@@ -512,9 +494,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                         }
                         fret_core::KeyCode::ArrowRight => {
                             let next = if modifiers.ctrl || modifiers.alt {
-                                Self::move_word_right(&self.text, self.caret)
+                                crate::text_edit::utf8::move_word_right(&self.text, self.caret)
                             } else {
-                                Self::next_boundary(&self.text, self.caret)
+                                crate::text_edit::utf8::next_char_boundary(&self.text, self.caret)
                             };
                             self.caret = next;
                             if !modifiers.shift {
@@ -654,28 +636,28 @@ impl<H: UiHost> Widget<H> for TextInput {
                 true
             }
             "text.move_left" => {
-                self.caret = Self::prev_boundary(&self.text, self.caret);
+                self.caret = crate::text_edit::utf8::prev_char_boundary(&self.text, self.caret);
                 self.selection_anchor = self.caret;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.move_right" => {
-                self.caret = Self::next_boundary(&self.text, self.caret);
+                self.caret = crate::text_edit::utf8::next_char_boundary(&self.text, self.caret);
                 self.selection_anchor = self.caret;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.move_word_left" => {
-                self.caret = Self::move_word_left(&self.text, self.caret);
+                self.caret = crate::text_edit::utf8::move_word_left(&self.text, self.caret);
                 self.selection_anchor = self.caret;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.move_word_right" => {
-                self.caret = Self::move_word_right(&self.text, self.caret);
+                self.caret = crate::text_edit::utf8::move_word_right(&self.text, self.caret);
                 self.selection_anchor = self.caret;
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
@@ -710,25 +692,25 @@ impl<H: UiHost> Widget<H> for TextInput {
                 true
             }
             "text.select_left" => {
-                self.caret = Self::prev_boundary(&self.text, self.caret);
+                self.caret = crate::text_edit::utf8::prev_char_boundary(&self.text, self.caret);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.select_right" => {
-                self.caret = Self::next_boundary(&self.text, self.caret);
+                self.caret = crate::text_edit::utf8::next_char_boundary(&self.text, self.caret);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.select_word_left" => {
-                self.caret = Self::move_word_left(&self.text, self.caret);
+                self.caret = crate::text_edit::utf8::move_word_left(&self.text, self.caret);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
             }
             "text.select_word_right" => {
-                self.caret = Self::move_word_right(&self.text, self.caret);
+                self.caret = crate::text_edit::utf8::move_word_right(&self.text, self.caret);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 true
@@ -760,7 +742,8 @@ impl<H: UiHost> Widget<H> for TextInput {
             "text.delete_backward" => {
                 if !self.is_ime_composing() {
                     if !self.delete_selection_if_any() {
-                        let prev = Self::prev_boundary(&self.text, self.caret);
+                        let prev =
+                            crate::text_edit::utf8::prev_char_boundary(&self.text, self.caret);
                         self.text.replace_range(prev..self.caret, "");
                         self.caret = prev;
                         self.selection_anchor = self.caret;
@@ -773,7 +756,8 @@ impl<H: UiHost> Widget<H> for TextInput {
             "text.delete_forward" => {
                 if !self.is_ime_composing() {
                     if !self.delete_selection_if_any() && self.caret < self.text.len() {
-                        let next = Self::next_boundary(&self.text, self.caret);
+                        let next =
+                            crate::text_edit::utf8::next_char_boundary(&self.text, self.caret);
                         self.text.replace_range(self.caret..next, "");
                     }
                     cx.invalidate_self(Invalidation::Layout);
@@ -784,7 +768,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             "text.delete_word_backward" => {
                 if !self.is_ime_composing() {
                     if !self.delete_selection_if_any() {
-                        let prev = Self::move_word_left(&self.text, self.caret);
+                        let prev = crate::text_edit::utf8::move_word_left(&self.text, self.caret);
                         self.text.replace_range(prev..self.caret, "");
                         self.caret = prev;
                         self.selection_anchor = self.caret;
@@ -797,7 +781,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             "text.delete_word_forward" => {
                 if !self.is_ime_composing() {
                     if !self.delete_selection_if_any() {
-                        let next = Self::move_word_right(&self.text, self.caret);
+                        let next = crate::text_edit::utf8::move_word_right(&self.text, self.caret);
                         self.text.replace_range(self.caret..next, "");
                         self.selection_anchor = self.caret;
                     }
@@ -813,8 +797,9 @@ impl<H: UiHost> Widget<H> for TextInput {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.last_bounds = cx.bounds;
 
-        self.caret = Self::clamp_to_boundary(&self.text, self.caret);
-        self.selection_anchor = Self::clamp_to_boundary(&self.text, self.selection_anchor);
+        self.caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
+        self.selection_anchor =
+            crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.selection_anchor);
 
         let theme = cx.theme().snapshot();
         self.sync_chrome_from_theme(theme);

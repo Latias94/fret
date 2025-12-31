@@ -338,30 +338,6 @@ impl TextArea {
         crate::text_edit::buffer::selection_range(self.selection_anchor, self.caret)
     }
 
-    fn clamp_to_boundary(text: &str, idx: usize) -> usize {
-        crate::text_edit::utf8::clamp_to_char_boundary(text, idx)
-    }
-
-    fn prev_boundary(text: &str, idx: usize) -> usize {
-        crate::text_edit::utf8::prev_char_boundary(text, idx)
-    }
-
-    fn next_boundary(text: &str, idx: usize) -> usize {
-        crate::text_edit::utf8::next_char_boundary(text, idx)
-    }
-
-    fn is_word_char(ch: char) -> bool {
-        crate::text_edit::utf8::is_word_char(ch)
-    }
-
-    fn move_word_left(text: &str, idx: usize) -> usize {
-        crate::text_edit::utf8::move_word_left(text, idx)
-    }
-
-    fn move_word_right(text: &str, idx: usize) -> usize {
-        crate::text_edit::utf8::move_word_right(text, idx)
-    }
-
     fn delete_selection_if_any(&mut self) -> bool {
         if !crate::text_edit::buffer::delete_selection_if_any(
             &mut self.text,
