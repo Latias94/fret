@@ -247,10 +247,14 @@ impl<H: UiHost> Widget<H> for TextArea {
                 }
                 self.ime_deduper.record_text_input(tick, text.as_str());
 
-                self.replace_selection(text);
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Layout);
-                cx.request_redraw();
+                let changed = self.edit_state().replace_selection(text.as_str());
+                let outcome = crate::text_edit::commands::Outcome {
+                    handled: true,
+                    invalidate_paint: false,
+                    invalidate_layout: changed,
+                };
+                let delta = crate::text_edit::commands::multiline_ui_delta("text.insert", outcome);
+                self.apply_multiline_ui_delta(cx, delta);
             }
             Event::ClipboardText(text) => {
                 if cx.focus != Some(cx.node) {
@@ -262,11 +266,9 @@ impl<H: UiHost> Widget<H> for TextArea {
                     crate::text_edit::commands::ClipboardTextPolicy::Multiline,
                     text.as_str(),
                 );
-                if outcome.invalidate_layout {
-                    self.ensure_caret_visible = true;
-                    cx.invalidate_self(Invalidation::Layout);
-                    cx.request_redraw();
-                }
+                let delta =
+                    crate::text_edit::commands::multiline_ui_delta("text.clipboard_text", outcome);
+                self.apply_multiline_ui_delta(cx, delta);
             }
             Event::Ime(ime) => {
                 if cx.focus != Some(cx.node) {
@@ -286,11 +288,16 @@ impl<H: UiHost> Widget<H> for TextArea {
                     &mut self.ime_replace_range,
                 );
                 if result != crate::text_edit::ime::ApplyResult::Noop {
-                    self.affinity = CaretAffinity::Downstream;
-                    self.text_dirty = true;
-                    self.ensure_caret_visible = true;
-                    cx.invalidate_self(Invalidation::Layout);
-                    cx.request_redraw();
+                    let delta = crate::text_edit::commands::MultilineUiDelta {
+                        handled: true,
+                        invalidate_layout: true,
+                        clear_preedit: false,
+                        text_dirty: true,
+                        reset_affinity: true,
+                        ensure_caret_visible: true,
+                        ..Default::default()
+                    };
+                    self.apply_multiline_ui_delta(cx, delta);
                 }
             }
             _ => {}
