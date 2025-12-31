@@ -136,10 +136,7 @@ pub struct TextArea {
     selection_rects: Vec<Rect>,
     last_bounds: Rect,
     last_sent_cursor: Option<Rect>,
-    last_text_input_tick: Option<fret_core::TickId>,
-    last_text_input_text: Option<String>,
-    last_ime_commit_tick: Option<fret_core::TickId>,
-    last_ime_commit_text: Option<String>,
+    ime_deduper: crate::text_edit::ime::Deduper,
 }
 
 impl Default for TextArea {
@@ -183,10 +180,7 @@ impl Default for TextArea {
             selection_rects: Vec::new(),
             last_bounds: Rect::default(),
             last_sent_cursor: None,
-            last_text_input_tick: None,
-            last_text_input_text: None,
-            last_ime_commit_tick: None,
-            last_ime_commit_text: None,
+            ime_deduper: crate::text_edit::ime::Deduper::default(),
         }
     }
 }
@@ -208,6 +202,7 @@ impl TextArea {
         self.preedit.clear();
         self.preedit_cursor = None;
         self.ime_replace_range = None;
+        self.ime_deduper = crate::text_edit::ime::Deduper::default();
         self.text_dirty = true;
         self.preferred_x = None;
     }
@@ -312,33 +307,15 @@ impl TextArea {
         if self.preedit.is_empty() {
             return None;
         }
-        let prefix = self.text.get(..self.caret)?;
-        let suffix = self.text.get(self.caret..)?;
-        Some(format!("{prefix}{}{suffix}", self.preedit))
+        crate::text_edit::ime::compose_text_at_caret(&self.text, self.caret, &self.preedit)
     }
 
     fn caret_display_index(&self) -> usize {
-        if self.preedit.is_empty() {
-            self.caret
-        } else {
-            self.caret + self.preedit_cursor_end()
-        }
+        crate::text_edit::ime::caret_display_index(self.caret, &self.preedit, self.preedit_cursor)
     }
 
     fn map_display_index_to_base(&self, display_index: usize) -> usize {
-        if self.preedit.is_empty() {
-            return display_index;
-        }
-
-        let anchor = self.caret;
-        let preedit_len = self.preedit.len();
-        if display_index <= anchor {
-            display_index
-        } else if display_index >= anchor + preedit_len {
-            display_index - preedit_len
-        } else {
-            anchor
-        }
+        crate::text_edit::ime::display_to_base_index(self.caret, self.preedit.len(), display_index)
     }
 
     fn content_bounds(&self) -> Rect {

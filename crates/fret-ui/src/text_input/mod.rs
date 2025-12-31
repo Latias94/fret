@@ -18,6 +18,7 @@ pub struct TextInput {
     preedit: String,
     preedit_cursor: Option<(usize, usize)>,
     ime_replace_range: Option<(usize, usize)>,
+    ime_deduper: crate::text_edit::ime::Deduper,
     style: TextStyle,
     text_blob: Option<fret_core::TextBlobId>,
     text_metrics: Option<TextMetrics>,
@@ -32,10 +33,6 @@ pub struct TextInput {
     prepared_scale_factor_bits: Option<u32>,
     last_bounds: Rect,
     last_sent_cursor: Option<Rect>,
-    last_text_input_tick: Option<fret_core::TickId>,
-    last_text_input_text: Option<String>,
-    last_ime_commit_tick: Option<fret_core::TickId>,
-    last_ime_commit_text: Option<String>,
 
     chrome_style: TextInputStyle,
     chrome_override: bool,
@@ -54,6 +51,7 @@ impl TextInput {
             preedit: String::new(),
             preedit_cursor: None,
             ime_replace_range: None,
+            ime_deduper: crate::text_edit::ime::Deduper::default(),
             style: TextStyle {
                 font: FontId::default(),
                 size: Px(13.0),
@@ -72,10 +70,6 @@ impl TextInput {
             prepared_scale_factor_bits: None,
             last_bounds: Rect::default(),
             last_sent_cursor: None,
-            last_text_input_tick: None,
-            last_text_input_text: None,
-            last_ime_commit_tick: None,
-            last_ime_commit_text: None,
 
             chrome_style: TextInputStyle::default(),
             chrome_override: false,
@@ -149,6 +143,7 @@ impl TextInput {
         self.caret = self.text.len();
         self.selection_anchor = self.caret;
         self.clear_ime_composition();
+        self.ime_deduper = crate::text_edit::ime::Deduper::default();
         self.text_blob = None;
         self.text_metrics = None;
         self.prefix_blob = None;
@@ -277,10 +272,8 @@ impl TextInput {
         let mut x = padding_left + caret_x;
 
         if self.is_ime_composing() && !self.preedit.is_empty() {
-            let cursor = self
-                .preedit_cursor
-                .map(|(_, end)| end.min(self.preedit.len()))
-                .unwrap_or(self.preedit.len());
+            let cursor =
+                crate::text_edit::ime::preedit_cursor_end(&self.preedit, self.preedit_cursor);
             let constraints = TextConstraints {
                 max_width: Some(bounds.size.width),
                 wrap: TextWrap::None,
@@ -351,11 +344,14 @@ impl<H: UiHost> Widget<H> for TextInput {
         cx.set_text_selection_supported(true);
 
         let (value, text_selection, text_composition) = if self.is_ime_composing()
-            && let (Some(prefix), Some(suffix)) =
-                (self.text.get(..self.caret), self.text.get(self.caret..))
+            && let Some(value) =
+                crate::text_edit::ime::compose_text_at_caret(&self.text, self.caret, &self.preedit)
         {
-            let value = format!("{prefix}{}{suffix}", self.preedit);
-            let caret_display = self.caret + self.preedit_cursor_end();
+            let caret_display = crate::text_edit::ime::caret_display_index(
+                self.caret,
+                &self.preedit,
+                self.preedit_cursor,
+            );
             (
                 value,
                 Some((caret_display as u32, caret_display as u32)),
@@ -552,13 +548,13 @@ impl<H: UiHost> Widget<H> for TextInput {
                     return;
                 }
                 let tick = cx.app.tick_id();
-                if self.last_ime_commit_tick == Some(tick)
-                    && self.last_ime_commit_text.as_deref() == Some(text.as_str())
+                if self
+                    .ime_deduper
+                    .ignore_text_input_after_ime_commit(tick, text.as_str())
                 {
                     return;
                 }
-                self.last_text_input_tick = Some(tick);
-                self.last_text_input_text = Some(text.clone());
+                self.ime_deduper.record_text_input(tick, text.as_str());
 
                 if !self.is_ime_composing() {
                     self.replace_selection(text);
@@ -588,16 +584,13 @@ impl<H: UiHost> Widget<H> for TextInput {
                     ime,
                     tick,
                     false,
-                    self.last_text_input_tick,
-                    self.last_text_input_text.as_deref(),
+                    &mut self.ime_deduper,
                     &mut self.text,
                     &mut self.caret,
                     &mut self.selection_anchor,
                     &mut self.preedit,
                     &mut self.preedit_cursor,
                     &mut self.ime_replace_range,
-                    &mut self.last_ime_commit_tick,
-                    &mut self.last_ime_commit_text,
                 );
                 if result != crate::text_edit::ime::ApplyResult::Noop {
                     cx.invalidate_self(Invalidation::Layout);

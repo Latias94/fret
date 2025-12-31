@@ -129,6 +129,38 @@ pub(crate) mod ime {
     use super::buffer;
     use super::{ImeEvent, TickId};
 
+    #[derive(Debug, Default, Clone)]
+    pub(crate) struct Deduper {
+        last_text_input_tick: Option<TickId>,
+        last_text_input_text: Option<String>,
+        last_ime_commit_tick: Option<TickId>,
+        last_ime_commit_text: Option<String>,
+    }
+
+    impl Deduper {
+        pub(crate) fn record_text_input(&mut self, tick: TickId, text: &str) {
+            self.last_text_input_tick = Some(tick);
+            self.last_text_input_text = Some(text.to_string());
+        }
+
+        pub(crate) fn ignore_text_input_after_ime_commit(&self, tick: TickId, text: &str) -> bool {
+            self.last_ime_commit_tick == Some(tick)
+                && self.last_ime_commit_text.as_deref() == Some(text)
+        }
+
+        fn last_text_input(&self) -> (Option<TickId>, Option<&str>) {
+            (
+                self.last_text_input_tick,
+                self.last_text_input_text.as_deref(),
+            )
+        }
+
+        fn record_ime_commit(&mut self, tick: TickId, text: &str) {
+            self.last_ime_commit_tick = Some(tick);
+            self.last_ime_commit_text = Some(text.to_string());
+        }
+    }
+
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub(crate) enum ApplyResult {
         Noop,
@@ -165,20 +197,62 @@ pub(crate) mod ime {
         text.replace("\r\n", "\n").replace('\r', "\n")
     }
 
+    pub(crate) fn compose_text_at_caret(text: &str, caret: usize, insert: &str) -> Option<String> {
+        let prefix = text.get(..caret)?;
+        let suffix = text.get(caret..)?;
+        Some(format!("{prefix}{insert}{suffix}"))
+    }
+
+    pub(crate) fn caret_display_index(
+        caret: usize,
+        preedit: &str,
+        preedit_cursor: Option<(usize, usize)>,
+    ) -> usize {
+        caret + preedit_cursor_end(preedit, preedit_cursor)
+    }
+
+    pub(crate) fn base_to_display_index(
+        caret: usize,
+        preedit_len: usize,
+        base_index: usize,
+    ) -> usize {
+        if preedit_len == 0 || base_index <= caret {
+            base_index
+        } else {
+            base_index + preedit_len
+        }
+    }
+
+    pub(crate) fn display_to_base_index(
+        caret: usize,
+        preedit_len: usize,
+        display_index: usize,
+    ) -> usize {
+        if preedit_len == 0 {
+            return display_index;
+        }
+
+        let anchor = caret;
+        if display_index <= anchor {
+            display_index
+        } else if display_index >= anchor + preedit_len {
+            display_index - preedit_len
+        } else {
+            anchor
+        }
+    }
+
     pub(crate) fn apply_event(
         ime: &ImeEvent,
         tick: TickId,
         normalize_newlines: bool,
-        last_text_input_tick: Option<TickId>,
-        last_text_input_text: Option<&str>,
+        deduper: &mut Deduper,
         text: &mut String,
         caret: &mut usize,
         selection_anchor: &mut usize,
         preedit: &mut String,
         preedit_cursor: &mut Option<(usize, usize)>,
         ime_replace_range: &mut Option<(usize, usize)>,
-        last_ime_commit_tick: &mut Option<TickId>,
-        last_ime_commit_text: &mut Option<String>,
     ) -> ApplyResult {
         match ime {
             ImeEvent::Enabled => ApplyResult::Noop,
@@ -193,6 +267,7 @@ pub(crate) mod ime {
                     text_in.clone()
                 };
 
+                let (last_text_input_tick, last_text_input_text) = deduper.last_text_input();
                 if last_text_input_tick == Some(tick)
                     && last_text_input_text == Some(committed.as_str())
                 {
@@ -200,8 +275,7 @@ pub(crate) mod ime {
                     return ApplyResult::CommitDuplicate;
                 }
 
-                *last_ime_commit_tick = Some(tick);
-                *last_ime_commit_text = Some(committed.clone());
+                deduper.record_ime_commit(tick, committed.as_str());
 
                 if let Some((start, end)) = ime_replace_range.take() {
                     *selection_anchor = start;

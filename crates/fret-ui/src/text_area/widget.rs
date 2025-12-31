@@ -243,13 +243,13 @@ impl<H: UiHost> Widget<H> for TextArea {
                     return;
                 }
                 let tick = cx.app.tick_id();
-                if self.last_ime_commit_tick == Some(tick)
-                    && self.last_ime_commit_text.as_deref() == Some(text.as_str())
+                if self
+                    .ime_deduper
+                    .ignore_text_input_after_ime_commit(tick, text.as_str())
                 {
                     return;
                 }
-                self.last_text_input_tick = Some(tick);
-                self.last_text_input_text = Some(text.clone());
+                self.ime_deduper.record_text_input(tick, text.as_str());
 
                 self.replace_selection(text);
                 self.ensure_caret_visible = true;
@@ -278,16 +278,13 @@ impl<H: UiHost> Widget<H> for TextArea {
                     ime,
                     tick,
                     true,
-                    self.last_text_input_tick,
-                    self.last_text_input_text.as_deref(),
+                    &mut self.ime_deduper,
                     &mut self.text,
                     &mut self.caret,
                     &mut self.selection_anchor,
                     &mut self.preedit,
                     &mut self.preedit_cursor,
                     &mut self.ime_replace_range,
-                    &mut self.last_ime_commit_tick,
-                    &mut self.last_ime_commit_text,
                 );
                 if result != crate::text_edit::ime::ApplyResult::Noop {
                     self.affinity = CaretAffinity::Downstream;
@@ -778,11 +775,7 @@ impl<H: UiHost> Widget<H> for TextArea {
         cx.scene.push(SceneOp::PushClipRect { rect: inner });
 
         let map_base_to_display = |idx: usize| -> usize {
-            if self.preedit.is_empty() || idx <= self.caret {
-                idx
-            } else {
-                idx + self.preedit.len()
-            }
+            crate::text_edit::ime::base_to_display_index(self.caret, self.preedit.len(), idx)
         };
 
         cx.services.selection_rects(
