@@ -3,10 +3,11 @@ use fret_runtime::CommandId;
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ContainerProps, PressableA11y, PressableProps, SpacerProps};
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
-use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
+use fret_ui::{ElementCx, Theme, UiHost};
 
 use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::collection_semantics::CollectionSemanticsExt as _;
+use crate::declarative::model_watch::ModelWatchExt as _;
 use crate::declarative::stack;
 use crate::{Items, Justify, MetricRef, Size, Space};
 
@@ -66,12 +67,10 @@ pub fn list_virtualized<H: UiHost>(
     on_select: impl Fn(usize) -> Option<CommandId>,
     mut row_contents: impl FnMut(&mut ElementCx<'_, H>, usize) -> Vec<AnyElement>,
 ) -> AnyElement {
-    let selected = selection
-        .map(|m| {
-            cx.observe_model(&m, Invalidation::Paint);
-            cx.app.models().get_copied(&m).unwrap_or(None)
-        })
-        .unwrap_or(None);
+    let selected = match &selection {
+        Some(m) => cx.watch_model(m).copied().unwrap_or(None),
+        None => None,
+    };
 
     if let Some(selected) = selected {
         scroll_handle.scroll_to_item(selected, ScrollStrategy::Nearest);
@@ -158,8 +157,7 @@ pub fn list_from_strings<H: UiHost>(
     size: Size,
     on_select: impl Fn(usize) -> Option<CommandId>,
 ) -> AnyElement {
-    cx.observe_model(&items, Invalidation::Layout);
-    let values = cx.app.models().get_cloned(&items).unwrap_or_default();
+    let values = cx.watch_model(&items).layout().cloned().unwrap_or_default();
 
     let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
     let items_revision = cx.app.models().revision(&items).unwrap_or(0);

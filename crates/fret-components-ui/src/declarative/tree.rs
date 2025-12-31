@@ -7,9 +7,10 @@ use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SpacerProps,
 };
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
-use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
+use fret_ui::{ElementCx, Theme, UiHost};
 
 use crate::declarative::action_hooks::ActionHooksExt;
+use crate::declarative::model_watch::ModelWatchExt as _;
 use crate::declarative::stack;
 use crate::{
     Items, Justify, MetricRef, Size, Space, TreeEntry, TreeItemId, TreeRowRenderer, TreeRowState,
@@ -112,19 +113,16 @@ pub fn tree_view_with_renderer<H: UiHost>(
     size: Size,
     renderer: &mut impl TreeRowRenderer<H>,
 ) -> AnyElement {
-    cx.observe_model(&items, Invalidation::Layout);
-    cx.observe_model(&state, Invalidation::Paint);
-
     let items_revision = cx.app.models().revision(&items).unwrap_or(0);
     let state_revision = cx.app.models().revision(&state).unwrap_or(0);
 
     let TreeState { selected, expanded } = cx
-        .app
-        .models()
-        .get_cloned(&state)
+        .watch_model(&state)
+        .paint()
+        .cloned()
         .unwrap_or_else(TreeState::default);
 
-    let items_value = cx.app.models().get_cloned(&items).unwrap_or_default();
+    let items_value = cx.watch_model(&items).layout().cloned().unwrap_or_default();
 
     let theme = Theme::global(&*cx.app);
     let (list_bg, border, row_hover, row_active) = resolve_list_colors(theme);
