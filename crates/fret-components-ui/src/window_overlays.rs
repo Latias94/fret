@@ -6,6 +6,7 @@
 use fret_core::{AppWindowId, NodeId, Rect, TimerToken};
 use fret_runtime::{CommandId, DragKind, Effect, Model};
 use fret_ui::action::DismissReason;
+use fret_ui::action::UiActionHostExt;
 use fret_ui::declarative;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
@@ -876,13 +877,11 @@ pub fn render<H: UiHost>(
             move |cx| {
                 cx.observe_model(&store_for_render, Invalidation::Paint);
 
-                let hook_store = store_for_render.clone();
+                let hook_store = store_for_render.downgrade();
                 cx.timer_on_timer_for(
                     cx.root_id(),
                     Arc::new(move |host, _cx, token| {
-                        host.models_mut()
-                            .update(&hook_store, |st| st.remove_toast_by_token(token))
-                            .ok()
+                        host.update_weak_model(&hook_store, |st| st.remove_toast_by_token(token))
                             .flatten()
                             .is_some()
                     }),

@@ -295,6 +295,11 @@ impl ModelStore {
         }
     }
 
+    #[cfg(test)]
+    fn state_lock_is_held_for_tests(&self) -> bool {
+        self.inner.state.try_lock().is_err()
+    }
+
     fn mark_changed_locked(state: &mut ModelStoreState, id: ModelId) {
         if state.changed_dedup.insert(id) {
             state.changed.push(id);
@@ -523,6 +528,38 @@ impl ModelStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn read_does_not_hold_store_lock_while_running_user_code() {
+        #[derive(Clone)]
+        struct Outer {
+            inner: Model<u32>,
+        }
+
+        let mut store = ModelStore::default();
+        let inner = store.insert(123_u32);
+        let outer = store.insert(Outer {
+            inner: inner.clone(),
+        });
+
+        let out = store
+            .read(&outer, |outer| {
+                assert!(
+                    !store.state_lock_is_held_for_tests(),
+                    "ModelStore::read must not hold the store lock while running user closures"
+                );
+
+                // If `read` regresses to holding the lock while executing the closure, this clone
+                // would re-enter the store and could deadlock. The lock probe above turns that
+                // into a deterministic assertion failure.
+                let _inner_clone = outer.inner.clone();
+
+                1u32
+            })
+            .expect("outer model should be readable");
+
+        assert_eq!(out, 1);
+    }
 
     #[test]
     fn strong_handle_drop_removes_entry() {

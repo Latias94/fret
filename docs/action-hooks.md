@@ -67,6 +67,17 @@ Component-layer convenience helpers live in:
 
 ## Recommended Usage Patterns
 
+### Reading Models During Rendering (Observe + Read)
+
+Model invalidation is opt-in: if an element reads a model during rendering but does not register
+observation, the runtime may not know it needs to invalidate layout/paint when the model changes.
+
+Prefer `ElementCx` helpers that combine “observe + read”:
+
+- `cx.get_model_copied(&model, Invalidation::Paint)` / `cx.get_model_cloned(&model, Invalidation::Layout)`
+- `cx.read_model_ref(&model, Invalidation::Layout, |value| ...)`
+- `cx.read_model(&model, Invalidation::Layout, |app, value| ...)`
+
 ### Toggle a Model on Activation
 
 Prefer a component-layer helper:
@@ -98,6 +109,15 @@ Keep matching rules and buffer strategy in components:
 - recommended: prefix buffer with timeout stored in element state
 
 See `ActionHooksExt::roving_typeahead_prefix_arc_str(...)` and `headless/typeahead.rs`.
+
+### Long-Lived Hooks: Prefer `WeakModel<T>`
+
+Timer hooks and other long-lived callbacks should avoid capturing a strong `Model<T>` unless the
+callback is intentionally responsible for keeping the model alive.
+
+Prefer capturing `WeakModel<T>` and upgrading opportunistically, e.g. via:
+
+- `fret_ui::action::UiActionHostExt::update_weak_model(...)`
 
 ## Transitional APIs
 

@@ -1,6 +1,7 @@
 use crate::UiHost;
 use fret_core::{AppWindowId, CursorIcon, KeyCode, Modifiers, MouseButton, Point, TimerToken};
-use fret_runtime::{CommandId, Effect, ModelStore};
+use fret_runtime::{CommandId, Effect, Model, ModelStore, WeakModel};
+use std::any::Any;
 use std::sync::Arc;
 
 /// Context passed to component-owned action handlers.
@@ -70,6 +71,36 @@ pub trait UiActionHost {
         self.push_effect(Effect::Command { window, command });
     }
 }
+
+pub trait UiActionHostExt: UiActionHost {
+    fn read_weak_model<T: Any, R>(
+        &mut self,
+        model: &WeakModel<T>,
+        f: impl FnOnce(&T) -> R,
+    ) -> Option<R> {
+        let model = model.upgrade()?;
+        self.models_mut().read(&model, f).ok()
+    }
+
+    fn update_model<T: Any, R>(
+        &mut self,
+        model: &Model<T>,
+        f: impl FnOnce(&mut T) -> R,
+    ) -> Option<R> {
+        self.models_mut().update(model, f).ok()
+    }
+
+    fn update_weak_model<T: Any, R>(
+        &mut self,
+        model: &WeakModel<T>,
+        f: impl FnOnce(&mut T) -> R,
+    ) -> Option<R> {
+        let model = model.upgrade()?;
+        self.update_model(&model, f)
+    }
+}
+
+impl<T> UiActionHostExt for T where T: UiActionHost + ?Sized {}
 
 /// Extra runtime-provided operations available during pointer event hooks.
 ///
