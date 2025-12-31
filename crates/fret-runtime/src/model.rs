@@ -251,6 +251,10 @@ struct ModelEntry {
     strong: u64,
     pending_drop: bool,
     #[cfg(debug_assertions)]
+    created_at: &'static Location<'static>,
+    #[cfg(debug_assertions)]
+    created_type: &'static str,
+    #[cfg(debug_assertions)]
     leased_at: Option<&'static Location<'static>>,
     #[cfg(debug_assertions)]
     leased_type: Option<&'static str>,
@@ -324,6 +328,16 @@ impl ModelStore {
         Some((leased_type, leased_at))
     }
 
+    #[cfg(debug_assertions)]
+    fn debug_created_info(
+        &self,
+        id: ModelId,
+    ) -> Option<(&'static str, &'static Location<'static>)> {
+        let state = self.state();
+        let entry = state.storage.get(id)?;
+        Some((entry.created_type, entry.created_at))
+    }
+
     fn inc_strong(&self, id: ModelId) {
         let mut state = self.state_mut();
         let Some(entry) = state.storage.get_mut(id) else {
@@ -379,13 +393,19 @@ impl ModelStore {
         std::mem::take(&mut state.changed)
     }
 
+    #[track_caller]
     pub fn insert<T: Any>(&mut self, value: T) -> Model<T> {
+        let caller = Location::caller();
         let mut state = self.state_mut();
         let id = state.storage.insert(ModelEntry {
             value: Some(Box::new(value)),
             revision: 0,
             strong: 1,
             pending_drop: false,
+            #[cfg(debug_assertions)]
+            created_at: caller,
+            #[cfg(debug_assertions)]
+            created_type: std::any::type_name::<T>(),
             #[cfg(debug_assertions)]
             leased_at: None,
             #[cfg(debug_assertions)]
@@ -440,7 +460,21 @@ impl ModelStore {
                 }
                 panic!("model is currently leased: id={:?}", model.id);
             }
-            Err(ModelUpdateError::TypeMismatch) => panic!("model type mismatch: id={:?}", model.id),
+            Err(ModelUpdateError::TypeMismatch) => {
+                #[cfg(debug_assertions)]
+                if let Some((stored, at)) = self.debug_created_info(model.id) {
+                    panic!(
+                        "model type mismatch: id={:?} stored_type={} stored_at={}:{}:{} expected_type={}",
+                        model.id,
+                        stored,
+                        at.file(),
+                        at.line(),
+                        at.column(),
+                        std::any::type_name::<T>()
+                    );
+                }
+                panic!("model type mismatch: id={:?}", model.id);
+            }
         }
     }
 
@@ -462,7 +496,21 @@ impl ModelStore {
                 }
                 panic!("model is currently leased: id={:?}", model.id);
             }
-            Err(ModelUpdateError::TypeMismatch) => panic!("model type mismatch: id={:?}", model.id),
+            Err(ModelUpdateError::TypeMismatch) => {
+                #[cfg(debug_assertions)]
+                if let Some((stored, at)) = self.debug_created_info(model.id) {
+                    panic!(
+                        "model type mismatch: id={:?} stored_type={} stored_at={}:{}:{} expected_type={}",
+                        model.id,
+                        stored,
+                        at.file(),
+                        at.line(),
+                        at.column(),
+                        std::any::type_name::<T>()
+                    );
+                }
+                panic!("model type mismatch: id={:?}", model.id);
+            }
         }
     }
 
@@ -557,6 +605,25 @@ impl ModelStore {
                 dirty: false,
             }),
             Err(boxed) => {
+                #[cfg(debug_assertions)]
+                {
+                    let state = self.state();
+                    if let Some(entry) = state.storage.get(model.id) {
+                        eprintln!(
+                            "model type mismatch: id={:?} stored_type={} stored_at={}:{}:{} expected_type={} attempted_at={}:{}:{}",
+                            model.id,
+                            entry.created_type,
+                            entry.created_at.file(),
+                            entry.created_at.line(),
+                            entry.created_at.column(),
+                            std::any::type_name::<T>(),
+                            caller.file(),
+                            caller.line(),
+                            caller.column()
+                        );
+                    }
+                }
+
                 let mut state = self.state_mut();
                 if let Some(entry) = state.storage.get_mut(model.id)
                     && entry.value.is_none()
