@@ -11,4 +11,5 @@ pub enum PlatformCompletion {
     ExternalDropData(ExternalDropDataEvent),
     FileDialogSelection(FileDialogSelection),
     FileDialogData(FileDialogDataEvent),
+    FileDialogCanceled,
 }

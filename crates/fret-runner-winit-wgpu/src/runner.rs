@@ -1164,6 +1164,9 @@ impl<D: WinitDriver> WinitRunner<D> {
             fret_core::PlatformCompletion::FileDialogData(data) => {
                 self.deliver_window_event_now(window, &Event::FileDialogData(data));
             }
+            fret_core::PlatformCompletion::FileDialogCanceled => {
+                self.deliver_window_event_now(window, &Event::FileDialogCanceled);
+            }
         }
     }
 
@@ -1747,7 +1750,12 @@ impl<D: WinitDriver> WinitRunner<D> {
                                     fret_core::PlatformCompletion::FileDialogSelection(selection),
                                 );
                             }
-                            Ok(None) => {}
+                            Ok(None) => {
+                                self.deliver_platform_completion_now(
+                                    window,
+                                    fret_core::PlatformCompletion::FileDialogCanceled,
+                                );
+                            }
                             Err(err) => {
                                 tracing::debug!(?err, "file dialog open failed");
                             }

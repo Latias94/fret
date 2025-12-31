@@ -388,6 +388,8 @@ pub enum Event {
     FileDialogSelection(FileDialogSelection),
     /// File dialog data payload, typically produced by `Effect::FileDialogReadAll`.
     FileDialogData(FileDialogDataEvent),
+    /// A file dialog request completed without a selection (user canceled).
+    FileDialogCanceled,
     /// Window close button / OS close request was triggered.
     ///
     /// The runner must not close the window immediately; the app/driver may intercept the request
