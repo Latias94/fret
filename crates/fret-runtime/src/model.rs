@@ -375,11 +375,12 @@ impl ModelStore {
     }
 
     fn dec_strong(&self, id: ModelId) {
-        // IMPORTANT: do not drop removed values while holding the store lock.
+        // IMPORTANT: do not drop removed values while holding a store borrow.
         //
         // Model values may themselves contain `Model<_>` handles (e.g. composite component state),
-        // and dropping those handles re-enters the store to decrement refcounts. Holding the lock
-        // while dropping would deadlock.
+        // and dropping those handles re-enters the store to decrement refcounts. Holding a borrow
+        // while dropping would trigger a re-entrant borrow panic (and used to deadlock when this
+        // was a mutex).
         let removed = {
             let mut state = self.state_mut();
             let should_remove_now = {
@@ -451,10 +452,11 @@ impl ModelStore {
         model: &Model<T>,
         f: impl FnOnce(&T) -> R,
     ) -> Result<R, ModelUpdateError> {
-        // IMPORTANT: do not run user code while holding the store lock.
+        // IMPORTANT: do not run user code while holding a store borrow.
         //
         // Model values can contain other `Model<_>` handles. Cloning/dropping those handles
-        // re-enters this store, so holding the lock would deadlock.
+        // re-enters this store, so holding a borrow would trigger a re-entrant borrow panic (and
+        // used to deadlock when this was a mutex).
         let mut lease = self.lease_shared(model)?;
         let result = if cfg!(panic = "unwind") {
             catch_unwind(AssertUnwindSafe(|| f(lease.value_ref())))
@@ -677,7 +679,7 @@ impl ModelStore {
             return;
         };
 
-        // Same lock-drop rule as `dec_strong`: do not drop removed values while holding the lock.
+        // Same borrow-drop rule as `dec_strong`: do not drop removed values while holding a borrow.
         let removed = {
             let mut state = self.state_mut();
             let (mark_dirty, should_remove) = {
@@ -750,12 +752,13 @@ mod tests {
             .read(&outer, |outer| {
                 assert!(
                     !store.state_lock_is_held_for_tests(),
-                    "ModelStore::read must not hold the store lock while running user closures"
+                    "ModelStore::read must not hold a store borrow while running user closures"
                 );
 
                 // If `read` regresses to holding the lock while executing the closure, this clone
-                // would re-enter the store and could deadlock. The lock probe above turns that
-                // into a deterministic assertion failure.
+                // would re-enter the store and could trigger a re-entrant borrow panic (and used to
+                // deadlock when this was a mutex). The borrow probe above turns that into a
+                // deterministic assertion failure.
                 let _inner_clone = outer.inner.clone();
 
                 1u32
@@ -775,7 +778,7 @@ mod tests {
             fn drop(&mut self) {
                 assert!(
                     !self.store.state_lock_is_held_for_tests(),
-                    "model value must not be dropped while holding the store lock"
+                    "model value must not be dropped while holding a store borrow"
                 );
             }
         }
