@@ -5,6 +5,7 @@ use super::ElementHostWidget;
 
 mod flex;
 mod grid;
+mod positioned_container;
 mod scrolling;
 
 impl ElementHostWidget {
@@ -403,50 +404,10 @@ impl ElementHostWidget {
                 clamp_to_constraints(Size::new(Px(16.0), Px(16.0)), props.layout, cx.available)
             }
             ElementInstance::PointerRegion(props) => {
-                // Probe within the available height budget so measurement passes do not observe an
-                // artificially "infinite" viewport (important for scroll/virtualized children).
-                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
-                let mut max_child = Size::new(Px(0.0), Px(0.0));
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    if layout_style.position == crate::element::PositionStyle::Absolute {
-                        continue;
-                    }
-                    let child_size = cx.layout_in(child, probe_bounds);
-                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
-                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
-                }
-
-                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
-                let base = Rect::new(cx.bounds.origin, desired);
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
-                }
-                desired
+                self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::HoverRegion(props) => {
-                // Probe within the available height budget so measurement passes do not observe an
-                // artificially "infinite" viewport (important for scroll/virtualized children).
-                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
-                let mut max_child = Size::new(Px(0.0), Px(0.0));
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    if layout_style.position == crate::element::PositionStyle::Absolute {
-                        continue;
-                    }
-                    let child_size = cx.layout_in(child, probe_bounds);
-                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
-                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
-                }
-
-                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
-                let base = Rect::new(cx.bounds.origin, desired);
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
-                }
-                desired
+                self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::Scroll(props) => self.layout_scroll_impl(cx, window, props),
             ElementInstance::Scrollbar(props) => self.layout_scrollbar_impl(cx, props),
