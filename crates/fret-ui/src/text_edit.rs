@@ -1,4 +1,5 @@
-use fret_core::{ImeEvent, TickId};
+use fret_core::ImeEvent;
+use fret_runtime::TickId;
 
 pub(crate) mod normalize {
     pub(crate) fn newlines_to_lf(text: &str) -> String {

@@ -32,7 +32,7 @@ pub use file_dialog::{
 pub use geometry::{Corners, Edges, Point, Px, Rect, Size, Transform2D};
 pub use ids::{
     AppWindowId, ClipboardToken, DockNodeId, ExternalDropToken, FileDialogToken, FontId, FrameId,
-    ImageId, NodeId, PathId, RenderTargetId, SvgId, TextBlobId, TickId, TimerToken,
+    ImageId, NodeId, PathId, RenderTargetId, SvgId, TextBlobId, TimerToken,
 };
 pub use input::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,

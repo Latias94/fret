@@ -7,7 +7,7 @@ use std::{
 };
 
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
-use fret_runtime::{ExternalDragPayloadKind, PlatformCapabilities, PlatformCompletion};
+use fret_runtime::{ExternalDragPayloadKind, PlatformCapabilities, PlatformCompletion, TickId};
 use fret_core::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
     ExternalDropToken, InternalDragEvent, InternalDragKind, Modifiers, MouseButton, Point, Px,
@@ -587,7 +587,7 @@ pub trait WinitDriver {
         context: &WgpuContext,
         renderer: &mut Renderer,
         scale_factor: f32,
-        tick_id: fret_core::TickId,
+        tick_id: TickId,
         frame_id: fret_core::FrameId,
     ) -> EngineFrameUpdate {
         EngineFrameUpdate {
@@ -614,7 +614,7 @@ pub trait WinitDriver {
         _context: &WgpuContext,
         _renderer: &mut Renderer,
         _scale_factor: f32,
-        _tick_id: fret_core::TickId,
+        _tick_id: TickId,
         _frame_id: fret_core::FrameId,
     ) -> Vec<wgpu::CommandBuffer> {
         Vec::new()
@@ -833,7 +833,7 @@ pub struct WinitRunner<D: WinitDriver> {
     left_mouse_down: bool,
     dock_tearoff_follow: Option<DockTearoffFollow>,
 
-    tick_id: fret_core::TickId,
+    tick_id: TickId,
     frame_id: fret_core::FrameId,
 
     raf_windows: HashSet<fret_core::AppWindowId>,
@@ -1123,7 +1123,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             saw_left_mouse_release_this_turn: false,
             left_mouse_down: false,
             dock_tearoff_follow: None,
-            tick_id: fret_core::TickId::default(),
+            tick_id: TickId::default(),
             frame_id: fret_core::FrameId::default(),
             raf_windows: HashSet::new(),
             timers: HashMap::new(),

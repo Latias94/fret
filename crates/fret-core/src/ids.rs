@@ -54,9 +54,6 @@ impl FontId {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TickId(pub u64);
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FrameId(pub u64);
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]

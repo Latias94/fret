@@ -4,7 +4,8 @@ use std::{
     panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
 };
 
-use fret_core::{AppWindowId, FrameId, NodeId, TickId, TimerToken};
+use fret_core::{AppWindowId, FrameId, NodeId, TimerToken};
+use fret_runtime::TickId;
 
 use crate::drag::DragKind;
 use crate::drag::DragSession;

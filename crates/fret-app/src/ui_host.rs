@@ -53,7 +53,7 @@ impl EffectSink for App {
 }
 
 impl TimeHost for App {
-    fn tick_id(&self) -> fret_core::TickId {
+    fn tick_id(&self) -> fret_runtime::TickId {
         App::tick_id(self)
     }
 
