@@ -5,8 +5,7 @@ use fret_components_ui::declarative::collection_semantics::CollectionSemanticsEx
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
-use fret_components_ui::window_overlays;
-use fret_components_ui::{MetricRef, Space};
+use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{Edges, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
@@ -77,7 +76,7 @@ impl DropdownMenuItem {
 /// shadcn/ui `Dropdown Menu` (v4).
 ///
 /// This is a dismissible popover overlay (non-modal) backed by the component-layer overlay
-/// manager (`fret-components-ui/window_overlays.rs`).
+/// manager (`fret-components-ui/overlay_controller.rs`).
 #[derive(Clone)]
 pub struct DropdownMenu {
     open: Model<bool>,
@@ -152,7 +151,7 @@ impl DropdownMenu {
             let trigger_id = trigger.id;
 
             if is_open {
-                let overlay_root_name = window_overlays::popover_root_name(trigger_id);
+                let overlay_root_name = OverlayController::popover_root_name(trigger_id);
 
                 let align = self.align;
                 let side = self.side;
@@ -399,18 +398,15 @@ impl DropdownMenu {
                     vec![content]
                 });
 
-                window_overlays::request_dismissible_popover(
-                    cx,
-                    window_overlays::DismissiblePopoverRequest {
-                        id: trigger_id,
-                        root_name: overlay_root_name,
-                        trigger: trigger_id,
-                        open,
-                        present: true,
-                        initial_focus: None,
-                        children: overlay_children,
-                    },
+                let mut request = OverlayRequest::dismissible_popover(
+                    trigger_id,
+                    trigger_id,
+                    open,
+                    OverlayPresence::instant(true),
+                    overlay_children,
                 );
+                request.root_name = Some(overlay_root_name);
+                OverlayController::request(cx, request);
             }
 
             trigger
