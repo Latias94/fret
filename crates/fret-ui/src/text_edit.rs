@@ -157,6 +157,144 @@ pub(crate) mod buffer {
     }
 }
 
+pub(crate) mod state {
+    use super::{buffer, ime, utf8};
+
+    pub(crate) struct TextEditState<'a> {
+        text: &'a mut String,
+        caret: &'a mut usize,
+        selection_anchor: &'a mut usize,
+        preedit: &'a mut String,
+        preedit_cursor: &'a mut Option<(usize, usize)>,
+        ime_replace_range: &'a mut Option<(usize, usize)>,
+    }
+
+    impl<'a> TextEditState<'a> {
+        pub(crate) fn new(
+            text: &'a mut String,
+            caret: &'a mut usize,
+            selection_anchor: &'a mut usize,
+            preedit: &'a mut String,
+            preedit_cursor: &'a mut Option<(usize, usize)>,
+            ime_replace_range: &'a mut Option<(usize, usize)>,
+        ) -> Self {
+            Self {
+                text,
+                caret,
+                selection_anchor,
+                preedit,
+                preedit_cursor,
+                ime_replace_range,
+            }
+        }
+
+        fn clamp_indexes(&mut self) {
+            *self.caret = utf8::clamp_to_char_boundary(self.text, *self.caret);
+            *self.selection_anchor =
+                utf8::clamp_to_char_boundary(self.text, *self.selection_anchor);
+        }
+
+        pub(crate) fn clamp_caret_and_anchor_to_char_boundary(&mut self) {
+            self.clamp_indexes();
+        }
+
+        pub(crate) fn has_selection(&self) -> bool {
+            buffer::has_selection(*self.selection_anchor, *self.caret)
+        }
+
+        fn clear_ime_state(&mut self) {
+            ime::clear_state(self.preedit, self.preedit_cursor, self.ime_replace_range);
+        }
+
+        pub(crate) fn replace_selection(&mut self, insert: &str) -> bool {
+            self.clamp_indexes();
+
+            if insert.is_empty() && !self.has_selection() {
+                return false;
+            }
+
+            buffer::replace_selection(self.text, self.caret, self.selection_anchor, insert);
+            self.clear_ime_state();
+            true
+        }
+
+        pub(crate) fn delete_selection_if_any(&mut self) -> bool {
+            self.clamp_indexes();
+            if !buffer::delete_selection_if_any(self.text, self.caret, self.selection_anchor) {
+                return false;
+            }
+            self.clear_ime_state();
+            true
+        }
+
+        pub(crate) fn delete_backward_char(&mut self) -> bool {
+            self.clamp_indexes();
+
+            if self.delete_selection_if_any() {
+                return true;
+            }
+            if *self.caret == 0 {
+                return false;
+            }
+            let prev = utf8::prev_char_boundary(self.text, *self.caret);
+            self.text.replace_range(prev..*self.caret, "");
+            *self.caret = prev;
+            *self.selection_anchor = *self.caret;
+            self.clear_ime_state();
+            true
+        }
+
+        pub(crate) fn delete_forward_char(&mut self) -> bool {
+            self.clamp_indexes();
+
+            if self.delete_selection_if_any() {
+                return true;
+            }
+            if *self.caret >= self.text.len() {
+                return false;
+            }
+            let next = utf8::next_char_boundary(self.text, *self.caret);
+            self.text.replace_range(*self.caret..next, "");
+            *self.selection_anchor = *self.caret;
+            self.clear_ime_state();
+            true
+        }
+
+        pub(crate) fn delete_word_backward(&mut self) -> bool {
+            self.clamp_indexes();
+
+            if self.delete_selection_if_any() {
+                return true;
+            }
+            if *self.caret == 0 {
+                return false;
+            }
+            let prev = utf8::move_word_left(self.text, *self.caret);
+            self.text.replace_range(prev..*self.caret, "");
+            *self.caret = prev;
+            *self.selection_anchor = *self.caret;
+            self.clear_ime_state();
+            true
+        }
+
+        pub(crate) fn delete_word_forward(&mut self) -> bool {
+            self.clamp_indexes();
+
+            if self.delete_selection_if_any() {
+                return true;
+            }
+            if *self.caret >= self.text.len() {
+                return false;
+            }
+            let next = utf8::move_word_right(self.text, *self.caret);
+            self.text.replace_range(*self.caret..next, "");
+            *self.selection_anchor = *self.caret;
+            self.clear_ime_state();
+            true
+        }
+    }
+}
+
 pub(crate) mod ime {
     use super::buffer;
     use super::{ImeEvent, TickId};

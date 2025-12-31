@@ -566,19 +566,10 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.delete_backward" => {
-                if self.delete_selection_if_any() {
-                    self.ensure_caret_visible = true;
-                    cx.invalidate_self(Invalidation::Layout);
-                    cx.request_redraw();
+                if !self.edit_state().delete_backward_char() {
                     return true;
                 }
-                if self.caret == 0 {
-                    return true;
-                }
-                let prev = crate::text_edit::utf8::prev_char_boundary(&self.text, self.caret);
-                self.text.replace_range(prev..self.caret, "");
-                self.caret = prev;
-                self.selection_anchor = self.caret;
+                self.clear_preedit();
                 self.affinity = CaretAffinity::Downstream;
                 self.text_dirty = true;
                 self.ensure_caret_visible = true;
@@ -587,18 +578,10 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.delete_forward" => {
-                if self.delete_selection_if_any() {
-                    self.ensure_caret_visible = true;
-                    cx.invalidate_self(Invalidation::Layout);
-                    cx.request_redraw();
+                if !self.edit_state().delete_forward_char() {
                     return true;
                 }
-                if self.caret >= self.text.len() {
-                    return true;
-                }
-                let next = crate::text_edit::utf8::next_char_boundary(&self.text, self.caret);
-                self.text.replace_range(self.caret..next, "");
-                self.selection_anchor = self.caret;
+                self.clear_preedit();
                 self.affinity = CaretAffinity::Downstream;
                 self.text_dirty = true;
                 self.ensure_caret_visible = true;
@@ -607,19 +590,10 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.delete_word_backward" => {
-                if self.delete_selection_if_any() {
-                    self.ensure_caret_visible = true;
-                    cx.invalidate_self(Invalidation::Layout);
-                    cx.request_redraw();
+                if !self.edit_state().delete_word_backward() {
                     return true;
                 }
-                if self.caret == 0 {
-                    return true;
-                }
-                let prev = crate::text_edit::utf8::move_word_left(&self.text, self.caret);
-                self.text.replace_range(prev..self.caret, "");
-                self.caret = prev;
-                self.selection_anchor = self.caret;
+                self.clear_preedit();
                 self.affinity = CaretAffinity::Downstream;
                 self.text_dirty = true;
                 self.ensure_caret_visible = true;
@@ -628,18 +602,10 @@ impl<H: UiHost> Widget<H> for TextArea {
                 true
             }
             "text.delete_word_forward" => {
-                if self.delete_selection_if_any() {
-                    self.ensure_caret_visible = true;
-                    cx.invalidate_self(Invalidation::Layout);
-                    cx.request_redraw();
+                if !self.edit_state().delete_word_forward() {
                     return true;
                 }
-                if self.caret >= self.text.len() {
-                    return true;
-                }
-                let next = crate::text_edit::utf8::move_word_right(&self.text, self.caret);
-                self.text.replace_range(self.caret..next, "");
-                self.selection_anchor = self.caret;
+                self.clear_preedit();
                 self.affinity = CaretAffinity::Downstream;
                 self.text_dirty = true;
                 self.ensure_caret_visible = true;
@@ -655,9 +621,7 @@ impl<H: UiHost> Widget<H> for TextArea {
         self.sync_style_from_theme(cx.theme());
         self.last_bounds = cx.bounds;
 
-        self.caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
-        self.selection_anchor =
-            crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.selection_anchor);
+        self.edit_state().clamp_caret_and_anchor_to_char_boundary();
 
         let scrollbar_w = self.scrollbar_width;
 

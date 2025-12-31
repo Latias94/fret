@@ -338,12 +338,19 @@ impl TextArea {
         crate::text_edit::buffer::selection_range(self.selection_anchor, self.caret)
     }
 
-    fn delete_selection_if_any(&mut self) -> bool {
-        if !crate::text_edit::buffer::delete_selection_if_any(
+    fn edit_state(&mut self) -> crate::text_edit::state::TextEditState<'_> {
+        crate::text_edit::state::TextEditState::new(
             &mut self.text,
             &mut self.caret,
             &mut self.selection_anchor,
-        ) {
+            &mut self.preedit,
+            &mut self.preedit_cursor,
+            &mut self.ime_replace_range,
+        )
+    }
+
+    fn delete_selection_if_any(&mut self) -> bool {
+        if !self.edit_state().delete_selection_if_any() {
             return false;
         }
         self.clear_preedit();
@@ -353,12 +360,7 @@ impl TextArea {
     }
 
     fn replace_selection(&mut self, insert: &str) {
-        crate::text_edit::buffer::replace_selection(
-            &mut self.text,
-            &mut self.caret,
-            &mut self.selection_anchor,
-            insert,
-        );
+        let _ = self.edit_state().replace_selection(insert);
         self.clear_preedit();
         self.affinity = CaretAffinity::Downstream;
         self.text_dirty = true;

@@ -206,6 +206,17 @@ impl TextInput {
         cx.focus == Some(cx.node)
     }
 
+    fn edit_state(&mut self) -> crate::text_edit::state::TextEditState<'_> {
+        crate::text_edit::state::TextEditState::new(
+            &mut self.text,
+            &mut self.caret,
+            &mut self.selection_anchor,
+            &mut self.preedit,
+            &mut self.preedit_cursor,
+            &mut self.ime_replace_range,
+        )
+    }
+
     fn selection_range(&self) -> (usize, usize) {
         crate::text_edit::buffer::selection_range(self.selection_anchor, self.caret)
     }
@@ -215,20 +226,11 @@ impl TextInput {
     }
 
     fn replace_selection(&mut self, insert: &str) {
-        crate::text_edit::buffer::replace_selection(
-            &mut self.text,
-            &mut self.caret,
-            &mut self.selection_anchor,
-            insert,
-        );
+        self.edit_state().replace_selection(insert);
     }
 
     fn delete_selection_if_any(&mut self) -> bool {
-        crate::text_edit::buffer::delete_selection_if_any(
-            &mut self.text,
-            &mut self.caret,
-            &mut self.selection_anchor,
-        )
+        self.edit_state().delete_selection_if_any()
     }
 
     fn caret_rect<H: UiHost>(
@@ -458,24 +460,12 @@ impl<H: UiHost> Widget<H> for TextInput {
                 if !self.is_ime_composing() {
                     match key {
                         fret_core::KeyCode::Backspace => {
-                            if !self.delete_selection_if_any() {
-                                let prev = crate::text_edit::utf8::prev_char_boundary(
-                                    &self.text, self.caret,
-                                );
-                                self.text.replace_range(prev..self.caret, "");
-                                self.caret = prev;
-                                self.selection_anchor = self.caret;
-                            }
+                            let _ = self.edit_state().delete_backward_char();
                             cx.invalidate_self(Invalidation::Layout);
                             cx.request_redraw();
                         }
                         fret_core::KeyCode::Delete => {
-                            if !self.delete_selection_if_any() && self.caret < self.text.len() {
-                                let next = crate::text_edit::utf8::next_char_boundary(
-                                    &self.text, self.caret,
-                                );
-                                self.text.replace_range(self.caret..next, "");
-                            }
+                            let _ = self.edit_state().delete_forward_char();
                             cx.invalidate_self(Invalidation::Layout);
                             cx.request_redraw();
                         }
@@ -741,13 +731,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             "text.delete_backward" => {
                 if !self.is_ime_composing() {
-                    if !self.delete_selection_if_any() {
-                        let prev =
-                            crate::text_edit::utf8::prev_char_boundary(&self.text, self.caret);
-                        self.text.replace_range(prev..self.caret, "");
-                        self.caret = prev;
-                        self.selection_anchor = self.caret;
-                    }
+                    let _ = self.edit_state().delete_backward_char();
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
@@ -755,11 +739,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             "text.delete_forward" => {
                 if !self.is_ime_composing() {
-                    if !self.delete_selection_if_any() && self.caret < self.text.len() {
-                        let next =
-                            crate::text_edit::utf8::next_char_boundary(&self.text, self.caret);
-                        self.text.replace_range(self.caret..next, "");
-                    }
+                    let _ = self.edit_state().delete_forward_char();
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
@@ -767,12 +747,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             "text.delete_word_backward" => {
                 if !self.is_ime_composing() {
-                    if !self.delete_selection_if_any() {
-                        let prev = crate::text_edit::utf8::move_word_left(&self.text, self.caret);
-                        self.text.replace_range(prev..self.caret, "");
-                        self.caret = prev;
-                        self.selection_anchor = self.caret;
-                    }
+                    let _ = self.edit_state().delete_word_backward();
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
@@ -780,11 +755,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             "text.delete_word_forward" => {
                 if !self.is_ime_composing() {
-                    if !self.delete_selection_if_any() {
-                        let next = crate::text_edit::utf8::move_word_right(&self.text, self.caret);
-                        self.text.replace_range(self.caret..next, "");
-                        self.selection_anchor = self.caret;
-                    }
+                    let _ = self.edit_state().delete_word_forward();
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
@@ -797,9 +768,7 @@ impl<H: UiHost> Widget<H> for TextInput {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.last_bounds = cx.bounds;
 
-        self.caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
-        self.selection_anchor =
-            crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.selection_anchor);
+        self.edit_state().clamp_caret_and_anchor_to_char_boundary();
 
         let theme = cx.theme().snapshot();
         self.sync_chrome_from_theme(theme);
