@@ -12,5 +12,7 @@ pub mod text;
 pub mod text_field;
 pub mod tree;
 
+pub use model_watch::ModelWatchExt;
+
 #[cfg(test)]
 mod padding_semantics_tests;

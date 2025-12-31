@@ -1041,8 +1041,12 @@ impl<H: UiHost> UiTree<H> {
             let mut stack: Vec<NodeId> = vec![root];
             while let Some(id) = stack.pop() {
                 if !visited.insert(id) {
-                    tracing::error!(?id, "cycle detected while building semantics snapshot");
-                    continue;
+                    if cfg!(debug_assertions) {
+                        panic!("cycle detected while building semantics snapshot: node={id:?}");
+                    } else {
+                        tracing::error!(?id, "cycle detected while building semantics snapshot");
+                        continue;
+                    }
                 }
                 let Some(node) = self.nodes.get_mut(id) else {
                     continue;
