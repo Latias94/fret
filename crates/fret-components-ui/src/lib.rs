@@ -10,6 +10,7 @@
 pub mod declarative;
 pub mod headless;
 pub mod overlay;
+pub mod overlay_controller;
 pub mod recipes;
 pub mod tree;
 pub mod window_overlays;
@@ -24,6 +25,8 @@ pub use style::{
     Radius, Space,
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
+
+pub use overlay_controller::{OverlayController, OverlayKind, OverlayPresence, OverlayRequest};
 
 pub use tree::{
     TreeEntry, TreeItem, TreeItemId, TreeRowRenderer, TreeRowState, TreeState, flatten_tree,
