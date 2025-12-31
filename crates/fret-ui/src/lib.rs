@@ -22,6 +22,7 @@ mod svg_source;
 mod test_host;
 #[allow(dead_code)]
 pub(crate) mod text_area;
+mod text_edit;
 #[allow(dead_code)]
 pub(crate) mod text_input;
 mod text_input_style;

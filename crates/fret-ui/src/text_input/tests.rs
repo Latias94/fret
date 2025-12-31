@@ -4,7 +4,7 @@ mod tests {
     use crate::UiTree;
     use crate::test_host::TestHost;
     use fret_core::{
-        AppWindowId, Event, PlatformCapabilities, Point, Px, Rect, Size, TextConstraints,
+        AppWindowId, Event, ImeEvent, PlatformCapabilities, Point, Px, Rect, Size, TextConstraints,
         TextMetrics, TextService, TextStyle,
     };
     use fret_runtime::Effect;

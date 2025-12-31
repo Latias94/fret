@@ -2,8 +2,8 @@ use super::{PreparedKey, TextArea};
 use crate::widget::{CommandCx, EventCx, LayoutCx, PaintCx, Widget};
 use crate::{Invalidation, UiHost};
 use fret_core::{
-    CaretAffinity, Color, Corners, DrawOrder, Edges, Event, ImeEvent, MouseButton, Px, Rect,
-    SceneOp, SemanticsRole, Size, TextConstraints, TextOverflow,
+    CaretAffinity, Color, Corners, DrawOrder, Edges, Event, MouseButton, Px, Rect, SceneOp,
+    SemanticsRole, Size, TextConstraints, TextOverflow,
 };
 use fret_runtime::Effect;
 
@@ -273,66 +273,28 @@ impl<H: UiHost> Widget<H> for TextArea {
                 if cx.focus != Some(cx.node) {
                     return;
                 }
-                match ime {
-                    ImeEvent::Enabled => {}
-                    ImeEvent::Disabled => {
-                        self.clear_preedit();
-                        cx.invalidate_self(Invalidation::Layout);
-                        cx.request_redraw();
-                    }
-                    ImeEvent::Commit(text) => {
-                        let committed = if text.contains('\r') {
-                            text.replace("\r\n", "\n").replace('\r', "\n")
-                        } else {
-                            text.clone()
-                        };
-                        let tick = cx.app.tick_id();
-                        if self.last_text_input_tick == Some(tick)
-                            && self.last_text_input_text.as_deref() == Some(committed.as_str())
-                        {
-                            self.clear_preedit();
-                            self.ensure_caret_visible = true;
-                            cx.invalidate_self(Invalidation::Layout);
-                            cx.request_redraw();
-                            return;
-                        }
-                        self.last_ime_commit_tick = Some(tick);
-                        self.last_ime_commit_text = Some(committed.clone());
-
-                        if let Some((start, end)) = self.ime_replace_range.take() {
-                            self.selection_anchor = start;
-                            self.caret = end;
-                        }
-                        self.replace_selection(&committed);
-                        self.clear_preedit();
-                        self.ensure_caret_visible = true;
-                        cx.invalidate_self(Invalidation::Layout);
-                        cx.request_redraw();
-                    }
-                    ImeEvent::Preedit { text, cursor } => {
-                        if text.is_empty() && cursor.is_none() {
-                            self.clear_preedit();
-                        } else {
-                            let starting = !self.is_ime_composing();
-                            if starting {
-                                let (start, end) = self.selection_range();
-                                if start != end {
-                                    self.ime_replace_range = Some((start, end));
-                                    self.caret = start;
-                                    self.selection_anchor = start;
-                                } else {
-                                    self.ime_replace_range = None;
-                                }
-                            }
-                            self.preedit = text.clone();
-                            self.preedit_cursor = *cursor;
-                            self.affinity = CaretAffinity::Downstream;
-                            self.text_dirty = true;
-                        }
-                        self.ensure_caret_visible = true;
-                        cx.invalidate_self(Invalidation::Layout);
-                        cx.request_redraw();
-                    }
+                let tick = cx.app.tick_id();
+                let result = crate::text_edit::ime::apply_event(
+                    ime,
+                    tick,
+                    true,
+                    self.last_text_input_tick,
+                    self.last_text_input_text.as_deref(),
+                    &mut self.text,
+                    &mut self.caret,
+                    &mut self.selection_anchor,
+                    &mut self.preedit,
+                    &mut self.preedit_cursor,
+                    &mut self.ime_replace_range,
+                    &mut self.last_ime_commit_tick,
+                    &mut self.last_ime_commit_text,
+                );
+                if result != crate::text_edit::ime::ApplyResult::Noop {
+                    self.affinity = CaretAffinity::Downstream;
+                    self.text_dirty = true;
+                    self.ensure_caret_visible = true;
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
                 }
             }
             _ => {}

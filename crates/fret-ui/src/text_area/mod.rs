@@ -291,21 +291,21 @@ impl TextArea {
         if self.preedit.is_empty() && self.preedit_cursor.is_none() {
             return;
         }
-        self.preedit.clear();
-        self.preedit_cursor = None;
-        self.ime_replace_range = None;
+        crate::text_edit::ime::clear_state(
+            &mut self.preedit,
+            &mut self.preedit_cursor,
+            &mut self.ime_replace_range,
+        );
         self.affinity = CaretAffinity::Downstream;
         self.text_dirty = true;
     }
 
     fn is_ime_composing(&self) -> bool {
-        !self.preedit.is_empty() || self.preedit_cursor.is_some()
+        crate::text_edit::ime::is_composing(&self.preedit, self.preedit_cursor)
     }
 
     fn preedit_cursor_end(&self) -> usize {
-        self.preedit_cursor
-            .map(|(_, end)| end.min(self.preedit.len()))
-            .unwrap_or(self.preedit.len())
+        crate::text_edit::ime::preedit_cursor_end(&self.preedit, self.preedit_cursor)
     }
 
     fn layout_text(&self) -> Option<String> {
@@ -358,97 +358,41 @@ impl TextArea {
     }
 
     fn selection_range(&self) -> (usize, usize) {
-        let a = self.selection_anchor.min(self.caret);
-        let b = self.selection_anchor.max(self.caret);
-        (a, b)
+        crate::text_edit::buffer::selection_range(self.selection_anchor, self.caret)
     }
 
     fn clamp_to_boundary(text: &str, idx: usize) -> usize {
-        if idx >= text.len() {
-            return text.len();
-        }
-        if text.is_char_boundary(idx) {
-            return idx;
-        }
-        let mut i = idx;
-        while i > 0 && !text.is_char_boundary(i) {
-            i -= 1;
-        }
-        i
+        crate::text_edit::utf8::clamp_to_char_boundary(text, idx)
     }
 
     fn prev_boundary(text: &str, idx: usize) -> usize {
-        let idx = Self::clamp_to_boundary(text, idx);
-        if idx == 0 {
-            return 0;
-        }
-        let slice = &text[..idx];
-        slice.char_indices().last().map(|(i, _)| i).unwrap_or(0)
+        crate::text_edit::utf8::prev_char_boundary(text, idx)
     }
 
     fn next_boundary(text: &str, idx: usize) -> usize {
-        let idx = Self::clamp_to_boundary(text, idx);
-        if idx >= text.len() {
-            return text.len();
-        }
-        let ch = text[idx..].chars().next().unwrap();
-        idx + ch.len_utf8()
+        crate::text_edit::utf8::next_char_boundary(text, idx)
     }
 
     fn is_word_char(ch: char) -> bool {
-        ch.is_alphanumeric() || ch == '_'
+        crate::text_edit::utf8::is_word_char(ch)
     }
 
     fn move_word_left(text: &str, idx: usize) -> usize {
-        let mut i = Self::prev_boundary(text, idx);
-        while i > 0 {
-            let prev = Self::prev_boundary(text, i);
-            let ch = text[prev..i].chars().next().unwrap_or(' ');
-            if !ch.is_whitespace() {
-                break;
-            }
-            i = prev;
-        }
-        while i > 0 {
-            let prev = Self::prev_boundary(text, i);
-            let ch = text[prev..i].chars().next().unwrap_or(' ');
-            if !Self::is_word_char(ch) {
-                break;
-            }
-            i = prev;
-        }
-        i
+        crate::text_edit::utf8::move_word_left(text, idx)
     }
 
     fn move_word_right(text: &str, idx: usize) -> usize {
-        let mut i = Self::next_boundary(text, idx);
-        while i < text.len() {
-            let next = Self::next_boundary(text, i);
-            let ch = text[i..next].chars().next().unwrap_or(' ');
-            if !ch.is_whitespace() {
-                break;
-            }
-            i = next;
-        }
-        while i < text.len() {
-            let next = Self::next_boundary(text, i);
-            let ch = text[i..next].chars().next().unwrap_or(' ');
-            if !Self::is_word_char(ch) {
-                break;
-            }
-            i = next;
-        }
-        i
+        crate::text_edit::utf8::move_word_right(text, idx)
     }
 
     fn delete_selection_if_any(&mut self) -> bool {
-        let (a, b) = self.selection_range();
-        if a == b {
+        if !crate::text_edit::buffer::delete_selection_if_any(
+            &mut self.text,
+            &mut self.caret,
+            &mut self.selection_anchor,
+        ) {
             return false;
         }
-        self.text.replace_range(a..b, "");
-        self.caret = a;
-        self.selection_anchor = self.caret;
         self.clear_preedit();
         self.affinity = CaretAffinity::Downstream;
         self.text_dirty = true;
@@ -456,16 +400,12 @@ impl TextArea {
     }
 
     fn replace_selection(&mut self, insert: &str) {
-        let (a, b) = self.selection_range();
-        if a != b {
-            self.text.replace_range(a..b, insert);
-            self.caret = a + insert.len();
-            self.selection_anchor = self.caret;
-        } else {
-            self.text.insert_str(self.caret, insert);
-            self.caret += insert.len();
-            self.selection_anchor = self.caret;
-        }
+        crate::text_edit::buffer::replace_selection(
+            &mut self.text,
+            &mut self.caret,
+            &mut self.selection_anchor,
+            insert,
+        );
         self.clear_preedit();
         self.affinity = CaretAffinity::Downstream;
         self.text_dirty = true;
