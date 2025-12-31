@@ -10,6 +10,31 @@ use fret_runtime::{CommandId, Effect, Model};
 
 use crate::TextInputStyle;
 
+trait TextInputUiCx {
+    fn invalidate_self(&mut self, kind: Invalidation);
+    fn request_redraw(&mut self);
+}
+
+impl<'a, H: UiHost> TextInputUiCx for EventCx<'a, H> {
+    fn invalidate_self(&mut self, kind: Invalidation) {
+        EventCx::invalidate_self(self, kind);
+    }
+
+    fn request_redraw(&mut self) {
+        EventCx::request_redraw(self);
+    }
+}
+
+impl<'a, H: UiHost> TextInputUiCx for CommandCx<'a, H> {
+    fn invalidate_self(&mut self, kind: Invalidation) {
+        CommandCx::invalidate_self(self, kind);
+    }
+
+    fn request_redraw(&mut self) {
+        CommandCx::request_redraw(self);
+    }
+}
+
 #[derive(Debug)]
 pub struct TextInput {
     text: String,
@@ -220,6 +245,20 @@ impl TextInput {
     fn mark_text_blobs_dirty(&mut self) {
         self.queue_release_all_text_blobs();
         self.last_sent_cursor = None;
+    }
+
+    fn apply_singleline_ui_delta(&mut self, cx: &mut impl TextInputUiCx, delta: crate::text_edit::commands::SingleLineUiDelta) {
+        if delta.invalidate_layout {
+            if delta.release_text_blobs {
+                self.mark_text_blobs_dirty();
+            }
+            cx.invalidate_self(Invalidation::Layout);
+        } else if delta.invalidate_paint {
+            cx.invalidate_self(Invalidation::Paint);
+        }
+        if delta.request_redraw {
+            cx.request_redraw();
+        }
     }
 
     fn selection_range(&self) -> (usize, usize) {
@@ -650,17 +689,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     command.as_str(),
                     result.outcome,
                 );
-                if delta.invalidate_layout {
-                    if delta.release_text_blobs {
-                        self.mark_text_blobs_dirty();
-                    }
-                    cx.invalidate_self(Invalidation::Layout);
-                } else if delta.invalidate_paint {
-                    cx.invalidate_self(Invalidation::Paint);
-                }
-                if delta.request_redraw {
-                    cx.request_redraw();
-                }
+                self.apply_singleline_ui_delta(cx, delta);
                 true
             }
             "text.paste" => {
@@ -679,27 +708,43 @@ impl<H: UiHost> Widget<H> for TextInput {
                 true
             }
             "text.move_up" => {
-                let _ = self.edit_state().move_home(false);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
+                let outcome = crate::text_edit::commands::apply_basic(
+                    &mut self.edit_state(),
+                    "text.move_home",
+                    self.is_ime_composing(),
+                );
+                let delta = crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
+                self.apply_singleline_ui_delta(cx, delta);
                 true
             }
             "text.move_down" => {
-                let _ = self.edit_state().move_end(false);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
+                let outcome = crate::text_edit::commands::apply_basic(
+                    &mut self.edit_state(),
+                    "text.move_end",
+                    self.is_ime_composing(),
+                );
+                let delta = crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
+                self.apply_singleline_ui_delta(cx, delta);
                 true
             }
             "text.select_up" => {
-                let _ = self.edit_state().move_home(true);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
+                let outcome = crate::text_edit::commands::apply_basic(
+                    &mut self.edit_state(),
+                    "text.select_home",
+                    self.is_ime_composing(),
+                );
+                let delta = crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
+                self.apply_singleline_ui_delta(cx, delta);
                 true
             }
             "text.select_down" => {
-                let _ = self.edit_state().move_end(true);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
+                let outcome = crate::text_edit::commands::apply_basic(
+                    &mut self.edit_state(),
+                    "text.select_end",
+                    self.is_ime_composing(),
+                );
+                let delta = crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
+                self.apply_singleline_ui_delta(cx, delta);
                 true
             }
             _ => {
@@ -715,17 +760,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     return false;
                 }
 
-                if delta.invalidate_layout {
-                    if delta.release_text_blobs {
-                        self.mark_text_blobs_dirty();
-                    }
-                    cx.invalidate_self(Invalidation::Layout);
-                } else if delta.invalidate_paint {
-                    cx.invalidate_self(Invalidation::Paint);
-                }
-                if delta.request_redraw {
-                    cx.request_redraw();
-                }
+                self.apply_singleline_ui_delta(cx, delta);
                 true
             }
         }
