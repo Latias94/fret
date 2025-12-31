@@ -58,6 +58,15 @@ impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedModel<'cx, 'm, 'a, H, T> {
         self.invalidation(Invalidation::HitTest)
     }
 
+    pub fn observe(self) {
+        self.cx.observe_model(self.model, self.invalidation);
+    }
+
+    pub fn revision(self) -> Option<u64> {
+        self.cx.observe_model(self.model, self.invalidation);
+        self.cx.app.models().revision(self.model)
+    }
+
     pub fn copied(self) -> Option<T>
     where
         T: Copy,
