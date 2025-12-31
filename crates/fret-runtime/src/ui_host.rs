@@ -1,7 +1,7 @@
 use std::any::Any;
 
-use crate::{FrameId, TickId};
-use fret_core::{AppWindowId, ClipboardToken, Point, TimerToken};
+use crate::{ClipboardToken, FrameId, TickId, TimerToken};
+use fret_core::{AppWindowId, Point};
 
 use crate::{CommandRegistry, DragKind, DragSession, Effect, ModelHost, ModelId};
 
