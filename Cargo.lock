@@ -1127,6 +1127,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-a11y-accesskit"
+version = "0.1.0"
+dependencies = [
+ "accesskit",
+ "fret-core",
+ "slotmap",
+]
+
+[[package]]
 name = "fret-app"
 version = "0.1.0"
 dependencies = [
@@ -1240,9 +1249,7 @@ dependencies = [
 name = "fret-platform"
 version = "0.1.0"
 dependencies = [
- "accesskit",
  "fret-core",
- "slotmap",
 ]
 
 [[package]]
@@ -1251,8 +1258,8 @@ version = "0.1.0"
 dependencies = [
  "accesskit",
  "accesskit_winit",
+ "fret-a11y-accesskit",
  "fret-core",
- "fret-platform",
  "slotmap",
  "winit",
 ]

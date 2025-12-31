@@ -1,12 +1,10 @@
 [package]
-name = "fret-platform-winit"
+name = "fret-a11y-accesskit"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
 accesskit.workspace = true
-accesskit_winit.workspace = true
 fret-core = { path = "../fret-core" }
-fret-a11y-accesskit = { path = "../fret-a11y-accesskit" }
 slotmap.workspace = true
-winit.workspace = true
+

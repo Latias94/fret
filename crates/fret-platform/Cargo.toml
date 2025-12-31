@@ -4,6 +4,4 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-accesskit.workspace = true
-slotmap.workspace = true
 fret-core = { path = "../fret-core" }

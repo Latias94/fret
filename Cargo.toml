@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/fret-a11y-accesskit",
     "crates/fret",
     "crates/fret-app",
     "crates/fret-components-app",
