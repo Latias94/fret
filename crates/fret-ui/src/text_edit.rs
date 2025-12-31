@@ -390,6 +390,17 @@ pub(crate) mod commands {
         pub(crate) invalidate_layout: bool,
     }
 
+    #[derive(Debug, Default, Clone, Copy)]
+    pub(crate) struct MultilineUiDelta {
+        pub(crate) handled: bool,
+        pub(crate) invalidate_paint: bool,
+        pub(crate) invalidate_layout: bool,
+        pub(crate) clear_preedit: bool,
+        pub(crate) text_dirty: bool,
+        pub(crate) reset_affinity: bool,
+        pub(crate) ensure_caret_visible: bool,
+    }
+
     impl Outcome {
         fn paint(changed: bool) -> Self {
             Self {
@@ -413,6 +424,25 @@ pub(crate) mod commands {
                 invalidate_paint: false,
                 invalidate_layout: false,
             }
+        }
+    }
+
+    pub(crate) fn multiline_ui_delta(command: &str, outcome: Outcome) -> MultilineUiDelta {
+        let is_navigation = command.starts_with("text.move")
+            || command.starts_with("text.select")
+            || command == "text.select_all";
+
+        let invalidate_layout = outcome.invalidate_layout;
+        let invalidate_paint = outcome.invalidate_paint || is_navigation;
+
+        MultilineUiDelta {
+            handled: outcome.handled,
+            invalidate_layout,
+            invalidate_paint,
+            clear_preedit: invalidate_layout,
+            text_dirty: invalidate_layout,
+            reset_affinity: invalidate_layout || invalidate_paint,
+            ensure_caret_visible: invalidate_layout || invalidate_paint,
         }
     }
 

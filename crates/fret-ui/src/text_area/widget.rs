@@ -377,11 +377,20 @@ impl<H: UiHost> Widget<H> for TextArea {
                 {
                     cx.app.push_effect(Effect::ClipboardSetText { text });
                 }
-                if result.outcome.invalidate_layout {
-                    self.clear_preedit();
-                    self.affinity = CaretAffinity::Downstream;
-                    self.text_dirty = true;
-                    self.ensure_caret_visible = true;
+                let delta = crate::text_edit::commands::multiline_ui_delta(cmd, result.outcome);
+                if delta.invalidate_layout {
+                    if delta.clear_preedit {
+                        self.clear_preedit();
+                    }
+                    if delta.reset_affinity {
+                        self.affinity = CaretAffinity::Downstream;
+                    }
+                    if delta.text_dirty {
+                        self.text_dirty = true;
+                    }
+                    if delta.ensure_caret_visible {
+                        self.ensure_caret_visible = true;
+                    }
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
@@ -514,25 +523,22 @@ impl<H: UiHost> Widget<H> for TextArea {
                     cmd,
                     is_ime_composing,
                 );
-                if !outcome.handled {
+                let delta = crate::text_edit::commands::multiline_ui_delta(cmd, outcome);
+                if !delta.handled {
                     return false;
                 }
 
-                let is_navigation = cmd.starts_with("text.move")
-                    || cmd.starts_with("text.select")
-                    || cmd == "text.select_all";
-
-                if outcome.invalidate_layout {
+                if delta.invalidate_layout {
                     self.clear_preedit();
-                    self.affinity = CaretAffinity::Downstream;
                     self.text_dirty = true;
+                    self.affinity = CaretAffinity::Downstream;
                     self.ensure_caret_visible = true;
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                     return true;
                 }
 
-                if outcome.invalidate_paint || is_navigation {
+                if delta.invalidate_paint {
                     self.affinity = CaretAffinity::Downstream;
                     self.ensure_caret_visible = true;
                     cx.invalidate_self(Invalidation::Paint);
