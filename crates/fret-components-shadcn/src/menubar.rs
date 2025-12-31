@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
+use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::overlay;
@@ -475,6 +476,12 @@ impl MenubarMenu {
                                                 let mut out: Vec<AnyElement> =
                                                     Vec::with_capacity(entries.len());
 
+                                                let item_count = entries
+                                                    .iter()
+                                                    .filter(|e| matches!(e, MenubarEntry::Item(_)))
+                                                    .count();
+                                                let mut item_ix: usize = 0;
+
                                                 for (idx, entry) in entries.into_iter().enumerate()
                                                 {
                                                     match entry {
@@ -497,6 +504,9 @@ impl MenubarMenu {
                                                             ));
                                                         }
                                                         MenubarEntry::Item(item) => {
+                                                            let collection_index = item_ix;
+                                                            item_ix = item_ix.saturating_add(1);
+
                                                             let item_enabled =
                                                                 !item.disabled && enabled;
                                                             let focusable =
@@ -529,7 +539,11 @@ impl MenubarMenu {
                                                                                 Some(label.clone())
                                                                             }),
                                                                         ..Default::default()
-                                                                    },
+                                                                    }
+                                                                    .with_collection_position(
+                                                                        collection_index,
+                                                                        item_count,
+                                                                    ),
                                                                     ..Default::default()
                                                                 },
                                                                 move |cx, st| {
@@ -669,7 +683,7 @@ mod tests {
     use fret_app::App;
     use fret_components_ui::window_overlays;
     use fret_core::{
-        AppWindowId, Modifiers, MouseButton, MouseButtons, Point, Rect, TextBlobId,
+        AppWindowId, FrameId, Modifiers, MouseButton, MouseButtons, Point, Rect, TextBlobId,
         TextConstraints, TextMetrics, TextService,
     };
     use fret_core::{PathCommand, SvgId, SvgService};
@@ -751,16 +765,26 @@ mod tests {
         window: AppWindowId,
         bounds: Rect,
     ) {
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
         window_overlays::begin_frame(app, window);
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "menubar", |cx| {
                 vec![menubar(cx, |cx| {
                     vec![
                         MenubarMenu::new("File").into_element(cx, |_cx| {
-                            vec![MenubarEntry::Item(MenubarItem::new("New"))]
+                            vec![
+                                MenubarEntry::Item(MenubarItem::new("New")),
+                                MenubarEntry::Separator,
+                                MenubarEntry::Item(MenubarItem::new("Open")),
+                                MenubarEntry::Item(MenubarItem::new("Exit")),
+                            ]
                         }),
                         MenubarMenu::new("Edit").into_element(cx, |_cx| {
-                            vec![MenubarEntry::Item(MenubarItem::new("Undo"))]
+                            vec![
+                                MenubarEntry::Item(MenubarItem::new("Undo")),
+                                MenubarEntry::Separator,
+                                MenubarEntry::Item(MenubarItem::new("Redo")),
+                            ]
                         }),
                     ]
                 })]
@@ -837,5 +861,66 @@ mod tests {
         let snap3 = ui.semantics_snapshot().expect("semantics snapshot");
         assert!(!menu_trigger_expanded(snap3, "File"));
         assert!(menu_trigger_expanded(snap3, "Edit"));
+    }
+
+    #[test]
+    fn menubar_items_have_collection_position_metadata_excluding_separators() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        // Frame 0: render and locate triggers.
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let file = center(menu_trigger_bounds(&snap0, "File"));
+
+        // Click "File" to open.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: file,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: file,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        // Frame 1: open menu should be present in semantics.
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+
+        assert!(menu_trigger_expanded(snap1, "File"));
+
+        let interesting = ["File", "Edit", "New", "Open", "Exit", "Undo", "Redo"];
+        let observed: Vec<(SemanticsRole, Option<&str>, Option<u32>, Option<u32>)> = snap1
+            .nodes
+            .iter()
+            .filter(|n| n.label.as_deref().is_some_and(|l| interesting.contains(&l)))
+            .map(|n| (n.role, n.label.as_deref(), n.pos_in_set, n.set_size))
+            .collect();
+
+        let open = snap1
+            .nodes
+            .iter()
+            .find(|n| n.label.as_deref() == Some("Open"))
+            .unwrap_or_else(|| panic!("Open node not found; observed={observed:?}"));
+        assert_eq!(open.pos_in_set, Some(2));
+        assert_eq!(open.set_size, Some(3));
     }
 }
