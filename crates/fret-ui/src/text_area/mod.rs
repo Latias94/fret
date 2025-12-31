@@ -3,8 +3,7 @@
 //! This lives in the runtime crate because it needs platform hooks and hard-to-change editing
 //! semantics (ADR 0012 / ADR 0071).
 use fret_core::{
-    CaretAffinity, Color, Corners, Edges, Px, Rect, Size, TextConstraints, TextMetrics, TextStyle,
-    TextWrap,
+    CaretAffinity, Color, Corners, Edges, Px, Rect, Size, TextMetrics, TextStyle, TextWrap,
 };
 use fret_runtime::Effect;
 

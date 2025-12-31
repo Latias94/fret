@@ -1,6 +1,7 @@
 use super::*;
 use crate::UiTree;
 use crate::test_host::TestHost;
+use crate::widget::Widget;
 use fret_core::{
     AppWindowId, CaretAffinity, Event, PlatformCapabilities, Point, Px, Rect, Scene, Size,
     TextConstraints, TextMetrics, TextService, TextStyle,
