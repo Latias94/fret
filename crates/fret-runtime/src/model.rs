@@ -300,12 +300,40 @@ impl<T: Any> Drop for ModelLease<T> {
 }
 
 impl ModelStore {
+    #[track_caller]
     fn state(&self) -> std::cell::Ref<'_, ModelStoreState> {
-        self.inner.state.borrow()
+        match self.inner.state.try_borrow() {
+            Ok(guard) => guard,
+            Err(_) => {
+                let caller = Location::caller();
+                panic!(
+                    "model store is already mutably borrowed (re-entrant borrow) at {}:{}:{}; \
+                     this likely indicates a bug where store methods call back into user code while \
+                     holding a store borrow",
+                    caller.file(),
+                    caller.line(),
+                    caller.column()
+                );
+            }
+        }
     }
 
+    #[track_caller]
     fn state_mut(&self) -> std::cell::RefMut<'_, ModelStoreState> {
-        self.inner.state.borrow_mut()
+        match self.inner.state.try_borrow_mut() {
+            Ok(guard) => guard,
+            Err(_) => {
+                let caller = Location::caller();
+                panic!(
+                    "model store is already borrowed (re-entrant borrow_mut) at {}:{}:{}; \
+                     this likely indicates a bug where store methods call back into user code while \
+                     holding a store borrow",
+                    caller.file(),
+                    caller.line(),
+                    caller.column()
+                );
+            }
+        }
     }
 
     #[cfg(test)]

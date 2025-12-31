@@ -12,10 +12,9 @@ Fret’s UI runtime is designed around a main-thread event loop:
   (see ADR 0008).
 
 Our model system (ADR 0031 + ADR 0086) uses an app-owned `ModelStore` with typed handles
-(`Model<T>` / `WeakModel<T>`) and leasing-based updates. The store was implemented with
-`Arc<Mutex<...>>` so model handles can decrement refcounts and remove entries in `Drop`.
+(`Model<T>` / `WeakModel<T>`) and leasing-based updates.
 
-Without an explicit threading rule, `Arc<Mutex<...>>` makes handles *accidentally* `Send`/`Sync`,
+Without an explicit threading rule, it is easy for handles to become *accidentally* `Send`/`Sync`,
 which invites subtle bugs:
 
 - updating models from background threads (races with UI invariants),
@@ -52,6 +51,6 @@ Recommended patterns:
 
 ## Implementation Notes
 
-- `ModelStore` includes a `PhantomData<Rc<()>>` marker to force `!Send`/`!Sync`.
-- This does not prevent internal locking; it prevents moving handles across threads.
-
+- `ModelStore` is backed by `Rc<RefCell<...>>` and includes a `PhantomData<Rc<()>>` marker,
+  making it `!Send`/`!Sync`.
+- This does not prevent logical re-entrancy bugs; it prevents moving handles across threads.
