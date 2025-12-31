@@ -1,4 +1,5 @@
 use std::{
+    any::TypeId,
     collections::{HashMap, HashSet},
     fmt,
     sync::Arc,
@@ -646,6 +647,15 @@ pub trait WinitDriver {
         _window: fret_core::AppWindowId,
         _state: &mut Self::WindowState,
         _changed: &[fret_app::ModelId],
+    ) {
+    }
+
+    fn handle_global_changes(
+        &mut self,
+        _app: &mut App,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _changed: &[TypeId],
     ) {
     }
 
@@ -2076,6 +2086,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             did_work |= self.fire_due_timers(now);
             did_work |= self.clear_internal_drag_hover_if_needed();
             did_work |= self.propagate_model_changes();
+            did_work |= self.propagate_global_changes();
 
             if !did_work {
                 break;
@@ -2092,6 +2103,19 @@ impl<D: WinitDriver> WinitRunner<D> {
         for (window, runtime) in self.windows.iter_mut() {
             self.driver
                 .handle_model_changes(&mut self.app, window, &mut runtime.user, &changed);
+        }
+        true
+    }
+
+    fn propagate_global_changes(&mut self) -> bool {
+        let changed = self.app.take_changed_globals();
+        if changed.is_empty() {
+            return false;
+        }
+
+        for (window, runtime) in self.windows.iter_mut() {
+            self.driver
+                .handle_global_changes(&mut self.app, window, &mut runtime.user, &changed);
         }
         true
     }

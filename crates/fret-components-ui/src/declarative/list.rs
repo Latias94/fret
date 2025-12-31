@@ -261,9 +261,11 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        Theme::global_mut(&mut app).apply_config(&ThemeConfig {
-            name: "Test".to_string(),
-            ..ThemeConfig::default()
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
         });
 
         let selection = app.models_mut().insert(Some(1usize));

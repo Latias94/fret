@@ -4,6 +4,7 @@ use fret_core::{
     Transform2D, UiServices,
 };
 use fret_runtime::{CommandId, Effect, InputContext, Model, ModelId};
+use std::any::{Any, TypeId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Invalidation {
@@ -132,16 +133,22 @@ pub struct LayoutCx<'a, H: UiHost> {
     pub scale_factor: f32,
     pub services: &'a mut dyn UiServices,
     pub observe_model: &'a mut dyn FnMut(ModelId, Invalidation),
+    pub observe_global: &'a mut dyn FnMut(TypeId, Invalidation),
     pub layout_child: &'a mut dyn FnMut(NodeId, Rect) -> Size,
 }
 
 impl<'a, H: UiHost> LayoutCx<'a, H> {
-    pub fn theme(&self) -> &Theme {
+    pub fn theme(&mut self) -> &Theme {
+        self.observe_global::<Theme>(Invalidation::Layout);
         Theme::global(&*self.app)
     }
 
     pub fn observe_model<T>(&mut self, model: Model<T>, invalidation: Invalidation) {
         (self.observe_model)(model.id(), invalidation);
+    }
+
+    pub fn observe_global<T: Any>(&mut self, invalidation: Invalidation) {
+        (self.observe_global)(TypeId::of::<T>(), invalidation);
     }
 
     pub fn layout(&mut self, child: NodeId, available: Size) -> Size {
@@ -164,18 +171,24 @@ pub struct PaintCx<'a, H: UiHost> {
     pub scale_factor: f32,
     pub services: &'a mut dyn UiServices,
     pub observe_model: &'a mut dyn FnMut(ModelId, Invalidation),
+    pub observe_global: &'a mut dyn FnMut(TypeId, Invalidation),
     pub scene: &'a mut Scene,
     pub paint_child: &'a mut dyn FnMut(NodeId, Rect),
     pub child_bounds: &'a dyn Fn(NodeId) -> Option<Rect>,
 }
 
 impl<'a, H: UiHost> PaintCx<'a, H> {
-    pub fn theme(&self) -> &Theme {
+    pub fn theme(&mut self) -> &Theme {
+        self.observe_global::<Theme>(Invalidation::Layout);
         Theme::global(&*self.app)
     }
 
     pub fn observe_model<T>(&mut self, model: Model<T>, invalidation: Invalidation) {
         (self.observe_model)(model.id(), invalidation);
+    }
+
+    pub fn observe_global<T: Any>(&mut self, invalidation: Invalidation) {
+        (self.observe_global)(TypeId::of::<T>(), invalidation);
     }
 
     pub fn paint(&mut self, child: NodeId, bounds: Rect) {

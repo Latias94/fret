@@ -535,6 +535,7 @@ fn ime_cursor_area_reflects_scroll_offset_in_paint_space() {
     ) -> Rect {
         let mut scene = Scene::default();
         let mut observe_model = |_id, _inv| {};
+        let mut observe_global = |_id, _inv| {};
         let mut paint_child = |_child: fret_core::NodeId, _bounds: Rect| {};
         let child_bounds = |_child: fret_core::NodeId| None;
 
@@ -548,6 +549,7 @@ fn ime_cursor_area_reflects_scroll_offset_in_paint_space() {
             scale_factor: 1.0,
             services,
             observe_model: &mut observe_model,
+            observe_global: &mut observe_global,
             scene: &mut scene,
             paint_child: &mut paint_child,
             child_bounds: &child_bounds,

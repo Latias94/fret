@@ -1,4 +1,5 @@
 use super::*;
+use std::any::TypeId;
 
 impl<H: UiHost> UiTree<H> {
     pub fn layout_all(
@@ -139,6 +140,14 @@ impl<H: UiHost> UiTree<H> {
             observations.push((model, inv));
         };
 
+        let mut global_observations: Vec<(TypeId, Invalidation)> = Vec::new();
+        let mut observe_global = |id: TypeId, inv: Invalidation| {
+            global_observations.push((id, inv));
+        };
+        // Theme changes can affect layout metrics across most of the tree; treat it as a default
+        // dependency to ensure layout re-runs when the global theme is updated.
+        observe_global(TypeId::of::<Theme>(), Invalidation::Layout);
+
         let size = self.with_widget_mut(node, |widget, tree| {
             let children: Vec<NodeId> = tree
                 .nodes
@@ -156,12 +165,15 @@ impl<H: UiHost> UiTree<H> {
                 scale_factor: sf,
                 services: unsafe { &mut *services_ptr },
                 observe_model: &mut observe_model,
+                observe_global: &mut observe_global,
                 layout_child: &mut layout_child,
             };
             widget.layout(&mut cx)
         });
 
         self.observed_in_layout.record(node, observations);
+        self.observed_globals_in_layout
+            .record(node, global_observations);
         if let Some(n) = self.nodes.get_mut(node) {
             n.measured_size = size;
             n.invalidation.layout = false;

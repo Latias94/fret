@@ -10,10 +10,12 @@ mod tests {
     #[test]
     fn surface_padding_pr_behaves_like_px() {
         let mut app = fret_app::App::default();
-        Theme::global_mut(&mut app).apply_config(&ThemeConfig {
-            name: "Test".to_string(),
-            metrics: std::collections::HashMap::from([("component.space.2".to_string(), 20.0)]),
-            ..ThemeConfig::default()
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                metrics: std::collections::HashMap::from([("component.space.2".to_string(), 20.0)]),
+                ..ThemeConfig::default()
+            });
         });
         let theme = Theme::global(&app);
 
@@ -36,10 +38,12 @@ mod tests {
     #[test]
     fn surface_padding_pb_behaves_like_py() {
         let mut app = fret_app::App::default();
-        Theme::global_mut(&mut app).apply_config(&ThemeConfig {
-            name: "Test".to_string(),
-            metrics: std::collections::HashMap::from([("component.space.2".to_string(), 18.0)]),
-            ..ThemeConfig::default()
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                metrics: std::collections::HashMap::from([("component.space.2".to_string(), 18.0)]),
+                ..ThemeConfig::default()
+            });
         });
         let theme = Theme::global(&app);
 
@@ -62,15 +66,17 @@ mod tests {
     #[test]
     fn input_padding_per_edge_overrides_axis_defaults() {
         let mut app = fret_app::App::default();
-        Theme::global_mut(&mut app).apply_config(&ThemeConfig {
-            name: "Test".to_string(),
-            metrics: std::collections::HashMap::from([
-                ("component.space.2".to_string(), 20.0),
-                ("component.space.3".to_string(), 24.0),
-                ("component.input.padding_x".to_string(), 6.0),
-                ("component.input.padding_y".to_string(), 4.0),
-            ]),
-            ..ThemeConfig::default()
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("component.space.2".to_string(), 20.0),
+                    ("component.space.3".to_string(), 24.0),
+                    ("component.input.padding_x".to_string(), 6.0),
+                    ("component.input.padding_y".to_string(), 4.0),
+                ]),
+                ..ThemeConfig::default()
+            });
         });
         let theme = Theme::global(&app);
 
@@ -85,10 +91,12 @@ mod tests {
     #[test]
     fn control_padding_pr_behaves_like_px() {
         let mut app = fret_app::App::default();
-        Theme::global_mut(&mut app).apply_config(&ThemeConfig {
-            name: "Test".to_string(),
-            metrics: std::collections::HashMap::from([("component.space.2".to_string(), 16.0)]),
-            ..ThemeConfig::default()
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                metrics: std::collections::HashMap::from([("component.space.2".to_string(), 16.0)]),
+                ..ThemeConfig::default()
+            });
         });
         let theme = Theme::global(&app);
 

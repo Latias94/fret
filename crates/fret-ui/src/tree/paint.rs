@@ -1,4 +1,5 @@
 use super::*;
+use std::any::TypeId;
 
 impl<H: UiHost> UiTree<H> {
     pub fn paint_all(
@@ -183,6 +184,11 @@ impl<H: UiHost> UiTree<H> {
             observations.push((model, inv));
         };
 
+        let mut global_observations: Vec<(TypeId, Invalidation)> = Vec::new();
+        let mut observe_global = |id: TypeId, inv: Invalidation| {
+            global_observations.push((id, inv));
+        };
+
         if self.debug_enabled {
             self.debug_stats.paint_nodes_performed =
                 self.debug_stats.paint_nodes_performed.saturating_add(1);
@@ -205,6 +211,7 @@ impl<H: UiHost> UiTree<H> {
                 scale_factor: sf,
                 services: unsafe { &mut *services_ptr },
                 observe_model: &mut observe_model,
+                observe_global: &mut observe_global,
                 scene,
                 paint_child: &mut paint_child,
                 child_bounds: &child_bounds,
@@ -228,6 +235,8 @@ impl<H: UiHost> UiTree<H> {
         let end = scene.ops_len();
 
         self.observed_in_paint.record(node, observations);
+        self.observed_globals_in_paint
+            .record(node, global_observations);
         if let Some(n) = self.nodes.get_mut(node) {
             n.invalidation.paint = false;
             if cache_enabled {

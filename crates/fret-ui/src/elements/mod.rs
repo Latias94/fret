@@ -11,6 +11,7 @@ use std::{
 };
 
 use crate::SvgSource;
+use crate::Theme;
 use crate::UiHost;
 use crate::element::{
     AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverRegionProps,
@@ -72,6 +73,7 @@ pub struct WindowElementState {
     prev_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
     cur_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
     observed_models: HashMap<GlobalElementId, Vec<(ModelId, Invalidation)>>,
+    observed_globals: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
     nodes: HashMap<GlobalElementId, NodeEntry>,
     root_bounds: HashMap<GlobalElementId, Rect>,
     prev_bounds: HashMap<GlobalElementId, Rect>,
@@ -113,6 +115,7 @@ impl WindowElementState {
         );
         self.cur_unkeyed_fingerprints.clear();
         self.observed_models.clear();
+        self.observed_globals.clear();
 
         std::mem::swap(&mut self.prev_bounds, &mut self.cur_bounds);
         self.cur_bounds.clear();
@@ -285,6 +288,11 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
         self.app.request_redraw(self.window);
     }
 
+    pub fn theme(&mut self) -> &Theme {
+        self.observe_global::<Theme>(Invalidation::Layout);
+        Theme::global(&*self.app)
+    }
+
     pub fn request_animation_frame(&mut self) {
         self.app
             .push_effect(Effect::RequestAnimationFrame(self.window));
@@ -357,6 +365,22 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             return;
         }
         list.push((model, invalidation));
+    }
+
+    pub fn observe_global<T: Any>(&mut self, invalidation: Invalidation) {
+        self.observe_global_id(TypeId::of::<T>(), invalidation);
+    }
+
+    pub fn observe_global_id(&mut self, global: TypeId, invalidation: Invalidation) {
+        let id = self.root_id();
+        let list = self.window_state.observed_globals.entry(id).or_default();
+        if list
+            .iter()
+            .any(|(g, inv)| *g == global && *inv == invalidation)
+        {
+            return;
+        }
+        list.push((global, invalidation));
     }
 
     #[track_caller]
@@ -1426,6 +1450,20 @@ pub(crate) fn observed_models_for_element<H: UiHost>(
         runtime
             .for_window_mut(window)
             .observed_models
+            .get(&element)
+            .cloned()
+            .unwrap_or_default()
+    })
+}
+
+pub(crate) fn observed_globals_for_element<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> Vec<(TypeId, Invalidation)> {
+    with_window_state(app, window, |window_state| {
+        window_state
+            .observed_globals
             .get(&element)
             .cloned()
             .unwrap_or_default()

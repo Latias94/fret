@@ -13,6 +13,7 @@ use fret_runtime::{
     CommandId, Effect, InputContext, InputDispatchPhase, KeyChord, KeymapService, ModelId, Platform,
 };
 use slotmap::SlotMap;
+use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -221,6 +222,55 @@ impl ObservationIndex {
     }
 }
 
+#[derive(Default)]
+struct GlobalObservationIndex {
+    by_node: HashMap<NodeId, HashMap<TypeId, ObservationMask>>,
+    by_global: HashMap<TypeId, HashMap<NodeId, ObservationMask>>,
+}
+
+impl GlobalObservationIndex {
+    fn record(&mut self, node: NodeId, observations: Vec<(TypeId, Invalidation)>) {
+        let mut next: HashMap<TypeId, ObservationMask> = HashMap::new();
+        for (global, inv) in observations {
+            next.entry(global).or_default().add(inv);
+        }
+
+        let prev = self.by_node.insert(node, next);
+        let prev = prev.unwrap_or_default();
+        let next = self.by_node.get(&node).cloned().unwrap_or_default();
+
+        for global in prev.keys() {
+            if next.contains_key(global) {
+                continue;
+            }
+            if let Some(nodes) = self.by_global.get_mut(global) {
+                nodes.remove(&node);
+                if nodes.is_empty() {
+                    self.by_global.remove(global);
+                }
+            }
+        }
+
+        for (global, mask) in next {
+            self.by_global.entry(global).or_default().insert(node, mask);
+        }
+    }
+
+    fn remove_node(&mut self, node: NodeId) {
+        let Some(prev) = self.by_node.remove(&node) else {
+            return;
+        };
+        for global in prev.keys() {
+            if let Some(nodes) = self.by_global.get_mut(global) {
+                nodes.remove(&node);
+                if nodes.is_empty() {
+                    self.by_global.remove(global);
+                }
+            }
+        }
+    }
+}
+
 pub struct UiTree<H: UiHost> {
     nodes: SlotMap<NodeId, Node<H>>,
     layers: SlotMap<UiLayerId, UiLayer>,
@@ -237,6 +287,8 @@ pub struct UiTree<H: UiHost> {
     replaying_pending_shortcut: bool,
     observed_in_layout: ObservationIndex,
     observed_in_paint: ObservationIndex,
+    observed_globals_in_layout: GlobalObservationIndex,
+    observed_globals_in_paint: GlobalObservationIndex,
 
     debug_enabled: bool,
     debug_stats: UiDebugFrameStats,
@@ -267,6 +319,8 @@ impl<H: UiHost> Default for UiTree<H> {
             replaying_pending_shortcut: false,
             observed_in_layout: ObservationIndex::default(),
             observed_in_paint: ObservationIndex::default(),
+            observed_globals_in_layout: GlobalObservationIndex::default(),
+            observed_globals_in_paint: GlobalObservationIndex::default(),
             debug_enabled: false,
             debug_stats: UiDebugFrameStats::default(),
             paint_cache_policy: PaintCachePolicy::Auto,
@@ -533,6 +587,8 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.remove(node);
         self.observed_in_layout.remove_node(node);
         self.observed_in_paint.remove_node(node);
+        self.observed_globals_in_layout.remove_node(node);
+        self.observed_globals_in_paint.remove_node(node);
         removed.push(node);
     }
 
@@ -851,6 +907,55 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
             if let Some(nodes) = self.observed_in_paint.by_model.get(&model) {
+                for (&node, &mask) in nodes {
+                    combined
+                        .entry(node)
+                        .and_modify(|m| *m = m.union(mask))
+                        .or_insert(mask);
+                }
+            }
+        }
+
+        let mut did_invalidate = false;
+        for (node, mask) in combined {
+            if mask.is_empty() || !self.nodes.contains_key(node) {
+                continue;
+            }
+            if mask.hit_test {
+                self.mark_invalidation(node, Invalidation::HitTest);
+            }
+            if mask.layout {
+                self.mark_invalidation(node, Invalidation::Layout);
+            }
+            if mask.paint {
+                self.mark_invalidation(node, Invalidation::Paint);
+            }
+            did_invalidate = true;
+        }
+
+        if did_invalidate && let Some(window) = self.window {
+            app.request_redraw(window);
+        }
+
+        did_invalidate
+    }
+
+    pub fn propagate_global_changes(&mut self, app: &mut H, changed: &[TypeId]) -> bool {
+        if changed.is_empty() {
+            return false;
+        }
+
+        let mut combined: HashMap<NodeId, ObservationMask> = HashMap::new();
+        for &global in changed {
+            if let Some(nodes) = self.observed_globals_in_layout.by_global.get(&global) {
+                for (&node, &mask) in nodes {
+                    combined
+                        .entry(node)
+                        .and_modify(|m| *m = m.union(mask))
+                        .or_insert(mask);
+                }
+            }
+            if let Some(nodes) = self.observed_globals_in_paint.by_global.get(&global) {
                 for (&node, &mask) in nodes {
                     combined
                         .entry(node)

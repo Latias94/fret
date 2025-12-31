@@ -507,6 +507,16 @@ impl WinitDriver for DockingArbitrationDriver {
         state.ui.propagate_model_changes(app, changed);
     }
 
+    fn handle_global_changes(
+        &mut self,
+        app: &mut App,
+        _window: AppWindowId,
+        state: &mut Self::WindowState,
+        changed: &[std::any::TypeId],
+    ) {
+        state.ui.propagate_global_changes(app, changed);
+    }
+
     fn handle_command(
         &mut self,
         app: &mut App,

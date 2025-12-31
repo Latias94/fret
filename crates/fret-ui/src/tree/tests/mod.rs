@@ -196,6 +196,7 @@ impl<H: UiHost> Widget<H> for ClickCounter {
 }
 
 mod hit_test;
+mod globals;
 mod models;
 mod outside_press;
 mod paint_cache;

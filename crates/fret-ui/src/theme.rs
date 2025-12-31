@@ -339,6 +339,10 @@ impl Theme {
         app.global_mut::<Theme>().expect("theme global exists")
     }
 
+    pub fn with_global_mut<H: UiHost, R>(app: &mut H, f: impl FnOnce(&mut Theme) -> R) -> R {
+        app.with_global_mut(|| default_theme().clone(), |theme, _app| f(theme))
+    }
+
     pub fn apply_config(&mut self, cfg: &ThemeConfig) {
         self.name = cfg.name.clone();
         self.author = cfg.author.clone();

@@ -1515,7 +1515,7 @@ mod tests {
             ]),
             ..ThemeConfig::default()
         };
-        Theme::global_mut(&mut app).apply_config(&cfg);
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
 
         let theme = Theme::global(&app);
         assert_eq!(MetricRef::space(Space::N2).resolve(theme), Px(12.0));
@@ -1537,7 +1537,7 @@ mod tests {
             ]),
             ..ThemeConfig::default()
         };
-        Theme::global_mut(&mut app).apply_config(&cfg);
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
 
         let theme = Theme::global(&app);
         assert_eq!(MetricRef::space(Space::N2).resolve(theme), Px(20.0));
@@ -1556,7 +1556,7 @@ mod tests {
             ]),
             ..ThemeConfig::default()
         };
-        Theme::global_mut(&mut app).apply_config(&cfg);
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
 
         let theme = Theme::global(&app);
         assert_eq!(MetricRef::radius(Radius::Md).resolve(theme), Px(12.0));

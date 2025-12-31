@@ -21,6 +21,8 @@ struct GlobalLeaseMarker {
 
 pub struct App {
     globals: HashMap<TypeId, Box<dyn Any>>,
+    changed_globals: Vec<TypeId>,
+    changed_globals_dedup: HashSet<TypeId>,
     models: ModelStore,
     commands: CommandRegistry,
     redraw_requests: HashSet<AppWindowId>,
@@ -41,6 +43,8 @@ impl App {
     pub fn new() -> Self {
         let mut app = Self {
             globals: HashMap::new(),
+            changed_globals: Vec::new(),
+            changed_globals_dedup: HashSet::new(),
             models: ModelStore::default(),
             commands: CommandRegistry::default(),
             redraw_requests: HashSet::new(),
@@ -58,6 +62,17 @@ impl App {
         app.set_global(fret_runtime::DockingInteractionSettings::default());
 
         app
+    }
+
+    fn mark_global_changed(&mut self, id: TypeId) {
+        if self.changed_globals_dedup.insert(id) {
+            self.changed_globals.push(id);
+        }
+    }
+
+    pub fn take_changed_globals(&mut self) -> Vec<TypeId> {
+        self.changed_globals_dedup.clear();
+        std::mem::take(&mut self.changed_globals)
     }
 
     #[track_caller]
@@ -80,6 +95,7 @@ impl App {
             Self::assert_global_not_leased::<T>(existing.as_ref());
         }
         self.globals.insert(type_id, Box::new(value));
+        self.mark_global_changed(type_id);
     }
 
     #[track_caller]
@@ -137,6 +153,8 @@ impl App {
         if !replaced.is::<GlobalLeaseMarker>() {
             panic!("global lease marker was replaced unexpectedly: type_id={type_id:?}");
         }
+
+        self.mark_global_changed(type_id);
 
         match result {
             Ok(value) => value,
@@ -306,6 +324,7 @@ pub struct Focus {
 #[cfg(test)]
 mod tests {
     use super::App;
+    use std::any::TypeId;
     use std::panic::{AssertUnwindSafe, catch_unwind};
 
     #[test]
@@ -348,5 +367,26 @@ mod tests {
             });
         }));
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn global_changes_are_tracked_and_deduped() {
+        let mut app = App::new();
+        let _ = app.take_changed_globals();
+
+        app.set_global::<u32>(1);
+        let changed = app.take_changed_globals();
+        assert_eq!(changed, vec![TypeId::of::<u32>()]);
+
+        app.set_global::<u32>(2);
+        app.set_global::<u32>(3);
+        let changed = app.take_changed_globals();
+        assert_eq!(changed, vec![TypeId::of::<u32>()]);
+
+        app.with_global_mut(|| 0u32, |v, _app| {
+            *v = 4;
+        });
+        let changed = app.take_changed_globals();
+        assert_eq!(changed, vec![TypeId::of::<u32>()]);
     }
 }

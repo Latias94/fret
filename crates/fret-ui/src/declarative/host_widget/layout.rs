@@ -23,6 +23,12 @@ impl ElementHostWidget {
             (cx.observe_model)(model, invalidation);
         }
 
+        for (global, invalidation) in
+            crate::elements::observed_globals_for_element(cx.app, window, self.element)
+        {
+            (cx.observe_global)(global, invalidation);
+        }
+
         let Some(instance) = self.instance(cx.app, window, cx.node) else {
             return Size::new(Px(0.0), Px(0.0));
         };

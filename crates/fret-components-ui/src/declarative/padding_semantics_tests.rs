@@ -8,13 +8,15 @@ mod tests {
     #[test]
     fn declarative_chrome_padding_pt_overrides_only_top() {
         let mut app = fret_app::App::default();
-        Theme::global_mut(&mut app).apply_config(&ThemeConfig {
-            name: "Test".to_string(),
-            metrics: std::collections::HashMap::from([
-                ("component.space.0".to_string(), 0.0),
-                ("component.space.6".to_string(), 32.0),
-            ]),
-            ..ThemeConfig::default()
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("component.space.0".to_string(), 0.0),
+                    ("component.space.6".to_string(), 32.0),
+                ]),
+                ..ThemeConfig::default()
+            });
         });
         let theme = Theme::global(&app).clone();
 
@@ -30,13 +32,15 @@ mod tests {
     #[test]
     fn declarative_chrome_padding_pr_overrides_only_right() {
         let mut app = fret_app::App::default();
-        Theme::global_mut(&mut app).apply_config(&ThemeConfig {
-            name: "Test".to_string(),
-            metrics: std::collections::HashMap::from([
-                ("component.space.0".to_string(), 0.0),
-                ("component.space.6".to_string(), 32.0),
-            ]),
-            ..ThemeConfig::default()
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("component.space.0".to_string(), 0.0),
+                    ("component.space.6".to_string(), 32.0),
+                ]),
+                ..ThemeConfig::default()
+            });
         });
         let theme = Theme::global(&app).clone();
 
