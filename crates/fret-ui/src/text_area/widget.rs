@@ -260,14 +260,21 @@ impl<H: UiHost> Widget<H> for TextArea {
                 if cx.focus != Some(cx.node) {
                     return;
                 }
-                self.clear_preedit();
+                let had_preedit = self.is_ime_composing();
                 let outcome = crate::text_edit::commands::apply_clipboard_text(
                     &mut self.edit_state(),
                     crate::text_edit::commands::ClipboardTextPolicy::Multiline,
                     text.as_str(),
                 );
-                let delta =
+                let mut delta =
                     crate::text_edit::commands::multiline_ui_delta("text.clipboard_text", outcome);
+                if had_preedit {
+                    delta.invalidate_layout = true;
+                    delta.clear_preedit = true;
+                    delta.text_dirty = true;
+                    delta.reset_affinity = true;
+                    delta.ensure_caret_visible = true;
+                }
                 self.apply_multiline_ui_delta(cx, delta);
             }
             Event::Ime(ime) => {
