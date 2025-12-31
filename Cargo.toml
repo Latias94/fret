@@ -12,6 +12,7 @@ members = [
     "crates/fret-core",
     "crates/fret-demo",
     "crates/fret-platform",
+    "crates/fret-platform-winit",
     "crates/fret-render",
     "crates/fret-runner-winit-wgpu",
     "crates/fret-runtime",

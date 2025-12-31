@@ -1241,8 +1241,18 @@ name = "fret-platform"
 version = "0.1.0"
 dependencies = [
  "accesskit",
+ "fret-core",
+ "slotmap",
+]
+
+[[package]]
+name = "fret-platform-winit"
+version = "0.1.0"
+dependencies = [
+ "accesskit",
  "accesskit_winit",
  "fret-core",
+ "fret-platform",
  "slotmap",
  "winit",
 ]
@@ -1275,7 +1285,7 @@ dependencies = [
  "cocoa",
  "fret-app",
  "fret-core",
- "fret-platform",
+ "fret-platform-winit",
  "fret-render",
  "objc",
  "pollster",

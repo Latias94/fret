@@ -12,6 +12,7 @@ use fret_core::{
     InternalDragEvent, InternalDragKind, Modifiers, MouseButton, PlatformCapabilities, Point, Px,
     Rect, Scene, Size, UiServices, ViewportInputEvent, WindowMetricsService,
 };
+use fret_platform_winit::accessibility;
 use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
 use slotmap::SlotMap;
 use tracing::error;
@@ -749,7 +750,7 @@ pub trait WinitDriver {
 
 struct WindowRuntime<S> {
     window: Arc<Window>,
-    accessibility: Option<fret_platform::accessibility::WinitAccessibility>,
+    accessibility: Option<accessibility::WinitAccessibility>,
     last_accessibility_snapshot: Option<std::sync::Arc<fret_core::SemanticsSnapshot>>,
     surface: SurfaceState<'static>,
     scene: Scene,
@@ -1128,13 +1129,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         &mut self,
         event_loop: &ActiveEventLoop,
         spec: WindowCreateSpec,
-    ) -> Result<
-        (
-            Arc<Window>,
-            Option<fret_platform::accessibility::WinitAccessibility>,
-        ),
-        RunnerError,
-    > {
+    ) -> Result<(Arc<Window>, Option<accessibility::WinitAccessibility>), RunnerError> {
         let mut attrs = Window::default_attributes()
             .with_title(spec.title)
             .with_inner_size(spec.size)
@@ -1157,7 +1152,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         let accessibility = self
             .config
             .accessibility_enabled
-            .then(|| fret_platform::accessibility::WinitAccessibility::new(event_loop, &window));
+            .then(|| accessibility::WinitAccessibility::new(event_loop, &window));
 
         if self.config.accessibility_enabled && spec.visible {
             window.set_visible(true);
@@ -1169,7 +1164,7 @@ impl<D: WinitDriver> WinitRunner<D> {
     fn insert_window(
         &mut self,
         window: Arc<Window>,
-        accessibility: Option<fret_platform::accessibility::WinitAccessibility>,
+        accessibility: Option<accessibility::WinitAccessibility>,
         surface: wgpu::Surface<'static>,
     ) -> Result<fret_core::AppWindowId, RunnerError> {
         let Some(context) = self.context.as_ref() else {
@@ -3169,7 +3164,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                         &mut state.user,
                     )
                 {
-                    let update = fret_platform::accessibility::tree_update_from_snapshot(
+                    let update = accessibility::tree_update_from_snapshot(
                         &snapshot,
                         state.window.scale_factor(),
                     );
@@ -3255,7 +3250,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
             a11y.drain_actions_fallback(&mut requests);
 
             for req in requests {
-                if let Some(target) = fret_platform::accessibility::focus_target_from_action(&req) {
+                if let Some(target) = accessibility::focus_target_from_action(&req) {
                     self.driver.accessibility_focus(
                         &mut self.app,
                         app_window,
@@ -3266,8 +3261,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     continue;
                 }
 
-                if let Some(target) = fret_platform::accessibility::invoke_target_from_action(&req)
-                {
+                if let Some(target) = accessibility::invoke_target_from_action(&req) {
                     let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                     self.driver.accessibility_invoke(
                         &mut self.app,
@@ -3280,12 +3274,10 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     continue;
                 }
 
-                if let Some((target, data)) =
-                    fret_platform::accessibility::set_value_from_action(&req)
-                {
+                if let Some((target, data)) = accessibility::set_value_from_action(&req) {
                     let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                     match data {
-                        fret_platform::accessibility::SetValueData::Text(value) => {
+                        accessibility::SetValueData::Text(value) => {
                             self.driver.accessibility_set_value_text(
                                 &mut self.app,
                                 services,
@@ -3295,7 +3287,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                                 &value,
                             );
                         }
-                        fret_platform::accessibility::SetValueData::Numeric(value) => {
+                        accessibility::SetValueData::Numeric(value) => {
                             self.driver.accessibility_set_value_numeric(
                                 &mut self.app,
                                 services,
@@ -3316,9 +3308,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 });
                 if let Some(snapshot) = snapshot {
                     if let Some((target, value)) =
-                        fret_platform::accessibility::replace_selected_text_from_action(
-                            &req, &snapshot,
-                        )
+                        accessibility::replace_selected_text_from_action(&req, &snapshot)
                     {
                         let services =
                             Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
@@ -3335,9 +3325,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     }
 
                     if let Some((target, data)) =
-                        fret_platform::accessibility::set_text_selection_from_action(
-                            &req, &snapshot,
-                        )
+                        accessibility::set_text_selection_from_action(&req, &snapshot)
                     {
                         let services =
                             Self::ui_services_mut(&mut self.renderer, &mut self.no_services);

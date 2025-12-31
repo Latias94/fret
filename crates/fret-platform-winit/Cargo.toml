@@ -1,0 +1,13 @@
+[package]
+name = "fret-platform-winit"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+accesskit.workspace = true
+accesskit_winit.workspace = true
+fret-core = { path = "../fret-core" }
+fret-platform = { path = "../fret-platform" }
+slotmap.workspace = true
+winit.workspace = true
+

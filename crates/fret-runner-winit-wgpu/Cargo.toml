@@ -12,7 +12,7 @@ cargo-clippy = []
 arboard.workspace = true
 fret-app = { path = "../fret-app" }
 fret-core = { path = "../fret-core" }
-fret-platform = { path = "../fret-platform" }
+fret-platform-winit = { path = "../fret-platform-winit" }
 fret-render = { path = "../fret-render" }
 pollster.workspace = true
 slotmap.workspace = true
