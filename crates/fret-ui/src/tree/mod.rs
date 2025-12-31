@@ -4,18 +4,16 @@ use crate::{
     widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
 use fret_core::{
-    AppWindowId, Corners, Event, KeyCode, NodeId, Point, PointerEvent, Px, Rect, Scene,
-    SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, Transform2D,
-    UiServices,
+    AppWindowId, Corners, Event, KeyCode, NodeId, Point, PointerEvent, Px, Rect, Scene, SceneOp,
+    SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, Transform2D, UiServices,
 };
 use fret_runtime::{
     CommandId, Effect, FrameId, InputContext, InputDispatchPhase, KeyChord, KeymapService, ModelId,
-    Platform,
-    PlatformCapabilities,
+    Platform, PlatformCapabilities,
 };
 use slotmap::SlotMap;
 use std::any::TypeId;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -1039,8 +1037,13 @@ impl<H: UiHost> UiTree<H> {
         let mut nodes: Vec<SemanticsNode> = Vec::with_capacity(self.nodes.len());
 
         for root in roots.iter().map(|r| r.root) {
+            let mut visited: HashSet<NodeId> = HashSet::new();
             let mut stack: Vec<NodeId> = vec![root];
             while let Some(id) = stack.pop() {
+                if !visited.insert(id) {
+                    tracing::error!(?id, "cycle detected while building semantics snapshot");
+                    continue;
+                }
                 let Some(node) = self.nodes.get_mut(id) else {
                     continue;
                 };
