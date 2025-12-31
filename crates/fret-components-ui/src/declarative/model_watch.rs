@@ -24,7 +24,10 @@ impl<'a, H: UiHost> ModelWatchExt for ElementCx<'a, H> {
     where
         Self: 'cx;
 
-    fn watch_model<'cx, 'm, T: Any>(&'cx mut self, model: &'m Model<T>) -> Self::WatchedModel<'cx, 'm, T> {
+    fn watch_model<'cx, 'm, T: Any>(
+        &'cx mut self,
+        model: &'m Model<T>,
+    ) -> Self::WatchedModel<'cx, 'm, T> {
         WatchedModel {
             cx: self,
             model,

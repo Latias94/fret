@@ -300,7 +300,10 @@ impl OverlayLayer {
     }
 
     fn tooltip(present: bool) -> Self {
-        Self::new(OverlayLayerKind::Tooltip, OverlayLayerState::tooltip(present))
+        Self::new(
+            OverlayLayerKind::Tooltip,
+            OverlayLayerState::tooltip(present),
+        )
     }
 
     fn hover(present: bool) -> Self {

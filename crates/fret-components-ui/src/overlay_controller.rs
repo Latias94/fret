@@ -323,12 +323,12 @@ impl OverlayController {
 mod tests {
     use super::*;
     use fret_app::App;
-    use fret_core::{PathCommand, SvgId, SvgService};
-    use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{
         Event, KeyCode, Modifiers, Point, Px, Rect, TextBlobId, TextConstraints, TextMetrics,
         TextService, TextStyle,
     };
+    use fret_core::{PathCommand, SvgId, SvgService};
+    use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::CommandId;
     use fret_runtime::Effect;
     use fret_ui::element::{LayoutStyle, Length, PressableProps};
