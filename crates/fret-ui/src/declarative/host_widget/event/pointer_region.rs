@@ -47,11 +47,11 @@ pub(super) fn handle_pointer_region<H: UiHost>(
         }
 
         fn request_focus(&mut self, target: crate::GlobalElementId) {
-            let Some(node) = crate::elements::with_window_state(
-                &mut *self.app,
-                self.window,
-                |window_state| window_state.node_entry(target).map(|e| e.node),
-            ) else {
+            let Some(node) =
+                crate::elements::with_window_state(&mut *self.app, self.window, |window_state| {
+                    window_state.node_entry(target).map(|e| e.node)
+                })
+            else {
                 return;
             };
             *self.requested_focus = Some(node);

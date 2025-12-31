@@ -143,10 +143,10 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                         // Page to the click position (center the thumb on the pointer).
                         let max_thumb_y = (bounds.size.height.0 - thumb.size.height.0).max(0.0);
                         if max_thumb_y > 0.0 {
-                            let click_y = (position.y.0 - bounds.origin.y.0)
-                                .clamp(0.0, bounds.size.height.0);
-                            let thumb_top = (click_y - thumb.size.height.0 * 0.5)
-                                .clamp(0.0, max_thumb_y);
+                            let click_y =
+                                (position.y.0 - bounds.origin.y.0).clamp(0.0, bounds.size.height.0);
+                            let thumb_top =
+                                (click_y - thumb.size.height.0 * 0.5).clamp(0.0, max_thumb_y);
                             let t = thumb_top / max_thumb_y;
                             let next = Px((max_offset.0 * t).clamp(0.0, max_offset.0));
                             let prev = handle.offset();

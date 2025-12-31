@@ -1,3 +1,11 @@
+use fret_core::{Event, Px, Size, TextStyle};
+use fret_runtime::Model;
+
+use crate::widget::{EventCx, LayoutCx, PaintCx, Widget};
+use crate::{Invalidation, UiHost};
+
+use super::{TextArea, TextAreaStyle};
+
 pub struct BoundTextArea {
     model: Model<String>,
     last_revision: Option<u64>,

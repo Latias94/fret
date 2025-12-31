@@ -1,6 +1,7 @@
 use std::{
     any::{Any, TypeId},
     collections::{HashMap, HashSet},
+    panic::{AssertUnwindSafe, catch_unwind, resume_unwind},
 };
 
 use fret_core::{AppWindowId, FrameId, NodeId, TickId, TimerToken};
@@ -11,6 +12,12 @@ use fret_runtime::{
     BindingV1, CommandRegistry, Effect, KeySpecV1, Keymap, KeymapFileV1, KeymapService, ModelHost,
     ModelId, ModelStore,
 };
+
+#[derive(Debug)]
+struct GlobalLeaseMarker {
+    type_name: &'static str,
+    leased_at: &'static std::panic::Location<'static>,
+}
 
 pub struct App {
     globals: HashMap<TypeId, Box<dyn Any>>,
@@ -53,20 +60,40 @@ impl App {
         app
     }
 
+    #[track_caller]
+    fn assert_global_not_leased<T: Any>(value: &dyn Any) {
+        if let Some(marker) = value.downcast_ref::<GlobalLeaseMarker>() {
+            panic!(
+                "global is currently leased: {} (type_id={:?}); leased at {}; accessed at {}",
+                marker.type_name,
+                TypeId::of::<T>(),
+                marker.leased_at,
+                std::panic::Location::caller()
+            );
+        }
+    }
+
+    #[track_caller]
     pub fn set_global<T: Any>(&mut self, value: T) {
-        self.globals.insert(TypeId::of::<T>(), Box::new(value));
+        let type_id = TypeId::of::<T>();
+        if let Some(existing) = self.globals.get(&type_id) {
+            Self::assert_global_not_leased::<T>(existing.as_ref());
+        }
+        self.globals.insert(type_id, Box::new(value));
     }
 
+    #[track_caller]
     pub fn global<T: Any>(&self) -> Option<&T> {
-        self.globals
-            .get(&TypeId::of::<T>())
-            .and_then(|value| value.downcast_ref::<T>())
+        let value = self.globals.get(&TypeId::of::<T>())?;
+        Self::assert_global_not_leased::<T>(value.as_ref());
+        value.downcast_ref::<T>()
     }
 
+    #[track_caller]
     pub fn global_mut<T: Any>(&mut self) -> Option<&mut T> {
-        self.globals
-            .get_mut(&TypeId::of::<T>())
-            .and_then(|value| value.downcast_mut::<T>())
+        let value = self.globals.get_mut(&TypeId::of::<T>())?;
+        Self::assert_global_not_leased::<T>(value.as_ref());
+        value.downcast_mut::<T>()
     }
 
     #[track_caller]
@@ -75,62 +102,46 @@ impl App {
         init: impl FnOnce() -> T,
         f: impl FnOnce(&mut T, &mut App) -> R,
     ) -> R {
-        #[derive(Debug)]
-        struct GlobalLeaseMarker;
-
-        struct Guard<T: Any> {
-            type_id: TypeId,
-            value: Option<T>,
-            globals: *mut HashMap<TypeId, Box<dyn Any>>,
-        }
-
-        impl<T: Any> Drop for Guard<T> {
-            fn drop(&mut self) {
-                let Some(value) = self.value.take() else {
-                    return;
-                };
-                // Safety: this guard is only constructed from `App::with_global_mut`, and it
-                // outlives the closure execution; `globals` remains valid for the duration.
-                unsafe {
-                    (*self.globals).insert(self.type_id, Box::new(value));
-                }
-            }
-        }
-
         let type_id = TypeId::of::<T>();
-        let existing = self
-            .globals
-            .insert(type_id, Box::new(GlobalLeaseMarker) as Box<dyn Any>);
+        let marker = GlobalLeaseMarker {
+            type_name: std::any::type_name::<T>(),
+            leased_at: std::panic::Location::caller(),
+        };
+        let existing = self.globals.insert(type_id, Box::new(marker));
 
-        let existing = match existing {
-            None => None,
+        let mut value = match existing {
+            None => init(),
             Some(v) => {
-                if v.is::<GlobalLeaseMarker>() {
+                if let Some(marker) = v.downcast_ref::<GlobalLeaseMarker>() {
                     panic!(
-                        "global already leased: {} ({type_id:?}) at {}",
-                        std::any::type_name::<T>(),
+                        "global already leased: {} (type_id={type_id:?}); leased at {}; accessed at {}",
+                        marker.type_name,
+                        marker.leased_at,
                         std::panic::Location::caller()
                     );
                 }
-                Some(*v.downcast::<T>().expect("global type id must match"))
+                *v.downcast::<T>().expect("global type id must match")
             }
         };
 
-        let mut guard = Guard::<T> {
-            type_id,
-            value: Some(existing.unwrap_or_else(init)),
-            globals: &mut self.globals as *mut _,
+        let result = if cfg!(panic = "unwind") {
+            catch_unwind(AssertUnwindSafe(|| f(&mut value, self)))
+        } else {
+            Ok(f(&mut value, self))
         };
 
-        // Safety: we keep `T` out of `self.globals` until `guard` drops and reinserts it,
-        // so it is safe to pass both `&mut T` and `&mut App` to the callback.
-        let result = {
-            let value = guard.value.as_mut().expect("guard value exists");
-            f(value, self)
+        let replaced = self.globals.insert(type_id, Box::new(value));
+        let Some(replaced) = replaced else {
+            panic!("global lease marker was removed unexpectedly: type_id={type_id:?}");
         };
+        if !replaced.is::<GlobalLeaseMarker>() {
+            panic!("global lease marker was replaced unexpectedly: type_id={type_id:?}");
+        }
 
-        drop(guard);
-        result
+        match result {
+            Ok(value) => value,
+            Err(panic) => resume_unwind(panic),
+        }
     }
 
     pub fn models(&self) -> &ModelStore {
@@ -290,4 +301,52 @@ impl ModelHost for App {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Focus {
     pub node: NodeId,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::App;
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+
+    #[test]
+    fn with_global_mut_restores_value_on_panic() {
+        let mut app = App::new();
+        app.set_global::<u32>(1);
+
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            app.with_global_mut(|| 0u32, |v, _app| {
+                *v = 2;
+                panic!("boom");
+            });
+        }));
+        assert!(result.is_err());
+
+        assert_eq!(*app.global::<u32>().unwrap(), 2);
+    }
+
+    #[test]
+    fn global_access_panics_while_leased() {
+        let mut app = App::new();
+        app.set_global::<u32>(1);
+
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            app.with_global_mut(|| 0u32, |_v, app| {
+                let _ = app.global::<u32>();
+            });
+        }));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn set_global_panics_while_leased() {
+        let mut app = App::new();
+        app.set_global::<u32>(1);
+
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            app.with_global_mut(|| 0u32, |_v, app| {
+                app.set_global::<u32>(2);
+            });
+        }));
+        assert!(result.is_err());
+    }
 }

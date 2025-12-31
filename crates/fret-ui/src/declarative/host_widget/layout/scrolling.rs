@@ -1,6 +1,6 @@
+use super::super::ElementHostWidget;
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
-use super::super::ElementHostWidget;
 
 impl ElementHostWidget {
     pub(super) fn layout_virtual_list_impl<H: UiHost>(
