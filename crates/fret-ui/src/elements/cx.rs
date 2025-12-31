@@ -1,0 +1,1255 @@
+use std::any::{Any, TypeId};
+use std::hash::Hash;
+use std::panic::Location;
+use std::sync::Arc;
+
+use fret_core::{AppWindowId, FrameId, NodeId, Px, Rect};
+use fret_runtime::{Effect, Model, ModelId};
+
+use crate::action::OnHoverChange;
+use crate::action::{
+    DismissibleActionHooks, KeyActionHooks, OnActivate, OnDismissRequest, OnKeyDown, OnPointerDown,
+    OnPointerMove, OnPointerUp, OnRovingActiveChange, OnRovingTypeahead, OnTimer,
+    PointerActionHooks, PressableActionHooks, PressableHoverActionHooks, RovingActionHooks,
+    TimerActionHooks,
+};
+use crate::element::{
+    AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverRegionProps,
+    ImageProps, LayoutStyle, OpacityProps, PointerRegionProps, PressableProps, PressableState,
+    ResizablePanelGroupProps, RowProps, ScrollProps, ScrollbarProps, SpacerProps, SpinnerProps,
+    StackProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, VirtualListOptions,
+    VirtualListProps, VirtualListState, VisualTransformProps,
+};
+use crate::widget::Invalidation;
+use crate::{SvgSource, Theme, UiHost};
+
+use super::hash::{callsite_hash, derive_child_id, stable_hash};
+use super::runtime::StateEntry;
+use super::{ContinuousFrames, ElementRuntime, GlobalElementId, WindowElementState, global_root};
+
+pub struct ElementCx<'a, H: UiHost> {
+    pub app: &'a mut H,
+    pub window: AppWindowId,
+    pub frame_id: FrameId,
+    pub bounds: Rect,
+    window_state: &'a mut WindowElementState,
+    stack: Vec<GlobalElementId>,
+    child_counters: Vec<u32>,
+}
+
+impl<'a, H: UiHost> ElementCx<'a, H> {
+    pub fn new(
+        app: &'a mut H,
+        runtime: &'a mut ElementRuntime,
+        window: AppWindowId,
+        bounds: Rect,
+        root: GlobalElementId,
+    ) -> Self {
+        let frame_id = app.frame_id();
+        runtime.prepare_window_for_frame(window, frame_id);
+
+        let window_state = runtime.for_window_mut(window);
+
+        Self {
+            app,
+            window,
+            frame_id,
+            bounds,
+            window_state,
+            stack: vec![root],
+            child_counters: vec![0],
+        }
+    }
+
+    pub fn new_for_root_name(
+        app: &'a mut H,
+        runtime: &'a mut ElementRuntime,
+        window: AppWindowId,
+        bounds: Rect,
+        root_name: &str,
+    ) -> Self {
+        Self::new(app, runtime, window, bounds, global_root(window, root_name))
+    }
+
+    pub fn root_id(&self) -> GlobalElementId {
+        *self.stack.last().expect("root exists")
+    }
+
+    /// Returns the last known `NodeId` for a declarative element, if available.
+    ///
+    /// This is safe to call during element rendering: it reads from the `ElementCx`'s already
+    /// borrowed window state, avoiding re-entrant `UiHost::with_global_mut` leases.
+    pub fn node_for_element(&self, element: GlobalElementId) -> Option<NodeId> {
+        self.window_state.node_entry(element).map(|e| e.node)
+    }
+
+    /// Returns the last frame's bounds for a declarative element, if available.
+    ///
+    /// This is safe to call during element rendering: it reads from the `ElementCx`'s already
+    /// borrowed window state, avoiding re-entrant `UiHost::with_global_mut` leases.
+    pub fn last_bounds_for_element(&self, element: GlobalElementId) -> Option<Rect> {
+        self.window_state.last_bounds(element)
+    }
+
+    /// Returns the last frame's **visual** bounds (post-`render_transform` AABB) for a declarative
+    /// element, if available.
+    ///
+    /// This is intended for anchored overlay policies that must track render transforms (ADR 0083)
+    /// without mixing layout transforms into the layout solver.
+    pub fn last_visual_bounds_for_element(&self, element: GlobalElementId) -> Option<Rect> {
+        self.window_state.last_visual_bounds(element)
+    }
+
+    /// Returns the last recorded root bounds for the element's root, if available.
+    ///
+    /// This is safe to call during element rendering for the same reason as
+    /// `last_bounds_for_element`.
+    pub fn root_bounds_for_element(&self, element: GlobalElementId) -> Option<Rect> {
+        let root = self.window_state.node_entry(element).map(|e| e.root)?;
+        self.window_state.root_bounds(root)
+    }
+
+    pub fn with_root_name<R>(&mut self, root_name: &str, f: impl FnOnce(&mut Self) -> R) -> R {
+        let root = global_root(self.window, root_name);
+
+        let prev_stack = std::mem::take(&mut self.stack);
+        let prev_counters = std::mem::take(&mut self.child_counters);
+
+        self.stack = vec![root];
+        self.child_counters = vec![0];
+
+        let out = f(self);
+
+        self.stack = prev_stack;
+        self.child_counters = prev_counters;
+
+        out
+    }
+
+    pub fn request_frame(&mut self) {
+        self.app.request_redraw(self.window);
+    }
+
+    pub fn request_animation_frame(&mut self) {
+        self.app
+            .push_effect(Effect::RequestAnimationFrame(self.window));
+    }
+
+    pub fn begin_continuous_frames(&mut self) -> ContinuousFrames {
+        let lease = self.window_state.begin_continuous_frames();
+        self.request_animation_frame();
+        lease
+    }
+
+    #[track_caller]
+    pub fn scope<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
+        let caller = callsite_hash(Location::caller());
+        self.enter(caller, None, f)
+    }
+
+    #[track_caller]
+    pub fn keyed<K: Hash, R>(&mut self, key: K, f: impl FnOnce(&mut Self) -> R) -> R {
+        let caller = callsite_hash(Location::caller());
+        let key_hash = stable_hash(&key);
+        self.enter(caller, Some(key_hash), f)
+    }
+
+    pub fn with_state<S: Any, R>(
+        &mut self,
+        init: impl FnOnce() -> S,
+        f: impl FnOnce(&mut S) -> R,
+    ) -> R {
+        let id = self.root_id();
+        self.with_state_for(id, init, f)
+    }
+
+    pub fn with_state_for<S: Any, R>(
+        &mut self,
+        element: GlobalElementId,
+        init: impl FnOnce() -> S,
+        f: impl FnOnce(&mut S) -> R,
+    ) -> R {
+        let key = (element, TypeId::of::<S>());
+
+        let entry = self
+            .window_state
+            .state
+            .entry(key)
+            .or_insert_with(|| StateEntry {
+                value: Box::new(init()),
+                last_seen_frame: self.frame_id,
+            });
+        entry.last_seen_frame = self.frame_id;
+
+        let state = entry
+            .value
+            .downcast_mut::<S>()
+            .expect("element state type mismatch");
+        f(state)
+    }
+
+    pub fn observe_model<T>(&mut self, model: Model<T>, invalidation: Invalidation) {
+        self.observe_model_id(model.id(), invalidation);
+    }
+
+    pub fn observe_model_id(&mut self, model: ModelId, invalidation: Invalidation) {
+        let id = self.root_id();
+        let list = self.window_state.observed_models.entry(id).or_default();
+        if list
+            .iter()
+            .any(|(m, inv)| *m == model && *inv == invalidation)
+        {
+            return;
+        }
+        list.push((model, invalidation));
+    }
+
+    pub fn observe_global<T: Any>(&mut self, invalidation: Invalidation) {
+        self.observe_global_id(TypeId::of::<T>(), invalidation);
+    }
+
+    pub fn observe_global_id(&mut self, global: TypeId, invalidation: Invalidation) {
+        let id = self.root_id();
+        let list = self.window_state.observed_globals.entry(id).or_default();
+        if list
+            .iter()
+            .any(|(g, inv)| *g == global && *inv == invalidation)
+        {
+            return;
+        }
+        list.push((global, invalidation));
+    }
+
+    pub fn theme(&mut self) -> &Theme {
+        self.observe_global::<Theme>(Invalidation::Layout);
+        Theme::global(&*self.app)
+    }
+
+    #[track_caller]
+    pub fn for_each_keyed<T, K: Hash>(
+        &mut self,
+        items: &[T],
+        mut key: impl FnMut(&T) -> K,
+        mut f: impl FnMut(&mut Self, usize, &T),
+    ) {
+        self.scope(|cx| {
+            for (index, item) in items.iter().enumerate() {
+                let k = key(item);
+                cx.keyed(k, |cx| f(cx, index, item));
+            }
+        });
+    }
+
+    #[track_caller]
+    pub fn for_each_unkeyed<T: Hash>(
+        &mut self,
+        items: &[T],
+        mut f: impl FnMut(&mut Self, usize, &T),
+    ) {
+        let list_id = callsite_hash(Location::caller());
+        let fingerprints: Vec<u64> = items.iter().map(stable_hash).collect();
+        self.window_state
+            .cur_unkeyed_fingerprints
+            .insert(list_id, fingerprints.clone());
+
+        if let Some(prev) = self.window_state.prev_unkeyed_fingerprints.get(&list_id)
+            && prev != &fingerprints
+            && items.len() > 1
+            && cfg!(debug_assertions)
+        {
+            tracing::warn!(
+                list_id = format_args!("{list_id:#x}"),
+                "unkeyed element list order changed; add explicit keys to preserve state"
+            );
+        }
+
+        self.scope(|cx| {
+            for (index, item) in items.iter().enumerate() {
+                let index_key = index as u64;
+                cx.enter(list_id, Some(index_key), |cx| f(cx, index, item));
+            }
+        });
+    }
+
+    fn enter<R>(
+        &mut self,
+        callsite: u64,
+        key_hash: Option<u64>,
+        f: impl FnOnce(&mut Self) -> R,
+    ) -> R {
+        let parent = self.root_id();
+        let child_index = self.child_counters.last_mut().expect("counter exists");
+        let slot = *child_index as u64;
+        *child_index = child_index.saturating_add(1);
+
+        let child_salt = key_hash.unwrap_or(slot);
+        let id = derive_child_id(parent, callsite, child_salt);
+
+        self.stack.push(id);
+        self.child_counters.push(0);
+        let out = f(self);
+        self.child_counters.pop();
+        self.stack.pop();
+        out
+    }
+
+    #[track_caller]
+    pub fn container(
+        &mut self,
+        props: ContainerProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Container(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn semantics(
+        &mut self,
+        props: crate::element::SemanticsProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Semantics(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn semantics_with_id(
+        &mut self,
+        props: crate::element::SemanticsProps,
+        f: impl FnOnce(&mut Self, GlobalElementId) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx, id);
+            AnyElement::new(id, ElementKind::Semantics(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn opacity(
+        &mut self,
+        opacity: f32,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        let props = OpacityProps {
+            opacity: opacity.clamp(0.0, 1.0),
+            ..Default::default()
+        };
+        self.opacity_props(props, f)
+    }
+
+    #[track_caller]
+    pub fn opacity_props(
+        &mut self,
+        props: OpacityProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Opacity(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn visual_transform(
+        &mut self,
+        transform: fret_core::Transform2D,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.visual_transform_props(
+            VisualTransformProps {
+                layout: LayoutStyle::default(),
+                transform,
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn visual_transform_props(
+        &mut self,
+        props: VisualTransformProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::VisualTransform(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn pressable(
+        &mut self,
+        props: PressableProps,
+        f: impl FnOnce(&mut Self, PressableState) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let hovered = cx.window_state.hovered_pressable == Some(id);
+            let pressed = cx.window_state.pressed_pressable == Some(id);
+            cx.pressable_clear_on_activate();
+            cx.pressable_clear_on_hover_change();
+            let children = f(cx, PressableState { hovered, pressed });
+            AnyElement::new(id, ElementKind::Pressable(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn pressable_with_id(
+        &mut self,
+        props: PressableProps,
+        f: impl FnOnce(&mut Self, PressableState, GlobalElementId) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let hovered = cx.window_state.hovered_pressable == Some(id);
+            let pressed = cx.window_state.pressed_pressable == Some(id);
+            cx.pressable_clear_on_activate();
+            cx.pressable_clear_on_hover_change();
+            let children = f(cx, PressableState { hovered, pressed }, id);
+            AnyElement::new(id, ElementKind::Pressable(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn pressable_with_id_props(
+        &mut self,
+        f: impl FnOnce(&mut Self, PressableState, GlobalElementId) -> (PressableProps, Vec<AnyElement>),
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let hovered = cx.window_state.hovered_pressable == Some(id);
+            let pressed = cx.window_state.pressed_pressable == Some(id);
+            cx.pressable_clear_on_activate();
+            cx.pressable_clear_on_hover_change();
+            let (props, children) = f(cx, PressableState { hovered, pressed }, id);
+            AnyElement::new(id, ElementKind::Pressable(props), children)
+        })
+    }
+
+    /// Register a component-owned activation handler for the current pressable element.
+    ///
+    /// This is a policy hook mechanism (ADR 0074): components decide what activation does (model
+    /// writes, overlay requests, command dispatch), while the runtime remains mechanism-only.
+    pub fn pressable_on_activate(&mut self, handler: OnActivate) {
+        self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_activate = Some(handler);
+        });
+    }
+
+    pub fn pressable_add_on_activate(&mut self, handler: OnActivate) {
+        self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_activate = match hooks.on_activate.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, reason| {
+                        prev(host, cx, reason);
+                        next(host, cx, reason);
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pressable_clear_on_activate(&mut self) {
+        self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_activate = None;
+        });
+    }
+
+    /// Register a component-owned hover change handler for the current pressable element.
+    ///
+    /// This is a mechanism-only hook: the runtime tracks hover deterministically and invokes
+    /// component code on hover transitions, without baking hover policy into `fret-ui`.
+    pub fn pressable_on_hover_change(&mut self, handler: OnHoverChange) {
+        self.with_state(PressableHoverActionHooks::default, |hooks| {
+            hooks.on_hover_change = Some(handler);
+        });
+    }
+
+    pub fn pressable_add_on_hover_change(&mut self, handler: OnHoverChange) {
+        self.with_state(PressableHoverActionHooks::default, |hooks| {
+            hooks.on_hover_change = match hooks.on_hover_change.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, hovered| {
+                        prev(host, cx, hovered);
+                        next(host, cx, hovered);
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pressable_clear_on_hover_change(&mut self) {
+        self.with_state(PressableHoverActionHooks::default, |hooks| {
+            hooks.on_hover_change = None;
+        });
+    }
+
+    #[track_caller]
+    pub fn pointer_region(
+        &mut self,
+        props: PointerRegionProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            cx.pointer_region_clear_on_pointer_down();
+            cx.pointer_region_clear_on_pointer_move();
+            cx.pointer_region_clear_on_pointer_up();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::PointerRegion(props), children)
+        })
+    }
+
+    /// Register a component-owned pointer down handler for the current pointer region element.
+    ///
+    /// This is a mechanism-only hook point: components decide what a pointer down does (open a
+    /// context menu, start a drag, request focus, etc.), while the runtime remains policy-free.
+    pub fn pointer_region_on_pointer_down(&mut self, handler: OnPointerDown) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_down = Some(handler);
+        });
+    }
+
+    pub fn pointer_region_add_on_pointer_down(&mut self, handler: OnPointerDown) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_down = match hooks.on_pointer_down.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, down| {
+                        prev(host, cx, down) || next(host, cx, down)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pointer_region_clear_on_pointer_down(&mut self) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_down = None;
+        });
+    }
+
+    /// Register a component-owned pointer move handler for the current pointer region element.
+    ///
+    /// This hook is invoked when the pointer region receives `PointerEvent::Move` events via
+    /// normal hit-testing or pointer capture.
+    pub fn pointer_region_on_pointer_move(&mut self, handler: OnPointerMove) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_move = Some(handler);
+        });
+    }
+
+    pub fn pointer_region_add_on_pointer_move(&mut self, handler: OnPointerMove) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_move = match hooks.on_pointer_move.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, mv| {
+                        prev(host, cx, mv) || next(host, cx, mv)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pointer_region_clear_on_pointer_move(&mut self) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_move = None;
+        });
+    }
+
+    /// Register a component-owned pointer up handler for the current pointer region element.
+    ///
+    /// This hook is invoked when the pointer region receives `PointerEvent::Up` events via
+    /// normal hit-testing or pointer capture.
+    pub fn pointer_region_on_pointer_up(&mut self, handler: OnPointerUp) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_up = Some(handler);
+        });
+    }
+
+    pub fn pointer_region_add_on_pointer_up(&mut self, handler: OnPointerUp) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_up = match hooks.on_pointer_up.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, up| {
+                        prev(host, cx, up) || next(host, cx, up)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pointer_region_clear_on_pointer_up(&mut self) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_up = None;
+        });
+    }
+
+    pub fn key_on_key_down_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down = Some(handler);
+        });
+    }
+
+    pub fn key_add_on_key_down_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down = match hooks.on_key_down.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, down| {
+                        prev(host, cx, down) || next(host, cx, down)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn key_clear_on_key_down_for(&mut self, element: GlobalElementId) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down = None;
+        });
+    }
+
+    pub fn timer_on_timer_for(&mut self, element: GlobalElementId, handler: OnTimer) {
+        self.with_state_for(element, TimerActionHooks::default, |hooks| {
+            hooks.on_timer = Some(handler);
+        });
+    }
+
+    pub fn timer_add_on_timer_for(&mut self, element: GlobalElementId, handler: OnTimer) {
+        self.with_state_for(element, TimerActionHooks::default, |hooks| {
+            hooks.on_timer = match hooks.on_timer.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, token| {
+                        prev(host, cx, token) || next(host, cx, token)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn timer_clear_on_timer_for(&mut self, element: GlobalElementId) {
+        self.with_state_for(element, TimerActionHooks::default, |hooks| {
+            hooks.on_timer = None;
+        });
+    }
+
+    /// Register a component-owned dismiss handler for the current dismissible root element.
+    ///
+    /// This is intended for overlay policy code that composes
+    /// `render_dismissible_root_with_hooks(...)` and
+    /// wants full control over dismissal semantics (ADR 0074).
+    pub fn dismissible_on_dismiss_request(&mut self, handler: OnDismissRequest) {
+        self.with_state(DismissibleActionHooks::default, |hooks| {
+            hooks.on_dismiss_request = Some(handler);
+        });
+    }
+
+    pub fn dismissible_add_on_dismiss_request(&mut self, handler: OnDismissRequest) {
+        self.with_state(DismissibleActionHooks::default, |hooks| {
+            hooks.on_dismiss_request = match hooks.on_dismiss_request.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, reason| {
+                        prev(host, cx, reason);
+                        next(host, cx, reason);
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn dismissible_clear_on_dismiss_request(&mut self) {
+        self.with_state(DismissibleActionHooks::default, |hooks| {
+            hooks.on_dismiss_request = None;
+        });
+    }
+
+    /// Register a component-owned roving active-change handler for the current roving element.
+    ///
+    /// This hook is invoked when the roving container changes focus among its children due to
+    /// keyboard navigation (arrow keys, Home/End, or typeahead).
+    ///
+    /// Components can implement “automatic activation” (e.g. Tabs) by updating selection models
+    /// here, keeping selection policy out of the runtime (ADR 0074).
+    pub fn roving_on_active_change(&mut self, handler: OnRovingActiveChange) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_active_change = Some(handler);
+        });
+    }
+
+    pub fn roving_add_on_active_change(&mut self, handler: OnRovingActiveChange) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_active_change = match hooks.on_active_change.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, idx| {
+                        prev(host, cx, idx);
+                        next(host, cx, idx);
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn roving_clear_on_active_change(&mut self) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_active_change = None;
+        });
+    }
+
+    /// Register a component-owned roving typeahead handler for the current roving element.
+    ///
+    /// When set, the runtime forwards alphanumeric key presses to this handler so components can
+    /// decide how typeahead should work (buffering, prefix matching, wrapping, etc.).
+    pub fn roving_on_typeahead(&mut self, handler: OnRovingTypeahead) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_typeahead = Some(handler);
+        });
+    }
+
+    pub fn roving_add_on_typeahead(&mut self, handler: OnRovingTypeahead) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_typeahead = match hooks.on_typeahead.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, it| {
+                        prev(host, cx, it.clone()).or_else(|| next(host, cx, it))
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn roving_clear_on_typeahead(&mut self) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_typeahead = None;
+        });
+    }
+
+    #[track_caller]
+    pub fn stack(&mut self, f: impl FnOnce(&mut Self) -> Vec<AnyElement>) -> AnyElement {
+        self.stack_props(StackProps::default(), f)
+    }
+
+    #[track_caller]
+    pub fn stack_props(
+        &mut self,
+        props: StackProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Stack(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn column(
+        &mut self,
+        props: ColumnProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Column(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn row(
+        &mut self,
+        props: RowProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Row(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn spacer(&mut self, props: SpacerProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::Spacer(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn text(&mut self, text: impl Into<std::sync::Arc<str>>) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::Text(TextProps::new(text)), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn text_props(&mut self, props: TextProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::Text(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn text_input(&mut self, props: TextInputProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::TextInput(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn text_area(&mut self, props: TextAreaProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::TextArea(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn resizable_panel_group(
+        &mut self,
+        props: ResizablePanelGroupProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::ResizablePanelGroup(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn image(&mut self, image: fret_core::ImageId) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::Image(ImageProps::new(image)), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn image_props(&mut self, props: ImageProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::Image(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn svg_icon(&mut self, svg: SvgSource) -> AnyElement {
+        self.svg_icon_props(SvgIconProps::new(svg))
+    }
+
+    #[track_caller]
+    pub fn svg_icon_props(&mut self, props: SvgIconProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::SvgIcon(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn spinner(&mut self) -> AnyElement {
+        self.spinner_props(SpinnerProps::default())
+    }
+
+    #[track_caller]
+    pub fn spinner_props(&mut self, props: SpinnerProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::Spinner(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn hover_region(
+        &mut self,
+        props: HoverRegionProps,
+        f: impl FnOnce(&mut Self, bool) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let hovered = cx.window_state.hovered_hover_region == Some(id);
+            let children = f(cx, hovered);
+            AnyElement::new(id, ElementKind::HoverRegion(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn scroll(
+        &mut self,
+        props: ScrollProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Scroll(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn scrollbar(&mut self, props: ScrollbarProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::Scrollbar(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn virtual_list(
+        &mut self,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        f: impl FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.virtual_list_with_layout(LayoutStyle::default(), len, options, scroll_handle, f)
+    }
+
+    #[track_caller]
+    pub fn virtual_list_ex(
+        &mut self,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        range_extractor: impl FnOnce(crate::virtual_list::VirtualRange) -> Vec<usize>,
+        f: impl FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.virtual_list_with_layout_ex(
+            LayoutStyle::default(),
+            len,
+            options,
+            scroll_handle,
+            range_extractor,
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn virtual_list_with_layout(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        f: impl FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.virtual_list_with_layout_ex(
+            layout,
+            len,
+            options,
+            scroll_handle,
+            crate::virtual_list::default_range_extractor,
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn virtual_list_with_layout_ex(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        range_extractor: impl FnOnce(crate::virtual_list::VirtualRange) -> Vec<usize>,
+        f: impl FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.virtual_list_with_layout_and_keys(
+            layout,
+            len,
+            options,
+            scroll_handle,
+            |i| i as crate::ItemKey,
+            range_extractor,
+            f,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn virtual_list_with_layout_and_keys(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        mut item_key_at: impl FnMut(usize) -> crate::ItemKey,
+        range_extractor: impl FnOnce(crate::virtual_list::VirtualRange) -> Vec<usize>,
+        f: impl FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+
+            let scroll_handle = scroll_handle.clone();
+            scroll_handle.set_items_count(len);
+
+            let range = cx.with_state(VirtualListState::default, |state| {
+                let prev_cfg = (
+                    state.metrics.estimate(),
+                    state.metrics.gap(),
+                    state.metrics.scroll_margin(),
+                );
+                let cfg = (
+                    options.estimate_row_height,
+                    options.gap,
+                    options.scroll_margin,
+                );
+
+                state.metrics.ensure(
+                    len,
+                    options.estimate_row_height,
+                    options.gap,
+                    options.scroll_margin,
+                );
+
+                let needs_rebuild = state.items_revision != options.items_revision
+                    || state.keys.len() != len
+                    || prev_cfg != cfg;
+
+                if needs_rebuild {
+                    state.items_revision = options.items_revision;
+                    state.keys.clear();
+                    state.keys.reserve(len);
+
+                    let mut heights = Vec::with_capacity(len);
+                    let mut measured = Vec::with_capacity(len);
+
+                    for i in 0..len {
+                        let key = item_key_at(i);
+                        state.keys.push(key);
+                        if let Some(h) = state.size_cache.get(&key).copied() {
+                            heights.push(h);
+                            measured.push(true);
+                        } else {
+                            heights.push(options.estimate_row_height);
+                            measured.push(false);
+                        }
+                    }
+
+                    state.metrics.rebuild_from_heights(
+                        heights,
+                        measured,
+                        options.estimate_row_height,
+                        options.gap,
+                        options.scroll_margin,
+                    );
+                }
+
+                let viewport_h = Px(state.viewport_h.0.max(0.0));
+                let offset_y = state
+                    .metrics
+                    .clamp_offset(scroll_handle.offset().y, viewport_h);
+
+                state
+                    .metrics
+                    .visible_range(offset_y, viewport_h, options.overscan)
+            });
+
+            let mut indices = range
+                .map(range_extractor)
+                .unwrap_or_default()
+                .into_iter()
+                .filter(|&idx| idx < len)
+                .collect::<Vec<_>>();
+            indices.sort_unstable();
+            indices.dedup();
+
+            let visible_items = cx.with_state(VirtualListState::default, |state| {
+                indices
+                    .iter()
+                    .map(|&idx| {
+                        let key = state
+                            .keys
+                            .get(idx)
+                            .copied()
+                            .unwrap_or(idx as crate::ItemKey);
+                        state.metrics.virtual_item(idx, key)
+                    })
+                    .collect::<Vec<_>>()
+            });
+
+            let children = f(cx, &visible_items);
+            AnyElement::new(
+                id,
+                ElementKind::VirtualList(VirtualListProps {
+                    layout,
+                    len,
+                    items_revision: options.items_revision,
+                    estimate_row_height: options.estimate_row_height,
+                    overscan: options.overscan,
+                    scroll_margin: options.scroll_margin,
+                    gap: options.gap,
+                    scroll_handle,
+                    visible_items,
+                }),
+                children,
+            )
+        })
+    }
+
+    #[track_caller]
+    pub fn flex(
+        &mut self,
+        props: FlexProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Flex(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn roving_flex(
+        &mut self,
+        props: crate::element::RovingFlexProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            cx.roving_clear_on_active_change();
+            cx.roving_clear_on_typeahead();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::RovingFlex(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn grid(
+        &mut self,
+        props: GridProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Grid(props), children)
+        })
+    }
+
+    /// Virtualized list helper that enforces stable element identity by entering a keyed scope
+    /// for each visible row.
+    ///
+    /// Prefer this over index-identity list rendering for any dynamic collection that can reorder,
+    /// so element-local state (caret/selection/scroll) does not “stick to positions”.
+    #[track_caller]
+    pub fn virtual_list_keyed(
+        &mut self,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl FnMut(usize) -> crate::ItemKey,
+        row: impl FnMut(&mut Self, usize) -> AnyElement,
+    ) -> AnyElement {
+        self.virtual_list_keyed_with_layout(
+            LayoutStyle::default(),
+            len,
+            options,
+            scroll_handle,
+            key_at,
+            row,
+        )
+    }
+
+    #[track_caller]
+    pub fn virtual_list_keyed_ex(
+        &mut self,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl FnMut(usize) -> crate::ItemKey,
+        range_extractor: impl FnOnce(crate::virtual_list::VirtualRange) -> Vec<usize>,
+        row: impl FnMut(&mut Self, usize) -> AnyElement,
+    ) -> AnyElement {
+        self.virtual_list_keyed_with_layout_ex(
+            LayoutStyle::default(),
+            len,
+            options,
+            scroll_handle,
+            key_at,
+            range_extractor,
+            row,
+        )
+    }
+
+    #[track_caller]
+    pub fn virtual_list_keyed_with_layout(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl FnMut(usize) -> crate::ItemKey,
+        row: impl FnMut(&mut Self, usize) -> AnyElement,
+    ) -> AnyElement {
+        self.virtual_list_keyed_with_layout_ex(
+            layout,
+            len,
+            options,
+            scroll_handle,
+            key_at,
+            crate::virtual_list::default_range_extractor,
+            row,
+        )
+    }
+
+    #[track_caller]
+    #[allow(clippy::too_many_arguments)]
+    pub fn virtual_list_keyed_with_layout_ex(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl FnMut(usize) -> crate::ItemKey,
+        range_extractor: impl FnOnce(crate::virtual_list::VirtualRange) -> Vec<usize>,
+        mut row: impl FnMut(&mut Self, usize) -> AnyElement,
+    ) -> AnyElement {
+        self.virtual_list_with_layout_and_keys(
+            layout,
+            len,
+            options,
+            scroll_handle,
+            key_at,
+            range_extractor,
+            |cx, items| {
+                items
+                    .iter()
+                    .copied()
+                    .map(|item| cx.keyed(item.key, |cx| row(cx, item.index)))
+                    .collect()
+            },
+        )
+    }
+}

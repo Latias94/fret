@@ -1,9 +1,8 @@
-pub fn global_root(window: AppWindowId, name: &str) -> GlobalElementId {
-    let mut h = Fnv1a64::default();
-    window.hash(&mut h);
-    h.write(name.as_bytes());
-    GlobalElementId(h.finish())
-}
+use fret_core::{AppWindowId, NodeId, Rect};
+
+use super::with_window_state;
+use super::{ElementCx, ElementRuntime, GlobalElementId};
+use crate::UiHost;
 
 pub fn with_element_cx<H: UiHost, R>(
     app: &mut H,
@@ -79,48 +78,4 @@ pub(crate) fn record_visual_bounds_for_element<H: UiHost>(
     bounds: Rect,
 ) {
     with_window_state(app, window, |st| st.record_visual_bounds(element, bounds));
-}
-
-fn derive_child_id(parent: GlobalElementId, callsite: u64, child_salt: u64) -> GlobalElementId {
-    let mut h = Fnv1a64::default();
-    h.write_u64(parent.0);
-    h.write_u64(callsite);
-    h.write_u64(child_salt);
-    GlobalElementId(h.finish())
-}
-
-fn stable_hash<T: Hash>(value: &T) -> u64 {
-    let mut h = Fnv1a64::default();
-    value.hash(&mut h);
-    h.finish()
-}
-
-fn callsite_hash(loc: &Location<'_>) -> u64 {
-    let mut h = Fnv1a64::default();
-    h.write(loc.file().as_bytes());
-    h.write_u32(loc.line());
-    h.write_u32(loc.column());
-    h.finish()
-}
-
-#[derive(Default)]
-struct Fnv1a64(u64);
-
-impl Hasher for Fnv1a64 {
-    fn finish(&self) -> u64 {
-        self.0
-    }
-
-    fn write(&mut self, bytes: &[u8]) {
-        let mut hash = if self.0 == 0 {
-            0xcbf29ce484222325
-        } else {
-            self.0
-        };
-        for b in bytes {
-            hash ^= *b as u64;
-            hash = hash.wrapping_mul(0x100000001b3);
-        }
-        self.0 = hash;
-    }
 }

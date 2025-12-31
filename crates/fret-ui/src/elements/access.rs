@@ -1,0 +1,174 @@
+use std::any::{Any, TypeId};
+
+use fret_core::{AppWindowId, NodeId};
+
+use crate::UiHost;
+use crate::widget::Invalidation;
+
+use fret_runtime::ModelId;
+
+use super::runtime::StateEntry;
+use super::{ElementRuntime, GlobalElementId, WindowElementState};
+
+pub fn with_element_state<H: UiHost, S: Any, R>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+    init: impl FnOnce() -> S,
+    f: impl FnOnce(&mut S) -> R,
+) -> R {
+    let frame_id = app.frame_id();
+    app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+        runtime.prepare_window_for_frame(window, frame_id);
+        let window_state = runtime.for_window_mut(window);
+
+        let key = (element, TypeId::of::<S>());
+        let entry = window_state.state.entry(key).or_insert_with(|| StateEntry {
+            value: Box::new(init()),
+            last_seen_frame: frame_id,
+        });
+        entry.last_seen_frame = frame_id;
+
+        let state = entry
+            .value
+            .downcast_mut::<S>()
+            .expect("element state type mismatch");
+        f(state)
+    })
+}
+
+pub(crate) fn observed_models_for_element<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> Vec<(ModelId, Invalidation)> {
+    let frame_id = app.frame_id();
+    app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+        runtime.prepare_window_for_frame(window, frame_id);
+        runtime
+            .for_window_mut(window)
+            .observed_models
+            .get(&element)
+            .cloned()
+            .unwrap_or_default()
+    })
+}
+
+pub(crate) fn observed_globals_for_element<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> Vec<(TypeId, Invalidation)> {
+    with_window_state(app, window, |window_state| {
+        window_state
+            .observed_globals
+            .get(&element)
+            .cloned()
+            .unwrap_or_default()
+    })
+}
+
+pub(crate) fn with_window_state<H: UiHost, R>(
+    app: &mut H,
+    window: AppWindowId,
+    f: impl FnOnce(&mut WindowElementState) -> R,
+) -> R {
+    let frame_id = app.frame_id();
+    app.with_global_mut(ElementRuntime::new, |runtime, _app| {
+        runtime.prepare_window_for_frame(window, frame_id);
+        let window_state = runtime.for_window_mut(window);
+        f(window_state)
+    })
+}
+
+pub(crate) fn update_hovered_pressable<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    next: Option<GlobalElementId>,
+) -> (
+    Option<GlobalElementId>,
+    Option<NodeId>,
+    Option<GlobalElementId>,
+    Option<NodeId>,
+) {
+    with_window_state(app, window, |st| {
+        let prev = st.hovered_pressable;
+        if prev == next {
+            return (None, None, None, None);
+        }
+        let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
+        let next_node = next.and_then(|id| st.node_entry(id).map(|e| e.node));
+        st.hovered_pressable = next;
+        (prev, prev_node, next, next_node)
+    })
+}
+
+pub(crate) fn update_hovered_hover_region<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    next: Option<GlobalElementId>,
+) -> (
+    Option<GlobalElementId>,
+    Option<NodeId>,
+    Option<GlobalElementId>,
+    Option<NodeId>,
+) {
+    with_window_state(app, window, |st| {
+        let prev = st.hovered_hover_region;
+        if prev == next {
+            return (None, None, None, None);
+        }
+        let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
+        let next_node = next.and_then(|id| st.node_entry(id).map(|e| e.node));
+        st.hovered_hover_region = next;
+        (prev, prev_node, next, next_node)
+    })
+}
+
+pub(crate) fn set_pressed_pressable<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    pressed: Option<GlobalElementId>,
+) -> Option<NodeId> {
+    with_window_state(app, window, |st| {
+        let prev = st.pressed_pressable;
+        if prev == pressed {
+            return None;
+        }
+        let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
+        st.pressed_pressable = pressed;
+        prev_node
+    })
+}
+
+pub(crate) fn is_hovered_pressable<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> bool {
+    with_window_state(app, window, |st| st.hovered_pressable == Some(element))
+}
+
+pub(crate) fn is_pressed_pressable<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> bool {
+    with_window_state(app, window, |st| st.pressed_pressable == Some(element))
+}
+
+pub fn take_element_state<H: UiHost, S: Any>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> Option<S> {
+    app.with_global_mut(ElementRuntime::new, |runtime, app| {
+        runtime.prepare_window_for_frame(window, app.frame_id());
+        let window_state = runtime.for_window_mut(window);
+        window_state
+            .state
+            .remove(&(element, TypeId::of::<S>()))
+            .and_then(|e| e.value.downcast::<S>().ok())
+            .map(|b| *b)
+    })
+}
