@@ -137,16 +137,17 @@ impl ContextMenu {
         entries: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<ContextMenuEntry>,
     ) -> AnyElement {
         cx.scope(|cx| {
-            cx.observe_model(self.open, Invalidation::Paint);
+            cx.observe_model(&self.open, Invalidation::Paint);
 
             let theme = Theme::global(&*cx.app).clone();
-            let is_open = cx.app.models().get(self.open).copied().unwrap_or(false);
+            let is_open = cx.app.models().get_copied(&self.open).unwrap_or(false);
 
             let id = cx.root_id();
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
 
             let open = self.open;
+            let open_for_pointer = open.clone();
             let pointer_policy = Arc::new(move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                                            _cx: fret_ui::action::ActionCx,
                                            down: PointerDownCx| {
@@ -158,7 +159,7 @@ impl ContextMenu {
                     return false;
                 }
 
-                let _ = host.models_mut().update(open, |v| *v = true);
+                let _ = host.models_mut().update(&open_for_pointer, |v| *v = true);
                 true
             });
 
@@ -167,7 +168,7 @@ impl ContextMenu {
                 vec![trigger]
             });
 
-            let key_open = self.open;
+            let key_open = open.clone();
             cx.key_on_key_down_for(
                 trigger_id,
                 Arc::new(move |host, _cx, down| {
@@ -178,7 +179,7 @@ impl ContextMenu {
                     if !is_shift_f10 {
                         return false;
                     }
-                    let _ = host.models_mut().update(key_open, |v| *v = true);
+                    let _ = host.models_mut().update(&key_open, |v| *v = true);
                     true
                 }),
             );
@@ -194,8 +195,9 @@ impl ContextMenu {
                 let side_offset = self.side_offset;
                 let window_margin = self.window_margin;
                 let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
+                let open_for_overlay = open.clone();
 
-                let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
+                let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                     let trigger_bounds =
                         overlay::anchor_bounds_for_element(cx, trigger_id);
                     let anchor = anchor_point.or_else(|| trigger_bounds.map(|r| r.origin));
@@ -352,6 +354,7 @@ impl ContextMenu {
                                                             .or_else(|| Some(label.clone()));
                                                         let disabled = item.disabled;
                                                         let command = item.command;
+                                                        let open = open_for_overlay.clone();
 
                                                         out.push(cx.pressable(
                                                             PressableProps {
@@ -380,7 +383,7 @@ impl ContextMenu {
                                                             move |cx, st| {
                                                                 cx.pressable_dispatch_command_opt(command);
                                                                 if !disabled {
-                                                                    cx.pressable_set_bool(open, false);
+                                                                    cx.pressable_set_bool(&open, false);
                                                                 }
 
                                                                 let theme = Theme::global(&*cx.app).clone();
@@ -584,12 +587,26 @@ mod tests {
         let mut services = FakeServices::default();
 
         // First frame: establish stable trigger bounds.
-        let _ = render_frame(&mut ui, &mut app, &mut services, window, bounds, open);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
 
-        let _ = app.models_mut().update(open, |v| *v = true);
+        let _ = app.models_mut().update(&open, |v| *v = true);
 
         // Second frame: open the menu and verify item metadata.
-        let _ = render_frame(&mut ui, &mut app, &mut services, window, bounds, open);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         let beta = snap

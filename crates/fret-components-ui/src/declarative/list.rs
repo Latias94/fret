@@ -68,8 +68,8 @@ pub fn list_virtualized<H: UiHost>(
 ) -> AnyElement {
     let selected = selection
         .map(|m| {
-            cx.observe_model(m, Invalidation::Paint);
-            cx.app.models().get(m).cloned().unwrap_or(None)
+            cx.observe_model(&m, Invalidation::Paint);
+            cx.app.models().get_copied(&m).unwrap_or(None)
         })
         .unwrap_or(None);
 
@@ -158,11 +158,11 @@ pub fn list_from_strings<H: UiHost>(
     size: Size,
     on_select: impl Fn(usize) -> Option<CommandId>,
 ) -> AnyElement {
-    cx.observe_model(items, Invalidation::Layout);
-    let values = cx.app.models().get(items).cloned().unwrap_or_default();
+    cx.observe_model(&items, Invalidation::Layout);
+    let values = cx.app.models().get_cloned(&items).unwrap_or_default();
 
     let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
-    let items_revision = cx.app.models().revision(items).unwrap_or(0);
+    let items_revision = cx.app.models().revision(&items).unwrap_or(0);
 
     list_virtualized(
         cx,
@@ -277,31 +277,25 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let render =
-            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| -> fret_core::NodeId {
-            fret_ui::declarative::render_root(
-                ui,
-                app,
-                services,
-                window,
-                bounds,
-                "test",
-                |cx| {
-                    vec![list_virtualized(
-                        cx,
-                        Some(selection),
-                        Size::Medium,
-                        None,
-                        3,
-                        2,
-                        &scroll_handle,
-                        0,
-                        |i| i as u64,
-                        |_i| Some(CommandId::new("noop")),
-                        |cx, i| vec![cx.text(format!("Item {i}"))],
-                    )]
-                },
-            )
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![list_virtualized(
+                    cx,
+                    Some(selection.clone()),
+                    Size::Medium,
+                    None,
+                    3,
+                    2,
+                    &scroll_handle,
+                    0,
+                    |i| i as u64,
+                    |_i| Some(CommandId::new("noop")),
+                    |cx, i| vec![cx.text(format!("Item {i}"))],
+                )]
+            })
         };
 
         // VirtualList computes the visible window based on viewport metrics populated during layout,

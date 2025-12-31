@@ -333,10 +333,13 @@ mod tests {
         app.set_global::<u32>(1);
 
         let result = catch_unwind(AssertUnwindSafe(|| {
-            app.with_global_mut(|| 0u32, |v, _app| {
-                *v = 2;
-                panic!("boom");
-            });
+            app.with_global_mut(
+                || 0u32,
+                |v, _app| {
+                    *v = 2;
+                    panic!("boom");
+                },
+            );
         }));
         assert!(result.is_err());
 
@@ -349,9 +352,12 @@ mod tests {
         app.set_global::<u32>(1);
 
         let result = catch_unwind(AssertUnwindSafe(|| {
-            app.with_global_mut(|| 0u32, |_v, app| {
-                let _ = app.global::<u32>();
-            });
+            app.with_global_mut(
+                || 0u32,
+                |_v, app| {
+                    let _ = app.global::<u32>();
+                },
+            );
         }));
         assert!(result.is_err());
     }
@@ -362,9 +368,12 @@ mod tests {
         app.set_global::<u32>(1);
 
         let result = catch_unwind(AssertUnwindSafe(|| {
-            app.with_global_mut(|| 0u32, |_v, app| {
-                app.set_global::<u32>(2);
-            });
+            app.with_global_mut(
+                || 0u32,
+                |_v, app| {
+                    app.set_global::<u32>(2);
+                },
+            );
         }));
         assert!(result.is_err());
     }
@@ -383,9 +392,12 @@ mod tests {
         let changed = app.take_changed_globals();
         assert_eq!(changed, vec![TypeId::of::<u32>()]);
 
-        app.with_global_mut(|| 0u32, |v, _app| {
-            *v = 4;
-        });
+        app.with_global_mut(
+            || 0u32,
+            |v, _app| {
+                *v = 4;
+            },
+        );
         let changed = app.take_changed_globals();
         assert_eq!(changed, vec![TypeId::of::<u32>()]);
     }

@@ -171,7 +171,7 @@ impl CommandInput {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
-            cx.observe_model(self.model, Invalidation::Paint);
+            cx.observe_model(&self.model, Invalidation::Paint);
 
             let border = border(&theme);
             let disabled = self.disabled;
@@ -608,17 +608,19 @@ impl CommandPalette {
                 .unzip();
             let entries_arc: Arc<[PaletteEntry]> = Arc::from(entries.into_boxed_slice());
 
-            let active = cx.with_state(CommandPaletteState::default, |st| st.active);
+            let active = cx.with_state(CommandPaletteState::default, |st| st.active.clone());
             let active = if let Some(active) = active {
                 active
             } else {
                 let init = cmdk_selection::clamp_active_index(&disabled_flags, None);
                 let active = cx.app.models_mut().insert(init);
-                cx.with_state(CommandPaletteState::default, |st| st.active = Some(active));
+                cx.with_state(CommandPaletteState::default, |st| {
+                    st.active = Some(active.clone())
+                });
                 active
             };
 
-            cx.observe_model(active, Invalidation::Paint);
+            cx.observe_model(&active, Invalidation::Paint);
 
             let items_changed = cx.with_state(CommandPaletteState::default, |st| {
                 if st.items_fingerprint != items_fingerprint {
@@ -629,14 +631,14 @@ impl CommandPalette {
                 }
             });
 
-            let cur_active = cx.app.models().get(active).copied().unwrap_or(None);
+            let cur_active = cx.app.models().get_copied(&active).unwrap_or(None);
             let next_active = if items_changed {
                 cmdk_selection::clamp_active_index(&disabled_flags, None)
             } else {
                 cmdk_selection::clamp_active_index(&disabled_flags, cur_active)
             };
             if next_active != cur_active {
-                let _ = cx.app.models_mut().update(active, |v| *v = next_active);
+                let _ = cx.app.models_mut().update(&active, |v| *v = next_active);
             }
 
             let mut row_ids: Vec<fret_ui::elements::GlobalElementId> =
@@ -664,7 +666,7 @@ impl CommandPalette {
 
             let mut key_counts: HashMap<RowKey, u32> = HashMap::new();
 
-            let active_idx = cx.app.models().get(active).copied().unwrap_or(None);
+            let active_idx = cx.app.models().get_copied(&active).unwrap_or(None);
             let item_count = items.len();
             let rows: Vec<AnyElement> = items
                 .into_iter()
@@ -679,6 +681,7 @@ impl CommandPalette {
                     let occ = *count;
                     *count = count.saturating_add(1);
 
+                    let active_for_row = active.clone();
                     cx.keyed((base, occ), |cx| {
                         let enabled = disabled_flags.get(idx).copied() == Some(false);
                         let selected = active_idx.is_some_and(|i| i == idx);
@@ -705,7 +708,7 @@ impl CommandPalette {
                             move |cx, st| {
                                 cx.pressable_dispatch_command_opt(command);
                                 if enabled {
-                                    let active = active;
+                                    let active = active_for_row.clone();
                                     cx.pressable_on_hover_change(Arc::new(
                                         move |host, action_cx, hovered| {
                                             if !hovered {
@@ -713,13 +716,13 @@ impl CommandPalette {
                                             }
                                             let current = host
                                                 .models_mut()
-                                                .get(active)
-                                                .copied()
+                                                .get_copied(&active)
                                                 .unwrap_or(None);
                                             let next = Some(idx);
                                             if current != next {
-                                                let _ =
-                                                    host.models_mut().update(active, |v| *v = next);
+                                                let _ = host
+                                                    .models_mut()
+                                                    .update(&active, |v| *v = next);
                                                 host.request_redraw(action_cx.window);
                                             }
                                         },
@@ -834,7 +837,7 @@ impl CommandPalette {
                             match down.key {
                                 KeyCode::ArrowDown | KeyCode::ArrowUp => {
                                     let current =
-                                        host.models_mut().get(active).copied().unwrap_or(None);
+                                        host.models_mut().get_copied(&active).unwrap_or(None);
                                     let forward = down.key == KeyCode::ArrowDown;
                                     let next = cmdk_selection::next_active_index(
                                         &disabled_flags,
@@ -844,34 +847,34 @@ impl CommandPalette {
                                     );
 
                                     if next != current {
-                                        let _ = host.models_mut().update(active, |v| *v = next);
+                                        let _ = host.models_mut().update(&active, |v| *v = next);
                                         host.request_redraw(action_cx.window);
                                     }
                                     true
                                 }
                                 KeyCode::Home => {
                                     let current =
-                                        host.models_mut().get(active).copied().unwrap_or(None);
+                                        host.models_mut().get_copied(&active).unwrap_or(None);
                                     let next = cmdk_selection::first_enabled(&disabled_flags);
                                     if next != current {
-                                        let _ = host.models_mut().update(active, |v| *v = next);
+                                        let _ = host.models_mut().update(&active, |v| *v = next);
                                         host.request_redraw(action_cx.window);
                                     }
                                     true
                                 }
                                 KeyCode::End => {
                                     let current =
-                                        host.models_mut().get(active).copied().unwrap_or(None);
+                                        host.models_mut().get_copied(&active).unwrap_or(None);
                                     let next = cmdk_selection::last_enabled(&disabled_flags);
                                     if next != current {
-                                        let _ = host.models_mut().update(active, |v| *v = next);
+                                        let _ = host.models_mut().update(&active, |v| *v = next);
                                         host.request_redraw(action_cx.window);
                                     }
                                     true
                                 }
                                 KeyCode::PageDown | KeyCode::PageUp => {
                                     let current =
-                                        host.models_mut().get(active).copied().unwrap_or(None);
+                                        host.models_mut().get_copied(&active).unwrap_or(None);
                                     let forward = down.key == KeyCode::PageDown;
                                     let next = cmdk_selection::advance_active_index(
                                         &disabled_flags,
@@ -881,14 +884,14 @@ impl CommandPalette {
                                         10,
                                     );
                                     if next != current {
-                                        let _ = host.models_mut().update(active, |v| *v = next);
+                                        let _ = host.models_mut().update(&active, |v| *v = next);
                                         host.request_redraw(action_cx.window);
                                     }
                                     true
                                 }
                                 KeyCode::Enter | KeyCode::NumpadEnter => {
                                     let current =
-                                        host.models_mut().get(active).copied().unwrap_or(None);
+                                        host.models_mut().get_copied(&active).unwrap_or(None);
                                     let Some(idx) = cmdk_selection::clamp_active_index(
                                         &disabled_flags,
                                         current,
@@ -1198,7 +1201,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            model,
+            model.clone(),
             items.clone(),
         );
 
@@ -1224,7 +1227,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            model,
+            model.clone(),
             items,
         );
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -1283,7 +1286,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            model,
+            model.clone(),
             items.clone(),
         );
 
@@ -1319,7 +1322,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            model,
+            model.clone(),
             items,
         );
         let snap = ui.semantics_snapshot().expect("semantics snapshot");

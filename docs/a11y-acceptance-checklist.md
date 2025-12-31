@@ -108,7 +108,7 @@ Run:
 
 ```bash
 cargo nextest run -p fret-components-shadcn
-cargo nextest run -p fret-platform
+cargo nextest run -p fret-a11y-accesskit
 ```
 
 ## Known limitations / follow-ups
@@ -116,6 +116,7 @@ cargo nextest run -p fret-platform
 - Semantics schema is intentionally minimal (ADR 0033). It currently does not model combobox-to-list
   relationships (ARIA `controls/owns/activedescendant`-style linkage). If parity needs it, extend
   `fret-core` semantics schema behind an ADR + tests.
-- Overlay item a11y nodes use a fixed slot pool (currently 256). Very long menus/lists will expose
-  only the first N items to AT. ADR 0085 defines a virtualized collection contract, but the runtime
-  still needs to implement virtualization + incremental semantics exposure.
+- Very large menus/lists can be expensive to expose in full to assistive technology.
+  Prefer virtualized list surfaces for long collections, and follow ADR 0085’s rules:
+  `active_descendant` must reference an item that is present in the current snapshot and within the
+  active modal barrier scope, and visible items should include `pos_in_set` / `set_size` when known.

@@ -85,10 +85,10 @@ impl Dialog {
         content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            cx.observe_model(self.open, Invalidation::Paint);
+            cx.observe_model(&self.open, Invalidation::Paint);
 
             let theme = Theme::global(&*cx.app).clone();
-            let is_open = cx.app.models().get(self.open).copied().unwrap_or(false);
+            let is_open = cx.app.models().get_copied(&self.open).unwrap_or(false);
 
             let trigger = trigger(cx);
             let id = trigger.id;
@@ -140,7 +140,7 @@ impl Dialog {
                     );
 
                     let barrier = if overlay_closable {
-                        let open = self.open;
+                        let open = self.open.clone();
                         cx.pressable(
                             PressableProps {
                                 layout: barrier_layout,
@@ -149,7 +149,7 @@ impl Dialog {
                                 ..Default::default()
                             },
                             move |cx, _st| {
-                                cx.pressable_set_bool(open, false);
+                                cx.pressable_set_bool(&open, false);
                                 vec![barrier_fill]
                             },
                         )
@@ -545,13 +545,13 @@ mod tests {
                         ..Default::default()
                     },
                     |cx, _st, id| {
-                        cx.pressable_toggle_bool(open);
+                        cx.pressable_toggle_bool(&open);
                         trigger_id = Some(id);
                         vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
                     },
                 );
 
-                let dialog = Dialog::new(open)
+                let dialog = Dialog::new(open.clone())
                     .overlay_closable(overlay_closable)
                     .into_element(
                         cx,
@@ -623,7 +623,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             true,
             content_id.clone(),
             Rc::new(Cell::new(None)),
@@ -649,7 +649,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(true));
+        assert_eq!(app.models().get_copied(&open), Some(true));
 
         // Second frame: render open + overlay.
         let _ = render_dialog_frame(
@@ -658,7 +658,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             true,
             content_id.clone(),
             Rc::new(Cell::new(None)),
@@ -686,7 +686,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(true));
+        assert_eq!(app.models().get_copied(&open), Some(true));
 
         // Click outside content should close via barrier.
         ui.dispatch_event(
@@ -707,7 +707,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(false));
+        assert_eq!(app.models().get_copied(&open), Some(false));
 
         let _ = trigger;
     }
@@ -736,7 +736,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             false,
             content_id.clone(),
             Rc::new(Cell::new(None)),
@@ -762,7 +762,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(true));
+        assert_eq!(app.models().get_copied(&open), Some(true));
     }
 
     #[test]
@@ -788,7 +788,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             true,
             content_id.clone(),
             Rc::new(Cell::new(None)),
@@ -805,7 +805,7 @@ mod tests {
             },
         );
 
-        assert_eq!(app.models().get(open).copied(), Some(false));
+        assert_eq!(app.models().get_copied(&open), Some(false));
     }
 
     #[test]
@@ -834,7 +834,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             true,
             content_id.clone(),
             initial_focus_cell.clone(),
@@ -860,7 +860,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(true));
+        assert_eq!(app.models().get_copied(&open), Some(true));
 
         // Second frame: open.
         let _ = render_dialog_frame(
@@ -869,7 +869,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             true,
             content_id.clone(),
             initial_focus_cell.clone(),
@@ -892,7 +892,7 @@ mod tests {
                 repeat: false,
             },
         );
-        assert_eq!(app.models().get(open).copied(), Some(false));
+        assert_eq!(app.models().get_copied(&open), Some(false));
 
         // Render a few frames to allow the close animation to finish and the overlay manager to
         // apply focus restore when the layer is uninstalled.
@@ -903,7 +903,7 @@ mod tests {
                 &mut services,
                 window,
                 bounds,
-                open,
+                open.clone(),
                 true,
                 content_id.clone(),
                 initial_focus_cell.clone(),
@@ -964,13 +964,13 @@ mod tests {
                         ..Default::default()
                     },
                     |cx, _st, id| {
-                        cx.pressable_toggle_bool(open);
+                        cx.pressable_toggle_bool(&open);
                         trigger_id = Some(id);
                         vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
                     },
                 );
 
-                let dialog = Dialog::new(open).into_element(
+                let dialog = Dialog::new(open.clone()).into_element(
                     cx,
                     |_cx| trigger,
                     move |cx| {
@@ -1041,7 +1041,7 @@ mod tests {
                 modifiers: Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(true));
+        assert_eq!(app.models().get_copied(&open), Some(true));
 
         // Frame 2: open.
         let first_focusable_id_frame2 = first_focusable_id.clone();
@@ -1072,12 +1072,12 @@ mod tests {
                     },
                     |cx, _st, id| {
                         let _ = id;
-                        cx.pressable_toggle_bool(open);
+                        cx.pressable_toggle_bool(&open);
                         vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
                     },
                 );
 
-                let dialog = Dialog::new(open).into_element(
+                let dialog = Dialog::new(open.clone()).into_element(
                     cx,
                     |_cx| trigger,
                     move |cx| {

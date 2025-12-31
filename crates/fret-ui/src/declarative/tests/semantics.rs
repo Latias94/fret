@@ -103,7 +103,7 @@ fn declarative_text_area_updates_model_on_text_input() {
         bounds,
         "text-area-text-input",
         |cx| {
-            let mut props = crate::element::TextAreaProps::new(model);
+            let mut props = crate::element::TextAreaProps::new(model.clone());
             props.min_height = Px(80.0);
             vec![cx.text_area(props)]
         },
@@ -122,7 +122,7 @@ fn declarative_text_area_updates_model_on_text_input() {
         &fret_core::Event::TextInput("hello\nworld".to_string()),
     );
     assert_eq!(
-        app.models().get(model).map(|s| s.as_str()),
+        app.models().get_cloned(&model).as_deref(),
         Some("hello\nworld")
     );
 }

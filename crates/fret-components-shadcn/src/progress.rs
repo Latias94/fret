@@ -52,7 +52,7 @@ impl Progress {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            cx.observe_model(self.model, Invalidation::Paint);
+            cx.observe_model(&self.model, Invalidation::Paint);
 
             let theme = Theme::global(&*cx.app).clone();
             let height = theme
@@ -76,7 +76,7 @@ impl Progress {
                 .or_else(|| theme.color_by_key("input"))
                 .unwrap_or(theme.colors.panel_border);
 
-            let v = cx.app.models().get(self.model).copied().unwrap_or(self.min);
+            let v = cx.app.models().get_copied(&self.model).unwrap_or(self.min);
             let t = self.normalized(v);
 
             let base_layout = LayoutRefinement::default()

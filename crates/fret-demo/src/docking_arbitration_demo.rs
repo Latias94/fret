@@ -126,7 +126,7 @@ impl DockingArbitrationDriver {
         let last_viewport_input = app.models_mut().insert(Arc::<str>::from("<none>"));
 
         app.with_global_mut(ViewportDebugService::default, |svc, _app| {
-            svc.last_event.insert(window, last_viewport_input);
+            svc.last_event.insert(window, last_viewport_input.clone());
         });
 
         let mut ui: UiTree<App> = UiTree::new();
@@ -354,9 +354,9 @@ impl DockingArbitrationDriver {
         let padding = theme.metrics.padding_md;
         let background = theme.colors.surface_background;
 
-        let popover_open = state.popover_open;
-        let dialog_open = state.dialog_open;
-        let last_viewport_input = state.last_viewport_input;
+        let popover_open = state.popover_open.clone();
+        let dialog_open = state.dialog_open.clone();
+        let last_viewport_input = state.last_viewport_input.clone();
 
         let controls = declarative::render_root(
             &mut state.ui,
@@ -366,9 +366,9 @@ impl DockingArbitrationDriver {
             bounds,
             "dock.panel.controls",
             |cx| {
-                cx.observe_model(popover_open, Invalidation::Layout);
-                cx.observe_model(dialog_open, Invalidation::Layout);
-                cx.observe_model(last_viewport_input, Invalidation::Layout);
+                cx.observe_model(&popover_open, Invalidation::Layout);
+                cx.observe_model(&dialog_open, Invalidation::Layout);
+                cx.observe_model(&last_viewport_input, Invalidation::Layout);
 
                 let drag_state = cx
                     .app
@@ -379,18 +379,17 @@ impl DockingArbitrationDriver {
                 let last = cx
                     .app
                     .models()
-                    .get(last_viewport_input)
-                    .cloned()
+                    .get_cloned(&last_viewport_input)
                     .unwrap_or_else(|| Arc::<str>::from("<missing>"));
 
-                let popover = shadcn::Popover::new(popover_open)
+                let popover = shadcn::Popover::new(popover_open.clone())
                     .auto_focus(true)
                     .into_element(
                         cx,
                         |cx| {
                             shadcn::Button::new("Open popover")
                                 .variant(shadcn::ButtonVariant::Outline)
-                                .toggle_model(popover_open)
+                                .toggle_model(popover_open.clone())
                                 .into_element(cx)
                         },
                         |cx| {
@@ -398,19 +397,19 @@ impl DockingArbitrationDriver {
                                 cx.text("Non-modal overlay (Popover)."),
                                 shadcn::Button::new("Close")
                                     .variant(shadcn::ButtonVariant::Secondary)
-                                    .toggle_model(popover_open)
+                                    .toggle_model(popover_open.clone())
                                     .into_element(cx),
                             ])
                             .into_element(cx)
                         },
                     );
 
-                let dialog = shadcn::Dialog::new(dialog_open).into_element(
+                let dialog = shadcn::Dialog::new(dialog_open.clone()).into_element(
                     cx,
                     |cx| {
                         shadcn::Button::new("Open modal dialog")
                             .variant(shadcn::ButtonVariant::Outline)
-                            .toggle_model(dialog_open)
+                            .toggle_model(dialog_open.clone())
                             .into_element(cx)
                     },
                     |cx| {
@@ -426,7 +425,7 @@ impl DockingArbitrationDriver {
                             shadcn::DialogFooter::new(vec![
                                 shadcn::Button::new("Close")
                                     .variant(shadcn::ButtonVariant::Secondary)
-                                    .toggle_model(dialog_open)
+                                    .toggle_model(dialog_open.clone())
                                     .into_element(cx),
                             ])
                             .into_element(cx),
@@ -559,8 +558,8 @@ impl WinitDriver for DockingArbitrationDriver {
             .into_boxed_str(),
         );
         app.with_global_mut(ViewportDebugService::default, |svc, app| {
-            if let Some(model) = svc.last_event.get(&event.window).copied() {
-                let _ = app.models_mut().update(model, |v| *v = msg.clone());
+            if let Some(model) = svc.last_event.get(&event.window).cloned() {
+                let _ = app.models_mut().update(&model, |v| *v = msg.clone());
                 app.request_redraw(event.window);
             }
         });

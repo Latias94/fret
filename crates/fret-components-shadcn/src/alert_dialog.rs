@@ -72,10 +72,10 @@ impl AlertDialog {
         content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            cx.observe_model(self.open, Invalidation::Paint);
+            cx.observe_model(&self.open, Invalidation::Paint);
 
             let theme = Theme::global(&*cx.app).clone();
-            let is_open = cx.app.models().get(self.open).copied().unwrap_or(false);
+            let is_open = cx.app.models().get_copied(&self.open).unwrap_or(false);
 
             let trigger = trigger(cx);
             let id = trigger.id;
@@ -586,13 +586,16 @@ mod tests {
                         ..Default::default()
                     },
                     |cx, _st, id| {
-                        cx.pressable_toggle_bool(open);
+                        cx.pressable_toggle_bool(&open);
                         trigger_id = Some(id);
                         vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
                     },
                 );
 
-                let alert = AlertDialog::new(open).into_element(
+                let open_for_dialog = open.clone();
+                let open_for_cancel = open.clone();
+
+                let alert = AlertDialog::new(open_for_dialog).into_element(
                     cx,
                     |_cx| trigger,
                     move |cx| {
@@ -610,7 +613,7 @@ mod tests {
                                 ..Default::default()
                             },
                             |cx, _st, id| {
-                                cx.pressable_set_bool(open, false);
+                                cx.pressable_set_bool(&open_for_cancel, false);
                                 cancel_id_out.set(Some(id));
                                 vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
                             },
@@ -653,7 +656,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             cancel_id.clone(),
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -677,7 +680,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(true));
+        assert_eq!(app.models().get_copied(&open), Some(true));
 
         // Frame 2: open, initial focus should go to the cancel element.
         app.set_frame_id(FrameId(2));
@@ -687,7 +690,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             cancel_id.clone(),
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -716,7 +719,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(true));
+        assert_eq!(app.models().get_copied(&open), Some(true));
 
         // Close via Escape.
         ui.dispatch_event(
@@ -728,7 +731,7 @@ mod tests {
                 repeat: false,
             },
         );
-        assert_eq!(app.models().get(open).copied(), Some(false));
+        assert_eq!(app.models().get_copied(&open), Some(false));
 
         // Render a few frames to allow the close animation to finish and the overlay manager to
         // restore focus when the layer is uninstalled.
@@ -740,7 +743,7 @@ mod tests {
                 &mut services,
                 window,
                 bounds,
-                open,
+                open.clone(),
                 cancel_id.clone(),
             );
             ui.layout_all(&mut app, &mut services, bounds, 1.0);

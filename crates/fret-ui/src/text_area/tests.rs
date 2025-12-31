@@ -609,10 +609,7 @@ fn semantics_value_and_composition_include_inline_preedit() {
     app.set_global(PlatformCapabilities::default());
     let mut services = FakeTextService::default();
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(200.0), Px(80.0)),
-    );
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(80.0)));
 
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     let _ = app.take_effects();
@@ -620,7 +617,10 @@ fn semantics_value_and_composition_include_inline_preedit() {
     ui.dispatch_event(
         &mut app,
         &mut services,
-        &Event::SetTextSelection { anchor: 1, focus: 1 },
+        &Event::SetTextSelection {
+            anchor: 1,
+            focus: 1,
+        },
     );
     ui.dispatch_event(
         &mut app,

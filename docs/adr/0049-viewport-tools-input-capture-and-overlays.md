@@ -1,6 +1,6 @@
 # ADR 0049: Viewport Tools (Input Capture, Tool Modes, and Overlay Rendering)
 
-Status: Proposed
+Status: Deferred
 Scope: Example editor layer (out of scope for the Fret framework)
 
 ## Context

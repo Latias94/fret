@@ -6,8 +6,8 @@ use fret_core::{
 use fret_runtime::{BindingV1, KeySpecV1, Keymap, KeymapFileV1, KeymapService, Model};
 use slotmap::KeyData;
 use std::sync::{
-    atomic::{AtomicUsize, Ordering},
     Arc,
+    atomic::{AtomicUsize, Ordering},
 };
 
 #[derive(Default)]
@@ -94,7 +94,7 @@ impl<H: UiHost> Widget<H> for PaintObservingWidget {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        cx.observe_model(self.model, Invalidation::Paint);
+        cx.observe_model(&self.model, Invalidation::Paint);
     }
 }
 
@@ -108,13 +108,13 @@ impl<H: UiHost> Widget<H> for HitTestObservingWidget {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        cx.observe_model(self.model, Invalidation::HitTest);
+        cx.observe_model(&self.model, Invalidation::HitTest);
     }
 }
 
 impl<H: UiHost> Widget<H> for ObservingWidget {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-        cx.observe_model(self.model, Invalidation::Layout);
+        cx.observe_model(&self.model, Invalidation::Layout);
         let _ = cx.services.text().prepare(
             "x",
             TextStyle {
@@ -133,7 +133,7 @@ impl<H: UiHost> Widget<H> for ObservingWidget {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        cx.observe_model(self.model, Invalidation::Paint);
+        cx.observe_model(&self.model, Invalidation::Paint);
         let _ = cx.scene;
     }
 }
@@ -185,7 +185,10 @@ impl<H: UiHost> Widget<H> for ClickCounter {
                 ..
             })
         ) {
-            let _ = cx.app.models_mut().update(self.clicks, |v| *v += 1);
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&self.clicks, |v: &mut u32| *v += 1);
             cx.stop_propagation();
         }
     }
@@ -195,8 +198,8 @@ impl<H: UiHost> Widget<H> for ClickCounter {
     }
 }
 
-mod hit_test;
 mod globals;
+mod hit_test;
 mod models;
 mod outside_press;
 mod paint_cache;

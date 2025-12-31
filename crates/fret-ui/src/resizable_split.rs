@@ -181,7 +181,7 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
 
         self.last_bounds = cx.bounds;
 
-        let fraction = cx.app.models().get(self.fraction).copied().unwrap_or(0.5);
+        let fraction = cx.app.models().get_copied(&self.fraction).unwrap_or(0.5);
         let (_a, _b, handle_rect, handle_center) = self.compute_layout(cx.bounds, fraction);
         self.last_handle_rect = handle_rect;
 
@@ -206,7 +206,7 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
                     let left = (center - origin - gap * 0.5).clamp(min, (avail - min).max(min));
                     let next = (left / avail).clamp(0.0, 1.0);
 
-                    let _ = cx.app.models_mut().update(self.fraction, |v| {
+                    let _ = cx.app.models_mut().update(&self.fraction, |v| {
                         *v = next;
                     });
 
@@ -292,7 +292,7 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.last_bounds = cx.bounds;
 
-        let fraction = cx.app.models().get(self.fraction).copied().unwrap_or(0.5);
+        let fraction = cx.app.models().get_copied(&self.fraction).unwrap_or(0.5);
         let (rect_a, rect_b, handle_rect, _center) = self.compute_layout(cx.bounds, fraction);
         self.last_handle_rect = handle_rect;
 
@@ -432,7 +432,7 @@ mod tests {
         app.set_global(PlatformCapabilities::default());
         let fraction = app.models_mut().insert(0.5f32);
 
-        let root = ui.create_node(ResizableSplit::new(Axis::Horizontal, fraction));
+        let root = ui.create_node(ResizableSplit::new(Axis::Horizontal, fraction.clone()));
         let a = ui.create_node(Leaf);
         let b = ui.create_node(Leaf);
         ui.add_child(root, a);
@@ -476,7 +476,7 @@ mod tests {
         app.set_global(PlatformCapabilities::default());
         let fraction = app.models_mut().insert(0.5f32);
 
-        let root = ui.create_node(ResizableSplit::new(Axis::Horizontal, fraction));
+        let root = ui.create_node(ResizableSplit::new(Axis::Horizontal, fraction.clone()));
         let a = ui.create_node(Leaf);
         let b = ui.create_node(Leaf);
         ui.add_child(root, a);
@@ -507,7 +507,7 @@ mod tests {
             }),
         );
 
-        let updated = app.models().get(fraction).copied().unwrap_or(0.0);
+        let updated = app.models().get_copied(&fraction).unwrap_or(0.0);
         assert!(
             updated > 0.5,
             "expected drag to increase split fraction, got {updated}"

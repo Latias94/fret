@@ -53,8 +53,8 @@ impl Collapsible {
         content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            cx.observe_model(self.open, Invalidation::Layout);
-            let is_open = cx.app.models().get(self.open).copied().unwrap_or(false);
+            cx.observe_model(&self.open, Invalidation::Layout);
+            let is_open = cx.app.models().get_copied(&self.open).unwrap_or(false);
 
             let trigger = trigger(cx, is_open);
             let content = is_open.then(|| content(cx));
@@ -147,7 +147,7 @@ impl CollapsibleTrigger {
                 ..Default::default()
             },
             move |cx, _state| {
-                cx.pressable_toggle_bool(open);
+                cx.pressable_toggle_bool(&open);
                 children
             },
         )

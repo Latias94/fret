@@ -42,7 +42,7 @@ impl Toaster {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Sonner {
     store: Model<window_overlays::ToastStore>,
 }
@@ -61,21 +61,21 @@ impl Sonner {
     }
 
     pub fn toast(
-        self,
+        &self,
         host: &mut dyn UiActionHost,
         window: AppWindowId,
         request: window_overlays::ToastRequest,
     ) -> window_overlays::ToastId {
-        window_overlays::toast_action(host, self.store, window, request)
+        window_overlays::toast_action(host, self.store.clone(), window, request)
     }
 
     pub fn dismiss(
-        self,
+        &self,
         host: &mut dyn UiActionHost,
         window: AppWindowId,
         id: window_overlays::ToastId,
     ) -> bool {
-        window_overlays::dismiss_toast_action(host, self.store, window, id)
+        window_overlays::dismiss_toast_action(host, self.store.clone(), window, id)
     }
 }
 

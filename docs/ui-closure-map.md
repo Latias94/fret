@@ -312,7 +312,7 @@ This is the “do it now or pay later” list, ordered by expected rewrite cost.
      - menu/list keyboard navigation that does not fight semantics reachability under modal barriers,
      - and explicit constraints when virtualization is involved.
     - Reference: `docs/adr/0073-active-descendant-and-composite-widget-semantics.md`
-   - Virtualized collections decision gate:
+   - Virtualized collections baseline (locked):
      - `docs/adr/0085-virtualized-accessibility-and-collection-semantics.md`
 
 2. **Docking + overlay + viewport capture conformance**

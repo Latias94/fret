@@ -41,6 +41,9 @@ fn global_change_invalidates_observers() {
     assert!(n.invalidation.paint);
 
     let effects = app.flush_effects();
-    assert!(effects.iter().any(|e| matches!(e, Effect::Redraw(w) if *w == window)));
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::Redraw(w) if *w == window))
+    );
 }
-

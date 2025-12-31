@@ -143,7 +143,7 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
         Theme::global(&*self.app)
     }
 
-    pub fn observe_model<T>(&mut self, model: Model<T>, invalidation: Invalidation) {
+    pub fn observe_model<T>(&mut self, model: &Model<T>, invalidation: Invalidation) {
         (self.observe_model)(model.id(), invalidation);
     }
 
@@ -183,7 +183,7 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
         Theme::global(&*self.app)
     }
 
-    pub fn observe_model<T>(&mut self, model: Model<T>, invalidation: Invalidation) {
+    pub fn observe_model<T>(&mut self, model: &Model<T>, invalidation: Invalidation) {
         (self.observe_model)(model.id(), invalidation);
     }
 

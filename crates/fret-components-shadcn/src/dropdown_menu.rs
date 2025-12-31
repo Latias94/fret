@@ -145,10 +145,10 @@ impl DropdownMenu {
         entries: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<DropdownMenuEntry>,
     ) -> AnyElement {
         cx.scope(|cx| {
-            cx.observe_model(self.open, Invalidation::Paint);
+            cx.observe_model(&self.open, Invalidation::Paint);
 
             let theme = Theme::global(&*cx.app).clone();
-            let is_open = cx.app.models().get(self.open).copied().unwrap_or(false);
+            let is_open = cx.app.models().get_copied(&self.open).unwrap_or(false);
 
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
@@ -161,9 +161,10 @@ impl DropdownMenu {
                 let side_offset = self.side_offset;
                 let window_margin = self.window_margin;
                 let open = self.open;
+                let open_for_overlay = open.clone();
                 let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
 
-                let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
+                let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                     let anchor = overlay::anchor_bounds_for_element(cx, trigger_id);
                     let Some(anchor) = anchor else {
                         return Vec::new();
@@ -311,6 +312,7 @@ impl DropdownMenu {
                                                             .or_else(|| Some(label.clone()));
                                                         let disabled = item.disabled;
                                                         let command = item.command;
+                                                        let open = open_for_overlay.clone();
 
                                                         out.push(cx.pressable(
                                                             PressableProps {
@@ -339,7 +341,7 @@ impl DropdownMenu {
                                                             move |cx, st| {
                                                                 cx.pressable_dispatch_command_opt(command);
                                                                 if !disabled {
-                                                                    cx.pressable_set_bool(open, false);
+                                                                    cx.pressable_set_bool(&open, false);
                                                                 }
 
                                                                 let theme = Theme::global(&*cx.app).clone();

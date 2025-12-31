@@ -141,7 +141,9 @@ fn hit_test_can_make_overlay_pointer_transparent() {
     let mut ui = UiTree::new();
     ui.set_window(window);
 
-    let base = ui.create_node(ClickCounter { clicks });
+    let base = ui.create_node(ClickCounter {
+        clicks: clicks.clone(),
+    });
     ui.set_root(base);
 
     let overlay = ui.create_node(TransparentOverlay);
@@ -164,7 +166,7 @@ fn hit_test_can_make_overlay_pointer_transparent() {
         }),
     );
 
-    let value = app.models().get(clicks).copied().unwrap_or(0);
+    let value = app.models().get_copied(&clicks).unwrap_or(0);
     assert_eq!(value, 1);
 }
 
@@ -178,10 +180,14 @@ fn layer_hit_testable_flag_can_make_overlay_pointer_transparent() {
     let mut ui = UiTree::new();
     ui.set_window(window);
 
-    let base = ui.create_node(ClickCounter { clicks });
+    let base = ui.create_node(ClickCounter {
+        clicks: clicks.clone(),
+    });
     ui.set_root(base);
 
-    let overlay = ui.create_node(ClickCounter { clicks });
+    let overlay = ui.create_node(ClickCounter {
+        clicks: clicks.clone(),
+    });
     let layer = ui.push_overlay_root_ex(overlay, false, true);
     ui.set_layer_hit_testable(layer, false);
 
@@ -202,7 +208,7 @@ fn layer_hit_testable_flag_can_make_overlay_pointer_transparent() {
         }),
     );
 
-    let value = app.models().get(clicks).copied().unwrap_or(0);
+    let value = app.models().get_copied(&clicks).unwrap_or(0);
     assert_eq!(value, 1);
 }
 
@@ -251,11 +257,14 @@ fn overlay_render_transform_affects_hit_testing_and_event_coordinates() {
                     let _ = cx
                         .app
                         .models_mut()
-                        .update(self.last_pos, |p| *p = *position);
+                        .update(&self.last_pos, |p: &mut Point| *p = *position);
                     cx.stop_propagation();
                 }
                 Event::Pointer(PointerEvent::Up { .. }) => {
-                    let _ = cx.app.models_mut().update(self.clicks, |v| *v += 1);
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&self.clicks, |v: &mut u32| *v += 1);
                     cx.stop_propagation();
                 }
                 _ => {}
@@ -273,7 +282,7 @@ fn overlay_render_transform_affects_hit_testing_and_event_coordinates() {
     ui.set_window(window);
 
     let base = ui.create_node(ClickCounter {
-        clicks: underlay_clicks,
+        clicks: underlay_clicks.clone(),
     });
     ui.set_root(base);
 
@@ -281,8 +290,8 @@ fn overlay_render_transform_affects_hit_testing_and_event_coordinates() {
         delta: Point::new(Px(40.0), Px(0.0)),
     });
     let overlay_leaf = ui.create_node(RecordOverlayClicks {
-        clicks: overlay_clicks,
-        last_pos: overlay_last_pos,
+        clicks: overlay_clicks.clone(),
+        last_pos: overlay_last_pos.clone(),
     });
     ui.add_child(overlay_root, overlay_leaf);
     let _layer = ui.push_overlay_root_ex(overlay_root, false, true);
@@ -314,13 +323,13 @@ fn overlay_render_transform_affects_hit_testing_and_event_coordinates() {
         }),
     );
 
-    assert_eq!(app.models().get(overlay_clicks).copied(), Some(1));
+    assert_eq!(app.models().get_copied(&overlay_clicks), Some(1));
     assert_eq!(
-        app.models().get(overlay_last_pos).copied(),
+        app.models().get_copied(&overlay_last_pos),
         Some(Point::new(Px(5.0), Px(5.0)))
     );
     assert_eq!(
-        app.models().get(underlay_clicks).copied(),
+        app.models().get_copied(&underlay_clicks),
         Some(0),
         "expected underlay to not receive clicks when overlay leaf handles them"
     );
@@ -345,5 +354,5 @@ fn overlay_render_transform_affects_hit_testing_and_event_coordinates() {
         }),
     );
 
-    assert_eq!(app.models().get(underlay_clicks).copied(), Some(1));
+    assert_eq!(app.models().get_copied(&underlay_clicks), Some(1));
 }

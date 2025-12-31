@@ -100,10 +100,10 @@ impl Sheet {
         content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            cx.observe_model(self.open, Invalidation::Paint);
+            cx.observe_model(&self.open, Invalidation::Paint);
 
             let theme = Theme::global(&*cx.app).clone();
-            let is_open = cx.app.models().get(self.open).copied().unwrap_or(false);
+            let is_open = cx.app.models().get_copied(&self.open).unwrap_or(false);
 
             let trigger = trigger(cx);
             let id = trigger.id;
@@ -141,7 +141,7 @@ impl Sheet {
                     };
 
                     let barrier = if overlay_closable {
-                        let open = self.open;
+                        let open = self.open.clone();
                         cx.pressable(
                             PressableProps {
                                 layout: barrier_layout,
@@ -150,7 +150,7 @@ impl Sheet {
                                 ..Default::default()
                             },
                             move |cx, _st| {
-                                cx.pressable_set_bool(open, false);
+                                cx.pressable_set_bool(&open, false);
                                 vec![cx.container(
                                     ContainerProps {
                                         layout: LayoutStyle {
@@ -596,7 +596,7 @@ mod tests {
                         ..Default::default()
                     },
                     |cx, _st, id| {
-                        cx.pressable_toggle_bool(open);
+                        cx.pressable_toggle_bool(&open);
                         trigger_id = Some(id);
                         vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
                     },
@@ -666,7 +666,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             true,
             SheetSide::Right,
             content_id.clone(),
@@ -693,7 +693,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(true));
+        assert_eq!(app.models().get_copied(&open), Some(true));
 
         // Second frame: render open + overlay.
         let _ = render_sheet_frame(
@@ -702,7 +702,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             true,
             SheetSide::Right,
             content_id.clone(),
@@ -730,7 +730,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(true));
+        assert_eq!(app.models().get_copied(&open), Some(true));
 
         // Click outside sheet should close via barrier.
         ui.dispatch_event(
@@ -751,7 +751,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(false));
+        assert_eq!(app.models().get_copied(&open), Some(false));
     }
 
     #[test]
@@ -777,7 +777,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             false,
             SheetSide::Right,
             content_id.clone(),
@@ -803,7 +803,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(true));
+        assert_eq!(app.models().get_copied(&open), Some(true));
     }
 
     #[test]
@@ -829,7 +829,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             true,
             SheetSide::Right,
             content_id.clone(),
@@ -847,7 +847,7 @@ mod tests {
             },
         );
 
-        assert_eq!(app.models().get(open).copied(), Some(false));
+        assert_eq!(app.models().get_copied(&open), Some(false));
     }
 
     #[test]
@@ -876,7 +876,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             true,
             SheetSide::Right,
             content_id.clone(),
@@ -903,7 +903,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(true));
+        assert_eq!(app.models().get_copied(&open), Some(true));
 
         // Second frame: open.
         let _ = render_sheet_frame(
@@ -912,7 +912,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             true,
             SheetSide::Right,
             content_id.clone(),
@@ -937,7 +937,7 @@ mod tests {
                 repeat: false,
             },
         );
-        assert_eq!(app.models().get(open).copied(), Some(false));
+        assert_eq!(app.models().get_copied(&open), Some(false));
 
         for _ in 0..4 {
             let _ = render_sheet_frame(
@@ -946,7 +946,7 @@ mod tests {
                 &mut services,
                 window,
                 bounds,
-                open,
+                open.clone(),
                 true,
                 SheetSide::Right,
                 content_id.clone(),

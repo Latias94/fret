@@ -163,13 +163,13 @@ impl Tabs {
         let chrome = self.chrome;
         let layout = self.layout;
 
-        cx.observe_model(model, Invalidation::Layout);
+        cx.observe_model(&model, Invalidation::Layout);
 
         let theme = Theme::global(&*cx.app).clone();
         let gap = tabs_gap(&theme);
         let text_style = tabs_trigger_text_style(&theme);
 
-        let selected: Option<Arc<str>> = cx.app.models().get(model).cloned().flatten();
+        let selected: Option<Arc<str>> = cx.app.models().get_cloned(&model).flatten();
 
         let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
         let disabled_flags: Vec<bool> = items.iter().map(|i| tabs_disabled || i.disabled).collect();
@@ -222,7 +222,7 @@ impl Tabs {
                         roving,
                     },
                     |cx| {
-                        cx.roving_select_option_arc_str(model, values_arc.clone());
+                        cx.roving_select_option_arc_str(&model, values_arc.clone());
 
                         let fg_muted = tabs_list_fg_muted(&theme);
                         let fg_disabled = theme.colors.text_disabled;
@@ -259,6 +259,7 @@ impl Tabs {
 
                             let value = item.value.clone();
                             let label = item.label.clone();
+                            let model = model.clone();
 
                             out.push(cx.pressable(
                                 PressableProps {
@@ -275,7 +276,7 @@ impl Tabs {
                                     ..Default::default()
                                 },
                                 move |cx, _state| {
-                                    cx.pressable_set_option_arc_str(model, value.clone());
+                                    cx.pressable_set_option_arc_str(&model, value.clone());
 
                                     vec![cx.container(
                                         ContainerProps {

@@ -157,23 +157,23 @@ pub fn combobox<H: UiHost>(
     search_enabled: bool,
 ) -> AnyElement {
     cx.scope(|cx| {
-        cx.observe_model(model, Invalidation::Paint);
-        cx.observe_model(open, Invalidation::Paint);
+        cx.observe_model(&model, Invalidation::Paint);
+        cx.observe_model(&open, Invalidation::Paint);
 
         let theme = Theme::global(&*cx.app).clone();
-        let selected = cx.app.models().get(model).cloned().unwrap_or_default();
-        let is_open = cx.app.models().get(open).copied().unwrap_or(false);
+        let selected = cx.app.models().get_cloned(&model).unwrap_or_default();
+        let is_open = cx.app.models().get_copied(&open).unwrap_or(false);
 
         let query_model = if let Some(q) = query {
-            cx.with_state(ComboboxState::default, |st| st.query = Some(q));
+            cx.with_state(ComboboxState::default, |st| st.query = Some(q.clone()));
             q
         } else {
-            let existing = cx.with_state(ComboboxState::default, |st| st.query);
+            let existing = cx.with_state(ComboboxState::default, |st| st.query.clone());
             if let Some(m) = existing {
                 m
             } else {
                 let m = cx.app.models_mut().insert(String::new());
-                cx.with_state(ComboboxState::default, |st| st.query = Some(m));
+                cx.with_state(ComboboxState::default, |st| st.query = Some(m.clone()));
                 m
             }
         };
@@ -184,7 +184,7 @@ pub fn combobox<H: UiHost>(
             prev
         });
         if was_open && !is_open {
-            let _ = cx.app.models_mut().update(query_model, |v| v.clear());
+            let _ = cx.app.models_mut().update(&query_model, |v| v.clear());
         }
 
         let resolved = resolve_input_chrome(
@@ -237,7 +237,7 @@ pub fn combobox<H: UiHost>(
                 border
             };
 
-            cx.pressable_toggle_bool(open);
+            cx.pressable_toggle_bool(&open);
 
             let props = PressableProps {
                 layout: trigger_layout,
@@ -273,8 +273,7 @@ pub fn combobox<H: UiHost>(
                 let query = cx
                     .app
                     .models()
-                    .get(query_model)
-                    .map(|s| s.trim().to_ascii_lowercase())
+                    .read(&query_model, |s| s.trim().to_ascii_lowercase())
                     .unwrap_or_default();
 
                 let filtered: Vec<ComboboxItem> = items
@@ -314,14 +313,13 @@ pub fn combobox<H: UiHost>(
                 );
 
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                    cx.observe_model(query_model, Invalidation::Paint);
-                    cx.observe_model(model, Invalidation::Paint);
+                    cx.observe_model(&query_model, Invalidation::Paint);
+                    cx.observe_model(&model, Invalidation::Paint);
 
                     let query = cx
                         .app
                         .models()
-                        .get(query_model)
-                        .map(|s| s.trim().to_ascii_lowercase())
+                        .read(&query_model, |s| s.trim().to_ascii_lowercase())
                         .unwrap_or_default();
 
                     let filtered: Vec<ComboboxItem> = items
@@ -412,7 +410,7 @@ pub fn combobox<H: UiHost>(
                                     let mut children: Vec<AnyElement> = Vec::new();
 
                                     if search_enabled {
-                                        let input = Input::new(query_model)
+                                        let input = Input::new(query_model.clone())
                                             .a11y_label("Combobox search");
                                         children.push(cx.container(
                                             ContainerProps {
@@ -507,6 +505,10 @@ pub fn combobox<H: UiHost>(
                                                                         theme.metrics.radius_sm,
                                                                     );
 
+                                                                    let model = model.clone();
+                                                                    let open = open.clone();
+                                                                    let query_model = query_model.clone();
+
                                                                     out.push(cx.pressable_with_id(
                                                                         PressableProps {
                                                                             layout: {
@@ -539,13 +541,17 @@ pub fn combobox<H: UiHost>(
                                                                         },
                                                                         move |cx, st, _id| {
                                                                             cx.pressable_set_option_arc_str(
-                                                                                model,
+                                                                                &model,
                                                                                 item.value.clone(),
                                                                             );
-                                                                            cx.pressable_set_bool(open, false);
+                                                                            cx.pressable_set_bool(&open, false);
+                                                                            let query_model_for_activate =
+                                                                                query_model.clone();
                                                                             cx.pressable_add_on_activate(
                                                                                 Arc::new(move |host, _cx, _reason| {
-                                                                                    let _ = host.models_mut().update(query_model, |v| v.clear());
+                                                                                    let _ = host
+                                                                                        .models_mut()
+                                                                                        .update(&query_model_for_activate, |v| v.clear());
                                                                                 })
                                                                             );
 

@@ -194,14 +194,14 @@ impl ToggleGroup {
 
         let theme = Theme::global(&*cx.app).clone();
 
-        let (selected_single, selected_multi) = match model {
+        let (selected_single, selected_multi) = match &model {
             ToggleGroupModel::Single(m) => {
                 cx.observe_model(m, Invalidation::Layout);
-                (cx.app.models().get(m).cloned().flatten(), None)
+                (cx.app.models().get_cloned(m).flatten(), None)
             }
             ToggleGroupModel::Multiple(m) => {
                 cx.observe_model(m, Invalidation::Layout);
-                (None, cx.app.models().get(m).cloned())
+                (None, cx.app.models().get_cloned(m))
             }
         };
 
@@ -249,9 +249,9 @@ impl ToggleGroup {
             },
         };
 
-        let (model_single, model_multi) = match model {
-            ToggleGroupModel::Single(m) => (Some(m), None),
-            ToggleGroupModel::Multiple(m) => (None, Some(m)),
+        let (model_single, model_multi) = match &model {
+            ToggleGroupModel::Single(m) => (Some(m.clone()), None),
+            ToggleGroupModel::Multiple(m) => (None, Some(m.clone())),
         };
 
         let roving = RovingFocusProps {
@@ -327,6 +327,8 @@ impl ToggleGroup {
                         let value = item.value.clone();
                         let a11y_label = item.a11y_label.clone().unwrap_or_else(|| value.clone());
                         let children = item.children;
+                        let model_single = model_single.clone();
+                        let model_multi = model_multi.clone();
 
                         out.push(
                             cx.pressable(
@@ -350,10 +352,10 @@ impl ToggleGroup {
                                     ..Default::default()
                                 },
                                 move |cx, state| {
-                                    if let Some(m) = model_single {
+                                    if let Some(m) = model_single.as_ref() {
                                         cx.pressable_set_option_arc_str(m, value.clone());
                                     }
-                                    if let Some(m) = model_multi {
+                                    if let Some(m) = model_multi.as_ref() {
                                         cx.pressable_toggle_vec_arc_str(m, value.clone());
                                     }
 

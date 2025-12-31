@@ -118,14 +118,14 @@ impl InputOtp {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        cx.observe_model(self.model, Invalidation::Paint);
+        cx.observe_model(&self.model, Invalidation::Paint);
 
         let length = self.length;
-        let mut value = cx.app.models().get(self.model).cloned().unwrap_or_default();
+        let mut value = cx.app.models().get_cloned(&self.model).unwrap_or_default();
         let sanitized = sanitize_otp(&value, length, self.numeric_only);
         if sanitized != value {
             let next = sanitized.clone();
-            let _ = cx.app.models_mut().update(self.model, |v| *v = next);
+            let _ = cx.app.models_mut().update(&self.model, |v| *v = next);
             value = sanitized;
         }
 
@@ -390,8 +390,8 @@ mod tests {
         let mut services = FakeServices::default();
 
         let model = app.models_mut().insert("12a 34-5678".to_string());
-        render(&mut ui, &mut app, &mut services, model);
+        render(&mut ui, &mut app, &mut services, model.clone());
 
-        assert_eq!(app.models().get(model).map(|s| s.as_str()), Some("123456"));
+        assert_eq!(app.models().get_cloned(&model).as_deref(), Some("123456"));
     }
 }

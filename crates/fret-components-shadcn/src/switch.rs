@@ -108,10 +108,10 @@ impl Switch {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let model = self.model;
-            cx.observe_model(model, Invalidation::Paint);
+            cx.observe_model(&model, Invalidation::Paint);
 
             let theme = Theme::global(&*cx.app).clone();
-            let on = cx.app.models().get(model).copied().unwrap_or(false);
+            let on = cx.app.models().get_copied(&model).unwrap_or(false);
 
             let w = switch_track_w(&theme);
             let h = switch_track_h(&theme);
@@ -149,10 +149,10 @@ impl Switch {
                 },
                 move |cx, st| {
                     cx.pressable_dispatch_command_opt(on_click);
-                    cx.pressable_toggle_bool(model);
+                    cx.pressable_toggle_bool(&model);
 
                     let theme = Theme::global(&*cx.app).clone();
-                    let on = cx.app.models().get(model).copied().unwrap_or(false);
+                    let on = cx.app.models().get_copied(&model).unwrap_or(false);
 
                     let mut bg = if on {
                         switch_bg_on(&theme)

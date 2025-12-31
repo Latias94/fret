@@ -22,9 +22,9 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
         bounds,
         "pointer-region-capture-move-up",
         |cx| {
-            let counter_down = counter;
-            let counter_move = counter;
-            let counter_up = counter;
+            let counter_down = counter.clone();
+            let counter_move = counter.clone();
+            let counter_up = counter.clone();
 
             let on_down = Arc::new(
                 move |host: &mut dyn crate::action::UiPointerActionHost,
@@ -36,7 +36,7 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
                     host.capture_pointer();
                     let _ = host
                         .models_mut()
-                        .update(counter_down, |v| *v = v.saturating_add(1));
+                        .update(&counter_down, |v: &mut u32| *v = v.saturating_add(1));
                     host.request_redraw(cx.window);
                     true
                 },
@@ -48,7 +48,7 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
                       _mv: crate::action::PointerMoveCx| {
                     let _ = host
                         .models_mut()
-                        .update(counter_move, |v| *v = v.saturating_add(10));
+                        .update(&counter_move, |v: &mut u32| *v = v.saturating_add(10));
                     true
                 },
             );
@@ -62,7 +62,7 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
                     }
                     let _ = host
                         .models_mut()
-                        .update(counter_up, |v| *v = v.saturating_add(100));
+                        .update(&counter_up, |v: &mut u32| *v = v.saturating_add(100));
                     host.request_redraw(cx.window);
                     true
                 },
@@ -125,7 +125,7 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
         }),
     );
 
-    assert_eq!(app.models().get(counter).copied(), Some(111));
+    assert_eq!(app.models().get_copied(&counter), Some(111));
 }
 
 #[test]
@@ -232,8 +232,10 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
         bounds,
         "resizable-panel-group-drag",
         |cx| {
-            let mut props =
-                crate::element::ResizablePanelGroupProps::new(fret_core::Axis::Horizontal, model);
+            let mut props = crate::element::ResizablePanelGroupProps::new(
+                fret_core::Axis::Horizontal,
+                model.clone(),
+            );
             props.min_px = vec![Px(10.0)];
             props.chrome = crate::ResizablePanelGroupStyle {
                 hit_thickness: Px(10.0),
@@ -251,7 +253,7 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
     ui.set_root(root);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-    let fractions_now = app.models().get(model).cloned().unwrap_or_default();
+    let fractions_now = app.models().get_cloned(&model).unwrap_or_default();
     let layout = crate::resizable_panel_group::compute_resizable_panel_group_layout(
         fret_core::Axis::Horizontal,
         bounds,
@@ -291,7 +293,7 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
         }),
     );
 
-    let v = app.models().get(model).cloned().unwrap_or_default();
+    let v = app.models().get_cloned(&model).unwrap_or_default();
     assert!(
         v.first().copied().unwrap_or(0.0) > 0.33,
         "expected left panel to grow, got {v:?}"
@@ -320,9 +322,12 @@ fn pressable_on_activate_hook_runs_on_pointer_activation() {
         |cx| {
             vec![
                 cx.pressable(crate::element::PressableProps::default(), |cx, _state| {
+                    let activated = activated.clone();
                     cx.pressable_on_activate(Arc::new(move |host, _cx, reason| {
                         assert_eq!(reason, ActivateReason::Pointer);
-                        let _ = host.models_mut().update(activated, |v| *v = true);
+                        let _ = host
+                            .models_mut()
+                            .update(&activated, |v: &mut bool| *v = true);
                     }));
                     vec![cx.text("activate")]
                 }),
@@ -332,7 +337,7 @@ fn pressable_on_activate_hook_runs_on_pointer_activation() {
     ui.set_root(root);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-    assert_eq!(app.models().get(activated).copied(), Some(false));
+    assert_eq!(app.models().get_copied(&activated), Some(false));
 
     let pressable_node = ui.children(root)[0];
     let pressable_bounds = ui
@@ -362,7 +367,7 @@ fn pressable_on_activate_hook_runs_on_pointer_activation() {
         }),
     );
 
-    assert_eq!(app.models().get(activated).copied(), Some(true));
+    assert_eq!(app.models().get_copied(&activated), Some(true));
 }
 
 #[test]
@@ -387,8 +392,11 @@ fn pressable_on_hover_change_hook_runs_on_pointer_move() {
         |cx| {
             vec![
                 cx.pressable(crate::element::PressableProps::default(), |cx, _state| {
+                    let hovered = hovered.clone();
                     cx.pressable_on_hover_change(Arc::new(move |host, _cx, is_hovered| {
-                        let _ = host.models_mut().update(hovered, |v| *v = is_hovered);
+                        let _ = host
+                            .models_mut()
+                            .update(&hovered, |v: &mut bool| *v = is_hovered);
                     }));
                     vec![cx.text("hover me")]
                 }),
@@ -398,7 +406,7 @@ fn pressable_on_hover_change_hook_runs_on_pointer_move() {
     ui.set_root(root);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-    assert_eq!(app.models().get(hovered).copied(), Some(false));
+    assert_eq!(app.models().get_copied(&hovered), Some(false));
 
     let pressable_node = ui.children(root)[0];
     let pressable_bounds = ui
@@ -419,7 +427,7 @@ fn pressable_on_hover_change_hook_runs_on_pointer_move() {
         }),
     );
 
-    assert_eq!(app.models().get(hovered).copied(), Some(true));
+    assert_eq!(app.models().get_copied(&hovered), Some(true));
 
     ui.dispatch_event(
         &mut app,
@@ -431,7 +439,7 @@ fn pressable_on_hover_change_hook_runs_on_pointer_move() {
         }),
     );
 
-    assert_eq!(app.models().get(hovered).copied(), Some(false));
+    assert_eq!(app.models().get_copied(&hovered), Some(false));
 }
 
 #[test]
@@ -456,9 +464,12 @@ fn pressable_on_activate_hook_runs_on_keyboard_activation() {
         |cx| {
             vec![
                 cx.pressable(crate::element::PressableProps::default(), |cx, _state| {
+                    let activated = activated.clone();
                     cx.pressable_on_activate(Arc::new(move |host, _cx, reason| {
                         assert_eq!(reason, ActivateReason::Keyboard);
-                        let _ = host.models_mut().update(activated, |v| *v = true);
+                        let _ = host
+                            .models_mut()
+                            .update(&activated, |v: &mut bool| *v = true);
                     }));
                     vec![cx.text("activate")]
                 }),
@@ -468,7 +479,7 @@ fn pressable_on_activate_hook_runs_on_keyboard_activation() {
     ui.set_root(root);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-    assert_eq!(app.models().get(activated).copied(), Some(false));
+    assert_eq!(app.models().get_copied(&activated), Some(false));
 
     let pressable_node = ui.children(root)[0];
     ui.set_focus(Some(pressable_node));
@@ -491,7 +502,7 @@ fn pressable_on_activate_hook_runs_on_keyboard_activation() {
         },
     );
 
-    assert_eq!(app.models().get(activated).copied(), Some(true));
+    assert_eq!(app.models().get_copied(&activated), Some(true));
 }
 
 #[test]
@@ -517,9 +528,12 @@ fn dismissible_on_dismiss_request_hook_runs_on_escape() {
         bounds,
         "dismissible-hook-escape",
         |cx| {
+            let dismissed = dismissed.clone();
             cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, reason| {
                 assert_eq!(reason, DismissReason::Escape);
-                let _ = host.models_mut().update(dismissed, |v| *v = true);
+                let _ = host
+                    .models_mut()
+                    .update(&dismissed, |v: &mut bool| *v = true);
             }));
 
             vec![
@@ -549,7 +563,7 @@ fn dismissible_on_dismiss_request_hook_runs_on_escape() {
         },
     );
 
-    assert_eq!(app.models().get(dismissed).copied(), Some(true));
+    assert_eq!(app.models().get_copied(&dismissed), Some(true));
 }
 
 #[test]
@@ -576,9 +590,12 @@ fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
         bounds,
         "dismissible-hook-outside-press",
         |cx| {
+            let dismissed = dismissed.clone();
             cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, reason| {
                 assert_eq!(reason, DismissReason::OutsidePress);
-                let _ = host.models_mut().update(dismissed, |v| *v = true);
+                let _ = host
+                    .models_mut()
+                    .update(&dismissed, |v: &mut bool| *v = true);
             }));
             Vec::new()
         },
@@ -602,7 +619,7 @@ fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
         }),
     );
 
-    assert_eq!(app.models().get(dismissed).copied(), Some(true));
+    assert_eq!(app.models().get_copied(&dismissed), Some(true));
 }
 
 #[test]
@@ -645,12 +662,15 @@ fn roving_flex_arrow_keys_move_focus_and_update_selection() {
 
             vec![cx.roving_flex(props, |cx| {
                 let values = values.clone();
+                let model = model.clone();
                 cx.roving_on_active_change(Arc::new(move |host, _cx, idx| {
                     let Some(value) = values.get(idx).cloned() else {
                         return;
                     };
                     let next = Some(value);
-                    let _ = host.models_mut().update(model, |v| *v = next);
+                    let _ = host
+                        .models_mut()
+                        .update(&model, |v: &mut Option<Arc<str>>| *v = next);
                 }));
 
                 let mut make = |label: &'static str| {
@@ -687,8 +707,8 @@ fn roving_flex_arrow_keys_move_focus_and_update_selection() {
         "expected ArrowDown to skip disabled child"
     );
     assert_eq!(
-        app.models().get(model).and_then(|v| v.as_deref()),
-        Some("c")
+        app.models().get_cloned(&model).flatten().as_deref(),
+        Some("c"),
     );
 }
 
@@ -728,11 +748,7 @@ fn roving_flex_typeahead_hook_can_choose_target_index() {
             vec![cx.roving_flex(props, |cx| {
                 cx.roving_on_typeahead(Arc::new(
                     |_host, _cx, it| {
-                        if it.input == 'c' {
-                            Some(2)
-                        } else {
-                            None
-                        }
+                        if it.input == 'c' { Some(2) } else { None }
                     },
                 ));
 

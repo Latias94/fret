@@ -122,23 +122,23 @@ impl ComponentsGalleryDriver {
     ) {
         fret_components_ui::window_overlays::begin_frame(app, window);
 
-        let items = state.items;
-        let tree_state = state.tree_state;
-        let progress = state.progress;
-        let checkbox = state.checkbox;
-        let switch = state.switch;
-        let radio = state.radio;
-        let select = state.select;
-        let select_open = state.select_open;
-        let dropdown_open = state.dropdown_open;
-        let context_menu_open = state.context_menu_open;
-        let popover_open = state.popover_open;
-        let dialog_open = state.dialog_open;
-        let alert_dialog_open = state.alert_dialog_open;
-        let sheet_open = state.sheet_open;
-        let cmdk_open = state.cmdk_open;
-        let cmdk_query = state.cmdk_query;
-        let last_action = state.last_action;
+        let items = state.items.clone();
+        let tree_state = state.tree_state.clone();
+        let progress = state.progress.clone();
+        let checkbox = state.checkbox.clone();
+        let switch = state.switch.clone();
+        let radio = state.radio.clone();
+        let select = state.select.clone();
+        let select_open = state.select_open.clone();
+        let dropdown_open = state.dropdown_open.clone();
+        let context_menu_open = state.context_menu_open.clone();
+        let popover_open = state.popover_open.clone();
+        let dialog_open = state.dialog_open.clone();
+        let alert_dialog_open = state.alert_dialog_open.clone();
+        let sheet_open = state.sheet_open.clone();
+        let cmdk_open = state.cmdk_open.clone();
+        let cmdk_query = state.cmdk_query.clone();
+        let last_action = state.last_action.clone();
 
         let root = declarative::render_root(
             &mut state.ui,
@@ -148,9 +148,14 @@ impl ComponentsGalleryDriver {
             bounds,
             "components-gallery",
             |cx| {
-                cx.observe_model(tree_state, Invalidation::Layout);
+                cx.observe_model(&tree_state, Invalidation::Layout);
                 let theme = Theme::global(&*cx.app).clone();
-                let selected = cx.app.models().get(tree_state).and_then(|s| s.selected);
+                let selected = cx
+                    .app
+                    .models()
+                    .read(&tree_state, |s| s.selected)
+                    .ok()
+                    .flatten();
 
                 let title: Arc<str> = Arc::from("components_gallery");
                 let subtitle: Arc<str> = Arc::from(format!(
@@ -238,12 +243,12 @@ impl ComponentsGalleryDriver {
                                             wrap: true,
                                         },
                                     |cx| {
-                                        cx.observe_model(checkbox, Invalidation::Layout);
-                                        cx.observe_model(switch, Invalidation::Layout);
+                                        cx.observe_model(&checkbox, Invalidation::Layout);
+                                        cx.observe_model(&switch, Invalidation::Layout);
                                         let checkbox_value =
-                                            cx.app.models().get(checkbox).copied().unwrap_or(false);
+                                            cx.app.models().get_copied(&checkbox).unwrap_or(false);
                                         let switch_value =
-                                            cx.app.models().get(switch).copied().unwrap_or(false);
+                                            cx.app.models().get_copied(&switch).unwrap_or(false);
 
                                             vec![
                                                 shadcn::Checkbox::new(checkbox)
@@ -268,13 +273,14 @@ impl ComponentsGalleryDriver {
                                         wrap: false,
                                     },
                                     |cx| {
-                                        cx.observe_model(radio, Invalidation::Layout);
+                                        cx.observe_model(&radio, Invalidation::Layout);
                                         let value = cx
                                             .app
                                             .models()
-                                            .get(radio)
-                                                .and_then(|v| v.as_deref())
-                                                .unwrap_or("<none>");
+                                            .get_cloned(&radio)
+                                            .flatten()
+                                            .map(|v| v.to_string())
+                                            .unwrap_or_else(|| "<none>".to_string());
 
                                             vec![
                                                 cx.text(format!("radio: {value}")),
@@ -301,12 +307,11 @@ impl ComponentsGalleryDriver {
                                         wrap: false,
                                     },
                                     |cx| {
-                                        cx.observe_model(select, Invalidation::Layout);
+                                        cx.observe_model(&select, Invalidation::Layout);
                                         let value = cx
                                             .app
                                             .models()
-                                            .get(select)
-                                            .cloned()
+                                            .get_cloned(&select)
                                             .flatten()
                                             .as_deref()
                                             .unwrap_or("<none>")
@@ -337,8 +342,8 @@ impl ComponentsGalleryDriver {
                                         wrap: false,
                                     },
                                     |cx| {
-                                        cx.observe_model(last_action, Invalidation::Layout);
-                                        let last_action = cx.app.models().get(last_action).cloned();
+                                        cx.observe_model(&last_action, Invalidation::Layout);
+                                        let last_action = cx.app.models().get_cloned(&last_action);
 
                                         let overlays = cx.flex(
                                             FlexProps {
@@ -417,13 +422,14 @@ impl ComponentsGalleryDriver {
                                                     )
                                                 };
 
-                                                let dropdown = shadcn::DropdownMenu::new(dropdown_open)
+                                                let dropdown =
+                                                    shadcn::DropdownMenu::new(dropdown_open.clone())
                                                     .into_element(
                                                         cx,
                                                         |cx| {
                                                             shadcn::Button::new("DropdownMenu")
                                                                 .variant(shadcn::ButtonVariant::Outline)
-                                                                .toggle_model(dropdown_open)
+                                                                .toggle_model(dropdown_open.clone())
                                                                 .into_element(cx)
                                                         },
                                                         |_cx| {
@@ -450,7 +456,7 @@ impl ComponentsGalleryDriver {
                                                     );
 
                                                 let context_menu =
-                                                    shadcn::ContextMenu::new(context_menu_open)
+                                                    shadcn::ContextMenu::new(context_menu_open.clone())
                                                         .into_element(
                                                             cx,
                                                             |cx| {
@@ -479,14 +485,15 @@ impl ComponentsGalleryDriver {
                                                             },
                                                         );
 
-                                                let popover = shadcn::Popover::new(popover_open)
+                                                let popover =
+                                                    shadcn::Popover::new(popover_open.clone())
                                                     .auto_focus(true)
                                                     .into_element(
                                                         cx,
                                                         |cx| {
                                                             shadcn::Button::new("Popover")
                                                                 .variant(shadcn::ButtonVariant::Outline)
-                                                                .toggle_model(popover_open)
+                                                                .toggle_model(popover_open.clone())
                                                                 .into_element(cx)
                                                         },
                                                         |cx| {
@@ -494,19 +501,20 @@ impl ComponentsGalleryDriver {
                                                                 cx.text("Popover content"),
                                                                 shadcn::Button::new("Close")
                                                                     .variant(shadcn::ButtonVariant::Secondary)
-                                                                    .toggle_model(popover_open)
+                                                                    .toggle_model(popover_open.clone())
                                                                     .into_element(cx),
                                                             ])
                                                             .into_element(cx)
                                                         },
                                                     );
 
-                                                let dialog = shadcn::Dialog::new(dialog_open).into_element(
+                                                let dialog =
+                                                    shadcn::Dialog::new(dialog_open.clone()).into_element(
                                                     cx,
                                                     |cx| {
                                                         shadcn::Button::new("Dialog")
                                                             .variant(shadcn::ButtonVariant::Outline)
-                                                            .toggle_model(dialog_open)
+                                                            .toggle_model(dialog_open.clone())
                                                             .into_element(cx)
                                                     },
                                                     |cx| {
@@ -523,7 +531,7 @@ impl ComponentsGalleryDriver {
                                                             shadcn::DialogFooter::new(vec![
                                                                 shadcn::Button::new("Close")
                                                                     .variant(shadcn::ButtonVariant::Secondary)
-                                                                    .toggle_model(dialog_open)
+                                                                    .toggle_model(dialog_open.clone())
                                                                     .into_element(cx),
                                                             ])
                                                             .into_element(cx),
@@ -532,13 +540,14 @@ impl ComponentsGalleryDriver {
                                                     },
                                                 );
 
-                                                let alert_dialog = shadcn::AlertDialog::new(alert_dialog_open)
+                                                let alert_dialog =
+                                                    shadcn::AlertDialog::new(alert_dialog_open.clone())
                                                     .into_element(
                                                         cx,
                                                         |cx| {
                                                             shadcn::Button::new("AlertDialog")
                                                                 .variant(shadcn::ButtonVariant::Outline)
-                                                                .toggle_model(alert_dialog_open)
+                                                                .toggle_model(alert_dialog_open.clone())
                                                                 .into_element(cx)
                                                         },
                                                         |cx| {
@@ -557,12 +566,12 @@ impl ComponentsGalleryDriver {
                                                                 shadcn::AlertDialogFooter::new(vec![
                                                                     shadcn::AlertDialogCancel::new(
                                                                         "Cancel",
-                                                                        alert_dialog_open,
+                                                                        alert_dialog_open.clone(),
                                                                     )
                                                                     .into_element(cx),
                                                                     shadcn::AlertDialogAction::new(
                                                                         "Continue",
-                                                                        alert_dialog_open,
+                                                                        alert_dialog_open.clone(),
                                                                     )
                                                                     .into_element(cx),
                                                                 ])
@@ -572,7 +581,7 @@ impl ComponentsGalleryDriver {
                                                         },
                                                     );
 
-                                                let sheet = shadcn::Sheet::new(sheet_open)
+                                                let sheet = shadcn::Sheet::new(sheet_open.clone())
                                                     .side(shadcn::SheetSide::Right)
                                                     .size(Px(360.0))
                                                     .into_element(
@@ -580,7 +589,7 @@ impl ComponentsGalleryDriver {
                                                         |cx| {
                                                             shadcn::Button::new("Sheet")
                                                                 .variant(shadcn::ButtonVariant::Outline)
-                                                                .toggle_model(sheet_open)
+                                                                .toggle_model(sheet_open.clone())
                                                                 .into_element(cx)
                                                         },
                                                         |cx| {
@@ -597,7 +606,7 @@ impl ComponentsGalleryDriver {
                                                                 shadcn::SheetFooter::new(vec![
                                                                     shadcn::Button::new("Close")
                                                                         .variant(shadcn::ButtonVariant::Secondary)
-                                                                        .toggle_model(sheet_open)
+                                                                        .toggle_model(sheet_open.clone())
                                                                         .into_element(cx),
                                                                 ])
                                                                 .into_element(cx),
@@ -619,12 +628,11 @@ impl ComponentsGalleryDriver {
                                             },
                                         );
 
-                                        cx.observe_model(cmdk_query, Invalidation::Layout);
+                                        cx.observe_model(&cmdk_query, Invalidation::Layout);
                                         let query = cx
                                             .app
                                             .models()
-                                            .get(cmdk_query)
-                                            .cloned()
+                                            .get_cloned(&cmdk_query)
                                             .unwrap_or_default();
                                         let query = query.trim().to_ascii_lowercase();
 
@@ -650,15 +658,15 @@ impl ComponentsGalleryDriver {
                                         .collect();
 
                                         let cmdk = shadcn::CommandDialog::new(
-                                            cmdk_open,
-                                            cmdk_query,
+                                            cmdk_open.clone(),
+                                            cmdk_query.clone(),
                                             cmdk_items,
                                         )
                                         .a11y_label("Command palette")
                                         .into_element(cx, |cx| {
                                             shadcn::Button::new("CommandDialog (Ctrl+K)")
                                                 .variant(shadcn::ButtonVariant::Outline)
-                                                .toggle_model(cmdk_open)
+                                                .toggle_model(cmdk_open.clone())
                                                 .into_element(cx)
                                         });
 
@@ -714,7 +722,7 @@ impl ComponentsGalleryDriver {
             let Ok(id) = id.parse::<TreeItemId>() else {
                 return true;
             };
-            let _ = app.models_mut().update(state, |s| s.selected = Some(id));
+            let _ = app.models_mut().update(&state, |s| s.selected = Some(id));
             return true;
         }
 
@@ -722,7 +730,7 @@ impl ComponentsGalleryDriver {
             let Ok(id) = id.parse::<TreeItemId>() else {
                 return true;
             };
-            let _ = app.models_mut().update(state, |s| {
+            let _ = app.models_mut().update(&state, |s| {
                 if !s.expanded.insert(id) {
                     s.expanded.remove(&id);
                 }
@@ -747,8 +755,8 @@ impl ComponentsGalleryDriver {
             return false;
         };
 
-        let items_value = app.models().get(items).cloned().unwrap_or_default();
-        let tree_state_value = app.models().get(state).cloned().unwrap_or_default();
+        let items_value = app.models().get_cloned(&items).unwrap_or_default();
+        let tree_state_value = app.models().get_cloned(&state).unwrap_or_default();
         let entries = fret_components_ui::flatten_tree(&items_value, &tree_state_value.expanded);
         if entries.is_empty() {
             return false;
@@ -763,13 +771,13 @@ impl ComponentsGalleryDriver {
             KeyCode::ArrowUp => {
                 let next = selected_index.saturating_sub(1);
                 let id = entries[next].id;
-                let _ = app.models_mut().update(state, |s| s.selected = Some(id));
+                let _ = app.models_mut().update(&state, |s| s.selected = Some(id));
                 true
             }
             KeyCode::ArrowDown => {
                 let next = (selected_index + 1).min(entries.len().saturating_sub(1));
                 let id = entries[next].id;
-                let _ = app.models_mut().update(state, |s| s.selected = Some(id));
+                let _ = app.models_mut().update(&state, |s| s.selected = Some(id));
                 true
             }
             KeyCode::ArrowLeft => {
@@ -777,7 +785,7 @@ impl ComponentsGalleryDriver {
                     return true;
                 };
                 if tree_state_value.expanded.contains(&cur.id) {
-                    let _ = app.models_mut().update(state, |s| {
+                    let _ = app.models_mut().update(&state, |s| {
                         s.expanded.remove(&cur.id);
                     });
                     return true;
@@ -785,7 +793,7 @@ impl ComponentsGalleryDriver {
                 if let Some(parent) = cur.parent {
                     let _ = app
                         .models_mut()
-                        .update(state, |s| s.selected = Some(parent));
+                        .update(&state, |s| s.selected = Some(parent));
                     return true;
                 }
                 true
@@ -795,7 +803,7 @@ impl ComponentsGalleryDriver {
                     return true;
                 };
                 if cur.has_children && !tree_state_value.expanded.contains(&cur.id) {
-                    let _ = app.models_mut().update(state, |s| {
+                    let _ = app.models_mut().update(&state, |s| {
                         s.expanded.insert(cur.id);
                     });
                     return true;
@@ -806,7 +814,7 @@ impl ComponentsGalleryDriver {
                     {
                         let _ = app
                             .models_mut()
-                            .update(state, |s| s.selected = Some(next.id));
+                            .update(&state, |s| s.selected = Some(next.id));
                     }
                     return true;
                 }
@@ -814,12 +822,12 @@ impl ComponentsGalleryDriver {
             }
             KeyCode::Home => {
                 let id = entries[0].id;
-                let _ = app.models_mut().update(state, |s| s.selected = Some(id));
+                let _ = app.models_mut().update(&state, |s| s.selected = Some(id));
                 true
             }
             KeyCode::End => {
                 let id = entries[entries.len().saturating_sub(1)].id;
-                let _ = app.models_mut().update(state, |s| s.selected = Some(id));
+                let _ = app.models_mut().update(&state, |s| s.selected = Some(id));
                 true
             }
             _ => false,
@@ -870,8 +878,8 @@ impl WinitDriver for ComponentsGalleryDriver {
 
         if ComponentsGalleryDriver::handle_tree_command(
             app,
-            state.items,
-            state.tree_state,
+            state.items.clone(),
+            state.tree_state.clone(),
             &command,
         ) {
             return;
@@ -895,33 +903,33 @@ impl WinitDriver for ComponentsGalleryDriver {
         if command.as_str() == "gallery.progress.inc" {
             let _ = app
                 .models_mut()
-                .update(state.progress, |v| *v = (*v + 10.0).min(100.0));
+                .update(&state.progress, |v| *v = (*v + 10.0).min(100.0));
         }
 
         if command.as_str() == "gallery.progress.dec" {
             let _ = app
                 .models_mut()
-                .update(state.progress, |v| *v = (*v - 10.0).max(0.0));
+                .update(&state.progress, |v| *v = (*v - 10.0).max(0.0));
         }
 
         if command.as_str() == "gallery.progress.reset" {
-            let _ = app.models_mut().update(state.progress, |v| *v = 35.0);
+            let _ = app.models_mut().update(&state.progress, |v| *v = 35.0);
         }
 
         if let Some(item) = command.as_str().strip_prefix("gallery.dropdown.select.") {
             let msg: Arc<str> = Arc::from(format!("dropdown.select.{item}").into_boxed_str());
-            let _ = app.models_mut().update(state.last_action, |v| *v = msg);
+            let _ = app.models_mut().update(&state.last_action, |v| *v = msg);
         }
 
         if let Some(item) = command.as_str().strip_prefix("gallery.cmdk.select.") {
             let msg: Arc<str> = Arc::from(format!("cmdk.select.{item}").into_boxed_str());
-            let _ = app.models_mut().update(state.last_action, |v| *v = msg);
-            let _ = app.models_mut().update(state.cmdk_open, |v| *v = false);
+            let _ = app.models_mut().update(&state.last_action, |v| *v = msg);
+            let _ = app.models_mut().update(&state.cmdk_open, |v| *v = false);
             app.request_redraw(window);
         }
 
         if command.as_str() == "gallery.context_menu.action" {
-            let _ = app.models_mut().update(state.last_action, |v| {
+            let _ = app.models_mut().update(&state.last_action, |v| {
                 *v = Arc::<str>::from("context_menu.action");
             });
         }
@@ -940,38 +948,26 @@ impl WinitDriver for ComponentsGalleryDriver {
             return;
         }
 
-        let overlays_open = app
-            .models()
-            .get(state.select_open)
-            .copied()
-            .unwrap_or(false)
+        let overlays_open = app.models().get_copied(&state.select_open).unwrap_or(false)
             || app
                 .models()
-                .get(state.dropdown_open)
-                .copied()
+                .get_copied(&state.dropdown_open)
                 .unwrap_or(false)
             || app
                 .models()
-                .get(state.context_menu_open)
-                .copied()
+                .get_copied(&state.context_menu_open)
                 .unwrap_or(false)
             || app
                 .models()
-                .get(state.popover_open)
-                .copied()
+                .get_copied(&state.popover_open)
                 .unwrap_or(false)
+            || app.models().get_copied(&state.dialog_open).unwrap_or(false)
             || app
                 .models()
-                .get(state.dialog_open)
-                .copied()
+                .get_copied(&state.alert_dialog_open)
                 .unwrap_or(false)
-            || app
-                .models()
-                .get(state.alert_dialog_open)
-                .copied()
-                .unwrap_or(false)
-            || app.models().get(state.sheet_open).copied().unwrap_or(false)
-            || app.models().get(state.cmdk_open).copied().unwrap_or(false);
+            || app.models().get_copied(&state.sheet_open).unwrap_or(false)
+            || app.models().get_copied(&state.cmdk_open).unwrap_or(false);
 
         if overlays_open {
             state.ui.dispatch_event(app, services, event);
@@ -991,8 +987,8 @@ impl WinitDriver for ComponentsGalleryDriver {
             };
 
             if open_chord {
-                let _ = app.models_mut().update(state.cmdk_open, |v| *v = true);
-                let _ = app.models_mut().update(state.cmdk_query, |v| v.clear());
+                let _ = app.models_mut().update(&state.cmdk_open, |v| *v = true);
+                let _ = app.models_mut().update(&state.cmdk_query, |v| v.clear());
                 app.request_redraw(window);
                 return;
             }
@@ -1011,8 +1007,8 @@ impl WinitDriver for ComponentsGalleryDriver {
         if focus.is_none() || focused_is_tree_item {
             if ComponentsGalleryDriver::handle_tree_key_event(
                 app,
-                state.items,
-                state.tree_state,
+                state.items.clone(),
+                state.tree_state.clone(),
                 event,
             ) {
                 return;

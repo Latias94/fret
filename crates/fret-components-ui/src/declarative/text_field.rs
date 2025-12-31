@@ -22,8 +22,12 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
     cancel_command: Option<CommandId>,
 ) -> fret_ui::element::AnyElement {
     cx.scope(|cx| {
-        cx.observe_model(model, Invalidation::Layout);
-        let has_value = cx.app.models().get(model).is_some_and(|s| !s.is_empty());
+        cx.observe_model(&model, Invalidation::Layout);
+        let has_value = cx
+            .app
+            .models()
+            .read(&model, |s| !s.is_empty())
+            .unwrap_or(false);
 
         let theme = Theme::global(&*cx.app).clone();
         let resolved = resolve_input_chrome(

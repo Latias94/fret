@@ -415,8 +415,9 @@ struct ToastService {
 
 pub fn toast_store<H: UiHost>(app: &mut H) -> Model<ToastStore> {
     app.with_global_mut(ToastService::default, |svc, app| {
-        *svc.store
+        svc.store
             .get_or_insert_with(|| app.models_mut().insert(ToastStore::default()))
+            .clone()
     })
 }
 
@@ -457,7 +458,7 @@ pub fn toast_action(
 
     let result = host
         .models_mut()
-        .update(store, |st| st.add_toast(window, request, token));
+        .update(&store, |st| st.add_toast(window, request, token));
 
     let Ok(id) = result else {
         if let Some(token) = token {
@@ -478,7 +479,7 @@ pub fn dismiss_toast_action(
 ) -> bool {
     let removed = host
         .models_mut()
-        .update(store, |st| st.remove_toast(window, id))
+        .update(&store, |st| st.remove_toast(window, id))
         .ok();
     let Some(entry) = removed.flatten() else {
         return false;
@@ -535,7 +536,7 @@ pub fn render<H: UiHost>(
         }
         seen_modals.insert(req.id);
 
-        let open_now = app.models().get(req.open).copied().unwrap_or(false);
+        let open_now = app.models().get_copied(&req.open).unwrap_or(false);
 
         let root = declarative::render_dismissible_root_with_hooks(
             ui,
@@ -548,7 +549,7 @@ pub fn render<H: UiHost>(
                 let open = req.open;
                 cx.dismissible_on_dismiss_request(Arc::new(
                     move |host, _cx, _reason: DismissReason| {
-                        let _ = host.models_mut().update(open, |v| *v = false);
+                        let _ = host.models_mut().update(&open, |v| *v = false);
                     },
                 ));
                 req.children
@@ -612,7 +613,7 @@ pub fn render<H: UiHost>(
     for req in popover_requests {
         if dock_drag_affects_window {
             if req.present {
-                let _ = app.models_mut().update(req.open, |v| *v = false);
+                let _ = app.models_mut().update(&req.open, |v| *v = false);
             }
             continue;
         }
@@ -622,7 +623,7 @@ pub fn render<H: UiHost>(
         }
         seen_popovers.insert(req.id);
 
-        let open_now = app.models().get(req.open).copied().unwrap_or(false);
+        let open_now = app.models().get_copied(&req.open).unwrap_or(false);
 
         let root = declarative::render_dismissible_root_with_hooks(
             ui,
@@ -635,7 +636,7 @@ pub fn render<H: UiHost>(
                 let open = req.open;
                 cx.dismissible_on_dismiss_request(Arc::new(
                     move |host, _cx, _reason: DismissReason| {
-                        let _ = host.models_mut().update(open, |v| *v = false);
+                        let _ = host.models_mut().update(&open, |v| *v = false);
                     },
                 ));
                 req.children
@@ -863,6 +864,7 @@ pub fn render<H: UiHost>(
         seen_toast_layers.insert(req.id);
 
         let store = req.store;
+        let store_for_render = store.clone();
         let position = req.position;
         let root = declarative::render_dismissible_root_with_hooks(
             ui,
@@ -872,14 +874,14 @@ pub fn render<H: UiHost>(
             bounds,
             &req.root_name,
             move |cx| {
-                cx.observe_model(store, Invalidation::Paint);
+                cx.observe_model(&store_for_render, Invalidation::Paint);
 
-                let hook_store = store;
+                let hook_store = store_for_render.clone();
                 cx.timer_on_timer_for(
                     cx.root_id(),
                     Arc::new(move |host, _cx, token| {
                         host.models_mut()
-                            .update(hook_store, |st| st.remove_toast_by_token(token))
+                            .update(&hook_store, |st| st.remove_toast_by_token(token))
                             .ok()
                             .flatten()
                             .is_some()
@@ -889,8 +891,9 @@ pub fn render<H: UiHost>(
                 let toasts: Vec<ToastEntry> = cx
                     .app
                     .models()
-                    .get(store)
-                    .map(|st| st.toasts_for_window(window).to_vec())
+                    .read(&store_for_render, |st| {
+                        st.toasts_for_window(window).to_vec()
+                    })
                     .unwrap_or_default();
 
                 if toasts.is_empty() {
@@ -902,6 +905,7 @@ pub fn render<H: UiHost>(
                 let gap = theme.metrics.padding_sm;
                 let toast_padding = theme.metrics.padding_sm;
                 let radius = theme.metrics.radius_md;
+                let store_for_toasts = store_for_render.clone();
 
                 let mut wrapper_layout = fret_ui::element::LayoutStyle {
                     position: fret_ui::element::PositionStyle::Absolute,
@@ -939,7 +943,7 @@ pub fn render<H: UiHost>(
                     move |cx| {
                         let mut out: Vec<AnyElement> = Vec::with_capacity(toasts.len());
                         for toast in toasts {
-                            let store = store;
+                            let store = store_for_toasts.clone();
                             let toast_id = toast.id;
 
                             let bg = match toast.variant {
@@ -951,7 +955,7 @@ pub fn render<H: UiHost>(
                             let fg_muted = theme.colors.text_muted;
 
                             let close = toast.dismissible.then(|| {
-                                let close_store = store;
+                                let close_store = store.clone();
                                 cx.pressable(
                                     fret_ui::element::PressableProps {
                                         layout: fret_ui::element::LayoutStyle::default(),
@@ -965,7 +969,7 @@ pub fn render<H: UiHost>(
                                             move |host, cx, _reason| {
                                                 let _ = dismiss_toast_action(
                                                     host,
-                                                    close_store,
+                                                    close_store.clone(),
                                                     cx.window,
                                                     toast_id,
                                                 );
@@ -977,7 +981,7 @@ pub fn render<H: UiHost>(
                             });
 
                             let action = toast.action.clone().map(|action| {
-                                let action_store = store;
+                                let action_store = store.clone();
                                 let cmd = action.command;
                                 let label = action.label;
                                 cx.pressable(
@@ -998,7 +1002,7 @@ pub fn render<H: UiHost>(
                                             move |host, cx, _reason| {
                                                 let _ = dismiss_toast_action(
                                                     host,
-                                                    action_store,
+                                                    action_store.clone(),
                                                     cx.window,
                                                     toast_id,
                                                 );
@@ -1072,8 +1076,8 @@ pub fn render<H: UiHost>(
 
         let has_toasts = app
             .models()
-            .get(store)
-            .is_some_and(|st| !st.toasts_for_window(window).is_empty());
+            .read(&store, |st| !st.toasts_for_window(window).is_empty())
+            .unwrap_or(false);
 
         let key = (window, req.id);
         app.with_global_mut(WindowOverlays::default, |overlays, _app| {
@@ -1212,7 +1216,7 @@ mod tests {
                         ..Default::default()
                     },
                     |cx, _st, id| {
-                        cx.pressable_toggle_bool(open);
+                        cx.pressable_toggle_bool(&open);
                         trigger_id = Some(id);
                         vec![cx.container(ContainerProps::default(), |_| Vec::new())]
                     },
@@ -1238,8 +1242,14 @@ mod tests {
         );
 
         // First frame: render base to establish stable bounds for the trigger element.
-        let trigger =
-            render_base_with_trigger(&mut ui, &mut app, &mut services, window, bounds, open);
+        let trigger = render_base_with_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         // Open via click.
@@ -1261,11 +1271,18 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(true));
+        assert_eq!(app.models().get_copied(&open), Some(true));
 
         // Second frame: request and render a dismissible popover.
         begin_frame(&mut app, window);
-        let _ = render_base_with_trigger(&mut ui, &mut app, &mut services, window, bounds, open);
+        let _ = render_base_with_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
 
         request_dismissible_popover_for_window(
             &mut app,
@@ -1274,7 +1291,7 @@ mod tests {
                 id: trigger,
                 root_name: popover_root_name(trigger),
                 trigger,
-                open,
+                open: open.clone(),
                 present: true,
                 initial_focus: None,
                 children: vec![],
@@ -1296,7 +1313,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(false));
+        assert_eq!(app.models().get_copied(&open), Some(false));
     }
 
     #[test]
@@ -1315,8 +1332,14 @@ mod tests {
         );
 
         // First frame: render base to establish stable bounds for the trigger element.
-        let trigger =
-            render_base_with_trigger(&mut ui, &mut app, &mut services, window, bounds, open);
+        let trigger = render_base_with_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         // Open via click.
@@ -1338,12 +1361,19 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(true));
+        assert_eq!(app.models().get_copied(&open), Some(true));
 
         // Second frame: request and render a dismissible popover with a non-pressable child so
         // the pointer-down bubbles to the root in the normal dispatch path.
         begin_frame(&mut app, window);
-        let _ = render_base_with_trigger(&mut ui, &mut app, &mut services, window, bounds, open);
+        let _ = render_base_with_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
 
         let root_name = popover_root_name(trigger);
         let children =
@@ -1377,7 +1407,7 @@ mod tests {
                 id: trigger,
                 root_name,
                 trigger,
-                open,
+                open: open.clone(),
                 present: true,
                 initial_focus: None,
                 children,
@@ -1399,7 +1429,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(true));
+        assert_eq!(app.models().get_copied(&open), Some(true));
     }
 
     #[test]
@@ -1441,7 +1471,7 @@ mod tests {
                         ..Default::default()
                     },
                     |cx, _st| {
-                        cx.pressable_toggle_bool(underlay_clicked);
+                        cx.pressable_toggle_bool(&underlay_clicked);
                         vec![]
                     },
                 )]
@@ -1475,7 +1505,7 @@ mod tests {
                 id: GlobalElementId(0xabc),
                 root_name: modal_root_name(GlobalElementId(0xabc)),
                 trigger: None,
-                open,
+                open: open.clone(),
                 present: true,
                 initial_focus: None,
                 children: modal_children,
@@ -1505,7 +1535,7 @@ mod tests {
             }),
         );
 
-        assert_eq!(app.models().get(underlay_clicked).copied(), Some(false));
+        assert_eq!(app.models().get_copied(&underlay_clicked), Some(false));
 
         // Escape should close via DismissibleLayer.
         ui.dispatch_event(
@@ -1517,7 +1547,7 @@ mod tests {
                 repeat: false,
             },
         );
-        assert_eq!(app.models().get(open).copied(), Some(false));
+        assert_eq!(app.models().get_copied(&open), Some(false));
     }
 
     #[test]
@@ -1560,7 +1590,7 @@ mod tests {
                         ..Default::default()
                     },
                     |cx, _st| {
-                        cx.pressable_toggle_bool(underlay_clicked);
+                        cx.pressable_toggle_bool(&underlay_clicked);
                         vec![]
                     },
                 )]
@@ -1586,7 +1616,7 @@ mod tests {
                         ..Default::default()
                     },
                     |cx, _st| {
-                        cx.pressable_toggle_bool(overlay_clicked);
+                        cx.pressable_toggle_bool(&overlay_clicked);
                         vec![]
                     },
                 )]
@@ -1627,8 +1657,8 @@ mod tests {
             }),
         );
 
-        assert_eq!(app.models().get(underlay_clicked).copied(), Some(false));
-        assert_eq!(app.models().get(overlay_clicked).copied(), Some(true));
+        assert_eq!(app.models().get_copied(&underlay_clicked), Some(false));
+        assert_eq!(app.models().get_copied(&overlay_clicked), Some(true));
     }
 
     #[test]
@@ -1671,7 +1701,7 @@ mod tests {
                         ..Default::default()
                     },
                     |cx, _st| {
-                        cx.pressable_toggle_bool(underlay_clicked);
+                        cx.pressable_toggle_bool(&underlay_clicked);
                         vec![]
                     },
                 )]
@@ -1697,7 +1727,7 @@ mod tests {
                         ..Default::default()
                     },
                     |cx, _st| {
-                        cx.pressable_toggle_bool(overlay_clicked);
+                        cx.pressable_toggle_bool(&overlay_clicked);
                         vec![]
                     },
                 )]
@@ -1739,7 +1769,7 @@ mod tests {
             }),
         );
 
-        assert_eq!(app.models().get(underlay_clicked).copied(), Some(true));
-        assert_eq!(app.models().get(overlay_clicked).copied(), Some(false));
+        assert_eq!(app.models().get_copied(&underlay_clicked), Some(true));
+        assert_eq!(app.models().get_copied(&overlay_clicked), Some(false));
     }
 }

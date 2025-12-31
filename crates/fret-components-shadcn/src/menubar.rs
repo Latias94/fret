@@ -152,7 +152,7 @@ impl Menubar {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct MenubarActive {
     trigger: GlobalElementId,
     open: Model<bool>,
@@ -229,28 +229,28 @@ impl MenubarMenu {
         let key = self.label.clone();
         cx.keyed(key, |cx| {
             let group_active =
-                cx.with_state_for(group, MenubarGroupState::default, |st| st.active);
+                cx.with_state_for(group, MenubarGroupState::default, |st| st.active.clone());
             let group_active = if let Some(group_active) = group_active {
                 group_active
             } else {
                 let group_active = cx.app.models_mut().insert(None);
                 cx.with_state_for(group, MenubarGroupState::default, |st| {
-                    st.active = Some(group_active);
+                    st.active = Some(group_active.clone());
                 });
                 group_active
             };
 
-            let open = cx.with_state(MenubarMenuState::default, |st| st.open);
+            let open = cx.with_state(MenubarMenuState::default, |st| st.open.clone());
             let open = if let Some(open) = open {
                 open
             } else {
                 let open = cx.app.models_mut().insert(false);
-                cx.with_state(MenubarMenuState::default, |st| st.open = Some(open));
+                cx.with_state(MenubarMenuState::default, |st| st.open = Some(open.clone()));
                 open
             };
 
-            cx.observe_model(group_active, Invalidation::Paint);
-            cx.observe_model(open, Invalidation::Paint);
+            cx.observe_model(&group_active, Invalidation::Paint);
+            cx.observe_model(&open, Invalidation::Paint);
 
             let theme = Theme::global(&*cx.app).clone();
             let enabled = !self.disabled;
@@ -281,73 +281,83 @@ impl MenubarMenu {
                 trigger_layout.size.height = Length::Auto;
                 trigger_layout.size.width = Length::Auto;
 
-                let active_value = cx.app.models().get(group_active).copied().unwrap_or(None);
-                let is_open = cx.app.models().get(open).copied().unwrap_or(false);
+                let active_value = cx.app.models().get_cloned(&group_active).flatten();
+                let is_open = cx.app.models().get_copied(&open).unwrap_or(false);
 
-                if let Some(active_value) = active_value
-                    && active_value.trigger != trigger_id
+                if active_value
+                    .as_ref()
+                    .is_some_and(|active_value| active_value.trigger != trigger_id)
                     && is_open
                 {
-                    let _ = cx.app.models_mut().update(open, |v| *v = false);
+                    let _ = cx.app.models_mut().update(&open, |v| *v = false);
                 }
 
-                if let Some(active_value) = active_value
-                    && active_value.trigger == trigger_id
+                if active_value
+                    .as_ref()
+                    .is_some_and(|active_value| active_value.trigger == trigger_id)
                     && !is_open
                 {
-                    let _ = cx.app.models_mut().update(group_active, |v| *v = None);
+                    let _ = cx.app.models_mut().update(&group_active, |v| *v = None);
                 }
 
                 if active_value.is_none() && is_open {
-                    let _ = cx.app.models_mut().update(group_active, |v| {
+                    let open_for_state = open.clone();
+                    let _ = cx.app.models_mut().update(&group_active, |v| {
                         *v = Some(MenubarActive {
                             trigger: trigger_id,
-                            open,
+                            open: open_for_state,
                         });
                     });
                 }
 
-                let active_value = cx.app.models().get(group_active).copied().unwrap_or(None);
+                let active_value = cx.app.models().get_cloned(&group_active).flatten();
                 if enabled
                     && st.hovered
                     && !st.pressed
-                    && matches!(active_value, Some(v) if v.trigger != trigger_id)
+                    && active_value
+                        .as_ref()
+                        .is_some_and(|active_value| active_value.trigger != trigger_id)
                 {
-                    if let Some(prev) = active_value {
-                        let _ = cx.app.models_mut().update(prev.open, |v| *v = false);
+                    if let Some(prev) = active_value.as_ref() {
+                        let _ = cx.app.models_mut().update(&prev.open, |v| *v = false);
                     }
-                    let _ = cx.app.models_mut().update(open, |v| *v = true);
-                    let _ = cx.app.models_mut().update(group_active, |v| {
+                    let _ = cx.app.models_mut().update(&open, |v| *v = true);
+                    let open_for_state = open.clone();
+                    let _ = cx.app.models_mut().update(&group_active, |v| {
                         *v = Some(MenubarActive {
                             trigger: trigger_id,
-                            open,
+                            open: open_for_state,
                         });
                     });
                 }
 
+                let group_active_for_activate = group_active.clone();
+                let open_for_activate = open.clone();
                 cx.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
-                    let cur = host.models_mut().get(group_active).copied().unwrap_or(None);
+                    let cur = host.models_mut().get_cloned(&group_active_for_activate).flatten();
                     match cur {
                         Some(cur) if cur.trigger == trigger_id => {
-                            let _ = host.models_mut().update(open, |v| *v = false);
-                            let _ = host.models_mut().update(group_active, |v| *v = None);
+                            let _ = host.models_mut().update(&open_for_activate, |v| *v = false);
+                            let _ =
+                                host.models_mut().update(&group_active_for_activate, |v| *v = None);
                         }
                         prev => {
                             if let Some(prev) = prev {
-                                let _ = host.models_mut().update(prev.open, |v| *v = false);
+                                let _ = host.models_mut().update(&prev.open, |v| *v = false);
                             }
-                            let _ = host.models_mut().update(open, |v| *v = true);
-                            let _ = host.models_mut().update(group_active, |v| {
+                            let _ = host.models_mut().update(&open_for_activate, |v| *v = true);
+                            let open_for_state = open_for_activate.clone();
+                            let _ = host.models_mut().update(&group_active_for_activate, |v| {
                                 *v = Some(MenubarActive {
                                     trigger: trigger_id,
-                                    open,
+                                    open: open_for_state,
                                 });
                             });
                         }
                     }
                 }));
 
-                let is_open = cx.app.models().get(open).copied().unwrap_or(false);
+                let is_open = cx.app.models().get_copied(&open).unwrap_or(false);
                 let trigger_bg = if is_open {
                     Some(bg_open)
                 } else if st.hovered || st.pressed {
@@ -376,8 +386,9 @@ impl MenubarMenu {
                     let window_margin = self.window_margin;
                     let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
                     let group_active = group_active;
+                    let open_for_overlay = open.clone();
 
-                    let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
+                    let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                         let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id) else {
                             return Vec::new();
                         };
@@ -515,6 +526,8 @@ impl MenubarMenu {
                                                             let a11y_label =
                                                                 item.a11y_label.clone();
                                                             let command = item.command;
+                                                            let open = open_for_overlay.clone();
+                                                            let group_active = group_active.clone();
 
                                                             out.push(cx.pressable(
                                                                 PressableProps {
@@ -548,10 +561,14 @@ impl MenubarMenu {
                                                                 },
                                                                 move |cx, st| {
                                                                     cx.pressable_dispatch_command_opt(command);
-                                                                    cx.pressable_set_bool(open, false);
+                                                                    cx.pressable_set_bool(&open, false);
+                                                                    let group_active_for_activate =
+                                                                        group_active.clone();
                                                                     cx.pressable_add_on_activate(
                                                                         Arc::new(move |host, _cx, _reason| {
-                                                                            let _ = host.models_mut().update(group_active, |v| *v = None);
+                                                                            let _ = host
+                                                                                .models_mut()
+                                                                                .update(&group_active_for_activate, |v| *v = None);
                                                                         }),
                                                                     );
 

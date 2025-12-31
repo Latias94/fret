@@ -23,25 +23,10 @@ ADR or adding a new ADR) before scaling feature surface area.
 
 ### P0 (Lock before scaling the UI kit)
 
-- **Virtualized accessibility contract for large collections**
-  - Add ADR (proposed): `docs/adr/0085-virtualized-accessibility-and-collection-semantics.md`
-  - Decide: semantics metadata (`pos_in_set`/`set_size`), active-descendant + virtualization rules, and layering boundaries.
-  - Implement: `crates/fret-core/src/semantics.rs`, `crates/fret-ui/src/widget.rs` + `crates/fret-ui/src/tree/mod.rs`, `crates/fret-a11y-accesskit/src/lib.rs`, `crates/fret-platform-winit/src/accessibility.rs`, component surfaces (virtualized lists/overlays).
-
-- **Default font stack + fallback policy v1**
-  - Update: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`
-  - Decide: default font alias (system UI font), configurable fallback lists (UI/CJK/emoji), and missing-glyph behavior (fallback vs tofu).
-  - Implement: `crates/fret-render/src/text.rs`, `crates/fret-core/src/text.rs` (types), `crates/fret-ui/src/theme.rs` (theme/config plumbing).
-
 - **Font discovery + user font loading + stable IDs**
   - Update: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0014-settings-and-configuration-files.md`
   - Decide: persistence format (store family + features + fallbacks, never numeric `FontId`), and invalidation/revision semantics when font DB changes.
   - Implement: `crates/fret-render/src/text.rs`, platform font enumeration hooks (future: `crates/fret-platform`).
-
-- **IME keystroke arbitration (platform-first during composition)**
-  - Update: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`
-  - Decide: when `Tab/Enter/Escape/Arrows/Backspace/...` are reserved for IME/text input vs routed to shortcuts/focus traversal, including modifier rules.
-  - Implement: `crates/fret-runner-winit-wgpu/src/runner.rs` (event mapping), `crates/fret-ui/src/tree/mod.rs` (routing), `crates/fret-ui/src/text_input/mod.rs` (focused widget behavior).
 
 - **Docking keep-alive + early submission + programmatic close without flicker**
   - Update: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`
@@ -174,6 +159,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0022-when-expressions.md`
 - `docs/adr/0023-command-metadata-menus-and-palette.md`
 - `docs/adr/0031-app-owned-models-and-leasing-updates.md`
+- `docs/adr/0086-model-handle-lifecycle-and-weak-models.md`
 - `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
 - `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`
 - `docs/adr/0044-text-editing-state-and-commands.md`
@@ -215,6 +201,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0061-focus-rings-and-focus-visible.md`
 - `docs/adr/0068-focus-traversal-and-focus-scopes.md`
 - `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
+- `docs/adr/0085-virtualized-accessibility-and-collection-semantics.md`
 - `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
 - `docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md`

@@ -34,4 +34,3 @@ pub fn set_continuous_frames<H: UiHost>(cx: &mut ElementCx<'_, H>, enabled: bool
         cx.request_frame();
     }
 }
-

@@ -1169,8 +1169,8 @@ fn declarative_elements_can_observe_models_for_invalidation() {
         root_name,
         |cx| {
             vec![cx.container(Default::default(), |cx| {
-                cx.observe_model(model, Invalidation::Layout);
-                let v = cx.app.models().get(model).copied().unwrap_or_default();
+                cx.observe_model(&model, Invalidation::Layout);
+                let v = cx.app.models().get_copied(&model).unwrap_or_default();
                 vec![cx.text(format!("Value {v}"))]
             })]
         },
@@ -1227,8 +1227,8 @@ fn model_observation_requires_rerender_after_frame_advance() {
         "mvp50-observe-contract-frame-advance",
         |cx| {
             vec![cx.container(Default::default(), |cx| {
-                cx.observe_model(model, Invalidation::Layout);
-                let v = cx.app.models().get(model).copied().unwrap_or_default();
+                cx.observe_model(&model, Invalidation::Layout);
+                let v = cx.app.models().get_copied(&model).unwrap_or_default();
                 vec![cx.text(format!("Value {v}"))]
             })]
         },

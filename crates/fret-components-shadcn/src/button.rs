@@ -292,7 +292,7 @@ impl Button {
                 move |cx, st| {
                     cx.pressable_dispatch_command_opt(command);
                     if let Some(model) = toggle_model {
-                        cx.pressable_toggle_bool(model);
+                        cx.pressable_toggle_bool(&model);
                     }
 
                     let hovered = st.hovered && !disabled;

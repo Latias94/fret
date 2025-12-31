@@ -188,7 +188,7 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
         f(state)
     }
 
-    pub fn observe_model<T>(&mut self, model: Model<T>, invalidation: Invalidation) {
+    pub fn observe_model<T>(&mut self, model: &Model<T>, invalidation: Invalidation) {
         self.observe_model_id(model.id(), invalidation);
     }
 

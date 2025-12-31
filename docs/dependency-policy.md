@@ -37,3 +37,7 @@ desktop-first now, wasm/WebGPU later, and a clean split between UI contracts and
 - Clipboard access is implemented at the runner boundary (not in UI/core):
   - `arboard` is used by `fret-runner-winit-wgpu` to read/write clipboard text,
   - UI requests clipboard access via `Effect`s (see ADR 0041).
+
+## Drift Checks
+
+- Validate crate layering and forbid backend leakage: `pwsh -NoProfile -File tools/check_layering.ps1`

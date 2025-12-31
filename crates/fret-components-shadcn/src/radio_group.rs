@@ -145,7 +145,7 @@ impl RadioGroup {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            cx.observe_model(self.model, Invalidation::Paint);
+            cx.observe_model(&self.model, Invalidation::Paint);
 
             let theme = Theme::global(&*cx.app).clone();
             let gap_y = row_gap(&theme);
@@ -173,7 +173,7 @@ impl RadioGroup {
                     ..Default::default()
                 },
                 move |cx| {
-                    let selected: Option<Arc<str>> = cx.app.models().get(model).cloned().flatten();
+                    let selected: Option<Arc<str>> = cx.app.models().get_cloned(&model).flatten();
 
                     let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
                     let disabled: Vec<bool> =
@@ -203,7 +203,7 @@ impl RadioGroup {
                             roving,
                         },
                         move |cx| {
-                            cx.roving_select_option_arc_str(model, values_arc.clone());
+                            cx.roving_select_option_arc_str(&model, values_arc.clone());
 
                             let mut out = Vec::with_capacity(items.len());
                             for (idx, item) in items.iter().cloned().enumerate() {
@@ -222,6 +222,7 @@ impl RadioGroup {
 
                                 let a11y_label = item.label.clone();
                                 let pressable_item_value = item.value.clone();
+                                let model = model.clone();
                                 out.push(cx.pressable(
                                     PressableProps {
                                         layout: pressable_layout,
@@ -238,7 +239,7 @@ impl RadioGroup {
                                     },
                                     move |cx, st| {
                                         cx.pressable_set_option_arc_str(
-                                            model,
+                                            &model,
                                             pressable_item_value.clone(),
                                         );
 

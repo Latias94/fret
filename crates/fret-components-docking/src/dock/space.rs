@@ -1684,7 +1684,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let invalidation_model = DockInvalidationService::model_for_window(cx.app, self.window);
-        cx.observe_model(invalidation_model, Invalidation::Layout);
+        cx.observe_model(&invalidation_model, Invalidation::Layout);
 
         self.last_bounds = cx.bounds;
         let hidden = hidden_bounds(Size::new(Px(0.0), Px(0.0)));

@@ -121,12 +121,12 @@ pub fn select<H: UiHost>(
     a11y_label: Option<Arc<str>>,
 ) -> AnyElement {
     cx.scope(|cx| {
-        cx.observe_model(model, Invalidation::Paint);
-        cx.observe_model(open, Invalidation::Paint);
+        cx.observe_model(&model, Invalidation::Paint);
+        cx.observe_model(&open, Invalidation::Paint);
 
         let theme = Theme::global(&*cx.app).clone();
-        let selected = cx.app.models().get(model).cloned().unwrap_or_default();
-        let is_open = cx.app.models().get(open).copied().unwrap_or(false);
+        let selected = cx.app.models().get_cloned(&model).unwrap_or_default();
+        let is_open = cx.app.models().get_copied(&open).unwrap_or(false);
 
         let resolved = resolve_input_chrome(
             &theme,
@@ -176,7 +176,7 @@ pub fn select<H: UiHost>(
                 border
             };
 
-            cx.pressable_toggle_bool(open);
+            cx.pressable_toggle_bool(&open);
 
             let props = PressableProps {
                 layout: trigger_layout,
@@ -224,7 +224,7 @@ pub fn select<H: UiHost>(
                     );
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                        let selected = cx.app.models().get(model).cloned().unwrap_or_default();
+                        let selected = cx.app.models().get_cloned(&model).unwrap_or_default();
 
                         let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
                         let labels: Vec<Arc<str>> = items.iter().map(|i| i.label.clone()).collect();
@@ -300,7 +300,7 @@ pub fn select<H: UiHost>(
                                                 },
                                                 |cx| {
                                                     cx.roving_select_option_arc_str(
-                                                        model,
+                                                        &model,
                                                         values_arc.clone(),
                                                     );
                                                     cx.roving_typeahead_prefix_arc_str(
@@ -318,6 +318,9 @@ pub fn select<H: UiHost>(
                                                                 .is_some_and(|v| v.as_ref() == item.value.as_ref());
 
                                                             let item_ring = decl_style::focus_ring(&theme, theme.metrics.radius_sm);
+
+                                                            let model = model.clone();
+                                                            let open = open.clone();
 
                                                             out.push(cx.pressable_with_id(
                                                                 PressableProps {
@@ -343,10 +346,10 @@ pub fn select<H: UiHost>(
                                                                     let _ = id;
 
                                                                     cx.pressable_set_option_arc_str(
-                                                                        model,
+                                                                        &model,
                                                                         item.value.clone(),
                                                                     );
-                                                                    cx.pressable_set_bool(open, false);
+                                                                    cx.pressable_set_bool(&open, false);
 
                                                                     let theme = Theme::global(&*cx.app).clone();
                                                                     let mut bg = Color::TRANSPARENT;
@@ -570,12 +573,12 @@ mod tests {
             &mut services,
             window,
             bounds,
-            model,
-            open,
+            model.clone(),
+            open.clone(),
             items.clone(),
         );
 
-        let _ = app.models_mut().update(open, |v| *v = true);
+        let _ = app.models_mut().update(&open, |v| *v = true);
 
         // Second frame: open the popover and verify item metadata.
         let _ = render_frame(
@@ -584,8 +587,8 @@ mod tests {
             &mut services,
             window,
             bounds,
-            model,
-            open,
+            model.clone(),
+            open.clone(),
             items,
         );
 

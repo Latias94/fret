@@ -112,20 +112,19 @@ pub fn tree_view_with_renderer<H: UiHost>(
     size: Size,
     renderer: &mut impl TreeRowRenderer<H>,
 ) -> AnyElement {
-    cx.observe_model(items, Invalidation::Layout);
-    cx.observe_model(state, Invalidation::Paint);
+    cx.observe_model(&items, Invalidation::Layout);
+    cx.observe_model(&state, Invalidation::Paint);
 
-    let items_revision = cx.app.models().revision(items).unwrap_or(0);
-    let state_revision = cx.app.models().revision(state).unwrap_or(0);
+    let items_revision = cx.app.models().revision(&items).unwrap_or(0);
+    let state_revision = cx.app.models().revision(&state).unwrap_or(0);
 
     let TreeState { selected, expanded } = cx
         .app
         .models()
-        .get(state)
-        .cloned()
+        .get_cloned(&state)
         .unwrap_or_else(TreeState::default);
 
-    let items_value = cx.app.models().get(items).cloned().unwrap_or_default();
+    let items_value = cx.app.models().get_cloned(&items).unwrap_or_default();
 
     let theme = Theme::global(&*cx.app);
     let (list_bg, border, row_hover, row_active) = resolve_list_colors(theme);

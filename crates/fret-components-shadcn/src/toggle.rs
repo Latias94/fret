@@ -191,10 +191,10 @@ impl Toggle {
         let chrome = self.chrome;
         let layout = self.layout;
 
-        cx.observe_model(model, Invalidation::Paint);
+        cx.observe_model(&model, Invalidation::Paint);
 
         let theme = Theme::global(&*cx.app).clone();
-        let on_now = cx.app.models().get(model).copied().unwrap_or(false);
+        let on_now = cx.app.models().get_copied(&model).unwrap_or(false);
 
         let radius = size.control_radius(&theme);
         let ring = decl_style::focus_ring(&theme, radius);
@@ -253,9 +253,9 @@ impl Toggle {
             },
             move |cx, state| {
                 cx.pressable_dispatch_command_opt(on_click);
-                cx.pressable_toggle_bool(model);
+                cx.pressable_toggle_bool(&model);
 
-                let on = cx.app.models().get(model).copied().unwrap_or(false);
+                let on = cx.app.models().get_copied(&model).unwrap_or(false);
                 let hovered = state.hovered && !state.pressed;
                 let pressed = state.pressed;
 

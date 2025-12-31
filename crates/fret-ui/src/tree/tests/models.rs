@@ -9,7 +9,9 @@ fn model_change_invalidates_observers() {
     ui.set_window(AppWindowId::default());
     ui.set_paint_cache_enabled(true);
 
-    let node = ui.create_node(ObservingWidget { model });
+    let node = ui.create_node(ObservingWidget {
+        model: model.clone(),
+    });
     ui.set_root(node);
 
     let mut services = FakeUiServices;
@@ -54,7 +56,9 @@ fn model_change_invalidates_observers_across_windows() {
 
     let mut ui_a = UiTree::new();
     ui_a.set_window(window_a);
-    let node_a = ui_a.create_node(ObservingWidget { model });
+    let node_a = ui_a.create_node(ObservingWidget {
+        model: model.clone(),
+    });
     ui_a.set_root(node_a);
     ui_a.layout_all(&mut app, &mut services, bounds, 1.0);
     let mut scene_a = Scene::default();
@@ -63,7 +67,9 @@ fn model_change_invalidates_observers_across_windows() {
 
     let mut ui_b = UiTree::new();
     ui_b.set_window(window_b);
-    let node_b = ui_b.create_node(ObservingWidget { model });
+    let node_b = ui_b.create_node(ObservingWidget {
+        model: model.clone(),
+    });
     ui_b.set_root(node_b);
     ui_b.layout_all(&mut app, &mut services, bounds, 1.0);
     let mut scene_b = Scene::default();
@@ -94,7 +100,9 @@ fn paint_observation_only_invalidates_paint() {
     let mut ui = UiTree::new();
     ui.set_window(AppWindowId::default());
 
-    let node = ui.create_node(PaintObservingWidget { model });
+    let node = ui.create_node(PaintObservingWidget {
+        model: model.clone(),
+    });
     ui.set_root(node);
 
     let mut services = FakeUiServices;
@@ -125,7 +133,9 @@ fn hit_test_observation_escalates_to_layout_and_paint() {
     let mut ui = UiTree::new();
     ui.set_window(AppWindowId::default());
 
-    let node = ui.create_node(HitTestObservingWidget { model });
+    let node = ui.create_node(HitTestObservingWidget {
+        model: model.clone(),
+    });
     ui.set_root(node);
 
     let mut services = FakeUiServices;
@@ -164,7 +174,9 @@ fn model_change_requests_redraw_for_each_invalidated_window() {
 
     let mut ui_a = UiTree::new();
     ui_a.set_window(window_a);
-    let node_a = ui_a.create_node(PaintObservingWidget { model });
+    let node_a = ui_a.create_node(PaintObservingWidget {
+        model: model.clone(),
+    });
     ui_a.set_root(node_a);
     ui_a.layout_all(&mut app, &mut services, bounds, 1.0);
     let mut scene_a = Scene::default();
@@ -173,7 +185,9 @@ fn model_change_requests_redraw_for_each_invalidated_window() {
 
     let mut ui_b = UiTree::new();
     ui_b.set_window(window_b);
-    let node_b = ui_b.create_node(PaintObservingWidget { model });
+    let node_b = ui_b.create_node(PaintObservingWidget {
+        model: model.clone(),
+    });
     ui_b.set_root(node_b);
     ui_b.layout_all(&mut app, &mut services, bounds, 1.0);
     let mut scene_b = Scene::default();
@@ -234,7 +248,9 @@ fn paint_all_sets_ime_allowed_for_focused_text_input() {
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
     let effects = app.take_effects();
-    assert!(effects
-        .iter()
-        .any(|e| matches!(e, fret_runtime::Effect::ImeAllow { enabled: true, .. })));
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, fret_runtime::Effect::ImeAllow { enabled: true, .. }))
+    );
 }

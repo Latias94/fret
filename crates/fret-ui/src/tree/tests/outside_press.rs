@@ -24,7 +24,9 @@ fn outside_press_observer_must_not_capture_pointer_or_break_click_through() {
     let mut ui = UiTree::new();
     ui.set_window(window);
 
-    let base = ui.create_node(ClickCounter { clicks });
+    let base = ui.create_node(ClickCounter {
+        clicks: clicks.clone(),
+    });
     ui.set_root(base);
 
     let overlay = ui.create_node(CaptureOnPointerDownOutside);
@@ -57,7 +59,7 @@ fn outside_press_observer_must_not_capture_pointer_or_break_click_through() {
         }),
     );
 
-    let value = app.models().get(clicks).copied().unwrap_or(0);
+    let value = app.models().get_copied(&clicks).unwrap_or(0);
     assert_eq!(
         value, 1,
         "expected click-through dispatch to reach underlay"
@@ -85,7 +87,9 @@ fn outside_press_observer_dispatch_sets_input_context_phase() {
                 let _ = cx
                     .app
                     .models_mut()
-                    .update(self.phase, |v| *v = cx.input_ctx.dispatch_phase);
+                    .update(&self.phase, |v: &mut fret_runtime::InputDispatchPhase| {
+                        *v = cx.input_ctx.dispatch_phase
+                    });
             }
         }
     }
@@ -100,7 +104,9 @@ fn outside_press_observer_dispatch_sets_input_context_phase() {
                 let _ = cx
                     .app
                     .models_mut()
-                    .update(self.phase, |v| *v = cx.input_ctx.dispatch_phase);
+                    .update(&self.phase, |v: &mut fret_runtime::InputDispatchPhase| {
+                        *v = cx.input_ctx.dispatch_phase
+                    });
             }
         }
     }
@@ -119,12 +125,12 @@ fn outside_press_observer_dispatch_sets_input_context_phase() {
     ui.set_window(window);
 
     let base = ui.create_node(RecordNormalPhase {
-        phase: normal_phase,
+        phase: normal_phase.clone(),
     });
     ui.set_root(base);
 
     let overlay = ui.create_node(RecordObserverPhase {
-        phase: observer_phase,
+        phase: observer_phase.clone(),
     });
     let layer = ui.push_overlay_root_ex(overlay, false, true);
     ui.set_layer_wants_pointer_down_outside_events(layer, true);
@@ -147,12 +153,12 @@ fn outside_press_observer_dispatch_sets_input_context_phase() {
     );
 
     assert_eq!(
-        app.models().get(observer_phase).copied(),
+        app.models().get_copied(&observer_phase),
         Some(fret_runtime::InputDispatchPhase::Observer),
         "observer pass should tag InputContext as Observer"
     );
     assert_eq!(
-        app.models().get(normal_phase).copied(),
+        app.models().get_copied(&normal_phase),
         Some(fret_runtime::InputDispatchPhase::Normal),
         "normal hit-tested dispatch should tag InputContext as Normal"
     );

@@ -555,7 +555,10 @@ fn event_cx_bounds_tracks_translated_nodes() {
                 return;
             }
             let origin = cx.bounds.origin;
-            let _ = cx.app.models_mut().update(self.out, |v| *v = origin);
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&self.out, |v: &mut Point| *v = origin);
         }
 
         fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
@@ -571,7 +574,7 @@ fn event_cx_bounds_tracks_translated_nodes() {
     ui.set_window(AppWindowId::default());
 
     let root = ui.create_node(TestStack);
-    let probe = ui.create_node(BoundsProbe::new(out));
+    let probe = ui.create_node(BoundsProbe::new(out.clone()));
     ui.add_child(root, probe);
     ui.set_root(root);
 
@@ -606,6 +609,6 @@ fn event_cx_bounds_tracks_translated_nodes() {
         }),
     );
 
-    let origin = app.models().get(out).copied().unwrap_or_default();
+    let origin = app.models().get_copied(&out).unwrap_or_default();
     assert_eq!(origin, Point::new(Px(0.0), Px(100.0)));
 }

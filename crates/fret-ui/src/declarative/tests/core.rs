@@ -263,6 +263,7 @@ fn key_hook_runs_for_focused_text_input() {
             props.layout.size.height = Length::Px(Px(32.0));
             let input = cx.text_input(props);
 
+            let invoked = invoked.clone();
             cx.key_on_key_down_for(
                 input.id,
                 Arc::new(move |host, _cx, down| {
@@ -272,7 +273,7 @@ fn key_hook_runs_for_focused_text_input() {
                     if down.key != fret_core::KeyCode::ArrowDown {
                         return false;
                     }
-                    let _ = host.models_mut().update(invoked, |v| *v += 1);
+                    let _ = host.models_mut().update(&invoked, |v: &mut u32| *v += 1);
                     true
                 }),
             );
@@ -318,7 +319,7 @@ fn key_hook_runs_for_focused_text_input() {
         },
     );
 
-    assert_eq!(app.models().get(invoked).copied().unwrap_or_default(), 1);
+    assert_eq!(app.models().get_copied(&invoked).unwrap_or_default(), 1);
 }
 
 #[test]

@@ -41,11 +41,14 @@ fn render_transform_affects_hit_testing_and_pointer_event_coordinates() {
                     let _ = cx
                         .app
                         .models_mut()
-                        .update(self.last_pos, |p| *p = *position);
+                        .update(&self.last_pos, |p: &mut Point| *p = *position);
                     cx.stop_propagation();
                 }
                 Event::Pointer(PointerEvent::Up { .. }) => {
-                    let _ = cx.app.models_mut().update(self.clicks, |v| *v += 1);
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&self.clicks, |v: &mut u32| *v += 1);
                     cx.stop_propagation();
                 }
                 _ => {}
@@ -68,7 +71,10 @@ fn render_transform_affects_hit_testing_and_pointer_event_coordinates() {
     let root = ui.create_node(TransformRoot {
         delta: Point::new(Px(40.0), Px(0.0)),
     });
-    let child = ui.create_node(RecordPointerPos { clicks, last_pos });
+    let child = ui.create_node(RecordPointerPos {
+        clicks: clicks.clone(),
+        last_pos: last_pos.clone(),
+    });
     ui.add_child(root, child);
     ui.set_root(root);
 
@@ -98,9 +104,9 @@ fn render_transform_affects_hit_testing_and_pointer_event_coordinates() {
         }),
     );
 
-    assert_eq!(app.models().get(clicks).copied(), Some(1));
+    assert_eq!(app.models().get_copied(&clicks), Some(1));
     assert_eq!(
-        app.models().get(last_pos).copied(),
+        app.models().get_copied(&last_pos),
         Some(Point::new(Px(5.0), Px(5.0)))
     );
 }
@@ -171,7 +177,7 @@ fn nested_render_transforms_compose_for_pointer_event_coordinates() {
                 let _ = cx
                     .app
                     .models_mut()
-                    .update(self.last_pos, |p| *p = *position);
+                    .update(&self.last_pos, |p: &mut Point| *p = *position);
                 cx.stop_propagation();
             }
         }
@@ -188,7 +194,9 @@ fn nested_render_transforms_compose_for_pointer_event_coordinates() {
         delta: Point::new(Px(40.0), Px(0.0)),
     });
     let scale = ui.create_node(ScaleRoot { scale: 2.0 });
-    let leaf = ui.create_node(RecordPointerPos { last_pos });
+    let leaf = ui.create_node(RecordPointerPos {
+        last_pos: last_pos.clone(),
+    });
     ui.add_child(root, scale);
     ui.add_child(scale, leaf);
     ui.set_root(root);
@@ -212,7 +220,7 @@ fn nested_render_transforms_compose_for_pointer_event_coordinates() {
     );
 
     assert_eq!(
-        app.models().get(last_pos).copied(),
+        app.models().get_copied(&last_pos),
         Some(Point::new(Px(5.0), Px(5.0)))
     );
 }

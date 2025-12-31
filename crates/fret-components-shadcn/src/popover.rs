@@ -115,10 +115,10 @@ impl Popover {
         content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            cx.observe_model(self.open, Invalidation::Paint);
+            cx.observe_model(&self.open, Invalidation::Paint);
 
             let theme = Theme::global(&*cx.app).clone();
-            let is_open = cx.app.models().get(self.open).copied().unwrap_or(false);
+            let is_open = cx.app.models().get_copied(&self.open).unwrap_or(false);
 
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
@@ -512,7 +512,7 @@ mod tests {
                         ..Default::default()
                     },
                     |cx, _st, id| {
-                        cx.pressable_toggle_bool(open);
+                        cx.pressable_toggle_bool(&open);
                         trigger_id = Some(id);
                         vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
                     },
@@ -578,7 +578,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             underlay_id.clone(),
             popover_focus_cell.clone(),
         );
@@ -603,7 +603,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(true));
+        assert_eq!(app.models().get_copied(&open), Some(true));
 
         // Second frame: open + auto-focus inside popover.
         app.set_frame_id(FrameId(2));
@@ -613,7 +613,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             underlay_id.clone(),
             popover_focus_cell.clone(),
         );
@@ -645,7 +645,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).copied(), Some(false));
+        assert_eq!(app.models().get_copied(&open), Some(false));
 
         // Third frame: popover hidden, focus should remain on the underlay.
         app.set_frame_id(FrameId(3));
@@ -655,7 +655,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             underlay_id.clone(),
             popover_focus_cell.clone(),
         );

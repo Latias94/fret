@@ -157,7 +157,7 @@ impl AccordionTrigger {
                         let value = value.clone();
                         cx.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
                             let value = value.clone();
-                            let _ = host.models_mut().update(model, |v| {
+                            let _ = host.models_mut().update(&model, |v| {
                                 let is_same = v.as_deref().is_some_and(|cur| cur == value.as_ref());
                                 if is_same {
                                     if collapsible {
@@ -170,7 +170,7 @@ impl AccordionTrigger {
                         }));
                     }
                     AccordionModel::Multiple { model } => {
-                        cx.pressable_toggle_vec_arc_str(model, value.clone());
+                        cx.pressable_toggle_vec_arc_str(&model, value.clone());
                     }
                 }
 
@@ -428,14 +428,14 @@ impl Accordion {
             let group_disabled = self.disabled;
             let layout = self.layout;
 
-            let (open_single, open_multi) = match model {
+            let (open_single, open_multi) = match &model {
                 AccordionModel::Single { model, .. } => {
                     cx.observe_model(model, Invalidation::Layout);
-                    (cx.app.models().get(model).cloned().flatten(), None)
+                    (cx.app.models().get_cloned(model).flatten(), None)
                 }
                 AccordionModel::Multiple { model } => {
                     cx.observe_model(model, Invalidation::Layout);
-                    (None, cx.app.models().get(model).cloned())
+                    (None, cx.app.models().get_cloned(model))
                 }
             };
 
@@ -685,7 +685,15 @@ mod tests {
             Size::new(Px(800.0), Px(600.0)),
         );
 
-        render_accordion_frame(&mut ui, &mut app, &mut services, window, bounds, open, true);
+        render_accordion_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+        );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         // Click first trigger.
@@ -708,7 +716,7 @@ mod tests {
             }),
         );
         assert_eq!(
-            app.models().get(open).cloned().flatten().as_deref(),
+            app.models().get_cloned(&open).flatten().as_deref(),
             Some("item-1")
         );
 
@@ -731,7 +739,7 @@ mod tests {
                 modifiers: fret_core::Modifiers::default(),
             }),
         );
-        assert_eq!(app.models().get(open).cloned().flatten().as_deref(), None);
+        assert_eq!(app.models().get_cloned(&open).flatten().as_deref(), None);
 
         // Click second trigger should open item-2.
         ui.dispatch_event(
@@ -753,7 +761,7 @@ mod tests {
             }),
         );
         assert_eq!(
-            app.models().get(open).cloned().flatten().as_deref(),
+            app.models().get_cloned(&open).flatten().as_deref(),
             Some("item-2")
         );
     }
@@ -778,7 +786,7 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open,
+            open.clone(),
             false,
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -803,7 +811,7 @@ mod tests {
             }),
         );
         assert_eq!(
-            app.models().get(open).cloned().flatten().as_deref(),
+            app.models().get_cloned(&open).flatten().as_deref(),
             Some("item-1")
         );
 
@@ -827,7 +835,7 @@ mod tests {
             }),
         );
         assert_eq!(
-            app.models().get(open).cloned().flatten().as_deref(),
+            app.models().get_cloned(&open).flatten().as_deref(),
             Some("item-1")
         );
     }

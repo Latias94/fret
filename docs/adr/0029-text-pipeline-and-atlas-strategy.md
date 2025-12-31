@@ -193,13 +193,13 @@ This ADR defines the contract and lock-in targets; implementation will evolve. C
   - `crates/fret-render/src/text.rs`
 - A framework-level fallback policy and platform-generic family defaults are configured at text-system startup, and a
   `font_stack_key` participates in `TextBlobId` caching so fallback/generic-family changes cannot reuse stale blobs.
-- `FontId` is still a placeholder core identifier; `TextStyle.font` does not yet select a concrete family/style in the
-  shaping backend (MVP currently uses the configured sans-serif generic family for all runs).
+- `TextStyle.font` selects among the three generic families (`SansSerif`/`Serif`/`Monospace`) via the semantic `FontId`
+  aliases (`FontId::ui()`/`FontId::serif()`/`FontId::monospace()`), which are then resolved by the text backend.
 
 Follow-up decisions (still required):
 
-- Define the stable mapping from theme/settings (“default font stack”) into `FontId` + backend font families, and decide
-  persistence format (store family + features + fallbacks, never numeric `FontId`).
+- Expand the stable mapping beyond the three built-in generic families (user font loading, stable IDs, and persistence
+  format: store family + features + fallbacks, never numeric `FontId`).
 
 MVP note:
 

@@ -187,7 +187,7 @@ pub fn slider<H: UiHost>(
     });
 
     cx.scope(|cx| {
-        cx.observe_model(model, fret_ui::Invalidation::Paint);
+        cx.observe_model(&model, fret_ui::Invalidation::Paint);
 
         let root_layout = decl_style::layout_style(&theme, layout.relative().w_full());
         let root_h = style.thumb_size.0.max(style.track_height.0).max(0.0);
@@ -198,9 +198,9 @@ pub fn slider<H: UiHost>(
         let value = cx
             .app
             .models()
-            .get(model)
-            .and_then(|values| values.first())
-            .copied()
+            .read(&model, |values| values.first().copied())
+            .ok()
+            .flatten()
             .unwrap_or(min);
         let t = norm_value(value, min, max);
         let a11y_value = fmt_a11y_value(value);
@@ -218,8 +218,8 @@ pub fn slider<H: UiHost>(
         let max_value = max;
         let step_value = step;
         let thumb_size = style.thumb_size;
-        let model_on_down = model;
-        let model_on_move = model;
+        let model_on_down = model.clone();
+        let model_on_move = model.clone();
 
         cx.semantics_with_id(semantics, |cx, semantics_id| {
             let on_down = Arc::new(
@@ -235,7 +235,7 @@ pub fn slider<H: UiHost>(
                     let bounds = host.bounds();
                     update_slider_model(
                         host,
-                        model_on_down,
+                        &model_on_down,
                         bounds,
                         down.position.x,
                         min_value,
@@ -258,7 +258,7 @@ pub fn slider<H: UiHost>(
                     let bounds = host.bounds();
                     update_slider_model(
                         host,
-                        model_on_move,
+                        &model_on_move,
                         bounds,
                         mv.position.x,
                         min_value,
@@ -282,7 +282,7 @@ pub fn slider<H: UiHost>(
                 },
             );
 
-            let model_on_key = model;
+            let model_on_key = model.clone();
             cx.key_on_key_down_for(
                 semantics_id,
                 Arc::new(move |host, cx, down| {
@@ -302,9 +302,9 @@ pub fn slider<H: UiHost>(
 
                     let cur = host
                         .models_mut()
-                        .get(model_on_key)
-                        .and_then(|v| v.first())
-                        .copied()
+                        .read(&model_on_key, |v| v.first().copied())
+                        .ok()
+                        .flatten()
                         .unwrap_or(min_value);
 
                     let next = match down.key {
@@ -318,14 +318,13 @@ pub fn slider<H: UiHost>(
                     let v = snap_value(next, min_value, max_value, step);
                     let mut values = host
                         .models_mut()
-                        .get(model_on_key)
-                        .cloned()
+                        .get_cloned(&model_on_key)
                         .unwrap_or_default();
                     if values.is_empty() {
                         values.push(min_value);
                     }
                     values[0] = v;
-                    let _ = host.models_mut().update(model_on_key, |dst| *dst = values);
+                    let _ = host.models_mut().update(&model_on_key, |dst| *dst = values);
                     host.request_redraw(cx.window);
                     true
                 }),
@@ -480,7 +479,7 @@ fn snap_value(v: f32, min: f32, max: f32, step: f32) -> f32 {
 
 fn update_slider_model(
     host: &mut dyn UiPointerActionHost,
-    model: Model<Vec<f32>>,
+    model: &Model<Vec<f32>>,
     bounds: Rect,
     pointer_x: Px,
     min: f32,
@@ -506,8 +505,7 @@ fn update_slider_model(
 
     let mut next = host
         .models_mut()
-        .get(model)
-        .cloned()
+        .get_cloned(model)
         .unwrap_or_else(|| vec![min]);
     if next.is_empty() {
         next.push(min);
@@ -592,7 +590,13 @@ mod tests {
             window,
             bounds,
             "shadcn-slider-updates-model-on-pointer-down",
-            |cx| vec![Slider::new(model).range(0.0, 100.0).into_element(cx)],
+            |cx| {
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .into_element(cx),
+                ]
+            },
         );
         ui.set_root(root);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -616,9 +620,8 @@ mod tests {
 
         let v = app
             .models()
-            .get(model)
-            .and_then(|values| values.first())
-            .copied()
+            .get_cloned(&model)
+            .and_then(|values| values.first().copied())
             .unwrap_or(f32::NAN);
         assert!((v - 100.0).abs() < 0.01, "expected slider=100, got {v}");
 

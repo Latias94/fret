@@ -1,6 +1,6 @@
 # ADR 0085: Virtualized Accessibility for Collections (Composite Widgets + Large Lists)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -196,6 +196,22 @@ Cons:
 1) Decide whether to implement platform-native virtualization patterns behind `fret-platform` as
    an additive enhancement.
 2) If we do, keep the P0 portable snapshot contract intact and add platform-specific tests.
+
+## Implementation Status (Current Workspace)
+
+P0 baseline is implemented end-to-end:
+
+- Semantics schema: `crates/fret-core/src/semantics.rs` (`active_descendant`, `pos_in_set`, `set_size`).
+- Runtime snapshot production: `crates/fret-ui/src/tree/mod.rs` (collects/stamps collection metadata and enforces basic invariants).
+- AccessKit mapping: `crates/fret-a11y-accesskit/src/lib.rs` (maps to `active_descendant`, `position_in_set`, `size_of_set`).
+- Component policy helpers and adoption:
+  - `crates/fret-components-ui/src/declarative/collection_semantics.rs`
+  - `crates/fret-components-ui/src/declarative/list.rs` (virtualized list stamps list item metadata)
+  - shadcn surfaces (cmdk/select/context menu) assert metadata in tests
+
+Follow-ups remain P1:
+
+- richer platform-native virtualization patterns (if desired) without changing the P0 portable contract.
 
 ## References
 

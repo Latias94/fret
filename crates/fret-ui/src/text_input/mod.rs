@@ -247,7 +247,11 @@ impl TextInput {
         self.last_sent_cursor = None;
     }
 
-    fn apply_singleline_ui_delta(&mut self, cx: &mut impl TextInputUiCx, delta: crate::text_edit::commands::SingleLineUiDelta) {
+    fn apply_singleline_ui_delta(
+        &mut self,
+        cx: &mut impl TextInputUiCx,
+        delta: crate::text_edit::commands::SingleLineUiDelta,
+    ) {
         if delta.invalidate_layout {
             if delta.release_text_blobs {
                 self.mark_text_blobs_dirty();
@@ -580,10 +584,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                                 command,
                                 false,
                             );
-                            let delta = crate::text_edit::commands::singleline_ui_delta(
-                                command,
-                                outcome,
-                            );
+                            let delta =
+                                crate::text_edit::commands::singleline_ui_delta(command, outcome);
                             self.apply_singleline_ui_delta(cx, delta);
                         }
                         fret_core::KeyCode::ArrowRight => {
@@ -599,10 +601,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                                 command,
                                 false,
                             );
-                            let delta = crate::text_edit::commands::singleline_ui_delta(
-                                command,
-                                outcome,
-                            );
+                            let delta =
+                                crate::text_edit::commands::singleline_ui_delta(command, outcome);
                             self.apply_singleline_ui_delta(cx, delta);
                         }
                         fret_core::KeyCode::Home => {
@@ -616,10 +616,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                                 command,
                                 false,
                             );
-                            let delta = crate::text_edit::commands::singleline_ui_delta(
-                                command,
-                                outcome,
-                            );
+                            let delta =
+                                crate::text_edit::commands::singleline_ui_delta(command, outcome);
                             self.apply_singleline_ui_delta(cx, delta);
                         }
                         fret_core::KeyCode::End => {
@@ -633,10 +631,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                                 command,
                                 false,
                             );
-                            let delta = crate::text_edit::commands::singleline_ui_delta(
-                                command,
-                                outcome,
-                            );
+                            let delta =
+                                crate::text_edit::commands::singleline_ui_delta(command, outcome);
                             self.apply_singleline_ui_delta(cx, delta);
                         }
                         _ => {}
@@ -784,7 +780,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                     "text.move_home",
                     is_ime_composing,
                 );
-                let delta = crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
+                let delta =
+                    crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
                 self.apply_singleline_ui_delta(cx, delta);
                 true
             }
@@ -795,7 +792,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                     "text.move_end",
                     is_ime_composing,
                 );
-                let delta = crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
+                let delta =
+                    crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
                 self.apply_singleline_ui_delta(cx, delta);
                 true
             }
@@ -806,7 +804,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                     "text.select_home",
                     is_ime_composing,
                 );
-                let delta = crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
+                let delta =
+                    crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
                 self.apply_singleline_ui_delta(cx, delta);
                 true
             }
@@ -817,7 +816,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                     "text.select_end",
                     is_ime_composing,
                 );
-                let delta = crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
+                let delta =
+                    crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
                 self.apply_singleline_ui_delta(cx, delta);
                 true
             }

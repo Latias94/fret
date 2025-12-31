@@ -19,21 +19,21 @@ pub trait ActionHooksExt {
 
     fn pressable_dispatch_command_opt(&mut self, command: Option<CommandId>);
 
-    fn pressable_toggle_bool(&mut self, model: Model<bool>);
+    fn pressable_toggle_bool(&mut self, model: &Model<bool>);
 
-    fn pressable_set_bool(&mut self, model: Model<bool>, value: bool);
+    fn pressable_set_bool(&mut self, model: &Model<bool>, value: bool);
 
-    fn pressable_set_arc_str(&mut self, model: Model<Arc<str>>, value: Arc<str>);
+    fn pressable_set_arc_str(&mut self, model: &Model<Arc<str>>, value: Arc<str>);
 
-    fn pressable_set_option_arc_str(&mut self, model: Model<Option<Arc<str>>>, value: Arc<str>);
+    fn pressable_set_option_arc_str(&mut self, model: &Model<Option<Arc<str>>>, value: Arc<str>);
 
-    fn pressable_toggle_vec_arc_str(&mut self, model: Model<Vec<Arc<str>>>, value: Arc<str>);
+    fn pressable_toggle_vec_arc_str(&mut self, model: &Model<Vec<Arc<str>>>, value: Arc<str>);
 
-    fn dismissible_close_bool(&mut self, open: Model<bool>);
+    fn dismissible_close_bool(&mut self, open: &Model<bool>);
 
     fn roving_select_option_arc_str(
         &mut self,
-        model: Model<Option<Arc<str>>>,
+        model: &Model<Option<Arc<str>>>,
         values: Arc<[Arc<str>]>,
     );
 
@@ -56,36 +56,41 @@ impl<H: UiHost> ActionHooksExt for ElementCx<'_, H> {
         self.pressable_dispatch_command(command);
     }
 
-    fn pressable_toggle_bool(&mut self, model: Model<bool>) {
+    fn pressable_toggle_bool(&mut self, model: &Model<bool>) {
+        let model = model.clone();
         self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
-            let _ = host.models_mut().update(model, |v| *v = !*v);
+            let _ = host.models_mut().update(&model, |v| *v = !*v);
         }));
     }
 
-    fn pressable_set_bool(&mut self, model: Model<bool>, value: bool) {
+    fn pressable_set_bool(&mut self, model: &Model<bool>, value: bool) {
+        let model = model.clone();
         self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
-            let _ = host.models_mut().update(model, |v| *v = value);
+            let _ = host.models_mut().update(&model, |v| *v = value);
         }));
     }
 
-    fn pressable_set_arc_str(&mut self, model: Model<Arc<str>>, value: Arc<str>) {
+    fn pressable_set_arc_str(&mut self, model: &Model<Arc<str>>, value: Arc<str>) {
+        let model = model.clone();
         self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
             let value = value.clone();
-            let _ = host.models_mut().update(model, |v| *v = value);
+            let _ = host.models_mut().update(&model, |v| *v = value);
         }));
     }
 
-    fn pressable_set_option_arc_str(&mut self, model: Model<Option<Arc<str>>>, value: Arc<str>) {
+    fn pressable_set_option_arc_str(&mut self, model: &Model<Option<Arc<str>>>, value: Arc<str>) {
+        let model = model.clone();
         self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
             let value = Some(value.clone());
-            let _ = host.models_mut().update(model, |v| *v = value);
+            let _ = host.models_mut().update(&model, |v| *v = value);
         }));
     }
 
-    fn pressable_toggle_vec_arc_str(&mut self, model: Model<Vec<Arc<str>>>, value: Arc<str>) {
+    fn pressable_toggle_vec_arc_str(&mut self, model: &Model<Vec<Arc<str>>>, value: Arc<str>) {
+        let model = model.clone();
         self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
             let value = value.clone();
-            let _ = host.models_mut().update(model, |v| {
+            let _ = host.models_mut().update(&model, |v| {
                 if let Some(pos) = v.iter().position(|it| it.as_ref() == value.as_ref()) {
                     v.remove(pos);
                 } else {
@@ -95,17 +100,19 @@ impl<H: UiHost> ActionHooksExt for ElementCx<'_, H> {
         }));
     }
 
-    fn dismissible_close_bool(&mut self, open: Model<bool>) {
+    fn dismissible_close_bool(&mut self, open: &Model<bool>) {
+        let open = open.clone();
         self.dismissible_add_on_dismiss_request(Arc::new(move |host, _cx, _reason| {
-            let _ = host.models_mut().update(open, |v| *v = false);
+            let _ = host.models_mut().update(&open, |v| *v = false);
         }));
     }
 
     fn roving_select_option_arc_str(
         &mut self,
-        model: Model<Option<Arc<str>>>,
+        model: &Model<Option<Arc<str>>>,
         values: Arc<[Arc<str>]>,
     ) {
+        let model = model.clone();
         struct RovingSelectOptionArcStrState {
             values: Rc<RefCell<Arc<[Arc<str>]>>>,
             handler: fret_ui::action::OnRovingActiveChange,
@@ -123,7 +130,7 @@ impl<H: UiHost> ActionHooksExt for ElementCx<'_, H> {
                             return;
                         };
                         let next = Some(value);
-                        let _ = host.models_mut().update(model, |v| *v = next);
+                        let _ = host.models_mut().update(&model, |v| *v = next);
                     },
                 );
 

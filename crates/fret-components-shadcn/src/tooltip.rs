@@ -1,5 +1,5 @@
-use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::declarative::scheduling;
+use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::hover_intent::{HoverIntentConfig, HoverIntentState};
 use fret_components_ui::overlay;
 use fret_components_ui::window_overlays;

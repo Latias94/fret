@@ -467,7 +467,7 @@ impl BoundResizablePanelGroup {
         bounds: Rect,
         children_len: usize,
     ) -> (Vec<Rect>, Vec<Rect>, Vec<f32>, Vec<f32>, f32) {
-        let raw = app.models().get(self.model).cloned().unwrap_or_default();
+        let raw = app.models().get_cloned(&self.model).unwrap_or_default();
         let layout = compute_resizable_panel_group_layout(
             self.axis,
             bounds,
@@ -488,7 +488,7 @@ impl BoundResizablePanelGroup {
 
     fn update_model_sizes<H: UiHost>(&self, app: &mut H, sizes: &[f32], avail: f32) {
         let next = fractions_from_sizes(sizes, avail);
-        let _ = app.models_mut().update(self.model, |v| *v = next);
+        let _ = app.models_mut().update(&self.model, |v| *v = next);
     }
 }
 
@@ -625,7 +625,7 @@ impl<H: UiHost> Widget<H> for BoundResizablePanelGroup {
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-        cx.observe_model(self.model, Invalidation::Layout);
+        cx.observe_model(&self.model, Invalidation::Layout);
 
         self.last_bounds = cx.bounds;
         let children_len = cx.children.len();
@@ -768,7 +768,7 @@ mod tests {
         app.set_global(PlatformCapabilities::default());
 
         let fractions = app.models_mut().insert(vec![0.33, 0.34, 0.33]);
-        let mut group = BoundResizablePanelGroup::new(Axis::Horizontal, fractions);
+        let mut group = BoundResizablePanelGroup::new(Axis::Horizontal, fractions.clone());
         group.set_style(ResizablePanelGroupStyle {
             gap: Px(0.0),
             hit_thickness: Px(10.0),
@@ -790,7 +790,7 @@ mod tests {
         let _ = app.take_effects();
 
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
-        let fractions_now = app.models().get(fractions).cloned().unwrap_or_default();
+        let fractions_now = app.models().get_cloned(&fractions).unwrap_or_default();
         let layout = compute_resizable_panel_group_layout(
             Axis::Horizontal,
             bounds,
@@ -830,7 +830,7 @@ mod tests {
             }),
         );
 
-        let v = app.models().get(fractions).cloned().unwrap_or_default();
+        let v = app.models().get_cloned(&fractions).unwrap_or_default();
         assert_eq!(v.len(), 3);
         assert!(v[0] > 0.33, "expected left panel to grow, got {v:?}");
         let effects = app.take_effects();
@@ -855,7 +855,7 @@ mod tests {
         app.set_global(PlatformCapabilities::default());
 
         let fractions = app.models_mut().insert(vec![0.33, 0.34, 0.33]);
-        let mut group = BoundResizablePanelGroup::new(Axis::Horizontal, fractions);
+        let mut group = BoundResizablePanelGroup::new(Axis::Horizontal, fractions.clone());
         group.set_style(ResizablePanelGroupStyle {
             gap: Px(0.0),
             hit_thickness: Px(10.0),
@@ -877,7 +877,7 @@ mod tests {
         let _ = ui.layout(&mut app, &mut services, root_id, size, 1.0);
 
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
-        let before = app.models().get(fractions).cloned().unwrap_or_default();
+        let before = app.models().get_cloned(&fractions).unwrap_or_default();
         let layout_before = compute_resizable_panel_group_layout(
             Axis::Horizontal,
             bounds,
@@ -919,7 +919,7 @@ mod tests {
             }),
         );
 
-        let after = app.models().get(fractions).cloned().unwrap_or_default();
+        let after = app.models().get_cloned(&fractions).unwrap_or_default();
         let layout_after = compute_resizable_panel_group_layout(
             Axis::Horizontal,
             bounds,
@@ -956,7 +956,7 @@ mod tests {
         app.set_global(PlatformCapabilities::default());
 
         let fractions = app.models_mut().insert(vec![0.5, 0.25, 0.25]);
-        let mut group = BoundResizablePanelGroup::new(Axis::Horizontal, fractions);
+        let mut group = BoundResizablePanelGroup::new(Axis::Horizontal, fractions.clone());
         group.set_style(ResizablePanelGroupStyle {
             gap: Px(0.0),
             hit_thickness: Px(10.0),
@@ -978,7 +978,7 @@ mod tests {
         let _ = ui.layout(&mut app, &mut services, root_id, size, 1.0);
 
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
-        let before = app.models().get(fractions).cloned().unwrap_or_default();
+        let before = app.models().get_cloned(&fractions).unwrap_or_default();
         let layout_before = compute_resizable_panel_group_layout(
             Axis::Horizontal,
             bounds,
@@ -1020,7 +1020,7 @@ mod tests {
             }),
         );
 
-        let after = app.models().get(fractions).cloned().unwrap_or_default();
+        let after = app.models().get_cloned(&fractions).unwrap_or_default();
         let layout_after = compute_resizable_panel_group_layout(
             Axis::Horizontal,
             bounds,
