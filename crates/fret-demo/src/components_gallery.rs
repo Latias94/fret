@@ -8,7 +8,9 @@ use fret_core::{
     AppWindowId, Edges, Event, KeyCode, PlatformCapabilities, Px, Rect, Scene, SemanticsRole,
     UiServices,
 };
-use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
+use fret_runner_winit_wgpu::{
+    RunnerUserEvent, WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig,
+};
 use fret_ui::declarative;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
@@ -1162,7 +1164,9 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let event_loop = EventLoop::new().context("create winit event loop")?;
+    let event_loop = EventLoop::<RunnerUserEvent>::with_user_event()
+        .build()
+        .context("create winit event loop")?;
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
     app.with_global_mut(IconRegistry::default, |icons, _app| {
@@ -1186,6 +1190,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let driver = ComponentsGalleryDriver;
     let mut runner = WinitRunner::new(config, app, driver);
+    runner.set_event_loop_proxy(event_loop.create_proxy());
     event_loop.run_app(&mut runner)?;
     Ok(())
 }

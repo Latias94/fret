@@ -12,7 +12,9 @@ use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, PlatformCapabilities, Rect, Scene,
     SceneOp, UiServices, ViewportInputEvent, geometry::Px,
 };
-use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
+use fret_runner_winit_wgpu::{
+    RunnerUserEvent, WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig,
+};
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::{Invalidation, Theme, UiTree};
@@ -760,7 +762,9 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let event_loop = EventLoop::new().context("create winit event loop")?;
+    let event_loop = EventLoop::<RunnerUserEvent>::with_user_event()
+        .build()
+        .context("create winit event loop")?;
     let mut app = App::new();
     let mut caps = PlatformCapabilities::default();
     if std::env::var("FRET_SINGLE_WINDOW")
@@ -803,6 +807,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let driver = DockingArbitrationDriver::new(pending_layout);
     let mut runner = WinitRunner::new(config, app, driver);
+    runner.set_event_loop_proxy(event_loop.create_proxy());
     event_loop.run_app(&mut runner)?;
     Ok(())
 }

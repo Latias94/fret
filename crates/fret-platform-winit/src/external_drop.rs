@@ -32,22 +32,12 @@ impl WinitExternalDrop {
     pub fn paths(&self, token: ExternalDropToken) -> Option<&[PathBuf]> {
         self.payloads.get(&token).map(|v| v.as_slice())
     }
-}
 
-impl Default for WinitExternalDrop {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl ExternalDropProvider for WinitExternalDrop {
-    fn read_all(
-        &mut self,
+    pub fn read_paths(
         token: ExternalDropToken,
+        paths: Vec<PathBuf>,
         limits: ExternalDropReadLimits,
-    ) -> Option<ExternalDropDataEvent> {
-        let paths = self.payloads.get(&token)?.clone();
-
+    ) -> ExternalDropDataEvent {
         let mut files: Vec<ExternalDropFileData> = Vec::new();
         let mut errors: Vec<ExternalDropReadError> = Vec::new();
         let mut total: u64 = 0;
@@ -132,11 +122,28 @@ impl ExternalDropProvider for WinitExternalDrop {
             files.push(ExternalDropFileData { name, bytes });
         }
 
-        Some(ExternalDropDataEvent {
+        ExternalDropDataEvent {
             token,
             files,
             errors,
-        })
+        }
+    }
+}
+
+impl Default for WinitExternalDrop {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ExternalDropProvider for WinitExternalDrop {
+    fn read_all(
+        &mut self,
+        token: ExternalDropToken,
+        limits: ExternalDropReadLimits,
+    ) -> Option<ExternalDropDataEvent> {
+        let paths = self.payloads.get(&token)?.clone();
+        Some(Self::read_paths(token, paths, limits))
     }
 
     fn release(&mut self, token: ExternalDropToken) {

@@ -24,7 +24,7 @@ use winit::{
     event::{
         DeviceEvent, ElementState, MouseButton as WinitMouseButton, MouseScrollDelta, WindowEvent,
     },
-    event_loop::{ActiveEventLoop, ControlFlow},
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoopProxy},
     keyboard::{Key, ModifiersState, NamedKey},
     window::{Window, WindowId, WindowLevel},
 };
@@ -34,6 +34,14 @@ use fret_platform::clipboard::Clipboard as _;
 use fret_platform::external_drop::ExternalDropProvider as _;
 
 type WindowAnchor = fret_core::WindowAnchor;
+
+#[derive(Debug, Clone)]
+pub enum RunnerUserEvent {
+    WindowEvent {
+        window: fret_core::AppWindowId,
+        event: fret_core::Event,
+    },
+}
 
 fn validate_scene_if_enabled(scene: &Scene) {
     if std::env::var_os("FRET_VALIDATE_SCENE").is_none() {
@@ -781,6 +789,7 @@ pub struct WinitRunner<D: WinitDriver> {
     pub config: WinitRunnerConfig,
     pub app: App,
     pub driver: D,
+    event_loop_proxy: Option<EventLoopProxy<RunnerUserEvent>>,
 
     context: Option<WgpuContext>,
     renderer: Option<Renderer>,
@@ -1070,6 +1079,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             config,
             app,
             driver,
+            event_loop_proxy: None,
             context: None,
             renderer: None,
             no_services: NoUiServices,
@@ -1093,6 +1103,39 @@ impl<D: WinitDriver> WinitRunner<D> {
             internal_drag_hover_pos: None,
             external_drop: WinitExternalDrop::default(),
         }
+    }
+
+    /// Sets the event-loop proxy used to deliver asynchronous platform completions back into the
+    /// window event stream.
+    ///
+    /// Without a proxy, the runner falls back to synchronous delivery for platform effects.
+    pub fn set_event_loop_proxy(&mut self, proxy: EventLoopProxy<RunnerUserEvent>) {
+        self.event_loop_proxy = Some(proxy);
+    }
+
+    fn spawn_window_event_task<F>(&self, window: fret_core::AppWindowId, task: F) -> bool
+    where
+        F: FnOnce() -> Event + Send + 'static,
+    {
+        let Some(proxy) = self.event_loop_proxy.clone() else {
+            return false;
+        };
+
+        std::thread::spawn(move || {
+            let event = task();
+            let _ = proxy.send_event(RunnerUserEvent::WindowEvent { window, event });
+        });
+
+        true
+    }
+
+    fn deliver_window_event_now(&mut self, window: fret_core::AppWindowId, event: &Event) {
+        let Some(state) = self.windows.get_mut(window) else {
+            return;
+        };
+        let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
+        self.driver
+            .handle_event(&mut self.app, services, window, &mut state.user, event);
     }
 
     fn external_drag_files(
@@ -1620,41 +1663,28 @@ impl<D: WinitDriver> WinitRunner<D> {
                         let Ok(Some(text)) = self.clipboard.get_text() else {
                             continue;
                         };
-                        if let Some(state) = self.windows.get_mut(window) {
-                            let services =
-                                Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
-                            self.driver.handle_event(
-                                &mut self.app,
-                                services,
-                                window,
-                                &mut state.user,
-                                &Event::ClipboardText(text),
-                            );
-                        }
+                        self.deliver_window_event_now(window, &Event::ClipboardText(text));
                     }
                     Effect::ExternalDropReadAll { window, token } => {
-                        let Some(event) = self.external_drop.read_all(
-                            token,
-                            fret_platform::external_drop::ExternalDropReadLimits {
-                                max_total_bytes: self.config.external_drop_max_total_bytes,
-                                max_file_bytes: self.config.external_drop_max_file_bytes,
-                                max_files: self.config.external_drop_max_files,
-                            },
-                        ) else {
-                            continue;
+                        let limits = fret_platform::external_drop::ExternalDropReadLimits {
+                            max_total_bytes: self.config.external_drop_max_total_bytes,
+                            max_file_bytes: self.config.external_drop_max_file_bytes,
+                            max_files: self.config.external_drop_max_files,
                         };
 
-                        if let Some(state) = self.windows.get_mut(window) {
-                            let services =
-                                Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
-                            self.driver.handle_event(
-                                &mut self.app,
-                                services,
-                                window,
-                                &mut state.user,
-                                &Event::ExternalDropData(event),
-                            );
+                        if let Some(paths) = self.external_drop.paths(token).map(|p| p.to_vec()) {
+                            if self.spawn_window_event_task(window, move || {
+                                let event = WinitExternalDrop::read_paths(token, paths, limits);
+                                Event::ExternalDropData(event)
+                            }) {
+                                continue;
+                            }
                         }
+
+                        let Some(event) = self.external_drop.read_all(token, limits) else {
+                            continue;
+                        };
+                        self.deliver_window_event_now(window, &Event::ExternalDropData(event));
                     }
                     Effect::ExternalDropRelease { token } => {
                         self.external_drop.release(token);
@@ -2395,7 +2425,7 @@ impl fret_core::SvgService for NoUiServices {
     }
 }
 
-impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
+impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
     fn device_event(
         &mut self,
         event_loop: &ActiveEventLoop,
@@ -2571,6 +2601,15 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
         self.driver.init(&mut self.app, main_window);
         self.app.request_redraw(main_window);
         self.drain_effects(event_loop);
+    }
+
+    fn user_event(&mut self, event_loop: &ActiveEventLoop, event: RunnerUserEvent) {
+        match event {
+            RunnerUserEvent::WindowEvent { window, event } => {
+                self.deliver_window_event_now(window, &event);
+                self.drain_effects(event_loop);
+            }
+        }
     }
 
     fn window_event(

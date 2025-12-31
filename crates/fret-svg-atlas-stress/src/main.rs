@@ -5,7 +5,9 @@ use fret_core::{
     UiServices,
 };
 use fret_render::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
-use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
+use fret_runner_winit_wgpu::{
+    RunnerUserEvent, WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig,
+};
 use std::time::{Duration, Instant};
 use winit::event_loop::EventLoop;
 
@@ -710,7 +712,7 @@ fn main() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let event_loop = EventLoop::new()?;
+    let event_loop = EventLoop::<RunnerUserEvent>::with_user_event().build()?;
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
 
@@ -791,6 +793,7 @@ fn main() -> anyhow::Result<()> {
 
     let driver = SvgAtlasStressDriver { max_frames };
     let mut runner = WinitRunner::new(config, app, driver);
+    runner.set_event_loop_proxy(event_loop.create_proxy());
     event_loop.run_app(&mut runner)?;
     Ok(())
 }
