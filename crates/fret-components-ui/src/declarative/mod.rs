@@ -3,6 +3,7 @@ pub mod collection_semantics;
 pub mod icon;
 pub mod list;
 pub mod model_watch;
+pub mod prelude;
 pub mod presence;
 pub mod scheduling;
 pub mod scroll;
