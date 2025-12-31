@@ -1,0 +1,57 @@
+# ADR 0087: Models Are Main-Thread Only (`!Send`/`!Sync`)
+
+Status: Accepted
+
+## Context
+
+Fret’s UI runtime is designed around a main-thread event loop:
+
+- input, focus/IME, docking, and overlay policies are inherently main-thread driven,
+- runners (e.g. winit) deliver events and drive rendering from a single thread,
+- background work is expected to communicate back to the UI thread via effects/messages
+  (see ADR 0008).
+
+Our model system (ADR 0031 + ADR 0086) uses an app-owned `ModelStore` with typed handles
+(`Model<T>` / `WeakModel<T>`) and leasing-based updates. The store was implemented with
+`Arc<Mutex<...>>` so model handles can decrement refcounts and remove entries in `Drop`.
+
+Without an explicit threading rule, `Arc<Mutex<...>>` makes handles *accidentally* `Send`/`Sync`,
+which invites subtle bugs:
+
+- updating models from background threads (races with UI invariants),
+- deadlocks via re-entrancy + lock ordering across unrelated subsystems,
+- hard-to-reproduce “stale UI” or focus/IME correctness issues.
+
+GPUI/Zed’s ownership model is explicitly main-thread oriented; background work returns results to
+the UI thread, where state is applied deterministically.
+
+References:
+
+- Threading boundary: `docs/adr/0008-threading-logging-errors.md`
+- App-owned models: `docs/adr/0031-app-owned-models-and-leasing-updates.md`
+- Model handles (strong/weak): `docs/adr/0086-model-handle-lifecycle-and-weak-models.md`
+
+## Decision
+
+`ModelStore` and all model handles (`Model<T>`, `WeakModel<T>`) are **main-thread only**.
+
+We enforce this at compile time by making the store `!Send` and `!Sync`.
+
+## Consequences
+
+- UI correctness is easier to reason about: all model reads/updates happen on the UI thread.
+- Background threads cannot accidentally capture and mutate model handles directly.
+- Cross-thread communication must use effects/messages, carrying plain data or stable ids.
+
+Recommended patterns:
+
+- Background task produces a result payload, then the UI thread applies it to a model via an
+  `Effect`/message handler.
+- If a background task needs to “remember a target”, pass `ModelId` (or an app-defined key) rather
+  than a `Model<T>` handle.
+
+## Implementation Notes
+
+- `ModelStore` includes a `PhantomData<Rc<()>>` marker to force `!Send`/`!Sync`.
+- This does not prevent internal locking; it prevents moving handles across threads.
+

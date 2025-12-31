@@ -24,6 +24,7 @@ reference is gone.
 References:
 
 - ADR 0031 (model store + leasing updates): `docs/adr/0031-app-owned-models-and-leasing-updates.md`
+- Main-thread-only models (`!Send`/`!Sync`): `docs/adr/0087-models-are-main-thread-only-and-not-send.md`
 - Zed / GPUI ownership writeup: https://zed.dev/blog/gpui-ownership
 
 ## Decision

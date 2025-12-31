@@ -28,6 +28,7 @@ References:
 - Zed / GPUI ownership writeup:
   - https://zed.dev/blog/gpui-ownership
 - Model handle lifecycle (strong/weak): `docs/adr/0086-model-handle-lifecycle-and-weak-models.md`
+- Main-thread-only models (`!Send`/`!Sync`): `docs/adr/0087-models-are-main-thread-only-and-not-send.md`
 - Fret effects queue boundary:
   - `docs/adr/0001-app-effects.md`
 - Framework scope boundary:

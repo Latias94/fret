@@ -160,6 +160,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0023-command-metadata-menus-and-palette.md`
 - `docs/adr/0031-app-owned-models-and-leasing-updates.md`
 - `docs/adr/0086-model-handle-lifecycle-and-weak-models.md`
+- `docs/adr/0087-models-are-main-thread-only-and-not-send.md`
 - `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
 - `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`
 - `docs/adr/0044-text-editing-state-and-commands.md`

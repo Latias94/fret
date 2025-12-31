@@ -145,6 +145,7 @@ impl<T> WeakModel<T> {
     pub fn upgrade(&self) -> Option<Model<T>> {
         let store = ModelStore {
             inner: self.store.upgrade()?,
+            _not_send: PhantomData,
         };
         store.upgrade_strong(self.id).then(|| Model {
             store,
@@ -227,6 +228,9 @@ pub trait ModelHost {
 #[derive(Clone, Default)]
 pub struct ModelStore {
     inner: Arc<ModelStoreInner>,
+    // Models are main-thread only. Enforce this at compile time by making the store (and all
+    // derived handles) `!Send` + `!Sync`.
+    _not_send: PhantomData<std::rc::Rc<()>>,
 }
 
 #[derive(Default)]
