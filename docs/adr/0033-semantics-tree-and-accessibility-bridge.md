@@ -103,18 +103,19 @@ Default text exposure policy (P0):
 
 ### 6) Platform boundary: bridge is implementation-specific, contract is stable
 
-`fret-platform` implements an OS-specific accessibility bridge (macOS AX, Windows UIA, Linux AT-SPI, etc.).
+Platform backend crates (`fret-platform-*`) implement OS-specific accessibility bridges (macOS AX, Windows UIA, Linux AT-SPI, etc.).
 The bridge consumes the window’s semantics tree and translates it to platform APIs.
 
 Recommended default (P0):
 
 - Use `accesskit` as the bridge implementation where possible, to avoid per-OS bespoke trees and to keep behavior consistent.
+  - In this workspace, the AccessKit mapping logic lives in `crates/fret-a11y-accesskit`, with winit adapter glue in `crates/fret-platform-winit`.
 
 Fret’s core contracts remain OS-agnostic:
 
 - `fret-core` stores semantics data types (optional),
 - `fret-ui` produces per-window semantics snapshots/updates,
-- `fret-platform` bridges.
+- platform backend bridges (e.g. `fret-platform-winit`).
 
 Default geometry unit (P0):
 

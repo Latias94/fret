@@ -52,7 +52,8 @@ For each module, we consider it “closed enough to scale” when:
 **Backends (not portable):**
 
 - `crates/fret-render` — wgpu renderer implementation for `fret-core::Scene`.
-- `crates/fret-platform` — accessibility bridge + platform helpers (desktop/winit today).
+- `crates/fret-platform` — portable platform I/O contracts (no `winit`).
+- `crates/fret-platform-winit` — desktop/winit backend implementations (+ AccessKit glue).
 - `crates/fret-runner-winit-wgpu` — concrete desktop runner wiring winit + renderer + effect draining.
 
 **Ergonomics + demos:**
@@ -193,7 +194,7 @@ flowchart LR
   UiTree --> Semantics[SemanticsSnapshot (a11y stream)]
   UiTree --> Effects[Effects (IME / commands / requests)]
   Scene --> Render[fret-render (wgpu)]
-  Semantics --> PlatformA11y[fret-platform (AccessKit bridge)]
+  Semantics --> PlatformA11y[fret-platform-winit (AccessKit bridge)]
 ```
 
 - **Event routing + capture + focus**: ADR 0005 / 0020 / 0068; code: `crates/fret-ui/src/tree.rs`
@@ -205,7 +206,7 @@ flowchart LR
 - **Performance primitives**: ADR 0051 / 0055 / 0034; code: `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/elements.rs`
 - **Scrolling + virtualization**: ADR 0042 / 0047 / 0070; code: `crates/fret-ui/src/scroll.rs`, `crates/fret-ui/src/virtual_list.rs`
 - **Text input + IME**: ADR 0012 / 0043 / 0044 / 0045 / 0046 / 0071; code: `crates/fret-ui/src/text_input.rs`, `crates/fret-ui/src/text_area.rs`
-- **A11y / AT surface (semantics)**: ADR 0033 / 0073; code: `crates/fret-ui/src/tree.rs` (snapshot) + `crates/fret-platform/src/accessibility.rs`
+- **A11y / AT surface (semantics)**: ADR 0033 / 0073; code: `crates/fret-ui/src/tree.rs` (snapshot) + `crates/fret-a11y-accesskit/src/lib.rs` (AccessKit mapping) + `crates/fret-platform-winit/src/accessibility.rs` (adapter glue)
 
 **Closure checklist (P0)**
 
@@ -293,7 +294,7 @@ flowchart LR
 **Code entry points**
 
 - Runner: `crates/fret-runner-winit-wgpu/src/runner.rs`
-- Accessibility bridge: `crates/fret-platform/src/accessibility.rs`
+- Accessibility bridge: `crates/fret-platform-winit/src/accessibility.rs` (winit glue) + `crates/fret-a11y-accesskit/src/lib.rs` (AccessKit mapping)
 
 **Closure checklist (P0)**
 

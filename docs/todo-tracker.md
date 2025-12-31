@@ -86,7 +86,7 @@ It complements (but does not replace) ADRs:
 - **Define minimum semantics for text fields (value/selection/composition)**
   - Goal: Narrator/AccessKit correctness for text editing and IME interaction.
   - ADRs: `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`, `docs/adr/0071-text-input-multiline-composition-contract.md`
-  - Code: `crates/fret-ui/src/tree.rs`, `crates/fret-platform/src/accessibility.rs`
+  - Code: `crates/fret-ui/src/tree.rs`, `crates/fret-a11y-accesskit/src/lib.rs`, `crates/fret-platform-winit/src/accessibility.rs`
 
 - **Viewport semantics contract**
   - Goal: decide viewport role/actions (focus, scroll, basic labeling) and validate reachability under modal barriers.
@@ -112,11 +112,11 @@ It complements (but does not replace) ADRs:
   - Update: contract locked (ADR 0080). Follow-up work is conformance testing and any v2 surface expansion (joins/caps/dashes).
 
 - **Clarify the runner vs platform split in docs and code**
-  - Problem: `fret-platform` currently hosts the AccessKit bridge, while winit event mapping/effects draining live in `fret-runner-winit-wgpu`; keep responsibilities crisp to avoid duplicating window registries and event translation.
+  - Problem: `fret-platform-winit` hosts the AccessKit bridge (and other desktop platform I/O), while winit event mapping/effects draining live in `fret-runner-winit-wgpu`; keep responsibilities crisp to avoid duplicating window registries and event translation.
   - ADRs: `docs/adr/0003-platform-boundary.md`
-  - Code: `crates/fret-platform/src/*`, `crates/fret-runner-winit-wgpu/src/runner.rs`
+  - Code: `crates/fret-platform/src/*`, `crates/fret-platform-winit/src/*`, `crates/fret-runner-winit-wgpu/src/runner.rs`
 
-- **Decide whether `fret-platform` remains "a11y-only" or grows into a broader platform IO boundary**
-  - Problem: `crates/fret-platform` currently only contains the AccessKit bridge (`crates/fret-platform/src/accessibility.rs`), while window lifecycle, event translation, and effect draining live in `fret-runner-winit-wgpu`; decide whether we want a single platform IO substrate crate to avoid duplicated registries and translation logic as backends grow (winit/web/etc).
+- **Decide whether `fret-platform-winit` grows into a broader platform IO boundary**
+  - Problem: `crates/fret-platform` is now intentionally portable contracts-only, while the concrete desktop backend lives in `crates/fret-platform-winit` and the event loop/effect draining live in `crates/fret-runner-winit-wgpu`; decide how much window registry/event translation should live in the platform-backend crate vs the runner as more backends (web/mobile) arrive.
   - ADRs: `docs/adr/0003-platform-boundary.md`
-  - Code: `crates/fret-platform/src/accessibility.rs`, `crates/fret-runner-winit-wgpu/src/runner.rs`
+  - Code: `crates/fret-platform-winit/src/*`, `crates/fret-runner-winit-wgpu/src/runner.rs`

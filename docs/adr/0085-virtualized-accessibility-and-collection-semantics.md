@@ -106,10 +106,10 @@ Component layer (`crates/fret-components-ui` / `crates/fret-components-shadcn`):
   - active descendant correctness (ADR 0073),
   - correct collection metadata assignments.
 
-Platform bridge (`crates/fret-platform`):
+Platform bridge (`crates/fret-platform-winit` + `crates/fret-a11y-accesskit`):
 
 - Maps `pos_in_set` / `set_size` and `active_descendant` into AccessKit in the best possible way on
-  each platform.
+  each platform (mapping lives in `crates/fret-a11y-accesskit`, with backend glue in `crates/fret-platform-winit`).
 - May adopt richer platform-native virtualization patterns later (P1), but must preserve the P0
   portable behavior.
 
@@ -175,9 +175,9 @@ Cons:
 
 1) Extend `fret_core::SemanticsNode` with `pos_in_set` and `set_size`.
 2) Extend `fret-ui` authoring surface (`SemanticsCx`) so elements can set these fields.
-3) Map these fields into AccessKit in `crates/fret-platform/src/accessibility.rs` (best-effort on
-   each platform).
-4) Add a focused unit test in `crates/fret-platform` to ensure the AccessKit node receives the
+3) Map these fields into AccessKit in `crates/fret-a11y-accesskit/src/lib.rs` (best-effort on each platform),
+   and wire the backend adapter in `crates/fret-platform-winit/src/accessibility.rs`.
+4) Add a focused unit test in `crates/fret-a11y-accesskit` to ensure the AccessKit node receives the
    expected metadata for a `ListItem`.
 
 ### Phase B — Component policy wiring (virtualized list surfaces)

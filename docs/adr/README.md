@@ -26,7 +26,7 @@ ADR or adding a new ADR) before scaling feature surface area.
 - **Virtualized accessibility contract for large collections**
   - Add ADR (proposed): `docs/adr/0085-virtualized-accessibility-and-collection-semantics.md`
   - Decide: semantics metadata (`pos_in_set`/`set_size`), active-descendant + virtualization rules, and layering boundaries.
-  - Implement: `crates/fret-core/src/semantics.rs`, `crates/fret-ui/src/widget.rs` + `crates/fret-ui/src/tree.rs`, `crates/fret-platform/src/accessibility.rs`, component surfaces (virtualized lists/overlays).
+  - Implement: `crates/fret-core/src/semantics.rs`, `crates/fret-ui/src/widget.rs` + `crates/fret-ui/src/tree.rs`, `crates/fret-a11y-accesskit/src/lib.rs`, `crates/fret-platform-winit/src/accessibility.rs`, component surfaces (virtualized lists/overlays).
 
 - **Default font stack + fallback policy v1**
   - Update: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`
@@ -74,12 +74,12 @@ ADR or adding a new ADR) before scaling feature surface area.
 - **Active descendant semantics for composite widgets (command palette / listbox / combobox)**
   - Add ADR (proposed): `docs/adr/0073-active-descendant-and-composite-widget-semantics.md`
   - Decide: minimal schema extension to support cmdk-style navigation without moving focus away from text input.
-  - Implement: semantics production in `crates/fret-ui/src/tree.rs`, platform bridge mapping in `crates/fret-platform`.
+  - Implement: semantics production in `crates/fret-ui/src/tree.rs`, AccessKit mapping in `crates/fret-a11y-accesskit/src/lib.rs`, backend glue in `crates/fret-platform-winit/src/accessibility.rs`.
 
 - **Accessibility conformance baseline (Narrator/VoiceOver/AT-SPI)**
   - Update: `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
   - Decide: minimum roles/actions/fields required for text fields (value/selection/composition), menus, tabs, and viewports.
-  - Implement: `crates/fret-platform/src/accessibility.rs`, semantics production in `crates/fret-ui/src/tree.rs`.
+  - Implement: semantics production in `crates/fret-ui/src/tree.rs`, AccessKit mapping in `crates/fret-a11y-accesskit/src/lib.rs`, backend glue in `crates/fret-platform-winit/src/accessibility.rs`.
 
 - **Cross-root focus traversal and focus scopes**
   - Update: `docs/adr/0068-focus-traversal-and-focus-scopes.md`, `docs/adr/0020-focus-and-command-routing.md`

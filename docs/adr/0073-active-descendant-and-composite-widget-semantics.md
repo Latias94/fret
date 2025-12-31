@@ -16,7 +16,8 @@ What exists today:
 - `active_descendant: Option<NodeId>` in the semantics schema:
   - `crates/fret-core/src/semantics.rs`
   - `crates/fret-ui/src/tree.rs` + `crates/fret-ui/src/widget.rs` (`SemanticsCx::set_active_descendant`)
-  - `crates/fret-platform/src/accessibility.rs` (AccessKit mapping + unit test)
+  - `crates/fret-a11y-accesskit/src/lib.rs` (AccessKit mapping + unit tests)
+  - `crates/fret-platform-winit/src/accessibility.rs` (winit adapter glue)
 - Overlay + list semantics tests for several window-scoped overlay surfaces
   (see `docs/a11y-acceptance-checklist.md` and `crates/fret-components-ui/src/window_overlays.rs`).
 - Roving-focus navigation for composite lists is typically implemented by **moving focus** between

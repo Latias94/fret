@@ -10,7 +10,8 @@ This document is the **closure-oriented index** for Fret’s UI substrate and it
 - `crates/fret-components-ui` (policy + headless infra)
 - `crates/fret-components-shadcn` (recipes + shadcn v4 surface)
 - `crates/fret-components-docking` (docking UI + policy)
-- `crates/fret-platform` (AccessKit bridge + platform glue)
+- `crates/fret-platform` (portable platform I/O contracts)
+- `crates/fret-platform-winit` (AccessKit bridge + desktop/winit glue)
 
 It is intentionally **not** a full spec. ADRs remain the source of truth; this file exists to:
 
@@ -50,7 +51,7 @@ flowchart LR
   Layout --> Semantics[SemanticsSnapshot (a11y stream)]
   Paint --> Semantics
   Scene --> Render[fret-render (wgpu)]
-  Semantics --> Bridge[fret-platform (AccessKit bridge)]
+  Semantics --> Bridge[fret-platform-winit (AccessKit bridge)]
 ```
 
 Key invariants:
@@ -253,7 +254,7 @@ Validation anchors:
 **Code entry points**
 
 - Snapshot production: `crates/fret-ui/src/tree.rs` (semantics snapshot)
-- Platform bridge: `crates/fret-platform/src/accessibility.rs`
+- Platform bridge: `crates/fret-platform-winit/src/accessibility.rs` (winit glue) + `crates/fret-a11y-accesskit/src/lib.rs` (AccessKit mapping)
 
 **Closure requirement**
 

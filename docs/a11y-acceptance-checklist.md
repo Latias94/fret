@@ -102,7 +102,7 @@ Collection position metadata checks:
 
 Platform mapping check (AccessKit):
 
-- `crates/fret-platform/src/accessibility.rs` (`list_item_pos_in_set_and_set_size_are_emitted`)
+- `crates/fret-a11y-accesskit/src/lib.rs` (`list_item_pos_in_set_and_set_size_are_emitted`)
 
 Run:
 

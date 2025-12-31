@@ -16,8 +16,10 @@ We also want to avoid hardwiring a specific event loop implementation into UI co
 
 The desktop implementation is split across:
 
-- `fret-platform`: winit-facing helpers (window registry) and the accessibility bridge
-  (`accesskit_winit`).
+- `fret-platform`: portable platform I/O contracts (clipboard, external drop payloads, file dialogs,
+  open-url). This crate is intentionally backend-agnostic.
+- `fret-platform-winit`: the desktop/winit backend implementation for `fret-platform` contracts,
+  plus the AccessKit adapter glue (`accesskit_winit`).
 - `fret-runner-winit-wgpu`: the concrete desktop runner that owns the event loop, maps winit events
   into `fret-core` events, drains `App` effects, and drives presentation via `fret-render`.
 
@@ -41,6 +43,6 @@ Keep the runner boundary responsible for:
 
 ## Future Work
 
-- Move more logic from `fret-demo` into `fret-platform` once APIs stabilize.
+- Move more logic from `fret-demo` into `fret-platform-winit` once APIs stabilize.
 - Add clipboard/IME/drag-and-drop as platform services exposed via effects.
 
