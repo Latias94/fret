@@ -508,12 +508,46 @@ impl ModelStore {
             if entry.strong == 0 {
                 return Err(ModelUpdateError::NotFound);
             }
-            #[cfg(debug_assertions)]
-            if entry.value.is_some() {
-                entry.leased_at = Some(caller);
-                entry.leased_type = Some(std::any::type_name::<T>());
+
+            match entry.value.take() {
+                Some(value) => {
+                    #[cfg(debug_assertions)]
+                    {
+                        entry.leased_at = Some(caller);
+                        entry.leased_type = Some(std::any::type_name::<T>());
+                    }
+                    value
+                }
+                None => {
+                    #[cfg(debug_assertions)]
+                    {
+                        let leased_type = entry.leased_type.unwrap_or("<unknown>");
+                        if let Some(leased_at) = entry.leased_at {
+                            eprintln!(
+                                "model already leased: id={:?} type={} leased_at={}:{}:{} attempted_at={}:{}:{}",
+                                model.id,
+                                leased_type,
+                                leased_at.file(),
+                                leased_at.line(),
+                                leased_at.column(),
+                                caller.file(),
+                                caller.line(),
+                                caller.column()
+                            );
+                        } else {
+                            eprintln!(
+                                "model already leased: id={:?} type={} attempted_at={}:{}:{} (lease origin unknown)",
+                                model.id,
+                                leased_type,
+                                caller.file(),
+                                caller.line(),
+                                caller.column()
+                            );
+                        }
+                    }
+                    return Err(ModelUpdateError::AlreadyLeased);
+                }
             }
-            entry.value.take().ok_or(ModelUpdateError::AlreadyLeased)?
         };
 
         match boxed.downcast::<T>() {
