@@ -562,6 +562,29 @@ mod tests {
     }
 
     #[test]
+    fn dropping_last_strong_does_not_drop_value_while_holding_store_lock() {
+        struct DropProbe {
+            store: ModelStore,
+        }
+
+        impl Drop for DropProbe {
+            fn drop(&mut self) {
+                assert!(
+                    !self.store.state_lock_is_held_for_tests(),
+                    "model value must not be dropped while holding the store lock"
+                );
+            }
+        }
+
+        let mut store = ModelStore::default();
+        let model = store.insert(DropProbe {
+            store: store.clone(),
+        });
+
+        drop(model);
+    }
+
+    #[test]
     fn strong_handle_drop_removes_entry() {
         let mut store = ModelStore::default();
         let model = store.insert(123_u32);
