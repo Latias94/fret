@@ -11,4 +11,3 @@ impl OpenUrl for WinitOpenUrl {
         Ok(())
     }
 }
-

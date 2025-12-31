@@ -59,6 +59,12 @@ pub struct FsCapabilities {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
+pub struct ShellCapabilities {
+    pub open_url: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct GfxCapabilities {
     pub webgpu: bool,
     pub wgpu: bool,
@@ -72,6 +78,7 @@ pub struct PlatformCapabilities {
     pub dnd: DndCapabilities,
     pub ime: ImeCapabilities,
     pub fs: FsCapabilities,
+    pub shell: ShellCapabilities,
     pub gfx: GfxCapabilities,
 }
 
@@ -99,6 +106,7 @@ impl Default for PlatformCapabilities {
                 real_paths: true,
                 file_dialogs: true,
             },
+            shell: ShellCapabilities { open_url: true },
             gfx: GfxCapabilities {
                 webgpu: false,
                 wgpu: true,
@@ -120,6 +128,7 @@ impl PlatformCapabilities {
             "ime.set_cursor_area" => Some(self.ime.set_cursor_area),
             "fs.real_paths" => Some(self.fs.real_paths),
             "fs.file_dialogs" => Some(self.fs.file_dialogs),
+            "shell.open_url" => Some(self.shell.open_url),
             "gfx.webgpu" => Some(self.gfx.webgpu),
             "gfx.wgpu" => Some(self.gfx.wgpu),
             _ => None,

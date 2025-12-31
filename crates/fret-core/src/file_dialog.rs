@@ -33,4 +33,3 @@ pub struct FileDialogDataEvent {
     pub files: Vec<FileDialogFileData>,
     pub errors: Vec<FileDialogReadError>,
 }
-

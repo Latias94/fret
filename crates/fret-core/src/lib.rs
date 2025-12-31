@@ -18,7 +18,7 @@ pub mod vector_path;
 pub mod viewport;
 pub mod window;
 
-pub use capabilities::{ExternalDragPayloadKind, PlatformCapabilities};
+pub use capabilities::{ExternalDragPayloadKind, PlatformCapabilities, ShellCapabilities};
 pub use cursor::CursorIcon;
 pub use dock::{
     Axis, DockFloatingWindow, DockGraph, DockNode, DockOpApplyError, DockOpApplyErrorKind, DropZone,
@@ -34,8 +34,8 @@ pub use file_dialog::{
 };
 pub use geometry::{Corners, Edges, Point, Px, Rect, Size, Transform2D};
 pub use ids::{
-    AppWindowId, DockNodeId, ExternalDropToken, FontId, FrameId, ImageId, NodeId, PathId,
-    FileDialogToken, RenderTargetId, SvgId, TextBlobId, TickId, TimerToken,
+    AppWindowId, DockNodeId, ExternalDropToken, FileDialogToken, FontId, FrameId, ImageId, NodeId,
+    PathId, RenderTargetId, SvgId, TextBlobId, TickId, TimerToken,
 };
 pub use input::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,

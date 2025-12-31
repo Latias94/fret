@@ -1719,11 +1719,27 @@ impl<D: WinitDriver> WinitRunner<D> {
                         self.external_drop.release(token);
                     }
                     Effect::OpenUrl { url } => {
+                        let caps = self
+                            .app
+                            .global::<PlatformCapabilities>()
+                            .cloned()
+                            .unwrap_or_default();
+                        if !caps.shell.open_url {
+                            continue;
+                        }
                         if let Err(err) = self.open_url.open_url(&url) {
                             tracing::debug!(?err, url = %url, "failed to open url");
                         }
                     }
                     Effect::FileDialogOpen { window, options } => {
+                        let caps = self
+                            .app
+                            .global::<PlatformCapabilities>()
+                            .cloned()
+                            .unwrap_or_default();
+                        if !caps.fs.file_dialogs {
+                            continue;
+                        }
                         match self.file_dialog.open_files(&options) {
                             Ok(Some(selection)) => {
                                 self.deliver_platform_completion_now(
@@ -1738,6 +1754,14 @@ impl<D: WinitDriver> WinitRunner<D> {
                         }
                     }
                     Effect::FileDialogReadAll { window, token } => {
+                        let caps = self
+                            .app
+                            .global::<PlatformCapabilities>()
+                            .cloned()
+                            .unwrap_or_default();
+                        if !caps.fs.file_dialogs {
+                            continue;
+                        }
                         let limits = fret_platform::external_drop::ExternalDropReadLimits {
                             max_total_bytes: self.config.external_drop_max_total_bytes,
                             max_file_bytes: self.config.external_drop_max_file_bytes,
@@ -1762,6 +1786,14 @@ impl<D: WinitDriver> WinitRunner<D> {
                         );
                     }
                     Effect::FileDialogRelease { token } => {
+                        let caps = self
+                            .app
+                            .global::<PlatformCapabilities>()
+                            .cloned()
+                            .unwrap_or_default();
+                        if !caps.fs.file_dialogs {
+                            continue;
+                        }
                         self.file_dialog.release(token);
                     }
                     Effect::ViewportInput(event) => {

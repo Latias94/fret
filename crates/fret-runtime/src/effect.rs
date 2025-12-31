@@ -1,6 +1,8 @@
 use std::time::Duration;
 
-use fret_core::{AppWindowId, CursorIcon, FileDialogOptions, FileDialogToken, Rect, TimerToken, WindowAnchor};
+use fret_core::{
+    AppWindowId, CursorIcon, FileDialogOptions, FileDialogToken, Rect, TimerToken, WindowAnchor,
+};
 
 use crate::CommandId;
 

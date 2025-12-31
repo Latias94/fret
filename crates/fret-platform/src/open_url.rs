@@ -14,4 +14,3 @@ pub struct OpenUrlError {
 pub trait OpenUrl {
     fn open_url(&mut self, url: &str) -> Result<(), OpenUrlError>;
 }
-

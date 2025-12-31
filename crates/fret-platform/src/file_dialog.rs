@@ -32,4 +32,3 @@ pub trait FileDialogProvider {
 
     fn release(&mut self, token: FileDialogToken);
 }
-
