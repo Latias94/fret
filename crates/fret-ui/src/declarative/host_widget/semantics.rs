@@ -1,4 +1,6 @@
-use super::*;
+use super::ElementHostWidget;
+use super::super::frame::*;
+use super::super::prelude::*;
 
 impl ElementHostWidget {
     pub(super) fn semantics_impl<H: UiHost>(&mut self, cx: &mut SemanticsCx<'_, H>) {

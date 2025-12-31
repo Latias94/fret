@@ -1586,7 +1586,7 @@ fn virtual_list_computes_visible_range_after_first_layout() {
     );
 
     let list_node = ui.children(root)[0];
-    let props = app.with_global_mut(super::ElementFrame::default, |frame, _app| {
+    let props = app.with_global_mut(super::frame::ElementFrame::default, |frame, _app| {
         frame
             .windows
             .get(&window)

@@ -1,4 +1,8 @@
-use super::*;
+use super::ElementHostWidget;
+use super::super::frame::*;
+use super::super::mount::node_for_element_in_window_frame;
+use super::super::paint_helpers::*;
+use super::super::prelude::*;
 
 impl ElementHostWidget {
     pub(super) fn event_impl<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {

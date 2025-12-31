@@ -1,4 +1,7 @@
-use super::*;
+use super::ElementHostWidget;
+use super::super::frame::*;
+use super::super::paint_helpers::*;
+use super::super::prelude::*;
 
 impl ElementHostWidget {
     pub(super) fn paint_impl<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {

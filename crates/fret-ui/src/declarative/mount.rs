@@ -1,4 +1,6 @@
-use super::*;
+use super::host_widget::ElementHostWidget;
+use super::prelude::*;
+use super::frame::{DismissibleLayerProps, ElementFrame, ElementInstance, ElementRecord, WindowFrame};
 
 pub(crate) fn with_window_frame<H: UiHost, R>(
     app: &mut H,
