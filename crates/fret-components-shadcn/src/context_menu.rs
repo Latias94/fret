@@ -5,8 +5,7 @@ use fret_components_ui::declarative::collection_semantics::CollectionSemanticsEx
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
-use fret_components_ui::window_overlays;
-use fret_components_ui::{MetricRef, Space};
+use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
     Edges, KeyCode, MouseButton, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
 };
@@ -187,7 +186,7 @@ impl ContextMenu {
             let anchor_point = pointer_down.map(|it| it.position);
 
             if is_open {
-                let overlay_root_name = window_overlays::popover_root_name(id);
+                let overlay_root_name = format!("window-overlays.popover.{:x}", id.0);
 
                 let align = self.align;
                 let side = self.side;
@@ -442,18 +441,16 @@ impl ContextMenu {
                     vec![content]
                 });
 
-                window_overlays::request_dismissible_popover(
-                    cx,
-                    window_overlays::DismissiblePopoverRequest {
-                        id,
-                        root_name: overlay_root_name,
-                        trigger: trigger_id,
-                        open,
-                        present: true,
-                        initial_focus: None,
-                        children: overlay_children,
-                    },
+                let mut request = OverlayRequest::dismissible_popover(
+                    id,
+                    trigger_id,
+                    open,
+                    OverlayPresence::instant(true),
+                    overlay_children,
                 );
+                request.root_name = Some(overlay_root_name);
+                request.initial_focus = None;
+                OverlayController::request(cx, request);
             }
 
             trigger
@@ -529,7 +526,7 @@ mod tests {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
 
-        fret_components_ui::window_overlays::begin_frame(app, window);
+        OverlayController::begin_frame(app, window);
         let root = fret_ui::declarative::render_root(
             ui,
             app,
@@ -566,7 +563,7 @@ mod tests {
             },
         );
         ui.set_root(root);
-        fret_components_ui::window_overlays::render(ui, app, services, window, bounds);
+        OverlayController::render(ui, app, services, window, bounds);
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
