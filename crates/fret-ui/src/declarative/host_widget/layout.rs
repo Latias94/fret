@@ -328,7 +328,7 @@ impl ElementHostWidget {
                     overflow: props.overflow,
                     scale_factor: cx.scale_factor,
                 };
-                let metrics = cx.services.text().measure(&props.text, style, constraints);
+                let metrics = cx.services.text().measure(&props.text, &style, constraints);
 
                 self.text_cache.metrics = Some(metrics);
                 self.text_cache.last_text = Some(props.text.clone());

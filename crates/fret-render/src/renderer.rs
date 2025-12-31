@@ -4525,7 +4525,7 @@ impl fret_core::TextService for Renderer {
     fn prepare(
         &mut self,
         text: &str,
-        style: fret_core::TextStyle,
+        style: &fret_core::TextStyle,
         constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
         self.text_system.prepare(text, style, constraints)
@@ -4534,7 +4534,7 @@ impl fret_core::TextService for Renderer {
     fn measure(
         &mut self,
         text: &str,
-        style: fret_core::TextStyle,
+        style: &fret_core::TextStyle,
         constraints: fret_core::TextConstraints,
     ) -> fret_core::TextMetrics {
         self.text_system.measure(text, style, constraints)

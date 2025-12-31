@@ -313,6 +313,7 @@ impl DropdownMenu {
                                                         let disabled = item.disabled;
                                                         let command = item.command;
                                                         let open = open_for_overlay.clone();
+                                                        let text_style = text_style.clone();
 
                                                         out.push(cx.pressable(
                                                             PressableProps {
@@ -372,7 +373,7 @@ impl DropdownMenu {
                                                                         vec![cx.text_props(TextProps {
                                                                             layout: LayoutStyle::default(),
                                                                             text: label.clone(),
-                                                                            style: Some(text_style),
+                                                                            style: Some(text_style.clone()),
                                                                             wrap: TextWrap::None,
                                                                             overflow: TextOverflow::Ellipsis,
                                                                             color: Some(if disabled {

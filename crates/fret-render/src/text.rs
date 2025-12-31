@@ -243,14 +243,14 @@ struct TextBlobKey {
 impl TextBlobKey {
     fn new(
         text: &str,
-        style: TextStyle,
+        style: &TextStyle,
         constraints: TextConstraints,
         font_stack_key: u64,
     ) -> Self {
         let max_width_bits = constraints.max_width.map(|w| w.0.to_bits());
         Self {
             text: Arc::<str>::from(text),
-            font: style.font,
+            font: style.font.clone(),
             font_stack_key,
             size_bits: style.size.0.to_bits(),
             weight: style.weight.0,
@@ -374,14 +374,12 @@ pub struct TextSystem {
     atlas_bind_group: wgpu::BindGroup,
 }
 
-fn family_for_font_id(font: fret_core::FontId) -> Family<'static> {
-    if font == fret_core::FontId::serif() {
-        Family::Serif
-    } else if font == fret_core::FontId::monospace() {
-        Family::Monospace
-    } else {
-        // Default: system UI sans-serif (ADR 0029).
-        Family::SansSerif
+fn family_for_font_id(font: &fret_core::FontId) -> Family<'_> {
+    match font {
+        fret_core::FontId::Ui => Family::SansSerif,
+        fret_core::FontId::Serif => Family::Serif,
+        fret_core::FontId::Monospace => Family::Monospace,
+        fret_core::FontId::Family(name) => Family::Name(name.as_str()),
     }
 }
 
@@ -617,7 +615,7 @@ impl TextSystem {
     pub fn prepare(
         &mut self,
         text: &str,
-        style: TextStyle,
+        style: &TextStyle,
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
         let key = TextBlobKey::new(text, style, constraints, self.font_stack_key);
@@ -634,7 +632,7 @@ impl TextSystem {
         let scale = constraints.scale_factor.max(1.0);
         let font_size_px = (style.size.0 * scale).max(1.0);
 
-        let mut attrs = Attrs::new().family(family_for_font_id(style.font));
+        let mut attrs = Attrs::new().family(family_for_font_id(&style.font));
         attrs = attrs.weight(Weight(style.weight.0));
         if let Some(letter_spacing_em) = style.letter_spacing_em
             && letter_spacing_em != 0.0
@@ -781,13 +779,13 @@ impl TextSystem {
     pub fn measure(
         &mut self,
         text: &str,
-        style: TextStyle,
+        style: &TextStyle,
         constraints: TextConstraints,
     ) -> TextMetrics {
         let scale = constraints.scale_factor.max(1.0);
         let font_size_px = (style.size.0 * scale).max(1.0);
 
-        let mut attrs = Attrs::new().family(Family::SansSerif);
+        let mut attrs = Attrs::new().family(family_for_font_id(&style.font));
         attrs = attrs.weight(Weight(style.weight.0));
         if let Some(letter_spacing_em) = style.letter_spacing_em
             && letter_spacing_em != 0.0
@@ -1325,21 +1323,21 @@ mod tests {
         };
 
         let base = TextStyle::default();
-        let k0 = TextBlobKey::new("hello", base, constraints, 1);
+        let k0 = TextBlobKey::new("hello", &base, constraints, 1);
 
-        let mut style = base;
+        let mut style = base.clone();
         style.weight = FontWeight::BOLD;
-        let k_weight = TextBlobKey::new("hello", style, constraints, 1);
+        let k_weight = TextBlobKey::new("hello", &style, constraints, 1);
         assert_ne!(k0, k_weight);
 
-        let mut style = base;
+        let mut style = base.clone();
         style.line_height = Some(Px(18.0));
-        let k_line_height = TextBlobKey::new("hello", style, constraints, 1);
+        let k_line_height = TextBlobKey::new("hello", &style, constraints, 1);
         assert_ne!(k0, k_line_height);
 
-        let mut style = base;
+        let mut style = base.clone();
         style.letter_spacing_em = Some(0.05);
-        let k_tracking = TextBlobKey::new("hello", style, constraints, 1);
+        let k_tracking = TextBlobKey::new("hello", &style, constraints, 1);
         assert_ne!(k0, k_tracking);
     }
 
@@ -1353,23 +1351,23 @@ mod tests {
         };
 
         let base = TextStyle::default();
-        let k0 = TextBlobKey::new("hello", base, constraints, 1);
-        let k1 = TextBlobKey::new("hello", base, constraints, 2);
+        let k0 = TextBlobKey::new("hello", &base, constraints, 1);
+        let k1 = TextBlobKey::new("hello", &base, constraints, 2);
         assert_ne!(k0, k1);
     }
 
     #[test]
     fn font_id_maps_to_cosmic_text_family() {
         assert_eq!(
-            super::family_for_font_id(fret_core::FontId::ui()),
+            super::family_for_font_id(&fret_core::FontId::ui()),
             Family::SansSerif
         );
         assert_eq!(
-            super::family_for_font_id(fret_core::FontId::serif()),
+            super::family_for_font_id(&fret_core::FontId::serif()),
             Family::Serif
         );
         assert_eq!(
-            super::family_for_font_id(fret_core::FontId::monospace()),
+            super::family_for_font_id(&fret_core::FontId::monospace()),
             Family::Monospace
         );
     }

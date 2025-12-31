@@ -202,7 +202,7 @@ impl ElementHostWidget {
                         cx.services.text().release(blob);
                     }
                     let (blob, metrics) =
-                        cx.services.text().prepare(&props.text, style, constraints);
+                        cx.services.text().prepare(&props.text, &style, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);

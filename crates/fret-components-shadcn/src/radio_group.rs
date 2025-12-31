@@ -223,6 +223,7 @@ impl RadioGroup {
                                 let a11y_label = item.label.clone();
                                 let pressable_item_value = item.value.clone();
                                 let model = model.clone();
+                                let text_style = text_style.clone();
                                 out.push(cx.pressable(
                                     PressableProps {
                                         layout: pressable_layout,
@@ -306,7 +307,7 @@ impl RadioGroup {
                                         let label_props = TextProps {
                                             layout: LayoutStyle::default(),
                                             text: label,
-                                            style: Some(text_style),
+                                            style: Some(text_style.clone()),
                                             color: Some(fg),
                                             wrap: TextWrap::Word,
                                             overflow: TextOverflow::Clip,

@@ -321,6 +321,7 @@ pub fn select<H: UiHost>(
 
                                                             let model = model.clone();
                                                             let open = open.clone();
+                                                            let text_style = text_style.clone();
 
                                                             out.push(cx.pressable_with_id(
                                                                 PressableProps {
@@ -342,7 +343,7 @@ pub fn select<H: UiHost>(
                                                                     .with_collection_position(idx, item_count),
                                                                      ..Default::default()
                                                                  },
-                                                                 |cx, st, id| {
+                                                                 move |cx, st, id| {
                                                                     let _ = id;
 
                                                                     cx.pressable_set_option_arc_str(
@@ -381,7 +382,7 @@ pub fn select<H: UiHost>(
                                                                             vec![cx.text_props(TextProps {
                                                                                 layout: LayoutStyle::default(),
                                                                                 text: item.label.clone(),
-                                                                                style: Some(text_style),
+                                                                                style: Some(text_style.clone()),
                                                                                 wrap: TextWrap::None,
                                                                                 overflow: TextOverflow::Ellipsis,
                                                                                 color: Some(fg),
@@ -446,7 +447,7 @@ pub fn select<H: UiHost>(
                                         layout
                                     },
                                     text: label,
-                                    style: Some(text_style),
+                                    style: Some(text_style.clone()),
                                     wrap: TextWrap::None,
                                     overflow: TextOverflow::Ellipsis,
                                     color: Some(if selected.is_some() { fg } else { fg_muted }),

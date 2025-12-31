@@ -260,6 +260,7 @@ impl Tabs {
                             let value = item.value.clone();
                             let label = item.label.clone();
                             let model = model.clone();
+                            let text_style = text_style.clone();
 
                             out.push(cx.pressable(
                                 PressableProps {
@@ -300,7 +301,7 @@ impl Tabs {
                                             vec![cx.text_props(TextProps {
                                                 layout: Default::default(),
                                                 text: label,
-                                                style: Some(text_style),
+                                                style: Some(text_style.clone()),
                                                 color: Some(fg),
                                                 wrap: TextWrap::None,
                                                 overflow: TextOverflow::Clip,

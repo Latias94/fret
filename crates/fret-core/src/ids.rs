@@ -1,4 +1,5 @@
-use slotmap::{KeyData, new_key_type};
+use serde::{Deserialize, Serialize};
+use slotmap::new_key_type;
 
 new_key_type! {
     pub struct AppWindowId;
@@ -6,28 +7,49 @@ new_key_type! {
     pub struct DockNodeId;
     pub struct ImageId;
     pub struct SvgId;
-    pub struct FontId;
     pub struct TextBlobId;
     pub struct PathId;
     pub struct RenderTargetId;
 }
 
-impl FontId {
+/// Stable, portable font identifier used by the UI/runtime.
+///
+/// This is intentionally a semantic identifier (not a font database index) so that it remains
+/// stable across runs and portable to wasm/sandboxed environments.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FontId {
     /// Built-in "system UI" font alias (implementation-defined).
-    ///
-    /// Note: this is a semantic alias, not a numeric font database id.
-    pub fn ui() -> Self {
-        Self::default()
-    }
-
+    Ui,
     /// Built-in serif font alias (implementation-defined).
-    pub fn serif() -> Self {
-        Self::from(KeyData::from_ffi(1))
+    Serif,
+    /// Built-in monospace font alias (implementation-defined).
+    Monospace,
+    /// A named font family resolved by the backend (best-effort).
+    Family(String),
+}
+
+impl Default for FontId {
+    fn default() -> Self {
+        Self::Ui
+    }
+}
+
+impl FontId {
+    pub fn ui() -> Self {
+        Self::Ui
     }
 
-    /// Built-in monospace font alias (implementation-defined).
+    pub fn serif() -> Self {
+        Self::Serif
+    }
+
     pub fn monospace() -> Self {
-        Self::from(KeyData::from_ffi(2))
+        Self::Monospace
+    }
+
+    pub fn family(name: impl Into<String>) -> Self {
+        Self::Family(name.into())
     }
 }
 

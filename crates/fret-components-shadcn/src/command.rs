@@ -395,6 +395,7 @@ impl CommandList {
                                 let label = item.label.clone();
                                 let command = item.command;
                                 let children = item.children;
+                                let text_style = text_style.clone();
 
                                 out.push(cx.pressable(
                                     PressableProps {
@@ -444,7 +445,7 @@ impl CommandList {
                                                         vec![cx.text_props(TextProps {
                                                             layout: LayoutStyle::default(),
                                                             text: label.clone(),
-                                                            style: Some(text_style),
+                                                            style: Some(text_style.clone()),
                                                             color: Some(fg),
                                                             wrap: TextWrap::None,
                                                             overflow: TextOverflow::Clip,
@@ -689,6 +690,7 @@ impl CommandPalette {
                         let label = item.label.clone();
                         let command = item.command;
                         let children = item.children;
+                        let text_style = text_style.clone();
 
                         let row = cx.pressable(
                             PressableProps {
@@ -768,7 +770,7 @@ impl CommandPalette {
                                                 vec![cx.text_props(TextProps {
                                                     layout: LayoutStyle::default(),
                                                     text: label.clone(),
-                                                    style: Some(text_style),
+                                                    style: Some(text_style.clone()),
                                                     color: Some(fg),
                                                     wrap: TextWrap::None,
                                                     overflow: TextOverflow::Clip,

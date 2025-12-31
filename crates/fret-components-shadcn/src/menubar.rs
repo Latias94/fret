@@ -387,6 +387,7 @@ impl MenubarMenu {
                     let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
                     let group_active = group_active;
                     let open_for_overlay = open.clone();
+                    let text_style = text_style.clone();
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                         let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id) else {
@@ -528,6 +529,7 @@ impl MenubarMenu {
                                                             let command = item.command;
                                                             let open = open_for_overlay.clone();
                                                             let group_active = group_active.clone();
+                                                            let text_style = text_style.clone();
 
                                                             out.push(cx.pressable(
                                                                 PressableProps {
@@ -613,7 +615,7 @@ impl MenubarMenu {
                                                                                     layout: LayoutStyle::default(),
                                                                                     text: label.clone(),
                                                                                     style: Some(
-                                                                                        text_style,
+                                                                                        text_style.clone(),
                                                                                     ),
                                                                                     color: Some(fg),
                                                                                     wrap: TextWrap::None,
@@ -673,7 +675,7 @@ impl MenubarMenu {
                         vec![cx.text_props(TextProps {
                             layout: LayoutStyle::default(),
                             text: label.clone(),
-                            style: Some(text_style),
+                            style: Some(text_style.clone()),
                             color: Some(if enabled { fg } else { fg_muted }),
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,

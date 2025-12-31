@@ -170,6 +170,7 @@ impl InputOtp {
                             },
                             ..Default::default()
                         };
+                        let slot_text_style_for_sep = slot_text_style.clone();
                         slots.push(cx.flex(
                             FlexProps {
                                 layout: sep_layout,
@@ -184,7 +185,7 @@ impl InputOtp {
                                 vec![cx.text_props(TextProps {
                                     layout: LayoutStyle::default(),
                                     text: Arc::from("•"),
-                                    style: Some(slot_text_style),
+                                    style: Some(slot_text_style_for_sep.clone()),
                                     color: Some(separator_color),
                                     wrap: TextWrap::None,
                                     overflow: TextOverflow::Clip,
@@ -213,6 +214,7 @@ impl InputOtp {
                     let radius = resolved.radius;
                     let fg = resolved.text_color;
 
+                    let slot_text_style_for_slot = slot_text_style.clone();
                     slots.push(cx.container(
                         ContainerProps {
                             layout: slot_layout,
@@ -238,7 +240,7 @@ impl InputOtp {
                                     vec![cx.text_props(TextProps {
                                         layout: LayoutStyle::default(),
                                         text,
-                                        style: Some(slot_text_style),
+                                        style: Some(slot_text_style_for_slot.clone()),
                                         color: Some(fg),
                                         wrap: TextWrap::None,
                                         overflow: TextOverflow::Clip,

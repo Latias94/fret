@@ -56,7 +56,7 @@ impl Default for TextConstraints {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TextStyle {
     pub font: FontId,
     pub size: Px,
@@ -101,14 +101,14 @@ pub trait TextService {
     fn prepare(
         &mut self,
         text: &str,
-        style: TextStyle,
+        style: &TextStyle,
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics);
 
     fn measure(
         &mut self,
         text: &str,
-        style: TextStyle,
+        style: &TextStyle,
         constraints: TextConstraints,
     ) -> TextMetrics {
         let (blob, metrics) = self.prepare(text, style, constraints);

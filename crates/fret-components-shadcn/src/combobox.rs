@@ -508,6 +508,7 @@ pub fn combobox<H: UiHost>(
                                                                     let model = model.clone();
                                                                     let open = open.clone();
                                                                     let query_model = query_model.clone();
+                                                                    let text_style = text_style.clone();
 
                                                                     out.push(cx.pressable_with_id(
                                                                         PressableProps {
@@ -601,7 +602,7 @@ pub fn combobox<H: UiHost>(
                                                                                     vec![cx.text_props(TextProps {
                                                                                         layout: LayoutStyle::default(),
                                                                                         text: item.label.clone(),
-                                                                                        style: Some(text_style),
+                                                                                        style: Some(text_style.clone()),
                                                                                         wrap: TextWrap::None,
                                                                                         overflow: TextOverflow::Ellipsis,
                                                                                         color: Some(fg),
@@ -687,7 +688,7 @@ pub fn combobox<H: UiHost>(
                                         layout
                                     },
                                     text: label,
-                                    style: Some(text_style),
+                                    style: Some(text_style.clone()),
                                     wrap: TextWrap::None,
                                     overflow: TextOverflow::Ellipsis,
                                     color: Some(if selected.is_some() { fg } else { fg_muted }),

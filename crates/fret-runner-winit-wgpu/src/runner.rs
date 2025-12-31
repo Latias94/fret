@@ -2660,7 +2660,7 @@ impl fret_core::TextService for NoUiServices {
     fn prepare(
         &mut self,
         _text: &str,
-        _style: fret_core::TextStyle,
+        _style: &fret_core::TextStyle,
         _constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
         (

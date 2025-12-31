@@ -16,7 +16,7 @@ impl TextService for FakeTextService {
     fn prepare(
         &mut self,
         _text: &str,
-        _style: TextStyle,
+        _style: &TextStyle,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
         (
@@ -167,7 +167,7 @@ impl TextService for ImeTextService {
     fn prepare(
         &mut self,
         text: &str,
-        _style: TextStyle,
+        _style: &TextStyle,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
         (

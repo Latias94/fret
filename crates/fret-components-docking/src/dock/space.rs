@@ -306,7 +306,7 @@ impl DockSpace {
 
         let (close_blob, close_metrics) = services.text().prepare(
             "×",
-            self.tab_close_style,
+            &self.tab_close_style,
             TextConstraints {
                 max_width: None,
                 wrap: TextWrap::None,
@@ -328,7 +328,7 @@ impl DockSpace {
             let title_hash = hash_title(title);
             let (blob, metrics) = services
                 .text()
-                .prepare(title, self.tab_text_style, constraints);
+                .prepare(title, &self.tab_text_style, constraints);
             self.tab_titles.insert(
                 panel,
                 PreparedTabTitle {
@@ -419,7 +419,7 @@ impl DockSpace {
         };
         let (blob, metrics) = services.text().prepare(
             "No panels in this window.\nUse File → Layout → Reset Layout.",
-            self.empty_state_style,
+            &self.empty_state_style,
             constraints,
         );
         self.empty_state = Some(PreparedTabTitle {

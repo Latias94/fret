@@ -488,7 +488,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         let metrics = cx
             .services
             .text()
-            .measure(&self.text, self.style, base_constraints);
+            .measure(&self.text, &self.style, base_constraints);
         self.text_metrics = Some(metrics);
 
         let base_h = self.text_metrics.map(|m| m.size.height.0).unwrap_or(0.0);
@@ -539,7 +539,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             let (blob, metrics) = cx
                 .services
                 .text()
-                .prepare(&self.text, self.style, constraints);
+                .prepare(&self.text, &self.style, constraints);
             self.text_blob = Some(blob);
             self.text_metrics = Some(metrics);
             cx.services.caret_stops(blob, &mut self.caret_stops);
@@ -556,7 +556,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 let (blob, metrics) =
                     cx.services
                         .text()
-                        .prepare(&self.text, self.style, constraints);
+                        .prepare(&self.text, &self.style, constraints);
                 self.text_blob = Some(blob);
                 self.text_metrics = Some(metrics);
                 cx.services.caret_stops(blob, &mut self.caret_stops);
@@ -572,7 +572,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             let (blob, metrics) = cx
                 .services
                 .text()
-                .prepare(&self.text, self.style, constraints);
+                .prepare(&self.text, &self.style, constraints);
             self.text_blob = Some(blob);
             self.text_metrics = Some(metrics);
             cx.services.caret_stops(blob, &mut self.caret_stops);
@@ -580,15 +580,15 @@ impl<H: UiHost> Widget<H> for TextInput {
             let (prefix_blob, prefix_metrics) =
                 cx.services
                     .text()
-                    .prepare(&self.text[..self.caret], self.style, constraints);
+                    .prepare(&self.text[..self.caret], &self.style, constraints);
             let (suffix_blob, suffix_metrics) =
                 cx.services
                     .text()
-                    .prepare(&self.text[self.caret..], self.style, constraints);
+                    .prepare(&self.text[self.caret..], &self.style, constraints);
             let (pre_blob, pre_metrics) =
                 cx.services
                     .text()
-                    .prepare(&self.preedit, self.style, constraints);
+                    .prepare(&self.preedit, &self.style, constraints);
 
             self.prefix_blob = Some(prefix_blob);
             self.prefix_metrics = Some(prefix_metrics);

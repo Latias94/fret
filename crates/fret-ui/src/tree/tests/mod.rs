@@ -39,7 +39,7 @@ impl TextService for FakeUiServices {
     fn prepare(
         &mut self,
         _text: &str,
-        _style: TextStyle,
+        _style: &TextStyle,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
         (
@@ -117,7 +117,7 @@ impl<H: UiHost> Widget<H> for ObservingWidget {
         cx.observe_model(&self.model, Invalidation::Layout);
         let _ = cx.services.text().prepare(
             "x",
-            TextStyle {
+            &TextStyle {
                 font: fret_core::FontId::default(),
                 size: fret_core::Px(12.0),
                 ..Default::default()

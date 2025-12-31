@@ -179,7 +179,7 @@ fn breadcrumb_text<H: UiHost>(
     cx.text_props(TextProps {
         layout: Default::default(),
         text,
-        style: Some(*base_style),
+        style: Some(base_style.clone()),
         color: Some(color),
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,

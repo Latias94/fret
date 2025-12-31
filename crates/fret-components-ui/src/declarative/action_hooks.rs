@@ -1,10 +1,10 @@
 use fret_runtime::{CommandId, Model, WeakModel};
-use fret_ui::action::RovingTypeaheadCx;
-use fret_ui::action::UiActionHostExt;
 use fret_ui::ElementCx;
 use fret_ui::UiHost;
+use fret_ui::action::RovingTypeaheadCx;
+use fret_ui::action::UiActionHostExt;
 
-use crate::headless::typeahead::{match_prefix_arc_str, TypeaheadBuffer};
+use crate::headless::typeahead::{TypeaheadBuffer, match_prefix_arc_str};
 
 use std::cell::RefCell;
 use std::rc::Rc;
