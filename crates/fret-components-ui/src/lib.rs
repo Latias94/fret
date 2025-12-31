@@ -26,7 +26,9 @@ pub use style::{
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
 
-pub use overlay_controller::{OverlayController, OverlayKind, OverlayPresence, OverlayRequest};
+pub use overlay_controller::{
+    OverlayController, OverlayKind, OverlayPresence, OverlayRequest, ToastLayerSpec,
+};
 
 pub use tree::{
     TreeEntry, TreeItem, TreeItemId, TreeRowRenderer, TreeRowState, TreeState, flatten_tree,
