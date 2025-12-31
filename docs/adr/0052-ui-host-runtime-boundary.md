@@ -187,6 +187,7 @@ This is intentionally a sketch to drive discussion; the exact surface should be 
 - `trait UiHost { fn frame_id(&self) -> FrameId; fn request_redraw(&mut self, window: AppWindowId); fn push_effect(&mut self, Effect); ... }`
 - `trait ModelHost { fn take_changed_models(&mut self) -> Vec<ModelId>; ... }`
 - `trait GlobalHost { fn get_global<T: Any>(&self) -> Option<&T>; fn with_global_mut<T: Any, R>(&mut self, init: fn() -> T, f: impl FnOnce(&mut T, &mut Self) -> R) -> R; }`
+  - P1: `fn take_changed_globals(&mut self) -> Vec<TypeId>` for global observation propagation (see ADR 0051).
 
 Non-goal: redesign the entire authoring model; ADR 0028/0039 remain the authoring contract.
 

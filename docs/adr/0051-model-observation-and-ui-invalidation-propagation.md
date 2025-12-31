@@ -58,6 +58,8 @@ To avoid ambiguity and partial implementations, P0 locks the following choices:
 - “Deferred notify” is achieved by the above tick-boundary propagation:
   - no separate “signal system” is introduced in P0.
 
+Note: the P1 extension (“observe globals by `TypeId`”) is now implemented in the workspace as an additive feature.
+
 ### 1) What can be observed (P0)
 
 P0 supports observation of:
@@ -69,6 +71,11 @@ P1 may extend to:
 - global services in the `App` typemap (by `TypeId` + monotonic revision)
 - theme revision (already tracked via `ThemeSnapshot.revision`, see ADR 0032 / ADR 0050)
 
+P1 (implemented) supports observation of:
+
+- app globals (by `TypeId`) with a per-tick changed set drained by the driver/runner.
+  - This is **best-effort**: globals mutated outside `set_global` / `with_global_mut` cannot be detected.
+
 ### 2) Observation API surface (P0)
 
 The UI runtime exposes an observation registration API that is usable from widgets:
@@ -76,6 +83,10 @@ The UI runtime exposes an observation registration API that is usable from widge
 - `cx.observe_model(model, Invalidation::Paint)` (most reads)
 - `cx.observe_model(model, Invalidation::Layout)` (reads that can change size/structure)
 - `cx.observe_model(model, Invalidation::HitTest)` (reads that affect hit testing)
+
+P1 (implemented) adds:
+
+- `cx.observe_global::<T>(Invalidation::Layout | Paint | HitTest)`
 
 Semantics:
 
@@ -103,6 +114,13 @@ When `Model<T>` is updated (dirty):
 
 **Coalescing rule**: multiple changes to the same model id in a single tick coalesce into one propagation.
 
+P1 (implemented): globals (`TypeId`) follow the same pattern:
+
+1. the host enqueues changed `TypeId`s (best-effort),
+2. the driver drains the per-tick changed set,
+3. each active `UiTree` invalidates observing nodes for those globals,
+4. affected windows request redraw (ADR 0034).
+
 ### 4) Multi-window semantics (P0)
 
 Model changes must invalidate nodes in **all** windows that observe the model id.
@@ -113,6 +131,8 @@ This requires the driver (app/runner integration) to:
 - broadcast the set to all active UI trees.
 
 Implementations must not assume that the window that initiated the update is the only observer.
+
+P1 (implemented) applies the same rule to globals: the driver broadcasts changed `TypeId`s to all windows’ UI trees.
 
 ### 5) Ordering and safety (Godot alignment)
 
@@ -191,6 +211,11 @@ This contract is considered P0 and must remain deterministic across windows:
 
 - model changes are drained once per tick by the driver/runner and broadcast to all active windows,
 - each window's UI tree invalidates observing nodes based on the current frame's observation graph.
+
+P1 (implemented):
+
+- global changes are drained once per tick by the driver/runner and broadcast to all active windows,
+- observing nodes are invalidated based on the current frame's global observation graph.
 
 See also: `crates/fret-ui/src/tree.rs` tests for multi-window invalidation coverage.
 
