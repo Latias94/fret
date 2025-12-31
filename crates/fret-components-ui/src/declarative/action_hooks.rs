@@ -41,6 +41,12 @@ pub trait ActionHooksExt {
 
     fn pressable_toggle_vec_arc_str(&mut self, model: &Model<Vec<Arc<str>>>, value: Arc<str>);
 
+    fn pressable_toggle_vec_arc_str_weak(
+        &mut self,
+        model: &WeakModel<Vec<Arc<str>>>,
+        value: Arc<str>,
+    );
+
     fn dismissible_close_bool(&mut self, open: &Model<bool>);
 
     fn dismissible_close_bool_weak(&mut self, open: &WeakModel<bool>);
@@ -145,6 +151,24 @@ impl<H: UiHost> ActionHooksExt for ElementCx<'_, H> {
         self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
             let value = value.clone();
             let _ = host.models_mut().update(&model, |v| {
+                if let Some(pos) = v.iter().position(|it| it.as_ref() == value.as_ref()) {
+                    v.remove(pos);
+                } else {
+                    v.push(value.clone());
+                }
+            });
+        }));
+    }
+
+    fn pressable_toggle_vec_arc_str_weak(
+        &mut self,
+        model: &WeakModel<Vec<Arc<str>>>,
+        value: Arc<str>,
+    ) {
+        let model = model.clone();
+        self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
+            let value = value.clone();
+            let _ = host.update_weak_model(&model, |v| {
                 if let Some(pos) = v.iter().position(|it| it.as_ref() == value.as_ref()) {
                     v.remove(pos);
                 } else {
