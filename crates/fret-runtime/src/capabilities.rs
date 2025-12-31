@@ -225,4 +225,3 @@ mod tests {
         assert_eq!(caps.str_key("does.not.exist"), None);
     }
 }
-

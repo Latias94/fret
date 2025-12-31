@@ -4,13 +4,11 @@ use fret_components_app::tree::AppTreeRowRenderer;
 use fret_components_icons::IconRegistry;
 use fret_components_shadcn as shadcn;
 use fret_components_ui::tree::{TreeItem, TreeItemId, TreeState};
-use fret_core::{
-    AppWindowId, Edges, Event, KeyCode, Px, Rect, Scene, SemanticsRole, UiServices,
-};
-use fret_runtime::PlatformCapabilities;
+use fret_core::{AppWindowId, Edges, Event, KeyCode, Px, Rect, Scene, SemanticsRole, UiServices};
 use fret_runner_winit_wgpu::{
     RunnerUserEvent, WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig,
 };
+use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,

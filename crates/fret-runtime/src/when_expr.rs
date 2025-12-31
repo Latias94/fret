@@ -359,8 +359,8 @@ fn expr_to_value(expr: Expr) -> Result<Value, String> {
 #[cfg(test)]
 mod tests {
     use super::WhenExpr;
-    use crate::InputContext;
     use crate::ExternalDragPayloadKind;
+    use crate::InputContext;
 
     #[test]
     fn when_expr_can_eval_capability_bools() {

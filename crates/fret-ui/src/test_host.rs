@@ -5,11 +5,11 @@ use std::{
 
 use fret_core::{AppWindowId, Point};
 use fret_runtime::{ClipboardToken, TimerToken};
-use fret_runtime::{FrameId, TickId};
 use fret_runtime::{
     CommandRegistry, CommandsHost, DragHost, DragKind, DragSession, Effect, EffectSink,
     GlobalsHost, ModelHost, ModelId, ModelStore, ModelsHost, TimeHost,
 };
+use fret_runtime::{FrameId, TickId};
 
 #[derive(Default)]
 pub(crate) struct TestHost {
