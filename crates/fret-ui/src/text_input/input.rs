@@ -33,6 +33,7 @@ impl TextInput {
             prepared_scale_factor_bits: None,
             last_bounds: Rect::default(),
             last_sent_cursor: None,
+            pending_clipboard_token: None,
 
             chrome_style: TextInputStyle::default(),
             chrome_override: false,

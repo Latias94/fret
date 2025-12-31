@@ -282,13 +282,17 @@ impl<H: UiHost> Widget<H> for TextInput {
                     self.apply_singleline_ui_delta(cx, delta);
                 }
             }
-            Event::ClipboardText(text) => {
+            Event::ClipboardText { token, text } => {
                 if !focused {
                     return;
                 }
                 if self.is_ime_composing() {
                     return;
                 }
+                if self.pending_clipboard_token != Some(*token) {
+                    return;
+                }
+                self.pending_clipboard_token = None;
 
                 let outcome = crate::text_edit::commands::apply_clipboard_text(
                     &mut self.edit_state(),
@@ -299,6 +303,11 @@ impl<H: UiHost> Widget<H> for TextInput {
                     self.mark_text_blobs_dirty();
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
+                }
+            }
+            Event::ClipboardTextUnavailable { token } => {
+                if self.pending_clipboard_token == Some(*token) {
+                    self.pending_clipboard_token = None;
                 }
             }
             Event::Ime(ime) => {
@@ -387,7 +396,10 @@ impl<H: UiHost> Widget<H> for TextInput {
                     let Some(window) = cx.window else {
                         return true;
                     };
-                    cx.app.push_effect(Effect::ClipboardGetText { window });
+                    let token = cx.app.next_clipboard_token();
+                    self.pending_clipboard_token = Some(token);
+                    cx.app
+                        .push_effect(Effect::ClipboardGetText { window, token });
                 }
                 true
             }

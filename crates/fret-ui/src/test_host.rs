@@ -3,7 +3,7 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-use fret_core::{AppWindowId, FrameId, Point, TickId, TimerToken};
+use fret_core::{AppWindowId, ClipboardToken, FrameId, Point, TickId, TimerToken};
 use fret_runtime::{
     CommandRegistry, CommandsHost, DragHost, DragKind, DragSession, Effect, EffectSink,
     GlobalsHost, ModelHost, ModelId, ModelStore, ModelsHost, TimeHost,
@@ -20,6 +20,7 @@ pub(crate) struct TestHost {
     tick_id: TickId,
     frame_id: FrameId,
     next_timer_token: u64,
+    next_clipboard_token: u64,
 }
 
 #[allow(dead_code)]
@@ -243,6 +244,12 @@ impl TimeHost for TestHost {
     fn next_timer_token(&mut self) -> TimerToken {
         let token = TimerToken(self.next_timer_token);
         self.next_timer_token = self.next_timer_token.saturating_add(1);
+        token
+    }
+
+    fn next_clipboard_token(&mut self) -> ClipboardToken {
+        let token = ClipboardToken(self.next_clipboard_token);
+        self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
         token
     }
 }

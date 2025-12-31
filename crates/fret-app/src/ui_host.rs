@@ -64,6 +64,10 @@ impl TimeHost for App {
     fn next_timer_token(&mut self) -> fret_core::TimerToken {
         App::next_timer_token(self)
     }
+
+    fn next_clipboard_token(&mut self) -> fret_core::ClipboardToken {
+        App::next_clipboard_token(self)
+    }
 }
 
 impl DragHost for App {

@@ -31,6 +31,7 @@ pub struct App {
     tick_id: TickId,
     frame_id: FrameId,
     next_timer_token: u64,
+    next_clipboard_token: u64,
 }
 
 impl Default for App {
@@ -53,6 +54,7 @@ impl App {
             tick_id: TickId::default(),
             frame_id: FrameId::default(),
             next_timer_token: 1,
+            next_clipboard_token: 1,
         };
 
         // Provide a minimal default keymap so basic UI focus traversal works out of the box.
@@ -259,6 +261,12 @@ impl App {
     pub fn next_timer_token(&mut self) -> TimerToken {
         let token = TimerToken(self.next_timer_token);
         self.next_timer_token = self.next_timer_token.saturating_add(1);
+        token
+    }
+
+    pub fn next_clipboard_token(&mut self) -> fret_core::ClipboardToken {
+        let token = fret_core::ClipboardToken(self.next_clipboard_token);
+        self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
         token
     }
 

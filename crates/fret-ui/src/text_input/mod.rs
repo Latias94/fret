@@ -32,6 +32,7 @@ pub struct TextInput {
     prepared_scale_factor_bits: Option<u32>,
     last_bounds: Rect,
     last_sent_cursor: Option<Rect>,
+    pending_clipboard_token: Option<fret_core::ClipboardToken>,
 
     chrome_style: TextInputStyle,
     chrome_override: bool,

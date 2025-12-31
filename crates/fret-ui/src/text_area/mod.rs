@@ -162,6 +162,7 @@ pub struct TextArea {
     last_bounds: Rect,
     last_sent_cursor: Option<Rect>,
     ime_deduper: crate::text_edit::ime::Deduper,
+    pending_clipboard_token: Option<fret_core::ClipboardToken>,
 }
 
 impl Default for TextArea {
@@ -206,6 +207,7 @@ impl Default for TextArea {
             last_bounds: Rect::default(),
             last_sent_cursor: None,
             ime_deduper: crate::text_edit::ime::Deduper::default(),
+            pending_clipboard_token: None,
         }
     }
 }
@@ -408,7 +410,10 @@ impl TextArea {
         let Some(window) = cx.window else {
             return true;
         };
-        cx.app.push_effect(Effect::ClipboardGetText { window });
+        let token = cx.app.next_clipboard_token();
+        self.pending_clipboard_token = Some(token);
+        cx.app
+            .push_effect(Effect::ClipboardGetText { window, token });
         true
     }
 

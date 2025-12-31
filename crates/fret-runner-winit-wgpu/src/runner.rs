@@ -1292,8 +1292,11 @@ impl<D: WinitDriver> WinitRunner<D> {
         completion: fret_core::PlatformCompletion,
     ) {
         match completion {
-            fret_core::PlatformCompletion::ClipboardText(text) => {
-                self.deliver_window_event_now(window, &Event::ClipboardText(text));
+            fret_core::PlatformCompletion::ClipboardText { token, text } => {
+                self.deliver_window_event_now(window, &Event::ClipboardText { token, text });
+            }
+            fret_core::PlatformCompletion::ClipboardTextUnavailable { token } => {
+                self.deliver_window_event_now(window, &Event::ClipboardTextUnavailable { token });
             }
             fret_core::PlatformCompletion::ExternalDropData(data) => {
                 self.deliver_window_event_now(window, &Event::ExternalDropData(data));
@@ -1831,12 +1834,16 @@ impl<D: WinitDriver> WinitRunner<D> {
                             tracing::debug!(?err, "failed to set clipboard text");
                         }
                     }
-                    Effect::ClipboardGetText { window } => {
-                        let Ok(Some(text)) = self.clipboard.get_text() else {
-                            continue;
-                        };
-                        self.deliver_window_event_now(window, &Event::ClipboardText(text));
-                    }
+                    Effect::ClipboardGetText { window, token } => match self.clipboard.get_text() {
+                        Ok(Some(text)) => self.deliver_window_event_now(
+                            window,
+                            &Event::ClipboardText { token, text },
+                        ),
+                        Ok(None) | Err(_) => self.deliver_window_event_now(
+                            window,
+                            &Event::ClipboardTextUnavailable { token },
+                        ),
+                    },
                     Effect::ExternalDropReadAll { window, token } => {
                         let limits = fret_platform::external_drop::ExternalDropReadLimits {
                             max_total_bytes: self.config.external_drop_max_total_bytes,

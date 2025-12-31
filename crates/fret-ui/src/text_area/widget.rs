@@ -256,10 +256,15 @@ impl<H: UiHost> Widget<H> for TextArea {
                 let delta = crate::text_edit::commands::multiline_ui_delta("text.insert", outcome);
                 self.apply_multiline_ui_delta(cx, delta);
             }
-            Event::ClipboardText(text) => {
+            Event::ClipboardText { token, text } => {
                 if cx.focus != Some(cx.node) {
                     return;
                 }
+                if self.pending_clipboard_token != Some(*token) {
+                    return;
+                }
+                self.pending_clipboard_token = None;
+
                 let had_preedit = self.is_ime_composing();
                 let outcome = crate::text_edit::commands::apply_clipboard_text(
                     &mut self.edit_state(),
@@ -276,6 +281,11 @@ impl<H: UiHost> Widget<H> for TextArea {
                     delta.ensure_caret_visible = true;
                 }
                 self.apply_multiline_ui_delta(cx, delta);
+            }
+            Event::ClipboardTextUnavailable { token } => {
+                if self.pending_clipboard_token == Some(*token) {
+                    self.pending_clipboard_token = None;
+                }
             }
             Event::Ime(ime) => {
                 if cx.focus != Some(cx.node) {

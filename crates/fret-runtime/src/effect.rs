@@ -1,7 +1,8 @@
 use std::time::Duration;
 
 use fret_core::{
-    AppWindowId, CursorIcon, FileDialogOptions, FileDialogToken, Rect, TimerToken, WindowAnchor,
+    AppWindowId, ClipboardToken, CursorIcon, FileDialogOptions, FileDialogToken, Rect, TimerToken,
+    WindowAnchor,
 };
 
 use crate::CommandId;
@@ -19,6 +20,7 @@ pub enum Effect {
     },
     ClipboardGetText {
         window: AppWindowId,
+        token: ClipboardToken,
     },
     ExternalDropReadAll {
         window: AppWindowId,

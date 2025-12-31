@@ -1,6 +1,6 @@
 use crate::{
-    AppWindowId, ExternalDropToken, FileDialogDataEvent, FileDialogSelection, RenderTargetId,
-    TimerToken,
+    AppWindowId, ClipboardToken, ExternalDropToken, FileDialogDataEvent, FileDialogSelection,
+    RenderTargetId, TimerToken,
     geometry::{Point, Px},
 };
 
@@ -383,7 +383,14 @@ pub enum Event {
         focus: u32,
     },
     /// Clipboard text payload delivered to the focused widget (typically as the result of a paste request).
-    ClipboardText(String),
+    ClipboardText {
+        token: ClipboardToken,
+        text: String,
+    },
+    /// Clipboard read completed without a text payload (clipboard empty/unavailable/error).
+    ClipboardTextUnavailable {
+        token: ClipboardToken,
+    },
     /// File dialog selection metadata (token + names). Bytes must be requested via effects.
     FileDialogSelection(FileDialogSelection),
     /// File dialog data payload, typically produced by `Effect::FileDialogReadAll`.

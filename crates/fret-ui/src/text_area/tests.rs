@@ -439,7 +439,15 @@ fn clipboard_text_normalizes_newlines_to_lf() {
     let mut area = TextArea::default();
     let mut cx = event_cx(&mut app, &mut services, node, window, bounds);
 
-    area.event(&mut cx, &Event::ClipboardText("a\r\nb\rc".to_string()));
+    let token = fret_core::ClipboardToken(1);
+    area.pending_clipboard_token = Some(token);
+    area.event(
+        &mut cx,
+        &Event::ClipboardText {
+            token,
+            text: "a\r\nb\rc".to_string(),
+        },
+    );
 
     assert_eq!(area.text(), "a\nb\nc");
 }

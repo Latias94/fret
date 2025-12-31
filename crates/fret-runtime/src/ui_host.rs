@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use fret_core::{AppWindowId, FrameId, Point, TickId, TimerToken};
+use fret_core::{AppWindowId, ClipboardToken, FrameId, Point, TickId, TimerToken};
 
 use crate::{CommandRegistry, DragKind, DragSession, Effect, ModelHost, ModelId};
 
@@ -33,6 +33,7 @@ pub trait TimeHost {
     fn tick_id(&self) -> TickId;
     fn frame_id(&self) -> FrameId;
     fn next_timer_token(&mut self) -> TimerToken;
+    fn next_clipboard_token(&mut self) -> ClipboardToken;
 }
 
 pub trait DragHost {
