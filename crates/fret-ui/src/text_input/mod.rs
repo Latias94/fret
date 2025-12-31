@@ -275,6 +275,14 @@ impl TextInput {
         }
     }
 
+    fn replace_selection_changed(&mut self, insert: &str) -> bool {
+        let changed = self.edit_state().replace_selection(insert);
+        if changed {
+            self.mark_text_blobs_dirty();
+        }
+        changed
+    }
+
     fn delete_selection_if_any(&mut self) -> bool {
         let changed = self.edit_state().delete_selection_if_any();
         if changed {
@@ -536,44 +544,100 @@ impl<H: UiHost> Widget<H> for TextInput {
                 if !self.is_ime_composing() {
                     match key {
                         fret_core::KeyCode::Backspace => {
-                            let _ = self.delete_backward_char();
-                            cx.invalidate_self(Invalidation::Layout);
-                            cx.request_redraw();
+                            let outcome = crate::text_edit::commands::apply_basic(
+                                &mut self.edit_state(),
+                                "text.delete_backward",
+                                false,
+                            );
+                            let delta = crate::text_edit::commands::singleline_ui_delta(
+                                "text.delete_backward",
+                                outcome,
+                            );
+                            self.apply_singleline_ui_delta(cx, delta);
                         }
                         fret_core::KeyCode::Delete => {
-                            let _ = self.delete_forward_char();
-                            cx.invalidate_self(Invalidation::Layout);
-                            cx.request_redraw();
+                            let outcome = crate::text_edit::commands::apply_basic(
+                                &mut self.edit_state(),
+                                "text.delete_forward",
+                                false,
+                            );
+                            let delta = crate::text_edit::commands::singleline_ui_delta(
+                                "text.delete_forward",
+                                outcome,
+                            );
+                            self.apply_singleline_ui_delta(cx, delta);
                         }
                         fret_core::KeyCode::ArrowLeft => {
-                            let extend = modifiers.shift;
-                            if modifiers.ctrl || modifiers.alt {
-                                let _ = self.edit_state().move_word_left(extend);
-                            } else {
-                                let _ = self.edit_state().move_left(extend);
-                            }
-                            cx.invalidate_self(Invalidation::Paint);
-                            cx.request_redraw();
+                            let word = modifiers.ctrl || modifiers.alt;
+                            let command = match (modifiers.shift, word) {
+                                (true, true) => "text.select_word_left",
+                                (true, false) => "text.select_left",
+                                (false, true) => "text.move_word_left",
+                                (false, false) => "text.move_left",
+                            };
+                            let outcome = crate::text_edit::commands::apply_basic(
+                                &mut self.edit_state(),
+                                command,
+                                false,
+                            );
+                            let delta = crate::text_edit::commands::singleline_ui_delta(
+                                command,
+                                outcome,
+                            );
+                            self.apply_singleline_ui_delta(cx, delta);
                         }
                         fret_core::KeyCode::ArrowRight => {
-                            let extend = modifiers.shift;
-                            if modifiers.ctrl || modifiers.alt {
-                                let _ = self.edit_state().move_word_right(extend);
-                            } else {
-                                let _ = self.edit_state().move_right(extend);
-                            }
-                            cx.invalidate_self(Invalidation::Paint);
-                            cx.request_redraw();
+                            let word = modifiers.ctrl || modifiers.alt;
+                            let command = match (modifiers.shift, word) {
+                                (true, true) => "text.select_word_right",
+                                (true, false) => "text.select_right",
+                                (false, true) => "text.move_word_right",
+                                (false, false) => "text.move_right",
+                            };
+                            let outcome = crate::text_edit::commands::apply_basic(
+                                &mut self.edit_state(),
+                                command,
+                                false,
+                            );
+                            let delta = crate::text_edit::commands::singleline_ui_delta(
+                                command,
+                                outcome,
+                            );
+                            self.apply_singleline_ui_delta(cx, delta);
                         }
                         fret_core::KeyCode::Home => {
-                            let _ = self.edit_state().move_home(modifiers.shift);
-                            cx.invalidate_self(Invalidation::Paint);
-                            cx.request_redraw();
+                            let command = if modifiers.shift {
+                                "text.select_home"
+                            } else {
+                                "text.move_home"
+                            };
+                            let outcome = crate::text_edit::commands::apply_basic(
+                                &mut self.edit_state(),
+                                command,
+                                false,
+                            );
+                            let delta = crate::text_edit::commands::singleline_ui_delta(
+                                command,
+                                outcome,
+                            );
+                            self.apply_singleline_ui_delta(cx, delta);
                         }
                         fret_core::KeyCode::End => {
-                            let _ = self.edit_state().move_end(modifiers.shift);
-                            cx.invalidate_self(Invalidation::Paint);
-                            cx.request_redraw();
+                            let command = if modifiers.shift {
+                                "text.select_end"
+                            } else {
+                                "text.move_end"
+                            };
+                            let outcome = crate::text_edit::commands::apply_basic(
+                                &mut self.edit_state(),
+                                command,
+                                false,
+                            );
+                            let delta = crate::text_edit::commands::singleline_ui_delta(
+                                command,
+                                outcome,
+                            );
+                            self.apply_singleline_ui_delta(cx, delta);
                         }
                         _ => {}
                     }
@@ -593,9 +657,15 @@ impl<H: UiHost> Widget<H> for TextInput {
                 self.ime_deduper.record_text_input(tick, text.as_str());
 
                 if !self.is_ime_composing() {
-                    self.replace_selection(text);
-                    cx.invalidate_self(Invalidation::Layout);
-                    cx.request_redraw();
+                    let changed = self.replace_selection_changed(text.as_str());
+                    let outcome = crate::text_edit::commands::Outcome {
+                        handled: true,
+                        invalidate_paint: false,
+                        invalidate_layout: changed,
+                    };
+                    let delta =
+                        crate::text_edit::commands::singleline_ui_delta("text.insert", outcome);
+                    self.apply_singleline_ui_delta(cx, delta);
                 }
             }
             Event::ClipboardText(text) => {
@@ -708,40 +778,44 @@ impl<H: UiHost> Widget<H> for TextInput {
                 true
             }
             "text.move_up" => {
+                let is_ime_composing = self.is_ime_composing();
                 let outcome = crate::text_edit::commands::apply_basic(
                     &mut self.edit_state(),
                     "text.move_home",
-                    self.is_ime_composing(),
+                    is_ime_composing,
                 );
                 let delta = crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
                 self.apply_singleline_ui_delta(cx, delta);
                 true
             }
             "text.move_down" => {
+                let is_ime_composing = self.is_ime_composing();
                 let outcome = crate::text_edit::commands::apply_basic(
                     &mut self.edit_state(),
                     "text.move_end",
-                    self.is_ime_composing(),
+                    is_ime_composing,
                 );
                 let delta = crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
                 self.apply_singleline_ui_delta(cx, delta);
                 true
             }
             "text.select_up" => {
+                let is_ime_composing = self.is_ime_composing();
                 let outcome = crate::text_edit::commands::apply_basic(
                     &mut self.edit_state(),
                     "text.select_home",
-                    self.is_ime_composing(),
+                    is_ime_composing,
                 );
                 let delta = crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
                 self.apply_singleline_ui_delta(cx, delta);
                 true
             }
             "text.select_down" => {
+                let is_ime_composing = self.is_ime_composing();
                 let outcome = crate::text_edit::commands::apply_basic(
                     &mut self.edit_state(),
                     "text.select_end",
-                    self.is_ime_composing(),
+                    is_ime_composing,
                 );
                 let delta = crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
                 self.apply_singleline_ui_delta(cx, delta);
