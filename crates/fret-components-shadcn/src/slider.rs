@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
-use fret_components_ui::LayoutRefinement;
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
+use fret_components_ui::LayoutRefinement;
 use fret_core::{Color, Corners, CursorIcon, Edges, MouseButton, Px, Rect, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiPointerActionHost};
@@ -187,8 +188,6 @@ pub fn slider<H: UiHost>(
     });
 
     cx.scope(|cx| {
-        cx.observe_model(&model, fret_ui::Invalidation::Paint);
-
         let root_layout = decl_style::layout_style(&theme, layout.relative().w_full());
         let root_h = style.thumb_size.0.max(style.track_height.0).max(0.0);
 
@@ -196,9 +195,8 @@ pub fn slider<H: UiHost>(
         semantics_layout.size.height = Length::Px(Px(root_h));
 
         let value = cx
-            .app
-            .models()
-            .read(&model, |values| values.first().copied())
+            .watch_model(&model)
+            .read_ref(|values| values.first().copied())
             .ok()
             .flatten()
             .unwrap_or(min);
@@ -591,11 +589,9 @@ mod tests {
             bounds,
             "shadcn-slider-updates-model-on-pointer-down",
             |cx| {
-                vec![
-                    Slider::new(model.clone())
-                        .range(0.0, 100.0)
-                        .into_element(cx),
-                ]
+                vec![Slider::new(model.clone())
+                    .range(0.0, 100.0)
+                    .into_element(cx)]
             },
         );
         ui.set_root(root);

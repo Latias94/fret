@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
@@ -8,7 +9,6 @@ use fret_core::{
     Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, LayoutStyle, MainAlign, PressableA11y,
     PressableProps, RovingFlexProps, RovingFocusProps, RowProps, SemanticsProps, TextProps,
@@ -430,12 +430,10 @@ impl Accordion {
 
             let (open_single, open_multi) = match &model {
                 AccordionModel::Single { model, .. } => {
-                    cx.observe_model(model, Invalidation::Layout);
-                    (cx.app.models().get_cloned(model).flatten(), None)
+                    (cx.watch_model(model).layout().cloned().flatten(), None)
                 }
                 AccordionModel::Multiple { model } => {
-                    cx.observe_model(model, Invalidation::Layout);
-                    (None, cx.app.models().get_cloned(model))
+                    (None, cx.watch_model(model).layout().cloned())
                 }
             };
 
