@@ -180,6 +180,26 @@ impl OverlayController {
         window_overlays::begin_frame(app, window);
     }
 
+    pub fn popover_root_name(id: GlobalElementId) -> String {
+        window_overlays::popover_root_name(id)
+    }
+
+    pub fn modal_root_name(id: GlobalElementId) -> String {
+        window_overlays::modal_root_name(id)
+    }
+
+    pub fn tooltip_root_name(id: GlobalElementId) -> String {
+        window_overlays::tooltip_root_name(id)
+    }
+
+    pub fn hover_overlay_root_name(id: GlobalElementId) -> String {
+        window_overlays::hover_overlay_root_name(id)
+    }
+
+    pub fn toast_layer_root_name(id: GlobalElementId) -> String {
+        window_overlays::toast_layer_root_name(id)
+    }
+
     pub fn request<H: UiHost>(cx: &mut ElementCx<'_, H>, request: OverlayRequest) {
         Self::request_for_window(cx.app, cx.window, request);
     }
@@ -316,6 +336,15 @@ impl OverlayController {
         request: window_overlays::ToastRequest,
     ) -> window_overlays::ToastId {
         window_overlays::toast_action(host, store, window, request)
+    }
+
+    pub fn dismiss_toast_action(
+        host: &mut dyn fret_ui::action::UiActionHost,
+        store: Model<window_overlays::ToastStore>,
+        window: AppWindowId,
+        id: window_overlays::ToastId,
+    ) -> bool {
+        window_overlays::dismiss_toast_action(host, store, window, id)
     }
 }
 

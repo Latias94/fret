@@ -4,8 +4,8 @@ use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
 use fret_components_ui::{
-    ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence, OverlayRequest,
-    Radius, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence,
+    OverlayRequest, Radius, Space,
 };
 use fret_core::{FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
@@ -126,7 +126,7 @@ impl Popover {
             let overlay_presence = OverlayPresence::from_fade(is_open, presence);
 
             if overlay_presence.present {
-                let overlay_root_name = format!("window-overlays.popover.{:x}", trigger_id.0);
+                let overlay_root_name = OverlayController::popover_root_name(trigger_id);
                 let align = self.align;
                 let side = self.side;
                 let side_offset = self.side_offset;

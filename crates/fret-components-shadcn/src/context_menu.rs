@@ -186,7 +186,7 @@ impl ContextMenu {
             let anchor_point = pointer_down.map(|it| it.position);
 
             if is_open {
-                let overlay_root_name = format!("window-overlays.popover.{:x}", id.0);
+                let overlay_root_name = OverlayController::popover_root_name(id);
 
                 let align = self.align;
                 let side = self.side;

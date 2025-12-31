@@ -2,8 +2,10 @@ use std::sync::Arc;
 
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::window_overlays;
-use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_components_ui::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    OverlayRequest, Radius, Space,
+};
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
@@ -77,7 +79,7 @@ impl AlertDialog {
 
             let trigger = trigger(cx);
             let id = trigger.id;
-            let overlay_root_name = window_overlays::modal_root_name(id);
+            let overlay_root_name = OverlayController::modal_root_name(id);
 
             if is_open {
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
@@ -162,18 +164,15 @@ impl AlertDialog {
                     vec![barrier, wrapper]
                 });
 
-                window_overlays::request_modal(
-                    cx,
-                    window_overlays::ModalRequest {
-                        id,
-                        root_name: overlay_root_name.clone(),
-                        trigger: Some(id),
-                        open: self.open,
-                        present: true,
-                        initial_focus: None,
-                        children: overlay_children,
-                    },
+                let mut request = OverlayRequest::modal(
+                    id,
+                    Some(id),
+                    self.open,
+                    OverlayPresence::instant(true),
+                    overlay_children,
                 );
+                request.root_name = Some(overlay_root_name);
+                OverlayController::request(cx, request);
             }
 
             trigger
@@ -566,7 +565,7 @@ mod tests {
         open: Model<bool>,
         cancel_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
     ) -> fret_ui::elements::GlobalElementId {
-        window_overlays::begin_frame(app, window);
+        OverlayController::begin_frame(app, window);
 
         let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
 
@@ -626,7 +625,7 @@ mod tests {
             });
 
         ui.set_root(root);
-        window_overlays::render(ui, app, services, window, bounds);
+        OverlayController::render(ui, app, services, window, bounds);
         trigger_id.expect("trigger id")
     }
 

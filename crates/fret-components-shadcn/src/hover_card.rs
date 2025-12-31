@@ -2,8 +2,10 @@ use fret_components_ui::declarative::scheduling;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::hover_intent::{HoverIntentConfig, HoverIntentState};
 use fret_components_ui::overlay;
-use fret_components_ui::window_overlays;
-use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_components_ui::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayRequest,
+    Radius, Space,
+};
 use fret_core::{Px, Size};
 use fret_ui::element::{AnyElement, HoverRegionProps, InsetStyle, LayoutStyle, PositionStyle};
 use fret_ui::{ElementCx, Theme, UiHost, overlay_placement};
@@ -151,7 +153,7 @@ impl HoverCard {
                 return out;
             }
 
-            let overlay_root_name = window_overlays::hover_overlay_root_name(hover_card_id);
+            let overlay_root_name = OverlayController::hover_overlay_root_name(hover_card_id);
 
             let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                 let anchor = overlay::anchor_bounds_for_element(cx, trigger_id);
@@ -209,15 +211,9 @@ impl HoverCard {
                 )]
             });
 
-            window_overlays::request_hover_overlay(
-                cx,
-                window_overlays::HoverOverlayRequest {
-                    id: hover_card_id,
-                    root_name: overlay_root_name,
-                    trigger: trigger_id,
-                    children: overlay_children,
-                },
-            );
+            let mut request = OverlayRequest::hover(hover_card_id, trigger_id, overlay_children);
+            request.root_name = Some(overlay_root_name);
+            OverlayController::request(cx, request);
 
             out
         })

@@ -1164,7 +1164,7 @@ mod tests {
         let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
 
-        fret_components_ui::window_overlays::begin_frame(app, window);
+        fret_components_ui::OverlayController::begin_frame(app, window);
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "cmdk", |cx| {
                 vec![CommandPalette::new(model, items).into_element(cx)]

@@ -10,8 +10,10 @@ use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::overlay;
 use fret_components_ui::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use fret_components_ui::window_overlays;
-use fret_components_ui::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
+use fret_components_ui::{
+    ChromeRefinement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    OverlayRequest, Space,
+};
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
@@ -189,7 +191,7 @@ pub fn select<H: UiHost>(
                 ..Default::default()
             };
 
-            let overlay_root_name = window_overlays::popover_root_name(trigger_id);
+            let overlay_root_name = OverlayController::popover_root_name(trigger_id);
 
             if is_open
                 && enabled
@@ -400,18 +402,15 @@ pub fn select<H: UiHost>(
                         )]
                     });
 
-                    window_overlays::request_dismissible_popover(
-                        cx,
-                        window_overlays::DismissiblePopoverRequest {
-                            id: trigger_id,
-                            root_name: overlay_root_name.clone(),
-                            trigger: trigger_id,
-                            open,
-                            present: true,
-                            initial_focus: None,
-                            children: overlay_children,
-                        },
+                    let mut request = OverlayRequest::dismissible_popover(
+                        trigger_id,
+                        trigger_id,
+                        open,
+                        OverlayPresence::instant(true),
+                        overlay_children,
                     );
+                    request.root_name = Some(overlay_root_name);
+                    OverlayController::request(cx, request);
             }
 
             let children = vec![cx.container(
@@ -531,13 +530,13 @@ mod tests {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
 
-        fret_components_ui::window_overlays::begin_frame(app, window);
+        fret_components_ui::OverlayController::begin_frame(app, window);
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "select", |cx| {
                 vec![Select::new(model, open).items(items).into_element(cx)]
             });
         ui.set_root(root);
-        fret_components_ui::window_overlays::render(ui, app, services, window, bounds);
+        fret_components_ui::OverlayController::render(ui, app, services, window, bounds);
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root

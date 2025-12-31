@@ -1,4 +1,4 @@
-use fret_components_ui::window_overlays;
+use fret_components_ui::{OverlayController, OverlayRequest, ToastStore};
 use fret_core::AppWindowId;
 use fret_runtime::Model;
 use fret_ui::action::UiActionHost;
@@ -7,13 +7,13 @@ use fret_ui::{ElementCx, UiHost};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Toaster {
-    position: window_overlays::ToastPosition,
+    position: ToastPosition,
 }
 
 impl Default for Toaster {
     fn default() -> Self {
         Self {
-            position: window_overlays::ToastPosition::BottomRight,
+            position: ToastPosition::BottomRight,
         }
     }
 }
@@ -23,7 +23,7 @@ impl Toaster {
         Self::default()
     }
 
-    pub fn position(mut self, position: window_overlays::ToastPosition) -> Self {
+    pub fn position(mut self, position: ToastPosition) -> Self {
         self.position = position;
         self
     }
@@ -31,11 +31,9 @@ impl Toaster {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let id = cx.root_id();
-            let store = window_overlays::toast_store(&mut *cx.app);
-            window_overlays::request_toast_layer(
-                cx,
-                window_overlays::ToastLayerRequest::new(id, store).position(self.position),
-            );
+            let store = OverlayController::toast_store(&mut *cx.app);
+            let request = OverlayRequest::toast_layer(id, store).toast_position(self.position);
+            OverlayController::request(cx, request);
 
             cx.stack(|_cx| Vec::new())
         })
@@ -44,7 +42,7 @@ impl Toaster {
 
 #[derive(Clone)]
 pub struct Sonner {
-    store: Model<window_overlays::ToastStore>,
+    store: Model<ToastStore>,
 }
 
 impl std::fmt::Debug for Sonner {
@@ -56,7 +54,7 @@ impl std::fmt::Debug for Sonner {
 impl Sonner {
     pub fn global<H: UiHost>(app: &mut H) -> Self {
         Self {
-            store: window_overlays::toast_store(app),
+            store: OverlayController::toast_store(app),
         }
     }
 
@@ -64,19 +62,14 @@ impl Sonner {
         &self,
         host: &mut dyn UiActionHost,
         window: AppWindowId,
-        request: window_overlays::ToastRequest,
-    ) -> window_overlays::ToastId {
-        window_overlays::toast_action(host, self.store.clone(), window, request)
+        request: ToastRequest,
+    ) -> ToastId {
+        OverlayController::toast_action(host, self.store.clone(), window, request)
     }
 
-    pub fn dismiss(
-        &self,
-        host: &mut dyn UiActionHost,
-        window: AppWindowId,
-        id: window_overlays::ToastId,
-    ) -> bool {
-        window_overlays::dismiss_toast_action(host, self.store.clone(), window, id)
+    pub fn dismiss(&self, host: &mut dyn UiActionHost, window: AppWindowId, id: ToastId) -> bool {
+        OverlayController::dismiss_toast_action(host, self.store.clone(), window, id)
     }
 }
 
-pub use window_overlays::{ToastAction, ToastId, ToastPosition, ToastRequest, ToastVariant};
+pub use fret_components_ui::{ToastAction, ToastId, ToastPosition, ToastRequest, ToastVariant};

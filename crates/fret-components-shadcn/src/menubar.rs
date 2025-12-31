@@ -6,8 +6,7 @@ use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::overlay;
-use fret_components_ui::window_overlays;
-use fret_components_ui::{MetricRef, Space};
+use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
@@ -378,7 +377,7 @@ impl MenubarMenu {
                 };
 
                 if is_open && enabled {
-                    let overlay_root_name = window_overlays::popover_root_name(trigger_id);
+                    let overlay_root_name = OverlayController::popover_root_name(trigger_id);
                     let side_offset = self.side_offset;
                     let window_margin = self.window_margin;
                     let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
@@ -639,18 +638,15 @@ impl MenubarMenu {
                         vec![content]
                     });
 
-                    window_overlays::request_dismissible_popover(
-                        cx,
-                        window_overlays::DismissiblePopoverRequest {
-                            id: trigger_id,
-                            root_name: overlay_root_name,
-                            trigger: trigger_id,
-                            open,
-                            present: true,
-                            initial_focus: None,
-                            children: overlay_children,
-                        },
+                    let mut request = OverlayRequest::dismissible_popover(
+                        trigger_id,
+                        trigger_id,
+                        open,
+                        OverlayPresence::instant(true),
+                        overlay_children,
                     );
+                    request.root_name = Some(overlay_root_name);
+                    OverlayController::request(cx, request);
                 }
 
                 let content = cx.container(
@@ -697,7 +693,6 @@ pub fn menubar<H: UiHost>(
 mod tests {
     use super::*;
     use fret_app::App;
-    use fret_components_ui::window_overlays;
     use fret_core::{
         AppWindowId, Modifiers, MouseButton, MouseButtons, Point, Rect, TextBlobId,
         TextConstraints, TextMetrics, TextService,
@@ -783,7 +778,7 @@ mod tests {
         bounds: Rect,
     ) {
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
-        window_overlays::begin_frame(app, window);
+        OverlayController::begin_frame(app, window);
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "menubar", |cx| {
                 vec![menubar(cx, |cx| {
@@ -807,7 +802,7 @@ mod tests {
                 })]
             });
         ui.set_root(root);
-        window_overlays::render(ui, app, services, window, bounds);
+        OverlayController::render(ui, app, services, window, bounds);
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
     }

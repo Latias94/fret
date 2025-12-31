@@ -2,8 +2,10 @@ use fret_components_ui::declarative::scheduling;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::hover_intent::{HoverIntentConfig, HoverIntentState};
 use fret_components_ui::overlay;
-use fret_components_ui::window_overlays;
-use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_components_ui::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    OverlayRequest, Radius, Space,
+};
 use std::sync::Arc;
 
 use fret_core::{Px, Size, TextOverflow, TextStyle, TextWrap};
@@ -162,7 +164,7 @@ impl Tooltip {
             }
 
             let tooltip_id = cx.root_id();
-            let overlay_root_name = window_overlays::tooltip_root_name(tooltip_id);
+            let overlay_root_name = OverlayController::tooltip_root_name(tooltip_id);
 
             let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                 let anchor = overlay::anchor_bounds_for_element(cx, trigger_id);
@@ -221,14 +223,13 @@ impl Tooltip {
                 vec![wrapper]
             });
 
-            window_overlays::request_tooltip(
-                cx,
-                window_overlays::TooltipRequest {
-                    id: tooltip_id,
-                    root_name: overlay_root_name,
-                    children: overlay_children,
-                },
+            let mut request = OverlayRequest::tooltip(
+                tooltip_id,
+                OverlayPresence::instant(true),
+                overlay_children,
             );
+            request.root_name = Some(overlay_root_name);
+            OverlayController::request(cx, request);
 
             out
         })

@@ -10,8 +10,10 @@ use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::overlay;
 use fret_components_ui::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use fret_components_ui::window_overlays;
-use fret_components_ui::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
+use fret_components_ui::{
+    ChromeRefinement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    OverlayRequest, Space,
+};
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
@@ -250,7 +252,7 @@ pub fn combobox<H: UiHost>(
                 ..Default::default()
             };
 
-            let overlay_root_name = window_overlays::popover_root_name(trigger_id);
+            let overlay_root_name = OverlayController::popover_root_name(trigger_id);
 
             if is_open
                 && enabled
@@ -639,18 +641,15 @@ pub fn combobox<H: UiHost>(
                     )]
                 });
 
-                window_overlays::request_dismissible_popover(
-                    cx,
-                    window_overlays::DismissiblePopoverRequest {
-                        id: trigger_id,
-                        root_name: overlay_root_name.clone(),
-                        trigger: trigger_id,
-                        open,
-                        present: true,
-                        initial_focus: None,
-                        children: overlay_children,
-                    },
+                let mut request = OverlayRequest::dismissible_popover(
+                    trigger_id,
+                    trigger_id,
+                    open,
+                    OverlayPresence::instant(true),
+                    overlay_children,
                 );
+                request.root_name = Some(overlay_root_name);
+                OverlayController::request(cx, request);
             }
 
             let children = vec![cx.container(
