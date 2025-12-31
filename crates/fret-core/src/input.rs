@@ -1,5 +1,6 @@
 use crate::{
-    AppWindowId, ExternalDropToken, RenderTargetId, TimerToken,
+    AppWindowId, ExternalDropToken, FileDialogDataEvent, FileDialogSelection, RenderTargetId,
+    TimerToken,
     geometry::{Point, Px},
 };
 
@@ -383,6 +384,10 @@ pub enum Event {
     },
     /// Clipboard text payload delivered to the focused widget (typically as the result of a paste request).
     ClipboardText(String),
+    /// File dialog selection metadata (token + names). Bytes must be requested via effects.
+    FileDialogSelection(FileDialogSelection),
+    /// File dialog data payload, typically produced by `Effect::FileDialogReadAll`.
+    FileDialogData(FileDialogDataEvent),
     /// Window close button / OS close request was triggered.
     ///
     /// The runner must not close the window immediately; the app/driver may intercept the request

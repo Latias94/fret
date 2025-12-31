@@ -3,6 +3,7 @@ pub mod cursor;
 pub mod dock;
 pub mod dock_layout;
 pub mod dock_op;
+pub mod file_dialog;
 pub mod geometry;
 pub mod ids;
 pub mod input;
@@ -28,10 +29,13 @@ pub use dock_layout::{
     DockWindowPlacement, EditorDockLayoutSpec,
 };
 pub use dock_op::{DockOp, SplitFractionsUpdate};
+pub use file_dialog::{
+    FileDialogDataEvent, FileDialogFilter, FileDialogOptions, FileDialogSelection,
+};
 pub use geometry::{Corners, Edges, Point, Px, Rect, Size, Transform2D};
 pub use ids::{
     AppWindowId, DockNodeId, ExternalDropToken, FontId, FrameId, ImageId, NodeId, PathId,
-    RenderTargetId, SvgId, TextBlobId, TickId, TimerToken,
+    FileDialogToken, RenderTargetId, SvgId, TextBlobId, TickId, TimerToken,
 };
 pub use input::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,

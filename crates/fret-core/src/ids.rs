@@ -42,3 +42,6 @@ pub struct TimerToken(pub u64);
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ExternalDropToken(pub u64);
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FileDialogToken(pub u64);

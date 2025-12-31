@@ -3,10 +3,12 @@
 //! This type is intentionally narrower than `Event` so platform backends can only inject
 //! completion results (e.g. clipboard reads, external-drop reads) into the UI event stream.
 
-use crate::input::ExternalDropDataEvent;
+use crate::{ExternalDropDataEvent, FileDialogDataEvent, FileDialogSelection};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PlatformCompletion {
     ClipboardText(String),
     ExternalDropData(ExternalDropDataEvent),
+    FileDialogSelection(FileDialogSelection),
+    FileDialogData(FileDialogDataEvent),
 }

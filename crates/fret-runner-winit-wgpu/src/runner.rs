@@ -15,6 +15,8 @@ use fret_core::{
 use fret_platform_winit::accessibility;
 use fret_platform_winit::clipboard::WinitClipboard;
 use fret_platform_winit::external_drop::WinitExternalDrop;
+use fret_platform_winit::file_dialog::WinitFileDialog;
+use fret_platform_winit::open_url::WinitOpenUrl;
 use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
 use slotmap::SlotMap;
 use tracing::error;
@@ -32,6 +34,8 @@ use winit::{
 use crate::error::RunnerError;
 use fret_platform::clipboard::Clipboard as _;
 use fret_platform::external_drop::ExternalDropProvider as _;
+use fret_platform::file_dialog::FileDialogProvider as _;
+use fret_platform::open_url::OpenUrl as _;
 
 type WindowAnchor = fret_core::WindowAnchor;
 
@@ -815,6 +819,8 @@ pub struct WinitRunner<D: WinitDriver> {
     raf_windows: HashSet<fret_core::AppWindowId>,
     timers: HashMap<fret_core::TimerToken, TimerEntry>,
     clipboard: WinitClipboard,
+    open_url: WinitOpenUrl,
+    file_dialog: WinitFileDialog,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
     internal_drag_hover_window: Option<fret_core::AppWindowId>,
     internal_drag_hover_pos: Option<Point>,
@@ -1098,6 +1104,8 @@ impl<D: WinitDriver> WinitRunner<D> {
             raf_windows: HashSet::new(),
             timers: HashMap::new(),
             clipboard: WinitClipboard::default(),
+            open_url: WinitOpenUrl::default(),
+            file_dialog: WinitFileDialog::default(),
             cursor_screen_pos: None,
             internal_drag_hover_window: None,
             internal_drag_hover_pos: None,
@@ -1136,6 +1144,27 @@ impl<D: WinitDriver> WinitRunner<D> {
         let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
         self.driver
             .handle_event(&mut self.app, services, window, &mut state.user, event);
+    }
+
+    fn deliver_platform_completion_now(
+        &mut self,
+        window: fret_core::AppWindowId,
+        completion: fret_core::PlatformCompletion,
+    ) {
+        match completion {
+            fret_core::PlatformCompletion::ClipboardText(text) => {
+                self.deliver_window_event_now(window, &Event::ClipboardText(text));
+            }
+            fret_core::PlatformCompletion::ExternalDropData(data) => {
+                self.deliver_window_event_now(window, &Event::ExternalDropData(data));
+            }
+            fret_core::PlatformCompletion::FileDialogSelection(selection) => {
+                self.deliver_window_event_now(window, &Event::FileDialogSelection(selection));
+            }
+            fret_core::PlatformCompletion::FileDialogData(data) => {
+                self.deliver_window_event_now(window, &Event::FileDialogData(data));
+            }
+        }
     }
 
     fn external_drag_files(
@@ -1688,6 +1717,52 @@ impl<D: WinitDriver> WinitRunner<D> {
                     }
                     Effect::ExternalDropRelease { token } => {
                         self.external_drop.release(token);
+                    }
+                    Effect::OpenUrl { url } => {
+                        if let Err(err) = self.open_url.open_url(&url) {
+                            tracing::debug!(?err, url = %url, "failed to open url");
+                        }
+                    }
+                    Effect::FileDialogOpen { window, options } => {
+                        match self.file_dialog.open_files(&options) {
+                            Ok(Some(selection)) => {
+                                self.deliver_platform_completion_now(
+                                    window,
+                                    fret_core::PlatformCompletion::FileDialogSelection(selection),
+                                );
+                            }
+                            Ok(None) => {}
+                            Err(err) => {
+                                tracing::debug!(?err, "file dialog open failed");
+                            }
+                        }
+                    }
+                    Effect::FileDialogReadAll { window, token } => {
+                        let limits = fret_platform::external_drop::ExternalDropReadLimits {
+                            max_total_bytes: self.config.external_drop_max_total_bytes,
+                            max_file_bytes: self.config.external_drop_max_file_bytes,
+                            max_files: self.config.external_drop_max_files,
+                        };
+
+                        if let Some(paths) = self.file_dialog.paths(token).map(|p| p.to_vec()) {
+                            if self.spawn_platform_completion_task(window, move || {
+                                let data = WinitFileDialog::read_paths(token, paths, limits);
+                                fret_core::PlatformCompletion::FileDialogData(data)
+                            }) {
+                                continue;
+                            }
+                        }
+
+                        let Some(data) = self.file_dialog.read_all(token, limits) else {
+                            continue;
+                        };
+                        self.deliver_platform_completion_now(
+                            window,
+                            fret_core::PlatformCompletion::FileDialogData(data),
+                        );
+                    }
+                    Effect::FileDialogRelease { token } => {
+                        self.file_dialog.release(token);
                     }
                     Effect::ViewportInput(event) => {
                         self.driver.viewport_input(&mut self.app, event);
@@ -2605,18 +2680,10 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
 
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: RunnerUserEvent) {
         match event {
-            RunnerUserEvent::PlatformCompletion { window, completion } => match completion {
-                fret_core::PlatformCompletion::ClipboardText(text) => {
-                    let event = Event::ClipboardText(text);
-                    self.deliver_window_event_now(window, &event);
-                    self.drain_effects(event_loop);
-                }
-                fret_core::PlatformCompletion::ExternalDropData(data) => {
-                    let event = Event::ExternalDropData(data);
-                    self.deliver_window_event_now(window, &event);
-                    self.drain_effects(event_loop);
-                }
-            },
+            RunnerUserEvent::PlatformCompletion { window, completion } => {
+                self.deliver_platform_completion_now(window, completion);
+                self.drain_effects(event_loop);
+            }
         }
     }
 

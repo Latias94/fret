@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use fret_core::{AppWindowId, CursorIcon, Rect, TimerToken, WindowAnchor};
+use fret_core::{AppWindowId, CursorIcon, FileDialogOptions, FileDialogToken, Rect, TimerToken, WindowAnchor};
 
 use crate::CommandId;
 
@@ -24,6 +24,20 @@ pub enum Effect {
     },
     ExternalDropRelease {
         token: fret_core::ExternalDropToken,
+    },
+    OpenUrl {
+        url: String,
+    },
+    FileDialogOpen {
+        window: AppWindowId,
+        options: FileDialogOptions,
+    },
+    FileDialogReadAll {
+        window: AppWindowId,
+        token: FileDialogToken,
+    },
+    FileDialogRelease {
+        token: FileDialogToken,
     },
     ViewportInput(fret_core::ViewportInputEvent),
     Dock(fret_core::DockOp),
