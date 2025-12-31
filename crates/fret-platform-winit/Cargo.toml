@@ -4,9 +4,11 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+arboard.workspace = true
 accesskit.workspace = true
 accesskit_winit.workspace = true
 fret-core = { path = "../fret-core" }
 fret-a11y-accesskit = { path = "../fret-a11y-accesskit" }
+fret-platform = { path = "../fret-platform" }
 slotmap.workspace = true
 winit.workspace = true

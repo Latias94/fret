@@ -1,4 +1,10 @@
-//! 可移植的平台边界（portable contracts）。
+//! Portable platform contracts.
 //!
-//! 注意：AccessKit 的具体映射实现已迁移到 `fret-a11y-accesskit`，winit 适配器胶水在
-//! `fret-platform-winit`。
+//! This crate is intentionally backend-agnostic (no `winit`, no `wgpu`, no `accesskit`).
+//!
+//! Backend implementations live in crates like:
+//! - `fret-platform-winit` (desktop/winit)
+//! - future: `fret-platform-web` / `fret-platform-ios` / `fret-platform-android`
+
+pub mod clipboard;
+pub mod external_drop;

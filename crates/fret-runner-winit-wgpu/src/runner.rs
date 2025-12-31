@@ -8,11 +8,13 @@ use std::{
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
-    ExternalDropDataEvent, ExternalDropFileData, ExternalDropReadError, ExternalDropToken,
-    InternalDragEvent, InternalDragKind, Modifiers, MouseButton, PlatformCapabilities, Point, Px,
-    Rect, Scene, Size, UiServices, ViewportInputEvent, WindowMetricsService,
+    ExternalDropToken, InternalDragEvent, InternalDragKind, Modifiers, MouseButton,
+    PlatformCapabilities, Point, Px, Rect, Scene, Size, UiServices, ViewportInputEvent,
+    WindowMetricsService,
 };
 use fret_platform_winit::accessibility;
+use fret_platform_winit::clipboard::WinitClipboard;
+use fret_platform_winit::external_drop::WinitExternalDrop;
 use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
 use slotmap::SlotMap;
 use tracing::error;
@@ -28,6 +30,8 @@ use winit::{
 };
 
 use crate::error::RunnerError;
+use fret_platform::clipboard::Clipboard as _;
+use fret_platform::external_drop::ExternalDropProvider as _;
 
 type WindowAnchor = fret_core::WindowAnchor;
 
@@ -801,13 +805,12 @@ pub struct WinitRunner<D: WinitDriver> {
 
     raf_windows: HashSet<fret_core::AppWindowId>,
     timers: HashMap<fret_core::TimerToken, TimerEntry>,
-    clipboard: Option<arboard::Clipboard>,
+    clipboard: WinitClipboard,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
     internal_drag_hover_window: Option<fret_core::AppWindowId>,
     internal_drag_hover_pos: Option<Point>,
 
-    external_drop_next_token: u64,
-    external_drop_payloads: HashMap<ExternalDropToken, Vec<std::path::PathBuf>>,
+    external_drop: WinitExternalDrop,
 }
 
 #[derive(Debug, Clone)]
@@ -1084,19 +1087,12 @@ impl<D: WinitDriver> WinitRunner<D> {
             frame_id: fret_core::FrameId::default(),
             raf_windows: HashSet::new(),
             timers: HashMap::new(),
-            clipboard: arboard::Clipboard::new().ok(),
+            clipboard: WinitClipboard::default(),
             cursor_screen_pos: None,
             internal_drag_hover_window: None,
             internal_drag_hover_pos: None,
-            external_drop_next_token: 1,
-            external_drop_payloads: HashMap::new(),
+            external_drop: WinitExternalDrop::default(),
         }
-    }
-
-    fn allocate_external_drop_token(&mut self) -> ExternalDropToken {
-        let token = ExternalDropToken(self.external_drop_next_token);
-        self.external_drop_next_token = self.external_drop_next_token.saturating_add(1);
-        token
     }
 
     fn external_drag_files(
@@ -1616,16 +1612,12 @@ impl<D: WinitDriver> WinitRunner<D> {
                         }
                     },
                     Effect::ClipboardSetText { text } => {
-                        let Some(clipboard) = self.clipboard.as_mut() else {
-                            continue;
-                        };
-                        if let Err(err) = clipboard.set_text(text) {
+                        if let Err(err) = self.clipboard.set_text(&text) {
                             tracing::debug!(?err, "failed to set clipboard text");
                         }
                     }
                     Effect::ClipboardGetText { window } => {
-                        let Some(text) = self.clipboard.as_mut().and_then(|cb| cb.get_text().ok())
-                        else {
+                        let Ok(Some(text)) = self.clipboard.get_text() else {
                             continue;
                         };
                         if let Some(state) = self.windows.get_mut(window) {
@@ -1641,70 +1633,16 @@ impl<D: WinitDriver> WinitRunner<D> {
                         }
                     }
                     Effect::ExternalDropReadAll { window, token } => {
-                        let Some(paths) = self.external_drop_payloads.get(&token).cloned() else {
+                        let Some(event) = self.external_drop.read_all(
+                            token,
+                            fret_platform::external_drop::ExternalDropReadLimits {
+                                max_total_bytes: self.config.external_drop_max_total_bytes,
+                                max_file_bytes: self.config.external_drop_max_file_bytes,
+                                max_files: self.config.external_drop_max_files,
+                            },
+                        ) else {
                             continue;
                         };
-
-                        let mut files: Vec<ExternalDropFileData> = Vec::new();
-                        let mut errors: Vec<ExternalDropReadError> = Vec::new();
-                        let mut total: u64 = 0;
-
-                        for path in paths.into_iter().take(self.config.external_drop_max_files) {
-                            let name = path
-                                .file_name()
-                                .map(|n| n.to_string_lossy().to_string())
-                                .unwrap_or_else(|| path.to_string_lossy().to_string());
-
-                            let meta_len = match std::fs::metadata(&path) {
-                                Ok(m) => Some(m.len()),
-                                Err(err) => {
-                                    errors.push(ExternalDropReadError {
-                                        name,
-                                        message: format!("metadata failed: {err}"),
-                                    });
-                                    continue;
-                                }
-                            };
-
-                            if let Some(len) = meta_len {
-                                if len > self.config.external_drop_max_file_bytes {
-                                    errors.push(ExternalDropReadError {
-                                        name,
-                                        message: format!(
-                                            "file too large ({} bytes > max {})",
-                                            len, self.config.external_drop_max_file_bytes
-                                        ),
-                                    });
-                                    continue;
-                                }
-                                if total.saturating_add(len)
-                                    > self.config.external_drop_max_total_bytes
-                                {
-                                    errors.push(ExternalDropReadError {
-                                        name,
-                                        message: format!(
-                                            "total size limit exceeded (max {} bytes)",
-                                            self.config.external_drop_max_total_bytes
-                                        ),
-                                    });
-                                    break;
-                                }
-                            }
-
-                            let bytes = match std::fs::read(&path) {
-                                Ok(bytes) => bytes,
-                                Err(err) => {
-                                    errors.push(ExternalDropReadError {
-                                        name,
-                                        message: format!("read failed: {err}"),
-                                    });
-                                    continue;
-                                }
-                            };
-
-                            total = total.saturating_add(bytes.len() as u64);
-                            files.push(ExternalDropFileData { name, bytes });
-                        }
 
                         if let Some(state) = self.windows.get_mut(window) {
                             let services =
@@ -1714,16 +1652,12 @@ impl<D: WinitDriver> WinitRunner<D> {
                                 services,
                                 window,
                                 &mut state.user,
-                                &Event::ExternalDropData(ExternalDropDataEvent {
-                                    token,
-                                    files,
-                                    errors,
-                                }),
+                                &Event::ExternalDropData(event),
                             );
                         }
                     }
                     Effect::ExternalDropRelease { token } => {
-                        self.external_drop_payloads.remove(&token);
+                        self.external_drop.release(token);
                     }
                     Effect::ViewportInput(event) => {
                         self.driver.viewport_input(&mut self.app, event);
@@ -2812,7 +2746,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     .windows
                     .get(app_window)
                     .and_then(|s| s.external_drag_token);
-                let token = existing.unwrap_or_else(|| self.allocate_external_drop_token());
+                let token = existing.unwrap_or_else(|| self.external_drop.allocate_token());
 
                 let (position, kind, files) = {
                     let Some(state) = self.windows.get_mut(app_window) else {
@@ -2833,7 +2767,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     (position, kind, files)
                 };
 
-                self.external_drop_payloads.insert(token, files);
+                self.external_drop.set_payload_paths(token, files);
 
                 if let Some(state) = self.windows.get_mut(app_window) {
                     let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
@@ -2853,7 +2787,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     .windows
                     .get(app_window)
                     .and_then(|s| s.external_drag_token);
-                let token = existing.unwrap_or_else(|| self.allocate_external_drop_token());
+                let token = existing.unwrap_or_else(|| self.external_drop.allocate_token());
 
                 let (position, kind, files) = {
                     let Some(state) = self.windows.get_mut(app_window) else {
@@ -2874,7 +2808,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     (position, kind, files)
                 };
 
-                self.external_drop_payloads.insert(token, files);
+                self.external_drop.set_payload_paths(token, files);
 
                 if let Some(state) = self.windows.get_mut(app_window) {
                     let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
@@ -2902,7 +2836,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 };
 
                 if let Some(token) = token {
-                    self.external_drop_payloads.remove(&token);
+                    self.external_drop.release(token);
                 }
 
                 if let Some(state) = self.windows.get_mut(app_window) {
@@ -2984,13 +2918,8 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                 let _ = self.update_dock_tearoff_follow();
 
                 if let Some(token) = external_drag_token {
-                    let paths = self
-                        .external_drop_payloads
-                        .get(&token)
-                        .cloned()
-                        .unwrap_or_default();
-                    let kind =
-                        ExternalDragKind::OverFiles(Self::external_drag_files(token, &paths));
+                    let paths = self.external_drop.paths(token).unwrap_or(&[]);
+                    let kind = ExternalDragKind::OverFiles(Self::external_drag_files(token, paths));
                     if let Some(state) = self.windows.get_mut(app_window) {
                         let services =
                             Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
