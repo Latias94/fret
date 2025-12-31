@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
 use fret_components_ui::window_overlays;
 use fret_components_ui::{MetricRef, Space};
 use fret_core::{Edges, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::{CommandId, Model};
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
@@ -145,10 +145,8 @@ impl DropdownMenu {
         entries: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<DropdownMenuEntry>,
     ) -> AnyElement {
         cx.scope(|cx| {
-            cx.observe_model(&self.open, Invalidation::Paint);
-
             let theme = Theme::global(&*cx.app).clone();
-            let is_open = cx.app.models().get_copied(&self.open).unwrap_or(false);
+            let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
 
             let trigger = trigger(cx);
             let trigger_id = trigger.id;

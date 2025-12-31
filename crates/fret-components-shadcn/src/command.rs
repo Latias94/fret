@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::cmdk_selection;
 use fret_components_ui::headless::roving_focus;
@@ -16,7 +17,6 @@ use fret_core::{
     TextWrap,
 };
 use fret_runtime::{CommandId, Model};
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, RowProps, TextProps,
@@ -171,7 +171,7 @@ impl CommandInput {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
-            cx.observe_model(&self.model, Invalidation::Paint);
+            cx.watch_model(&self.model).observe();
 
             let border = border(&theme);
             let disabled = self.disabled;
@@ -621,8 +621,6 @@ impl CommandPalette {
                 active
             };
 
-            cx.observe_model(&active, Invalidation::Paint);
-
             let items_changed = cx.with_state(CommandPaletteState::default, |st| {
                 if st.items_fingerprint != items_fingerprint {
                     st.items_fingerprint = items_fingerprint;
@@ -632,7 +630,7 @@ impl CommandPalette {
                 }
             });
 
-            let cur_active = cx.app.models().get_copied(&active).unwrap_or(None);
+            let cur_active = cx.watch_model(&active).copied().unwrap_or(None);
             let next_active = if items_changed {
                 cmdk_selection::clamp_active_index(&disabled_flags, None)
             } else {
@@ -667,7 +665,7 @@ impl CommandPalette {
 
             let mut key_counts: HashMap<RowKey, u32> = HashMap::new();
 
-            let active_idx = cx.app.models().get_copied(&active).unwrap_or(None);
+            let active_idx = cx.watch_model(&active).copied().unwrap_or(None);
             let item_count = items.len();
             let rows: Vec<AnyElement> = items
                 .into_iter()
@@ -1163,7 +1161,7 @@ mod tests {
         model: Model<String>,
         items: Vec<CommandItem>,
     ) -> fret_core::NodeId {
-        let next_frame = fret_core::FrameId(app.frame_id().0.saturating_add(1));
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
 
         fret_components_ui::window_overlays::begin_frame(app, window);

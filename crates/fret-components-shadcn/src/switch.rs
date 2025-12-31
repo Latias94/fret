@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 use fret_core::{Color, Corners, Edges, Px};
 use fret_runtime::{CommandId, Model};
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableA11y,
     PressableProps, SizeStyle,
@@ -108,10 +108,9 @@ impl Switch {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let model = self.model;
-            cx.observe_model(&model, Invalidation::Paint);
 
             let theme = Theme::global(&*cx.app).clone();
-            let on = cx.app.models().get_copied(&model).unwrap_or(false);
+            let on = cx.watch_model(&model).copied().unwrap_or(false);
 
             let w = switch_track_w(&theme);
             let h = switch_track_h(&theme);
@@ -152,7 +151,7 @@ impl Switch {
                     cx.pressable_toggle_bool(&model);
 
                     let theme = Theme::global(&*cx.app).clone();
-                    let on = cx.app.models().get_copied(&model).unwrap_or(false);
+                    let on = cx.watch_model(&model).copied().unwrap_or(false);
 
                     let mut bg = if on {
                         switch_bg_on(&theme)

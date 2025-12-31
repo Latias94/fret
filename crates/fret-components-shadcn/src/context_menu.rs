@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
 use fret_components_ui::window_overlays;
@@ -17,7 +18,7 @@ use fret_ui::element::{
     RovingFlexProps, RovingFocusProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
-use fret_ui::{ElementCx, Invalidation, Theme, UiHost};
+use fret_ui::{ElementCx, Theme, UiHost};
 
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
 
@@ -137,10 +138,8 @@ impl ContextMenu {
         entries: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<ContextMenuEntry>,
     ) -> AnyElement {
         cx.scope(|cx| {
-            cx.observe_model(&self.open, Invalidation::Paint);
-
             let theme = Theme::global(&*cx.app).clone();
-            let is_open = cx.app.models().get_copied(&self.open).unwrap_or(false);
+            let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
 
             let id = cx.root_id();
             let trigger = trigger(cx);
@@ -467,10 +466,11 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, FrameId, PathCommand, PathConstraints, PathId, PathMetrics};
+    use fret_core::{AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics};
     use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_core::{TextStyle, UiServices};
+    use fret_runtime::FrameId;
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]

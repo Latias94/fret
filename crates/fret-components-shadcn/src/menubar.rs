@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::overlay;
@@ -11,7 +12,6 @@ use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::{CommandId, Model};
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
@@ -249,9 +249,6 @@ impl MenubarMenu {
                 open
             };
 
-            cx.observe_model(&group_active, Invalidation::Paint);
-            cx.observe_model(&open, Invalidation::Paint);
-
             let theme = Theme::global(&*cx.app).clone();
             let enabled = !self.disabled;
 
@@ -281,8 +278,8 @@ impl MenubarMenu {
                 trigger_layout.size.height = Length::Auto;
                 trigger_layout.size.width = Length::Auto;
 
-                let active_value = cx.app.models().get_cloned(&group_active).flatten();
-                let is_open = cx.app.models().get_copied(&open).unwrap_or(false);
+                let active_value = cx.watch_model(&group_active).cloned().flatten();
+                let is_open = cx.watch_model(&open).copied().unwrap_or(false);
 
                 if active_value
                     .as_ref()
@@ -310,7 +307,7 @@ impl MenubarMenu {
                     });
                 }
 
-                let active_value = cx.app.models().get_cloned(&group_active).flatten();
+                let active_value = cx.watch_model(&group_active).cloned().flatten();
                 if enabled
                     && st.hovered
                     && !st.pressed
@@ -357,7 +354,7 @@ impl MenubarMenu {
                     }
                 }));
 
-                let is_open = cx.app.models().get_copied(&open).unwrap_or(false);
+                let is_open = cx.watch_model(&open).copied().unwrap_or(false);
                 let trigger_bg = if is_open {
                     Some(bg_open)
                 } else if st.hovered || st.pressed {
@@ -702,11 +699,12 @@ mod tests {
     use fret_app::App;
     use fret_components_ui::window_overlays;
     use fret_core::{
-        AppWindowId, FrameId, Modifiers, MouseButton, MouseButtons, Point, Rect, TextBlobId,
+        AppWindowId, Modifiers, MouseButton, MouseButtons, Point, Rect, TextBlobId,
         TextConstraints, TextMetrics, TextService,
     };
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_runtime::FrameId;
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]

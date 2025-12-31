@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::presence;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::window_overlays;
@@ -9,7 +10,6 @@ use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
     PositionStyle, PressableProps, SemanticsProps, SizeStyle, TextProps,
@@ -85,10 +85,8 @@ impl Dialog {
         content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            cx.observe_model(&self.open, Invalidation::Paint);
-
             let theme = Theme::global(&*cx.app).clone();
-            let is_open = cx.app.models().get_copied(&self.open).unwrap_or(false);
+            let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
 
             let trigger = trigger(cx);
             let id = trigger.id;

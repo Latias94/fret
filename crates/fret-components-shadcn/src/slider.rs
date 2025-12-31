@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use fret_components_ui::LayoutRefinement;
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::LayoutRefinement;
 use fret_core::{Color, Corners, CursorIcon, Edges, MouseButton, Px, Rect, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiPointerActionHost};
@@ -589,9 +589,11 @@ mod tests {
             bounds,
             "shadcn-slider-updates-model-on-pointer-down",
             |cx| {
-                vec![Slider::new(model.clone())
-                    .range(0.0, 100.0)
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);

@@ -4,6 +4,7 @@ use fret_components_icons::ids;
 use fret_components_ui::declarative::action_hooks::ActionHooksExt;
 use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_components_ui::declarative::icon as decl_icon;
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::scroll as decl_scroll;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
@@ -15,7 +16,6 @@ use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
@@ -157,12 +157,9 @@ pub fn combobox<H: UiHost>(
     search_enabled: bool,
 ) -> AnyElement {
     cx.scope(|cx| {
-        cx.observe_model(&model, Invalidation::Paint);
-        cx.observe_model(&open, Invalidation::Paint);
-
         let theme = Theme::global(&*cx.app).clone();
-        let selected = cx.app.models().get_cloned(&model).unwrap_or_default();
-        let is_open = cx.app.models().get_copied(&open).unwrap_or(false);
+        let selected = cx.watch_model(&model).cloned().unwrap_or_default();
+        let is_open = cx.watch_model(&open).copied().unwrap_or(false);
 
         let query_model = if let Some(q) = query {
             cx.with_state(ComboboxState::default, |st| st.query = Some(q.clone()));
@@ -271,9 +268,9 @@ pub fn combobox<H: UiHost>(
                     .unwrap_or(Px(32.0));
 
                 let query = cx
-                    .app
-                    .models()
-                    .read(&query_model, |s| s.trim().to_ascii_lowercase())
+                    .watch_model(&query_model)
+                    .layout()
+                    .read_ref(|s| s.trim().to_ascii_lowercase())
                     .unwrap_or_default();
 
                 let filtered: Vec<ComboboxItem> = items
@@ -313,13 +310,11 @@ pub fn combobox<H: UiHost>(
                 );
 
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                    cx.observe_model(&query_model, Invalidation::Paint);
-                    cx.observe_model(&model, Invalidation::Paint);
+                    let selected = cx.watch_model(&model).cloned().unwrap_or_default();
 
                     let query = cx
-                        .app
-                        .models()
-                        .read(&query_model, |s| s.trim().to_ascii_lowercase())
+                        .watch_model(&query_model)
+                        .read_ref(|s| s.trim().to_ascii_lowercase())
                         .unwrap_or_default();
 
                     let filtered: Vec<ComboboxItem> = items

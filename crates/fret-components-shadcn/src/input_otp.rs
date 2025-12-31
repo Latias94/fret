@@ -1,6 +1,6 @@
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::recipes::input::{resolve_input_chrome, InputTokenKeys};
+use fret_components_ui::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_components_ui::{
     ChromeRefinement, LayoutRefinement, MetricRef, Size as ComponentSize, Space,
 };

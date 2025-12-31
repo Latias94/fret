@@ -4,9 +4,9 @@ use std::sync::Arc;
 
 use fret_components_ui::LayoutRefinement;
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_core::SemanticsRole;
 use fret_runtime::Model;
-use fret_ui::Invalidation;
 use fret_ui::element::{AnyElement, PressableA11y, PressableProps, SemanticsProps, StackProps};
 use fret_ui::{ElementCx, UiHost};
 
@@ -53,8 +53,11 @@ impl Collapsible {
         content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            cx.observe_model(&self.open, Invalidation::Layout);
-            let is_open = cx.app.models().get_copied(&self.open).unwrap_or(false);
+            let is_open = cx
+                .watch_model(&self.open)
+                .layout()
+                .copied()
+                .unwrap_or(false);
 
             let trigger = trigger(cx, is_open);
             let content = is_open.then(|| content(cx));

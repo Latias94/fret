@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::presence;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
@@ -7,7 +8,6 @@ use fret_components_ui::window_overlays;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_core::{FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
     PositionStyle, SemanticsProps, SizeStyle, TextProps,
@@ -115,10 +115,8 @@ impl Popover {
         content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            cx.observe_model(&self.open, Invalidation::Paint);
-
             let theme = Theme::global(&*cx.app).clone();
-            let is_open = cx.app.models().get_copied(&self.open).unwrap_or(false);
+            let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
 
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
@@ -407,13 +405,12 @@ mod tests {
 
     use fret_app::App;
     use fret_components_ui::declarative::action_hooks::ActionHooksExt;
-    use fret_core::{
-        AppWindowId, FrameId, PathCommand, Point, Rect, Size as CoreSize, SvgId, SvgService,
-    };
+    use fret_core::{AppWindowId, PathCommand, Point, Rect, Size as CoreSize, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{
         Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
+    use fret_runtime::FrameId;
     use fret_ui::UiTree;
     use fret_ui::element::PressableProps;
 

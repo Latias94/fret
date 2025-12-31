@@ -4,6 +4,7 @@ use fret_components_icons::ids;
 use fret_components_ui::declarative::action_hooks::ActionHooksExt;
 use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_components_ui::declarative::icon as decl_icon;
+use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::scroll as decl_scroll;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
@@ -15,7 +16,6 @@ use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
@@ -121,12 +121,9 @@ pub fn select<H: UiHost>(
     a11y_label: Option<Arc<str>>,
 ) -> AnyElement {
     cx.scope(|cx| {
-        cx.observe_model(&model, Invalidation::Paint);
-        cx.observe_model(&open, Invalidation::Paint);
-
         let theme = Theme::global(&*cx.app).clone();
-        let selected = cx.app.models().get_cloned(&model).unwrap_or_default();
-        let is_open = cx.app.models().get_copied(&open).unwrap_or(false);
+        let selected = cx.watch_model(&model).cloned().unwrap_or_default();
+        let is_open = cx.watch_model(&open).copied().unwrap_or(false);
 
         let resolved = resolve_input_chrome(
             &theme,
@@ -224,7 +221,7 @@ pub fn select<H: UiHost>(
                     );
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                        let selected = cx.app.models().get_cloned(&model).unwrap_or_default();
+                        let selected = cx.watch_model(&model).cloned().unwrap_or_default();
 
                         let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
                         let labels: Vec<Arc<str>> = items.iter().map(|i| i.label.clone()).collect();
@@ -469,10 +466,11 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, FrameId, PathCommand, PathConstraints, PathId, PathMetrics};
+    use fret_core::{AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics};
     use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_core::{TextStyle, UiServices};
+    use fret_runtime::FrameId;
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
