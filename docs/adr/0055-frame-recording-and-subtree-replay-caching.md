@@ -4,7 +4,7 @@ Status: Accepted
 
 Implementation status:
 
-- Implemented (P0): paint-stream range replay in `crates/fret-ui/src/tree.rs` (per-window `UiTree`).
+- Implemented (P0): paint-stream range replay in `crates/fret-ui/src/tree/mod.rs` (per-window `UiTree`).
 - Cache key: `bounds.size`, `scale_factor`, `theme_revision` (locked P0 fields; origin differences are handled via replay-time translation).
 - Observations: paint-time model observations are reused on cache hit by retaining the previous `ObservationIndex` entries.
 - Observability: per-window hit/miss/op counters are exposed via `UiDebugFrameStats` and shown in the demo HUD.

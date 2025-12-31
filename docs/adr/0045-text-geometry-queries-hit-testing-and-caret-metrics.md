@@ -103,6 +103,6 @@ Notes:
   - `crates/fret-render/src/text.rs`
   - `crates/fret-render/src/renderer.rs`
 - TextInput uses caret-stop tables for event hit-testing and uses `caret_x` for painting/cursor area:
-  - `crates/fret-ui/src/text_input.rs`
+  - `crates/fret-ui/src/text_input/mod.rs`
 - Multiline text input experiments (wrapping/scrolling + geometry queries):
-  - `crates/fret-ui/src/text_area.rs`
+  - `crates/fret-ui/src/text_area/mod.rs`

@@ -217,7 +217,7 @@ P1 (implemented):
 - global changes are drained once per tick by the driver/runner and broadcast to all active windows,
 - observing nodes are invalidated based on the current frame's global observation graph.
 
-See also: `crates/fret-ui/src/tree.rs` tests for multi-window invalidation coverage.
+See also: `crates/fret-ui/src/tree/tests/` for multi-window invalidation coverage.
 
 ## Open Questions
 

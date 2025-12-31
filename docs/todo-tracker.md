@@ -17,8 +17,8 @@ It complements (but does not replace) ADRs:
 - **Preedit-first key arbitration end-to-end (runner + routing)**
   - Problem: composing IME sessions must not lose `Tab/Space/Enter/NumpadEnter/Escape/Arrows/Backspace/...` to focus traversal or global shortcuts.
   - ADRs: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`
-  - Code: `crates/fret-runner-winit-wgpu/src/runner.rs`, `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/text_input.rs`, `crates/fret-ui/src/text_area.rs`
-  - Current: `crates/fret-ui/src/tree.rs` defers shortcut matching for reserved keys and only falls back if the widget does not `stop_propagation`. `crates/fret-ui/src/text_input.rs` and `crates/fret-ui/src/text_area.rs` stop propagation for these keys while IME is composing (treat “composing” as `preedit` non-empty **or** preedit cursor metadata present).
+  - Code: `crates/fret-runner-winit-wgpu/src/runner.rs`, `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/text_input/mod.rs`, `crates/fret-ui/src/text_area/mod.rs`
+  - Current: `crates/fret-ui/src/tree/mod.rs` defers shortcut matching for reserved keys and only falls back if the widget does not `stop_propagation`. `crates/fret-ui/src/text_input/mod.rs` and `crates/fret-ui/src/text_area/mod.rs` stop propagation for these keys while IME is composing (treat “composing” as `preedit` non-empty **or** preedit cursor metadata present).
   - Current: regression tests exist for:
     - composing: reserved keys suppress traversal/shortcuts (`tab_focus_next_is_suppressed_during_ime_composition`, `reserved_shortcuts_are_suppressed_during_ime_composition`);
     - not composing: `Tab` focus traversal works (`tab_focus_next_runs_when_text_input_not_composing`).
@@ -26,13 +26,13 @@ It complements (but does not replace) ADRs:
 - **Define and validate blur/disable semantics for IME enablement**
   - Problem: ensure loss of focus reliably disables IME where appropriate, and avoid per-widget effect spam.
   - ADRs: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0020-focus-and-command-routing.md`
-  - Code: `crates/fret-ui/src/tree.rs`
+  - Code: `crates/fret-ui/src/tree/mod.rs`
   - Current: `UiTree` owns `Effect::ImeAllow` and updates it on focus changes and at paint time; widgets only emit `Effect::ImeSetCursorArea` when the caret rect changes.
 
 - **Multiline IME contract + conformance harness**
   - Goal: lock and validate multiline selection/composition/caret-rect behavior (scroll/wrap/DPI/preedit updates).
   - ADRs: `docs/adr/0071-text-input-multiline-composition-contract.md`, `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
-  - Code: `crates/fret-ui/src/text_area.rs`, `crates/fret-render/src/text.rs`
+  - Code: `crates/fret-ui/src/text_area/mod.rs`, `crates/fret-render/src/text.rs`
 
 ## P0 — Fonts / Fallbacks / Missing Glyphs
 
@@ -73,7 +73,7 @@ It complements (but does not replace) ADRs:
 - **Adopt the continuous frames lease contract across high-frequency subsystems**
   - Goal: use RAII `begin_continuous_frames` leases (ADR 0034) for viewport rendering, drags, and animations, and avoid ad-hoc RAF loops.
   - ADRs: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`
-  - Code: `crates/fret-ui/src/elements.rs`, `crates/fret-runner-winit-wgpu/src/runner.rs`
+  - Code: `crates/fret-ui/src/elements/mod.rs`, `crates/fret-runner-winit-wgpu/src/runner.rs`
 
 - **Investigate "doesn't draw until hover" initial render regressions**
   - Symptom: some demo surfaces appear blank on startup and only render after pointer movement/hover.
@@ -86,7 +86,7 @@ It complements (but does not replace) ADRs:
 - **Define minimum semantics for text fields (value/selection/composition)**
   - Goal: Narrator/AccessKit correctness for text editing and IME interaction.
   - ADRs: `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`, `docs/adr/0071-text-input-multiline-composition-contract.md`
-  - Code: `crates/fret-ui/src/tree.rs`, `crates/fret-a11y-accesskit/src/lib.rs`, `crates/fret-platform-winit/src/accessibility.rs`
+  - Code: `crates/fret-ui/src/tree/mod.rs`, `crates/fret-a11y-accesskit/src/lib.rs`, `crates/fret-platform-winit/src/accessibility.rs`
 
 - **Viewport semantics contract**
   - Goal: decide viewport role/actions (focus, scroll, basic labeling) and validate reachability under modal barriers.

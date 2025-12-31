@@ -1228,8 +1228,8 @@ References:
 - Command registry + effects: `crates/fret-app/src/app.rs`
 - Keymap + `when`: `crates/fret-app/src/keymap.rs`, `crates/fret-app/src/when_expr.rs`
 - Command palette demo widget: `crates/fret-demo/src/command_palette.rs`
-- Focus + routing: `crates/fret-ui/src/tree.rs`
-- Overlay/multi-root: `crates/fret-ui/src/tree.rs`, `docs/adr/0011-overlays-and-multi-root.md`
+- Focus + routing: `crates/fret-ui/src/tree/mod.rs`
+- Overlay/multi-root: `crates/fret-ui/src/tree/mod.rs`, `docs/adr/0011-overlays-and-multi-root.md`
 - Context menu: `crates/fret-components-ui/src/context_menu.rs`
 - Virtualized lists: `crates/fret-ui/src/primitives/virtual_list.rs`, `crates/fret-ui/src/legacy_widgets/tree_view.rs`
 - Editor shell wiring: `crates/fret-demo/src/editor_shell.rs`

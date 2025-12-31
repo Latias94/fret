@@ -20,14 +20,14 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 
 ### Event routing, focus, capture, and semantics
 
-- **Module(s):** `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/widget.rs`, `crates/fret-ui/src/focus_visible.rs`
+- **Module(s):** `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/widget.rs`, `crates/fret-ui/src/focus_visible.rs`
 - **ADR(s):** `docs/adr/0068-focus-traversal-and-focus-scopes.md`
 - **Reference(s):**
   - WAI-ARIA Authoring Practices (APG): focus/keyboard interaction outcomes (policy lives in components)
 
 ### Overlay/layer substrate + modal barrier
 
-- **Module(s):** `crates/fret-ui/src/tree.rs`
+- **Module(s):** `crates/fret-ui/src/tree/mod.rs`
 - **ADR(s):**
   - `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
   - `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
@@ -42,9 +42,9 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 - **Reference(s):**
   - Floating UI: `repo-ref/floating-ui` (contract vocabulary; not a DOM implementation target)
 - **Related contract(s):**
-  - Cross-frame anchor geometry for declarative elements: `crates/fret-ui/src/elements.rs` (`bounds_for_element`, `root_bounds_for_element`)
-  - RenderTransform-aware anchoring: `docs/adr/0083-render-transform-hit-testing.md` + `crates/fret-ui/src/elements.rs` (`visual_bounds_for_element`, `last_visual_bounds_for_element`)
-  - Stable overlay owner identity for declarative triggers: `crates/fret-ui/src/elements.rs` (`GlobalElementId`), consumed via `crates/fret-components-ui` (`OverlayOwnerId`)
+  - Cross-frame anchor geometry for declarative elements: `crates/fret-ui/src/elements/mod.rs` (`bounds_for_element`, `root_bounds_for_element`)
+  - RenderTransform-aware anchoring: `docs/adr/0083-render-transform-hit-testing.md` + `crates/fret-ui/src/elements/mod.rs` (`visual_bounds_for_element`, `last_visual_bounds_for_element`)
+  - Stable overlay owner identity for declarative triggers: `crates/fret-ui/src/elements/mod.rs` (`GlobalElementId`), consumed via `crates/fret-components-ui` (`OverlayOwnerId`)
 
 ### Declarative layout vocabulary (Tailwind/CSS semantics)
 
@@ -61,7 +61,7 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 - **Module(s):**
   - `crates/fret-runtime/src/effect.rs`
   - `crates/fret-runner-winit-wgpu/src/runner.rs`
-  - `crates/fret-ui/src/elements.rs`
+  - `crates/fret-ui/src/elements/mod.rs`
 - **ADR(s):** `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
 - **Reference(s):**
   - GPUI/Zed `Window::refresh()` mental model: `repo-ref/zed/crates/gpui/src/window.rs`
@@ -83,7 +83,7 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 
 - **Module(s):**
   - `crates/fret-ui/src/paint.rs`
-  - `crates/fret-ui/src/tree.rs` (paint cache + deterministic replay)
+  - `crates/fret-ui/src/tree/mod.rs` (paint cache + deterministic replay)
 - **ADR(s):**
   - `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
   - `docs/adr/0060-shadows-and-elevation.md`
@@ -99,8 +99,8 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 ### Text input engine (IME/caret/selection; hard semantics)
 
 - **Module(s):**
-  - `crates/fret-ui/src/text_input.rs`
-  - `crates/fret-ui/src/text_area.rs`
+  - `crates/fret-ui/src/text_input/mod.rs`
+  - `crates/fret-ui/src/text_area/mod.rs`
 - **ADR(s):**
   - `docs/adr/0044-text-editing-state-and-commands.md`
   - `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`

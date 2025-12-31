@@ -163,23 +163,23 @@ Each section below answers:
 
 **Code entry points**
 
-- `crates/fret-ui/src/tree.rs` (routing + focus/capture + layers + paint cache)
-- `crates/fret-ui/src/elements.rs`, `crates/fret-ui/src/declarative.rs`
+- `crates/fret-ui/src/tree/mod.rs` (routing + focus/capture + layers + paint cache)
+- `crates/fret-ui/src/elements/mod.rs`, `crates/fret-ui/src/declarative.rs`
 - `crates/fret-ui/src/action.rs` (action hook substrate)
 - `crates/fret-ui/src/overlay_placement.rs`
 - `crates/fret-ui/src/scroll.rs`, `crates/fret-ui/src/virtual_list.rs`
-- `crates/fret-ui/src/text_input.rs`, `crates/fret-ui/src/text_area.rs`
+- `crates/fret-ui/src/text_input/mod.rs`, `crates/fret-ui/src/text_area/mod.rs`
 
 **Validation anchors**
 
-- Runtime conformance suite: `cargo nextest run -p fret-ui` (most tests live in `crates/fret-ui/src/tree.rs`)
+- Runtime conformance suite: `cargo nextest run -p fret-ui` (most tests live in `crates/fret-ui/src/tree/tests/`)
 - RenderTransform closure (hit testing + event coordinates + visual bounds):
-  - `crates/fret-ui/src/tree.rs` (`render_transform_affects_hit_testing_and_pointer_event_coordinates`)
-  - `crates/fret-ui/src/tree.rs` (`nested_render_transforms_compose_for_pointer_event_coordinates`)
-  - `crates/fret-ui/src/tree.rs` (`hit_test_respects_rounded_overflow_clip_under_render_transform`)
-  - `crates/fret-ui/src/tree.rs` (`overlay_render_transform_affects_hit_testing_and_event_coordinates`)
-  - `crates/fret-ui/src/tree.rs` (`visual_bounds_for_element_includes_ancestor_render_transform`)
-  - `crates/fret-ui/src/tree.rs` (`non_invertible_render_transform_is_ignored_for_paint_and_visual_bounds`)
+  - `crates/fret-ui/src/tree/tests/` (`render_transform_affects_hit_testing_and_pointer_event_coordinates`)
+  - `crates/fret-ui/src/tree/tests/` (`nested_render_transforms_compose_for_pointer_event_coordinates`)
+  - `crates/fret-ui/src/tree/tests/` (`hit_test_respects_rounded_overflow_clip_under_render_transform`)
+  - `crates/fret-ui/src/tree/tests/` (`overlay_render_transform_affects_hit_testing_and_event_coordinates`)
+  - `crates/fret-ui/src/tree/tests/` (`visual_bounds_for_element_includes_ancestor_render_transform`)
+  - `crates/fret-ui/src/tree/tests/` (`non_invertible_render_transform_is_ignored_for_paint_and_visual_bounds`)
 - Anchored placement solver invariants:
   - `crates/fret-ui/src/overlay_placement.rs` (`keeps_bottom_when_it_fits`)
   - `crates/fret-ui/src/overlay_placement.rs` (`flips_from_bottom_to_top_when_bottom_overflows`)
@@ -197,16 +197,16 @@ flowchart LR
   Semantics --> PlatformA11y[fret-platform-winit (AccessKit bridge)]
 ```
 
-- **Event routing + capture + focus**: ADR 0005 / 0020 / 0068; code: `crates/fret-ui/src/tree.rs`
-- **Overlays + barriers + outside press**: ADR 0011 / 0067 / 0069; code: `crates/fret-ui/src/tree.rs`; policy: `crates/fret-components-ui/src/window_overlays/*`
+- **Event routing + capture + focus**: ADR 0005 / 0020 / 0068; code: `crates/fret-ui/src/tree/mod.rs`
+- **Overlays + barriers + outside press**: ADR 0011 / 0067 / 0069; code: `crates/fret-ui/src/tree/mod.rs`; policy: `crates/fret-components-ui/src/window_overlays/*`
 - **Anchored overlays (placement)**: ADR 0064; code: `crates/fret-ui/src/overlay_placement.rs`; reference: `repo-ref/floating-ui`
-- **RenderTransform + anchor geometry**: ADR 0083; code: `crates/fret-ui/src/tree.rs` (hit-test mapping + `visual_bounds_for_element` recording) + `crates/fret-ui/src/elements.rs` (cross-frame geometry queries)
+- **RenderTransform + anchor geometry**: ADR 0083; code: `crates/fret-ui/src/tree/mod.rs` (hit-test mapping + `visual_bounds_for_element` recording) + `crates/fret-ui/src/elements/mod.rs` (cross-frame geometry queries)
 - **Layout**: ADR 0035 / 0057 / 0062 / 0076; code: `crates/fret-ui/src/declarative.rs`, `crates/fret-ui/src/element.rs`
 - **Painting + clip/transform semantics**: ADR 0002 / 0019 / 0063 / 0078 / 0082; code: `crates/fret-ui/src/paint.rs` + declarative paint emission
-- **Performance primitives**: ADR 0051 / 0055 / 0034; code: `crates/fret-ui/src/tree.rs`, `crates/fret-ui/src/elements.rs`
+- **Performance primitives**: ADR 0051 / 0055 / 0034; code: `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/elements/mod.rs`
 - **Scrolling + virtualization**: ADR 0042 / 0047 / 0070; code: `crates/fret-ui/src/scroll.rs`, `crates/fret-ui/src/virtual_list.rs`
-- **Text input + IME**: ADR 0012 / 0043 / 0044 / 0045 / 0046 / 0071; code: `crates/fret-ui/src/text_input.rs`, `crates/fret-ui/src/text_area.rs`
-- **A11y / AT surface (semantics)**: ADR 0033 / 0073; code: `crates/fret-ui/src/tree.rs` (snapshot) + `crates/fret-a11y-accesskit/src/lib.rs` (AccessKit mapping) + `crates/fret-platform-winit/src/accessibility.rs` (adapter glue)
+- **Text input + IME**: ADR 0012 / 0043 / 0044 / 0045 / 0046 / 0071; code: `crates/fret-ui/src/text_input/mod.rs`, `crates/fret-ui/src/text_area/mod.rs`
+- **A11y / AT surface (semantics)**: ADR 0033 / 0073; code: `crates/fret-ui/src/tree/mod.rs` (snapshot) + `crates/fret-a11y-accesskit/src/lib.rs` (AccessKit mapping) + `crates/fret-platform-winit/src/accessibility.rs` (adapter glue)
 
 **Closure checklist (P0)**
 

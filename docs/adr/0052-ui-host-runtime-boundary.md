@@ -158,7 +158,7 @@ Notes:
 - Next tightening step is likely *splitting* into smaller service traits (e.g. `EffectSink`, `Globals`, `Models`, `Commands`, `Timers`, `DragHost`)
   so third-party hosts can implement only what they need.
 
-### `crates/fret-ui/src/tree.rs` — retained UI runtime
+### `crates/fret-ui/src/tree/mod.rs` — retained UI runtime
 
 Notes:
 
@@ -167,7 +167,7 @@ Notes:
 - If we want a smaller host surface for embedding, this is the hotspot to refactor: either introduce a thin host-facing
   trait for keymap/commands, or keep the concrete services in `fret-runtime` and treat them as part of the public contract.
 
-### `crates/fret-ui/src/elements.rs` — element-local state runtime
+### `crates/fret-ui/src/elements/mod.rs` — element-local state runtime
 
 Notes:
 

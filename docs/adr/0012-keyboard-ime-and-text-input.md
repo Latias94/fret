@@ -175,6 +175,6 @@ Text input ingestion note:
 Current MVP text widget note:
 
 - A minimal single-line `TextInput` widget renders inline preedit and updates the IME cursor area:
-  - `crates/fret-ui/src/text_input.rs`
+  - `crates/fret-ui/src/text_input/mod.rs`
 - Multiline text input experiments (still evolving; see ADR 0071):
-  - `crates/fret-ui/src/text_area.rs`
+  - `crates/fret-ui/src/text_area/mod.rs`

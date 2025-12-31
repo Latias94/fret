@@ -26,7 +26,7 @@ ADR or adding a new ADR) before scaling feature surface area.
 - **Virtualized accessibility contract for large collections**
   - Add ADR (proposed): `docs/adr/0085-virtualized-accessibility-and-collection-semantics.md`
   - Decide: semantics metadata (`pos_in_set`/`set_size`), active-descendant + virtualization rules, and layering boundaries.
-  - Implement: `crates/fret-core/src/semantics.rs`, `crates/fret-ui/src/widget.rs` + `crates/fret-ui/src/tree.rs`, `crates/fret-a11y-accesskit/src/lib.rs`, `crates/fret-platform-winit/src/accessibility.rs`, component surfaces (virtualized lists/overlays).
+  - Implement: `crates/fret-core/src/semantics.rs`, `crates/fret-ui/src/widget.rs` + `crates/fret-ui/src/tree/mod.rs`, `crates/fret-a11y-accesskit/src/lib.rs`, `crates/fret-platform-winit/src/accessibility.rs`, component surfaces (virtualized lists/overlays).
 
 - **Default font stack + fallback policy v1**
   - Update: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`
@@ -41,7 +41,7 @@ ADR or adding a new ADR) before scaling feature surface area.
 - **IME keystroke arbitration (platform-first during composition)**
   - Update: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`
   - Decide: when `Tab/Enter/Escape/Arrows/Backspace/...` are reserved for IME/text input vs routed to shortcuts/focus traversal, including modifier rules.
-  - Implement: `crates/fret-runner-winit-wgpu/src/runner.rs` (event mapping), `crates/fret-ui/src/tree.rs` (routing), `crates/fret-ui/src/text_input.rs` (focused widget behavior).
+  - Implement: `crates/fret-runner-winit-wgpu/src/runner.rs` (event mapping), `crates/fret-ui/src/tree/mod.rs` (routing), `crates/fret-ui/src/text_input/mod.rs` (focused widget behavior).
 
 - **Docking keep-alive + early submission + programmatic close without flicker**
   - Update: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`
@@ -52,7 +52,7 @@ ADR or adding a new ADR) before scaling feature surface area.
 - **Docking drag vs overlays vs viewport capture: arbitration matrix**
   - Add ADR (proposed): `docs/adr/0072-docking-interaction-arbitration-matrix.md`
   - Decide: drag start/stop precedence, which overlays close/freeze during dock drags, and how modal barriers intentionally block docking/tool input.
-  - Implement: `crates/fret-components-docking/src/dock/space.rs`, `crates/fret-components-ui/src/overlay_policy.rs`, `crates/fret-ui/src/tree.rs` (capture + layering).
+  - Implement: `crates/fret-components-docking/src/dock/space.rs`, `crates/fret-components-ui/src/overlay_policy.rs`, `crates/fret-ui/src/tree/mod.rs` (capture + layering).
 
 - **Multi-window degradation policy (single-window platforms)**
   - Add ADR (proposed): `docs/adr/0084-multi-window-degradation-policy.md`
@@ -74,12 +74,12 @@ ADR or adding a new ADR) before scaling feature surface area.
 - **Active descendant semantics for composite widgets (command palette / listbox / combobox)**
   - Add ADR (proposed): `docs/adr/0073-active-descendant-and-composite-widget-semantics.md`
   - Decide: minimal schema extension to support cmdk-style navigation without moving focus away from text input.
-  - Implement: semantics production in `crates/fret-ui/src/tree.rs`, AccessKit mapping in `crates/fret-a11y-accesskit/src/lib.rs`, backend glue in `crates/fret-platform-winit/src/accessibility.rs`.
+  - Implement: semantics production in `crates/fret-ui/src/tree/mod.rs`, AccessKit mapping in `crates/fret-a11y-accesskit/src/lib.rs`, backend glue in `crates/fret-platform-winit/src/accessibility.rs`.
 
 - **Accessibility conformance baseline (Narrator/VoiceOver/AT-SPI)**
   - Update: `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
   - Decide: minimum roles/actions/fields required for text fields (value/selection/composition), menus, tabs, and viewports.
-  - Implement: semantics production in `crates/fret-ui/src/tree.rs`, AccessKit mapping in `crates/fret-a11y-accesskit/src/lib.rs`, backend glue in `crates/fret-platform-winit/src/accessibility.rs`.
+  - Implement: semantics production in `crates/fret-ui/src/tree/mod.rs`, AccessKit mapping in `crates/fret-a11y-accesskit/src/lib.rs`, backend glue in `crates/fret-platform-winit/src/accessibility.rs`.
 
 - **Cross-root focus traversal and focus scopes**
   - Update: `docs/adr/0068-focus-traversal-and-focus-scopes.md`, `docs/adr/0020-focus-and-command-routing.md`
@@ -127,7 +127,7 @@ These anchors are intentionally few; use `rg` to drill down from them.
 
 - App/effects/models: `crates/fret-app/src/app.rs`
 - Desktop runner (winit + wgpu): `crates/fret-runner-winit-wgpu/src/runner.rs`
-- UI runtime (retained tree prototype): `crates/fret-ui/src/tree.rs`
+- UI runtime (retained tree prototype): `crates/fret-ui/src/tree/mod.rs`
 - Docking UI (`DockSpace`, policy-heavy): `crates/fret-components-docking/src/dock/space.rs`
 - Core contracts (IDs, dock graph, scene ops): `crates/fret-core/src/lib.rs`
 - Renderer (quads/SDF/text hooks): `crates/fret-render/src/renderer.rs`

@@ -15,7 +15,7 @@ What exists today:
 - A semantics snapshot contract and platform bridge boundary (ADR 0033) with roles/flags/actions.
 - `active_descendant: Option<NodeId>` in the semantics schema:
   - `crates/fret-core/src/semantics.rs`
-  - `crates/fret-ui/src/tree.rs` + `crates/fret-ui/src/widget.rs` (`SemanticsCx::set_active_descendant`)
+  - `crates/fret-ui/src/tree/mod.rs` + `crates/fret-ui/src/widget.rs` (`SemanticsCx::set_active_descendant`)
   - `crates/fret-a11y-accesskit/src/lib.rs` (AccessKit mapping + unit tests)
   - `crates/fret-platform-winit/src/accessibility.rs` (winit adapter glue)
 - Overlay + list semantics tests for several window-scoped overlay surfaces

@@ -23,17 +23,17 @@ Status legend:
 
 | Contract (ADR 0066) | Status | Current implementation entry points | Key gaps (if any) |
 | --- | --- | --- | --- |
-| Input routing + hit testing | **Done** | `crates/fret-ui/src/tree.rs` | — |
-| Hover tracking + geometry queries | **Done** | `crates/fret-ui/src/elements.rs` (`HoverRegion`, `bounds_for_element`), `crates/fret-ui/src/declarative.rs` (bounds recording) | — |
-| Focus + capture + focus-visible + traversal | **Done** | `crates/fret-ui/src/tree.rs` (modal scoping + `focus.next`/`focus.previous`), `crates/fret-ui/src/focus_visible.rs` | Component-layer focus trap/restore remains policy (ADR 0067); runtime traversal is conservative until a scroll-into-view contract is formalized (ADR 0068). |
-| Multi-root layers substrate | **Done** | `crates/fret-ui/src/tree.rs` (`push_overlay_root_ex`, `remove_layer`, `active_input_layers`) | — |
+| Input routing + hit testing | **Done** | `crates/fret-ui/src/tree/mod.rs` | — |
+| Hover tracking + geometry queries | **Done** | `crates/fret-ui/src/elements/mod.rs` (`HoverRegion`, `bounds_for_element`), `crates/fret-ui/src/declarative.rs` (bounds recording) | — |
+| Focus + capture + focus-visible + traversal | **Done** | `crates/fret-ui/src/tree/mod.rs` (modal scoping + `focus.next`/`focus.previous`), `crates/fret-ui/src/focus_visible.rs` | Component-layer focus trap/restore remains policy (ADR 0067); runtime traversal is conservative until a scroll-into-view contract is formalized (ADR 0068). |
+| Multi-root layers substrate | **Done** | `crates/fret-ui/src/tree/mod.rs` (`push_overlay_root_ex`, `remove_layer`, `active_input_layers`) | — |
 | Placement solver | **Partial** | `crates/fret-ui/src/overlay_placement.rs` | Arrow support is intentionally deferred to P1 (ADR 0066 Gate 3.2). |
-| Declarative authoring | **Done** | `crates/fret-ui/src/element.rs`, `crates/fret-ui/src/elements.rs`, `crates/fret-ui/src/declarative.rs` | — |
+| Declarative authoring | **Done** | `crates/fret-ui/src/element.rs`, `crates/fret-ui/src/elements/mod.rs`, `crates/fret-ui/src/declarative.rs` | — |
 | Layout vocabulary | **Done** | `crates/fret-ui/src/element.rs`, `crates/fret-ui/src/declarative.rs` | Layout defaults should remain CSS/Tailwind-like; avoid adding per-component defaults in runtime. |
 | Scroll contract | **Done** | `crates/fret-ui/src/scroll.rs`, declarative scroll element in `crates/fret-ui/src/declarative.rs` | — |
-| Virtualization contract (TanStack alignment) | **Done** | `crates/fret-ui/src/virtual_list.rs`, `crates/fret-ui/src/elements.rs`, declarative `VirtualList` in `crates/fret-ui/src/declarative.rs` | Lanes/masonry remain P1. |
-| Text input / IME engine contract | **Partial** | `crates/fret-ui/src/text_input.rs` + ADR 0012/0044/0045/0046 | Single-line is usable; multiline and geometry queries must remain the Stable contract boundary (component chrome stays out of runtime). |
-| Semantics tree | **Partial** | `crates/fret-ui/src/tree.rs` + `crates/fret-core/src/semantics.rs` | `SemanticsSnapshot` exposes `barrier_root` and per-root flags; the eventual platform bridge must enforce “background is inert/hidden under barrier” (ADR 0066 Gate H). |
+| Virtualization contract (TanStack alignment) | **Done** | `crates/fret-ui/src/virtual_list.rs`, `crates/fret-ui/src/elements/mod.rs`, declarative `VirtualList` in `crates/fret-ui/src/declarative.rs` | Lanes/masonry remain P1. |
+| Text input / IME engine contract | **Partial** | `crates/fret-ui/src/text_input/mod.rs` + ADR 0012/0044/0045/0046 | Single-line is usable; multiline and geometry queries must remain the Stable contract boundary (component chrome stays out of runtime). |
+| Semantics tree | **Partial** | `crates/fret-ui/src/tree/mod.rs` + `crates/fret-core/src/semantics.rs` | `SemanticsSnapshot` exposes `barrier_root` and per-root flags; the eventual platform bridge must enforce “background is inert/hidden under barrier” (ADR 0066 Gate H). |
 
 ## P0 “make it usable” tasks (recommended order)
 

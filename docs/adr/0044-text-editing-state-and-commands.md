@@ -98,10 +98,10 @@ IME candidate windows near the caret:
 ## Implementation Notes (Current Workspace)
 
 - TextInput baseline widget:
-  - `crates/fret-ui/src/text_input.rs`
+  - `crates/fret-ui/src/text_input/mod.rs`
 - Multiline text input experiments:
-  - `crates/fret-ui/src/text_area.rs`
+  - `crates/fret-ui/src/text_area/mod.rs`
 - Repeatable dispatch on key-repeat:
-  - `crates/fret-ui/src/tree.rs`
+  - `crates/fret-ui/src/tree/mod.rs`
 - Demo command registration + bindings:
   - `crates/fret-demo` (entrypoints evolve; search for text editing command wiring)

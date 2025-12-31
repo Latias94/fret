@@ -6,7 +6,7 @@ Status: Accepted
 
 The runtime traversal mechanism described here is **largely implemented** in `crates/fret-ui`:
 
-- Commands: `focus.next` / `focus.previous` are handled by `UiTree` (`crates/fret-ui/src/tree.rs`).
+- Commands: `focus.next` / `focus.previous` are handled by `UiTree` (`crates/fret-ui/src/tree/mod.rs`).
 - Modal-aware candidate gating: traversal only considers nodes in the **active input layers**
   (modal-barrier aware), and applies a conservative **visibility intersection** filter.
 - Cross-root ordering: active roots are iterated in **reverse paint order** (top → bottom), then a
@@ -15,7 +15,7 @@ The runtime traversal mechanism described here is **largely implemented** in `cr
 Current implementation entry points:
 
 - `UiTree::dispatch_focus_traversal(...)` and `UiTree::focus_traverse_in_roots(...)`
-  (`crates/fret-ui/src/tree.rs`).
+  (`crates/fret-ui/src/tree/mod.rs`).
 
 Known gaps / follow-ups:
 

@@ -86,18 +86,18 @@ Key invariants:
 
 Implementation anchors:
 
-- `crates/fret-ui/src/tree.rs` (transform propagation, hit-test mapping)
-- `crates/fret-ui/src/elements.rs` (`visual_bounds_for_element`, last-frame geometry)
+- `crates/fret-ui/src/tree/mod.rs` (transform propagation, hit-test mapping)
+- `crates/fret-ui/src/elements/mod.rs` (`visual_bounds_for_element`, last-frame geometry)
 - Component anchoring: `crates/fret-components-shadcn/src/overlay_anchor.rs`
 
 Validation anchors:
 
-- `crates/fret-ui/src/tree.rs` (`render_transform_affects_hit_testing_and_pointer_event_coordinates`)
-- `crates/fret-ui/src/tree.rs` (`nested_render_transforms_compose_for_pointer_event_coordinates`)
-- `crates/fret-ui/src/tree.rs` (`hit_test_respects_rounded_overflow_clip_under_render_transform`)
-- `crates/fret-ui/src/tree.rs` (`overlay_render_transform_affects_hit_testing_and_event_coordinates`)
-- `crates/fret-ui/src/tree.rs` (`visual_bounds_for_element_includes_ancestor_render_transform`)
-- `crates/fret-ui/src/tree.rs` (`non_invertible_render_transform_is_ignored_for_paint_and_visual_bounds`)
+- `crates/fret-ui/src/tree/tests/` (`render_transform_affects_hit_testing_and_pointer_event_coordinates`)
+- `crates/fret-ui/src/tree/tests/` (`nested_render_transforms_compose_for_pointer_event_coordinates`)
+- `crates/fret-ui/src/tree/tests/` (`hit_test_respects_rounded_overflow_clip_under_render_transform`)
+- `crates/fret-ui/src/tree/tests/` (`overlay_render_transform_affects_hit_testing_and_event_coordinates`)
+- `crates/fret-ui/src/tree/tests/` (`visual_bounds_for_element_includes_ancestor_render_transform`)
+- `crates/fret-ui/src/tree/tests/` (`non_invertible_render_transform_is_ignored_for_paint_and_visual_bounds`)
 
 ---
 
@@ -114,12 +114,12 @@ Validation anchors:
 
 **Code entry points**
 
-- `crates/fret-ui/src/tree.rs`
+- `crates/fret-ui/src/tree/mod.rs`
 - `crates/fret-ui/src/focus_visible.rs`
 
 **Validation anchors**
 
-- `cargo nextest run -p fret-ui` (many routing/focus tests live in `crates/fret-ui/src/tree.rs`)
+- `cargo nextest run -p fret-ui` (many routing/focus tests live in `crates/fret-ui/src/tree/tests/`)
 
 **Common failure modes to guard**
 
@@ -137,7 +137,7 @@ Validation anchors:
 
 **Mechanism (runtime)**
 
-- Overlay root stack + barrier flags in `crates/fret-ui/src/tree.rs`
+- Overlay root stack + barrier flags in `crates/fret-ui/src/tree/mod.rs`
 
 **Policy (components)**
 
@@ -183,7 +183,7 @@ Validation anchors:
 
 **Validation anchors**
 
-- Runtime-level: hit-testing parity tests (overflow clip / rounded clip) in `crates/fret-ui/src/tree.rs`
+- Runtime-level: hit-testing parity tests (overflow clip / rounded clip) in `crates/fret-ui/src/tree/tests/`
 - Renderer-level: `crates/fret-render/tests/affine_clip_conformance.rs` (deep stacks, affine + clip-local evaluation)
 
 **Non-goals (for v1)**
@@ -235,13 +235,13 @@ Validation anchors:
 
 **Code entry points**
 
-- `crates/fret-ui/src/text_input.rs`
-- `crates/fret-ui/src/text_area.rs`
+- `crates/fret-ui/src/text_input/mod.rs`
+- `crates/fret-ui/src/text_area/mod.rs`
 - `crates/fret-ui/src/text_input_style.rs`
 
 **Validation anchors**
 
-- `crates/fret-ui/src/text_input.rs` and `crates/fret-ui/src/text_area.rs` tests
+- `crates/fret-ui/src/text_input/tests.rs` and `crates/fret-ui/src/text_area/tests.rs` tests
 
 ### 8) A11y / Semantics (AT-Ready Infrastructure)
 
@@ -253,7 +253,7 @@ Validation anchors:
 
 **Code entry points**
 
-- Snapshot production: `crates/fret-ui/src/tree.rs` (semantics snapshot)
+- Snapshot production: `crates/fret-ui/src/tree/mod.rs` (semantics snapshot)
 - Platform bridge: `crates/fret-platform-winit/src/accessibility.rs` (winit glue) + `crates/fret-a11y-accesskit/src/lib.rs` (AccessKit mapping)
 
 **Closure requirement**
@@ -290,7 +290,7 @@ Validation anchors:
 
 **Code entry points**
 
-- `crates/fret-ui/src/tree.rs` (debug stats structs; overlay stack/focus/capture visibility)
+- `crates/fret-ui/src/tree/mod.rs` (debug stats structs; overlay stack/focus/capture visibility)
 - Renderer metrics: `crates/fret-render/src/renderer.rs`
 
 **Closure requirement**
