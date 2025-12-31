@@ -391,6 +391,15 @@ pub(crate) mod commands {
     }
 
     #[derive(Debug, Default, Clone, Copy)]
+    pub(crate) struct SingleLineUiDelta {
+        pub(crate) handled: bool,
+        pub(crate) invalidate_paint: bool,
+        pub(crate) invalidate_layout: bool,
+        pub(crate) release_text_blobs: bool,
+        pub(crate) request_redraw: bool,
+    }
+
+    #[derive(Debug, Default, Clone, Copy)]
     pub(crate) struct MultilineUiDelta {
         pub(crate) handled: bool,
         pub(crate) invalidate_paint: bool,
@@ -424,6 +433,23 @@ pub(crate) mod commands {
                 invalidate_paint: false,
                 invalidate_layout: false,
             }
+        }
+    }
+
+    pub(crate) fn singleline_ui_delta(command: &str, outcome: Outcome) -> SingleLineUiDelta {
+        let is_navigation = command.starts_with("text.move")
+            || command.starts_with("text.select")
+            || command == "text.select_all";
+
+        let invalidate_layout = outcome.invalidate_layout;
+        let invalidate_paint = outcome.invalidate_paint || is_navigation;
+
+        SingleLineUiDelta {
+            handled: outcome.handled,
+            invalidate_layout,
+            invalidate_paint,
+            release_text_blobs: invalidate_layout,
+            request_redraw: invalidate_layout || invalidate_paint,
         }
     }
 

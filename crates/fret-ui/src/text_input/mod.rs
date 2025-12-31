@@ -217,6 +217,11 @@ impl TextInput {
         )
     }
 
+    fn mark_text_blobs_dirty(&mut self) {
+        self.queue_release_all_text_blobs();
+        self.last_sent_cursor = None;
+    }
+
     fn selection_range(&self) -> (usize, usize) {
         crate::text_edit::buffer::selection_range(self.selection_anchor, self.caret)
     }
@@ -226,11 +231,49 @@ impl TextInput {
     }
 
     fn replace_selection(&mut self, insert: &str) {
-        self.edit_state().replace_selection(insert);
+        if self.edit_state().replace_selection(insert) {
+            self.mark_text_blobs_dirty();
+        }
     }
 
     fn delete_selection_if_any(&mut self) -> bool {
-        self.edit_state().delete_selection_if_any()
+        let changed = self.edit_state().delete_selection_if_any();
+        if changed {
+            self.mark_text_blobs_dirty();
+        }
+        changed
+    }
+
+    fn delete_backward_char(&mut self) -> bool {
+        let changed = self.edit_state().delete_backward_char();
+        if changed {
+            self.mark_text_blobs_dirty();
+        }
+        changed
+    }
+
+    fn delete_forward_char(&mut self) -> bool {
+        let changed = self.edit_state().delete_forward_char();
+        if changed {
+            self.mark_text_blobs_dirty();
+        }
+        changed
+    }
+
+    fn delete_word_backward(&mut self) -> bool {
+        let changed = self.edit_state().delete_word_backward();
+        if changed {
+            self.mark_text_blobs_dirty();
+        }
+        changed
+    }
+
+    fn delete_word_forward(&mut self) -> bool {
+        let changed = self.edit_state().delete_word_forward();
+        if changed {
+            self.mark_text_blobs_dirty();
+        }
+        changed
     }
 
     fn caret_rect<H: UiHost>(
@@ -454,12 +497,12 @@ impl<H: UiHost> Widget<H> for TextInput {
                 if !self.is_ime_composing() {
                     match key {
                         fret_core::KeyCode::Backspace => {
-                            let _ = self.edit_state().delete_backward_char();
+                            let _ = self.delete_backward_char();
                             cx.invalidate_self(Invalidation::Layout);
                             cx.request_redraw();
                         }
                         fret_core::KeyCode::Delete => {
-                            let _ = self.edit_state().delete_forward_char();
+                            let _ = self.delete_forward_char();
                             cx.invalidate_self(Invalidation::Layout);
                             cx.request_redraw();
                         }
@@ -530,6 +573,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     text.as_str(),
                 );
                 if outcome.invalidate_layout {
+                    self.mark_text_blobs_dirty();
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
@@ -552,6 +596,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     &mut self.ime_replace_range,
                 );
                 if result != crate::text_edit::ime::ApplyResult::Noop {
+                    self.mark_text_blobs_dirty();
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
@@ -571,6 +616,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 self.clear_ime_composition();
                 self.caret = 0;
                 self.selection_anchor = 0;
+                self.mark_text_blobs_dirty();
                 cx.invalidate_self(Invalidation::Layout);
                 cx.request_redraw();
                 true
@@ -599,8 +645,20 @@ impl<H: UiHost> Widget<H> for TextInput {
                 {
                     cx.app.push_effect(Effect::ClipboardSetText { text });
                 }
-                if result.outcome.invalidate_layout {
+
+                let delta = crate::text_edit::commands::singleline_ui_delta(
+                    command.as_str(),
+                    result.outcome,
+                );
+                if delta.invalidate_layout {
+                    if delta.release_text_blobs {
+                        self.mark_text_blobs_dirty();
+                    }
                     cx.invalidate_self(Invalidation::Layout);
+                } else if delta.invalidate_paint {
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                if delta.request_redraw {
                     cx.request_redraw();
                 }
                 true
@@ -651,16 +709,21 @@ impl<H: UiHost> Widget<H> for TextInput {
                     command.as_str(),
                     is_ime_composing,
                 );
-                if !outcome.handled {
+                let delta =
+                    crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
+                if !delta.handled {
                     return false;
                 }
 
-                if outcome.invalidate_layout {
+                if delta.invalidate_layout {
+                    if delta.release_text_blobs {
+                        self.mark_text_blobs_dirty();
+                    }
                     cx.invalidate_self(Invalidation::Layout);
-                } else if outcome.invalidate_paint {
+                } else if delta.invalidate_paint {
                     cx.invalidate_self(Invalidation::Paint);
                 }
-                if outcome.invalidate_layout || outcome.invalidate_paint {
+                if delta.request_redraw {
                     cx.request_redraw();
                 }
                 true
