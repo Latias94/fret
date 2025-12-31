@@ -35,29 +35,29 @@ ADR or adding a new ADR) before scaling feature surface area.
   - Implement: `crates/fret-components-docking/src/dock/space.rs`, `crates/fret-components-docking/src/dock/manager.rs`, app integration points applying `DockOp` + invalidation.
 
 - **Docking drag vs overlays vs viewport capture: arbitration matrix**
-  - Add ADR (proposed): `docs/adr/0072-docking-interaction-arbitration-matrix.md`
+  - Update: `docs/adr/0072-docking-interaction-arbitration-matrix.md` (Accepted)
   - Decide: drag start/stop precedence, which overlays close/freeze during dock drags, and how modal barriers intentionally block docking/tool input.
   - Implement: `crates/fret-components-docking/src/dock/space.rs`, `crates/fret-components-ui/src/overlay_policy.rs`, `crates/fret-ui/src/tree/mod.rs` (capture + layering).
 
 - **Multi-window degradation policy (single-window platforms)**
-  - Add ADR (proposed): `docs/adr/0084-multi-window-degradation-policy.md`
+  - Update: `docs/adr/0084-multi-window-degradation-policy.md` (Proposed)
   - Decide: how multiple logical `DockLayoutWindow` roots map onto platforms where `ui.multi_window == false` (wasm/mobile), without changing core persistence.
   - Implement: `crates/fret-components-docking` policy layer (in-window floating) + demo harness.
 
 ### P1 (Lock soon; otherwise behavior will drift)
 
 - **Docking split sizing + resizable primitive contract**
-  - Add ADR (proposed): `docs/adr/0077-resizable-panel-groups-and-docking-split-sizing.md`
+  - Update: `docs/adr/0077-resizable-panel-groups-and-docking-split-sizing.md` (Accepted)
   - Decide: runtime-owned resize mechanics, docking integration shape, and whether to eventually persist pixel `preferred_px` hints vs fractions-only.
   - Implement: docking host rendering in `crates/fret-components-docking`, runtime substrate in `crates/fret-ui`.
 
 - **Text input semantics for multiline + IME composition ranges**
-  - Add ADR (proposed): `docs/adr/0071-text-input-multiline-composition-contract.md`
+  - Update: `docs/adr/0071-text-input-multiline-composition-contract.md` (Accepted)
   - Update: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
   - Decide: exact selection/composition range semantics (byte vs grapheme), and caret-rect reporting requirements for IME candidate placement.
 
 - **Active descendant semantics for composite widgets (command palette / listbox / combobox)**
-  - Add ADR (proposed): `docs/adr/0073-active-descendant-and-composite-widget-semantics.md`
+  - Update: `docs/adr/0073-active-descendant-and-composite-widget-semantics.md` (Accepted)
   - Decide: minimal schema extension to support cmdk-style navigation without moving focus away from text input.
   - Implement: semantics production in `crates/fret-ui/src/tree/mod.rs`, AccessKit mapping in `crates/fret-a11y-accesskit/src/lib.rs`, backend glue in `crates/fret-platform-winit/src/accessibility.rs`.
 
