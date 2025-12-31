@@ -406,112 +406,58 @@ impl<H: UiHost> Widget<H> for TextArea {
                 }
                 true
             }
-            "text.move_home" => {
-                hit_test_line(self, cx, false);
-                self.selection_anchor = self.caret;
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
+            "text.move_home" | "text.move_end" | "text.select_home" | "text.select_end" => {
+                let is_end = matches!(cmd, "text.move_end" | "text.select_end");
+                let extend = matches!(cmd, "text.select_home" | "text.select_end");
+
+                hit_test_line(self, cx, is_end);
+                if !extend {
+                    self.selection_anchor = self.caret;
+                }
+
+                let delta = crate::text_edit::commands::MultilineUiDelta {
+                    handled: true,
+                    invalidate_paint: true,
+                    ensure_caret_visible: true,
+                    ..Default::default()
+                };
+                self.apply_multiline_ui_delta(cx, delta);
                 true
             }
-            "text.move_end" => {
-                hit_test_line(self, cx, true);
-                self.selection_anchor = self.caret;
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.move_up" => {
+            "text.move_up" | "text.move_down" | "text.select_up" | "text.select_down" => {
                 let Some(blob) = self.blob else {
                     return true;
                 };
+
+                let extend = matches!(cmd, "text.select_up" | "text.select_down");
+                let down = matches!(cmd, "text.move_down" | "text.select_down");
+
                 let caret_index = self.caret_display_index();
                 let caret_rect = cx.services.caret_rect(blob, caret_index, self.affinity);
                 let x = self.preferred_x.unwrap_or(caret_rect.origin.x);
-                let y = Px(caret_rect.origin.y.0 - 1.0);
-                let hit = cx
-                    .services
-                    .hit_test_point(blob, fret_core::Point::new(x, y));
-                self.caret = hit.index;
-                self.selection_anchor = self.caret;
-                self.affinity = hit.affinity;
-                self.preferred_x = Some(x);
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.move_down" => {
-                let Some(blob) = self.blob else {
-                    return true;
+                let y = if down {
+                    Px(caret_rect.origin.y.0 + caret_rect.size.height.0 + 1.0)
+                } else {
+                    Px(caret_rect.origin.y.0 - 1.0)
                 };
-                let caret_index = self.caret_display_index();
-                let caret_rect = cx.services.caret_rect(blob, caret_index, self.affinity);
-                let x = self.preferred_x.unwrap_or(caret_rect.origin.x);
-                let y = Px(caret_rect.origin.y.0 + caret_rect.size.height.0 + 1.0);
+
                 let hit = cx
                     .services
                     .hit_test_point(blob, fret_core::Point::new(x, y));
-                self.caret = hit.index;
-                self.selection_anchor = self.caret;
+                self.caret = self.map_display_index_to_base(hit.index);
+                if !extend {
+                    self.selection_anchor = self.caret;
+                }
                 self.affinity = hit.affinity;
                 self.preferred_x = Some(x);
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.select_home" => {
-                hit_test_line(self, cx, false);
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.select_end" => {
-                hit_test_line(self, cx, true);
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.select_up" => {
-                let Some(blob) = self.blob else {
-                    return true;
+
+                let delta = crate::text_edit::commands::MultilineUiDelta {
+                    handled: true,
+                    invalidate_paint: true,
+                    ensure_caret_visible: true,
+                    ..Default::default()
                 };
-                let caret_index = self.caret_display_index();
-                let caret_rect = cx.services.caret_rect(blob, caret_index, self.affinity);
-                let x = self.preferred_x.unwrap_or(caret_rect.origin.x);
-                let y = Px(caret_rect.origin.y.0 - 1.0);
-                let hit = cx
-                    .services
-                    .hit_test_point(blob, fret_core::Point::new(x, y));
-                self.caret = hit.index;
-                self.affinity = hit.affinity;
-                self.preferred_x = Some(x);
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                true
-            }
-            "text.select_down" => {
-                let Some(blob) = self.blob else {
-                    return true;
-                };
-                let caret_index = self.caret_display_index();
-                let caret_rect = cx.services.caret_rect(blob, caret_index, self.affinity);
-                let x = self.preferred_x.unwrap_or(caret_rect.origin.x);
-                let y = Px(caret_rect.origin.y.0 + caret_rect.size.height.0 + 1.0);
-                let hit = cx
-                    .services
-                    .hit_test_point(blob, fret_core::Point::new(x, y));
-                self.caret = hit.index;
-                self.affinity = hit.affinity;
-                self.preferred_x = Some(x);
-                self.ensure_caret_visible = true;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
+                self.apply_multiline_ui_delta(cx, delta);
                 true
             }
             _ => {
