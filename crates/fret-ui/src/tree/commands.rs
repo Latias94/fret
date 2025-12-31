@@ -46,7 +46,6 @@ impl<H: UiHost> UiTree<H> {
 
         let mut handled = false;
         let mut needs_redraw = false;
-        let services_ptr: *mut dyn UiServices = services;
 
         loop {
             let (did_handle, invalidations, requested_focus, stop_propagation, parent) = self
@@ -54,7 +53,7 @@ impl<H: UiHost> UiTree<H> {
                     let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
                     let mut cx = CommandCx {
                         app,
-                        services: unsafe { &mut *services_ptr },
+                        services: &mut *services,
                         node: node_id,
                         window: tree.window,
                         input_ctx: input_ctx.clone(),

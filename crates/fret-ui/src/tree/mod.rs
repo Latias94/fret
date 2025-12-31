@@ -333,6 +333,10 @@ impl<H: UiHost> Default for UiTree<H> {
 }
 
 impl<H: UiHost> UiTree<H> {
+    pub(crate) fn node_bounds(&self, node: NodeId) -> Option<Rect> {
+        self.nodes.get(node).map(|n| n.bounds)
+    }
+
     fn set_ime_allowed(&mut self, app: &mut H, enabled: bool) {
         if self.ime_allowed == enabled {
             return;

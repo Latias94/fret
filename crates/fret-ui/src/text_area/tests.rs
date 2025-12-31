@@ -544,23 +544,22 @@ fn ime_cursor_area_reflects_scroll_offset_in_paint_space() {
         let mut scene = Scene::default();
         let mut observe_model = |_id, _inv| {};
         let mut observe_global = |_id, _inv| {};
-        let mut paint_child = |_child: fret_core::NodeId, _bounds: Rect| {};
-        let child_bounds = |_child: fret_core::NodeId| None;
+        let mut tree = crate::tree::UiTree::<TestHost>::default();
 
         let mut cx = crate::widget::PaintCx {
             app,
+            tree: &mut tree,
             node,
             window: Some(window),
             focus: Some(node),
             children: &[],
             bounds,
             scale_factor: 1.0,
+            accumulated_transform: fret_core::Transform2D::IDENTITY,
             services,
             observe_model: &mut observe_model,
             observe_global: &mut observe_global,
             scene: &mut scene,
-            paint_child: &mut paint_child,
-            child_bounds: &child_bounds,
         };
 
         area.paint(&mut cx);

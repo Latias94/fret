@@ -9,8 +9,6 @@ impl<H: UiHost> UiTree<H> {
         start: NodeId,
         event: &Event,
     ) -> bool {
-        let services_ptr: *mut dyn UiServices = services;
-
         let (active_roots, _barrier_root) = self.active_input_layers();
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
@@ -24,7 +22,7 @@ impl<H: UiHost> UiTree<H> {
                             .unwrap_or((&[][..], Rect::default()));
                         let mut cx = EventCx {
                             app,
-                            services: unsafe { &mut *services_ptr },
+                            services: &mut *services,
                             node: node_id,
                             window: tree.window,
                             input_ctx: input_ctx.clone(),
@@ -87,7 +85,7 @@ impl<H: UiHost> UiTree<H> {
                         .unwrap_or((&[][..], Rect::default()));
                     let mut cx = EventCx {
                         app,
-                        services: unsafe { &mut *services_ptr },
+                        services: &mut *services,
                         node: node_id,
                         window: tree.window,
                         input_ctx: input_ctx.clone(),
@@ -283,7 +281,6 @@ impl<H: UiHost> UiTree<H> {
 
         let mut needs_redraw = false;
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
-        let services_ptr: *mut dyn UiServices = services;
         let mut stop_propagation_requested = false;
 
         if let Event::KeyDown {
@@ -509,7 +506,7 @@ impl<H: UiHost> UiTree<H> {
                         .unwrap_or((&[][..], Rect::default()));
                     let mut cx = EventCx {
                         app,
-                        services: unsafe { &mut *services_ptr },
+                        services: &mut *services,
                         node: node_id,
                         window: tree.window,
                         input_ctx: input_ctx.clone(),
@@ -588,7 +585,7 @@ impl<H: UiHost> UiTree<H> {
                         .unwrap_or((&[][..], Rect::default()));
                     let mut cx = EventCx {
                         app,
-                        services: unsafe { &mut *services_ptr },
+                        services: &mut *services,
                         node: node_id,
                         window: tree.window,
                         input_ctx: input_ctx.clone(),
@@ -728,8 +725,6 @@ impl<H: UiHost> UiTree<H> {
         start: NodeId,
         event: &Event,
     ) {
-        let services_ptr: *mut dyn UiServices = services;
-
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
             for (node_id, event_for_node) in chain {
@@ -744,7 +739,7 @@ impl<H: UiHost> UiTree<H> {
                     observer_ctx.dispatch_phase = InputDispatchPhase::Observer;
                     let mut cx = EventCx {
                         app,
-                        services: unsafe { &mut *services_ptr },
+                        services: &mut *services,
                         node: node_id,
                         window: tree.window,
                         input_ctx: observer_ctx,
@@ -785,7 +780,7 @@ impl<H: UiHost> UiTree<H> {
                 observer_ctx.dispatch_phase = InputDispatchPhase::Observer;
                 let mut cx = EventCx {
                     app,
-                    services: unsafe { &mut *services_ptr },
+                    services: &mut *services,
                     node: node_id,
                     window: tree.window,
                     input_ctx: observer_ctx,

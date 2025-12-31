@@ -77,7 +77,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn paint_node(
+    pub(crate) fn paint_node(
         &mut self,
         app: &mut H,
         services: &mut dyn UiServices,
@@ -100,30 +100,7 @@ impl<H: UiHost> UiTree<H> {
             Some(t) => accumulated_transform.compose(t),
             None => accumulated_transform,
         };
-
-        let tree_ref: *const UiTree<H> = self as *const UiTree<H>;
-        let tree_ptr: *mut UiTree<H> = self;
-        let app_ptr: *mut H = app;
-        let services_ptr: *mut dyn UiServices = services;
-        let scene_ptr: *mut Scene = scene;
         let sf = scale_factor;
-        let child_accumulated_transform = current_transform;
-        let mut paint_child = move |child: NodeId, bounds: Rect| {
-            unsafe {
-                (&mut *tree_ptr).paint_node(
-                    &mut *app_ptr,
-                    &mut *services_ptr,
-                    child,
-                    bounds,
-                    &mut *scene_ptr,
-                    sf,
-                    child_accumulated_transform,
-                )
-            };
-        };
-        let child_bounds = move |child: NodeId| -> Option<Rect> {
-            unsafe { (&*tree_ref).nodes.get(child).map(|n| n.bounds) }
-        };
 
         let (invalidated, prev_cache) = match self.nodes.get(node) {
             Some(n) => (n.invalidation.paint, n.paint_cache),
@@ -201,20 +178,22 @@ impl<H: UiHost> UiTree<H> {
                 .get(node)
                 .map(|n| n.children.clone())
                 .unwrap_or_default();
+            let window = tree.window;
+            let focus = tree.focus;
             let mut cx = PaintCx {
                 app,
                 node,
-                window: tree.window,
-                focus: tree.focus,
+                window,
+                focus,
                 children: &children,
                 bounds,
                 scale_factor: sf,
-                services: unsafe { &mut *services_ptr },
+                accumulated_transform: current_transform,
+                services: &mut *services,
                 observe_model: &mut observe_model,
                 observe_global: &mut observe_global,
                 scene,
-                paint_child: &mut paint_child,
-                child_bounds: &child_bounds,
+                tree,
             };
             let transform = widget.render_transform(bounds);
             let pushed_transform = if let Some(transform) = transform

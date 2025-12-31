@@ -124,6 +124,7 @@ impl<'a, H: UiHost> CommandCx<'a, H> {
 
 pub struct LayoutCx<'a, H: UiHost> {
     pub app: &'a mut H,
+    pub tree: &'a mut crate::tree::UiTree<H>,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
     pub focus: Option<NodeId>,
@@ -134,7 +135,6 @@ pub struct LayoutCx<'a, H: UiHost> {
     pub services: &'a mut dyn UiServices,
     pub observe_model: &'a mut dyn FnMut(ModelId, Invalidation),
     pub observe_global: &'a mut dyn FnMut(TypeId, Invalidation),
-    pub layout_child: &'a mut dyn FnMut(NodeId, Rect) -> Size,
 }
 
 impl<'a, H: UiHost> LayoutCx<'a, H> {
@@ -153,28 +153,29 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
 
     pub fn layout(&mut self, child: NodeId, available: Size) -> Size {
         let rect = Rect::new(self.bounds.origin, available);
-        (self.layout_child)(child, rect)
+        self.layout_in(child, rect)
     }
 
     pub fn layout_in(&mut self, child: NodeId, bounds: Rect) -> Size {
-        (self.layout_child)(child, bounds)
+        self.tree
+            .layout_in(self.app, self.services, child, bounds, self.scale_factor)
     }
 }
 
 pub struct PaintCx<'a, H: UiHost> {
     pub app: &'a mut H,
+    pub tree: &'a mut crate::tree::UiTree<H>,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
     pub focus: Option<NodeId>,
     pub children: &'a [NodeId],
     pub bounds: Rect,
     pub scale_factor: f32,
+    pub accumulated_transform: Transform2D,
     pub services: &'a mut dyn UiServices,
     pub observe_model: &'a mut dyn FnMut(ModelId, Invalidation),
     pub observe_global: &'a mut dyn FnMut(TypeId, Invalidation),
     pub scene: &'a mut Scene,
-    pub paint_child: &'a mut dyn FnMut(NodeId, Rect),
-    pub child_bounds: &'a dyn Fn(NodeId) -> Option<Rect>,
 }
 
 impl<'a, H: UiHost> PaintCx<'a, H> {
@@ -192,11 +193,19 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
     }
 
     pub fn paint(&mut self, child: NodeId, bounds: Rect) {
-        (self.paint_child)(child, bounds);
+        self.tree.paint_node(
+            self.app,
+            self.services,
+            child,
+            bounds,
+            self.scene,
+            self.scale_factor,
+            self.accumulated_transform,
+        )
     }
 
     pub fn child_bounds(&self, child: NodeId) -> Option<Rect> {
-        (self.child_bounds)(child)
+        self.tree.node_bounds(child)
     }
 }
 

@@ -124,16 +124,7 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_nodes_performed =
                 self.debug_stats.layout_nodes_performed.saturating_add(1);
         }
-
-        let tree_ptr: *mut UiTree<H> = self;
-        let app_ptr: *mut H = app;
-        let services_ptr: *mut dyn UiServices = services;
         let sf = scale_factor;
-        let mut layout_child = move |child: NodeId, bounds: Rect| -> Size {
-            unsafe {
-                (&mut *tree_ptr).layout_node(&mut *app_ptr, &mut *services_ptr, child, bounds, sf)
-            }
-        };
 
         let mut observations: Vec<(ModelId, Invalidation)> = Vec::new();
         let mut observe_model = |model: ModelId, inv: Invalidation| {
@@ -163,10 +154,10 @@ impl<H: UiHost> UiTree<H> {
                 bounds,
                 available: bounds.size,
                 scale_factor: sf,
-                services: unsafe { &mut *services_ptr },
+                services: &mut *services,
                 observe_model: &mut observe_model,
                 observe_global: &mut observe_global,
-                layout_child: &mut layout_child,
+                tree,
             };
             widget.layout(&mut cx)
         });
