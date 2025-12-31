@@ -257,10 +257,12 @@ impl<H: UiHost> Widget<H> for TextArea {
                     return;
                 }
                 self.clear_preedit();
-                if let Some(normalized) =
-                    crate::text_edit::clipboard::normalize_multiline(text.as_str())
-                {
-                    self.replace_selection(&normalized);
+                let outcome = crate::text_edit::commands::apply_clipboard_text(
+                    &mut self.edit_state(),
+                    crate::text_edit::commands::ClipboardTextPolicy::Multiline,
+                    text.as_str(),
+                );
+                if outcome.invalidate_layout {
                     self.ensure_caret_visible = true;
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();

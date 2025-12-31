@@ -380,6 +380,7 @@ pub(crate) mod state {
 }
 
 pub(crate) mod commands {
+    use super::clipboard;
     use super::state::TextEditState;
 
     #[derive(Debug, Default, Clone, Copy)]
@@ -464,6 +465,29 @@ pub(crate) mod commands {
             }
             _ => Outcome::default(),
         }
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub(crate) enum ClipboardTextPolicy {
+        SingleLine,
+        Multiline,
+    }
+
+    pub(crate) fn apply_clipboard_text(
+        edit: &mut TextEditState<'_>,
+        policy: ClipboardTextPolicy,
+        text: &str,
+    ) -> Outcome {
+        let normalized = match policy {
+            ClipboardTextPolicy::SingleLine => clipboard::normalize_single_line(text),
+            ClipboardTextPolicy::Multiline => clipboard::normalize_multiline(text),
+        };
+
+        let Some(normalized) = normalized else {
+            return Outcome::noop_handled();
+        };
+
+        Outcome::layout(edit.replace_selection(&normalized))
     }
 
     #[derive(Debug, Clone)]

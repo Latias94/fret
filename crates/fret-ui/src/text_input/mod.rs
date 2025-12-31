@@ -520,14 +520,18 @@ impl<H: UiHost> Widget<H> for TextInput {
                 if !focused {
                     return;
                 }
-                if !self.is_ime_composing() {
-                    if let Some(sanitized) =
-                        crate::text_edit::clipboard::normalize_single_line(text.as_str())
-                    {
-                        self.replace_selection(&sanitized);
-                        cx.invalidate_self(Invalidation::Layout);
-                        cx.request_redraw();
-                    }
+                if self.is_ime_composing() {
+                    return;
+                }
+
+                let outcome = crate::text_edit::commands::apply_clipboard_text(
+                    &mut self.edit_state(),
+                    crate::text_edit::commands::ClipboardTextPolicy::SingleLine,
+                    text.as_str(),
+                );
+                if outcome.invalidate_layout {
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
                 }
             }
             Event::Ime(ime) => {
