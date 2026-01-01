@@ -476,6 +476,7 @@ impl MenubarMenu {
                                                 roving,
                                             },
                                             move |cx| {
+                                                cx.roving_nav_apg();
                                                 cx.roving_typeahead_prefix_arc_str(
                                                     labels_arc.clone(),
                                                     typeahead_timeout_ticks,

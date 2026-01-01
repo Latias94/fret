@@ -270,6 +270,7 @@ impl ToggleGroup {
                     roving,
                 },
                 move |cx| {
+                    cx.roving_nav_apg();
                     let n = items.len();
                     let mut out = Vec::with_capacity(n);
 

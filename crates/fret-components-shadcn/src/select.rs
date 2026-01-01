@@ -294,14 +294,15 @@ pub fn select<H: UiHost>(
                                                             justify: MainAlign::Start,
                                                             align: CrossAlign::Stretch,
                                                             wrap: false,
-                                                    },
-                                                    roving,
                                                 },
-                                                |cx| {
-                                                    cx.roving_select_option_arc_str(
-                                                        &model,
-                                                        values_arc.clone(),
-                                                    );
+                                                roving,
+                                            },
+                                            |cx| {
+                                                cx.roving_nav_apg();
+                                                cx.roving_select_option_arc_str(
+                                                    &model,
+                                                    values_arc.clone(),
+                                                );
                                                     cx.roving_typeahead_prefix_arc_str(
                                                         labels_arc.clone(),
                                                         30,

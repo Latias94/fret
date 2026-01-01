@@ -220,6 +220,7 @@ impl Tabs {
                         roving,
                     },
                     |cx| {
+                        cx.roving_nav_apg();
                         cx.roving_select_option_arc_str(&model, values_arc.clone());
 
                         let fg_muted = tabs_list_fg_muted(&theme);

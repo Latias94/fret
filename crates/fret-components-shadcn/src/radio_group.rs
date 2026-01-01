@@ -201,6 +201,7 @@ impl RadioGroup {
                             roving,
                         },
                         move |cx| {
+                            cx.roving_nav_apg();
                             cx.roving_select_option_arc_str(&model, values_arc.clone());
 
                             let mut out = Vec::with_capacity(items.len());

@@ -1,5 +1,5 @@
 use crate::UiHost;
-use fret_core::{AppWindowId, CursorIcon, KeyCode, Modifiers, MouseButton, Point};
+use fret_core::{AppWindowId, Axis, CursorIcon, KeyCode, Modifiers, MouseButton, Point};
 use fret_runtime::{CommandId, Effect, Model, ModelStore, TimerToken, WeakModel};
 use std::any::Any;
 use std::sync::Arc;
@@ -202,8 +202,31 @@ pub type OnRovingActiveChange = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, usiz
 pub type OnRovingTypeahead =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, RovingTypeaheadCx) -> Option<usize> + 'static>;
 
+#[derive(Debug, Clone)]
+pub struct RovingNavigateCx {
+    pub key: KeyCode,
+    pub modifiers: Modifiers,
+    pub repeat: bool,
+    pub axis: Axis,
+    pub current: Option<usize>,
+    pub len: usize,
+    pub disabled: Arc<[bool]>,
+    pub wrap: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RovingNavigateResult {
+    NotHandled,
+    Handled { target: Option<usize> },
+}
+
+pub type OnRovingNavigate = Arc<
+    dyn Fn(&mut dyn UiActionHost, ActionCx, RovingNavigateCx) -> RovingNavigateResult + 'static,
+>;
+
 #[derive(Default)]
 pub(crate) struct RovingActionHooks {
     pub on_active_change: Option<OnRovingActiveChange>,
     pub on_typeahead: Option<OnRovingTypeahead>,
+    pub on_navigate: Option<OnRovingNavigate>,
 }

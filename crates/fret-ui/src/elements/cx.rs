@@ -9,7 +9,7 @@ use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 use crate::action::OnHoverChange;
 use crate::action::{
     DismissibleActionHooks, KeyActionHooks, OnActivate, OnDismissRequest, OnKeyDown, OnPointerDown,
-    OnPointerMove, OnPointerUp, OnRovingActiveChange, OnRovingTypeahead, OnTimer,
+    OnPointerMove, OnPointerUp, OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead, OnTimer,
     PointerActionHooks, PressableActionHooks, PressableHoverActionHooks, RovingActionHooks,
     TimerActionHooks,
 };
@@ -788,6 +788,39 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
         });
     }
 
+    /// Register a component-owned roving navigation handler for the current roving element.
+    ///
+    /// This is invoked for key down events that bubble through the roving container so component
+    /// code can decide which child should become focused (arrow keys, Home/End, etc.).
+    pub fn roving_on_navigate(&mut self, handler: OnRovingNavigate) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_navigate = Some(handler);
+        });
+    }
+
+    pub fn roving_add_on_navigate(&mut self, handler: OnRovingNavigate) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_navigate = match hooks.on_navigate.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, it| {
+                        match prev(host, cx, it.clone()) {
+                            crate::action::RovingNavigateResult::NotHandled => next(host, cx, it),
+                            other => other,
+                        }
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn roving_clear_on_navigate(&mut self) {
+        self.with_state(RovingActionHooks::default, |hooks| {
+            hooks.on_navigate = None;
+        });
+    }
+
     #[track_caller]
     pub fn stack(&mut self, f: impl FnOnce(&mut Self) -> Vec<AnyElement>) -> AnyElement {
         self.stack_props(StackProps::default(), f)
@@ -1176,6 +1209,7 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             let id = cx.root_id();
             cx.roving_clear_on_active_change();
             cx.roving_clear_on_typeahead();
+            cx.roving_clear_on_navigate();
             let children = f(cx);
             AnyElement::new(id, ElementKind::RovingFlex(props), children)
         })

@@ -386,6 +386,7 @@ impl CommandList {
                             roving,
                         },
                         move |cx| {
+                            cx.roving_nav_apg();
                             let mut out = Vec::with_capacity(items.len());
 
                             for (idx, item) in items.into_iter().enumerate() {

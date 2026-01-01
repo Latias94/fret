@@ -1,9 +1,11 @@
 use fret_runtime::{CommandId, Model, WeakModel};
 use fret_ui::ElementCx;
 use fret_ui::UiHost;
+use fret_ui::action::RovingNavigateResult;
 use fret_ui::action::RovingTypeaheadCx;
 use fret_ui::action::UiActionHostExt;
 
+use crate::headless::roving_focus;
 use crate::headless::typeahead::{TypeaheadBuffer, match_prefix_arc_str};
 
 use std::cell::RefCell;
@@ -84,6 +86,12 @@ pub trait ActionHooksExt {
     fn roving_typeahead_first_char_arc_str(&mut self, labels: Arc<[Arc<str>]>);
 
     fn roving_typeahead_prefix_arc_str(&mut self, labels: Arc<[Arc<str>]>, timeout_ticks: u64);
+
+    /// Install an APG-aligned default keyboard navigation policy for `RovingFlex`.
+    ///
+    /// This keeps navigation policy out of `crates/fret-ui` while keeping declarative call sites
+    /// small and consistent.
+    fn roving_nav_apg(&mut self);
 }
 
 impl<H: UiHost> ActionHooksExt for ElementCx<'_, H> {
@@ -416,5 +424,45 @@ impl<H: UiHost> ActionHooksExt for ElementCx<'_, H> {
         );
 
         self.roving_add_on_typeahead(handler);
+    }
+
+    fn roving_nav_apg(&mut self) {
+        self.roving_add_on_navigate(Arc::new(|_host, _cx, it| {
+            use fret_core::KeyCode;
+
+            match it.key {
+                KeyCode::Home => {
+                    return RovingNavigateResult::Handled {
+                        target: roving_focus::first_enabled(&it.disabled),
+                    };
+                }
+                KeyCode::End => {
+                    return RovingNavigateResult::Handled {
+                        target: roving_focus::last_enabled(&it.disabled),
+                    };
+                }
+                _ => {}
+            }
+
+            let Some(current) = it.current else {
+                return RovingNavigateResult::NotHandled;
+            };
+
+            let forward = match (it.axis, it.key) {
+                (fret_core::Axis::Vertical, KeyCode::ArrowDown) => Some(true),
+                (fret_core::Axis::Vertical, KeyCode::ArrowUp) => Some(false),
+                (fret_core::Axis::Horizontal, KeyCode::ArrowRight) => Some(true),
+                (fret_core::Axis::Horizontal, KeyCode::ArrowLeft) => Some(false),
+                _ => None,
+            };
+
+            let Some(forward) = forward else {
+                return RovingNavigateResult::NotHandled;
+            };
+
+            RovingNavigateResult::Handled {
+                target: roving_focus::next_enabled(&it.disabled, current, forward, it.wrap),
+            }
+        }));
     }
 }

@@ -663,6 +663,45 @@ fn roving_flex_arrow_keys_move_focus_and_update_selection() {
             vec![cx.roving_flex(props, |cx| {
                 let values = values.clone();
                 let model = model.clone();
+                cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
+                    use crate::action::RovingNavigateResult;
+                    use fret_core::KeyCode;
+
+                    let Some(current) = it.current else {
+                        return RovingNavigateResult::NotHandled;
+                    };
+
+                    let forward = match it.key {
+                        KeyCode::ArrowDown => true,
+                        KeyCode::ArrowUp => false,
+                        _ => return RovingNavigateResult::NotHandled,
+                    };
+
+                    let len = it.len;
+                    let is_disabled =
+                        |idx: usize| -> bool { it.disabled.get(idx).copied().unwrap_or(false) };
+
+                    let mut target: Option<usize> = None;
+                    if it.wrap {
+                        for step in 1..=len {
+                            let idx = if forward {
+                                (current + step) % len
+                            } else {
+                                (current + len - (step % len)) % len
+                            };
+                            if !is_disabled(idx) {
+                                target = Some(idx);
+                                break;
+                            }
+                        }
+                    } else if forward {
+                        target = ((current + 1)..len).find(|&i| !is_disabled(i));
+                    } else if current > 0 {
+                        target = (0..current).rev().find(|&i| !is_disabled(i));
+                    }
+
+                    RovingNavigateResult::Handled { target }
+                }));
                 cx.roving_on_active_change(Arc::new(move |host, _cx, idx| {
                     let Some(value) = values.get(idx).cloned() else {
                         return;
