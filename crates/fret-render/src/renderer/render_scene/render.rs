@@ -25,6 +25,7 @@ impl Renderer {
         self.ensure_viewport_pipeline(device, format);
         self.ensure_pipeline(device, format);
         self.ensure_text_pipeline(device, format);
+        self.ensure_text_color_pipeline(device, format);
         self.ensure_mask_pipeline(device, format);
         self.ensure_path_pipeline(device, format);
         let path_samples = self.effective_path_msaa_samples(format);
@@ -142,7 +143,8 @@ impl Renderer {
                 None,
                 Quad,
                 Viewport,
-                Text,
+                TextMask,
+                TextColor,
                 Mask,
                 Composite,
                 Path,
@@ -160,6 +162,10 @@ impl Renderer {
                 .text_pipeline
                 .as_ref()
                 .expect("text pipeline must exist");
+            let text_color_pipeline = self
+                .text_color_pipeline
+                .as_ref()
+                .expect("text color pipeline must exist");
             let mask_pipeline = self
                 .mask_pipeline
                 .as_ref()
@@ -519,11 +525,31 @@ impl Renderer {
                             continue;
                         }
 
-                        if !matches!(active_pipeline, ActivePipeline::Text) {
-                            pass.set_pipeline(text_pipeline);
-                            pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
-                            pass.set_bind_group(1, self.text_system.atlas_bind_group(), &[]);
-                            active_pipeline = ActivePipeline::Text;
+                        match draw.kind {
+                            TextDrawKind::Mask => {
+                                if !matches!(active_pipeline, ActivePipeline::TextMask) {
+                                    pass.set_pipeline(text_pipeline);
+                                    pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
+                                    pass.set_bind_group(
+                                        1,
+                                        self.text_system.mask_atlas_bind_group(),
+                                        &[],
+                                    );
+                                    active_pipeline = ActivePipeline::TextMask;
+                                }
+                            }
+                            TextDrawKind::Color => {
+                                if !matches!(active_pipeline, ActivePipeline::TextColor) {
+                                    pass.set_pipeline(text_color_pipeline);
+                                    pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
+                                    pass.set_bind_group(
+                                        1,
+                                        self.text_system.color_atlas_bind_group(),
+                                        &[],
+                                    );
+                                    active_pipeline = ActivePipeline::TextColor;
+                                }
+                            }
                         }
 
                         let uniform_offset =

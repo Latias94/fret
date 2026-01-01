@@ -1,0 +1,183 @@
+use super::*;
+
+#[derive(Clone, Copy)]
+pub(super) enum ClipPop {
+    NoShader,
+    Shader { prev_head: u32 },
+}
+
+pub(super) struct EncodeState<'a> {
+    pub(super) scale_factor: f32,
+    pub(super) viewport_size: (u32, u32),
+
+    pub(super) instances: &'a mut Vec<QuadInstance>,
+    pub(super) viewport_vertices: &'a mut Vec<ViewportVertex>,
+    pub(super) text_vertices: &'a mut Vec<TextVertex>,
+    pub(super) path_vertices: &'a mut Vec<PathVertex>,
+    pub(super) clips: &'a mut Vec<ClipRRectUniform>,
+    pub(super) uniforms: &'a mut Vec<ViewportUniform>,
+    pub(super) ordered_draws: &'a mut Vec<OrderedDraw>,
+
+    pub(super) scissor_stack: Vec<ScissorRect>,
+    pub(super) current_scissor: ScissorRect,
+
+    pub(super) clip_pop_stack: Vec<ClipPop>,
+    pub(super) clip_head: u32,
+    pub(super) clip_count: u32,
+
+    pub(super) current_uniform_index: u32,
+
+    pub(super) quad_batch: Option<(ScissorRect, u32, u32)>,
+
+    pub(super) transform_stack: Vec<Transform2D>,
+    pub(super) opacity_stack: Vec<f32>,
+}
+
+impl<'a> EncodeState<'a> {
+    pub(super) fn new(
+        encoding: &'a mut SceneEncoding,
+        scale_factor: f32,
+        viewport_size: (u32, u32),
+    ) -> Self {
+        let instances = &mut encoding.instances;
+        let viewport_vertices = &mut encoding.viewport_vertices;
+        let text_vertices = &mut encoding.text_vertices;
+        let path_vertices = &mut encoding.path_vertices;
+        let clips = &mut encoding.clips;
+        let uniforms = &mut encoding.uniforms;
+        let ordered_draws = &mut encoding.ordered_draws;
+
+        let current_scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
+        let mut state = Self {
+            scale_factor,
+            viewport_size,
+            instances,
+            viewport_vertices,
+            text_vertices,
+            path_vertices,
+            clips,
+            uniforms,
+            ordered_draws,
+            scissor_stack: vec![current_scissor],
+            current_scissor,
+            clip_pop_stack: Vec::new(),
+            clip_head: 0,
+            clip_count: 0,
+            current_uniform_index: 0,
+            quad_batch: None,
+            transform_stack: vec![Transform2D::IDENTITY],
+            opacity_stack: vec![1.0],
+        };
+
+        state.current_uniform_index = state.push_uniform_snapshot(0, 0);
+        state
+    }
+
+    pub(super) fn flush_quad_batch(&mut self) {
+        if let Some((scissor, uniform_index, first_instance)) = self.quad_batch.take() {
+            let instance_count = (self.instances.len() as u32).saturating_sub(first_instance);
+            if instance_count > 0 {
+                self.ordered_draws.push(OrderedDraw::Quad(DrawCall {
+                    scissor,
+                    uniform_index,
+                    first_instance,
+                    instance_count,
+                }));
+            }
+        }
+    }
+
+    pub(super) fn push_uniform_snapshot(&mut self, clip_head: u32, clip_count: u32) -> u32 {
+        let uniform_index = self.uniforms.len() as u32;
+        self.uniforms.push(ViewportUniform {
+            viewport_size: [self.viewport_size.0 as f32, self.viewport_size.1 as f32],
+            clip_head,
+            clip_count,
+        });
+        uniform_index
+    }
+
+    pub(super) fn current_opacity(&self) -> f32 {
+        *self
+            .opacity_stack
+            .last()
+            .expect("opacity stack must be non-empty")
+    }
+
+    pub(super) fn current_transform(&self) -> Transform2D {
+        *self
+            .transform_stack
+            .last()
+            .expect("transform stack must be non-empty")
+    }
+
+    pub(super) fn to_physical_px(&self, t: Transform2D) -> Transform2D {
+        t.to_physical_px(self.scale_factor)
+    }
+
+    pub(super) fn current_transform_px(&self) -> Transform2D {
+        self.to_physical_px(self.current_transform())
+    }
+
+    pub(super) fn current_transform_max_scale(t: Transform2D) -> f32 {
+        if let Some((s, _)) = t.as_translation_uniform_scale()
+            && s.is_finite()
+            && s > 0.0
+        {
+            return s;
+        }
+
+        let sx = (t.a * t.a + t.b * t.b).sqrt();
+        let sy = (t.c * t.c + t.d * t.d).sqrt();
+        let s = sx.max(sy);
+        if s.is_finite() && s > 0.0 { s } else { 1.0 }
+    }
+
+    pub(super) fn color_with_opacity(mut c: Color, opacity: f32) -> Color {
+        c.a = (c.a * opacity).clamp(0.0, 1.0);
+        c
+    }
+}
+
+pub(super) fn transform_rows(t_px: Transform2D) -> ([f32; 4], [f32; 4]) {
+    (
+        [t_px.a, t_px.c, t_px.tx, 0.0],
+        [t_px.b, t_px.d, t_px.ty, 0.0],
+    )
+}
+
+pub(super) fn apply_transform_px(t_px: Transform2D, x: f32, y: f32) -> (f32, f32) {
+    let p = t_px.apply_point(Point::new(Px(x), Px(y)));
+    (p.x.0, p.y.0)
+}
+
+pub(super) fn transform_quad_points_px(
+    t_px: Transform2D,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+) -> [(f32, f32); 4] {
+    let (x0, y0) = (x, y);
+    let (x1, y1) = (x + w, y + h);
+    [
+        apply_transform_px(t_px, x0, y0),    // TL
+        apply_transform_px(t_px, x + w, y0), // TR
+        apply_transform_px(t_px, x1, y1),    // BR
+        apply_transform_px(t_px, x0, y1),    // BL
+    ]
+}
+
+pub(super) fn bounds_of_quad_points(pts: &[(f32, f32); 4]) -> (f32, f32, f32, f32) {
+    let mut min_x = pts[0].0;
+    let mut max_x = pts[0].0;
+    let mut min_y = pts[0].1;
+    let mut max_y = pts[0].1;
+    for (x, y) in pts.iter().copied() {
+        min_x = min_x.min(x);
+        max_x = max_x.max(x);
+        min_y = min_y.min(y);
+        max_y = max_y.max(y);
+    }
+    (min_x, min_y, max_x, max_y)
+}

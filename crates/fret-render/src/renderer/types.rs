@@ -214,6 +214,13 @@ pub(super) struct TextDraw {
     pub(super) uniform_index: u32,
     pub(super) first_vertex: u32,
     pub(super) vertex_count: u32,
+    pub(super) kind: TextDrawKind,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum TextDrawKind {
+    Mask,
+    Color,
 }
 
 #[derive(Clone, Copy)]

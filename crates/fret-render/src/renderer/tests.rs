@@ -1,5 +1,6 @@
 use super::shaders::{
-    COMPOSITE_PREMUL_SHADER, MASK_SHADER, PATH_SHADER, QUAD_SHADER, TEXT_SHADER, VIEWPORT_SHADER,
+    COMPOSITE_PREMUL_SHADER, MASK_SHADER, PATH_SHADER, QUAD_SHADER, TEXT_COLOR_SHADER, TEXT_SHADER,
+    VIEWPORT_SHADER,
 };
 use super::{clamp_corner_radii_for_rect, svg_draw_rect_px};
 use fret_core::geometry::{Point, Px, Transform2D};
@@ -12,6 +13,7 @@ fn shaders_parse_as_wgsl() {
         ("composite_premul", COMPOSITE_PREMUL_SHADER),
         ("path", PATH_SHADER),
         ("text", TEXT_SHADER),
+        ("text_color", TEXT_COLOR_SHADER),
         ("mask", MASK_SHADER),
     ] {
         naga::front::wgsl::parse_str(src)

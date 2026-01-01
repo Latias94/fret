@@ -2,6 +2,7 @@ use cosmic_text::{
     Attrs, AttrsList, CacheKey, CacheKeyFlags, Family, FontSystem, Metrics, ShapeBuffer, ShapeLine,
     Shaping, SwashCache, Weight,
 };
+use cosmic_text::SwashContent;
 use fret_core::{
     CaretAffinity, HitTestResult, Point, Rect, Size, TextBlobId, TextConstraints, TextMetrics,
     TextOverflow, TextStyle, TextWrap, geometry::Px,
@@ -204,6 +205,13 @@ pub struct GlyphQuad {
     pub rect: [f32; 4],
     /// Normalized UV rect in the atlas: (u0, v0, u1, v1).
     pub uv: [f32; 4],
+    pub kind: GlyphQuadKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GlyphQuadKind {
+    Mask,
+    Color,
 }
 
 #[derive(Debug, Clone)]
@@ -278,6 +286,7 @@ struct PendingUpload {
     y: u32,
     w: u32,
     h: u32,
+    bytes_per_pixel: u32,
     data: Vec<u8>,
 }
 
@@ -345,6 +354,7 @@ impl GlyphAtlas {
         key: CacheKey,
         w: u32,
         h: u32,
+        bytes_per_pixel: u32,
         data: Vec<u8>,
     ) -> Option<&GlyphAtlasEntry> {
         if self.glyphs.contains_key(&key) {
@@ -352,10 +362,25 @@ impl GlyphAtlas {
         }
 
         let (x, y) = self.allocate(w, h)?;
-        self.pending.push(PendingUpload { x, y, w, h, data });
+        self.pending.push(PendingUpload {
+            x,
+            y,
+            w,
+            h,
+            bytes_per_pixel,
+            data,
+        });
         self.glyphs.insert(key, GlyphAtlasEntry { x, y, w, h });
         self.glyphs.get(&key)
     }
+}
+
+fn subpixel_mask_to_alpha(data: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(data.len() / 4);
+    for rgba in data.chunks_exact(4) {
+        out.push(rgba[0].max(rgba[1]).max(rgba[2]));
+    }
+    out
 }
 
 pub struct TextSystem {
@@ -368,10 +393,13 @@ pub struct TextSystem {
     blob_cache: HashMap<TextBlobKey, TextBlobId>,
     blob_key_by_id: HashMap<TextBlobId, TextBlobKey>,
 
-    atlas: GlyphAtlas,
-    atlas_texture: wgpu::Texture,
+    mask_atlas: GlyphAtlas,
+    color_atlas: GlyphAtlas,
+    mask_atlas_texture: wgpu::Texture,
+    color_atlas_texture: wgpu::Texture,
     atlas_bind_group_layout: wgpu::BindGroupLayout,
-    atlas_bind_group: wgpu::BindGroup,
+    mask_atlas_bind_group: wgpu::BindGroup,
+    color_atlas_bind_group: wgpu::BindGroup,
 }
 
 fn family_for_font_id(font: &fret_core::FontId) -> Family<'_> {
@@ -400,8 +428,8 @@ impl TextSystem {
         let atlas_width = 2048;
         let atlas_height = 2048;
 
-        let atlas_texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("fret glyph atlas"),
+        let mask_atlas_texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("fret glyph mask atlas"),
             size: wgpu::Extent3d {
                 width: atlas_width,
                 height: atlas_height,
@@ -415,7 +443,25 @@ impl TextSystem {
             view_formats: &[],
         });
 
-        let atlas_view = atlas_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let color_atlas_texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("fret glyph color atlas"),
+            size: wgpu::Extent3d {
+                width: atlas_width,
+                height: atlas_height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+
+        let mask_atlas_view =
+            mask_atlas_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let color_atlas_view =
+            color_atlas_texture.create_view(&wgpu::TextureViewDescriptor::default());
         let atlas_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("fret glyph atlas sampler"),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
@@ -450,8 +496,8 @@ impl TextSystem {
                 ],
             });
 
-        let atlas_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fret glyph atlas bind group"),
+        let mask_atlas_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("fret glyph mask atlas bind group"),
             layout: &atlas_bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
@@ -460,7 +506,22 @@ impl TextSystem {
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&atlas_view),
+                    resource: wgpu::BindingResource::TextureView(&mask_atlas_view),
+                },
+            ],
+        });
+
+        let color_atlas_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("fret glyph color atlas bind group"),
+            layout: &atlas_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Sampler(&atlas_sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&color_atlas_view),
                 },
             ],
         });
@@ -491,10 +552,13 @@ impl TextSystem {
             blob_cache: HashMap::new(),
             blob_key_by_id: HashMap::new(),
 
-            atlas: GlyphAtlas::new(atlas_width, atlas_height),
-            atlas_texture,
+            mask_atlas: GlyphAtlas::new(atlas_width, atlas_height),
+            color_atlas: GlyphAtlas::new(atlas_width, atlas_height),
+            mask_atlas_texture,
+            color_atlas_texture,
             atlas_bind_group_layout,
-            atlas_bind_group,
+            mask_atlas_bind_group,
+            color_atlas_bind_group,
         }
     }
 
@@ -540,7 +604,8 @@ impl TextSystem {
         self.blobs.clear();
         self.blob_cache.clear();
         self.blob_key_by_id.clear();
-        self.atlas.reset();
+        self.mask_atlas.reset();
+        self.color_atlas.reset();
         true
     }
 
@@ -548,62 +613,84 @@ impl TextSystem {
         &self.atlas_bind_group_layout
     }
 
-    pub fn atlas_bind_group(&self) -> &wgpu::BindGroup {
-        &self.atlas_bind_group
+    pub fn mask_atlas_bind_group(&self) -> &wgpu::BindGroup {
+        &self.mask_atlas_bind_group
+    }
+
+    pub fn color_atlas_bind_group(&self) -> &wgpu::BindGroup {
+        &self.color_atlas_bind_group
     }
 
     pub fn flush_uploads(&mut self, queue: &wgpu::Queue) {
-        if self.atlas.pending.is_empty() {
-            return;
+        fn flush(pending: &mut Vec<PendingUpload>, texture: &wgpu::Texture, queue: &wgpu::Queue) {
+            for upload in std::mem::take(pending) {
+                if upload.w == 0 || upload.h == 0 {
+                    continue;
+                }
+
+                let bytes_per_row = upload.w.saturating_mul(upload.bytes_per_pixel);
+                if bytes_per_row == 0 {
+                    continue;
+                }
+
+                let aligned_bytes_per_row =
+                    bytes_per_row.div_ceil(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
+                        * wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+                let aligned_bytes_per_row = aligned_bytes_per_row.max(bytes_per_row);
+
+                let expected_len = (bytes_per_row.saturating_mul(upload.h)) as usize;
+                if upload.data.len() != expected_len {
+                    continue;
+                }
+
+                let data = if aligned_bytes_per_row == bytes_per_row {
+                    upload.data
+                } else {
+                    let mut padded = vec![0u8; (aligned_bytes_per_row * upload.h) as usize];
+                    for row in 0..upload.h as usize {
+                        let src0 = row * bytes_per_row as usize;
+                        let src1 = src0 + bytes_per_row as usize;
+                        let dst0 = row * aligned_bytes_per_row as usize;
+                        let dst1 = dst0 + bytes_per_row as usize;
+                        padded[dst0..dst1].copy_from_slice(&upload.data[src0..src1]);
+                    }
+                    padded
+                };
+
+                queue.write_texture(
+                    wgpu::TexelCopyTextureInfo {
+                        texture,
+                        mip_level: 0,
+                        origin: wgpu::Origin3d {
+                            x: upload.x,
+                            y: upload.y,
+                            z: 0,
+                        },
+                        aspect: wgpu::TextureAspect::All,
+                    },
+                    &data,
+                    wgpu::TexelCopyBufferLayout {
+                        offset: 0,
+                        bytes_per_row: Some(aligned_bytes_per_row),
+                        rows_per_image: Some(upload.h),
+                    },
+                    wgpu::Extent3d {
+                        width: upload.w,
+                        height: upload.h,
+                        depth_or_array_layers: 1,
+                    },
+                );
+            }
         }
 
-        for upload in std::mem::take(&mut self.atlas.pending) {
-            if upload.w == 0 || upload.h == 0 {
-                continue;
-            }
-
-            // WebGPU requires `bytes_per_row` to be aligned; pad each row as needed.
-            let bytes_per_row = upload.w;
-            let aligned_bytes_per_row = bytes_per_row.div_ceil(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
-                * wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-            let aligned_bytes_per_row = aligned_bytes_per_row.max(bytes_per_row);
-
-            let data = if aligned_bytes_per_row == bytes_per_row {
-                upload.data
-            } else {
-                let mut padded = vec![0u8; (aligned_bytes_per_row * upload.h) as usize];
-                for row in 0..upload.h as usize {
-                    let src0 = row * upload.w as usize;
-                    let src1 = src0 + upload.w as usize;
-                    let dst0 = row * aligned_bytes_per_row as usize;
-                    let dst1 = dst0 + upload.w as usize;
-                    padded[dst0..dst1].copy_from_slice(&upload.data[src0..src1]);
-                }
-                padded
-            };
-
-            queue.write_texture(
-                wgpu::TexelCopyTextureInfo {
-                    texture: &self.atlas_texture,
-                    mip_level: 0,
-                    origin: wgpu::Origin3d {
-                        x: upload.x,
-                        y: upload.y,
-                        z: 0,
-                    },
-                    aspect: wgpu::TextureAspect::All,
-                },
-                &data,
-                wgpu::TexelCopyBufferLayout {
-                    offset: 0,
-                    bytes_per_row: Some(aligned_bytes_per_row),
-                    rows_per_image: Some(upload.h),
-                },
-                wgpu::Extent3d {
-                    width: upload.w,
-                    height: upload.h,
-                    depth_or_array_layers: 1,
-                },
+        if !self.mask_atlas.pending.is_empty() {
+            flush(&mut self.mask_atlas.pending, &self.mask_atlas_texture, queue);
+        }
+        if !self.color_atlas.pending.is_empty() {
+            flush(
+                &mut self.color_atlas.pending,
+                &self.color_atlas_texture,
+                queue,
             );
         }
     }
@@ -729,15 +816,47 @@ impl TextSystem {
                     continue;
                 }
 
-                let (atlas_w, atlas_h) = (self.atlas.width as f32, self.atlas.height as f32);
-                let (ex, ey, ew, eh) = match self.atlas.get_or_insert(
-                    cache_key,
-                    image.placement.width,
-                    image.placement.height,
-                    image.data,
-                ) {
-                    Some(e) => (e.x, e.y, e.w, e.h),
-                    None => continue,
+                let (kind, bytes_per_pixel, data) = match image.content {
+                    SwashContent::Mask => (GlyphQuadKind::Mask, 1, image.data),
+                    SwashContent::Color => (GlyphQuadKind::Color, 4, image.data),
+                    SwashContent::SubpixelMask => {
+                        (GlyphQuadKind::Mask, 1, subpixel_mask_to_alpha(&image.data))
+                    }
+                };
+
+                let (atlas_w, atlas_h, ex, ey, ew, eh) = match kind {
+                    GlyphQuadKind::Mask => {
+                        let (atlas_w, atlas_h) = (
+                            self.mask_atlas.width as f32,
+                            self.mask_atlas.height as f32,
+                        );
+                        let Some(e) = self.mask_atlas.get_or_insert(
+                            cache_key,
+                            image.placement.width,
+                            image.placement.height,
+                            bytes_per_pixel,
+                            data,
+                        ) else {
+                            continue;
+                        };
+                        (atlas_w, atlas_h, e.x, e.y, e.w, e.h)
+                    }
+                    GlyphQuadKind::Color => {
+                        let (atlas_w, atlas_h) = (
+                            self.color_atlas.width as f32,
+                            self.color_atlas.height as f32,
+                        );
+                        let Some(e) = self.color_atlas.get_or_insert(
+                            cache_key,
+                            image.placement.width,
+                            image.placement.height,
+                            bytes_per_pixel,
+                            data,
+                        ) else {
+                            continue;
+                        };
+                        (atlas_w, atlas_h, e.x, e.y, e.w, e.h)
+                    }
                 };
 
                 let line_baseline_px = y_top_px + l.max_ascent.max(0.0);
@@ -755,6 +874,7 @@ impl TextSystem {
                 glyphs.push(GlyphQuad {
                     rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
                     uv: [u0, v0, u1, v1],
+                    kind,
                 });
             }
         }
@@ -1309,9 +1429,18 @@ fn selection_rects_from_lines(lines: &[TextLine], range: (usize, usize), out: &m
 
 #[cfg(test)]
 mod tests {
-    use super::{TextBlobKey, layout_text};
+    use super::{TextBlobKey, layout_text, subpixel_mask_to_alpha};
     use cosmic_text::{Attrs, Family};
     use fret_core::{FontWeight, Px, TextConstraints, TextOverflow, TextStyle, TextWrap};
+
+    #[test]
+    fn subpixel_mask_to_alpha_uses_channel_max() {
+        let data = vec![
+            10u8, 3u8, 4u8, 0u8, //
+            1u8, 200u8, 2u8, 0u8,
+        ];
+        assert_eq!(subpixel_mask_to_alpha(&data), vec![10u8, 200u8]);
+    }
 
     #[test]
     fn text_blob_key_includes_typography_fields() {
