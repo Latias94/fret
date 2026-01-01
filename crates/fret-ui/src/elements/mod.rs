@@ -16,9 +16,9 @@ pub use queries::{
 pub use runtime::{ContinuousFrames, ElementRuntime, WindowElementState};
 
 pub(crate) use access::{
-    is_hovered_pressable, is_pressed_pressable, observed_globals_for_element,
-    observed_models_for_element, set_pressed_pressable, update_hovered_hover_region,
-    update_hovered_pressable, with_window_state,
+    is_pressed_pressable, observed_globals_for_element, observed_models_for_element,
+    set_pressed_pressable, update_hovered_hover_region, update_hovered_pressable,
+    with_window_state,
 };
 pub(crate) use queries::{record_bounds_for_element, record_visual_bounds_for_element};
 pub(crate) use runtime::NodeEntry;

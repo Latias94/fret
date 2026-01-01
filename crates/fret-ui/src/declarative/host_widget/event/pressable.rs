@@ -29,15 +29,19 @@ pub(super) fn handle_pressable<H: UiHost>(
                 cx.request_redraw();
                 cx.stop_propagation();
             }
-            fret_core::PointerEvent::Up { button, .. } => {
+            fret_core::PointerEvent::Up {
+                button, position, ..
+            } => {
                 if *button != MouseButton::Left {
                     return;
                 }
                 cx.release_pointer_capture();
                 crate::elements::set_pressed_pressable(&mut *cx.app, window, None);
 
-                let hovered =
-                    crate::elements::is_hovered_pressable(&mut *cx.app, window, this.element);
+                // Activate based on the pointer-up position, not the cached hovered state. This
+                // keeps click-through outside-press dismissal semantics (ADR 0069) robust even
+                // when overlay policies update hover state in an observer pass.
+                let hovered = cx.bounds.contains(*position);
 
                 if hovered {
                     let hook = crate::elements::with_element_state(
