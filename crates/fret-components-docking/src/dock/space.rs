@@ -1790,9 +1790,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             || self.floating_drag.is_some()
             || self.viewport_capture.is_some()
             || self.tear_off_in_flight.is_some();
-        if wants_animation_frames
-            && let Some(window) = cx.window
-        {
+        if wants_animation_frames && let Some(window) = cx.window {
             cx.app.push_effect(Effect::RequestAnimationFrame(window));
         }
 
