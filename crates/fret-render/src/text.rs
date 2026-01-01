@@ -1,8 +1,8 @@
+use cosmic_text::SwashContent;
 use cosmic_text::{
     Attrs, AttrsList, CacheKey, CacheKeyFlags, Family, FontSystem, Metrics, ShapeBuffer, ShapeLine,
     Shaping, SwashCache, Weight,
 };
-use cosmic_text::SwashContent;
 use fret_core::{
     CaretAffinity, HitTestResult, Point, Rect, Size, TextBlobId, TextConstraints, TextMetrics,
     TextOverflow, TextStyle, TextWrap, geometry::Px,
@@ -399,9 +399,7 @@ fn collect_font_names(db: &cosmic_text::fontdb::Database) -> Vec<String> {
         db.family_name(&Family::Monospace),
     ] {
         let key = family.to_ascii_lowercase();
-        by_lower
-            .entry(key)
-            .or_insert_with(|| family.to_string());
+        by_lower.entry(key).or_insert_with(|| family.to_string());
     }
 
     let mut names: Vec<String> = by_lower.into_values().collect();
@@ -695,9 +693,9 @@ impl TextSystem {
                     continue;
                 }
 
-                let aligned_bytes_per_row =
-                    bytes_per_row.div_ceil(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
-                        * wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+                let aligned_bytes_per_row = bytes_per_row
+                    .div_ceil(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
+                    * wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
                 let aligned_bytes_per_row = aligned_bytes_per_row.max(bytes_per_row);
 
                 let expected_len = (bytes_per_row.saturating_mul(upload.h)) as usize;
@@ -746,7 +744,11 @@ impl TextSystem {
         }
 
         if !self.mask_atlas.pending.is_empty() {
-            flush(&mut self.mask_atlas.pending, &self.mask_atlas_texture, queue);
+            flush(
+                &mut self.mask_atlas.pending,
+                &self.mask_atlas_texture,
+                queue,
+            );
         }
         if !self.color_atlas.pending.is_empty() {
             flush(
@@ -888,10 +890,8 @@ impl TextSystem {
 
                 let (atlas_w, atlas_h, ex, ey, ew, eh) = match kind {
                     GlyphQuadKind::Mask => {
-                        let (atlas_w, atlas_h) = (
-                            self.mask_atlas.width as f32,
-                            self.mask_atlas.height as f32,
-                        );
+                        let (atlas_w, atlas_h) =
+                            (self.mask_atlas.width as f32, self.mask_atlas.height as f32);
                         let Some(e) = self.mask_atlas.get_or_insert(
                             cache_key,
                             image.placement.width,
@@ -1513,7 +1513,9 @@ mod tests {
         let names = collect_font_names(&db);
 
         assert!(
-            names.iter().any(|n| n == db.family_name(&Family::SansSerif)),
+            names
+                .iter()
+                .any(|n| n == db.family_name(&Family::SansSerif)),
             "expected sans-serif generic family to be present"
         );
         assert!(
