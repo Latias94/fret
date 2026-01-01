@@ -12,6 +12,8 @@ pub struct UiFrameCx<'a, H: UiHost> {
     pub scale_factor: f32,
 }
 
+pub type UiFrameContext<'a, H> = UiFrameCx<'a, H>;
+
 impl<'a, H: UiHost> UiFrameCx<'a, H> {
     pub fn new(
         ui: &'a mut UiTree<H>,

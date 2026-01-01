@@ -59,6 +59,7 @@ pub struct Combobox {
     query: Option<Model<String>>,
     items: Vec<ComboboxItem>,
     placeholder: Arc<str>,
+    search_placeholder: Arc<str>,
     empty_text: Arc<str>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
@@ -72,7 +73,8 @@ impl Combobox {
             open,
             query: None,
             items: Vec::new(),
-            placeholder: Arc::from("Select…"),
+            placeholder: Arc::from("Select..."),
+            search_placeholder: Arc::from("Search..."),
             empty_text: Arc::from("No results."),
             disabled: false,
             a11y_label: None,
@@ -97,6 +99,11 @@ impl Combobox {
 
     pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
         self.placeholder = placeholder.into();
+        self
+    }
+
+    pub fn search_placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.search_placeholder = placeholder.into();
         self
     }
 
@@ -128,6 +135,7 @@ impl Combobox {
             self.query,
             &self.items,
             self.placeholder,
+            self.search_placeholder,
             self.empty_text,
             self.disabled,
             self.a11y_label,
@@ -144,6 +152,7 @@ pub fn combobox<H: UiHost>(
     query: Option<Model<String>>,
     items: &[ComboboxItem],
     placeholder: Arc<str>,
+    search_placeholder: Arc<str>,
     empty_text: Arc<str>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
@@ -400,6 +409,7 @@ pub fn combobox<H: UiHost>(
 
                         command_items.push(
                             CommandItem::new(label_text)
+                                .value(item.value.clone())
                                 .disabled(item_disabled)
                                 .on_select_action(on_select)
                                 .children(vec![text, icon]),
@@ -410,7 +420,7 @@ pub fn combobox<H: UiHost>(
                     let list = if search_enabled {
                         CommandPalette::new(query_model.clone(), command_items)
                             .a11y_label("Combobox list")
-                            .placeholder("Search…")
+                            .placeholder(search_placeholder.clone())
                             .disabled(disabled)
                             .empty_text(empty_text)
                             .refine_style(ChromeRefinement {

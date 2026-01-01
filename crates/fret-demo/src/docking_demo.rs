@@ -11,7 +11,8 @@ use fret_core::{
     geometry::Px,
 };
 use fret_runner_winit_wgpu::{
-    RunnerUserEvent, WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig,
+    RunnerUserEvent, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
+    WinitRenderContext, WinitRunner, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
@@ -167,7 +168,7 @@ impl DockingDemoDriver {
     }
 }
 
-impl WinitDriver for DockingDemoDriver {
+impl WinitAppDriver for DockingDemoDriver {
     type WindowState = DockingDemoWindowState;
 
     fn init(&mut self, _app: &mut App, main_window: AppWindowId) {
@@ -180,32 +181,38 @@ impl WinitDriver for DockingDemoDriver {
 
     fn handle_model_changes(
         &mut self,
-        app: &mut App,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
+        context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[fret_app::ModelId],
     ) {
-        state.ui.propagate_model_changes(app, changed);
+        context
+            .state
+            .ui
+            .propagate_model_changes(context.app, changed);
     }
 
     fn handle_global_changes(
         &mut self,
-        app: &mut App,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
+        context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[std::any::TypeId],
     ) {
-        state.ui.propagate_global_changes(app, changed);
+        context
+            .state
+            .ui
+            .propagate_global_changes(context.app, changed);
     }
 
     fn handle_command(
         &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
+        context: WinitCommandContext<'_, Self::WindowState>,
         command: CommandId,
     ) {
+        let WinitCommandContext {
+            app,
+            services,
+            window,
+            state,
+        } = context;
+
         if state.ui.dispatch_command(app, services, &command) {
             return;
         }
@@ -214,14 +221,13 @@ impl WinitDriver for DockingDemoDriver {
         }
     }
 
-    fn handle_event(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-        event: &Event,
-    ) {
+    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
+        let WinitEventContext {
+            app,
+            services,
+            window,
+            state,
+        } = context;
         if matches!(event, Event::WindowCloseRequested) {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
@@ -233,16 +239,17 @@ impl WinitDriver for DockingDemoDriver {
         let _ = handle_dock_op(app, op);
     }
 
-    fn render(
-        &mut self,
-        app: &mut App,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-        bounds: Rect,
-        scale_factor: f32,
-        services: &mut dyn UiServices,
-        scene: &mut Scene,
-    ) {
+    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
+        let WinitRenderContext {
+            app,
+            services,
+            window,
+            state,
+            bounds,
+            scale_factor,
+            scene,
+        } = context;
+
         DockingDemoDriver::render_dock(app, services, window, state, bounds);
 
         state.ui.request_semantics_snapshot();
@@ -424,7 +431,7 @@ pub fn run() -> anyhow::Result<()> {
     }
 
     let driver = DockingDemoDriver::default();
-    let mut runner = WinitRunner::new(config, app, driver);
+    let mut runner = WinitRunner::new_app(config, app, driver);
     runner.set_event_loop_proxy(event_loop.create_proxy());
     event_loop.run_app(&mut runner)?;
     Ok(())

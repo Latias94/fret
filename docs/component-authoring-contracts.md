@@ -31,6 +31,7 @@ at least one regression test before expanding usage.
   - Identity: `ElementCx::scope(...)`, `ElementCx::keyed(...)`
   - Local state: `ElementCx::{with_state, with_state_for}`
   - Model reads + observation: `ElementCx::{observe_model, read_model_ref, get_model_*}`
+  - Focus reads: `ElementCx::{focused_element, is_focused_element}`
   - Cross-frame geometry queries: `ElementCx::{last_bounds_for_element, last_visual_bounds_for_element}`
 - Element props (mechanism vocabulary): `fret_ui::element::*Props` and `fret_ui::element::LayoutStyle`
 
@@ -116,6 +117,16 @@ Mechanism primitives:
 - `fret_ui::element::{RovingFlexProps, RovingFocusProps}` (roving focus mechanism)
 - Modal barrier behavior is implemented in the runtime’s multi-root overlay substrate; overlay
   policy should be in components.
+
+Focus state for styling:
+
+- `ElementCx::focused_element()` exposes the currently focused element for the window (as a
+  `GlobalElementId`) when it can be mapped from the focused `NodeId`.
+- `ElementCx::is_focused_element(id)` is the recommended way to compute “focused” affordances
+  (menu item active background, tooltip open-on-focus, focus chrome variants) without introducing
+  component-local focus mirrors.
+- `fret_ui::element::PressableState` includes `focused: bool` so pressable-based components can
+  style against `hovered/pressed/focused` consistently.
 
 Practical guidance:
 

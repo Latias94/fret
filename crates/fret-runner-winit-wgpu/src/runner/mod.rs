@@ -569,6 +569,260 @@ impl WindowCreateSpec {
     }
 }
 
+pub struct WinitWindowContext<'a, S> {
+    pub app: &'a mut App,
+    pub window: fret_core::AppWindowId,
+    pub state: &'a mut S,
+}
+
+pub struct WinitEventContext<'a, S> {
+    pub app: &'a mut App,
+    pub services: &'a mut dyn UiServices,
+    pub window: fret_core::AppWindowId,
+    pub state: &'a mut S,
+}
+
+pub struct WinitCommandContext<'a, S> {
+    pub app: &'a mut App,
+    pub services: &'a mut dyn UiServices,
+    pub window: fret_core::AppWindowId,
+    pub state: &'a mut S,
+}
+
+pub struct WinitRenderContext<'a, S> {
+    pub app: &'a mut App,
+    pub services: &'a mut dyn UiServices,
+    pub window: fret_core::AppWindowId,
+    pub state: &'a mut S,
+    pub bounds: Rect,
+    pub scale_factor: f32,
+    pub scene: &'a mut Scene,
+}
+
+pub struct WinitGlobalContext<'a> {
+    pub app: &'a mut App,
+    pub services: &'a mut dyn UiServices,
+}
+
+pub trait WinitAppDriver {
+    type WindowState;
+
+    fn init(&mut self, _app: &mut App, _main_window: fret_core::AppWindowId) {}
+
+    fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, _renderer: &mut Renderer) {}
+
+    #[allow(clippy::too_many_arguments)]
+    fn gpu_frame_prepare(
+        &mut self,
+        _app: &mut App,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _context: &WgpuContext,
+        _renderer: &mut Renderer,
+        _scale_factor: f32,
+    ) {
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn record_engine_frame(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        context: &WgpuContext,
+        renderer: &mut Renderer,
+        scale_factor: f32,
+        tick_id: TickId,
+        frame_id: FrameId,
+    ) -> EngineFrameUpdate {
+        EngineFrameUpdate {
+            target_updates: Vec::new(),
+            command_buffers: self.record_engine_commands(
+                app,
+                window,
+                state,
+                context,
+                renderer,
+                scale_factor,
+                tick_id,
+                frame_id,
+            ),
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn record_engine_commands(
+        &mut self,
+        _app: &mut App,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _context: &WgpuContext,
+        _renderer: &mut Renderer,
+        _scale_factor: f32,
+        _tick_id: TickId,
+        _frame_id: FrameId,
+    ) -> Vec<wgpu::CommandBuffer> {
+        Vec::new()
+    }
+
+    fn viewport_input(&mut self, _app: &mut App, _event: ViewportInputEvent) {}
+
+    fn dock_op(&mut self, _app: &mut App, _op: fret_core::DockOp) {}
+
+    fn handle_command(
+        &mut self,
+        _context: WinitCommandContext<'_, Self::WindowState>,
+        _command: fret_app::CommandId,
+    ) {
+    }
+
+    fn handle_global_command(
+        &mut self,
+        _context: WinitGlobalContext<'_>,
+        _command: fret_app::CommandId,
+    ) {
+    }
+
+    fn handle_model_changes(
+        &mut self,
+        _context: WinitWindowContext<'_, Self::WindowState>,
+        _changed: &[fret_app::ModelId],
+    ) {
+    }
+
+    fn handle_global_changes(
+        &mut self,
+        _context: WinitWindowContext<'_, Self::WindowState>,
+        _changed: &[TypeId],
+    ) {
+    }
+
+    fn create_window_state(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+    ) -> Self::WindowState;
+
+    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event);
+
+    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>);
+
+    fn window_create_spec(
+        &mut self,
+        _app: &mut App,
+        _request: &CreateWindowRequest,
+    ) -> Option<WindowCreateSpec> {
+        None
+    }
+
+    fn window_created(
+        &mut self,
+        _app: &mut App,
+        _request: &CreateWindowRequest,
+        _new_window: fret_core::AppWindowId,
+    ) {
+    }
+
+    fn before_close_window(&mut self, _app: &mut App, _window: fret_core::AppWindowId) -> bool {
+        true
+    }
+
+    fn accessibility_snapshot(
+        &mut self,
+        _app: &mut App,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+    ) -> Option<std::sync::Arc<fret_core::SemanticsSnapshot>> {
+        None
+    }
+
+    fn accessibility_focus(
+        &mut self,
+        _app: &mut App,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _target: fret_core::NodeId,
+    ) {
+    }
+
+    fn accessibility_invoke(
+        &mut self,
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _target: fret_core::NodeId,
+    ) {
+    }
+
+    fn accessibility_set_value_text(
+        &mut self,
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _target: fret_core::NodeId,
+        _value: &str,
+    ) {
+    }
+
+    fn accessibility_set_value_numeric(
+        &mut self,
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _target: fret_core::NodeId,
+        _value: f64,
+    ) {
+    }
+
+    fn accessibility_set_text_selection(
+        &mut self,
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _target: fret_core::NodeId,
+        _anchor: u32,
+        _focus: u32,
+    ) {
+    }
+
+    fn accessibility_replace_selected_text(
+        &mut self,
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _target: fret_core::NodeId,
+        _value: &str,
+    ) {
+    }
+}
+
+pub struct WinitAppDriverAdapter<D> {
+    inner: D,
+}
+
+impl<D> WinitAppDriverAdapter<D> {
+    pub fn new(inner: D) -> Self {
+        Self { inner }
+    }
+
+    pub fn into_inner(self) -> D {
+        self.inner
+    }
+
+    pub fn inner(&self) -> &D {
+        &self.inner
+    }
+
+    pub fn inner_mut(&mut self) -> &mut D {
+        &mut self.inner
+    }
+}
+
 pub trait WinitDriver {
     type WindowState;
 
@@ -3006,5 +3260,294 @@ fn sanitize_text_input(text: &str) -> Option<String> {
         None
     } else {
         Some(filtered)
+    }
+}
+
+impl<D: WinitAppDriver> WinitDriver for WinitAppDriverAdapter<D> {
+    type WindowState = D::WindowState;
+
+    fn init(&mut self, app: &mut App, main_window: fret_core::AppWindowId) {
+        self.inner.init(app, main_window);
+    }
+
+    fn gpu_ready(&mut self, app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
+        self.inner.gpu_ready(app, context, renderer);
+    }
+
+    fn gpu_frame_prepare(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        context: &WgpuContext,
+        renderer: &mut Renderer,
+        scale_factor: f32,
+    ) {
+        self.inner
+            .gpu_frame_prepare(app, window, state, context, renderer, scale_factor);
+    }
+
+    fn record_engine_frame(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        context: &WgpuContext,
+        renderer: &mut Renderer,
+        scale_factor: f32,
+        tick_id: TickId,
+        frame_id: FrameId,
+    ) -> EngineFrameUpdate {
+        self.inner.record_engine_frame(
+            app,
+            window,
+            state,
+            context,
+            renderer,
+            scale_factor,
+            tick_id,
+            frame_id,
+        )
+    }
+
+    fn record_engine_commands(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        context: &WgpuContext,
+        renderer: &mut Renderer,
+        scale_factor: f32,
+        tick_id: TickId,
+        frame_id: FrameId,
+    ) -> Vec<wgpu::CommandBuffer> {
+        self.inner.record_engine_commands(
+            app,
+            window,
+            state,
+            context,
+            renderer,
+            scale_factor,
+            tick_id,
+            frame_id,
+        )
+    }
+
+    fn viewport_input(&mut self, app: &mut App, event: ViewportInputEvent) {
+        self.inner.viewport_input(app, event);
+    }
+
+    fn dock_op(&mut self, app: &mut App, op: fret_core::DockOp) {
+        self.inner.dock_op(app, op);
+    }
+
+    fn handle_command(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        command: fret_app::CommandId,
+    ) {
+        self.inner.handle_command(
+            WinitCommandContext {
+                app,
+                services,
+                window,
+                state,
+            },
+            command,
+        );
+    }
+
+    fn handle_global_command(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        command: fret_app::CommandId,
+    ) {
+        self.inner
+            .handle_global_command(WinitGlobalContext { app, services }, command);
+    }
+
+    fn handle_model_changes(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        changed: &[fret_app::ModelId],
+    ) {
+        self.inner
+            .handle_model_changes(WinitWindowContext { app, window, state }, changed);
+    }
+
+    fn handle_global_changes(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        changed: &[TypeId],
+    ) {
+        self.inner
+            .handle_global_changes(WinitWindowContext { app, window, state }, changed);
+    }
+
+    fn create_window_state(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+    ) -> Self::WindowState {
+        self.inner.create_window_state(app, window)
+    }
+
+    fn handle_event(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        event: &Event,
+    ) {
+        self.inner.handle_event(
+            WinitEventContext {
+                app,
+                services,
+                window,
+                state,
+            },
+            event,
+        );
+    }
+
+    fn render(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        bounds: Rect,
+        scale_factor: f32,
+        services: &mut dyn fret_core::UiServices,
+        scene: &mut Scene,
+    ) {
+        self.inner.render(WinitRenderContext {
+            app,
+            services,
+            window,
+            state,
+            bounds,
+            scale_factor,
+            scene,
+        });
+    }
+
+    fn window_create_spec(
+        &mut self,
+        app: &mut App,
+        request: &CreateWindowRequest,
+    ) -> Option<WindowCreateSpec> {
+        self.inner.window_create_spec(app, request)
+    }
+
+    fn window_created(
+        &mut self,
+        app: &mut App,
+        request: &CreateWindowRequest,
+        new_window: fret_core::AppWindowId,
+    ) {
+        self.inner.window_created(app, request, new_window);
+    }
+
+    fn before_close_window(&mut self, app: &mut App, window: fret_core::AppWindowId) -> bool {
+        self.inner.before_close_window(app, window)
+    }
+
+    fn accessibility_snapshot(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+    ) -> Option<std::sync::Arc<fret_core::SemanticsSnapshot>> {
+        self.inner.accessibility_snapshot(app, window, state)
+    }
+
+    fn accessibility_focus(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+    ) {
+        self.inner.accessibility_focus(app, window, state, target);
+    }
+
+    fn accessibility_invoke(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+    ) {
+        self.inner
+            .accessibility_invoke(app, services, window, state, target);
+    }
+
+    fn accessibility_set_value_text(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+        value: &str,
+    ) {
+        self.inner
+            .accessibility_set_value_text(app, services, window, state, target, value);
+    }
+
+    fn accessibility_set_value_numeric(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+        value: f64,
+    ) {
+        self.inner
+            .accessibility_set_value_numeric(app, services, window, state, target, value);
+    }
+
+    fn accessibility_set_text_selection(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+        anchor: u32,
+        focus: u32,
+    ) {
+        self.inner
+            .accessibility_set_text_selection(app, services, window, state, target, anchor, focus);
+    }
+
+    fn accessibility_replace_selected_text(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+        value: &str,
+    ) {
+        self.inner
+            .accessibility_replace_selected_text(app, services, window, state, target, value);
+    }
+}
+
+impl<D: WinitAppDriver> WinitRunner<WinitAppDriverAdapter<D>> {
+    pub fn new_app(config: WinitRunnerConfig, app: App, driver: D) -> Self {
+        Self::new(config, app, WinitAppDriverAdapter::new(driver))
     }
 }

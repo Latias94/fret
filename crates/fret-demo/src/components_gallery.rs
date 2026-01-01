@@ -10,7 +10,8 @@ use fret_core::{
     FontId, KeyCode, Px, Rect, Scene, SemanticsRole, TextStyle, UiServices,
 };
 use fret_runner_winit_wgpu::{
-    RunnerUserEvent, WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig,
+    RunnerUserEvent, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
+    WinitRenderContext, WinitRunner, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
@@ -1085,7 +1086,7 @@ impl ComponentsGalleryDriver {
     }
 }
 
-impl WinitDriver for ComponentsGalleryDriver {
+impl WinitAppDriver for ComponentsGalleryDriver {
     type WindowState = ComponentsGalleryWindowState;
 
     fn init(&mut self, _app: &mut App, _main_window: AppWindowId) {}
@@ -1104,11 +1105,11 @@ impl WinitDriver for ComponentsGalleryDriver {
 
     fn handle_model_changes(
         &mut self,
-        app: &mut App,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
+        context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[fret_app::ModelId],
     ) {
+        let WinitWindowContext { app, state, .. } = context;
+
         state.ui.propagate_model_changes(app, changed);
 
         if changed.contains(&state.ui_font_override.id()) {
@@ -1132,22 +1133,24 @@ impl WinitDriver for ComponentsGalleryDriver {
 
     fn handle_global_changes(
         &mut self,
-        app: &mut App,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
+        context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[std::any::TypeId],
     ) {
+        let WinitWindowContext { app, state, .. } = context;
         state.ui.propagate_global_changes(app, changed);
     }
 
     fn handle_command(
         &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
+        context: WinitCommandContext<'_, Self::WindowState>,
         command: CommandId,
     ) {
+        let WinitCommandContext {
+            app,
+            services,
+            window,
+            state,
+        } = context;
         if state.ui.dispatch_command(app, services, &command) {
             return;
         }
@@ -1256,14 +1259,13 @@ impl WinitDriver for ComponentsGalleryDriver {
         }
     }
 
-    fn handle_event(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-        event: &Event,
-    ) {
+    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
+        let WinitEventContext {
+            app,
+            services,
+            window,
+            state,
+        } = context;
         if matches!(event, Event::WindowCloseRequested) {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
@@ -1395,16 +1397,16 @@ impl WinitDriver for ComponentsGalleryDriver {
         state.ui.dispatch_event(app, services, event);
     }
 
-    fn render(
-        &mut self,
-        app: &mut App,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-        bounds: Rect,
-        scale_factor: f32,
-        services: &mut dyn UiServices,
-        scene: &mut Scene,
-    ) {
+    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
+        let WinitRenderContext {
+            app,
+            services,
+            window,
+            state,
+            bounds,
+            scale_factor,
+            scene,
+        } = context;
         ComponentsGalleryDriver::render_gallery(app, services, window, state, bounds);
 
         state.ui.request_semantics_snapshot();
@@ -1572,7 +1574,7 @@ pub fn run() -> anyhow::Result<()> {
     }
 
     let driver = ComponentsGalleryDriver;
-    let mut runner = WinitRunner::new(config, app, driver);
+    let mut runner = WinitRunner::new_app(config, app, driver);
     runner.set_event_loop_proxy(event_loop.create_proxy());
     event_loop.run_app(&mut runner)?;
     Ok(())

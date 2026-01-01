@@ -2,7 +2,8 @@ use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Px, Rect, Scene, SceneOp, Size, UiServices};
 use fret_runner_winit_wgpu::{
-    RunnerUserEvent, WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig,
+    RunnerUserEvent, WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext,
+    WinitRunner, WinitRunnerConfig,
 };
 use winit::event_loop::EventLoop;
 
@@ -14,7 +15,7 @@ struct FirstFrameSmokeWindowState {
     close_requested: bool,
 }
 
-impl WinitDriver for FirstFrameSmokeDriver {
+impl WinitAppDriver for FirstFrameSmokeDriver {
     type WindowState = FirstFrameSmokeWindowState;
 
     fn create_window_state(&mut self, _app: &mut App, _window: AppWindowId) -> Self::WindowState {
@@ -24,26 +25,17 @@ impl WinitDriver for FirstFrameSmokeDriver {
         }
     }
 
-    fn handle_event(
-        &mut self,
-        _app: &mut App,
-        _services: &mut dyn UiServices,
-        _window: AppWindowId,
-        _state: &mut Self::WindowState,
-        _event: &fret_core::Event,
-    ) {
-    }
+    fn handle_event(&mut self, _context: WinitEventContext<'_, Self::WindowState>, _event: &fret_core::Event) {}
 
-    fn render(
-        &mut self,
-        app: &mut App,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-        bounds: Rect,
-        _scale_factor: f32,
-        _services: &mut dyn UiServices,
-        scene: &mut Scene,
-    ) {
+    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
+        let WinitRenderContext {
+            app,
+            window,
+            state,
+            bounds,
+            scene,
+            ..
+        } = context;
         scene.clear();
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(0),
@@ -106,7 +98,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let app = App::new();
     let driver = FirstFrameSmokeDriver::default();
-    let mut runner = WinitRunner::new(config, app, driver);
+    let mut runner = WinitRunner::new_app(config, app, driver);
 
     event_loop
         .run_app(&mut runner)

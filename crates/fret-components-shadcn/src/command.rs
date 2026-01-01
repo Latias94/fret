@@ -227,6 +227,7 @@ impl CommandInput {
 #[derive(Clone)]
 pub struct CommandItem {
     label: Arc<str>,
+    value: Arc<str>,
     disabled: bool,
     command: Option<CommandId>,
     on_select: Option<fret_ui::action::OnActivate>,
@@ -237,6 +238,7 @@ impl std::fmt::Debug for CommandItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CommandItem")
             .field("label", &self.label.as_ref())
+            .field("value", &self.value.as_ref())
             .field("disabled", &self.disabled)
             .field("command", &self.command)
             .field("on_select", &self.on_select.is_some())
@@ -250,11 +252,17 @@ impl CommandItem {
         let label = label.into();
         Self {
             label: label.clone(),
+            value: label,
             disabled: false,
             command: None,
             on_select: None,
             children: Vec::new(),
         }
+    }
+
+    pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
+        self.value = value.into();
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -588,6 +596,7 @@ impl CommandPalette {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
         #[derive(Clone)]
         struct PaletteEntry {
+            value: Arc<str>,
             command: Option<CommandId>,
             on_select: Option<fret_ui::action::OnActivate>,
             disabled: bool,
@@ -596,7 +605,7 @@ impl CommandPalette {
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         enum RowKey {
             Command(CommandId),
-            Label(Arc<str>),
+            Value(Arc<str>),
         }
 
         struct KeyHandlerState {
@@ -618,6 +627,7 @@ impl CommandPalette {
                 items.len().hash(&mut hasher);
                 for item in &items {
                     item.label.as_ref().hash(&mut hasher);
+                    item.value.as_ref().hash(&mut hasher);
                     item.disabled.hash(&mut hasher);
                     item.command
                         .as_ref()
@@ -635,6 +645,7 @@ impl CommandPalette {
                         disabled || i.disabled || (i.command.is_none() && i.on_select.is_none());
                     (
                         PaletteEntry {
+                            value: i.value.clone(),
                             command: i.command.clone(),
                             on_select: i.on_select.clone(),
                             disabled,
@@ -649,7 +660,9 @@ impl CommandPalette {
             let active = if let Some(active) = active {
                 active
             } else {
-                let init = cmdk_selection::clamp_active_index(&disabled_flags, None);
+                let init = cmdk_selection::clamp_active_index(&disabled_flags, None)
+                    .and_then(|i| entries_arc.get(i))
+                    .map(|e| e.value.clone());
                 let active = cx.app.models_mut().insert(init);
                 cx.with_state(CommandPaletteState::default, |st| {
                     st.active = Some(active.clone())
@@ -657,7 +670,7 @@ impl CommandPalette {
                 active
             };
 
-            let items_changed = cx.with_state(CommandPaletteState::default, |st| {
+            let _items_changed = cx.with_state(CommandPaletteState::default, |st| {
                 if st.items_fingerprint != items_fingerprint {
                     st.items_fingerprint = items_fingerprint;
                     true
@@ -666,14 +679,31 @@ impl CommandPalette {
                 }
             });
 
-            let cur_active = cx.watch_model(&active).copied().unwrap_or(None);
-            let next_active = if items_changed {
-                cmdk_selection::clamp_active_index(&disabled_flags, None)
-            } else {
-                cmdk_selection::clamp_active_index(&disabled_flags, cur_active)
-            };
+            let cur_active = cx.watch_model(&active).cloned().unwrap_or(None);
+            let next_active = cur_active
+                .as_ref()
+                .and_then(|v| {
+                    entries_arc
+                        .iter()
+                        .enumerate()
+                        .find(|(idx, e)| {
+                            disabled_flags.get(*idx).copied() == Some(false)
+                                && e.value.as_ref() == v.as_ref()
+                        })
+                        .map(|(_, e)| e.value.clone())
+                })
+                .or_else(|| {
+                    entries_arc
+                        .iter()
+                        .enumerate()
+                        .find(|(idx, _)| disabled_flags.get(*idx).copied() == Some(false))
+                        .map(|(_, e)| e.value.clone())
+                });
             if next_active != cur_active {
-                let _ = cx.app.models_mut().update(&active, |v| *v = next_active);
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&active, |v| *v = next_active.clone());
             }
 
             let mut row_ids: Vec<fret_ui::elements::GlobalElementId> =
@@ -701,7 +731,16 @@ impl CommandPalette {
 
             let mut key_counts: HashMap<RowKey, u32> = HashMap::new();
 
-            let active_idx = cx.watch_model(&active).copied().unwrap_or(None);
+            let active_idx = next_active.as_ref().and_then(|active_value| {
+                items.iter().enumerate().find_map(|(idx, item)| {
+                    let enabled = disabled_flags.get(idx).copied() == Some(false);
+                    if enabled && item.value.as_ref() == active_value.as_ref() {
+                        Some(idx)
+                    } else {
+                        None
+                    }
+                })
+            });
             let item_count = items.len();
             let rows: Vec<AnyElement> = items
                 .into_iter()
@@ -711,7 +750,7 @@ impl CommandPalette {
                         .command
                         .clone()
                         .map(RowKey::Command)
-                        .unwrap_or_else(|| RowKey::Label(item.label.clone()));
+                        .unwrap_or_else(|| RowKey::Value(item.value.clone()));
                     let count = key_counts.entry(base.clone()).or_insert(0);
                     let occ = *count;
                     *count = count.saturating_add(1);
@@ -722,6 +761,7 @@ impl CommandPalette {
                         let selected = active_idx.is_some_and(|i| i == idx);
 
                         let label = item.label.clone();
+                        let value = item.value.clone();
                         let command = item.command;
                         let on_select = item.on_select.clone();
                         let children = item.children;
@@ -756,13 +796,13 @@ impl CommandPalette {
                                             }
                                             let current = host
                                                 .models_mut()
-                                                .get_copied(&active)
+                                                .get_cloned(&active)
                                                 .unwrap_or(None);
-                                            let next = Some(idx);
+                                            let next = Some(value.clone());
                                             if current != next {
                                                 let _ = host
                                                     .models_mut()
-                                                    .update(&active, |v| *v = next);
+                                                    .update(&active, |v| *v = next.clone());
                                                 host.request_redraw(action_cx.window);
                                             }
                                         },
@@ -879,62 +919,91 @@ impl CommandPalette {
 
                             match down.key {
                                 KeyCode::ArrowDown | KeyCode::ArrowUp => {
-                                    let current =
-                                        host.models_mut().get_copied(&active).unwrap_or(None);
+                                    let current_value =
+                                        host.models_mut().get_cloned(&active).unwrap_or(None);
+                                    let current = current_value.as_ref().and_then(|v| {
+                                        entries.iter().position(|e| e.value.as_ref() == v.as_ref())
+                                    });
                                     let forward = down.key == KeyCode::ArrowDown;
-                                    let next = cmdk_selection::next_active_index(
+                                    let next_idx = cmdk_selection::next_active_index(
                                         &disabled_flags,
                                         current,
                                         forward,
                                         wrap_read.get(),
                                     );
 
-                                    if next != current {
-                                        let _ = host.models_mut().update(&active, |v| *v = next);
+                                    let next = next_idx
+                                        .and_then(|i| entries.get(i))
+                                        .map(|e| e.value.clone());
+                                    if next != current_value {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&active, |v| *v = next.clone());
                                         host.request_redraw(action_cx.window);
                                     }
                                     true
                                 }
                                 KeyCode::Home => {
-                                    let current =
-                                        host.models_mut().get_copied(&active).unwrap_or(None);
-                                    let next = cmdk_selection::first_enabled(&disabled_flags);
-                                    if next != current {
-                                        let _ = host.models_mut().update(&active, |v| *v = next);
+                                    let current_value =
+                                        host.models_mut().get_cloned(&active).unwrap_or(None);
+                                    let next_idx = cmdk_selection::first_enabled(&disabled_flags);
+                                    let next = next_idx
+                                        .and_then(|i| entries.get(i))
+                                        .map(|e| e.value.clone());
+                                    if next != current_value {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&active, |v| *v = next.clone());
                                         host.request_redraw(action_cx.window);
                                     }
                                     true
                                 }
                                 KeyCode::End => {
-                                    let current =
-                                        host.models_mut().get_copied(&active).unwrap_or(None);
-                                    let next = cmdk_selection::last_enabled(&disabled_flags);
-                                    if next != current {
-                                        let _ = host.models_mut().update(&active, |v| *v = next);
+                                    let current_value =
+                                        host.models_mut().get_cloned(&active).unwrap_or(None);
+                                    let next_idx = cmdk_selection::last_enabled(&disabled_flags);
+                                    let next = next_idx
+                                        .and_then(|i| entries.get(i))
+                                        .map(|e| e.value.clone());
+                                    if next != current_value {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&active, |v| *v = next.clone());
                                         host.request_redraw(action_cx.window);
                                     }
                                     true
                                 }
                                 KeyCode::PageDown | KeyCode::PageUp => {
-                                    let current =
-                                        host.models_mut().get_copied(&active).unwrap_or(None);
+                                    let current_value =
+                                        host.models_mut().get_cloned(&active).unwrap_or(None);
+                                    let current = current_value.as_ref().and_then(|v| {
+                                        entries.iter().position(|e| e.value.as_ref() == v.as_ref())
+                                    });
                                     let forward = down.key == KeyCode::PageDown;
-                                    let next = cmdk_selection::advance_active_index(
+                                    let next_idx = cmdk_selection::advance_active_index(
                                         &disabled_flags,
                                         current,
                                         forward,
                                         wrap_read.get(),
                                         10,
                                     );
-                                    if next != current {
-                                        let _ = host.models_mut().update(&active, |v| *v = next);
+                                    let next = next_idx
+                                        .and_then(|i| entries.get(i))
+                                        .map(|e| e.value.clone());
+                                    if next != current_value {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&active, |v| *v = next.clone());
                                         host.request_redraw(action_cx.window);
                                     }
                                     true
                                 }
                                 KeyCode::Enter | KeyCode::NumpadEnter => {
-                                    let current =
-                                        host.models_mut().get_copied(&active).unwrap_or(None);
+                                    let current_value =
+                                        host.models_mut().get_cloned(&active).unwrap_or(None);
+                                    let current = current_value.as_ref().and_then(|v| {
+                                        entries.iter().position(|e| e.value.as_ref() == v.as_ref())
+                                    });
                                     let Some(idx) = cmdk_selection::clamp_active_index(
                                         &disabled_flags,
                                         current,
@@ -1131,7 +1200,7 @@ impl CommandDialog {
 
 #[derive(Default)]
 struct CommandPaletteState {
-    active: Option<Model<Option<usize>>>,
+    active: Option<Model<Option<Arc<str>>>>,
     items_fingerprint: u64,
 }
 
@@ -1395,5 +1464,102 @@ mod tests {
         assert_eq!(active_node.label.as_deref(), Some("Beta"));
         assert_eq!(active_node.pos_in_set, Some(2));
         assert_eq!(active_node.set_size, Some(3));
+    }
+
+    #[test]
+    fn cmdk_highlight_tracks_value_across_reorder() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(String::new());
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+            CommandItem::new("Beta").on_select(CommandId::new("beta")),
+            CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+        ];
+
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            items.clone(),
+        );
+
+        let input = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable text input");
+        ui.set_focus(Some(input));
+
+        // Highlight "Gamma".
+        for _ in 0..2 {
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &fret_core::Event::KeyDown {
+                    key: KeyCode::ArrowDown,
+                    modifiers: Modifiers::default(),
+                    repeat: false,
+                },
+            );
+        }
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            items,
+        );
+
+        // Reorder items and ensure highlight stays on the same value (not the same index).
+        let reordered = vec![
+            CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+            CommandItem::new("Beta").on_select(CommandId::new("beta")),
+        ];
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            reordered,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let focus = snap.focus.expect("focus");
+        assert_eq!(focus, input, "focus should remain on the input node");
+
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::TextField && n.id == focus)
+            .expect("focused text field node");
+        let active = input
+            .active_descendant
+            .expect("active_descendant should be set");
+        let active_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == active)
+            .expect("active_descendant should reference a node in the snapshot");
+
+        assert_eq!(active_node.role, SemanticsRole::ListItem);
+        assert_eq!(active_node.label.as_deref(), Some("Gamma"));
     }
 }

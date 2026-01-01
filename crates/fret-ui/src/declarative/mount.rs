@@ -12,6 +12,8 @@ pub struct RenderRootCx<'a, H: UiHost> {
     pub bounds: Rect,
 }
 
+pub type RenderRootContext<'a, H> = RenderRootCx<'a, H>;
+
 impl<'a, H: UiHost> RenderRootCx<'a, H> {
     pub fn new(
         ui: &'a mut UiTree<H>,

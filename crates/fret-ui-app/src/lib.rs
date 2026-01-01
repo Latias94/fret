@@ -13,7 +13,8 @@ pub use fret_ui::tree;
 
 pub use fret_ui::{
     GlobalElementId, Invalidation, PaintCachePolicy, Theme, ThemeConfig, ThemeSnapshot,
-    UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiFrameCx, UiHost, UiLayerId,
+    UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiFrameContext, UiFrameCx, UiHost,
+    UiLayerId,
 };
 
 pub type UiTree = fret_ui::UiTree<App>;

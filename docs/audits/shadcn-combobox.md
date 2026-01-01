@@ -40,6 +40,8 @@ examples in `repo-ref/ui`.
   navigation inside the command list.
 - Pass: `CommandPalette` now supports input placeholder (backed by the `TextInput` placeholder
   surface in `fret-ui`), so recipes can match `CommandInput placeholder="..."` ergonomics.
+- Pass: `Combobox` exposes `search_placeholder(...)` and forwards it to
+  `CommandPalette::placeholder(...)`.
 
 ### Visual parity (shadcn)
 
@@ -52,6 +54,7 @@ examples in `repo-ref/ui`.
 
 - Partial: Filtering is currently label substring match implemented in `Combobox` (app-owned), not
   cmdk’s full `value`/ranking semantics.
+- Pass: Highlight selection tracks `CommandItem.value` (stable across list reorder/filtering).
 
 ## Validation
 
@@ -59,7 +62,7 @@ examples in `repo-ref/ui`.
 
 ## Follow-ups (recommended)
 
-- Add a placeholder surface for `TextInput` (runtime contract) so `CommandPalette` can render
-  `CommandInput placeholder="..."` parity.
+- Implement cmdk-style filtering/ranking (value/keywords + scoring) so query handling can move into
+  `CommandPalette` instead of per-recipe filtering in `Combobox`.
 - Consider exposing a `CommandItem` “indicator/checked” surface (and `CommandShortcut`) to better
   match upstream `cmdk` DOM patterns.
