@@ -19,6 +19,24 @@ pub trait ActionHooksExt {
 
     fn pressable_dispatch_command_opt(&mut self, command: Option<CommandId>);
 
+    fn pressable_update_model<T, F>(&mut self, model: &Model<T>, update: F)
+    where
+        T: 'static,
+        F: Fn(&mut T) + 'static;
+
+    fn pressable_update_weak_model<T, F>(&mut self, model: &WeakModel<T>, update: F)
+    where
+        T: 'static,
+        F: Fn(&mut T) + 'static;
+
+    fn pressable_set_model<T>(&mut self, model: &Model<T>, value: T)
+    where
+        T: Clone + 'static;
+
+    fn pressable_set_weak_model<T>(&mut self, model: &WeakModel<T>, value: T)
+    where
+        T: Clone + 'static;
+
     fn pressable_toggle_bool(&mut self, model: &Model<bool>);
 
     fn pressable_toggle_bool_weak(&mut self, model: &WeakModel<bool>);
@@ -82,56 +100,68 @@ impl<H: UiHost> ActionHooksExt for ElementCx<'_, H> {
         self.pressable_dispatch_command(command);
     }
 
-    fn pressable_toggle_bool(&mut self, model: &Model<bool>) {
+    fn pressable_update_model<T, F>(&mut self, model: &Model<T>, update: F)
+    where
+        T: 'static,
+        F: Fn(&mut T) + 'static,
+    {
         let model = model.clone();
         self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
-            let _ = host.models_mut().update(&model, |v| *v = !*v);
+            let _ = host.models_mut().update(&model, |v| update(v));
         }));
+    }
+
+    fn pressable_update_weak_model<T, F>(&mut self, model: &WeakModel<T>, update: F)
+    where
+        T: 'static,
+        F: Fn(&mut T) + 'static,
+    {
+        let model = model.clone();
+        self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
+            let _ = host.update_weak_model(&model, |v| update(v));
+        }));
+    }
+
+    fn pressable_set_model<T>(&mut self, model: &Model<T>, value: T)
+    where
+        T: Clone + 'static,
+    {
+        self.pressable_update_model(model, move |v| *v = value.clone());
+    }
+
+    fn pressable_set_weak_model<T>(&mut self, model: &WeakModel<T>, value: T)
+    where
+        T: Clone + 'static,
+    {
+        self.pressable_update_weak_model(model, move |v| *v = value.clone());
+    }
+
+    fn pressable_toggle_bool(&mut self, model: &Model<bool>) {
+        self.pressable_update_model(model, |v| *v = !*v);
     }
 
     fn pressable_toggle_bool_weak(&mut self, model: &WeakModel<bool>) {
-        let model = model.clone();
-        self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
-            let _ = host.update_weak_model(&model, |v| *v = !*v);
-        }));
+        self.pressable_update_weak_model(model, |v| *v = !*v);
     }
 
     fn pressable_set_bool(&mut self, model: &Model<bool>, value: bool) {
-        let model = model.clone();
-        self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
-            let _ = host.models_mut().update(&model, |v| *v = value);
-        }));
+        self.pressable_set_model(model, value);
     }
 
     fn pressable_set_bool_weak(&mut self, model: &WeakModel<bool>, value: bool) {
-        let model = model.clone();
-        self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
-            let _ = host.update_weak_model(&model, |v| *v = value);
-        }));
+        self.pressable_set_weak_model(model, value);
     }
 
     fn pressable_set_arc_str(&mut self, model: &Model<Arc<str>>, value: Arc<str>) {
-        let model = model.clone();
-        self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
-            let value = value.clone();
-            let _ = host.models_mut().update(&model, |v| *v = value);
-        }));
+        self.pressable_set_model(model, value);
     }
 
     fn pressable_set_arc_str_weak(&mut self, model: &WeakModel<Arc<str>>, value: Arc<str>) {
-        let model = model.clone();
-        self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
-            let value = value.clone();
-            let _ = host.update_weak_model(&model, |v| *v = value);
-        }));
+        self.pressable_set_weak_model(model, value);
     }
 
     fn pressable_set_option_arc_str(&mut self, model: &Model<Option<Arc<str>>>, value: Arc<str>) {
-        let model = model.clone();
-        self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
-            let value = Some(value.clone());
-            let _ = host.models_mut().update(&model, |v| *v = value);
-        }));
+        self.pressable_set_model(model, Some(value));
     }
 
     fn pressable_set_option_arc_str_weak(
@@ -139,11 +169,7 @@ impl<H: UiHost> ActionHooksExt for ElementCx<'_, H> {
         model: &WeakModel<Option<Arc<str>>>,
         value: Arc<str>,
     ) {
-        let model = model.clone();
-        self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
-            let value = Some(value.clone());
-            let _ = host.update_weak_model(&model, |v| *v = value);
-        }));
+        self.pressable_set_weak_model(model, Some(value));
     }
 
     fn pressable_toggle_vec_arc_str(&mut self, model: &Model<Vec<Arc<str>>>, value: Arc<str>) {
