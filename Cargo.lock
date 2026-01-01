@@ -1296,6 +1296,7 @@ dependencies = [
  "fret-components-ui",
  "fret-core",
  "fret-icons-lucide",
+ "fret-render",
  "fret-runner-winit-wgpu",
  "fret-runtime",
  "fret-ui",

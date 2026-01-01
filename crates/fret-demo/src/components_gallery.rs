@@ -5,7 +5,8 @@ use fret_components_icons::IconRegistry;
 use fret_components_shadcn as shadcn;
 use fret_components_ui::tree::{TreeItem, TreeItemId, TreeState};
 use fret_core::{
-    AppWindowId, Corners, Edges, Event, KeyCode, Px, Rect, Scene, SemanticsRole, UiServices,
+    AppWindowId, Corners, Edges, Event, FontId, KeyCode, Px, Rect, Scene, SemanticsRole,
+    TextStyle, UiServices,
 };
 use fret_runner_winit_wgpu::{
     RunnerUserEvent, WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig,
@@ -13,11 +14,17 @@ use fret_runner_winit_wgpu::{
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{
-    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow, TextProps,
 };
 use fret_ui::{Invalidation, Theme, UiTree};
+use std::collections::HashSet;
 use std::sync::Arc;
 use winit::event_loop::EventLoop;
+
+#[derive(Clone, Default)]
+struct FontCatalogService {
+    names: Vec<Arc<str>>,
+}
 
 struct ComponentsGalleryWindowState {
     ui: UiTree<App>,
@@ -39,6 +46,8 @@ struct ComponentsGalleryWindowState {
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
+    emoji_font_override: Model<Option<Arc<str>>>,
+    emoji_font_override_open: Model<bool>,
 }
 
 #[derive(Default)]
@@ -86,6 +95,8 @@ impl ComponentsGalleryDriver {
         let cmdk_open = app.models_mut().insert(false);
         let cmdk_query = app.models_mut().insert(String::new());
         let last_action = app.models_mut().insert(Arc::<str>::from("<none>"));
+        let emoji_font_override = app.models_mut().insert(None::<Arc<str>>);
+        let emoji_font_override_open = app.models_mut().insert(false);
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -110,6 +121,8 @@ impl ComponentsGalleryDriver {
             cmdk_open,
             cmdk_query,
             last_action,
+            emoji_font_override,
+            emoji_font_override_open,
         }
     }
 
@@ -130,6 +143,8 @@ impl ComponentsGalleryDriver {
         let radio = state.radio.clone();
         let select = state.select.clone();
         let select_open = state.select_open.clone();
+        let emoji_font_override = state.emoji_font_override.clone();
+        let emoji_font_override_open = state.emoji_font_override_open.clone();
         let dropdown_open = state.dropdown_open.clone();
         let context_menu_open = state.context_menu_open.clone();
         let popover_open = state.popover_open.clone();
@@ -224,15 +239,123 @@ impl ComponentsGalleryDriver {
                                             ..Default::default()
                                         },
                                         |cx| {
-                                            let mut out =
-                                                Vec::with_capacity(1 + text_smoke_lines.len());
+                                            let selected_emoji_font = cx
+                                                .app
+                                                .models()
+                                                .read(&emoji_font_override, |v| v.clone())
+                                                .ok()
+                                                .flatten();
+                                            let available_fonts = cx
+                                                .app
+                                                .global::<FontCatalogService>()
+                                                .map(|svc| svc.names.clone())
+                                                .unwrap_or_default();
+
+                                            let mut out = Vec::with_capacity(
+                                                4 + text_smoke_lines.len()
+                                                    + selected_emoji_font.is_some() as usize,
+                                            );
                                             out.push(cx.text(text_smoke_title));
+                                            out.push(cx.flex(
+                                                FlexProps {
+                                                    layout: LayoutStyle::default(),
+                                                    direction: fret_core::Axis::Horizontal,
+                                                    gap: Px(8.0),
+                                                    padding: Edges::all(Px(0.0)),
+                                                    justify: MainAlign::Start,
+                                                    align: CrossAlign::Center,
+                                                    wrap: true,
+                                                },
+                                                |cx| {
+                                                    let mut seen: HashSet<Arc<str>> =
+                                                        HashSet::new();
+                                                    let mut items: Vec<shadcn::SelectItem> =
+                                                        Vec::new();
+
+                                                    for preferred in [
+                                                        "Apple Color Emoji",
+                                                        "Segoe UI Emoji",
+                                                        "Noto Color Emoji",
+                                                    ] {
+                                                        if available_fonts.iter().any(|n| {
+                                                            n.eq_ignore_ascii_case(preferred)
+                                                        }) {
+                                                            let name: Arc<str> =
+                                                                Arc::from(preferred);
+                                                            if seen.insert(name.clone()) {
+                                                                items.push(shadcn::SelectItem::new(
+                                                                    name.clone(),
+                                                                    name,
+                                                                ));
+                                                            }
+                                                        }
+                                                    }
+
+                                                    for name in &available_fonts {
+                                                        if items.len() >= 32 {
+                                                            break;
+                                                        }
+                                                        if seen.insert(name.clone()) {
+                                                            items.push(shadcn::SelectItem::new(
+                                                                name.clone(),
+                                                                name.clone(),
+                                                            ));
+                                                        }
+                                                    }
+
+                                                    vec![
+                                                        shadcn::Select::new(
+                                                            emoji_font_override.clone(),
+                                                            emoji_font_override_open.clone(),
+                                                        )
+                                                        .placeholder("Force emoji font (optional)")
+                                                        .items(items)
+                                                        .into_element(cx),
+                                                        shadcn::Button::new("Reset")
+                                                            .variant(shadcn::ButtonVariant::Outline)
+                                                            .on_click(CommandId::from(
+                                                                "gallery.text_smoke.emoji_font.reset",
+                                                            ))
+                                                            .into_element(cx),
+                                                    ]
+                                                },
+                                            ));
+                                            if let Some(name) = selected_emoji_font.as_deref() {
+                                                out.push(cx.text(format!(
+                                                    "Forced emoji font: {name}"
+                                                )));
+                                            }
                                             for line in text_smoke_lines {
+                                                if selected_emoji_font.is_some()
+                                                    && line.starts_with("Emoji:")
+                                                {
+                                                    out.push(cx.text(line.clone()));
+
+                                                    let theme = cx.theme().snapshot();
+                                                    let mut style = TextStyle::default();
+                                                    if let Some(name) =
+                                                        selected_emoji_font.as_deref()
+                                                    {
+                                                        style.font = FontId::family(name);
+                                                    }
+                                                    style.size = theme.metrics.font_size;
+                                                    style.line_height =
+                                                        Some(theme.metrics.font_line_height);
+
+                                                    let mut props = TextProps::new(format!(
+                                                        "Emoji (forced): {}",
+                                                        line.strip_prefix("Emoji: ")
+                                                            .unwrap_or(line.as_ref())
+                                                    ));
+                                                    props.style = Some(style);
+                                                    out.push(cx.text_props(props));
+                                                    continue;
+                                                }
                                                 out.push(cx.text(line));
                                             }
                                             out
-                                    },
-                                ),
+                                        },
+                                    ),
                                     cx.flex(
                                         FlexProps {
                                             layout: LayoutStyle::default(),
@@ -873,6 +996,20 @@ impl WinitDriver for ComponentsGalleryDriver {
 
     fn init(&mut self, _app: &mut App, _main_window: AppWindowId) {}
 
+    fn gpu_ready(
+        &mut self,
+        app: &mut App,
+        _context: &fret_render::WgpuContext,
+        renderer: &mut fret_render::Renderer,
+    ) {
+        let names = renderer
+            .all_font_names()
+            .into_iter()
+            .map(|n: String| Arc::<str>::from(n.into_boxed_str()))
+            .collect();
+        app.set_global(FontCatalogService { names });
+    }
+
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
         Self::build_ui(app, window)
     }
@@ -965,6 +1102,12 @@ impl WinitDriver for ComponentsGalleryDriver {
             let _ = app.models_mut().update(&state.last_action, |v| {
                 *v = Arc::<str>::from("context_menu.action");
             });
+        }
+
+        if command.as_str() == "gallery.text_smoke.emoji_font.reset" {
+            let _ = app
+                .models_mut()
+                .update(&state.emoji_font_override, |v| *v = None);
         }
     }
 
