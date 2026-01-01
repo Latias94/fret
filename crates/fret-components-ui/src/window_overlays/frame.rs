@@ -1,0 +1,100 @@
+use fret_core::AppWindowId;
+use fret_ui::{ElementCx, UiHost};
+
+use super::state::WindowOverlays;
+use super::{
+    DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest, TooltipRequest,
+};
+
+pub fn begin_frame<H: UiHost>(app: &mut H, window: AppWindowId) {
+    let frame_id = app.frame_id();
+    app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        let w = overlays.windows.entry(window).or_default();
+        if w.frame_id != frame_id {
+            w.frame_id = frame_id;
+            w.popovers.clear();
+            w.modals.clear();
+            w.hover_overlays.clear();
+            w.tooltips.clear();
+            w.toasts.clear();
+        }
+    });
+}
+
+pub fn request_dismissible_popover<H: UiHost>(
+    cx: &mut ElementCx<'_, H>,
+    request: DismissiblePopoverRequest,
+) {
+    request_dismissible_popover_for_window(cx.app, cx.window, request);
+}
+
+pub fn request_dismissible_popover_for_window<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    request: DismissiblePopoverRequest,
+) {
+    app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        let w = overlays.windows.entry(window).or_default();
+        w.popovers.push(request);
+    });
+}
+
+pub fn request_modal<H: UiHost>(cx: &mut ElementCx<'_, H>, request: ModalRequest) {
+    request_modal_for_window(cx.app, cx.window, request);
+}
+
+pub fn request_modal_for_window<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    request: ModalRequest,
+) {
+    app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        let w = overlays.windows.entry(window).or_default();
+        w.modals.push(request);
+    });
+}
+
+pub fn request_hover_overlay<H: UiHost>(cx: &mut ElementCx<'_, H>, request: HoverOverlayRequest) {
+    request_hover_overlay_for_window(cx.app, cx.window, request);
+}
+
+pub fn request_hover_overlay_for_window<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    request: HoverOverlayRequest,
+) {
+    app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        let w = overlays.windows.entry(window).or_default();
+        w.hover_overlays.push(request);
+    });
+}
+
+pub fn request_tooltip<H: UiHost>(cx: &mut ElementCx<'_, H>, request: TooltipRequest) {
+    request_tooltip_for_window(cx.app, cx.window, request);
+}
+
+pub fn request_tooltip_for_window<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    request: TooltipRequest,
+) {
+    app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        let w = overlays.windows.entry(window).or_default();
+        w.tooltips.push(request);
+    });
+}
+
+pub fn request_toast_layer<H: UiHost>(cx: &mut ElementCx<'_, H>, request: ToastLayerRequest) {
+    request_toast_layer_for_window(cx.app, cx.window, request);
+}
+
+pub fn request_toast_layer_for_window<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    request: ToastLayerRequest,
+) {
+    app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        let w = overlays.windows.entry(window).or_default();
+        w.toasts.push(request);
+    });
+}
