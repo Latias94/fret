@@ -158,6 +158,23 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
         renderer.set_svg_raster_budget_bytes(self.config.svg_raster_budget_bytes);
         renderer.set_path_msaa_samples(self.config.path_msaa_samples);
         let _ = renderer.set_text_font_families(&self.config.text_font_families);
+        self.app
+            .set_global::<fret_core::TextFontFamilyConfig>(self.config.text_font_families.clone());
+
+        let prev_rev = self
+            .app
+            .global::<fret_runtime::FontCatalog>()
+            .map(|c| c.revision)
+            .unwrap_or(0);
+        let revision = prev_rev.saturating_add(1);
+        let families = renderer.all_font_names();
+        let cache = fret_app::FontCatalogCache::from_families(revision, &families);
+        self.app
+            .set_global::<fret_runtime::FontCatalog>(fret_runtime::FontCatalog {
+                families,
+                revision,
+            });
+        self.app.set_global::<fret_app::FontCatalogCache>(cache);
 
         self.context = Some(context);
         self.renderer = Some(renderer);
@@ -335,6 +352,18 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
             }
             WindowEvent::Ime(ime) => {
                 if let Some(state) = self.windows.get_mut(app_window) {
+                    if std::env::var_os("FRET_IME_DEBUG").is_some_and(|v| !v.is_empty()) {
+                        tracing::info!(
+                            "IME_DEBUG winit: WindowEvent::Ime({:?}) cached_rect={}",
+                            ime,
+                            state.ime_cursor_area.is_some()
+                        );
+                    }
+                    #[cfg(windows)]
+                    if let Some(rect) = state.ime_cursor_area {
+                        super::windows_ime::set_ime_cursor_area(state.window.as_ref(), rect);
+                    }
+
                     let mapped = match ime {
                         winit::event::Ime::Enabled => fret_core::ImeEvent::Enabled,
                         winit::event::Ime::Disabled => fret_core::ImeEvent::Disabled,
@@ -509,6 +538,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                     };
                     let logical = position.to_logical::<f32>(state.window.scale_factor());
                     state.cursor_pos = Point::new(Px(logical.x), Px(logical.y));
+                    state.cursor_pos_physical = Some(position);
 
                     let screen_pos = state.window.inner_position().ok().map(|inner| {
                         PhysicalPosition::new(
@@ -565,7 +595,15 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                     let Some(runtime) = self.windows.get_mut(app_window) else {
                         return;
                     };
-                    let pos = runtime.cursor_pos;
+                    let pos = runtime
+                        .cursor_pos_physical
+                        .map(|physical| {
+                            let logical: winit::dpi::LogicalPosition<f32> =
+                                physical.to_logical(runtime.window.scale_factor());
+                            Point::new(Px(logical.x), Px(logical.y))
+                        })
+                        .unwrap_or(runtime.cursor_pos);
+                    runtime.cursor_pos = pos;
                     match state {
                         ElementState::Pressed => {
                             set_mouse_buttons(&mut runtime.pressed_buttons, button, true);

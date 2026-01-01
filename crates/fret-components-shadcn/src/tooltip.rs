@@ -16,19 +16,14 @@ use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementCx, Theme, UiHost};
 
 fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
+    // shadcn/ui v4 (2025-09-22): tooltip uses `bg-foreground text-background`.
     let bg = theme
-        .color_by_key("tooltip")
-        .or_else(|| theme.color_by_key("popover"))
-        .unwrap_or(theme.colors.panel_background);
-    let border = theme
-        .color_by_key("border")
-        .unwrap_or(theme.colors.panel_border);
+        .color_by_key("foreground")
+        .unwrap_or(theme.colors.text_primary);
 
     ChromeRefinement::default()
-        .rounded(Radius::Md)
-        .border_1()
+        .rounded(Radius::Sm)
         .bg(ColorRef::Color(bg))
-        .border_color(ColorRef::Color(border))
         .px(Space::N3)
         .py(Space::N2)
 }
@@ -79,7 +74,7 @@ impl Tooltip {
             content,
             align: TooltipAlign::default(),
             side: TooltipSide::default(),
-            side_offset: Px(4.0),
+            side_offset: Px(0.0),
             window_margin_override: None,
             open_delay_frames: 0,
             close_delay_frames: 0,
@@ -126,7 +121,7 @@ impl Tooltip {
         let theme = Theme::global(&*cx.app).clone();
 
         let layout = decl_style::layout_style(&theme, self.layout);
-        let side_offset = if self.side_offset == Px(4.0) {
+        let side_offset = if self.side_offset == Px(0.0) {
             theme
                 .metric_by_key("component.tooltip.side_offset")
                 .unwrap_or(self.side_offset)
@@ -255,18 +250,44 @@ impl TooltipTrigger {
 /// shadcn/ui `TooltipContent` (v4).
 #[derive(Debug, Clone)]
 pub struct TooltipContent {
-    text: Arc<str>,
+    children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
 
 impl TooltipContent {
-    pub fn new(text: impl Into<Arc<str>>) -> Self {
+    pub fn new(children: Vec<AnyElement>) -> Self {
         Self {
-            text: text.into(),
+            children,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn text<H: UiHost>(cx: &mut ElementCx<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let text = text.into();
+
+        let text_style = TextStyle {
+            font: fret_core::FontId::default(),
+            size: theme.metrics.font_size,
+            weight: fret_core::FontWeight::NORMAL,
+            line_height: Some(theme.metrics.font_line_height),
+            letter_spacing_em: None,
+        };
+
+        let fg = theme
+            .color_by_key("background")
+            .unwrap_or(theme.colors.surface_background);
+
+        cx.text_props(TextProps {
+            layout: LayoutStyle::default(),
+            text,
+            style: Some(text_style),
+            color: Some(fg),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+        })
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -288,25 +309,7 @@ impl TooltipContent {
 
         let radius = MetricRef::radius(Radius::Md).resolve(&theme);
         props.shadow = Some(decl_style::shadow_sm(&theme, radius));
-
-        let text_style = TextStyle {
-            font: fret_core::FontId::default(),
-            size: theme.metrics.font_size,
-            weight: fret_core::FontWeight::NORMAL,
-            line_height: Some(theme.metrics.font_line_height),
-            letter_spacing_em: None,
-        };
-
-        let text = self.text;
-        cx.container(props, move |cx| {
-            vec![cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: text.clone(),
-                style: Some(text_style),
-                color: Some(theme.colors.text_primary),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Ellipsis,
-            })]
-        })
+        let children = self.children;
+        cx.container(props, move |_cx| children)
     }
 }

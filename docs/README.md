@@ -19,14 +19,15 @@ contracts early to avoid large rewrites later.
 5. `docs/roadmap.md` — priorities, decision gates, and milestones (what to do next, and what must be decided early).
 6. `docs/shadcn-declarative-progress.md` — shadcn/ui v4 parity and the declarative-only migration tracker.
 7. `docs/action-hooks.md` — how we keep `fret-ui` mechanism-only by moving interaction policy to components (ADR 0074).
-8. `docs/adr/README.md` — module-oriented ADR index (where to find the relevant contracts fast).
+8. `docs/component-authoring-contracts.md` — the public APIs and “gotchas” component authors should rely on (living checklist).
+9. `docs/adr/README.md` — module-oriented ADR index (where to find the relevant contracts fast).
    - Tip: ADRs marked `Status: Proposed` are “decision gates” and should be treated as changeable until accepted.
-9. `docs/repo-ref.md` — pinned local reference sources (where to read upstream code without version drift).
-10. `docs/dependency-policy.md` — dependency and MSRV policy (how we keep contracts portable).
-11. `docs/todo-tracker.md` — review-driven TODO list (action items linked back to ADRs).
-12. `docs/known-issues.md` — common diagnostics and current platform limitations.
-13. Archived MVP planning docs (historical): `docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`, `docs/archive/mvp-archive.md`
-14. ADR deep dives (pick by subsystem):
+10. `docs/repo-ref.md` — pinned local reference sources (where to read upstream code without version drift).
+11. `docs/dependency-policy.md` — dependency and MSRV policy (how we keep contracts portable).
+12. `docs/todo-tracker.md` — review-driven TODO list (action items linked back to ADRs).
+13. `docs/known-issues.md` — common diagnostics and current platform limitations.
+14. Archived MVP planning docs (historical): `docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`, `docs/archive/mvp-archive.md`
+15. ADR deep dives (pick by subsystem):
    - UI execution model: `docs/adr/0028-declarative-elements-and-element-state.md`
    - Component authoring: `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
    - Ownership/data flow: `docs/adr/0031-app-owned-models-and-leasing-updates.md`

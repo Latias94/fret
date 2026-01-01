@@ -152,7 +152,17 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::ScrollProps,
     ) -> Size {
-        let probe_bounds = Rect::new(cx.bounds.origin, Size::new(cx.available.width, Px(1.0e9)));
+        let probe_w = if props.axis.scroll_x() {
+            Px(1.0e9)
+        } else {
+            cx.available.width
+        };
+        let probe_h = if props.axis.scroll_y() {
+            Px(1.0e9)
+        } else {
+            cx.available.height
+        };
+        let probe_bounds = Rect::new(cx.bounds.origin, Size::new(probe_w, probe_h));
 
         let mut max_child = Size::new(Px(0.0), Px(0.0));
         for &child in cx.children {
@@ -162,14 +172,23 @@ impl ElementHostWidget {
         }
 
         let desired = clamp_to_constraints(max_child, props.layout, cx.available);
-        let content_h = Px(max_child.height.0.max(0.0));
+        let content_w = if props.axis.scroll_x() {
+            Px(max_child.width.0.max(0.0))
+        } else {
+            desired.width
+        };
+        let content_h = if props.axis.scroll_y() {
+            Px(max_child.height.0.max(0.0))
+        } else {
+            desired.height
+        };
 
         // Avoid mutating the imperative handle during "probe" layout passes that use an
         // effectively-unbounded available height (e.g. Stack/Pressable measuring with
         // `Px(1.0e9)`), otherwise scroll position can be clamped to zero prematurely.
-        let is_probe_layout = cx.available.height.0 >= 1.0e8;
+        let is_probe_layout = cx.available.height.0 >= 1.0e8 || cx.available.width.0 >= 1.0e8;
         let external_handle = props.scroll_handle.clone();
-        let offset_y = crate::elements::with_element_state(
+        let offset = crate::elements::with_element_state(
             &mut *cx.app,
             window,
             self.element,
@@ -178,17 +197,31 @@ impl ElementHostWidget {
                 let handle = external_handle.as_ref().unwrap_or(&state.scroll_handle);
                 if !is_probe_layout {
                     handle.set_viewport_size(desired);
-                    handle.set_content_size(Size::new(max_child.width, content_h));
+                    handle.set_content_size(Size::new(content_w, content_h));
                     let prev = handle.offset();
                     handle.set_offset(prev);
                 }
-                handle.offset().y
+                handle.offset()
             },
         );
 
+        let offset_x = if props.axis.scroll_x() {
+            offset.x
+        } else {
+            Px(0.0)
+        };
+        let offset_y = if props.axis.scroll_y() {
+            offset.y
+        } else {
+            Px(0.0)
+        };
+
         let shifted = Rect::new(
-            fret_core::Point::new(cx.bounds.origin.x, Px(cx.bounds.origin.y.0 - offset_y.0)),
-            Size::new(desired.width, content_h),
+            fret_core::Point::new(
+                Px(cx.bounds.origin.x.0 - offset_x.0),
+                Px(cx.bounds.origin.y.0 - offset_y.0),
+            ),
+            Size::new(content_w, content_h),
         );
         for &child in cx.children {
             let _ = cx.layout_in(child, shifted);

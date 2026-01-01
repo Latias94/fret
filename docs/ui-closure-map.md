@@ -333,7 +333,7 @@ This is the “do it now or pay later” list, ordered by expected rewrite cost.
 1. **Multi-window capability degradation policy**
    - Define a single, explicit policy for “logical windows” on platforms without OS multi-window.
    - Tie it to the capabilities matrix (ADR 0054) and docking layout persistence rules (ADR 0013/0017).
-   - Decision gate: `docs/adr/0084-multi-window-degradation-policy.md`
+   - Contract: `docs/adr/0084-multi-window-degradation-policy.md`
 
 2. **UI inspector surface**
    - Decide a minimal, stable inspector data shape and a demo inspector UI surface (ADR 0036).

@@ -388,7 +388,7 @@ mod tests {
                 .eval(&ctx)
         );
         assert!(
-            WhenExpr::parse("cap.dnd.external_payload != \"file_path\"")
+            WhenExpr::parse("cap.dnd.external_payload != \"none\"")
                 .unwrap()
                 .eval(&ctx)
         );

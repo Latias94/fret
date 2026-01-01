@@ -3,6 +3,11 @@ name = "fret-components-shadcn"
 version.workspace = true
 edition.workspace = true
 
+[features]
+default = []
+# Heavy, app-specific composites (e.g. data grids / dashboard blocks).
+datagrid = []
+
 [dependencies]
 fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }

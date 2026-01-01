@@ -138,6 +138,12 @@ impl<H: UiHost> UiTree<H> {
         // Theme changes can affect layout metrics across most of the tree; treat it as a default
         // dependency to ensure layout re-runs when the global theme is updated.
         observe_global(TypeId::of::<Theme>(), Invalidation::Layout);
+        // Font family overrides affect text measurement and can shift layout across the tree.
+        // Treat it as a default dependency so changing font configuration forces a relayout.
+        observe_global(
+            TypeId::of::<fret_core::TextFontFamilyConfig>(),
+            Invalidation::Layout,
+        );
 
         let size = self.with_widget_mut(node, |widget, tree| {
             let children: Vec<NodeId> = tree

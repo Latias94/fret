@@ -27,7 +27,11 @@ pub mod keys {
     pub const SHELL_OPEN_URL: &str = "shell.open_url";
 
     pub const GFX_WEBGPU: &str = "gfx.webgpu";
-    pub const GFX_WGPU: &str = "gfx.wgpu";
+    /// Indicates that a native GPU rendering backend is available.
+    ///
+    /// This is intentionally not named after a Rust crate (e.g. `wgpu`) so the contract remains
+    /// portable across backends and future implementations.
+    pub const GFX_NATIVE_GPU: &str = "gfx.native_gpu";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,7 +54,7 @@ pub const KNOWN_BOOL_CAPABILITY_KEYS: &[&str] = &[
     keys::FS_FILE_DIALOGS,
     keys::SHELL_OPEN_URL,
     keys::GFX_WEBGPU,
-    keys::GFX_WGPU,
+    keys::GFX_NATIVE_GPU,
 ];
 
 pub const KNOWN_STR_CAPABILITY_KEYS: &[&str] =
@@ -70,9 +74,8 @@ pub fn capability_key_kind(key: &str) -> Option<CapabilityValueKind> {
 #[serde(rename_all = "snake_case")]
 pub enum ExternalDragPayloadKind {
     None,
-    #[default]
-    FilePath,
     FileToken,
+    #[default]
     Text,
 }
 
@@ -80,7 +83,6 @@ impl ExternalDragPayloadKind {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::None => "none",
-            Self::FilePath => "file_path",
             Self::FileToken => "file_token",
             Self::Text => "text",
         }
@@ -172,7 +174,7 @@ pub struct ShellCapabilities {
 #[serde(default)]
 pub struct GfxCapabilities {
     pub webgpu: bool,
-    pub wgpu: bool,
+    pub native_gpu: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -215,7 +217,7 @@ impl Default for PlatformCapabilities {
             shell: ShellCapabilities { open_url: true },
             gfx: GfxCapabilities {
                 webgpu: false,
-                wgpu: true,
+                native_gpu: true,
             },
         }
     }
@@ -236,7 +238,7 @@ impl PlatformCapabilities {
             keys::FS_FILE_DIALOGS => Some(self.fs.file_dialogs),
             keys::SHELL_OPEN_URL => Some(self.shell.open_url),
             keys::GFX_WEBGPU => Some(self.gfx.webgpu),
-            keys::GFX_WGPU => Some(self.gfx.wgpu),
+            keys::GFX_NATIVE_GPU => Some(self.gfx.native_gpu),
             _ => None,
         }
     }

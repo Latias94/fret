@@ -4,6 +4,9 @@ pub mod commands;
 pub mod docking_settings;
 pub mod drag;
 pub mod effect;
+pub mod font_catalog;
+#[cfg(test)]
+mod font_config_tests;
 pub mod input;
 pub mod keymap;
 pub mod menu;
@@ -13,7 +16,9 @@ pub mod time;
 pub mod ui_host;
 pub mod when_expr;
 
-pub use capabilities::{ExternalDragPayloadKind, PlatformCapabilities, ShellCapabilities};
+pub use capabilities::{
+    ExternalDragPayloadKind, ExternalDragPositionQuality, PlatformCapabilities, ShellCapabilities,
+};
 pub use command::CommandId;
 pub use commands::{CommandMeta, CommandRegistry, CommandScope};
 pub use docking_settings::{
@@ -22,6 +27,7 @@ pub use docking_settings::{
 };
 pub use drag::{DragKind, DragSession};
 pub use effect::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
+pub use font_catalog::FontCatalog;
 pub use fret_core::FrameId;
 pub use fret_core::{ClipboardToken, ExternalDropToken, FileDialogToken, TimerToken};
 pub use input::{

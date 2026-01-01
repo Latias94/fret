@@ -11,7 +11,7 @@ use fret_components_ui::headless::roving_focus;
 use fret_components_ui::overlay;
 use fret_components_ui::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_components_ui::{
-    ChromeRefinement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     OverlayRequest, Space,
 };
 use fret_core::{
@@ -539,10 +539,17 @@ pub fn combobox<H: UiHost>(
                                                                             ..Default::default()
                                                                         },
                                                                         move |cx, st, _id| {
-                                                                            cx.pressable_set_option_arc_str(
-                                                                                &model,
-                                                                                item.value.clone(),
-                                                                            );
+                                                                            if is_selected {
+                                                                                cx.pressable_update_model(
+                                                                                    &model,
+                                                                                    |v| *v = None,
+                                                                                );
+                                                                            } else {
+                                                                                cx.pressable_set_option_arc_str(
+                                                                                    &model,
+                                                                                    item.value.clone(),
+                                                                                );
+                                                                            }
                                                                             cx.pressable_set_bool(&open, false);
                                                                             let query_model_for_activate =
                                                                                 query_model.clone();
@@ -597,14 +604,48 @@ pub fn combobox<H: UiHost>(
                                                                                     ),
                                                                                 },
                                                                                 |cx| {
-                                                                                    vec![cx.text_props(TextProps {
-                                                                                        layout: LayoutStyle::default(),
-                                                                                        text: item.label.clone(),
-                                                                                        style: Some(text_style.clone()),
-                                                                                        wrap: TextWrap::None,
-                                                                                        overflow: TextOverflow::Ellipsis,
-                                                                                        color: Some(fg),
-                                                                                    })]
+                                                                                    let check_color =
+                                                                                        if is_selected {
+                                                                                            fg
+                                                                                        } else {
+                                                                                            alpha_mul(fg, 0.0)
+                                                                                        };
+
+                                                                                    vec![cx.flex(
+                                                                                        FlexProps {
+                                                                                            layout: LayoutStyle::default(),
+                                                                                            direction: fret_core::Axis::Horizontal,
+                                                                                            gap: Px(8.0),
+                                                                                            padding: Edges::all(Px(0.0)),
+                                                                                            justify: MainAlign::Start,
+                                                                                            align: CrossAlign::Center,
+                                                                                            wrap: false,
+                                                                                        },
+                                                                                        |cx| {
+                                                                                            vec![
+                                                                                                decl_icon::icon_with(
+                                                                                                    cx,
+                                                                                                    ids::ui::CHECK,
+                                                                                                    Some(Px(16.0)),
+                                                                                                    Some(ColorRef::Color(
+                                                                                                        check_color,
+                                                                                                    )),
+                                                                                                ),
+                                                                                                cx.text_props(TextProps {
+                                                                                                    layout: {
+                                                                                                        let mut layout = LayoutStyle::default();
+                                                                                                        layout.size.width = Length::Fill;
+                                                                                                        layout
+                                                                                                    },
+                                                                                                    text: item.label.clone(),
+                                                                                                    style: Some(text_style.clone()),
+                                                                                                    wrap: TextWrap::None,
+                                                                                                    overflow: TextOverflow::Ellipsis,
+                                                                                                    color: Some(fg),
+                                                                                                }),
+                                                                                            ]
+                                                                                        },
+                                                                                    )]
                                                                                 },
                                                                             )]
                                                                         },

@@ -595,11 +595,17 @@ impl DockGraph {
         if index >= list.len() {
             return false;
         }
+        let removed_before_active = index < *active;
         list.remove(index);
         if list.is_empty() {
             *active = 0;
-        } else if *active >= list.len() {
-            *active = list.len() - 1;
+        } else {
+            if removed_before_active {
+                *active = active.saturating_sub(1);
+            }
+            if *active >= list.len() {
+                *active = list.len() - 1;
+            }
         }
         true
     }
@@ -1656,5 +1662,38 @@ mod tests {
         assert!(g.find_panel_in_window(window_a, &panel_a).is_some());
         assert!(g.find_panel_in_window(window_a, &panel_b).is_some());
         assert_eq!(g.floating_windows(window_a).len(), 1);
+    }
+
+    #[test]
+    fn close_panel_before_active_preserves_active_panel() {
+        let w = window(1);
+        let panel_a = PanelKey::new("test.a");
+        let panel_b = PanelKey::new("test.b");
+        let panel_c = PanelKey::new("test.c");
+
+        let mut g = DockGraph::new();
+        let tabs = g.insert_node(DockNode::Tabs {
+            tabs: vec![panel_a.clone(), panel_b.clone(), panel_c.clone()],
+            active: 1,
+        });
+        g.set_window_root(w, tabs);
+
+        assert!(g.apply_op(&DockOp::ClosePanel {
+            window: w,
+            panel: panel_a.clone(),
+        }));
+
+        let DockNode::Tabs { tabs: list, active } = g.node(tabs).expect("tabs node must exist")
+        else {
+            unreachable!();
+        };
+
+        assert_eq!(list, &vec![panel_b.clone(), panel_c.clone()]);
+        assert_eq!(*active, 0, "expected active panel (b) to remain active");
+        assert_eq!(
+            g.find_panel_in_window(w, &panel_b),
+            Some((tabs, 0)),
+            "expected the previously-active panel to remain selected"
+        );
     }
 }

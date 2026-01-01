@@ -439,17 +439,7 @@ fn family_for_font_id(font: &fret_core::FontId) -> Family<'_> {
     }
 }
 
-/// Overrides for the default font family selection.
-///
-/// This configures the three generic families used by `TextStyle.font`
-/// (`SansSerif`/`Serif`/`Monospace`). Full per-script fallback customization is tracked
-/// separately (ADR 0029).
-#[derive(Debug, Clone, Default)]
-pub struct TextFontFamilyConfig {
-    pub ui_sans: Vec<String>,
-    pub ui_serif: Vec<String>,
-    pub ui_mono: Vec<String>,
-}
+pub type TextFontFamilyConfig = fret_core::TextFontFamilyConfig;
 
 impl TextSystem {
     /// Returns a sorted list of available font family names.
@@ -819,6 +809,7 @@ impl TextSystem {
             let line_height_px = l
                 .line_height_opt
                 .unwrap_or_else(|| (l.max_ascent + l.max_descent).max(0.0))
+                .max((l.max_ascent + l.max_descent).max(0.0))
                 .max(0.0);
 
             let y_top_px = layout.line_tops_px[i];
@@ -1262,9 +1253,11 @@ fn layout_text(
 
             let ascent_px = ll.max_ascent.max(0.0);
             let descent_px = ll.max_descent.max(0.0);
+            let min_height_px = (ascent_px + descent_px).max(0.0);
             let height_px = ll
                 .line_height_opt
-                .unwrap_or(ascent_px + descent_px)
+                .unwrap_or(min_height_px)
+                .max(min_height_px)
                 .max(0.0);
 
             first_ascent_px.get_or_insert(ascent_px);

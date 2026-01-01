@@ -13,7 +13,7 @@ pub(super) fn handle_virtual_list<H: UiHost>(
     };
     match pe {
         fret_core::PointerEvent::Wheel { delta, .. } => {
-            crate::elements::with_element_state(
+            let consumed = crate::elements::with_element_state(
                 &mut *cx.app,
                 window,
                 this.element,
@@ -37,13 +37,18 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                         props
                             .scroll_handle
                             .set_offset(fret_core::Point::new(prev.x, next));
+                        true
+                    } else {
+                        false
                     }
                 },
             );
-            cx.invalidate_self(Invalidation::Layout);
-            cx.invalidate_self(Invalidation::Paint);
-            cx.request_redraw();
-            cx.stop_propagation();
+            if consumed {
+                cx.invalidate_self(Invalidation::Layout);
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                cx.stop_propagation();
+            }
         }
         fret_core::PointerEvent::Down { button, .. } => {
             if *button == MouseButton::Left {
@@ -66,9 +71,17 @@ pub(super) fn handle_scroll<H: UiHost>(
         return true;
     };
     if let fret_core::PointerEvent::Wheel { delta, .. } = pe {
-        if let Some(handle) = props.scroll_handle.as_ref() {
+        let scroll_x = props.axis.scroll_x();
+        let scroll_y = props.axis.scroll_y();
+        let delta_x = if scroll_x { delta.x } else { Px(0.0) };
+        let delta_y = if scroll_y { delta.y } else { Px(0.0) };
+
+        let consumed = if let Some(handle) = props.scroll_handle.as_ref() {
             let prev = handle.offset();
-            handle.set_offset(Point::new(prev.x, Px(prev.y.0 - delta.y.0)));
+            let desired = Point::new(Px(prev.x.0 - delta_x.0), Px(prev.y.0 - delta_y.0));
+            handle.set_offset(desired);
+            let next = handle.offset();
+            (prev.x.0 - next.x.0).abs() > 0.01 || (prev.y.0 - next.y.0).abs() > 0.01
         } else {
             crate::elements::with_element_state(
                 &mut *cx.app,
@@ -77,16 +90,20 @@ pub(super) fn handle_scroll<H: UiHost>(
                 crate::element::ScrollState::default,
                 |state| {
                     let prev = state.scroll_handle.offset();
-                    state
-                        .scroll_handle
-                        .set_offset(Point::new(prev.x, Px(prev.y.0 - delta.y.0)));
+                    let desired = Point::new(Px(prev.x.0 - delta_x.0), Px(prev.y.0 - delta_y.0));
+                    state.scroll_handle.set_offset(desired);
+                    let next = state.scroll_handle.offset();
+                    (prev.x.0 - next.x.0).abs() > 0.01 || (prev.y.0 - next.y.0).abs() > 0.01
                 },
-            );
+            )
+        };
+
+        if consumed {
+            cx.invalidate_self(Invalidation::Layout);
+            cx.invalidate_self(Invalidation::Paint);
+            cx.request_redraw();
+            cx.stop_propagation();
         }
-        cx.invalidate_self(Invalidation::Layout);
-        cx.invalidate_self(Invalidation::Paint);
-        cx.request_redraw();
-        cx.stop_propagation();
     }
     true
 }

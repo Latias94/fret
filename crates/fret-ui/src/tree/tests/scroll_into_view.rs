@@ -39,6 +39,7 @@ fn focus_traversal_scrolls_focused_descendant_into_view() {
                             layout
                         },
                         scroll_handle: Some(scroll_handle.clone()),
+                        ..Default::default()
                     },
                     |cx| {
                         vec![cx.flex(

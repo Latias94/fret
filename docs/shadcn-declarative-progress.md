@@ -55,75 +55,82 @@ The upstream reference in `repo-ref/ui` defines 54 `registry:ui` components (`re
 
 Status below uses Rust module naming (hyphenated names normalized to `_`).
 
-| Registry name | Rust module | Status | Notes |
-| --- | --- | --- | --- |
-| accordion | `accordion` | Present | Selection model drives open/close; no animation yet |
-| alert | `alert` | Present |  |
-| alert-dialog | `alert_dialog` | Present | Modal overlay policy; Tab traversal wraps within modal barrier (ADR 0068) |
-| aspect-ratio | `aspect_ratio` | Present |  |
-| avatar | `avatar` | Present |  |
-| badge | `badge` | Present |  |
-| breadcrumb | `breadcrumb` | Present |  |
-| button | `button` | Present |  |
-| button-group | `button_group` | Present | Thin wrapper over `toggle_group` styling |
-| calendar | `calendar` | Missing | Large surface; likely deferred unless needed |
-| card | `card` | Present |  |
-| carousel | `carousel` | Defer | Not editor-critical |
-| chart | `chart` | Defer | Not editor-critical |
-| checkbox | `checkbox` | Present |  |
-| collapsible | `collapsible` | Present | Headless open/close + a11y semantics |
-| command | `command` | Present | First pass: visual shell + roving list navigation; filtering is app-owned |
-| context-menu | `context_menu` | Present | Right click + (macOS) ctrl-click + Shift+F10 |
-| dialog | `dialog` | Present | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
-| drawer | `drawer` | Present | `sheet` facade (defaults to bottom); overlay policy |
-| dropdown-menu | `dropdown_menu` | Present | Menu navigation + typeahead + dismissible popover infra (ADR 0074) |
-| empty | `empty` | Present |  |
-| field | `field` | Present | Repo-specific “form field” primitives |
-| form | `form` | Present |  |
-| hover-card | `hover_card` | Present | Needs tooltip/popover-grade overlay infra for parity |
-| input | `input` | Present |  |
-| input-group | `input_group` | Present | Composition over `input` + slots/icons |
-| input-otp | `input_otp` | Present | Slots rendered over transparent `TextInput`; digits-only clamping; a11y TBD |
-| item | `item` | Present | Repo-specific list/item recipes aligned with shadcn style |
-| kbd | `kbd` | Present |  |
-| label | `label` | Present |  |
-| menubar | `menubar` | Present | Click-to-open; hover switching + richer keyboard policy TBD |
-| native-select | `native_select` | Defer | Can map to `select` + platform-native later |
-| navigation-menu | `navigation_menu` | Defer | Complex; not editor-critical |
-| pagination | `pagination` | Present |  |
-| popover | `popover` | Present | Anchored placement + click-through outside press dismissal (ADR 0069); non-modal (no focus trap) |
-| progress | `progress` | Present |  |
-| radio-group | `radio_group` | Present |  |
-| resizable | `resizable` | Present | Runtime-owned drag + layout; multi-panel group; a11y TBD |
-| scroll-area | `scroll_area` | Present | Declarative wrapper over `Scroll` + styling |
-| select | `select` | Present | Uses `window_overlays` dismissible popover infra |
-| separator | `separator` | Present | Simple primitive; declarative-only |
-| sheet | `sheet` | Present | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
-| sidebar | `sidebar` | Present |  |
-| skeleton | `skeleton` | Present |  |
-| slider | `slider` | Present | Declarative composition over primitives (PointerRegion hooks + bounds); a11y TBD |
-| sonner | `sonner` | Present | Toast store + overlay layer + timers (no a11y yet) |
-| spinner | `spinner` | Present |  |
-| switch | `switch` | Present |  |
-| table | `table` | Present |  |
-| tabs | `tabs` | Present |  |
-| textarea | `textarea` | Present | Wrapper over declarative `TextArea` (runtime `TextArea` engine); a11y TBD |
-| toggle | `toggle` | Present |  |
-| toggle-group | `toggle_group` | Present |  |
-| tooltip | `tooltip` | Present | Hover intent + placement; rendered via overlay root (not clipped) |
+Audit column is a lightweight review marker for shadcn parity against `repo-ref/ui` docs/examples:
+`Unreviewed` → `In review` → `Pass` (or `Defer`/`Skip` when applicable).
+
+| Registry name | Rust module | Status | Audit | Notes |
+| --- | --- | --- | --- | --- |
+| accordion | `accordion` | Present | Unreviewed | Selection model drives open/close; no animation yet |
+| alert | `alert` | Present | Unreviewed |  |
+| alert-dialog | `alert_dialog` | Present | Unreviewed | Modal overlay policy; Tab traversal wraps within modal barrier (ADR 0068) |
+| aspect-ratio | `aspect_ratio` | Present | Unreviewed |  |
+| avatar | `avatar` | Present | Unreviewed |  |
+| badge | `badge` | Present | Unreviewed |  |
+| breadcrumb | `breadcrumb` | Present | Unreviewed |  |
+| button | `button` | Present | Unreviewed |  |
+| button-group | `button_group` | Present | Unreviewed | Thin wrapper over `toggle_group` styling |
+| calendar | `calendar` | Missing | Unreviewed | Large surface; likely deferred unless needed |
+| card | `card` | Present | Unreviewed |  |
+| carousel | `carousel` | Defer | Unreviewed | Not editor-critical |
+| chart | `chart` | Defer | Unreviewed | Not editor-critical |
+| checkbox | `checkbox` | Present | Unreviewed |  |
+| collapsible | `collapsible` | Present | Unreviewed | Headless open/close + a11y semantics |
+| command | `command` | Present | Unreviewed | First pass: visual shell + roving list navigation; filtering is app-owned |
+| context-menu | `context_menu` | Present | Unreviewed | Right click + (macOS) ctrl-click + Shift+F10 |
+| dialog | `dialog` | Present | Unreviewed | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
+| drawer | `drawer` | Present | Unreviewed | `sheet` facade (defaults to bottom); overlay policy |
+| dropdown-menu | `dropdown_menu` | Present | In review | Menu navigation + typeahead + dismissible popover infra (ADR 0074); now includes `Label`/`Group`/`Shortcut` + destructive items; audit: `docs/audits/shadcn-dropdown-menu.md` |
+| empty | `empty` | Present | Unreviewed |  |
+| field | `field` | Present | Unreviewed | Repo-specific “form field” primitives |
+| form | `form` | Present | Unreviewed |  |
+| hover-card | `hover_card` | Present | Unreviewed | Needs tooltip/popover-grade overlay infra for parity |
+| input | `input` | Present | Unreviewed |  |
+| input-group | `input_group` | Present | Unreviewed | Composition over `input` + slots/icons |
+| input-otp | `input_otp` | Present | Unreviewed | Slots rendered over transparent `TextInput`; digits-only clamping; a11y TBD |
+| item | `item` | Present | Unreviewed | Repo-specific list/item recipes aligned with shadcn style |
+| kbd | `kbd` | Present | Unreviewed |  |
+| label | `label` | Present | Unreviewed |  |
+| menubar | `menubar` | Present | Unreviewed | Click-to-open; hover switching + richer keyboard policy TBD |
+| native-select | `native_select` | Defer | Unreviewed | Can map to `select` + platform-native later |
+| navigation-menu | `navigation_menu` | Defer | Unreviewed | Complex; not editor-critical |
+| pagination | `pagination` | Present | Unreviewed |  |
+| popover | `popover` | Present | Pass | Anchored placement + click-through outside press dismissal (ADR 0069); non-modal (no focus trap); audit: `docs/audits/shadcn-popover.md` |
+| progress | `progress` | Present | Unreviewed |  |
+| radio-group | `radio_group` | Present | Unreviewed |  |
+| resizable | `resizable` | Present | Unreviewed | Runtime-owned drag + layout; multi-panel group; a11y TBD |
+| scroll-area | `scroll_area` | Present | Unreviewed | Declarative wrapper over `Scroll` + styling |
+| select | `select` | Present | Unreviewed | Uses `window_overlays` dismissible popover infra |
+| separator | `separator` | Present | Unreviewed | Simple primitive; declarative-only |
+| sheet | `sheet` | Present | Unreviewed | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
+| sidebar | `sidebar` | Present | Unreviewed |  |
+| skeleton | `skeleton` | Present | Unreviewed |  |
+| slider | `slider` | Present | Unreviewed | Declarative composition over primitives (PointerRegion hooks + bounds); a11y TBD |
+| sonner | `sonner` | Present | Unreviewed | Toast store + overlay layer + timers (no a11y yet) |
+| spinner | `spinner` | Present | Unreviewed |  |
+| switch | `switch` | Present | Unreviewed |  |
+| table | `table` | Present | Unreviewed |  |
+| tabs | `tabs` | Present | Unreviewed |  |
+| textarea | `textarea` | Present | Unreviewed | Wrapper over declarative `TextArea` (runtime `TextArea` engine); a11y TBD |
+| toggle | `toggle` | Present | Unreviewed |  |
+| toggle-group | `toggle_group` | Present | Unreviewed |  |
+| tooltip | `tooltip` | Present | In review | Hover intent + placement; rendered via overlay root (not clipped); audit: `docs/audits/shadcn-tooltip.md` |
 
 ## Non-registry surfaces
 
 These are shadcn-style surfaces referenced by docs/demos but not part of the `registry:ui` baseline:
 
-| Surface | Rust module | Status | Notes |
-| --- | --- | --- | --- |
-| combobox | `combobox` | Present | Search input + popover list; active-descendant semantics are still pending (ADR 0073) |
+| Surface | Rust module | Status | Audit | Notes |
+| --- | --- | --- | --- | --- |
+| combobox | `combobox` | Present | Unreviewed | Search input + popover list; active-descendant semantics are still pending (ADR 0073) |
+| date picker | `date_picker` | Missing | Unreviewed | Upstream is a `Popover` + `Calendar` recipe; consider shipping as a recipe/example first |
+| data table / datagrid | `data_table` | Feature-gated | Unreviewed | Enabled by `fret-components-shadcn/datagrid`; not a `registry:ui` item upstream |
+| toast | `toast` | Skip | Unreviewed | Upstream `toast` is deprecated in favor of `sonner`; this repo ships `sonner` |
+| typography | `typography` | Skip | Unreviewed | Upstream typography page is docs-only and not shipped as a component |
 
 Notes:
 - “Present” means a declarative module exists and compiles; it may still be below the “Definition of Done” parity bar (keyboard/APG, a11y checklist, tests).
 - Most “Missing” entries were previously implemented as retained widgets and intentionally deleted under the declarative-only boundary. They should come back as declarative components backed by `fret-components-ui` infra + `fret-ui` mechanisms.
-- `data_table` exists in `fret-components-shadcn` but is not a `registry:ui` item upstream; treat as an extension.
+- `data_table` is not a `registry:ui` item upstream; treat it as an extension and keep it feature-gated.
 
 ## Recommended Order (Near-term)
 

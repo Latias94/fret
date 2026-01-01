@@ -201,34 +201,67 @@ impl<H: UiHost> Widget<H> for TextArea {
                 if cx.focus != Some(cx.node) {
                     return;
                 }
-                if !self.is_ime_composing() {
+
+                if self.is_ime_composing() {
+                    if modifiers.ctrl || modifiers.alt || modifiers.meta {
+                        return;
+                    }
+
+                    // During IME composition (preedit), reserve common navigation/IME keys for the
+                    // platform IME path (ADR 0012).
+                    if matches!(
+                        key,
+                        fret_core::KeyCode::Tab
+                            | fret_core::KeyCode::Space
+                            | fret_core::KeyCode::Enter
+                            | fret_core::KeyCode::NumpadEnter
+                            | fret_core::KeyCode::Escape
+                            | fret_core::KeyCode::ArrowUp
+                            | fret_core::KeyCode::ArrowDown
+                            | fret_core::KeyCode::ArrowLeft
+                            | fret_core::KeyCode::ArrowRight
+                            | fret_core::KeyCode::Backspace
+                            | fret_core::KeyCode::Delete
+                            | fret_core::KeyCode::Home
+                            | fret_core::KeyCode::End
+                            | fret_core::KeyCode::PageUp
+                            | fret_core::KeyCode::PageDown
+                    ) {
+                        cx.stop_propagation();
+                    }
                     return;
                 }
+
                 if modifiers.ctrl || modifiers.alt || modifiers.meta {
                     return;
                 }
 
-                // During IME composition (preedit), reserve common navigation/IME keys for the
-                // platform IME path (ADR 0012).
-                if matches!(
-                    key,
-                    fret_core::KeyCode::Tab
-                        | fret_core::KeyCode::Space
-                        | fret_core::KeyCode::Enter
-                        | fret_core::KeyCode::NumpadEnter
-                        | fret_core::KeyCode::Escape
-                        | fret_core::KeyCode::ArrowUp
-                        | fret_core::KeyCode::ArrowDown
-                        | fret_core::KeyCode::ArrowLeft
-                        | fret_core::KeyCode::ArrowRight
-                        | fret_core::KeyCode::Backspace
-                        | fret_core::KeyCode::Delete
-                        | fret_core::KeyCode::Home
-                        | fret_core::KeyCode::End
-                        | fret_core::KeyCode::PageUp
-                        | fret_core::KeyCode::PageDown
-                ) {
-                    cx.stop_propagation();
+                match key {
+                    fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter => {
+                        let changed = self.edit_state().replace_selection("\n");
+                        let outcome = crate::text_edit::commands::Outcome {
+                            handled: true,
+                            invalidate_paint: false,
+                            invalidate_layout: changed,
+                        };
+                        let delta =
+                            crate::text_edit::commands::multiline_ui_delta("text.insert", outcome);
+                        self.apply_multiline_ui_delta(cx, delta);
+                        cx.stop_propagation();
+                    }
+                    fret_core::KeyCode::Tab => {
+                        let changed = self.edit_state().replace_selection("\t");
+                        let outcome = crate::text_edit::commands::Outcome {
+                            handled: true,
+                            invalidate_paint: false,
+                            invalidate_layout: changed,
+                        };
+                        let delta =
+                            crate::text_edit::commands::multiline_ui_delta("text.insert", outcome);
+                        self.apply_multiline_ui_delta(cx, delta);
+                        cx.stop_propagation();
+                    }
+                    _ => {}
                 }
             }
             Event::TextInput(text) => {
@@ -699,13 +732,48 @@ impl<H: UiHost> Widget<H> for TextArea {
                 Size::new(Px(hairline.0.max(1.0)), caret.size.height),
             );
 
+            let ime_rect = if self.is_ime_composing() && !self.preedit_rects.is_empty() {
+                let mut min_x = f32::INFINITY;
+                let mut min_y = f32::INFINITY;
+                let mut max_x = f32::NEG_INFINITY;
+                let mut max_y = f32::NEG_INFINITY;
+
+                for r in &self.preedit_rects {
+                    if r.size.width.0 <= 0.0 || r.size.height.0 <= 0.0 {
+                        continue;
+                    }
+
+                    let x0 = (inner.origin.x + r.origin.x).0;
+                    let y0 = (inner.origin.y.0 + r.origin.y.0 - self.offset_y.0) as f32;
+                    let x1 = x0 + r.size.width.0;
+                    let y1 = y0 + r.size.height.0;
+
+                    min_x = min_x.min(x0);
+                    min_y = min_y.min(y0);
+                    max_x = max_x.max(x1);
+                    max_y = max_y.max(y1);
+                }
+
+                if min_x.is_finite() && min_y.is_finite() && max_x.is_finite() && max_y.is_finite()
+                {
+                    Rect::new(
+                        fret_core::Point::new(Px(min_x), Px(min_y)),
+                        Size::new(Px((max_x - min_x).max(1.0)), Px((max_y - min_y).max(1.0))),
+                    )
+                } else {
+                    caret_rect
+                }
+            } else {
+                caret_rect
+            };
+
             if let Some(window) = cx.window
-                && self.last_sent_cursor != Some(caret_rect)
+                && self.last_sent_cursor != Some(ime_rect)
             {
-                self.last_sent_cursor = Some(caret_rect);
+                self.last_sent_cursor = Some(ime_rect);
                 cx.app.push_effect(Effect::ImeSetCursorArea {
                     window,
-                    rect: caret_rect,
+                    rect: ime_rect,
                 });
             }
 

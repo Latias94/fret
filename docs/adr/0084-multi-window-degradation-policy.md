@@ -1,6 +1,6 @@
 # ADR 0084: Multi-Window Degradation Policy (Logical Windows on Single-Window Platforms)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -141,6 +141,13 @@ Cons:
     - tear-off becomes in-window float,
     - drag arbitration (ADR 0072) still holds.
   - Suggested harness: `cargo run -p fret-demo --bin docking_arbitration_demo` with `FRET_SINGLE_WINDOW=1` (see `docs/docking-arbitration-checklist.md`).
+
+## Implementation Status
+
+This policy is implemented in the current workspace:
+
+- Dock layout import fallback (unmapped logical windows -> in-window floatings): `crates/fret-core/src/dock.rs`
+- Tear-off request degradation (no OS window creation when `ui.multi_window == false`): `crates/fret-components-docking/src/runtime.rs`
 
 ## References
 

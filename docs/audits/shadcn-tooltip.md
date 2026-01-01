@@ -1,0 +1,60 @@
+# shadcn/ui v4 Audit — Tooltip
+
+This audit compares Fret’s shadcn-aligned `Tooltip` against the upstream shadcn/ui v4 docs and
+examples in `repo-ref/ui`.
+
+## Upstream references (source of truth)
+
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/tooltip.mdx`
+- Reference implementation (Radix base): `repo-ref/ui/apps/v4/registry/bases/radix/ui/tooltip.tsx`
+- Reference examples: `repo-ref/ui/apps/v4/registry/bases/radix/examples/tooltip-example.tsx`
+
+Key upstream notes:
+
+- Tooltip should open on **hover** and on **keyboard focus**.
+- v4 updated tooltip colors to `bg-foreground text-background` (2025-09-22 changelog).
+- Content includes an arrow and supports rich children (icons, `<Kbd />`, formatted blocks).
+
+## Fret implementation
+
+- Component code: `crates/fret-components-shadcn/src/tooltip.rs`
+- Hover intent state machine: `crates/fret-components-ui/src/headless/hover_intent.rs`
+- Overlay placement helpers: `crates/fret-components-ui/src/overlay.rs`
+- Per-window tooltip overlay policy: `crates/fret-components-ui/src/window_overlays/mod.rs`
+
+## Audit checklist
+
+### Composition surface
+
+- Pass: `Tooltip`, `TooltipTrigger`, `TooltipContent` exist and are declarative-only.
+- Pass: `TooltipContent` now supports rich children (`Vec<AnyElement>`), matching upstream examples.
+- Defer: `TooltipProvider` surface is not modeled (upstream uses a Provider to control delay).
+
+### Open/close behavior
+
+- Pass: Hover open/close is implemented via `HoverRegion` + `HoverIntentState`.
+- Defer: Open-on-keyboard-focus is not implemented (runtime currently does not expose a
+  component-facing focus-change hook/query for arbitrary elements).
+
+### Placement & portal behavior
+
+- Pass: Renders into a per-window overlay root (portal-like), not clipped by ancestor overflow.
+- Pass: Supports `side` and `align` placement options.
+- Pass: Default `side_offset` aligns with upstream’s default (`0`) and can be overridden.
+- Pass: Placement anchors to **visual bounds** when available (render-transform aware) via
+  `fret-components-ui::overlay::anchor_bounds_for_element`.
+
+### Visual defaults (shadcn parity)
+
+- Pass: Default tooltip background aligns with upstream (`foreground`).
+- Partial: Default “text color inheritance” is not a first-class concept; `TooltipContent::text(...)`
+  sets `background` as the text color, but rich children must set colors explicitly for now.
+- Defer: Arrow is not implemented (upstream includes an arrow by default).
+
+## Follow-ups (recommended)
+
+- Add a small runtime-visible “focus state” signal for declarative elements (or a focus-change hook)
+  so tooltips can open on keyboard focus without embedding policy into `fret-ui`.
+- Add an optional arrow primitive for anchored overlays (tooltip/popover/hover-card).
+- Add nextest contract tests for tooltip hover timing + placement invariants.
+

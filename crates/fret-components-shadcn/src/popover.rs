@@ -4,7 +4,7 @@ use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
 use fret_components_ui::{
-    ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     OverlayRequest, Radius, Space,
 };
 use fret_core::{FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
@@ -43,6 +43,7 @@ pub struct Popover {
     open: Model<bool>,
     align: PopoverAlign,
     side: PopoverSide,
+    align_offset: Px,
     side_offset: Px,
     window_margin_override: Option<Px>,
     auto_focus: bool,
@@ -55,6 +56,7 @@ impl std::fmt::Debug for Popover {
             .field("open", &"<model>")
             .field("align", &self.align)
             .field("side", &self.side)
+            .field("align_offset", &self.align_offset)
             .field("side_offset", &self.side_offset)
             .field("window_margin_override", &self.window_margin_override)
             .field("auto_focus", &self.auto_focus)
@@ -69,7 +71,8 @@ impl Popover {
             open,
             align: PopoverAlign::default(),
             side: PopoverSide::default(),
-            side_offset: Px(6.0),
+            align_offset: Px(0.0),
+            side_offset: Px(4.0),
             window_margin_override: None,
             auto_focus: false,
             initial_focus: None,
@@ -83,6 +86,11 @@ impl Popover {
 
     pub fn side(mut self, side: PopoverSide) -> Self {
         self.side = side;
+        self
+    }
+
+    pub fn align_offset(mut self, offset: Px) -> Self {
+        self.align_offset = offset;
         self
     }
 
@@ -129,6 +137,7 @@ impl Popover {
                 let overlay_root_name = OverlayController::popover_root_name(trigger_id);
                 let align = self.align;
                 let side = self.side;
+                let align_offset = self.align_offset;
                 let side_offset = self.side_offset;
                 let window_margin = self.window_margin_override.unwrap_or_else(|| {
                     theme
@@ -149,7 +158,7 @@ impl Popover {
                     let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
 
                     let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
-                    let estimated = Size::new(Px(256.0), Px(160.0));
+                    let estimated = Size::new(Px(288.0), Px(160.0));
                     let content_size = last_content_size.unwrap_or(estimated);
 
                     let align = match align {
@@ -162,6 +171,27 @@ impl Popover {
                         PopoverSide::Right => Side::Right,
                         PopoverSide::Bottom => Side::Bottom,
                         PopoverSide::Left => Side::Left,
+                    };
+
+                    let anchor = if align_offset.0.abs() > 0.01 {
+                        match side {
+                            Side::Top | Side::Bottom => {
+                                let origin = fret_core::Point::new(
+                                    Px(anchor.origin.x.0 + align_offset.0),
+                                    anchor.origin.y,
+                                );
+                                fret_core::Rect::new(origin, anchor.size)
+                            }
+                            Side::Left | Side::Right => {
+                                let origin = fret_core::Point::new(
+                                    anchor.origin.x,
+                                    Px(anchor.origin.y.0 + align_offset.0),
+                                );
+                                fret_core::Rect::new(origin, anchor.size)
+                            }
+                        }
+                    } else {
+                        anchor
                     };
 
                     let placed = anchored_panel_bounds_sized(
@@ -283,7 +313,7 @@ impl PopoverContent {
         Self {
             children,
             chrome: ChromeRefinement::default(),
-            layout: LayoutRefinement::default(),
+            layout: LayoutRefinement::default().w_px(MetricRef::Px(Px(288.0))),
             a11y_label: None,
         }
     }
@@ -392,6 +422,50 @@ impl PopoverTitle {
             }),
             color: Some(fg),
             wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        })
+    }
+}
+
+/// shadcn/ui `PopoverDescription` (v4).
+#[derive(Debug, Clone)]
+pub struct PopoverDescription {
+    text: Arc<str>,
+}
+
+impl PopoverDescription {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self { text: text.into() }
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let fg = theme
+            .color_by_key("muted.foreground")
+            .or_else(|| theme.color_by_key("muted-foreground"))
+            .unwrap_or(theme.colors.text_muted);
+
+        let px = theme
+            .metric_by_key("component.popover.description_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or(theme.metrics.font_size);
+        let line_height = theme
+            .metric_by_key("component.popover.description_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or(theme.metrics.font_line_height);
+
+        cx.text_props(TextProps {
+            layout: Default::default(),
+            text: self.text,
+            style: Some(TextStyle {
+                font: FontId::default(),
+                size: px,
+                weight: FontWeight::NORMAL,
+                line_height: Some(line_height),
+                letter_spacing_em: None,
+            }),
+            color: Some(fg),
+            wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
         })
     }

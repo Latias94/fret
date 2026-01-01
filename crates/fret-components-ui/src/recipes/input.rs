@@ -1,6 +1,6 @@
 use fret_core::{Color, Corners, Edges, Px};
 use fret_ui::Theme;
-use fret_ui::element::{RingPlacement, RingStyle};
+use fret_ui::element::{ContainerProps, LayoutStyle, Overflow, RingPlacement, RingStyle};
 
 use crate::style::PaddingRefinement;
 use crate::style::{ColorFallback, MetricFallback};
@@ -51,6 +51,24 @@ pub struct ResolvedInputChrome {
     pub text_color: Color,
     pub text_px: Px,
     pub selection_color: Color,
+}
+
+pub fn input_chrome_container_props(
+    mut layout: LayoutStyle,
+    chrome: ResolvedInputChrome,
+    border_color: Color,
+) -> ContainerProps {
+    layout.overflow = Overflow::Clip;
+    ContainerProps {
+        layout,
+        padding: chrome.padding,
+        background: Some(chrome.background),
+        shadow: None,
+        border: Edges::all(chrome.border_width),
+        border_color: Some(border_color),
+        corner_radii: Corners::all(chrome.radius),
+        ..Default::default()
+    }
 }
 
 pub fn resolve_input_chrome(

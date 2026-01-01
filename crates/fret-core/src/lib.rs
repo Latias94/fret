@@ -52,8 +52,8 @@ pub use semantics::{
 pub use services::UiServices;
 pub use svg::{SvgFit, SvgService};
 pub use text::{
-    CaretAffinity, FontWeight, HitTestResult, TextConstraints, TextMetrics, TextOverflow,
-    TextService, TextStyle, TextWrap,
+    CaretAffinity, FontWeight, HitTestResult, TextConstraints, TextFontFamilyConfig, TextMetrics,
+    TextOverflow, TextService, TextStyle, TextWrap,
 };
 pub use vector_path::{
     FillRule, FillStyle, PathCommand, PathConstraints, PathMetrics, PathService, PathStyle,

@@ -52,6 +52,7 @@ pub fn overflow_scroll<H: UiHost>(
             ScrollProps {
                 layout: scroll_layout,
                 scroll_handle: Some(handle.clone()),
+                ..Default::default()
             },
             f,
         );

@@ -619,6 +619,12 @@ impl<H: UiHost> Widget<H> for TextInput {
         let _padding_right = self.chrome_style.padding.right;
         let padding_top = self.chrome_style.padding.top;
         let padding_bottom = self.chrome_style.padding.bottom;
+        let text_height = self.text_metrics.map(|m| m.size.height).unwrap_or(Px(16.0));
+        let inner_height = Px((cx.bounds.size.height.0 - padding_top.0 - padding_bottom.0)
+            .max(0.0)
+            .max(text_height.0));
+        let vertical_offset = Px(((inner_height.0 - text_height.0).max(0.0)) / 2.0);
+
         if self.has_selection() && !self.is_ime_composing() {
             let (a, b) = self.selection_range();
             let start_x = self
@@ -635,7 +641,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 rect: Rect::new(
                     fret_core::geometry::Point::new(
                         cx.bounds.origin.x + padding_left + start_x,
-                        cx.bounds.origin.y + padding_top,
+                        cx.bounds.origin.y + padding_top + vertical_offset,
                     ),
                     Size::new(
                         Px((end_x.0 - start_x.0).max(0.0)),
@@ -651,12 +657,12 @@ impl<H: UiHost> Widget<H> for TextInput {
         let base_origin = if let Some(metrics) = self.text_metrics {
             fret_core::geometry::Point::new(
                 cx.bounds.origin.x + padding_left,
-                cx.bounds.origin.y + padding_top + metrics.baseline,
+                cx.bounds.origin.y + padding_top + vertical_offset + metrics.baseline,
             )
         } else {
             fret_core::geometry::Point::new(
                 cx.bounds.origin.x + padding_left,
-                cx.bounds.origin.y + padding_top + Px(10.0),
+                cx.bounds.origin.y + padding_top + vertical_offset + Px(10.0),
             )
         };
 
@@ -723,11 +729,16 @@ impl<H: UiHost> Widget<H> for TextInput {
             ),
             caret_local.size,
         );
-        if self.last_sent_cursor != Some(caret) {
-            self.last_sent_cursor = Some(caret);
+
+        // Anchor IME UI to the *current* caret position (including preedit cursor offset).
+        // This keeps the IME candidate/composition UI tracking the cursor within the preedit text.
+        let ime_rect = caret;
+
+        if self.last_sent_cursor != Some(ime_rect) {
+            self.last_sent_cursor = Some(ime_rect);
             cx.app.push_effect(Effect::ImeSetCursorArea {
                 window,
-                rect: caret,
+                rect: ime_rect,
             });
         }
 

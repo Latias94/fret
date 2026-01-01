@@ -370,12 +370,13 @@ fn parse_keys(index: usize, keys: KeySpecV1) -> Result<KeyChord, KeymapError> {
 
     let mut mods = Modifiers::default();
     for m in keys.mods {
-        match m.as_str() {
+        let token = m.to_ascii_lowercase();
+        match token.as_str() {
             "shift" => mods.shift = true,
-            "ctrl" => mods.ctrl = true,
-            "alt" => mods.alt = true,
-            "altgr" => mods.alt_gr = true,
-            "meta" => mods.meta = true,
+            "ctrl" | "control" => mods.ctrl = true,
+            "alt" | "option" => mods.alt = true,
+            "altgr" | "alt_gr" | "altgraph" => mods.alt_gr = true,
+            "meta" | "cmd" | "command" => mods.meta = true,
             other => {
                 return Err(KeymapError::UnknownModifier {
                     index,
@@ -485,6 +486,22 @@ mod tests {
             err,
             KeymapError::WhenValidationFailed { index: 0, .. }
         ));
+    }
+
+    #[test]
+    fn keymap_accepts_modifier_tokens_case_insensitive_and_aliases() {
+        let bytes = br#"{
+            "keymap_version": 1,
+            "bindings": [
+                { "command": "test.shift", "keys": { "mods": ["Shift"], "key": "Tab" } },
+                { "command": "test.ctrl", "keys": { "mods": ["Control"], "key": "KeyA" } },
+                { "command": "test.alt", "keys": { "mods": ["Option"], "key": "KeyB" } },
+                { "command": "test.meta", "keys": { "mods": ["Command"], "key": "KeyC" } },
+                { "command": "test.alt_gr", "keys": { "mods": ["Alt_Gr"], "key": "KeyD" } }
+            ]
+        }"#;
+
+        Keymap::from_bytes(bytes).expect("keymap parses");
     }
 
     #[test]

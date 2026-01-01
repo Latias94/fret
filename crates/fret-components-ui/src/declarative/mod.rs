@@ -1,4 +1,5 @@
 pub mod action_hooks;
+pub mod chrome;
 pub mod collection_semantics;
 pub mod list;
 pub mod model_watch;

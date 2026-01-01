@@ -439,6 +439,114 @@ fn reserved_shortcuts_are_suppressed_during_ime_composition() {
 }
 
 #[test]
+fn reserved_shortcuts_are_suppressed_during_text_area_ime_composition() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(KeymapService {
+        keymap: Keymap::from_v1(KeymapFileV1 {
+            keymap_version: 1,
+            bindings: vec![
+                BindingV1 {
+                    command: Some("test.tab".into()),
+                    platform: None,
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "Tab".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("test.enter".into()),
+                    platform: None,
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "Enter".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("test.numpad_enter".into()),
+                    platform: None,
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "NumpadEnter".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("test.space".into()),
+                    platform: None,
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "Space".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("test.escape".into()),
+                    platform: None,
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "Escape".into(),
+                    },
+                },
+            ],
+        })
+        .expect("valid keymap"),
+    });
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let text_area = ui.create_node(crate::text_area::TextArea::default());
+    ui.add_child(root, text_area);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(80.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.set_focus(Some(text_area));
+
+    let _ = app.take_effects();
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Ime(fret_core::ImeEvent::Preedit {
+            text: "nihao".into(),
+            cursor: Some((0, 0)),
+        }),
+    );
+    let _ = app.take_effects();
+
+    for key in [
+        KeyCode::Tab,
+        KeyCode::Enter,
+        KeyCode::NumpadEnter,
+        KeyCode::Space,
+        KeyCode::Escape,
+    ] {
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+    }
+
+    let effects = app.take_effects();
+    assert!(
+        !effects.iter().any(|e| matches!(e, Effect::Command { .. })),
+        "did not expect any shortcut commands during IME composition"
+    );
+}
+
+#[test]
 fn tab_focus_next_is_suppressed_during_text_area_ime_composition() {
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());

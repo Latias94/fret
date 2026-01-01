@@ -3,6 +3,26 @@ use crate::{
     geometry::{Point, Px, Rect},
     ids::FontId,
 };
+use serde::{Deserialize, Serialize};
+
+/// Overrides for the default font family selection used by the text system.
+///
+/// This is intended to be persisted in settings/config files and applied by the host/runner.
+/// It configures the three generic families used by `TextStyle.font` (`Ui`/`Serif`/`Monospace`).
+///
+/// Notes:
+/// - Entries are treated as ordered "try this first" candidates; backends will pick the first
+///   installed family name and ignore unknown ones.
+/// - This does not attempt to model per-script fallback chains yet (ADR 0029).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TextFontFamilyConfig {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ui_sans: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ui_serif: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ui_mono: Vec<String>,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FontWeight(pub u16);

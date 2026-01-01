@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret_components_ui::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_core::{Corners, FontId, NodeId, TextStyle};
 use fret_runtime::{CommandId, Model};
-use fret_ui::element::{AnyElement, Length, SizeStyle, TextInputProps};
+use fret_ui::element::{AnyElement, Length, Overflow, SizeStyle, TextInputProps};
 use fret_ui::{ElementCx, TextInputStyle, Theme, UiHost};
 
 #[derive(Clone)]
@@ -108,6 +108,7 @@ pub fn input<H: UiHost>(
         min_height: Some(resolved.min_height),
         ..Default::default()
     };
+    props.layout.overflow = Overflow::Clip;
 
     cx.text_input(props)
 }

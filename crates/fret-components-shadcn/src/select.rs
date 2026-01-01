@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret_components_icons::ids;
 use fret_components_ui::declarative::action_hooks::ActionHooksExt;
+use fret_components_ui::declarative::chrome as decl_chrome;
 use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_components_ui::declarative::icon as decl_icon;
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
@@ -9,7 +10,9 @@ use fret_components_ui::declarative::scroll as decl_scroll;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::overlay;
-use fret_components_ui::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_components_ui::recipes::input::{
+    InputTokenKeys, input_chrome_container_props, resolve_input_chrome,
+};
 use fret_components_ui::{
     ChromeRefinement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     OverlayRequest, Space,
@@ -158,7 +161,6 @@ pub fn select<H: UiHost>(
         trigger_layout.size.height = Length::Auto;
         trigger_layout.size.min_height = Some(resolved.min_height);
 
-        let bg = resolved.background;
         let border = resolved.border_color;
         let border_focus = resolved.border_color_focused;
         let fg = resolved.text_color;
@@ -168,7 +170,7 @@ pub fn select<H: UiHost>(
 
         let enabled = !disabled;
 
-        cx.pressable_with_id_props(|cx, st, trigger_id| {
+        decl_chrome::control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
             let border_color = if st.hovered || st.pressed {
                 alpha_mul(border_focus, 0.85)
             } else {
@@ -328,7 +330,7 @@ pub fn select<H: UiHost>(
                                                                     layout: {
                                                                         let mut layout = LayoutStyle::default();
                                                                         layout.size.width = Length::Fill;
-                                                                        layout.size.min_height = Some(item_h);
+                                                                        layout.size.height = Length::Px(item_h);
                                                                         layout
                                                                     },
                                                                     enabled: !item_disabled,
@@ -414,49 +416,48 @@ pub fn select<H: UiHost>(
                     OverlayController::request(cx, request);
             }
 
-            let children = vec![cx.container(
-                ContainerProps {
-                    layout: LayoutStyle::default(),
-                    padding: resolved.padding,
-                    background: Some(bg),
-                    shadow: None,
-                    border: Edges::all(resolved.border_width),
-                    border_color: Some(border_color),
-                    corner_radii: Corners::all(radius),
+            let chrome = input_chrome_container_props(
+                {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout
                 },
-                |cx| {
-                    vec![cx.flex(
-                        FlexProps {
-                            layout: LayoutStyle::default(),
-                            direction: fret_core::Axis::Horizontal,
-                            gap: MetricRef::space(Space::N2).resolve(&theme),
-                            padding: Edges::all(Px(0.0)),
-                            justify: MainAlign::SpaceBetween,
-                            align: CrossAlign::Center,
-                            wrap: false,
-                        },
-                        |cx| {
-                            vec![
-                                cx.text_props(TextProps {
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Fill;
-                                        layout
-                                    },
-                                    text: label,
-                                    style: Some(text_style.clone()),
-                                    wrap: TextWrap::None,
-                                    overflow: TextOverflow::Ellipsis,
-                                    color: Some(if selected.is_some() { fg } else { fg_muted }),
-                                }),
-                                decl_icon::icon_with(cx, ids::ui::CHEVRON_DOWN, Some(Px(16.0)), None),
-                            ]
-                        },
-                    )]
-                },
-            )];
+                resolved,
+                border_color,
+            );
 
-            (props, children)
+            let content = move |cx: &mut ElementCx<'_, H>| {
+                vec![cx.flex(
+                    FlexProps {
+                        layout: LayoutStyle::default(),
+                        direction: fret_core::Axis::Horizontal,
+                        gap: MetricRef::space(Space::N2).resolve(&theme),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::SpaceBetween,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                    },
+                    |cx| {
+                        vec![
+                            cx.text_props(TextProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout
+                                },
+                                text: label,
+                                style: Some(text_style.clone()),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Ellipsis,
+                                color: Some(if selected.is_some() { fg } else { fg_muted }),
+                            }),
+                            decl_icon::icon_with(cx, ids::ui::CHEVRON_DOWN, Some(Px(16.0)), None),
+                        ]
+                    },
+                )]
+            };
+
+            (props, chrome, content)
         })
     })
 }

@@ -76,7 +76,6 @@ We define a minimal set of booleans/enums that cover the “hard portability” 
   - `dnd.external`: `bool`
   - `dnd.external_payload`: enum:
     - `none`
-    - `file_path` (desktop)
     - `file_token` (web/sandbox; portable handle)
     - `text` (web/desktop)
   - `dnd.external_position`: enum (quality/degradation signal):
@@ -91,7 +90,7 @@ We define a minimal set of booleans/enums that cover the “hard portability” 
   - `fs.file_dialogs`: `bool` (may be permission-gated)
 - **Rendering backend**
   - `gfx.webgpu`: `bool`
-  - `gfx.wgpu`: `bool`
+  - `gfx.native_gpu`: `bool`
 
 This list is intentionally small; it can expand later, but early tokens should remain stable.
 
@@ -106,11 +105,12 @@ Capabilities become part of the command resolution input context (ADR 0022 / ADR
 
 #### b) External drag payload portability (ADR 0053)
 
-Capabilities explicitly define whether external drag can deliver real paths.
+Capabilities explicitly define the external drag payload contract (token/text/none) and any
+degradation signals for hover position quality.
 
 This is a contract guardrail:
 
-- if `dnd.external_payload != file_path`, core events must not expose `PathBuf`,
+- core events must not expose `PathBuf`,
 - access to dropped data must go through effect-driven APIs (token/handle).
 
 #### c) Docking and multi-window (ADR 0013 / ADR 0017)

@@ -45,8 +45,15 @@ type WindowAnchor = fret_core::WindowAnchor;
 
 mod app_handler;
 mod no_services;
+#[cfg(windows)]
+mod windows_ime;
 
 use no_services::NoUiServices;
+
+#[cfg(windows)]
+pub fn ime_msg_hook(msg: *const std::ffi::c_void) -> bool {
+    windows_ime::msg_hook(msg)
+}
 
 #[derive(Debug, Clone)]
 pub enum RunnerUserEvent {
@@ -798,9 +805,11 @@ struct WindowRuntime<S> {
     surface: SurfaceState<'static>,
     scene: Scene,
     cursor_pos: Point,
+    cursor_pos_physical: Option<PhysicalPosition<f64>>,
     pressed_buttons: fret_core::MouseButtons,
     is_focused: bool,
     ime_allowed: bool,
+    ime_cursor_area: Option<Rect>,
     cursor_icon: fret_core::CursorIcon,
     external_drag_files: Vec<std::path::PathBuf>,
     external_drag_token: Option<fret_runtime::ExternalDropToken>,
@@ -1176,7 +1185,7 @@ impl<D: WinitDriver> WinitRunner<D> {
 
             caps.shell.open_url = true;
 
-            caps.gfx.wgpu = true;
+            caps.gfx.native_gpu = true;
             caps.gfx.webgpu = false;
         }
 
@@ -1201,7 +1210,7 @@ impl<D: WinitDriver> WinitRunner<D> {
 
             caps.shell.open_url = true;
 
-            caps.gfx.wgpu = false;
+            caps.gfx.native_gpu = false;
             caps.gfx.webgpu = true;
         }
 
@@ -1226,7 +1235,7 @@ impl<D: WinitDriver> WinitRunner<D> {
 
             caps.shell.open_url = true;
 
-            caps.gfx.wgpu = true;
+            caps.gfx.native_gpu = true;
             caps.gfx.webgpu = false;
         }
 
@@ -1272,7 +1281,7 @@ impl<D: WinitDriver> WinitRunner<D> {
 
         caps.shell.open_url &= available.shell.open_url;
 
-        caps.gfx.wgpu &= available.gfx.wgpu;
+        caps.gfx.native_gpu &= available.gfx.native_gpu;
         caps.gfx.webgpu &= available.gfx.webgpu;
 
         caps
@@ -1428,9 +1437,11 @@ impl<D: WinitDriver> WinitRunner<D> {
                 surface,
                 scene: Scene::default(),
                 cursor_pos: Point::new(Px(0.0), Px(0.0)),
+                cursor_pos_physical: None,
                 pressed_buttons: fret_core::MouseButtons::default(),
                 is_focused: false,
                 ime_allowed: false,
+                ime_cursor_area: None,
                 cursor_icon: fret_core::CursorIcon::Default,
                 external_drag_files: Vec::new(),
                 external_drag_token: None,
@@ -1449,15 +1460,19 @@ impl<D: WinitDriver> WinitRunner<D> {
                         Size::new(Px(size_logical.width), Px(size_logical.height)),
                     );
                 });
-
-            // Ensure the window draws at least one frame after creation. Some platforms/drivers
-            // may not schedule an initial redraw until input arrives, which is especially visible
-            // in docking demos (see docs/todo-tracker.md).
-            state.window.request_redraw();
         }
 
         let winit_id = self.windows[id].window.id();
         self.winit_to_app.insert(winit_id, id);
+
+        // Ensure the window draws at least one frame after creation.
+        //
+        // Important: `WindowEvent::RedrawRequested` is keyed by the winit `WindowId`, so we must
+        // install the `winit_to_app` mapping *before* requesting the redraw. Otherwise, the first
+        // redraw can be dropped and the window may appear blank until another event arrives.
+        if let Some(state) = self.windows.get(id) {
+            state.window.request_redraw();
+        }
         Ok(id)
     }
 
@@ -1807,7 +1822,23 @@ impl<D: WinitDriver> WinitRunner<D> {
                         }
                     }
                     Effect::ImeSetCursorArea { window, rect } => {
-                        if let Some(state) = self.windows.get(window) {
+                        if let Some(state) = self.windows.get_mut(window) {
+                            if std::env::var_os("FRET_IME_DEBUG").is_some_and(|v| !v.is_empty()) {
+                                tracing::info!(
+                                    "IME_DEBUG effect: ImeSetCursorArea window={:?} rect=({:.1},{:.1} {:.1}x{:.1})",
+                                    window,
+                                    rect.origin.x.0,
+                                    rect.origin.y.0,
+                                    rect.size.width.0,
+                                    rect.size.height.0
+                                );
+                            }
+                            state.ime_cursor_area = Some(rect);
+                            #[cfg(windows)]
+                            {
+                                windows_ime::set_ime_cursor_area(&state.window, rect);
+                            }
+                            #[cfg(not(windows))]
                             state.window.set_ime_cursor_area(
                                 winit::dpi::LogicalPosition::new(rect.origin.x.0, rect.origin.y.0),
                                 winit::dpi::LogicalSize::new(rect.size.width.0, rect.size.height.0),
@@ -2053,6 +2084,19 @@ impl<D: WinitDriver> WinitRunner<D> {
                         if added == 0 {
                             continue;
                         }
+
+                        let prev_rev = self
+                            .app
+                            .global::<fret_runtime::FontCatalog>()
+                            .map(|c| c.revision)
+                            .unwrap_or(0);
+                        let revision = prev_rev.saturating_add(1);
+                        let families = renderer.all_font_names();
+                        let cache = fret_app::FontCatalogCache::from_families(revision, &families);
+                        self.app.set_global::<fret_runtime::FontCatalog>(
+                            fret_runtime::FontCatalog { families, revision },
+                        );
+                        self.app.set_global::<fret_app::FontCatalogCache>(cache);
 
                         // Adding fonts can change text measurement and can also change which
                         // concrete families the generic font IDs resolve to (if overrides are set).

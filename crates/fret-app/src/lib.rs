@@ -1,6 +1,7 @@
 pub mod app;
 pub mod dock_layout_file;
 pub mod drag;
+pub mod font_catalog_cache;
 pub mod keymap;
 pub mod menu;
 pub mod settings;
@@ -8,6 +9,7 @@ pub mod ui_host;
 pub mod when_expr;
 
 pub use app::App;
+pub use font_catalog_cache::FontCatalogCache;
 
 pub use fret_runtime::{
     CommandId, CommandMeta, CommandRegistry, CommandScope, CreateWindowKind, CreateWindowRequest,

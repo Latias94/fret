@@ -758,7 +758,7 @@ impl TextProps {
             text: text.into(),
             style: None,
             color: None,
-            wrap: TextWrap::None,
+            wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
         }
     }
@@ -862,6 +862,7 @@ pub struct VirtualListState {
 #[derive(Debug, Clone)]
 pub struct ScrollProps {
     pub layout: LayoutStyle,
+    pub axis: ScrollAxis,
     pub scroll_handle: Option<crate::scroll::ScrollHandle>,
 }
 
@@ -873,8 +874,26 @@ impl Default for ScrollProps {
         };
         Self {
             layout,
+            axis: ScrollAxis::Y,
             scroll_handle: None,
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScrollAxis {
+    X,
+    Y,
+    Both,
+}
+
+impl ScrollAxis {
+    pub fn scroll_x(self) -> bool {
+        matches!(self, Self::X | Self::Both)
+    }
+
+    pub fn scroll_y(self) -> bool {
+        matches!(self, Self::Y | Self::Both)
     }
 }
 

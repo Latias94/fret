@@ -53,6 +53,13 @@ pub enum Effect {
     FileDialogRelease {
         token: FileDialogToken,
     },
+    /// Add font bytes (TTF/OTF/TTC) to the renderer text system.
+    ///
+    /// The runner/backend is responsible for applying this to the renderer and triggering any
+    /// required invalidation/redraw.
+    TextAddFonts {
+        fonts: Vec<Vec<u8>>,
+    },
     ViewportInput(fret_core::ViewportInputEvent),
     Dock(fret_core::DockOp),
     ImeAllow {

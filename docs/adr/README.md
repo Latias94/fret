@@ -40,9 +40,8 @@ ADR or adding a new ADR) before scaling feature surface area.
   - Implement: `crates/fret-components-docking/src/dock/space.rs`, `crates/fret-components-ui/src/overlay_policy.rs`, `crates/fret-ui/src/tree/mod.rs` (capture + layering).
 
 - **Multi-window degradation policy (single-window platforms)**
-  - Update: `docs/adr/0084-multi-window-degradation-policy.md` (Proposed)
-  - Decide: how multiple logical `DockLayoutWindow` roots map onto platforms where `ui.multi_window == false` (wasm/mobile), without changing core persistence.
-  - Implement: `crates/fret-components-docking` policy layer (in-window floating) + demo harness.
+  - Update: `docs/adr/0084-multi-window-degradation-policy.md` (Accepted)
+  - Implement: `crates/fret-core` import fallback + `crates/fret-components-docking` tear-off degradation (demo harness still recommended).
 
 ### P1 (Lock soon; otherwise behavior will drift)
 
@@ -78,6 +77,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Declarative layout semantics (Flex + sizing)**: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`, `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`, `docs/adr/0042-virtualization-and-large-lists.md`
 - **Tailwind layout vocabulary (margin/position/grid/aspect-ratio)**: `docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md`
 - **Rounded clipping / overflow-hidden**: `docs/adr/0063-rounded-clipping-and-soft-clip-masks.md`
+- **Overflow conventions (surfaces, focus rings, portals)**: `docs/adr/0088-overflow-and-clipping-conventions.md`
 - **Docking + multi-window tear-off**: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0017-multi-window-display-and-dpi.md`, `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
 - **Docking interaction arbitration (overlays/tools)**: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
 - **Dismissable non-modal overlays (outside press)**: `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`

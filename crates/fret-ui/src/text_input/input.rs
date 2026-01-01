@@ -272,6 +272,7 @@ impl TextInput {
     ) -> Rect {
         let padding_left = self.chrome_style.padding.left;
         let padding_top = self.chrome_style.padding.top;
+        let padding_bottom = self.chrome_style.padding.bottom;
 
         let caret_x = self
             .text_blob
@@ -296,11 +297,16 @@ impl TextInput {
             x = x + pre_metrics.size.width;
         }
 
-        let h = self.text_metrics.map(|m| m.size.height).unwrap_or(Px(16.0));
+        let text_h = self.text_metrics.map(|m| m.size.height).unwrap_or(Px(16.0));
+        let inner_h = Px((bounds.size.height.0 - padding_top.0 - padding_bottom.0)
+            .max(0.0)
+            .max(text_h.0));
+        let y_offset = Px(((inner_h.0 - text_h.0).max(0.0)) / 2.0);
+
         let hairline = Px((1.0 / scale_factor.max(1.0)).max(1.0 / 8.0));
         Rect::new(
-            fret_core::geometry::Point::new(x, padding_top),
-            Size::new(Px(hairline.0.max(1.0)), Px(h.0.max(16.0))),
+            fret_core::geometry::Point::new(x, padding_top + y_offset),
+            Size::new(Px(hairline.0.max(1.0)), Px(text_h.0.max(16.0))),
         )
     }
 

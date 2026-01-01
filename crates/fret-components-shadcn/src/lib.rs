@@ -22,6 +22,7 @@ pub mod collapsible;
 pub mod combobox;
 pub mod command;
 pub mod context_menu;
+#[cfg(feature = "datagrid")]
 pub mod data_table;
 pub mod dialog;
 pub mod drawer;
@@ -84,6 +85,7 @@ pub use command::{
     Command, CommandDialog, CommandInput, CommandItem, CommandList, CommandPalette, command,
 };
 pub use context_menu::{ContextMenu, ContextMenuEntry, ContextMenuItem};
+#[cfg(feature = "datagrid")]
 pub use data_table::{DataTable, DataTableRowState};
 pub use dialog::{
     Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -117,7 +119,8 @@ pub use pagination::{
     PaginationLinkSize, PaginationNext, PaginationPrevious,
 };
 pub use popover::{
-    Popover, PopoverAlign, PopoverContent, PopoverHeader, PopoverSide, PopoverTitle, PopoverTrigger,
+    Popover, PopoverAlign, PopoverContent, PopoverDescription, PopoverHeader, PopoverSide,
+    PopoverTitle, PopoverTrigger,
 };
 pub use progress::{Progress, progress};
 pub use radio_group::{RadioGroup, RadioGroupItem, radio_group};

@@ -25,3 +25,6 @@ winit.workspace = true
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa.workspace = true
 objc.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys.workspace = true

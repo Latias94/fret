@@ -527,6 +527,7 @@ fn scroll_thumb_drag_updates_offset() {
                         crate::element::ScrollProps {
                             layout: scroll_layout,
                             scroll_handle: Some(scroll_handle.clone()),
+                            ..Default::default()
                         },
                         |cx| {
                             vec![cx.column(
