@@ -7,13 +7,14 @@ use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
 use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
-    Edges, FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
+    Edges, FontId, FontWeight, KeyCode, Point, Px, Rect, SemanticsRole, Size, TextOverflow,
+    TextStyle, TextWrap,
 };
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
-    ScrollAxis, ScrollProps, SemanticsProps, SizeStyle, TextProps,
+    Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps, RovingFlexProps,
+    RovingFocusProps, ScrollAxis, ScrollProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementCx, Theme, UiHost};
@@ -46,23 +47,33 @@ pub enum DropdownMenuEntry {
 #[derive(Debug, Clone)]
 pub struct DropdownMenuItem {
     pub label: Arc<str>,
+    pub value: Arc<str>,
     pub disabled: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
     pub variant: DropdownMenuItemVariant,
+    pub submenu: Option<Vec<DropdownMenuEntry>>,
 }
 
 impl DropdownMenuItem {
     pub fn new(label: impl Into<Arc<str>>) -> Self {
+        let label = label.into();
         Self {
-            label: label.into(),
+            label: label.clone(),
+            value: label,
             disabled: false,
             command: None,
             a11y_label: None,
             trailing: None,
             variant: DropdownMenuItemVariant::Default,
+            submenu: None,
         }
+    }
+
+    pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
+        self.value = value.into();
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -77,6 +88,11 @@ impl DropdownMenuItem {
 
     pub fn on_select(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    pub fn submenu(mut self, entries: Vec<DropdownMenuEntry>) -> Self {
+        self.submenu = Some(entries);
         self
     }
 
@@ -171,6 +187,93 @@ fn flatten_entries(into: &mut Vec<DropdownMenuEntry>, entries: Vec<DropdownMenuE
     }
 }
 
+#[derive(Default)]
+struct DropdownMenuSubmenuState {
+    open_value: Option<Model<Option<Arc<str>>>>,
+    trigger: Option<Model<Option<fret_ui::GlobalElementId>>>,
+    last_pointer: Option<Model<Option<Point>>>,
+    was_open: bool,
+}
+
+fn rect_expand(rect: Rect, px: Px) -> Rect {
+    Rect::new(
+        Point::new(rect.origin.x - px, rect.origin.y - px),
+        Size::new(rect.size.width + px * 2.0, rect.size.height + px * 2.0),
+    )
+}
+
+fn is_point_in_polygon(point: Point, polygon: &[Point]) -> bool {
+    if polygon.len() < 3 {
+        return false;
+    }
+
+    let x = point.x.0;
+    let y = point.y.0;
+    let mut inside = false;
+    let mut j = polygon.len() - 1;
+    for i in 0..polygon.len() {
+        let xi = polygon[i].x.0;
+        let yi = polygon[i].y.0;
+        let xj = polygon[j].x.0;
+        let yj = polygon[j].y.0;
+
+        let intersect = (yi >= y) != (yj >= y) && x <= ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+        if intersect {
+            inside = !inside;
+        }
+        j = i;
+    }
+
+    inside
+}
+
+fn safe_polygon_contains(point: Point, reference: Rect, floating: Rect, buffer: Px) -> bool {
+    let reference = rect_expand(reference, buffer);
+    let floating = rect_expand(floating, buffer);
+    if reference.contains(point) || floating.contains(point) {
+        return true;
+    }
+
+    let ref_left = reference.origin.x.0;
+    let ref_right = ref_left + reference.size.width.0;
+    let ref_top = reference.origin.y.0;
+    let ref_bottom = ref_top + reference.size.height.0;
+
+    let float_left = floating.origin.x.0;
+    let float_right = float_left + floating.size.width.0;
+    let float_top = floating.origin.y.0;
+    let float_bottom = float_top + floating.size.height.0;
+
+    // Safe-hover corridor between the reference (submenu trigger) and the floating submenu panel.
+    //
+    // We keep this intentionally simple and deterministic:
+    // - It is symmetric for left/right placement.
+    // - It prefers a trapezoid connecting the facing edges so diagonal mouse travel stays "safe".
+    //
+    // This is inspired by Floating UI's `safePolygon`, but without intent heuristics / delays.
+    if float_left >= ref_right {
+        let poly = [
+            Point::new(Px(ref_right), Px(ref_top)),
+            Point::new(Px(float_left), Px(float_top)),
+            Point::new(Px(float_left), Px(float_bottom)),
+            Point::new(Px(ref_right), Px(ref_bottom)),
+        ];
+        return is_point_in_polygon(point, &poly);
+    }
+
+    if float_right <= ref_left {
+        let poly = [
+            Point::new(Px(float_right), Px(float_top)),
+            Point::new(Px(ref_left), Px(ref_top)),
+            Point::new(Px(ref_left), Px(ref_bottom)),
+            Point::new(Px(float_right), Px(float_bottom)),
+        ];
+        return is_point_in_polygon(point, &poly);
+    }
+
+    false
+}
+
 /// shadcn/ui `Dropdown Menu` (v4).
 ///
 /// This is a dismissible popover overlay (non-modal) backed by the component-layer overlay
@@ -255,6 +358,28 @@ impl DropdownMenu {
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
 
+            let was_open = cx.with_state(DropdownMenuSubmenuState::default, |st| st.was_open);
+            if is_open && !was_open {
+                if let Some(model) =
+                    cx.with_state(DropdownMenuSubmenuState::default, |st| st.open_value.clone())
+                {
+                    let _ = cx.app.models_mut().update(&model, |v| *v = None);
+                }
+                if let Some(model) =
+                    cx.with_state(DropdownMenuSubmenuState::default, |st| st.trigger.clone())
+                {
+                    let _ = cx.app.models_mut().update(&model, |v| *v = None);
+                }
+                if let Some(model) =
+                    cx.with_state(DropdownMenuSubmenuState::default, |st| st.last_pointer.clone())
+                {
+                    let _ = cx.app.models_mut().update(&model, |v| *v = None);
+                }
+                cx.with_state(DropdownMenuSubmenuState::default, |st| st.was_open = true);
+            } else if !is_open && was_open {
+                cx.with_state(DropdownMenuSubmenuState::default, |st| st.was_open = false);
+            }
+
             if is_open {
                 let overlay_root_name = OverlayController::popover_root_name(trigger_id);
 
@@ -277,6 +402,42 @@ impl DropdownMenu {
                     let mut flat: Vec<DropdownMenuEntry> = Vec::new();
                     flatten_entries(&mut flat, entries(cx));
                     let entries = flat;
+
+                    let submenu_open =
+                        cx.with_state(DropdownMenuSubmenuState::default, |st| st.open_value.clone());
+                    let submenu_open = if let Some(submenu_open) = submenu_open {
+                        submenu_open
+                    } else {
+                        let submenu_open = cx.app.models_mut().insert(None);
+                        cx.with_state(DropdownMenuSubmenuState::default, |st| {
+                            st.open_value = Some(submenu_open.clone());
+                        });
+                        submenu_open
+                    };
+
+                    let submenu_trigger =
+                        cx.with_state(DropdownMenuSubmenuState::default, |st| st.trigger.clone());
+                    let submenu_trigger = if let Some(submenu_trigger) = submenu_trigger {
+                        submenu_trigger
+                    } else {
+                        let submenu_trigger = cx.app.models_mut().insert(None);
+                        cx.with_state(DropdownMenuSubmenuState::default, |st| {
+                            st.trigger = Some(submenu_trigger.clone());
+                        });
+                        submenu_trigger
+                    };
+
+                    let submenu_last_pointer =
+                        cx.with_state(DropdownMenuSubmenuState::default, |st| st.last_pointer.clone());
+                    let submenu_last_pointer = if let Some(submenu_last_pointer) = submenu_last_pointer {
+                        submenu_last_pointer
+                    } else {
+                        let submenu_last_pointer = cx.app.models_mut().insert(None);
+                        cx.with_state(DropdownMenuSubmenuState::default, |st| {
+                            st.last_pointer = Some(submenu_last_pointer.clone());
+                        });
+                        submenu_last_pointer
+                    };
                     let item_count = entries
                         .iter()
                         .filter(|e| matches!(e, DropdownMenuEntry::Item(_)))
@@ -338,6 +499,12 @@ impl DropdownMenu {
                         .color_by_key("accent.foreground")
                         .or_else(|| theme.color_by_key("accent-foreground"))
                         .unwrap_or(theme.colors.text_primary);
+
+                    let entries_for_submenu = entries.clone();
+                    let open_for_menu = open_for_overlay.clone();
+                    let open_for_submenu = open_for_overlay.clone();
+                    let submenu_open_for_menu = submenu_open.clone();
+                    let submenu_trigger_for_menu = submenu_trigger.clone();
 
                     let content = cx.semantics(
                         SemanticsProps {
@@ -505,6 +672,7 @@ impl DropdownMenu {
                                                         item_ix = item_ix.saturating_add(1);
 
                                                         let label = item.label.clone();
+                                                        let value = item.value.clone();
                                                         let a11y_label = item
                                                             .a11y_label
                                                             .clone()
@@ -513,124 +681,216 @@ impl DropdownMenu {
                                                         let command = item.command;
                                                         let trailing = item.trailing.clone();
                                                         let variant = item.variant;
-                                                        let open = open_for_overlay.clone();
+                                                        let has_submenu = item.submenu.is_some();
+                                                        let open = open_for_menu.clone();
                                                         let text_style = text_style.clone();
 
-                                                        out.push(cx.pressable(
-                                                            PressableProps {
-                                                                        layout: {
-                                                                            let mut layout =
-                                                                                LayoutStyle::default();
-                                                                            layout.size.width =
-                                                                                Length::Fill;
-                                                                            layout.size.min_height =
-                                                                                Some(Px(28.0));
-                                                                            layout
+                                                        out.push(cx.keyed(value.clone(), |cx| {
+                                                            cx.pressable_with_id_props(|cx, st, item_id| {
+                                                                if !disabled && (st.hovered || st.focused) {
+                                                                    if has_submenu {
+                                                                        let _ = cx.app.models_mut().update(&submenu_open_for_menu, |v| {
+                                                                            if v.as_ref().is_some_and(|cur| cur.as_ref() == value.as_ref()) {
+                                                                                return;
+                                                                            }
+                                                                            *v = Some(value.clone());
+                                                                        });
+                                                                        let _ = cx.app.models_mut().update(&submenu_trigger_for_menu, |v| {
+                                                                            *v = Some(item_id);
+                                                                        });
+                                                                    } else {
+                                                                        let _ = cx.app.models_mut().update(&submenu_open_for_menu, |v| *v = None);
+                                                                        let _ = cx.app.models_mut().update(&submenu_trigger_for_menu, |v| *v = None);
+                                                                    }
+                                                                }
+
+                                                                if has_submenu {
+                                                                    let submenu_open_for_activate = submenu_open_for_menu.clone();
+                                                                    let submenu_trigger_for_activate = submenu_trigger_for_menu.clone();
+                                                                    let value_for_activate = value.clone();
+                                                                    cx.pressable_add_on_activate(Arc::new(
+                                                                        move |host, acx, _reason| {
+                                                                            if disabled {
+                                                                                return;
+                                                                            }
+                                                                            let _ = host.models_mut().update(&submenu_open_for_activate, |v| {
+                                                                                *v = Some(value_for_activate.clone());
+                                                                            });
+                                                                            let _ = host.models_mut().update(&submenu_trigger_for_activate, |v| {
+                                                                                *v = Some(item_id);
+                                                                            });
+                                                                            host.request_redraw(acx.window);
                                                                         },
-                                                                        enabled: !disabled,
-                                                                        focusable: !disabled,
-                                                                        focus_ring: Some(ring),
-                                                                        a11y: PressableA11y {
-                                                                            role: Some(
-                                                                                SemanticsRole::MenuItem,
-                                                                            ),
-                                                                            label: a11y_label,
-                                                                            ..Default::default()
+                                                                    ));
+                                                                } else {
+                                                                    cx.pressable_dispatch_command_opt(command);
+                                                                    if !disabled {
+                                                                        cx.pressable_set_bool(&open, false);
+                                                                    }
+                                                                }
+
+                                                                // Submenu keyboard affordances (minimal):
+                                                                // - ArrowRight opens the submenu for this item (if any).
+                                                                // - ArrowLeft closes any open submenu.
+                                                                //
+                                                                // Focus transfer into the submenu is not wired yet; users can still
+                                                                // interact via pointer or Tab navigation.
+                                                                let key_has_submenu = has_submenu;
+                                                                let submenu_open_for_key = submenu_open_for_menu.clone();
+                                                                let submenu_trigger_for_key = submenu_trigger_for_menu.clone();
+                                                                let value_for_key = value.clone();
+                                                                cx.key_on_key_down_for(
+                                                                    item_id,
+                                                                    Arc::new(move |host, acx, down| {
+                                                                        if down.repeat {
+                                                                            return false;
                                                                         }
-                                                                        .with_collection_position(
-                                                                            collection_index,
-                                                                            item_count,
-                                                                        ),
+                                                                        match down.key {
+                                                                            KeyCode::ArrowRight => {
+                                                                                if !key_has_submenu {
+                                                                                    return false;
+                                                                                }
+                                                                                let _ = host.models_mut().update(
+                                                                                    &submenu_open_for_key,
+                                                                                    |v| *v = Some(value_for_key.clone()),
+                                                                                );
+                                                                                let _ = host.models_mut().update(
+                                                                                    &submenu_trigger_for_key,
+                                                                                    |v| *v = Some(item_id),
+                                                                                );
+                                                                                host.request_redraw(acx.window);
+                                                                                true
+                                                                            }
+                                                                            KeyCode::ArrowLeft => {
+                                                                                let _ = host.models_mut().update(
+                                                                                    &submenu_open_for_key,
+                                                                                    |v| *v = None,
+                                                                                );
+                                                                                let _ = host.models_mut().update(
+                                                                                    &submenu_trigger_for_key,
+                                                                                    |v| *v = None,
+                                                                                );
+                                                                                host.request_redraw(acx.window);
+                                                                                true
+                                                                            }
+                                                                            _ => false,
+                                                                        }
+                                                                    }),
+                                                                );
+
+                                                                let is_open_submenu = cx
+                                                                    .watch_model(&submenu_open_for_menu)
+                                                                    .cloned()
+                                                                    .unwrap_or(None)
+                                                                    .as_ref()
+                                                                    .is_some_and(|cur| cur.as_ref() == value.as_ref());
+
+                                                                let props = PressableProps {
+                                                                    layout: {
+                                                                        let mut layout = LayoutStyle::default();
+                                                                        layout.size.width = Length::Fill;
+                                                                        layout.size.min_height = Some(Px(28.0));
+                                                                        layout
+                                                                    },
+                                                                    enabled: !disabled,
+                                                                    focusable: !disabled,
+                                                                    focus_ring: Some(ring),
+                                                                    a11y: PressableA11y {
+                                                                        role: Some(SemanticsRole::MenuItem),
+                                                                        label: a11y_label,
+                                                                        expanded: has_submenu.then_some(is_open_submenu),
+                                                                        ..Default::default()
+                                                                    }
+                                                                    .with_collection_position(collection_index, item_count),
+                                                                    ..Default::default()
+                                                                };
+
+                                                                let mut row_bg = fret_core::Color::TRANSPARENT;
+                                                                let mut row_fg = if variant == DropdownMenuItemVariant::Destructive {
+                                                                    destructive_fg
+                                                                } else {
+                                                                    fg
+                                                                };
+                                                                if st.hovered || st.pressed || st.focused {
+                                                                    row_bg = accent;
+                                                                    row_fg = accent_fg;
+                                                                }
+
+                                                                let children = vec![cx.container(
+                                                                    ContainerProps {
+                                                                        layout: LayoutStyle::default(),
+                                                                        padding: Edges {
+                                                                            top: pad_y,
+                                                                            right: pad_x,
+                                                                            bottom: pad_y,
+                                                                            left: pad_x,
+                                                                        },
+                                                                        background: Some(row_bg),
+                                                                        corner_radii: fret_core::Corners::all(radius_sm),
                                                                         ..Default::default()
                                                                     },
-                                                                    move |cx, st| {
-                                                                        cx.pressable_dispatch_command_opt(
-                                                                            command,
+                                                                    move |cx| {
+                                                                        let mut row: Vec<AnyElement> = Vec::with_capacity(
+                                                                            2 + usize::from(trailing.is_some()),
                                                                         );
-                                                                        if !disabled {
-                                                                            cx.pressable_set_bool(
-                                                                                &open,
-                                                                                false,
-                                                                            );
-                                                                        }
+                                                                        row.push(cx.text_props(TextProps {
+                                                                            layout: {
+                                                                                let mut layout = LayoutStyle::default();
+                                                                                layout.size.width = Length::Fill;
+                                                                                layout
+                                                                            },
+                                                                            text: label.clone(),
+                                                                            style: Some(text_style.clone()),
+                                                                            wrap: TextWrap::None,
+                                                                            overflow: TextOverflow::Ellipsis,
+                                                                            color: Some(if disabled { text_disabled } else { row_fg }),
+                                                                        }));
 
-                                                                        let mut row_bg =
-                                                                            fret_core::Color::TRANSPARENT;
-                                                                        let mut row_fg = if variant
-                                                                            == DropdownMenuItemVariant::Destructive
-                                                                        {
-                                                                            destructive_fg
-                                                                        } else {
-                                                                            fg
-                                                                        };
-                                                                        if st.hovered
-                                                                            || st.pressed
-                                                                            || st.focused
-                                                                        {
-                                                                            row_bg = accent;
-                                                                            row_fg = accent_fg;
-                                                                        }
-
-                                                                        vec![cx.container(
-                                                                            ContainerProps {
+                                                                        if let Some(t) = trailing.clone() {
+                                                                            row.push(t);
+                                                                        } else if has_submenu {
+                                                                            let fg = theme
+                                                                                .color_by_key("muted.foreground")
+                                                                                .or_else(|| theme.color_by_key("muted-foreground"))
+                                                                                .unwrap_or(theme.colors.text_muted);
+                                                                            row.push(cx.text_props(TextProps {
                                                                                 layout: LayoutStyle::default(),
-                                                                                padding: Edges {
-                                                                                    top: pad_y,
-                                                                                    right: pad_x,
-                                                                                    bottom: pad_y,
-                                                                                    left: pad_x,
+                                                                                text: Arc::from(">"),
+                                                                                style: Some(TextStyle {
+                                                                                    font: FontId::default(),
+                                                                                    size: font_size,
+                                                                                    weight: FontWeight::MEDIUM,
+                                                                                    line_height: Some(font_line_height),
+                                                                                    letter_spacing_em: None,
+                                                                                }),
+                                                                                wrap: TextWrap::None,
+                                                                                overflow: TextOverflow::Clip,
+                                                                                color: Some(fg),
+                                                                            }));
+                                                                        }
+
+                                                                        vec![cx.flex(
+                                                                            FlexProps {
+                                                                                layout: {
+                                                                                    let mut layout = LayoutStyle::default();
+                                                                                    layout.size.width = Length::Fill;
+                                                                                    layout
                                                                                 },
-                                                                                background: Some(row_bg),
-                                                                                corner_radii:
-                                                                                    fret_core::Corners::all(
-                                                                                        radius_sm,
-                                                                                    ),
-                                                                                ..Default::default()
+                                                                                direction: fret_core::Axis::Horizontal,
+                                                                                gap: Px(8.0),
+                                                                                padding: Edges::all(Px(0.0)),
+                                                                                justify: MainAlign::Start,
+                                                                                align: CrossAlign::Center,
+                                                                                wrap: false,
                                                                             },
-                                                                            move |cx| {
-                                                                                let mut row: Vec<AnyElement> =
-                                                                                    Vec::with_capacity(1 + usize::from(trailing.is_some()));
-                                                                                row.push(cx.text_props(TextProps {
-                                                                                    layout: {
-                                                                                        let mut layout = LayoutStyle::default();
-                                                                                        layout.size.width = Length::Fill;
-                                                                                        layout
-                                                                                    },
-                                                                                    text: label.clone(),
-                                                                                    style: Some(text_style.clone()),
-                                                                                    wrap: TextWrap::None,
-                                                                                    overflow: TextOverflow::Ellipsis,
-                                                                                    color: Some(if disabled {
-                                                                                        text_disabled
-                                                                                    } else {
-                                                                                        row_fg
-                                                                                    }),
-                                                                                }));
-
-                                                                                if let Some(t) = trailing.clone() {
-                                                                                    row.push(t);
-                                                                                }
-
-                                                                                vec![cx.flex(
-                                                                                    FlexProps {
-                                                                                        layout: {
-                                                                                            let mut layout = LayoutStyle::default();
-                                                                                            layout.size.width = Length::Fill;
-                                                                                            layout
-                                                                                        },
-                                                                                        direction: fret_core::Axis::Horizontal,
-                                                                                        gap: Px(8.0),
-                                                                                        padding: Edges::all(Px(0.0)),
-                                                                                        justify: MainAlign::Start,
-                                                                                        align: CrossAlign::Center,
-                                                                                        wrap: false,
-                                                                                    },
-                                                                                    move |_cx| row.clone(),
-                                                                                )]
-                                                                            },
+                                                                            move |_cx| row.clone(),
                                                                         )]
                                                                     },
-                                                                ));
+                                                                )];
+
+                                                                (props, children)
+                                                            })
+                                                        }));
                                                             }
                                                         }
                                                     }
@@ -642,6 +902,370 @@ impl DropdownMenu {
                                     )]
                                 },
                             )]
+                        },
+                    );
+
+                    let pointer_layout = LayoutStyle {
+                        position: PositionStyle::Absolute,
+                        inset: InsetStyle {
+                            top: Some(Px(0.0)),
+                            right: Some(Px(0.0)),
+                            bottom: Some(Px(0.0)),
+                            left: Some(Px(0.0)),
+                        },
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+
+                    let content = cx.pointer_region(
+                        PointerRegionProps {
+                            layout: pointer_layout,
+                            enabled: true,
+                        },
+                        move |cx| {
+                            let last_pointer_for_hook = submenu_last_pointer.clone();
+                            cx.pointer_region_on_pointer_move(Arc::new(move |host, acx, mv| {
+                                let _ = host.models_mut().update(&last_pointer_for_hook, |v| {
+                                    *v = Some(mv.position);
+                                });
+                                host.request_redraw(acx.window);
+                                false
+                            }));
+
+                            let mut children = vec![content];
+
+                            let open_value = cx.watch_model(&submenu_open).cloned().unwrap_or(None);
+                            let open_trigger =
+                                cx.watch_model(&submenu_trigger).copied().unwrap_or(None);
+                            let cursor = cx
+                                .watch_model(&submenu_last_pointer)
+                                .copied()
+                                .unwrap_or(None);
+
+                            if let (Some(open_value), Some(open_trigger), Some(cursor)) =
+                                (open_value, open_trigger, cursor)
+                            {
+                                let trigger_anchor =
+                                    overlay::anchor_bounds_for_element(cx, open_trigger);
+                                if let Some(trigger_anchor) = trigger_anchor {
+                                    let submenu_entries = entries_for_submenu.iter().find_map(|e| {
+                                        let DropdownMenuEntry::Item(item) = e else {
+                                            return None;
+                                        };
+                                        let Some(sub) = item.submenu.clone() else {
+                                            return None;
+                                        };
+                                        (item.value.as_ref() == open_value.as_ref()).then_some(sub)
+                                    });
+
+                                    if let Some(submenu_entries) = submenu_entries {
+                                        let outer = overlay::outer_bounds_with_window_margin(
+                                            cx.bounds,
+                                            window_margin,
+                                        );
+                                        let desired = Size::new(Px(192.0), Px(1.0e9));
+                                        let placed = anchored_panel_bounds_sized(
+                                            outer,
+                                            trigger_anchor,
+                                            desired,
+                                            Px(2.0),
+                                            Side::Right,
+                                            Align::Start,
+                                        );
+
+                                        if safe_polygon_contains(cursor, trigger_anchor, placed, Px(6.0)) {
+                                            let mut flat: Vec<DropdownMenuEntry> = Vec::new();
+                                            flatten_entries(&mut flat, submenu_entries);
+                                            let submenu_entries = flat;
+                                            let item_count = submenu_entries
+                                                .iter()
+                                                .filter(|e| matches!(e, DropdownMenuEntry::Item(_)))
+                                                .count();
+
+                                            let font_size = theme.metrics.font_size;
+                                            let font_line_height = theme.metrics.font_line_height;
+                                            let radius_sm = theme.metrics.radius_sm;
+                                            let text_disabled = theme.colors.text_disabled;
+                                            let destructive_fg = theme
+                                                .color_by_key("destructive")
+                                                .or_else(|| theme.color_by_key("destructive.background"))
+                                                .unwrap_or(theme.colors.text_primary);
+                                            let label_fg = theme
+                                                .color_by_key("muted.foreground")
+                                                .or_else(|| theme.color_by_key("muted-foreground"))
+                                                .unwrap_or(theme.colors.text_muted);
+
+                                            let text_style = TextStyle {
+                                                font: FontId::default(),
+                                                size: font_size,
+                                                weight: FontWeight::NORMAL,
+                                                line_height: Some(font_line_height),
+                                                letter_spacing_em: None,
+                                            };
+
+                                            let submenu = cx.semantics(
+                                                SemanticsProps {
+                                                    layout: LayoutStyle::default(),
+                                                    role: SemanticsRole::Menu,
+                                                    ..Default::default()
+                                                },
+                                                move |cx| {
+                                                    let mut item_ix: usize = 0;
+                                                    let mut rows: Vec<AnyElement> =
+                                                        Vec::with_capacity(submenu_entries.len());
+
+                                                    for entry in submenu_entries.clone() {
+                                                        match entry {
+                                                            DropdownMenuEntry::Label(label) => {
+                                                                let text = label.text.clone();
+                                                                rows.push(cx.text_props(TextProps {
+                                                                    layout: LayoutStyle::default(),
+                                                                    text,
+                                                                    style: Some(TextStyle {
+                                                                        font: FontId::default(),
+                                                                        size: font_size,
+                                                                        weight: FontWeight::MEDIUM,
+                                                                        line_height: Some(font_line_height),
+                                                                        letter_spacing_em: None,
+                                                                    }),
+                                                                    wrap: TextWrap::None,
+                                                                    overflow: TextOverflow::Ellipsis,
+                                                                    color: Some(label_fg),
+                                                                }));
+                                                            }
+                                                            DropdownMenuEntry::Group(_) => {
+                                                                unreachable!("groups are flattened")
+                                                            }
+                                                            DropdownMenuEntry::Separator => {
+                                                                rows.push(cx.container(
+                                                                    ContainerProps {
+                                                                        layout: {
+                                                                            let mut layout =
+                                                                                LayoutStyle::default();
+                                                                            layout.size.width =
+                                                                                Length::Fill;
+                                                                            layout.size.height =
+                                                                                Length::Px(Px(1.0));
+                                                                            layout
+                                                                        },
+                                                                        padding: Edges::all(Px(0.0)),
+                                                                        background: Some(border),
+                                                                        ..Default::default()
+                                                                    },
+                                                                    |_cx| Vec::new(),
+                                                                ));
+                                                            }
+                                                            DropdownMenuEntry::Item(item) => {
+                                                                let collection_index = item_ix;
+                                                                item_ix = item_ix.saturating_add(1);
+
+                                                                let label = item.label.clone();
+                                                                let value = item.value.clone();
+                                                                let a11y_label = item
+                                                                    .a11y_label
+                                                                    .clone()
+                                                                    .or_else(|| Some(label.clone()));
+                                                                let disabled = item.disabled;
+                                                                let command = item.command;
+                                                                let trailing = item.trailing.clone();
+                                                                let variant = item.variant;
+                                                                let open = open_for_submenu.clone();
+                                                                let submenu_open_for_key =
+                                                                    submenu_open.clone();
+                                                                let submenu_trigger_for_key =
+                                                                    submenu_trigger.clone();
+                                                                let text_style = text_style.clone();
+
+                                                                rows.push(cx.keyed(value.clone(), |cx| {
+                                                                    cx.pressable_with_id_props(
+                                                                        |cx, st, item_id| {
+                                                                            cx.pressable_dispatch_command_opt(command);
+                                                                            if !disabled {
+                                                                                cx.pressable_set_bool(&open, false);
+                                                                            }
+
+                                                                            let submenu_open_for_key =
+                                                                                submenu_open_for_key.clone();
+                                                                            let submenu_trigger_for_key =
+                                                                                submenu_trigger_for_key.clone();
+                                                                            cx.key_on_key_down_for(
+                                                                                item_id,
+                                                                                Arc::new(move |host, acx, down| {
+                                                                                    if down.repeat {
+                                                                                        return false;
+                                                                                    }
+                                                                                    if down.key != KeyCode::ArrowLeft {
+                                                                                        return false;
+                                                                                    }
+
+                                                                                    let _ = host.models_mut().update(
+                                                                                        &submenu_open_for_key,
+                                                                                        |v| *v = None,
+                                                                                    );
+                                                                                    let _ = host.models_mut().update(
+                                                                                        &submenu_trigger_for_key,
+                                                                                        |v| *v = None,
+                                                                                    );
+                                                                                    host.request_redraw(acx.window);
+                                                                                    true
+                                                                                }),
+                                                                            );
+
+                                                                            let props = PressableProps {
+                                                                                layout: {
+                                                                                    let mut layout = LayoutStyle::default();
+                                                                                    layout.size.width = Length::Fill;
+                                                                                    layout.size.min_height = Some(Px(28.0));
+                                                                                    layout
+                                                                                },
+                                                                                enabled: !disabled,
+                                                                                focusable: !disabled,
+                                                                                focus_ring: Some(ring),
+                                                                                a11y: PressableA11y {
+                                                                                    role: Some(SemanticsRole::MenuItem),
+                                                                                    label: a11y_label,
+                                                                                    ..Default::default()
+                                                                                }
+                                                                                .with_collection_position(
+                                                                                    collection_index,
+                                                                                    item_count,
+                                                                                ),
+                                                                                ..Default::default()
+                                                                            };
+
+                                                                            let mut row_bg =
+                                                                                fret_core::Color::TRANSPARENT;
+                                                                            let mut row_fg = if variant
+                                                                                == DropdownMenuItemVariant::Destructive
+                                                                            {
+                                                                                destructive_fg
+                                                                            } else {
+                                                                                fg
+                                                                            };
+                                                                            if st.hovered || st.pressed || st.focused {
+                                                                                row_bg = accent;
+                                                                                row_fg = accent_fg;
+                                                                            }
+
+                                                                            let children = vec![cx.container(
+                                                                                ContainerProps {
+                                                                                    layout: LayoutStyle::default(),
+                                                                                    padding: Edges {
+                                                                                        top: pad_y,
+                                                                                        right: pad_x,
+                                                                                        bottom: pad_y,
+                                                                                        left: pad_x,
+                                                                                    },
+                                                                                    background: Some(row_bg),
+                                                                                    corner_radii: fret_core::Corners::all(radius_sm),
+                                                                                    ..Default::default()
+                                                                                },
+                                                                                move |cx| {
+                                                                                    let mut row: Vec<AnyElement> = Vec::with_capacity(
+                                                                                        1 + usize::from(trailing.is_some()),
+                                                                                    );
+                                                                                    row.push(cx.text_props(TextProps {
+                                                                                        layout: {
+                                                                                            let mut layout = LayoutStyle::default();
+                                                                                            layout.size.width = Length::Fill;
+                                                                                            layout
+                                                                                        },
+                                                                                        text: label.clone(),
+                                                                                        style: Some(text_style.clone()),
+                                                                                        wrap: TextWrap::None,
+                                                                                        overflow: TextOverflow::Ellipsis,
+                                                                                        color: Some(if disabled { text_disabled } else { row_fg }),
+                                                                                    }));
+
+                                                                                    if let Some(t) = trailing.clone() {
+                                                                                        row.push(t);
+                                                                                    }
+
+                                                                                    vec![cx.flex(
+                                                                                        FlexProps {
+                                                                                            layout: {
+                                                                                                let mut layout = LayoutStyle::default();
+                                                                                                layout.size.width = Length::Fill;
+                                                                                                layout
+                                                                                            },
+                                                                                            direction: fret_core::Axis::Horizontal,
+                                                                                            gap: Px(8.0),
+                                                                                            padding: Edges::all(Px(0.0)),
+                                                                                            justify: MainAlign::Start,
+                                                                                            align: CrossAlign::Center,
+                                                                                            wrap: false,
+                                                                                        },
+                                                                                        move |_cx| row.clone(),
+                                                                                    )]
+                                                                                },
+                                                                            )];
+
+                                                                            (props, children)
+                                                                        },
+                                                                    )
+                                                                }));
+                                                            }
+                                                        }
+                                                    }
+
+                                                    vec![cx.container(
+                                                        ContainerProps {
+                                                            layout: LayoutStyle {
+                                                                position: PositionStyle::Absolute,
+                                                                inset: InsetStyle {
+                                                                    left: Some(placed.origin.x),
+                                                                    top: Some(placed.origin.y),
+                                                                    ..Default::default()
+                                                                },
+                                                                size: SizeStyle {
+                                                                    width: Length::Px(placed.size.width),
+                                                                    height: Length::Px(placed.size.height),
+                                                                    ..Default::default()
+                                                                },
+                                                                overflow: Overflow::Clip,
+                                                                ..Default::default()
+                                                            },
+                                                            padding: Edges::all(Px(4.0)),
+                                                            background: Some(bg),
+                                                            shadow: Some(shadow),
+                                                            border: Edges::all(Px(1.0)),
+                                                            border_color: Some(border),
+                                                            corner_radii: fret_core::Corners::all(
+                                                                theme.metrics.radius_sm,
+                                                            ),
+                                                        },
+                                                        move |cx| {
+                                                            vec![cx.flex(
+                                                                FlexProps {
+                                                                    layout: LayoutStyle::default(),
+                                                                    direction: fret_core::Axis::Vertical,
+                                                                    gap: Px(0.0),
+                                                                    padding: Edges::all(Px(0.0)),
+                                                                    justify: MainAlign::Start,
+                                                                    align: CrossAlign::Stretch,
+                                                                    wrap: false,
+                                                                },
+                                                                move |_cx| rows.clone(),
+                                                            )]
+                                                        },
+                                                    )]
+                                                },
+                                            );
+
+                                            children.push(submenu);
+                                        } else {
+                                            let _ = cx.app.models_mut().update(&submenu_open, |v| *v = None);
+                                            let _ = cx.app.models_mut().update(&submenu_trigger, |v| *v = None);
+                                        }
+                                    }
+                                }
+                            }
+
+                            children
                         },
                     );
 
@@ -669,7 +1293,10 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, PathCommand, Point, Rect, SvgId, SvgService};
+    use fret_core::{
+        AppWindowId, Event, Modifiers, MouseButtons, PathCommand, Point, PointerEvent, Rect, SvgId,
+        SvgService,
+    };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, SemanticsRole, Size as CoreSize};
     use fret_core::{
@@ -730,6 +1357,7 @@ mod tests {
         window: AppWindowId,
         bounds: Rect,
         open: Model<bool>,
+        entries: Vec<DropdownMenuEntry>,
     ) -> fret_core::NodeId {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
@@ -742,7 +1370,7 @@ mod tests {
             window,
             bounds,
             "dropdown-menu",
-            |cx| {
+            move |cx| {
                 vec![DropdownMenu::new(open).into_element(
                     cx,
                     |cx| {
@@ -759,14 +1387,7 @@ mod tests {
                             |_cx| Vec::new(),
                         )
                     },
-                    |_cx| {
-                        vec![
-                            DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha")),
-                            DropdownMenuEntry::Separator,
-                            DropdownMenuEntry::Item(DropdownMenuItem::new("Beta")),
-                            DropdownMenuEntry::Item(DropdownMenuItem::new("Gamma")),
-                        ]
-                    },
+                    move |_cx| entries,
                 )]
             },
         );
@@ -800,6 +1421,12 @@ mod tests {
             window,
             bounds,
             open.clone(),
+            vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha")),
+                DropdownMenuEntry::Separator,
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Beta")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Gamma")),
+            ],
         );
 
         let _ = app.models_mut().update(&open, |v| *v = true);
@@ -812,6 +1439,12 @@ mod tests {
             window,
             bounds,
             open.clone(),
+            vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha")),
+                DropdownMenuEntry::Separator,
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Beta")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Gamma")),
+            ],
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -822,5 +1455,128 @@ mod tests {
             .expect("Beta menu item");
         assert_eq!(beta.pos_in_set, Some(2));
         assert_eq!(beta.set_size, Some(3));
+    }
+
+    fn rect_center(rect: Rect) -> Point {
+        Point::new(
+            Px(rect.origin.x.0 + rect.size.width.0 / 2.0),
+            Px(rect.origin.y.0 + rect.size.height.0 / 2.0),
+        )
+    }
+
+    #[test]
+    fn dropdown_menu_submenu_opens_on_hover_and_closes_on_leave() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![
+            DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+            ])),
+            DropdownMenuEntry::Item(DropdownMenuItem::new("Other")),
+        ];
+
+        // First frame: establish stable trigger bounds.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Second frame: open the menu.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                position: rect_center(more.bounds),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        // Third frame: hover "More" should open the submenu.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem
+                    && n.label.as_deref() == Some("Sub Alpha")),
+            "submenu items should render when hovering the submenu trigger"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                position: Point::new(Px(390.0), Px(10.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        // Fourth frame: leaving the safe corridor should close the submenu (but not the menu).
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            !snap
+                .nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem
+                    && n.label.as_deref() == Some("Sub Alpha")),
+            "submenu should close when the pointer leaves the safe corridor"
+        );
     }
 }

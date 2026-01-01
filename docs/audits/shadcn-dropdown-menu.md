@@ -1,6 +1,6 @@
-# shadcn/ui v4 Audit — Dropdown Menu
+# shadcn/ui v4 Audit - Dropdown Menu
 
-This audit compares Fret’s shadcn-aligned `DropdownMenu` against the upstream shadcn/ui v4 docs and
+This audit compares Fret's shadcn-aligned `DropdownMenu` against the upstream shadcn/ui v4 docs and
 examples in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
@@ -58,8 +58,18 @@ Key upstream behaviors/surfaces:
 Not implemented yet in Fret shadcn surface:
 
 - Checkbox/radio surfaces: `DropdownMenuCheckboxItem` / `DropdownMenuRadioGroup` / `DropdownMenuRadioItem`
-- Submenus: `DropdownMenuSub` / `DropdownMenuSubTrigger` / `DropdownMenuSubContent`
-- Styling knobs: inset/padding variants, icons, and “active item” highlight parity (needs focused state)
+- Styling knobs: inset/padding variants, icons, and "active item" highlight parity (needs focused state)
+
+### Submenus
+
+- Partial: Submenus are supported via `DropdownMenuItem::submenu(Vec<DropdownMenuEntry>)` and open on
+  hover/focus/activate.
+- Partial: Pointer "safe hover" is implemented as a deterministic trapezoid corridor between the
+  submenu trigger bounds and the submenu panel bounds (inspired by Floating UI `safePolygon`).
+- Known gap: No intent heuristics / close delay yet; fast diagonal travel can still close the submenu
+  in edge cases.
+- Known gap: Keyboard focus transfer into/out of the submenu is not fully wired; ArrowRight/ArrowLeft
+  open/close the submenu, but roving navigation remains within the currently focused list.
 
 Notes on API mapping:
 
@@ -72,6 +82,7 @@ Notes on API mapping:
 
 - Contract test: `dropdown_menu_items_have_collection_position_metadata_excluding_separators`
   (ensures `pos_in_set`/`set_size` exclude separators).
+- Interaction test: `dropdown_menu_submenu_opens_on_hover_and_closes_on_leave`
 
 ## Follow-ups (recommended)
 
@@ -81,3 +92,6 @@ Notes on API mapping:
   behavior).
 - Consider adding a component-facing focus state for `Pressable` (mechanism-only) so menus can
   style the active item like shadcn (background highlight, not just focus ring).
+- If we want Radix-level submenu ergonomics, consider:
+  - intent-based safe-hover (`safePolygon`) + optional close delay, and
+  - explicit keyboard focus transfer between parent menu and submenu.
