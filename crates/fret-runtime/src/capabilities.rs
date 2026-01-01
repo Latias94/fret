@@ -10,6 +10,12 @@ pub mod keys {
 
     pub const DND_EXTERNAL: &str = "dnd.external";
     pub const DND_EXTERNAL_PAYLOAD: &str = "dnd.external_payload";
+    /// Indicates the quality of pointer position updates during external OS drag sessions.
+    ///
+    /// This is intentionally a capability (not a widget behavior fork): components may use it
+    /// to decide whether "drag hover" UX is reliable (e.g. highlight drop targets) or should be
+    /// treated as best-effort / drop-only.
+    pub const DND_EXTERNAL_POSITION: &str = "dnd.external_position";
 
     pub const IME: &str = "ime";
     pub const IME_ENABLED: &str = "ime.enabled";
@@ -47,7 +53,8 @@ pub const KNOWN_BOOL_CAPABILITY_KEYS: &[&str] = &[
     keys::GFX_WGPU,
 ];
 
-pub const KNOWN_STR_CAPABILITY_KEYS: &[&str] = &[keys::DND_EXTERNAL_PAYLOAD];
+pub const KNOWN_STR_CAPABILITY_KEYS: &[&str] =
+    &[keys::DND_EXTERNAL_PAYLOAD, keys::DND_EXTERNAL_POSITION];
 
 pub fn capability_key_kind(key: &str) -> Option<CapabilityValueKind> {
     if KNOWN_BOOL_CAPABILITY_KEYS.iter().any(|&k| k == key) {
@@ -80,6 +87,44 @@ impl ExternalDragPayloadKind {
     }
 }
 
+/// Quality of cursor/position updates during external OS drag sessions (e.g. file drag hover).
+///
+/// This is used to express *degradation*, not just availability:
+/// a backend may support external drops but not provide reliable per-frame hover coordinates.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ExternalDragPositionQuality {
+    /// External drag is unsupported (or position updates are unavailable).
+    None,
+    /// The backend provides external drag events, but pointer positions are best-effort / may be
+    /// stale or missing (e.g. macOS winit file DnD hover limitations).
+    BestEffort,
+    /// The backend provides reliable pointer position updates during external drag hover.
+    #[default]
+    Continuous,
+}
+
+impl ExternalDragPositionQuality {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::BestEffort => "best_effort",
+            Self::Continuous => "continuous",
+        }
+    }
+
+    pub fn clamp_to_available(self, available: Self) -> Self {
+        use ExternalDragPositionQuality::*;
+        match (self, available) {
+            (None, _) => None,
+            (_, None) => None,
+            (BestEffort, BestEffort | Continuous) => BestEffort,
+            (Continuous, Continuous) => Continuous,
+            (Continuous, BestEffort) => BestEffort,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct UiCapabilities {
@@ -100,6 +145,7 @@ pub struct ClipboardCapabilities {
 pub struct DndCapabilities {
     pub external: bool,
     pub external_payload: ExternalDragPayloadKind,
+    pub external_position: ExternalDragPositionQuality,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -156,6 +202,7 @@ impl Default for PlatformCapabilities {
             dnd: DndCapabilities {
                 external: true,
                 external_payload: ExternalDragPayloadKind::FileToken,
+                external_position: ExternalDragPositionQuality::Continuous,
             },
             ime: ImeCapabilities {
                 enabled: true,
@@ -197,6 +244,7 @@ impl PlatformCapabilities {
     pub fn str_key(&self, key: &str) -> Option<&'static str> {
         match key {
             keys::DND_EXTERNAL_PAYLOAD => Some(self.dnd.external_payload.as_str()),
+            keys::DND_EXTERNAL_POSITION => Some(self.dnd.external_position.as_str()),
             _ => None,
         }
     }

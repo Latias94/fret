@@ -64,3 +64,9 @@ Plan:
 Reference:
 
 - `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
+
+Related capability:
+
+- `PlatformCapabilities.dnd.external_position == "best_effort"` indicates hover cursor positions are not
+  reliable for external OS drags; components should avoid committing to rich “drag hover” UX and instead
+  treat drop targeting as best-effort (e.g. resolve target on drop only).

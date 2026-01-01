@@ -360,6 +360,7 @@ fn expr_to_value(expr: Expr) -> Result<Value, String> {
 mod tests {
     use super::WhenExpr;
     use crate::ExternalDragPayloadKind;
+    use crate::ExternalDragPositionQuality;
     use crate::InputContext;
 
     #[test]
@@ -379,6 +380,7 @@ mod tests {
     fn when_expr_can_eval_capability_strings() {
         let mut ctx = InputContext::default();
         ctx.caps.dnd.external_payload = ExternalDragPayloadKind::FileToken;
+        ctx.caps.dnd.external_position = ExternalDragPositionQuality::BestEffort;
 
         assert!(
             WhenExpr::parse("dnd.external_payload == \"file_token\"")
@@ -387,6 +389,12 @@ mod tests {
         );
         assert!(
             WhenExpr::parse("cap.dnd.external_payload != \"file_path\"")
+                .unwrap()
+                .eval(&ctx)
+        );
+
+        assert!(
+            WhenExpr::parse("dnd.external_position == \"best_effort\"")
                 .unwrap()
                 .eval(&ctx)
         );

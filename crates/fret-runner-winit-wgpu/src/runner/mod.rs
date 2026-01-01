@@ -19,7 +19,8 @@ use fret_platform_winit::file_dialog::WinitFileDialog;
 use fret_platform_winit::open_url::WinitOpenUrl;
 use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
 use fret_runtime::{
-    ExternalDragPayloadKind, FrameId, PlatformCapabilities, PlatformCompletion, TickId,
+    ExternalDragPayloadKind, ExternalDragPositionQuality, FrameId, PlatformCapabilities,
+    PlatformCompletion, TickId,
 };
 use slotmap::SlotMap;
 use tracing::error;
@@ -1158,6 +1159,14 @@ impl<D: WinitDriver> WinitRunner<D> {
             caps.dnd.external = true;
             // The portable external drag contract is token-based (ADR 0053).
             caps.dnd.external_payload = ExternalDragPayloadKind::FileToken;
+            caps.dnd.external_position = ExternalDragPositionQuality::Continuous;
+
+            // winit on macOS does not reliably provide continuous drag-over cursor positions for
+            // external file drags (see `docs/known-issues.md`).
+            #[cfg(target_os = "macos")]
+            {
+                caps.dnd.external_position = ExternalDragPositionQuality::BestEffort;
+            }
 
             caps.ime.enabled = true;
             caps.ime.set_cursor_area = true;
@@ -1182,6 +1191,7 @@ impl<D: WinitDriver> WinitRunner<D> {
 
             caps.dnd.external = false;
             caps.dnd.external_payload = ExternalDragPayloadKind::None;
+            caps.dnd.external_position = ExternalDragPositionQuality::None;
 
             caps.ime.enabled = true;
             caps.ime.set_cursor_area = false;
@@ -1206,6 +1216,7 @@ impl<D: WinitDriver> WinitRunner<D> {
 
             caps.dnd.external = false;
             caps.dnd.external_payload = ExternalDragPayloadKind::None;
+            caps.dnd.external_position = ExternalDragPositionQuality::None;
 
             caps.ime.enabled = true;
             caps.ime.set_cursor_area = true;
@@ -1245,6 +1256,13 @@ impl<D: WinitDriver> WinitRunner<D> {
                 // Narrow to the backend's portable contract if the requested mode isn't supported.
                 (_, available) => available,
             };
+        caps.dnd.external_position = if caps.dnd.external {
+            caps.dnd
+                .external_position
+                .clamp_to_available(available.dnd.external_position)
+        } else {
+            ExternalDragPositionQuality::None
+        };
 
         caps.ime.enabled &= available.ime.enabled;
         caps.ime.set_cursor_area &= available.ime.set_cursor_area;
@@ -2026,6 +2044,32 @@ impl<D: WinitDriver> WinitRunner<D> {
                         }
                         self.file_dialog.release(token);
                     }
+                    Effect::TextAddFonts { fonts } => {
+                        let Some(renderer) = self.renderer.as_mut() else {
+                            continue;
+                        };
+
+                        let added = renderer.add_fonts(fonts);
+                        if added == 0 {
+                            continue;
+                        }
+
+                        // Adding fonts can change text measurement and can also change which
+                        // concrete families the generic font IDs resolve to (if overrides are set).
+                        // Re-setting the global font-family config forces a relayout via global
+                        // observation, even if the config value itself remains unchanged.
+                        let config = self
+                            .app
+                            .global::<fret_core::TextFontFamilyConfig>()
+                            .cloned()
+                            .unwrap_or_default();
+                        self.app
+                            .set_global::<fret_core::TextFontFamilyConfig>(config);
+
+                        for (_id, state) in self.windows.iter() {
+                            state.window.request_redraw();
+                        }
+                    }
                     Effect::ViewportInput(event) => {
                         self.driver.viewport_input(&mut self.app, event);
                     }
@@ -2193,6 +2237,19 @@ impl<D: WinitDriver> WinitRunner<D> {
         let changed = self.app.take_changed_globals();
         if changed.is_empty() {
             return false;
+        }
+
+        if changed.contains(&TypeId::of::<fret_core::TextFontFamilyConfig>())
+            && let (Some(renderer), Some(config)) = (
+                self.renderer.as_mut(),
+                self.app.global::<fret_core::TextFontFamilyConfig>(),
+            )
+        {
+            if renderer.set_text_font_families(config) {
+                for (_id, state) in self.windows.iter() {
+                    state.window.request_redraw();
+                }
+            }
         }
 
         for (window, runtime) in self.windows.iter_mut() {

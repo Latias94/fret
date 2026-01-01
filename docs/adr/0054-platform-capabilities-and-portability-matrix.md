@@ -79,6 +79,10 @@ We define a minimal set of booleans/enums that cover the “hard portability” 
     - `file_path` (desktop)
     - `file_token` (web/sandbox; portable handle)
     - `text` (web/desktop)
+  - `dnd.external_position`: enum (quality/degradation signal):
+    - `none` (no usable external drag position updates)
+    - `best_effort` (positions may be stale/missing; do not rely on hover UX)
+    - `continuous` (reliable hover position updates)
 - **IME/text input**
   - `ime`: `bool`
   - `ime.set_cursor_area`: `bool`
