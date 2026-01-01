@@ -590,6 +590,36 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
 }
 
 #[test]
+fn dock_drag_requests_animation_frames_while_dragging() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    harness.app.begin_cross_window_drag_with_kind(
+        DragKind::DockPanel,
+        harness.window,
+        Point::new(Px(12.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.viewport"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+        },
+    );
+    if let Some(drag) = harness.app.drag_mut() {
+        drag.dragging = true;
+    }
+    let _ = harness.app.take_effects();
+
+    harness.layout();
+
+    let effects = harness.app.take_effects();
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::RequestAnimationFrame(w) if *w == harness.window)),
+        "expected dock drag to request animation frames, got: {effects:?}",
+    );
+}
+
+#[test]
 fn viewport_capture_emits_clamped_pointer_moves_outside_draw_rect() {
     let mut harness = DockViewportHarness::new();
     harness.layout();
@@ -643,6 +673,34 @@ fn viewport_capture_emits_clamped_pointer_moves_outside_draw_rect() {
         input.target_px,
         (0, 0),
         "expected clamped target_px at top-left"
+    );
+}
+
+#[test]
+fn viewport_capture_requests_animation_frames_while_active() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let down_pos = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: down_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    harness.layout();
+
+    let effects = harness.app.take_effects();
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::RequestAnimationFrame(w) if *w == harness.window)),
+        "expected viewport capture to request animation frames, got: {effects:?}",
     );
 }
 
