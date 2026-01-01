@@ -1785,6 +1785,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .app
             .drag()
             .is_some_and(|d| d.dragging && d.payload::<DockPanelDragPayload>().is_some());
+        let wants_animation_frames = is_dock_dragging
+            || self.divider_drag.is_some()
+            || self.floating_drag.is_some()
+            || self.viewport_capture.is_some()
+            || self.tear_off_in_flight.is_some();
+        if wants_animation_frames
+            && let Some(window) = cx.window
+        {
+            cx.app.push_effect(Effect::RequestAnimationFrame(window));
+        }
 
         let paint_panels = {
             let Some(dock) = cx.app.global_mut::<DockManager>() else {
