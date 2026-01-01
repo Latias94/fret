@@ -450,7 +450,7 @@ impl ElementHostWidget {
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::HoverRegion(props) => {
-                self.layout_positioned_container_impl(cx, window, props.layout)
+                self.layout_hover_region_impl(cx, window, props.layout)
             }
             ElementInstance::Scroll(props) => self.layout_scroll_impl(cx, window, props),
             ElementInstance::Scrollbar(props) => self.layout_scrollbar_impl(cx, props),
