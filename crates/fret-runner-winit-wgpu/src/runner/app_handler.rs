@@ -641,134 +641,144 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                 self.drain_effects(event_loop);
             }
             WindowEvent::RedrawRequested => {
-                let (Some(context), Some(renderer)) =
-                    (self.context.as_ref(), self.renderer.as_mut())
-                else {
-                    return;
-                };
-                let Some(state) = self.windows.get_mut(app_window) else {
-                    return;
-                };
+                // Drain effects before rendering so dock ops, invalidation bumps, and window
+                // requests apply deterministically to the frame being drawn (ADR 0013).
+                self.drain_effects(event_loop);
 
-                let (frame, view) = match state.surface.get_current_frame_view() {
-                    Ok(v) => v,
-                    Err(wgpu::SurfaceError::Lost) => {
-                        let size = state.window.inner_size();
-                        self.resize_surface(app_window, size.width, size.height);
+                {
+                    let (Some(context), Some(renderer)) =
+                        (self.context.as_ref(), self.renderer.as_mut())
+                    else {
                         return;
-                    }
-                    Err(wgpu::SurfaceError::OutOfMemory) => {
-                        event_loop.exit();
+                    };
+                    let Some(state) = self.windows.get_mut(app_window) else {
                         return;
-                    }
-                    Err(
-                        wgpu::SurfaceError::Outdated
-                        | wgpu::SurfaceError::Timeout
-                        | wgpu::SurfaceError::Other,
-                    ) => return,
-                };
+                    };
 
-                let scale_factor = state.window.scale_factor() as f32;
-                let physical = state.window.inner_size();
-                let logical: winit::dpi::LogicalSize<f32> =
-                    physical.to_logical(state.window.scale_factor());
+                    let (frame, view) = match state.surface.get_current_frame_view() {
+                        Ok(v) => v,
+                        Err(wgpu::SurfaceError::Lost) => {
+                            let size = state.window.inner_size();
+                            self.resize_surface(app_window, size.width, size.height);
+                            return;
+                        }
+                        Err(wgpu::SurfaceError::OutOfMemory) => {
+                            event_loop.exit();
+                            return;
+                        }
+                        Err(
+                            wgpu::SurfaceError::Outdated
+                            | wgpu::SurfaceError::Timeout
+                            | wgpu::SurfaceError::Other,
+                        ) => return,
+                    };
 
-                let bounds = Rect::new(
-                    Point::new(Px(0.0), Px(0.0)),
-                    Size::new(Px(logical.width), Px(logical.height)),
-                );
+                    let scale_factor = state.window.scale_factor() as f32;
+                    let physical = state.window.inner_size();
+                    let logical: winit::dpi::LogicalSize<f32> =
+                        physical.to_logical(state.window.scale_factor());
 
-                self.driver.gpu_frame_prepare(
-                    &mut self.app,
-                    app_window,
-                    &mut state.user,
-                    context,
-                    renderer,
-                    scale_factor,
-                );
+                    let bounds = Rect::new(
+                        Point::new(Px(0.0), Px(0.0)),
+                        Size::new(Px(logical.width), Px(logical.height)),
+                    );
 
-                self.driver.render(
-                    &mut self.app,
-                    app_window,
-                    &mut state.user,
-                    bounds,
-                    scale_factor,
-                    renderer as &mut dyn fret_core::UiServices,
-                    &mut state.scene,
-                );
-
-                validate_scene_if_enabled(&state.scene);
-
-                if let Some(a11y) = state.accessibility.as_mut()
-                    && a11y.is_active()
-                    && let Some(snapshot) = self.driver.accessibility_snapshot(
+                    self.driver.gpu_frame_prepare(
                         &mut self.app,
                         app_window,
                         &mut state.user,
-                    )
-                {
-                    let update = accessibility::tree_update_from_snapshot(
-                        &snapshot,
-                        state.window.scale_factor(),
+                        context,
+                        renderer,
+                        scale_factor,
                     );
-                    a11y.update_if_active(|| update);
-                    state.last_accessibility_snapshot = Some(snapshot);
-                } else {
-                    state.last_accessibility_snapshot = None;
-                }
 
-                let engine_frame = self.driver.record_engine_frame(
-                    &mut self.app,
-                    app_window,
-                    &mut state.user,
-                    context,
-                    renderer,
-                    scale_factor,
-                    self.tick_id,
-                    self.frame_id,
-                );
+                    self.driver.render(
+                        &mut self.app,
+                        app_window,
+                        &mut state.user,
+                        bounds,
+                        scale_factor,
+                        renderer as &mut dyn fret_core::UiServices,
+                        &mut state.scene,
+                    );
 
-                for update in engine_frame.target_updates {
-                    match update {
-                        RenderTargetUpdate::Update { id, desc } => {
-                            if !renderer.update_render_target(id, desc) {
-                                error!(
-                                    ?id,
-                                    "engine frame update tried to update unknown render target"
-                                );
+                    validate_scene_if_enabled(&state.scene);
+
+                    if let Some(a11y) = state.accessibility.as_mut()
+                        && a11y.is_active()
+                        && let Some(snapshot) = self.driver.accessibility_snapshot(
+                            &mut self.app,
+                            app_window,
+                            &mut state.user,
+                        )
+                    {
+                        let update = accessibility::tree_update_from_snapshot(
+                            &snapshot,
+                            state.window.scale_factor(),
+                        );
+                        a11y.update_if_active(|| update);
+                        state.last_accessibility_snapshot = Some(snapshot);
+                    } else {
+                        state.last_accessibility_snapshot = None;
+                    }
+
+                    let engine_frame = self.driver.record_engine_frame(
+                        &mut self.app,
+                        app_window,
+                        &mut state.user,
+                        context,
+                        renderer,
+                        scale_factor,
+                        self.tick_id,
+                        self.frame_id,
+                    );
+
+                    for update in engine_frame.target_updates {
+                        match update {
+                            RenderTargetUpdate::Update { id, desc } => {
+                                if !renderer.update_render_target(id, desc) {
+                                    error!(
+                                        ?id,
+                                        "engine frame update tried to update unknown render target"
+                                    );
+                                }
                             }
-                        }
-                        RenderTargetUpdate::Unregister { id } => {
-                            if !renderer.unregister_render_target(id) {
-                                error!(
-                                    ?id,
-                                    "engine frame update tried to unregister unknown render target"
-                                );
+                            RenderTargetUpdate::Unregister { id } => {
+                                if !renderer.unregister_render_target(id) {
+                                    error!(
+                                        ?id,
+                                        "engine frame update tried to unregister unknown render target"
+                                    );
+                                }
                             }
                         }
                     }
+
+                    let ui_cmd = renderer.render_scene(
+                        &context.device,
+                        &context.queue,
+                        fret_render::RenderSceneParams {
+                            format: state.surface.format(),
+                            target_view: &view,
+                            scene: &state.scene,
+                            clear: self.config.clear_color,
+                            scale_factor,
+                            viewport_size: state.surface.size(),
+                        },
+                    );
+
+                    let mut cmd_buffers = engine_frame.command_buffers;
+                    cmd_buffers.push(ui_cmd);
+                    context.queue.submit(cmd_buffers);
+                    frame.present();
+
+                    self.frame_id.0 = self.frame_id.0.saturating_add(1);
+                    self.app.set_frame_id(self.frame_id);
                 }
 
-                let ui_cmd = renderer.render_scene(
-                    &context.device,
-                    &context.queue,
-                    fret_render::RenderSceneParams {
-                        format: state.surface.format(),
-                        target_view: &view,
-                        scene: &state.scene,
-                        clear: self.config.clear_color,
-                        scale_factor,
-                        viewport_size: state.surface.size(),
-                    },
-                );
-
-                let mut cmd_buffers = engine_frame.command_buffers;
-                cmd_buffers.push(ui_cmd);
-                context.queue.submit(cmd_buffers);
-                frame.present();
-
-                self.frame_id.0 = self.frame_id.0.saturating_add(1);
-                self.app.set_frame_id(self.frame_id);
+                // Drain effects produced during rendering so they don't lag by a frame (e.g. IME
+                // cursor updates, timer-driven docking invalidations, window raise/create effects).
+                self.drain_effects(event_loop);
             }
             _ => {}
         }
