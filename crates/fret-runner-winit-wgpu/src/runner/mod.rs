@@ -1431,6 +1431,11 @@ impl<D: WinitDriver> WinitRunner<D> {
                         Size::new(Px(size_logical.width), Px(size_logical.height)),
                     );
                 });
+
+            // Ensure the window draws at least one frame after creation. Some platforms/drivers
+            // may not schedule an initial redraw until input arrives, which is especially visible
+            // in docking demos (see docs/todo-tracker.md).
+            state.window.request_redraw();
         }
 
         let winit_id = self.windows[id].window.id();
