@@ -11,7 +11,7 @@ use super::{
 use crate::test_host::TestHost;
 use fret_core::{
     AppWindowId, Event, InternalDragEvent, InternalDragKind, Modifiers, Point, Px, Scene, SceneOp,
-    Size, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle,
+    Size, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle, UiServices,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::InternalDragRouteService;
@@ -1009,4 +1009,72 @@ fn dock_drop_hint_rects_can_select_zone() {
         assert_eq!(hit.zone, expected);
         assert!(hit.insert_index.is_none());
     }
+}
+
+#[test]
+fn render_and_bind_panels_falls_back_to_placeholder_for_missing_ui() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let dock_space = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(dock_space);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let panel = PanelKey::new("core.missing");
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel.clone()],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+        dock.panels.insert(
+            panel.clone(),
+            DockPanel {
+                title: "Missing".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+    });
+
+    struct AlwaysMissingRegistry;
+    impl DockPanelRegistry<TestHost> for AlwaysMissingRegistry {
+        fn render_panel(
+            &self,
+            _ui: &mut UiTree<TestHost>,
+            _app: &mut TestHost,
+            _services: &mut dyn UiServices,
+            _window: AppWindowId,
+            _bounds: Rect,
+            _panel: &PanelKey,
+        ) -> Option<NodeId> {
+            None
+        }
+    }
+
+    app.with_global_mut(
+        DockPanelRegistryService::<TestHost>::default,
+        |svc, _app| {
+            svc.set(Arc::new(AlwaysMissingRegistry));
+        },
+    );
+
+    let mut text = FakeTextService;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(640.0), Px(480.0)),
+    );
+    render_and_bind_dock_panels(&mut ui, &mut app, &mut text, window, bounds, dock_space);
+
+    let service = app
+        .global::<DockPanelContentService>()
+        .expect("DockPanelContentService should exist after render_and_bind_dock_panels");
+    assert!(
+        service.get(window, &panel).is_some(),
+        "expected a placeholder node for a non-viewport panel with missing UI"
+    );
 }

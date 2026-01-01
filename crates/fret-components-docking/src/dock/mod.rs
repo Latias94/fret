@@ -61,6 +61,10 @@ pub fn create_dock_space_node<H: UiHost>(
     ui: &mut fret_ui::UiTree<H>,
     window: fret_core::AppWindowId,
 ) -> NodeId {
+    // Integration contract:
+    // - Create one DockSpace node per window and keep it alive (do not conditionally omit it).
+    // - Call `render_and_bind_dock_panels(...)` every frame before `layout_all`/`paint_all`.
+    // This matches ADR 0013's "dock host keep-alive / early submission" guidance.
     use fret_ui::retained_bridge::UiTreeRetainedExt as _;
     ui.create_node_retained(DockSpace::new(window))
 }
