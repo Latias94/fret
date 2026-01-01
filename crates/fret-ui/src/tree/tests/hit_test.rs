@@ -567,3 +567,109 @@ fn hit_test_respects_nested_rounded_overflow_clips_under_rotation() {
     let inside_window = outer_t.apply_point(inside_local);
     assert_eq!(ui.hit_test(root, inside_window), Some(leaf));
 }
+
+#[test]
+fn modal_barrier_fallback_delivers_transformed_event_coordinates() {
+    struct RecordDownPos {
+        down: Model<u32>,
+        last_pos: Model<Point>,
+        delta: Point,
+    }
+
+    impl<H: UiHost> Widget<H> for RecordDownPos {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+            Some(Transform2D::translation(self.delta))
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.down, |v: &mut u32| *v += 1);
+                if let Event::Pointer(PointerEvent::Down { position, .. }) = event {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&self.last_pos, |p: &mut Point| *p = *position);
+                }
+                cx.stop_propagation();
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    struct CountDown {
+        down: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for CountDown {
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.down, |v: &mut u32| *v += 1);
+                cx.stop_propagation();
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let underlay_down = app.models_mut().insert(0u32);
+    let modal_down = app.models_mut().insert(0u32);
+    let modal_last_pos = app.models_mut().insert(Point::new(Px(0.0), Px(0.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(CountDown {
+        down: underlay_down.clone(),
+    });
+    ui.set_root(base);
+
+    let modal_root = ui.create_node(RecordDownPos {
+        down: modal_down.clone(),
+        last_pos: modal_last_pos.clone(),
+        delta: Point::new(Px(40.0), Px(0.0)),
+    });
+    ui.push_overlay_root(modal_root, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(45.0), Px(5.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&underlay_down), Some(0));
+    assert_eq!(app.models().get_copied(&modal_down), Some(1));
+    assert_eq!(
+        app.models().get_copied(&modal_last_pos),
+        Some(Point::new(Px(5.0), Px(5.0))),
+        "expected barrier fallback to map pointer coordinates through render_transform"
+    );
+}
