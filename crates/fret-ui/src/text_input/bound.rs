@@ -64,6 +64,10 @@ impl BoundTextInput {
         self
     }
 
+    pub fn set_placeholder(&mut self, placeholder: Option<std::sync::Arc<str>>) {
+        self.input.set_placeholder(placeholder);
+    }
+
     pub fn set_chrome_style(&mut self, style: TextInputStyle) {
         self.input.set_chrome_style(style);
     }

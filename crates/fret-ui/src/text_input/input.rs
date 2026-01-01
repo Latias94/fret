@@ -20,8 +20,11 @@ impl TextInput {
                 size: Px(13.0),
                 ..Default::default()
             },
+            placeholder: None,
             text_blob: None,
             text_metrics: None,
+            placeholder_blob: None,
+            placeholder_metrics: None,
             prefix_blob: None,
             prefix_metrics: None,
             suffix_blob: None,
@@ -42,6 +45,18 @@ impl TextInput {
             text_style_override: false,
             last_text_style_theme_revision: None,
         }
+    }
+
+    pub fn set_placeholder(&mut self, placeholder: Option<std::sync::Arc<str>>) {
+        if self.placeholder == placeholder {
+            return;
+        }
+        self.placeholder = placeholder;
+        if let Some(blob) = self.placeholder_blob.take() {
+            self.pending_release.push(blob);
+        }
+        self.placeholder_metrics = None;
+        self.last_sent_cursor = None;
     }
 
     pub fn set_chrome_style(&mut self, style: TextInputStyle) {
@@ -139,6 +154,7 @@ impl TextInput {
     pub(super) fn queue_release_all_text_blobs(&mut self) {
         for blob in [
             self.text_blob.take(),
+            self.placeholder_blob.take(),
             self.prefix_blob.take(),
             self.suffix_blob.take(),
             self.preedit_blob.take(),
@@ -149,6 +165,7 @@ impl TextInput {
             self.pending_release.push(blob);
         }
         self.text_metrics = None;
+        self.placeholder_metrics = None;
         self.prefix_metrics = None;
         self.suffix_metrics = None;
         self.preedit_metrics = None;

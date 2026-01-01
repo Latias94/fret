@@ -1,32 +1,23 @@
 use std::sync::Arc;
 
 use fret_components_icons::ids;
-use fret_components_ui::declarative::action_hooks::ActionHooksExt;
-use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::icon as decl_icon;
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
-use fret_components_ui::declarative::scroll as decl_scroll;
 use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::headless::roving_focus;
-use fret_components_ui::overlay;
 use fret_components_ui::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use fret_components_ui::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    OverlayRequest, Space,
-};
+use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
-    SemanticsProps, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    PressableA11y, PressableProps, TextProps,
 };
-use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementCx, Theme, UiHost};
 
-use crate::input::Input;
+use crate::{CommandItem, CommandList, CommandPalette, Popover, PopoverContent};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -196,11 +187,11 @@ pub fn combobox<H: UiHost>(
         let radius = resolved.radius;
         let ring = decl_style::focus_ring(&theme, radius);
 
-        let label = selected
+        let resolved_label = selected
             .as_ref()
             .and_then(|v| items.iter().find(|it| it.value.as_ref() == v.as_ref()))
             .map(|it| it.label.clone())
-            .unwrap_or(placeholder);
+            .unwrap_or(placeholder.clone());
 
         let text_style = TextStyle {
             font: FontId::default(),
@@ -214,7 +205,9 @@ pub fn combobox<H: UiHost>(
 
         let mut trigger_layout = decl_style::layout_style(
             &theme,
-            LayoutRefinement::default().w_full().min_h(MetricRef::Px(resolved.min_height)),
+            LayoutRefinement::default()
+                .w_full()
+                .min_h(MetricRef::Px(resolved.min_height)),
         );
         trigger_layout.size.height = Length::Auto;
         trigger_layout.size.min_height = Some(resolved.min_height);
@@ -228,96 +221,111 @@ pub fn combobox<H: UiHost>(
             .unwrap_or(theme.colors.text_muted);
 
         let enabled = !disabled;
+        let items: Vec<ComboboxItem> = items.to_vec();
+        let open_for_trigger = open.clone();
+        let trigger_gap = MetricRef::space(Space::N2).resolve(&theme);
+        let has_selection = selected.is_some();
+        let a11y_label_for_trigger = a11y_label.clone();
 
-        cx.pressable_with_id_props(|cx, st, trigger_id| {
-            let border_color = if st.hovered || st.pressed {
-                alpha_mul(border_focus, 0.85)
-            } else {
-                border
-            };
+        Popover::new(open.clone())
+            .auto_focus(true)
+            .into_element_with_anchor(
+                cx,
+                move |cx| {
+                    cx.pressable_with_id_props(|cx, st, _trigger_id| {
+                        let border_color = if st.hovered || st.pressed {
+                            alpha_mul(border_focus, 0.85)
+                        } else {
+                            border
+                        };
 
-            cx.pressable_toggle_bool(&open);
+                        cx.pressable_toggle_bool(&open_for_trigger);
 
-            let props = PressableProps {
-                layout: trigger_layout,
-                enabled,
-                focusable: true,
-                focus_ring: Some(ring),
-                a11y: PressableA11y {
-                    role: Some(SemanticsRole::ComboBox),
-                    label: a11y_label.clone(),
-                    expanded: Some(is_open),
-                    ..Default::default()
-                },
-                ..Default::default()
-            };
+                        let props = PressableProps {
+                            layout: trigger_layout,
+                            enabled,
+                            focusable: true,
+                            focus_ring: Some(ring),
+                            a11y: PressableA11y {
+                                role: Some(SemanticsRole::ComboBox),
+                                label: a11y_label_for_trigger
+                                    .clone()
+                                    .or_else(|| Some(resolved_label.clone())),
+                                expanded: Some(is_open),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        };
 
-            let overlay_root_name = OverlayController::popover_root_name(trigger_id);
+                        let children = vec![cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle::default(),
+                                padding: resolved.padding,
+                                background: Some(bg),
+                                shadow: None,
+                                border: Edges::all(resolved.border_width),
+                                border_color: Some(border_color),
+                                corner_radii: Corners::all(radius),
+                            },
+                            move |cx| {
+                                vec![cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle::default(),
+                                        direction: fret_core::Axis::Horizontal,
+                                        gap: trigger_gap,
+                                        padding: Edges::all(Px(0.0)),
+                                        justify: MainAlign::SpaceBetween,
+                                        align: CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    move |cx| {
+                                        vec![
+                                            cx.text_props(TextProps {
+                                                layout: {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size.width = Length::Fill;
+                                                    layout
+                                                },
+                                                text: resolved_label.clone(),
+                                                style: Some(text_style.clone()),
+                                                wrap: TextWrap::None,
+                                                overflow: TextOverflow::Ellipsis,
+                                                color: Some(if has_selection {
+                                                    fg
+                                                } else {
+                                                    fg_muted
+                                                }),
+                                            }),
+                                            decl_icon::icon_with(
+                                                cx,
+                                                ids::ui::CHEVRON_DOWN,
+                                                Some(Px(16.0)),
+                                                None,
+                                            ),
+                                        ]
+                                    },
+                                )]
+                            },
+                        )];
 
-            if is_open
-                && enabled
-                && let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id)
-            {
-                let outer = cx.bounds;
-
-                let max_h = theme
-                    .metric_by_key("component.combobox.max_list_height")
-                    .or_else(|| theme.metric_by_key("component.select.max_list_height"))
-                    .unwrap_or(Px(280.0));
-                let item_h = theme
-                    .metric_by_key("component.combobox.item_height")
-                    .or_else(|| theme.metric_by_key("component.select.item_height"))
-                    .unwrap_or(Px(32.0));
-
-                let query = cx
-                    .watch_model(&query_model)
-                    .layout()
-                    .read_ref(|s| s.trim().to_ascii_lowercase())
-                    .unwrap_or_default();
-
-                let filtered: Vec<ComboboxItem> = items
-                    .iter()
-                    .cloned()
-                    .filter(|it| {
-                        if query.is_empty() {
-                            return true;
-                        }
-                        it.label
-                            .as_ref()
-                            .to_ascii_lowercase()
-                            .contains(query.as_str())
+                        (props, children)
                     })
-                    .collect();
+                },
+                move |cx, anchor| {
+                    let max_h = theme
+                        .metric_by_key("component.combobox.max_list_height")
+                        .or_else(|| theme.metric_by_key("component.select.max_list_height"))
+                        .unwrap_or(Px(280.0));
+                    let desired_w = Px(anchor.size.width.0.max(180.0));
 
-                let list_count = filtered.len().max(1) as f32;
-                let desired_list_h = Px((item_h.0 * list_count).min(max_h.0).max(item_h.0));
-                let desired_w = Px(anchor.size.width.0.max(180.0));
-
-                let search_h = search_enabled
-                    .then(|| resolved.min_height.0 + (theme.metrics.padding_sm.0 * 2.0))
-                    .unwrap_or(0.0);
-                let desired = fret_core::Size::new(desired_w, Px(desired_list_h.0 + search_h));
-
-                let side_offset = theme
-                    .metric_by_key("component.select.popover_offset")
-                    .unwrap_or(Px(6.0));
-
-                let placed = anchored_panel_bounds_sized(
-                    outer,
-                    anchor,
-                    desired,
-                    side_offset,
-                    Side::Bottom,
-                    Align::Start,
-                );
-
-                let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                    let selected = cx.watch_model(&model).cloned().unwrap_or_default();
-
-                    let query = cx
-                        .watch_model(&query_model)
-                        .read_ref(|s| s.trim().to_ascii_lowercase())
-                        .unwrap_or_default();
+                    let query = if search_enabled {
+                        cx.watch_model(&query_model)
+                            .layout()
+                            .read_ref(|s| s.trim().to_ascii_lowercase())
+                            .unwrap_or_default()
+                    } else {
+                        String::new()
+                    };
 
                     let filtered: Vec<ComboboxItem> = items
                         .iter()
@@ -333,415 +341,108 @@ pub fn combobox<H: UiHost>(
                         })
                         .collect();
 
-                    let disabled_flags: Vec<bool> =
-                        filtered.iter().map(|i| i.disabled || !enabled).collect();
+                    let fg = theme
+                        .color_by_key("foreground")
+                        .unwrap_or(theme.colors.text_primary);
+                    let fg_disabled = theme.colors.text_disabled;
 
-                    let active = selected
-                        .as_ref()
-                        .and_then(|v| {
-                            roving_focus::active_index_from_str_keys(
-                                &filtered
-                                    .iter()
-                                    .map(|i| i.value.clone())
-                                    .collect::<Vec<_>>(),
-                                Some(v.as_ref()),
-                                &disabled_flags,
-                            )
-                        })
-                        .or_else(|| roving_focus::first_enabled(&disabled_flags));
+                    let item_text_style = crate::command::item_text_style(&theme);
 
-                    let roving = RovingFocusProps {
-                        enabled: true,
-                        wrap: true,
-                        disabled: Arc::from(disabled_flags.clone().into_boxed_slice()),
-                        ..Default::default()
-                    };
+                    let mut command_items: Vec<CommandItem> = Vec::with_capacity(filtered.len());
+                    for item in filtered {
+                        let item_disabled = disabled || item.disabled;
+                        let is_selected = selected
+                            .as_ref()
+                            .is_some_and(|v| v.as_ref() == item.value.as_ref());
 
-                    let popover_layout = LayoutStyle {
-                        position: PositionStyle::Absolute,
-                        inset: InsetStyle {
-                            left: Some(placed.origin.x),
-                            top: Some(placed.origin.y),
-                            ..Default::default()
-                        },
-                        size: {
-                            let mut size = fret_ui::element::SizeStyle::default();
-                            size.width = Length::Px(placed.size.width);
-                            size.height = Length::Px(placed.size.height);
-                            size
-                        },
-                        overflow: Overflow::Clip,
-                        ..Default::default()
-                    };
-
-                    let shadow = decl_style::shadow_sm(&theme, radius);
-
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: popover_layout,
-                            padding: Edges::all(Px(0.0)),
-                            background: Some(theme.colors.panel_background),
-                            shadow: Some(shadow),
-                            border: Edges::all(resolved.border_width),
-                            border_color: Some(border),
-                            corner_radii: Corners::all(radius),
-                        },
-                        |cx| {
-                            vec![cx.flex(
-                                FlexProps {
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Fill;
-                                        layout.size.height = Length::Fill;
-                                        layout.size.min_height = Some(Px(0.0));
-                                        layout
-                                    },
-                                    direction: fret_core::Axis::Vertical,
-                                    gap: Px(0.0),
-                                    padding: Edges::all(Px(0.0)),
-                                    justify: MainAlign::Start,
-                                    align: CrossAlign::Stretch,
-                                    wrap: false,
-                                },
-                                |cx| {
-                                    let mut children: Vec<AnyElement> = Vec::new();
-
-                                    if search_enabled {
-                                        let input = Input::new(query_model.clone())
-                                            .a11y_label("Combobox search");
-                                        children.push(cx.container(
-                                            ContainerProps {
-                                                layout: LayoutStyle::default(),
-                                                padding: Edges::all(theme.metrics.padding_sm),
-                                                ..Default::default()
-                                            },
-                                            move |cx| vec![input.into_element(cx)],
-                                        ));
-                                    }
-
-                                    let list_inner = if filtered.is_empty() {
-                                        let fg = theme.colors.text_muted;
-                                        let empty_style = TextStyle {
-                                            font: FontId::default(),
-                                            size: resolved.text_px,
-                                            weight: FontWeight::NORMAL,
-                                            line_height: theme
-                                                .metric_by_key("font.line_height")
-                                                .or(Some(theme.metrics.font_line_height)),
-                                            letter_spacing_em: None,
-                                        };
-                                        cx.container(ContainerProps::default(), move |cx| {
-                                            vec![cx.text_props(TextProps {
-                                                layout: LayoutStyle::default(),
-                                                text: empty_text.clone(),
-                                                style: Some(empty_style),
-                                                color: Some(fg),
-                                                wrap: TextWrap::None,
-                                                overflow: TextOverflow::Clip,
-                                            })]
-                                        })
+                        let model_for_select = model.clone();
+                        let open_for_select = open.clone();
+                        let query_for_select = query_model.clone();
+                        let value_for_select = item.value.clone();
+                        let on_select: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                let _ = host.models_mut().update(&model_for_select, |v| {
+                                    if v.as_ref().is_some_and(|cur| {
+                                        cur.as_ref() == value_for_select.as_ref()
+                                    }) {
+                                        *v = None;
                                     } else {
-                                        let labels: Vec<Arc<str>> =
-                                            filtered.iter().map(|i| i.label.clone()).collect();
-                                        let labels_arc: Arc<[Arc<str>]> =
-                                            Arc::from(labels.into_boxed_slice());
+                                        *v = Some(value_for_select.clone());
+                                    }
+                                });
+                                let _ = host.models_mut().update(&open_for_select, |v| *v = false);
+                                let _ = host.models_mut().update(&query_for_select, |v| v.clear());
+                                host.request_redraw(action_cx.window);
+                            });
 
-                                        decl_scroll::overflow_scrollbar(
-                                            cx,
-                                            LayoutRefinement::default().w_full().h_full(),
-                                            |cx| {
-                                                vec![cx.semantics(
-                                                    SemanticsProps {
-                                                        layout: LayoutStyle::default(),
-                                                        role: SemanticsRole::List,
-                                                        ..Default::default()
-                                                    },
-                                                    |cx| {
-                                                        vec![cx.roving_flex(
-                                                            RovingFlexProps {
-                                                                flex: FlexProps {
-                                                                    layout: LayoutStyle::default(),
-                                                                    direction: fret_core::Axis::Vertical,
-                                                                    gap: Px(0.0),
-                                                                    padding: Edges::all(Px(4.0)),
-                                                                    justify: MainAlign::Start,
-                                                                    align: CrossAlign::Stretch,
-                                                                    wrap: false,
-                                                                },
-                                                                roving,
-                                                            },
-                                                            |cx| {
-                                                                cx.roving_nav_apg();
-                                                                cx.roving_typeahead_prefix_arc_str(
-                                                                    labels_arc.clone(),
-                                                                    30,
-                                                                );
+                        let label_text = item.label.clone();
+                        let icon = decl_icon::icon_with(
+                            cx,
+                            ids::ui::CHECK,
+                            Some(Px(16.0)),
+                            Some(ColorRef::Color(if item_disabled {
+                                fg_disabled
+                            } else {
+                                fg
+                            })),
+                        );
+                        let icon =
+                            cx.opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| vec![icon]);
 
-                                                                let mut out =
-                                                                    Vec::with_capacity(filtered.len());
-                                                                let item_count = filtered.len();
-                                                                for (idx, item) in filtered
-                                                                    .iter()
-                                                                    .cloned()
-                                                                    .enumerate()
-                                                                {
-                                                                    let item_disabled = disabled_flags
-                                                                        .get(idx)
-                                                                        .copied()
-                                                                        .unwrap_or(true);
-                                                                    let tab_stop =
-                                                                        active.is_some_and(|a| a == idx);
-
-                                                                    let is_selected = selected
-                                                                        .as_ref()
-                                                                        .is_some_and(|v| {
-                                                                            v.as_ref() == item.value.as_ref()
-                                                                        });
-
-                                                                    let item_ring = decl_style::focus_ring(
-                                                                        &theme,
-                                                                        theme.metrics.radius_sm,
-                                                                    );
-
-                                                                    let model = model.clone();
-                                                                    let open = open.clone();
-                                                                    let query_model = query_model.clone();
-                                                                    let text_style = text_style.clone();
-
-                                                                    out.push(cx.pressable_with_id(
-                                                                        PressableProps {
-                                                                            layout: {
-                                                                                let mut layout =
-                                                                                    LayoutStyle::default();
-                                                                                layout.size.width =
-                                                                                    Length::Fill;
-                                                                                layout.size.min_height =
-                                                                                    Some(item_h);
-                                                                                layout
-                                                                            },
-                                                                            enabled: !item_disabled,
-                                                                            focusable: tab_stop,
-                                                                            focus_ring: Some(item_ring),
-                                                                            a11y: PressableA11y {
-                                                                                role: Some(
-                                                                                    SemanticsRole::ListItem,
-                                                                                ),
-                                                                                label: Some(
-                                                                                    item.label.clone(),
-                                                                                ),
-                                                                                selected: is_selected,
-                                                                                ..Default::default()
-                                                                            }
-                                                                            .with_collection_position(
-                                                                                idx,
-                                                                                item_count,
-                                                                            ),
-                                                                            ..Default::default()
-                                                                        },
-                                                                        move |cx, st, _id| {
-                                                                            if is_selected {
-                                                                                cx.pressable_update_model(
-                                                                                    &model,
-                                                                                    |v| *v = None,
-                                                                                );
-                                                                            } else {
-                                                                                cx.pressable_set_option_arc_str(
-                                                                                    &model,
-                                                                                    item.value.clone(),
-                                                                                );
-                                                                            }
-                                                                            cx.pressable_set_bool(&open, false);
-                                                                            let query_model_for_activate =
-                                                                                query_model.clone();
-                                                                            cx.pressable_add_on_activate(
-                                                                                Arc::new(move |host, _cx, _reason| {
-                                                                                    let _ = host
-                                                                                        .models_mut()
-                                                                                        .update(&query_model_for_activate, |v| v.clear());
-                                                                                })
-                                                                            );
-
-                                                                            let theme =
-                                                                                Theme::global(&*cx.app).clone();
-                                                                            let mut bg = Color::TRANSPARENT;
-                                                                            if is_selected {
-                                                                                bg = alpha_mul(
-                                                                                    theme.colors.selection_background,
-                                                                                    0.35,
-                                                                                );
-                                                                            }
-                                                                            if st.hovered || st.pressed {
-                                                                                bg = alpha_mul(
-                                                                                    theme.colors.selection_background,
-                                                                                    0.45,
-                                                                                );
-                                                                            }
-
-                                                                            let fg = if item_disabled {
-                                                                                alpha_mul(fg_muted, 0.8)
-                                                                            } else {
-                                                                                fg
-                                                                            };
-
-                                                                            vec![cx.container(
-                                                                                ContainerProps {
-                                                                                    layout: {
-                                                                                        let mut layout =
-                                                                                            LayoutStyle::default();
-                                                                                        layout.size.width =
-                                                                                            Length::Fill;
-                                                                                        layout.size.height =
-                                                                                            Length::Fill;
-                                                                                        layout
-                                                                                    },
-                                                                                    padding: Edges::all(Px(8.0)),
-                                                                                    background: Some(bg),
-                                                                                    shadow: None,
-                                                                                    border: Edges::all(Px(0.0)),
-                                                                                    border_color: None,
-                                                                                    corner_radii: Corners::all(
-                                                                                        theme.metrics.radius_sm,
-                                                                                    ),
-                                                                                },
-                                                                                |cx| {
-                                                                                    let check_color =
-                                                                                        if is_selected {
-                                                                                            fg
-                                                                                        } else {
-                                                                                            alpha_mul(fg, 0.0)
-                                                                                        };
-
-                                                                                    vec![cx.flex(
-                                                                                        FlexProps {
-                                                                                            layout: LayoutStyle::default(),
-                                                                                            direction: fret_core::Axis::Horizontal,
-                                                                                            gap: Px(8.0),
-                                                                                            padding: Edges::all(Px(0.0)),
-                                                                                            justify: MainAlign::Start,
-                                                                                            align: CrossAlign::Center,
-                                                                                            wrap: false,
-                                                                                        },
-                                                                                        |cx| {
-                                                                                            vec![
-                                                                                                decl_icon::icon_with(
-                                                                                                    cx,
-                                                                                                    ids::ui::CHECK,
-                                                                                                    Some(Px(16.0)),
-                                                                                                    Some(ColorRef::Color(
-                                                                                                        check_color,
-                                                                                                    )),
-                                                                                                ),
-                                                                                                cx.text_props(TextProps {
-                                                                                                    layout: {
-                                                                                                        let mut layout = LayoutStyle::default();
-                                                                                                        layout.size.width = Length::Fill;
-                                                                                                        layout
-                                                                                                    },
-                                                                                                    text: item.label.clone(),
-                                                                                                    style: Some(text_style.clone()),
-                                                                                                    wrap: TextWrap::None,
-                                                                                                    overflow: TextOverflow::Ellipsis,
-                                                                                                    color: Some(fg),
-                                                                                                }),
-                                                                                            ]
-                                                                                        },
-                                                                                    )]
-                                                                                },
-                                                                            )]
-                                                                        },
-                                                                    ));
-                                                                }
-                                                                out
-                                                            },
-                                                        )]
-                                                    },
-                                                )]
-                                            },
-                                        )
-                                    };
-
-                                    children.push(cx.container(
-                                        ContainerProps {
-                                            layout: {
-                                                let mut layout = LayoutStyle::default();
-                                                layout.size.width = Length::Fill;
-                                                layout.size.height = Length::Fill;
-                                                layout.size.min_height = Some(Px(0.0));
-                                                layout.flex.grow = 1.0;
-                                                layout.flex.basis = Length::Px(Px(0.0));
-                                                layout
-                                            },
-                                            ..Default::default()
-                                        },
-                                        move |_cx| vec![list_inner],
-                                    ));
-
-                                    children
-                                },
-                            )]
-                        },
-                    )]
-                });
-
-                let mut request = OverlayRequest::dismissible_popover(
-                    trigger_id,
-                    trigger_id,
-                    open,
-                    OverlayPresence::instant(true),
-                    overlay_children,
-                );
-                request.root_name = Some(overlay_root_name);
-                OverlayController::request(cx, request);
-            }
-
-            let children = vec![cx.container(
-                ContainerProps {
-                    layout: LayoutStyle::default(),
-                    padding: resolved.padding,
-                    background: Some(bg),
-                    shadow: None,
-                    border: Edges::all(resolved.border_width),
-                    border_color: Some(border_color),
-                    corner_radii: Corners::all(radius),
-                },
-                |cx| {
-                    vec![cx.flex(
-                        FlexProps {
+                        let text = cx.text_props(TextProps {
                             layout: LayoutStyle::default(),
-                            direction: fret_core::Axis::Horizontal,
-                            gap: MetricRef::space(Space::N2).resolve(&theme),
-                            padding: Edges::all(Px(0.0)),
-                            justify: MainAlign::SpaceBetween,
-                            align: CrossAlign::Center,
-                            wrap: false,
-                        },
-                        |cx| {
-                            vec![
-                                cx.text_props(TextProps {
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Fill;
-                                        layout
-                                    },
-                                    text: label,
-                                    style: Some(text_style.clone()),
-                                    wrap: TextWrap::None,
-                                    overflow: TextOverflow::Ellipsis,
-                                    color: Some(if selected.is_some() { fg } else { fg_muted }),
-                                }),
-                                decl_icon::icon_with(
-                                    cx,
-                                    ids::ui::CHEVRON_DOWN,
-                                    Some(Px(16.0)),
-                                    None,
-                                ),
-                            ]
-                        },
-                    )]
-                },
-            )];
+                            text: label_text.clone(),
+                            style: Some(item_text_style.clone()),
+                            color: Some(if item_disabled { fg_disabled } else { fg }),
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Ellipsis,
+                        });
 
-            (props, children)
-        })
+                        command_items.push(
+                            CommandItem::new(label_text)
+                                .disabled(item_disabled)
+                                .on_select_action(on_select)
+                                .children(vec![text, icon]),
+                        );
+                    }
+
+                    let transparent = Color::TRANSPARENT;
+                    let list = if search_enabled {
+                        CommandPalette::new(query_model.clone(), command_items)
+                            .a11y_label("Combobox list")
+                            .placeholder("Search…")
+                            .disabled(disabled)
+                            .empty_text(empty_text)
+                            .refine_style(ChromeRefinement {
+                                radius: Some(MetricRef::Px(Px(0.0))),
+                                border_width: Some(MetricRef::Px(Px(0.0))),
+                                background: Some(ColorRef::Color(transparent)),
+                                border_color: Some(ColorRef::Color(transparent)),
+                                ..Default::default()
+                            })
+                            .refine_scroll_layout(
+                                LayoutRefinement::default().max_h(MetricRef::Px(max_h)),
+                            )
+                            .into_element(cx)
+                    } else {
+                        CommandList::new(command_items)
+                            .disabled(disabled)
+                            .empty_text(empty_text)
+                            .refine_scroll_layout(
+                                LayoutRefinement::default().max_h(MetricRef::Px(max_h)),
+                            )
+                            .into_element(cx)
+                    };
+
+                    PopoverContent::new(vec![list])
+                        .refine_style(ChromeRefinement::default().p(Space::N0))
+                        .refine_layout(
+                            LayoutRefinement::default()
+                                .w_px(MetricRef::Px(desired_w))
+                                .min_w_0(),
+                        )
+                        .into_element(cx)
+                },
+            )
     })
 }

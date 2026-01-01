@@ -13,6 +13,7 @@ contracts early to avoid large rewrites later.
 ## Recommended reading order (for a new contributor or AI agent)
 
 1. `docs/architecture.md` — what Fret is, what it is not, and how crates fit together.
+   - Repository layout (core vs ecosystem): `docs/repo-structure.md`
 2. `docs/golden-architecture.md` — module closure index (docs/ADRs/code/tests entry points).
 3. `docs/ui-closure-map.md` — closure-oriented UI subsystem map (overlays/transform/clip/a11y/docking).
 4. `docs/runtime-contract-matrix.md` — a compact map of the `fret-ui` runtime contract surface and references.

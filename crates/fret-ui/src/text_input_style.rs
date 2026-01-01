@@ -13,6 +13,7 @@ pub struct TextInputStyle {
     pub focus_ring: Option<RingStyle>,
     pub corner_radii: Corners,
     pub text_color: Color,
+    pub placeholder_color: Color,
     pub selection_color: Color,
     pub caret_color: Color,
     pub preedit_color: Color,
@@ -54,6 +55,12 @@ impl Default for TextInputStyle {
                 b: 0.92,
                 a: 1.0,
             },
+            placeholder_color: Color {
+                r: 0.92,
+                g: 0.92,
+                b: 0.92,
+                a: 0.5,
+            },
             selection_color: Color {
                 r: 0.24,
                 g: 0.34,
@@ -92,6 +99,7 @@ impl TextInputStyle {
             focus_ring: None,
             corner_radii: Corners::all(theme.metrics.radius_sm),
             text_color: theme.colors.text_primary,
+            placeholder_color: theme.colors.text_muted,
             selection_color: Color {
                 a: 1.0,
                 ..theme.colors.selection_background

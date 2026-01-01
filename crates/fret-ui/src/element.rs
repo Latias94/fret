@@ -434,6 +434,7 @@ pub struct PressableA11y {
 pub struct PressableState {
     pub hovered: bool,
     pub pressed: bool,
+    pub focused: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -561,6 +562,7 @@ pub struct TextInputProps {
     pub layout: LayoutStyle,
     pub model: Model<String>,
     pub a11y_label: Option<std::sync::Arc<str>>,
+    pub placeholder: Option<std::sync::Arc<str>>,
     pub active_descendant: Option<NodeId>,
     pub chrome: TextInputStyle,
     pub text_style: TextStyle,
@@ -574,6 +576,7 @@ impl TextInputProps {
             layout: LayoutStyle::default(),
             model,
             a11y_label: None,
+            placeholder: None,
             active_descendant: None,
             chrome: TextInputStyle::default(),
             text_style: TextStyle::default(),
@@ -589,6 +592,10 @@ impl std::fmt::Debug for TextInputProps {
             .field("layout", &self.layout)
             .field("model", &"<model>")
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field(
+                "placeholder",
+                &self.placeholder.as_ref().map(|s| s.as_ref()),
+            )
             .field("chrome", &self.chrome)
             .field("text_style", &self.text_style)
             .field("submit_command", &self.submit_command)

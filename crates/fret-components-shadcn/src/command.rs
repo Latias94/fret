@@ -17,6 +17,7 @@ use fret_core::{
     TextWrap,
 };
 use fret_runtime::{CommandId, Model};
+use fret_ui::action::ActivateReason;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, RowProps, TextProps,
@@ -51,7 +52,7 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
-fn item_text_style(theme: &Theme) -> TextStyle {
+pub(crate) fn item_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.command.item.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
@@ -128,6 +129,7 @@ impl Command {
 pub struct CommandInput {
     model: fret_runtime::Model<String>,
     a11y_label: Option<Arc<str>>,
+    placeholder: Option<Arc<str>>,
     disabled: bool,
     layout: LayoutRefinement,
 }
@@ -148,6 +150,7 @@ impl CommandInput {
         Self {
             model,
             a11y_label: None,
+            placeholder: None,
             disabled: false,
             layout: LayoutRefinement::default(),
         }
@@ -155,6 +158,11 @@ impl CommandInput {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
         self
     }
 
@@ -192,6 +200,11 @@ impl CommandInput {
                 self.a11y_label
                     .unwrap_or_else(|| Arc::from("Command input")),
             );
+            let input = if let Some(placeholder) = self.placeholder.clone() {
+                input.placeholder(placeholder)
+            } else {
+                input
+            };
 
             cx.container(wrapper, move |cx| {
                 let mut input = input.into_element(cx);
@@ -216,6 +229,7 @@ pub struct CommandItem {
     label: Arc<str>,
     disabled: bool,
     command: Option<CommandId>,
+    on_select: Option<fret_ui::action::OnActivate>,
     children: Vec<AnyElement>,
 }
 
@@ -225,6 +239,7 @@ impl std::fmt::Debug for CommandItem {
             .field("label", &self.label.as_ref())
             .field("disabled", &self.disabled)
             .field("command", &self.command)
+            .field("on_select", &self.on_select.is_some())
             .field("children_len", &self.children.len())
             .finish()
     }
@@ -237,6 +252,7 @@ impl CommandItem {
             label: label.clone(),
             disabled: false,
             command: None,
+            on_select: None,
             children: Vec::new(),
         }
     }
@@ -248,6 +264,11 @@ impl CommandItem {
 
     pub fn on_select(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    pub fn on_select_action(mut self, on_select: fret_ui::action::OnActivate) -> Self {
+        self.on_select = Some(on_select);
         self
     }
 
@@ -395,6 +416,7 @@ impl CommandList {
 
                                 let label = item.label.clone();
                                 let command = item.command;
+                                let on_select = item.on_select.clone();
                                 let children = item.children;
                                 let text_style = text_style.clone();
 
@@ -413,6 +435,9 @@ impl CommandList {
                                     },
                                     move |cx, st| {
                                         cx.pressable_dispatch_command_opt(command);
+                                        if let Some(on_select) = on_select.clone() {
+                                            cx.pressable_add_on_activate(on_select);
+                                        }
                                         let hovered = st.hovered && !st.pressed;
                                         let pressed = st.pressed;
 
@@ -480,6 +505,7 @@ pub struct CommandPalette {
     wrap: bool,
     empty_text: Arc<str>,
     a11y_label: Arc<str>,
+    placeholder: Option<Arc<str>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     scroll: LayoutRefinement,
@@ -509,6 +535,7 @@ impl CommandPalette {
             wrap: true,
             empty_text: Arc::from("No results."),
             a11y_label: Arc::from("Command input"),
+            placeholder: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             scroll: LayoutRefinement::default()
@@ -538,6 +565,11 @@ impl CommandPalette {
         self
     }
 
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
         self
@@ -557,6 +589,7 @@ impl CommandPalette {
         #[derive(Clone)]
         struct PaletteEntry {
             command: Option<CommandId>,
+            on_select: Option<fret_ui::action::OnActivate>,
             disabled: bool,
         }
 
@@ -598,10 +631,12 @@ impl CommandPalette {
             let (entries, disabled_flags): (Vec<PaletteEntry>, Vec<bool>) = items
                 .iter()
                 .map(|i| {
-                    let disabled = disabled || i.disabled || i.command.is_none();
+                    let disabled =
+                        disabled || i.disabled || (i.command.is_none() && i.on_select.is_none());
                     (
                         PaletteEntry {
                             command: i.command.clone(),
+                            on_select: i.on_select.clone(),
                             disabled,
                         },
                         disabled,
@@ -688,6 +723,7 @@ impl CommandPalette {
 
                         let label = item.label.clone();
                         let command = item.command;
+                        let on_select = item.on_select.clone();
                         let children = item.children;
                         let text_style = text_style.clone();
 
@@ -708,6 +744,9 @@ impl CommandPalette {
                             },
                             move |cx, st| {
                                 cx.pressable_dispatch_command_opt(command);
+                                if let Some(on_select) = on_select.clone() {
+                                    cx.pressable_add_on_activate(on_select);
+                                }
                                 if enabled {
                                     let active = active_for_row.clone();
                                     cx.pressable_on_hover_change(Arc::new(
@@ -808,6 +847,9 @@ impl CommandPalette {
             wrapper.border_color = Some(border);
 
             let mut input = Input::new(self.model).a11y_label(self.a11y_label);
+            if let Some(placeholder) = self.placeholder {
+                input = input.placeholder(placeholder);
+            }
             if let Some(active_descendant) = active_descendant {
                 input = input.active_descendant(active_descendant);
             }
@@ -903,10 +945,14 @@ impl CommandPalette {
                                     let Some(entry) = entries.get(idx) else {
                                         return false;
                                     };
-                                    let Some(command) = entry.command.clone() else {
-                                        return false;
-                                    };
-                                    host.dispatch_command(Some(action_cx.window), command);
+
+                                    if let Some(on_select) = entry.on_select.clone() {
+                                        on_select(host, action_cx, ActivateReason::Keyboard);
+                                    }
+
+                                    if let Some(command) = entry.command.clone() {
+                                        host.dispatch_command(Some(action_cx.window), command);
+                                    }
                                     true
                                 }
                                 _ => false,

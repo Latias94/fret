@@ -58,6 +58,7 @@ pub struct WindowElementState {
     cur_bounds: HashMap<GlobalElementId, Rect>,
     prev_visual_bounds: HashMap<GlobalElementId, Rect>,
     cur_visual_bounds: HashMap<GlobalElementId, Rect>,
+    pub(super) focused_element: Option<GlobalElementId>,
     pub(super) hovered_pressable: Option<GlobalElementId>,
     pub(super) pressed_pressable: Option<GlobalElementId>,
     pub(super) hovered_hover_region: Option<GlobalElementId>,
@@ -100,10 +101,18 @@ impl WindowElementState {
 
         std::mem::swap(&mut self.prev_visual_bounds, &mut self.cur_visual_bounds);
         self.cur_visual_bounds.clear();
+
+        self.focused_element = None;
     }
 
     pub(crate) fn node_entry(&self, id: GlobalElementId) -> Option<NodeEntry> {
         self.nodes.get(&id).copied()
+    }
+
+    pub(crate) fn element_for_node(&self, node: NodeId) -> Option<GlobalElementId> {
+        self.nodes
+            .iter()
+            .find_map(|(&element, entry)| (entry.node == node).then_some(element))
     }
 
     pub(crate) fn set_node_entry(&mut self, id: GlobalElementId, entry: NodeEntry) {

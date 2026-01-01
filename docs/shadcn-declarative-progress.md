@@ -121,7 +121,7 @@ These are shadcn-style surfaces referenced by docs/demos but not part of the `re
 
 | Surface | Rust module | Status | Audit | Notes |
 | --- | --- | --- | --- | --- |
-| combobox | `combobox` | Present | Unreviewed | Search input + popover list; active-descendant semantics are still pending (ADR 0073) |
+| combobox | `combobox` | Present | In review | Now implemented as `Popover` + `CommandPalette` recipe; audit: `docs/audits/shadcn-combobox.md` |
 | date picker | `date_picker` | Missing | Unreviewed | Upstream is a `Popover` + `Calendar` recipe; consider shipping as a recipe/example first |
 | data table / datagrid | `data_table` | Feature-gated | Unreviewed | Enabled by `fret-components-shadcn/datagrid`; not a `registry:ui` item upstream |
 | toast | `toast` | Skip | Unreviewed | Upstream `toast` is deprecated in favor of `sonner`; this repo ships `sonner` |

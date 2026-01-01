@@ -4,6 +4,7 @@ pub mod drag_route;
 pub mod element;
 pub mod elements;
 pub mod focus_visible;
+mod frame_cx;
 pub mod host;
 pub mod overlay_placement;
 pub mod paint;
@@ -41,6 +42,7 @@ or `fret-components-ui::declarative::action_hooks::ActionHooksExt`."
 
 pub use drag_route::InternalDragRouteService;
 pub use elements::{ElementCx, ElementRuntime, GlobalElementId};
+pub use frame_cx::UiFrameCx;
 pub use host::UiHost;
 pub use resizable_panel_group::ResizablePanelGroupStyle;
 pub use scroll::{ScrollHandle, ScrollStrategy, VirtualListScrollHandle};

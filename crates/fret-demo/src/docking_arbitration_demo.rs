@@ -87,14 +87,10 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
             .collect();
 
         let root_name = "dock.panel.controls";
-        Some(declarative::render_root(
-            ui,
-            app,
-            services,
-            window,
-            bounds,
-            root_name,
-            |cx| {
+        Some(
+            declarative::RenderRootCx::new(ui, app, services, window, bounds).render_root(
+                root_name,
+                |cx| {
                 cx.observe_model(&models.popover_open, Invalidation::Layout);
                 cx.observe_model(&models.dialog_open, Invalidation::Layout);
                 cx.observe_model(&models.last_viewport_input, Invalidation::Layout);
@@ -200,8 +196,9 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                     rows
                 },
             )]
-            },
-        ))
+                },
+            ),
+        )
     }
 }
 
@@ -626,10 +623,10 @@ impl WinitDriver for DockingArbitrationDriver {
         state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);
         scene.clear();
-        state.ui.layout_all(app, services, bounds, scale_factor);
-        state
-            .ui
-            .paint_all(app, services, bounds, scene, scale_factor);
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+        frame.layout_all();
+        frame.paint_all(scene);
     }
 
     fn window_create_spec(

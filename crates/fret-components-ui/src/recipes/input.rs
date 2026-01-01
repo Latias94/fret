@@ -232,6 +232,7 @@ pub fn default_text_input_style(theme: &Theme) -> fret_ui::TextInputStyle {
         }),
         corner_radii: Corners::all(theme.metrics.radius_sm),
         text_color: theme.colors.text_primary,
+        placeholder_color: theme.colors.text_muted,
         selection_color: Color {
             a: 1.0,
             ..theme.colors.selection_background

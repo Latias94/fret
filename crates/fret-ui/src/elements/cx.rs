@@ -83,6 +83,19 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
         self.window_state.node_entry(element).map(|e| e.node)
     }
 
+    pub fn focused_element(&self) -> Option<GlobalElementId> {
+        self.window_state.focused_element
+    }
+
+    pub fn is_focused_element(&self, element: GlobalElementId) -> bool {
+        self.window_state.focused_element == Some(element)
+    }
+
+    pub(crate) fn sync_focused_element_from_focused_node(&mut self, focused: Option<NodeId>) {
+        self.window_state.focused_element =
+            focused.and_then(|node| self.window_state.element_for_node(node));
+    }
+
     /// Returns the last frame's bounds for a declarative element, if available.
     ///
     /// This is safe to call during element rendering: it reads from the `ElementCx`'s already
@@ -458,9 +471,17 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
+            let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
             cx.pressable_clear_on_hover_change();
-            let children = f(cx, PressableState { hovered, pressed });
+            let children = f(
+                cx,
+                PressableState {
+                    hovered,
+                    pressed,
+                    focused,
+                },
+            );
             AnyElement::new(id, ElementKind::Pressable(props), children)
         })
     }
@@ -475,9 +496,18 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
+            let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
             cx.pressable_clear_on_hover_change();
-            let children = f(cx, PressableState { hovered, pressed }, id);
+            let children = f(
+                cx,
+                PressableState {
+                    hovered,
+                    pressed,
+                    focused,
+                },
+                id,
+            );
             AnyElement::new(id, ElementKind::Pressable(props), children)
         })
     }
@@ -491,9 +521,18 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
+            let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
             cx.pressable_clear_on_hover_change();
-            let (props, children) = f(cx, PressableState { hovered, pressed }, id);
+            let (props, children) = f(
+                cx,
+                PressableState {
+                    hovered,
+                    pressed,
+                    focused,
+                },
+                id,
+            );
             AnyElement::new(id, ElementKind::Pressable(props), children)
         })
     }

@@ -163,14 +163,8 @@ impl ComponentsGalleryDriver {
         let cmdk_query = state.cmdk_query.clone();
         let last_action = state.last_action.clone();
 
-        let root = declarative::render_root(
-            &mut state.ui,
-            app,
-            services,
-            window,
-            bounds,
-            "components-gallery",
-            |cx| {
+        let root = declarative::RenderRootCx::new(&mut state.ui, app, services, window, bounds)
+            .render_root("components-gallery", |cx| {
                 cx.observe_model(&tree_state, Invalidation::Layout);
                 let theme = Theme::global(&*cx.app).clone();
                 let selected = cx
@@ -961,8 +955,7 @@ impl ComponentsGalleryDriver {
                         )]
                     },
                 )]
-            },
-        );
+            });
 
         state.ui.set_root(root);
         OverlayController::render(&mut state.ui, app, services, window, bounds);
@@ -1417,10 +1410,10 @@ impl WinitDriver for ComponentsGalleryDriver {
         state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);
         scene.clear();
-        state.ui.layout_all(app, services, bounds, scale_factor);
-        state
-            .ui
-            .paint_all(app, services, bounds, scene, scale_factor);
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+        frame.layout_all();
+        frame.paint_all(scene);
     }
 
     fn window_create_spec(

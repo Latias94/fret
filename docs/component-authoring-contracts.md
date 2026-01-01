@@ -184,6 +184,7 @@ Notes:
 - Text engines live in `fret-ui` and are intentionally not exposed as retained widgets.
 - IME and accessibility semantics are part of the runtime contract (see ADR 0071 and the acceptance
   checklist in `docs/ime-acceptance-checklist.md`).
+- `TextInputProps` supports `placeholder` (render-only; not reflected as the editable value).
 
 ## Styling and tokens (component-layer, token-driven)
 

@@ -22,6 +22,7 @@ pub(super) fn handle_text_input<H: UiHost>(
     let input = this.text_input.as_mut().expect("text input");
     input.set_chrome_style(props.chrome);
     input.set_text_style(props.text_style);
+    input.set_placeholder(props.placeholder);
     input.set_submit_command(props.submit_command);
     input.set_cancel_command(props.cancel_command);
     input.event(cx, event);

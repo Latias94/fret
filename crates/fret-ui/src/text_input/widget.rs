@@ -545,6 +545,19 @@ impl<H: UiHost> Widget<H> for TextInput {
             cx.services.caret_stops(blob, &mut self.caret_stops);
         }
 
+        let show_placeholder = self.preedit.is_empty()
+            && self.text.is_empty()
+            && self.placeholder.as_ref().is_some_and(|s| !s.is_empty());
+        if show_placeholder && self.placeholder_blob.is_none() {
+            let placeholder = self.placeholder.as_ref().expect("checked above").as_ref();
+            let (blob, metrics) = cx
+                .services
+                .text()
+                .prepare(placeholder, &self.style, constraints);
+            self.placeholder_blob = Some(blob);
+            self.placeholder_metrics = Some(metrics);
+        }
+
         if self.preedit.is_empty() {
             if self.prefix_blob.is_some()
                 || self.suffix_blob.is_some()
@@ -619,7 +632,13 @@ impl<H: UiHost> Widget<H> for TextInput {
         let _padding_right = self.chrome_style.padding.right;
         let padding_top = self.chrome_style.padding.top;
         let padding_bottom = self.chrome_style.padding.bottom;
-        let text_height = self.text_metrics.map(|m| m.size.height).unwrap_or(Px(16.0));
+        let text_height = if show_placeholder {
+            self.placeholder_metrics
+                .map(|m| m.size.height)
+                .unwrap_or(Px(16.0))
+        } else {
+            self.text_metrics.map(|m| m.size.height).unwrap_or(Px(16.0))
+        };
         let inner_height = Px((cx.bounds.size.height.0 - padding_top.0 - padding_bottom.0)
             .max(0.0)
             .max(text_height.0));
@@ -654,20 +673,28 @@ impl<H: UiHost> Widget<H> for TextInput {
                 corner_radii: self.chrome_style.corner_radii,
             });
         }
-        let base_origin = if let Some(metrics) = self.text_metrics {
-            fret_core::geometry::Point::new(
-                cx.bounds.origin.x + padding_left,
-                cx.bounds.origin.y + padding_top + vertical_offset + metrics.baseline,
-            )
+        let baseline = if show_placeholder {
+            self.placeholder_metrics.map(|m| m.baseline)
         } else {
-            fret_core::geometry::Point::new(
-                cx.bounds.origin.x + padding_left,
-                cx.bounds.origin.y + padding_top + vertical_offset + Px(10.0),
-            )
-        };
+            self.text_metrics.map(|m| m.baseline)
+        }
+        .unwrap_or(Px(10.0));
+        let base_origin = fret_core::geometry::Point::new(
+            cx.bounds.origin.x + padding_left,
+            cx.bounds.origin.y + padding_top + vertical_offset + baseline,
+        );
 
         if self.preedit.is_empty() {
-            if let Some(blob) = self.text_blob {
+            if show_placeholder {
+                if let Some(blob) = self.placeholder_blob {
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(0),
+                        origin: base_origin,
+                        text: blob,
+                        color: self.chrome_style.placeholder_color,
+                    });
+                }
+            } else if let Some(blob) = self.text_blob {
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
                     origin: base_origin,

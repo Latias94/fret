@@ -43,30 +43,27 @@ impl DockPanelRegistry<App> for DemoDockPanelRegistry {
         };
 
         let root_name = format!("dock_demo.panel.{}", panel.kind.0);
-        Some(declarative::render_root(
-            ui,
-            app,
-            services,
-            window,
-            bounds,
-            &root_name,
-            |cx| {
-                vec![cx.container(
-                    ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
-                            layout
+        Some(
+            declarative::RenderRootCx::new(ui, app, services, window, bounds).render_root(
+                &root_name,
+                |cx| {
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            padding: fret_core::Edges::all(padding),
+                            background: Some(background),
+                            ..Default::default()
                         },
-                        padding: fret_core::Edges::all(padding),
-                        background: Some(background),
-                        ..Default::default()
-                    },
-                    |cx| vec![cx.text(label)],
-                )]
-            },
-        ))
+                        |cx| vec![cx.text(label)],
+                    )]
+                },
+            ),
+        )
     }
 }
 
@@ -251,10 +248,10 @@ impl WinitDriver for DockingDemoDriver {
         state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);
         scene.clear();
-        state.ui.layout_all(app, services, bounds, scale_factor);
-        state
-            .ui
-            .paint_all(app, services, bounds, scene, scale_factor);
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+        frame.layout_all();
+        frame.paint_all(scene);
     }
 
     fn window_create_spec(

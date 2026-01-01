@@ -4,6 +4,64 @@ use super::frame::{
 use super::host_widget::ElementHostWidget;
 use super::prelude::*;
 
+pub struct RenderRootCx<'a, H: UiHost> {
+    pub ui: &'a mut UiTree<H>,
+    pub app: &'a mut H,
+    pub services: &'a mut dyn fret_core::UiServices,
+    pub window: AppWindowId,
+    pub bounds: Rect,
+}
+
+impl<'a, H: UiHost> RenderRootCx<'a, H> {
+    pub fn new(
+        ui: &'a mut UiTree<H>,
+        app: &'a mut H,
+        services: &'a mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+    ) -> Self {
+        Self {
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+        }
+    }
+
+    pub fn render_root(
+        self,
+        root_name: &str,
+        render: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+    ) -> NodeId {
+        crate::declarative::render_root(
+            self.ui,
+            self.app,
+            self.services,
+            self.window,
+            self.bounds,
+            root_name,
+            render,
+        )
+    }
+
+    pub fn render_dismissible_root_with_hooks(
+        self,
+        root_name: &str,
+        render: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+    ) -> NodeId {
+        crate::declarative::render_dismissible_root_with_hooks(
+            self.ui,
+            self.app,
+            self.services,
+            self.window,
+            self.bounds,
+            root_name,
+            render,
+        )
+    }
+}
+
 pub(crate) fn with_window_frame<H: UiHost, R>(
     app: &mut H,
     window: AppWindowId,
@@ -48,8 +106,10 @@ pub fn render_root<H: UiHost>(
     render: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
 ) -> NodeId {
     let frame_id = app.frame_id();
+    let focused = ui.focus();
 
     let children = crate::elements::with_element_cx(app, window, bounds, root_name, |cx| {
+        cx.sync_focused_element_from_focused_node(focused);
         cx.dismissible_clear_on_dismiss_request();
         render(cx)
     });
@@ -174,8 +234,10 @@ fn render_dismissible_root_impl<H: UiHost, F: FnOnce(&mut ElementCx<'_, H>) -> V
     render: F,
 ) -> NodeId {
     let frame_id = app.frame_id();
+    let focused = ui.focus();
 
     let children = crate::elements::with_element_cx(app, window, bounds, root_name, |cx| {
+        cx.sync_focused_element_from_focused_node(focused);
         cx.dismissible_clear_on_dismiss_request();
         render(cx)
     });

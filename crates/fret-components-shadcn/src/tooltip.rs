@@ -145,10 +145,34 @@ impl Tooltip {
         let content_id = content.id;
 
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
+            #[derive(Debug, Default, Clone, Copy)]
+            struct FocusEdgeState {
+                was_focused: bool,
+            }
+
             let frame = cx.app.frame_id();
-            let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
+            let focused = cx.is_focused_element(trigger_id);
+            let (open_delay_ticks, close_delay_ticks) =
+                cx.with_state(FocusEdgeState::default, |st| {
+                    let was = st.was_focused;
+                    st.was_focused = focused;
+
+                    // shadcn/Radix behavior: focus opens immediately, blur closes immediately.
+                    let open = if focused { 0 } else { open_delay_frames as u64 };
+                    let close = if was && !focused {
+                        0
+                    } else if focused {
+                        0
+                    } else {
+                        close_delay_frames as u64
+                    };
+
+                    (open, close)
+                });
+
+            let cfg = HoverIntentConfig::new(open_delay_ticks, close_delay_ticks);
             let update = cx.with_state(HoverIntentState::default, |state| {
-                state.update(hovered, frame.0, cfg)
+                state.update(hovered || focused, frame.0, cfg)
             });
 
             scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
@@ -311,5 +335,178 @@ impl TooltipContent {
         props.shadow = Some(decl_style::shadow_sm(&theme, radius));
         let children = self.children;
         cx.container(props, move |_cx| children)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
+        Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService, TextBlobId,
+        TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
+    };
+    use fret_runtime::FrameId;
+    use fret_ui::element::{
+        ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, TextProps,
+    };
+    use fret_ui::tree::UiTree;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &CoreTextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: CoreSize::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    fn render_tooltip_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) {
+        OverlayController::begin_frame(app, window);
+
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        a11y: PressableA11y {
+                            role: Some(SemanticsRole::Button),
+                            label: Some(Arc::from("trigger")),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    |cx, _st, id| {
+                        trigger_id_out.set(Some(id));
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let content = TooltipContent::new(vec![cx.text_props(TextProps::new("tip"))])
+                    .into_element(cx);
+                content_id_out.set(Some(content.id));
+
+                vec![
+                    Tooltip::new(trigger, content)
+                        .open_delay_frames(30)
+                        .close_delay_frames(30)
+                        .into_element(cx),
+                ]
+            });
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+    }
+
+    #[test]
+    fn tooltip_opens_on_keyboard_focus_without_hover() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        // Frame 1: establish element->node mappings.
+        app.set_frame_id(FrameId(1));
+        render_tooltip_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_element = trigger_id.get().expect("trigger element id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger node");
+        ui.set_focus(Some(trigger_node));
+
+        // Frame 2: focus should cause the tooltip overlay to be requested and mounted.
+        app.set_frame_id(FrameId(2));
+        render_tooltip_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_element = content_id.get().expect("content element id");
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element);
+        assert!(
+            content_node.is_some(),
+            "expected tooltip content to be mounted when focused"
+        );
     }
 }

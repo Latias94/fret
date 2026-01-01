@@ -1,6 +1,91 @@
 use super::*;
 
 #[test]
+fn pressable_state_reports_focused_when_focused() {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let focused = Rc::new(Cell::new(false));
+    let pressable_element_id: Rc<Cell<Option<crate::elements::GlobalElementId>>> =
+        Rc::new(Cell::new(None));
+
+    fn render_frame(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        focused_out: Rc<Cell<bool>>,
+        pressable_id_out: Rc<Cell<Option<crate::elements::GlobalElementId>>>,
+    ) -> NodeId {
+        render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "pressable-state-reports-focused",
+            move |cx| {
+                let focused_out = focused_out.clone();
+                let pressable_id_out = pressable_id_out.clone();
+                vec![cx.pressable_with_id(
+                    crate::element::PressableProps::default(),
+                    move |cx, st, id| {
+                        pressable_id_out.set(Some(id));
+                        focused_out.set(st.focused);
+                        vec![cx.text("pressable")]
+                    },
+                )]
+            },
+        )
+    }
+
+    // First frame: render once to establish stable identity + node mapping.
+    let root = render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        focused.clone(),
+        pressable_element_id.clone(),
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(focused.get(), false);
+
+    let pressable_element = pressable_element_id.get().expect("pressable element id");
+    let pressable_node = crate::elements::node_for_element(&mut app, window, pressable_element)
+        .expect("pressable node");
+    ui.set_focus(Some(pressable_node));
+
+    // Second frame: the authoring context should observe the focused element.
+    app.advance_frame();
+    let root = render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        focused.clone(),
+        pressable_element_id.clone(),
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(focused.get(), true);
+}
+
+#[test]
 fn declarative_pointer_region_can_capture_and_receive_move_up() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

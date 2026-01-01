@@ -51,10 +51,12 @@ impl ImeSmokeDriver {
         input_multi: Model<String>,
         last_ime: Model<Arc<str>>,
     ) {
-        let root = declarative::render_root(ui, app, services, window, bounds, "ime-smoke", |cx| {
-            cx.observe_model(&input_single, Invalidation::Layout);
-            cx.observe_model(&input_multi, Invalidation::Layout);
-            cx.observe_model(&last_ime, Invalidation::Paint);
+        let root = declarative::RenderRootCx::new(ui, app, services, window, bounds).render_root(
+            "ime-smoke",
+            |cx| {
+             cx.observe_model(&input_single, Invalidation::Layout);
+             cx.observe_model(&input_multi, Invalidation::Layout);
+             cx.observe_model(&last_ime, Invalidation::Paint);
 
             let theme = Theme::global(&*cx.app).clone();
 
@@ -107,7 +109,8 @@ impl ImeSmokeDriver {
                     )]
                 },
             )]
-        });
+            },
+        );
 
         ui.set_root(root);
     }
@@ -208,10 +211,10 @@ impl WinitDriver for ImeSmokeDriver {
         state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);
         scene.clear();
-        state.ui.layout_all(app, services, bounds, scale_factor);
-        state
-            .ui
-            .paint_all(app, services, bounds, scene, scale_factor);
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+        frame.layout_all();
+        frame.paint_all(scene);
     }
 
     fn window_create_spec(

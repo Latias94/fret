@@ -10,6 +10,7 @@ use fret_ui::{ElementCx, TextInputStyle, Theme, UiHost};
 pub struct Input {
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
+    placeholder: Option<Arc<str>>,
     active_descendant: Option<NodeId>,
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
@@ -20,6 +21,7 @@ impl Input {
         Self {
             model,
             a11y_label: None,
+            placeholder: None,
             active_descendant: None,
             submit_command: None,
             cancel_command: None,
@@ -28,6 +30,11 @@ impl Input {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
         self
     }
 
@@ -51,6 +58,7 @@ impl Input {
             cx,
             self.model,
             self.a11y_label,
+            self.placeholder,
             self.active_descendant,
             self.submit_command,
             self.cancel_command,
@@ -62,6 +70,7 @@ pub fn input<H: UiHost>(
     cx: &mut ElementCx<'_, H>,
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
+    placeholder: Option<Arc<str>>,
     active_descendant: Option<NodeId>,
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
@@ -98,6 +107,7 @@ pub fn input<H: UiHost>(
 
     let mut props = TextInputProps::new(model);
     props.a11y_label = a11y_label;
+    props.placeholder = placeholder;
     props.active_descendant = active_descendant;
     props.submit_command = submit_command;
     props.cancel_command = cancel_command;

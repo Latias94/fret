@@ -8,17 +8,21 @@ use fret_core::{
     TextStyle,
 };
 use fret_runtime::{Effect, PlatformCapabilities};
+use std::sync::Arc;
 
 #[derive(Default)]
-struct FakeTextService {}
+struct FakeTextService {
+    prepared: Vec<String>,
+}
 
 impl TextService for FakeTextService {
     fn prepare(
         &mut self,
-        _text: &str,
+        text: &str,
         _style: &TextStyle,
         _constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
+        self.prepared.push(text.to_string());
         (
             fret_core::TextBlobId::default(),
             TextMetrics {
@@ -129,6 +133,48 @@ fn text_input_hover_sets_text_cursor_effect() {
     );
 }
 
+#[test]
+fn text_input_renders_placeholder_when_empty() {
+    let window = AppWindowId::default();
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut input = TextInput::new();
+    input.set_placeholder(Some(Arc::from("Search…")));
+    let root = ui.create_node(input);
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut text = FakeTextService::default();
+    let mut scene = fret_core::Scene::default();
+
+    let _ = ui.layout(
+        &mut app,
+        &mut text,
+        root,
+        Size::new(Px(200.0), Px(40.0)),
+        1.0,
+    );
+
+    ui.paint(
+        &mut app,
+        &mut text,
+        root,
+        Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(40.0)),
+        ),
+        &mut scene,
+        1.0,
+    );
+
+    assert!(
+        text.prepared.iter().any(|t| t == "Search…"),
+        "expected placeholder to be prepared as text"
+    );
+}
 #[test]
 fn ime_commit_replaces_original_selection_after_preedit_starts() {
     let window = AppWindowId::default();

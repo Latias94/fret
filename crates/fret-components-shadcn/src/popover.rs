@@ -123,6 +123,15 @@ impl Popover {
         trigger: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
         content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
     ) -> AnyElement {
+        self.into_element_with_anchor(cx, trigger, move |cx, _anchor| content(cx))
+    }
+
+    pub fn into_element_with_anchor<H: UiHost>(
+        self,
+        cx: &mut ElementCx<'_, H>,
+        trigger: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
+        content: impl FnOnce(&mut ElementCx<'_, H>, fret_core::Rect) -> AnyElement,
+    ) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
@@ -146,13 +155,14 @@ impl Popover {
                 });
 
                 let opacity = presence.opacity;
-                let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
+                let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                     let anchor = overlay::anchor_bounds_for_element(cx, trigger_id);
                     let Some(anchor) = anchor else {
                         return Vec::new();
                     };
+                    let anchor_raw = anchor;
 
-                    let content = content(cx);
+                    let content = content(cx, anchor_raw);
                     let content_id = content.id;
 
                     let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);

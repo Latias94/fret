@@ -7,7 +7,7 @@ mod prelude;
 mod taffy_layout;
 pub(crate) use frame::{ElementInstance, element_record_for_node};
 pub(crate) use mount::with_window_frame;
-pub use mount::{render_dismissible_root_with_hooks, render_root};
+pub use mount::{RenderRootCx, render_dismissible_root_with_hooks, render_root};
 
 #[cfg(test)]
 mod tests;

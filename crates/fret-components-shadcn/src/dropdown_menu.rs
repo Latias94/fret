@@ -563,7 +563,10 @@ impl DropdownMenu {
                                                                         } else {
                                                                             fg
                                                                         };
-                                                                        if st.hovered || st.pressed {
+                                                                        if st.hovered
+                                                                            || st.pressed
+                                                                            || st.focused
+                                                                        {
                                                                             row_bg = accent;
                                                                             row_fg = accent_fg;
                                                                         }
