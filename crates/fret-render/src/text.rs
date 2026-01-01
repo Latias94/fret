@@ -383,6 +383,36 @@ fn subpixel_mask_to_alpha(data: &[u8]) -> Vec<u8> {
     out
 }
 
+fn collect_font_names(db: &cosmic_text::fontdb::Database) -> Vec<String> {
+    let mut by_lower: HashMap<String, String> = HashMap::new();
+
+    for face in db.faces() {
+        for (family, _lang) in &face.families {
+            let key = family.to_ascii_lowercase();
+            by_lower.entry(key).or_insert_with(|| family.clone());
+        }
+    }
+
+    for family in [
+        db.family_name(&Family::SansSerif),
+        db.family_name(&Family::Serif),
+        db.family_name(&Family::Monospace),
+    ] {
+        let key = family.to_ascii_lowercase();
+        by_lower
+            .entry(key)
+            .or_insert_with(|| family.to_string());
+    }
+
+    let mut names: Vec<String> = by_lower.into_values().collect();
+    names.sort_unstable_by(|a, b| {
+        a.to_ascii_lowercase()
+            .cmp(&b.to_ascii_lowercase())
+            .then(a.cmp(b))
+    });
+    names
+}
+
 pub struct TextSystem {
     font_system: FontSystem,
     swash_cache: SwashCache,
@@ -424,6 +454,38 @@ pub struct TextFontFamilyConfig {
 }
 
 impl TextSystem {
+    /// Returns a sorted list of available font family names.
+    ///
+    /// This is intended for settings/UI pickers. The result is best-effort and platform-dependent.
+    pub fn all_font_names(&self) -> Vec<String> {
+        collect_font_names(self.font_system.db())
+    }
+
+    /// Adds font bytes (TTF/OTF/TTC) to the font database.
+    ///
+    /// Returns the number of newly loaded faces. When this returns non-zero, all cached text blobs
+    /// and atlas entries are cleared to avoid reusing stale shaping/rasterization results.
+    pub fn add_fonts(&mut self, fonts: impl IntoIterator<Item = Vec<u8>>) -> usize {
+        let before_faces = self.font_system.db().faces().count();
+        for data in fonts {
+            self.font_system.db_mut().load_font_data(data);
+        }
+        let after_faces = self.font_system.db().faces().count();
+        let added = after_faces.saturating_sub(before_faces);
+
+        if added > 0 {
+            self.font_stack_key =
+                font_stack_cache_key(self.font_system.locale(), self.font_system.db());
+            self.blobs.clear();
+            self.blob_cache.clear();
+            self.blob_key_by_id.clear();
+            self.mask_atlas.reset();
+            self.color_atlas.reset();
+        }
+
+        added
+    }
+
     pub fn new(device: &wgpu::Device) -> Self {
         let atlas_width = 2048;
         let atlas_height = 2048;
@@ -1429,7 +1491,7 @@ fn selection_rects_from_lines(lines: &[TextLine], range: (usize, usize), out: &m
 
 #[cfg(test)]
 mod tests {
-    use super::{TextBlobKey, layout_text, subpixel_mask_to_alpha};
+    use super::{TextBlobKey, collect_font_names, layout_text, subpixel_mask_to_alpha};
     use cosmic_text::{Attrs, Family};
     use fret_core::{FontWeight, Px, TextConstraints, TextOverflow, TextStyle, TextWrap};
 
@@ -1440,6 +1502,45 @@ mod tests {
             1u8, 200u8, 2u8, 0u8,
         ];
         assert_eq!(subpixel_mask_to_alpha(&data), vec![10u8, 200u8]);
+    }
+
+    #[test]
+    fn all_font_names_is_sorted_and_deduped() {
+        // This is intentionally platform-dependent; we only assert structural invariants.
+        let (locale, db) = cosmic_text::FontSystem::new().into_locale_and_db();
+        let _ = locale;
+
+        let names = collect_font_names(&db);
+
+        assert!(
+            names.iter().any(|n| n == db.family_name(&Family::SansSerif)),
+            "expected sans-serif generic family to be present"
+        );
+        assert!(
+            names.iter().any(|n| n == db.family_name(&Family::Serif)),
+            "expected serif generic family to be present"
+        );
+        assert!(
+            names
+                .iter()
+                .any(|n| n == db.family_name(&Family::Monospace)),
+            "expected monospace generic family to be present"
+        );
+
+        let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+        for name in &names {
+            assert!(
+                seen.insert(name.to_ascii_lowercase()),
+                "expected case-insensitive dedupe for {name:?}"
+            );
+        }
+
+        for w in names.windows(2) {
+            assert!(
+                w[0].to_ascii_lowercase() <= w[1].to_ascii_lowercase(),
+                "expected case-insensitive sort"
+            );
+        }
     }
 
     #[test]

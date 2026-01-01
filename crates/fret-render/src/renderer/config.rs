@@ -142,6 +142,18 @@ impl Renderer {
         self.text_system.set_font_families(config)
     }
 
+    /// Returns a sorted list of available font family names (best-effort).
+    pub fn all_font_names(&self) -> Vec<String> {
+        self.text_system.all_font_names()
+    }
+
+    /// Adds font bytes (TTF/OTF/TTC) to the renderer text system.
+    ///
+    /// Returns the number of newly loaded faces.
+    pub fn add_fonts(&mut self, fonts: impl IntoIterator<Item = Vec<u8>>) -> usize {
+        self.text_system.add_fonts(fonts)
+    }
+
     pub(super) fn effective_path_msaa_samples(&self, format: wgpu::TextureFormat) -> u32 {
         let requested = self.path_msaa_samples.max(1);
         if requested == 1 {
