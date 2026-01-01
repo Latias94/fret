@@ -26,10 +26,8 @@ impl<H: UiHost> UiTree<H> {
             focus_is_text_input: self.focus_is_text_input(),
             dispatch_phase: InputDispatchPhase::Normal,
         };
-
-        if self.dispatch_focus_traversal(app, command, &active_layers, barrier_root, base_root) {
-            return true;
-        }
+        let is_focus_traversal_command =
+            matches!(command.as_str(), "focus.next" | "focus.previous");
 
         if self
             .focus
@@ -46,18 +44,22 @@ impl<H: UiHost> UiTree<H> {
 
         let mut handled = false;
         let mut needs_redraw = false;
+        let mut stopped = false;
 
         loop {
-            let (did_handle, invalidations, requested_focus, stop_propagation, parent) = self
+            let (did_handle, invalidations, requested_focus, stop_bubbling, parent) = self
                 .with_widget_mut(node_id, |widget, tree| {
                     let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                    let window = tree.window;
+                    let focus = tree.focus;
                     let mut cx = CommandCx {
                         app,
                         services: &mut *services,
+                        tree,
                         node: node_id,
-                        window: tree.window,
+                        window,
                         input_ctx: input_ctx.clone(),
-                        focus: tree.focus,
+                        focus,
                         invalidations: Vec::new(),
                         requested_focus: None,
                         stop_propagation: false,
@@ -94,7 +96,11 @@ impl<H: UiHost> UiTree<H> {
                 self.mark_invalidation(focus, Invalidation::Paint);
             }
 
-            if did_handle || stop_propagation {
+            if did_handle {
+                break;
+            }
+            if stop_bubbling {
+                stopped = true;
                 break;
             }
 
@@ -102,6 +108,17 @@ impl<H: UiHost> UiTree<H> {
                 Some(parent) => parent,
                 None => break,
             };
+        }
+
+        if !handled && !stopped && is_focus_traversal_command {
+            handled = self.dispatch_focus_traversal(
+                app,
+                command,
+                &active_layers,
+                barrier_root,
+                base_root,
+            );
+            needs_redraw = true;
         }
 
         if needs_redraw && let Some(window) = self.window {

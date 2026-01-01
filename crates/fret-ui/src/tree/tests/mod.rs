@@ -198,6 +198,7 @@ impl<H: UiHost> Widget<H> for ClickCounter {
     }
 }
 
+mod focus_scope;
 mod globals;
 mod hit_test;
 mod models;

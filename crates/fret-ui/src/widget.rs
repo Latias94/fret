@@ -84,6 +84,7 @@ impl<'a, H: UiHost> EventCx<'a, H> {
 pub struct CommandCx<'a, H: UiHost> {
     pub app: &'a mut H,
     pub services: &'a mut dyn UiServices,
+    pub tree: &'a mut crate::tree::UiTree<H>,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
     pub input_ctx: InputContext,

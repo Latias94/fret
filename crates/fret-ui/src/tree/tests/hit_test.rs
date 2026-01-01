@@ -356,3 +356,214 @@ fn overlay_render_transform_affects_hit_testing_and_event_coordinates() {
 
     assert_eq!(app.models().get_copied(&underlay_clicks), Some(1));
 }
+
+#[test]
+fn modal_barrier_blocks_underlay_pointer_events_even_when_modal_root_is_pointer_transparent() {
+    struct CountDown {
+        down: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for CountDown {
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.down, |v: &mut u32| *v += 1);
+                cx.stop_propagation();
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    struct PointerTransparentModalRoot {
+        down: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for PointerTransparentModalRoot {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.down, |v: &mut u32| *v += 1);
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let underlay_down = app.models_mut().insert(0u32);
+    let modal_down = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(CountDown {
+        down: underlay_down.clone(),
+    });
+    ui.set_root(base);
+
+    let modal_root = ui.create_node(PointerTransparentModalRoot {
+        down: modal_down.clone(),
+    });
+    ui.push_overlay_root(modal_root, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+        }),
+    );
+
+    assert_eq!(
+        app.models().get_copied(&underlay_down),
+        Some(0),
+        "expected modal barrier to keep underlay inert"
+    );
+    assert_eq!(
+        app.models().get_copied(&modal_down),
+        Some(1),
+        "expected modal root to receive the event even when hit-test is pointer transparent"
+    );
+}
+
+#[test]
+fn hit_test_respects_nested_rounded_overflow_clips_under_rotation() {
+    struct RootLayout;
+
+    impl<H: UiHost> Widget<H> for RootLayout {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let Some(&child) = cx.children.first() else {
+                return cx.available;
+            };
+            let child_bounds =
+                Rect::new(Point::new(Px(40.0), Px(0.0)), Size::new(Px(40.0), Px(40.0)));
+            let _ = cx.layout_in(child, child_bounds);
+            cx.available
+        }
+    }
+
+    struct OuterClip {
+        center: Point,
+        transform: Transform2D,
+    }
+
+    impl<H: UiHost> Widget<H> for OuterClip {
+        fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+            Some(self.transform)
+        }
+
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn clips_hit_test(&self, _bounds: Rect) -> bool {
+            true
+        }
+
+        fn clip_hit_test_corner_radii(&self, _bounds: Rect) -> Option<Corners> {
+            Some(Corners::all(Px(18.0)))
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let Some(&child) = cx.children.first() else {
+                return cx.available;
+            };
+            let child_bounds = Rect::new(
+                Point::new(Px(self.center.x.0 - 10.0), Px(self.center.y.0 - 10.0)),
+                Size::new(Px(20.0), Px(20.0)),
+            );
+            let _ = cx.layout_in(child, child_bounds);
+            cx.available
+        }
+    }
+
+    struct InnerClip;
+
+    impl<H: UiHost> Widget<H> for InnerClip {
+        fn clips_hit_test(&self, _bounds: Rect) -> bool {
+            true
+        }
+
+        fn clip_hit_test_corner_radii(&self, _bounds: Rect) -> Option<Corners> {
+            Some(Corners::all(Px(10.0)))
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            for &child in cx.children {
+                let _ = cx.layout_in(child, cx.bounds);
+            }
+            cx.available
+        }
+    }
+
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(RootLayout);
+    ui.set_root(root);
+
+    let center = Point::new(Px(60.0), Px(20.0));
+    let outer_t = Transform2D::rotation_about_degrees(45.0, center);
+
+    let outer = ui.create_node(OuterClip {
+        center,
+        transform: outer_t,
+    });
+    ui.add_child(root, outer);
+
+    let inner = ui.create_node(InnerClip);
+    ui.add_child(outer, inner);
+
+    let leaf = ui.create_node(TestStack);
+    ui.add_child(inner, leaf);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let inner_origin = Point::new(Px(50.0), Px(10.0));
+    let outside_local = Point::new(Px(inner_origin.x.0 + 1.0), Px(inner_origin.y.0 + 1.0));
+    let outside_window = outer_t.apply_point(outside_local);
+
+    assert_eq!(
+        ui.hit_test(root, outside_window),
+        None,
+        "expected nested rounded clip to reject corner point under rotation"
+    );
+
+    let inside_local = Point::new(Px(inner_origin.x.0 + 15.0), Px(inner_origin.y.0 + 15.0));
+    let inside_window = outer_t.apply_point(inside_local);
+    assert_eq!(ui.hit_test(root, inside_window), Some(leaf));
+}

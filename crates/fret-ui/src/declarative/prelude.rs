@@ -4,9 +4,9 @@ pub(super) use crate::UiHost;
 pub(super) use crate::action;
 pub(super) use crate::action::{ActivateReason, DismissReason, KeyDownCx};
 pub(super) use crate::element::{
-    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, HoverRegionProps, LayoutStyle,
-    Length, MainAlign, Overflow, PointerRegionProps, PressableProps, SpacerProps, SpinnerProps,
-    StackProps, TextProps, VisualTransformProps,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, FocusScopeProps,
+    HoverRegionProps, LayoutStyle, Length, MainAlign, Overflow, PointerRegionProps, PressableProps,
+    SpacerProps, SpinnerProps, StackProps, TextProps, VisualTransformProps,
 };
 pub(super) use crate::elements::{ElementCx, GlobalElementId, NodeEntry};
 pub(super) use crate::text_input::BoundTextInput;

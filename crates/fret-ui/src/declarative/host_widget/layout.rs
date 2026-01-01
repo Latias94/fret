@@ -37,6 +37,7 @@ impl ElementHostWidget {
             ElementInstance::Pressable(p) => p.enabled,
             ElementInstance::PointerRegion(p) => p.enabled,
             ElementInstance::Semantics(_) => false,
+            ElementInstance::FocusScope(_) => false,
             ElementInstance::DismissibleLayer(_) => false,
             ElementInstance::Opacity(_) => false,
             ElementInstance::VisualTransform(_) => false,
@@ -47,6 +48,7 @@ impl ElementHostWidget {
             ElementInstance::Pressable(p) => p.enabled,
             ElementInstance::PointerRegion(_) => true,
             ElementInstance::Semantics(_) => true,
+            ElementInstance::FocusScope(_) => true,
             ElementInstance::DismissibleLayer(_) => true,
             ElementInstance::VisualTransform(_) => true,
             ElementInstance::Spinner(_) => false,
@@ -68,6 +70,7 @@ impl ElementHostWidget {
         self.clips_hit_test = match &instance {
             ElementInstance::Container(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Semantics(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::FocusScope(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Opacity(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::VisualTransform(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Pressable(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -197,6 +200,29 @@ impl ElementHostWidget {
                 desired
             }
             ElementInstance::Semantics(props) => {
+                // Probe within the available height budget so measurement passes do not observe an
+                // artificially "infinite" viewport (important for scroll/virtualized children).
+                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let mut max_child = Size::new(Px(0.0), Px(0.0));
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    if layout_style.position == crate::element::PositionStyle::Absolute {
+                        continue;
+                    }
+                    let child_size = cx.layout_in(child, probe_bounds);
+                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
+                }
+
+                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let base = Rect::new(cx.bounds.origin, desired);
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
+                }
+                desired
+            }
+            ElementInstance::FocusScope(props) => {
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
                 let probe_bounds = Rect::new(cx.bounds.origin, cx.available);

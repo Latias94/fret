@@ -356,6 +356,32 @@ impl<'a, H: UiHost> ElementCx<'a, H> {
     }
 
     #[track_caller]
+    pub fn focus_scope(
+        &mut self,
+        props: crate::element::FocusScopeProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::FocusScope(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn focus_scope_with_id(
+        &mut self,
+        props: crate::element::FocusScopeProps,
+        f: impl FnOnce(&mut Self, GlobalElementId) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx, id);
+            AnyElement::new(id, ElementKind::FocusScope(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn semantics_with_id(
         &mut self,
         props: crate::element::SemanticsProps,

@@ -30,6 +30,7 @@ impl AnyElement {
 pub enum ElementKind {
     Container(ContainerProps),
     Semantics(SemanticsProps),
+    FocusScope(FocusScopeProps),
     Opacity(OpacityProps),
     VisualTransform(VisualTransformProps),
     Pressable(PressableProps),
@@ -270,6 +271,26 @@ impl Default for SemanticsProps {
             expanded: None,
             checked: None,
             active_descendant: None,
+        }
+    }
+}
+
+/// A transparent focus-scope wrapper that can trap focus traversal within its subtree.
+///
+/// This is a small, mechanism-oriented primitive intended to support component-owned focus scopes
+/// (ADR 0068). It does not imply modal barriers or pointer blocking; it only affects `focus.next`
+/// / `focus.previous` command routing when focus is inside the subtree.
+#[derive(Debug, Clone, Copy)]
+pub struct FocusScopeProps {
+    pub layout: LayoutStyle,
+    pub trap_focus: bool,
+}
+
+impl Default for FocusScopeProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            trap_focus: false,
         }
     }
 }

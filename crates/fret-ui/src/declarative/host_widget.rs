@@ -4,6 +4,8 @@ use super::frame::layout_style_for_node;
 use super::layout_helpers::clamp_to_constraints;
 use super::prelude::*;
 use super::taffy_layout::*;
+use crate::widget::CommandCx;
+use fret_runtime::CommandId;
 
 mod event;
 mod layout;
@@ -408,6 +410,34 @@ impl ElementHostWidget {
 }
 
 impl<H: UiHost> Widget<H> for ElementHostWidget {
+    fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
+        let Some(window) = cx.window else {
+            return false;
+        };
+        let Some(instance) = self.instance(cx.app, window, cx.node) else {
+            return false;
+        };
+
+        match instance {
+            ElementInstance::FocusScope(props) if props.trap_focus => {
+                let forward = match command.as_str() {
+                    "focus.next" => Some(true),
+                    "focus.previous" => Some(false),
+                    _ => None,
+                };
+                let Some(forward) = forward else {
+                    return false;
+                };
+
+                cx.tree
+                    .focus_traverse_in_roots(cx.app, &[cx.node], forward, Some(cx.node));
+                cx.stop_propagation();
+                true
+            }
+            _ => false,
+        }
+    }
+
     fn clips_hit_test(&self, _bounds: Rect) -> bool {
         self.clips_hit_test
     }

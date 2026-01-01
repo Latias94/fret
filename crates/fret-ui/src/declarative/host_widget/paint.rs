@@ -60,6 +60,13 @@ impl ElementHostWidget {
                     None,
                 );
             }
+            ElementInstance::FocusScope(props) => {
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+            }
             ElementInstance::Opacity(props) => {
                 let opacity = props.opacity.clamp(0.0, 1.0);
                 if opacity <= 0.0 {
