@@ -11,16 +11,14 @@ use fret_core::{
     geometry::Px,
 };
 use fret_runner_winit_wgpu::{
-    RunnerUserEvent, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
-    WinitRenderContext, WinitRunner, WinitRunnerConfig, WinitWindowContext,
+    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
+    WinitRunnerConfig, WinitWindowContext, run_app,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::{Theme, UiTree};
 use std::sync::Arc;
-use winit::event_loop::EventLoop;
-
 struct DemoDockPanelRegistry;
 
 impl DockPanelRegistry<App> for DemoDockPanelRegistry {
@@ -400,9 +398,6 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let event_loop = EventLoop::<RunnerUserEvent>::with_user_event()
-        .build()
-        .context("create winit event loop")?;
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
     app.with_global_mut(IconRegistry::default, |icons, _app| {
@@ -431,8 +426,5 @@ pub fn run() -> anyhow::Result<()> {
     }
 
     let driver = DockingDemoDriver::default();
-    let mut runner = WinitRunner::new_app(config, app, driver);
-    runner.set_event_loop_proxy(event_loop.create_proxy());
-    event_loop.run_app(&mut runner)?;
-    Ok(())
+    run_app(config, app, driver).map_err(anyhow::Error::from)
 }

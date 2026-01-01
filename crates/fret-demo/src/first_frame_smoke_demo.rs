@@ -1,11 +1,8 @@
-use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
-use fret_core::{AppWindowId, Corners, Edges, Px, Rect, Scene, SceneOp, Size, UiServices};
+use fret_core::{AppWindowId, Corners, Edges, Px, Rect, SceneOp, Size};
 use fret_runner_winit_wgpu::{
-    RunnerUserEvent, WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext,
-    WinitRunner, WinitRunnerConfig,
+    WindowCreateSpec, WinitAppBuilder, WinitAppDriver, WinitEventContext, WinitRenderContext,
 };
-use winit::event_loop::EventLoop;
 
 #[derive(Default)]
 struct FirstFrameSmokeDriver;
@@ -25,7 +22,12 @@ impl WinitAppDriver for FirstFrameSmokeDriver {
         }
     }
 
-    fn handle_event(&mut self, _context: WinitEventContext<'_, Self::WindowState>, _event: &fret_core::Event) {}
+    fn handle_event(
+        &mut self,
+        _context: WinitEventContext<'_, Self::WindowState>,
+        _event: &fret_core::Event,
+    ) {
+    }
 
     fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
         let WinitRenderContext {
@@ -88,21 +90,11 @@ impl WinitAppDriver for FirstFrameSmokeDriver {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    let event_loop = EventLoop::<RunnerUserEvent>::with_user_event().build()?;
-
-    let config = WinitRunnerConfig {
-        main_window_title: "first_frame_smoke_demo".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(520.0, 200.0),
-        ..WinitRunnerConfig::default()
-    };
-
-    let app = App::new();
-    let driver = FirstFrameSmokeDriver::default();
-    let mut runner = WinitRunner::new_app(config, app, driver);
-
-    event_loop
-        .run_app(&mut runner)
-        .context("winit run_app failed")?;
-
-    Ok(())
+    WinitAppBuilder::new(App::new(), FirstFrameSmokeDriver::default())
+        .configure(|config| {
+            config.main_window_title = "first_frame_smoke_demo".to_string();
+            config.main_window_size = winit::dpi::LogicalSize::new(520.0, 200.0);
+        })
+        .run()
+        .map_err(anyhow::Error::from)
 }

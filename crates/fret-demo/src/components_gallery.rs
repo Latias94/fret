@@ -7,11 +7,11 @@ use fret_components_ui::OverlayController;
 use fret_components_ui::tree::{TreeItem, TreeItemId, TreeState};
 use fret_core::{
     AppWindowId, Corners, Edges, Event, FileDialogFilter, FileDialogOptions, FileDialogToken,
-    FontId, KeyCode, Px, Rect, Scene, SemanticsRole, TextStyle, UiServices,
+    FontId, KeyCode, Px, Rect, SemanticsRole, TextStyle, UiServices,
 };
 use fret_runner_winit_wgpu::{
-    RunnerUserEvent, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
-    WinitRenderContext, WinitRunner, WinitRunnerConfig, WinitWindowContext,
+    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
+    WinitRunnerConfig, WinitWindowContext, run_app,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
@@ -21,8 +21,6 @@ use fret_ui::element::{
 use fret_ui::{Invalidation, Theme, UiTree};
 use std::collections::HashSet;
 use std::sync::Arc;
-use winit::event_loop::EventLoop;
-
 struct ComponentsGalleryWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
@@ -1549,9 +1547,6 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let event_loop = EventLoop::<RunnerUserEvent>::with_user_event()
-        .build()
-        .context("create winit event loop")?;
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
     app.with_global_mut(IconRegistry::default, |icons, _app| {
@@ -1574,8 +1569,5 @@ pub fn run() -> anyhow::Result<()> {
     }
 
     let driver = ComponentsGalleryDriver;
-    let mut runner = WinitRunner::new_app(config, app, driver);
-    runner.set_event_loop_proxy(event_loop.create_proxy());
-    event_loop.run_app(&mut runner)?;
-    Ok(())
+    run_app(config, app, driver).map_err(anyhow::Error::from)
 }

@@ -14,8 +14,8 @@ use fret_core::{
     ViewportInputEvent, geometry::Px,
 };
 use fret_runner_winit_wgpu::{
-    RunnerUserEvent, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
-    WinitRenderContext, WinitRunner, WinitRunnerConfig, WinitWindowContext,
+    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
+    WinitRunnerConfig, WinitWindowContext, run_app,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
@@ -23,8 +23,6 @@ use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::{Invalidation, UiTree};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use winit::event_loop::EventLoop;
-
 #[derive(Clone)]
 struct DockingArbitrationPanelModels {
     popover_open: Model<bool>,
@@ -815,9 +813,6 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let event_loop = EventLoop::<RunnerUserEvent>::with_user_event()
-        .build()
-        .context("create winit event loop")?;
     let mut app = App::new();
     let mut caps = PlatformCapabilities::default();
     if std::env::var("FRET_SINGLE_WINDOW")
@@ -862,8 +857,5 @@ pub fn run() -> anyhow::Result<()> {
             });
 
     let driver = DockingArbitrationDriver::new(pending_layout);
-    let mut runner = WinitRunner::new_app(config, app, driver);
-    runner.set_event_loop_proxy(event_loop.create_proxy());
-    event_loop.run_app(&mut runner)?;
-    Ok(())
+    run_app(config, app, driver).map_err(anyhow::Error::from)
 }

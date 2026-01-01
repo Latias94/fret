@@ -1,10 +1,10 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect};
 use fret_components_shadcn as shadcn;
-use fret_core::{AppWindowId, Event, Px, Rect, Scene, UiServices};
+use fret_core::{AppWindowId, Event, Px, Rect, UiServices};
 use fret_runner_winit_wgpu::{
-    RunnerUserEvent, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunner, WinitRunnerConfig, WinitWindowContext,
+    WinitAppBuilder, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
+    WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::{
     BindingV1, KeySpecV1, Keymap, KeymapFileV1, KeymapService, Model, PlatformCapabilities,
@@ -13,10 +13,6 @@ use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign};
 use fret_ui::{Invalidation, Theme, UiTree};
 use std::sync::Arc;
-use winit::event_loop::EventLoop;
-#[cfg(windows)]
-use winit::platform::windows::EventLoopBuilderExtWindows as _;
-
 struct ImeSmokeWindowState {
     ui: UiTree<App>,
     input_single: Model<String>,
@@ -167,11 +163,7 @@ impl WinitAppDriver for ImeSmokeDriver {
         }
     }
 
-    fn handle_event(
-        &mut self,
-        context: WinitEventContext<'_, Self::WindowState>,
-        event: &Event,
-    ) {
+    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
         let WinitEventContext {
             app,
             services,
@@ -255,11 +247,6 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let event_loop = EventLoop::<RunnerUserEvent>::with_user_event()
-        .with_msg_hook(fret_runner_winit_wgpu::runner::ime_msg_hook)
-        .build()
-        .context("create winit event loop")?;
-
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
 
@@ -313,8 +300,9 @@ pub fn run() -> anyhow::Result<()> {
     }
 
     let driver = ImeSmokeDriver::default();
-    let mut runner = WinitRunner::new_app(config, app, driver);
-    runner.set_event_loop_proxy(event_loop.create_proxy());
-    event_loop.run_app(&mut runner)?;
-    Ok(())
+
+    WinitAppBuilder::new(app, driver)
+        .with_config(config)
+        .run()
+        .map_err(anyhow::Error::from)
 }
