@@ -1,0 +1,121 @@
+use super::super::state::{EncodeState, apply_transform_px};
+use super::super::*;
+
+use crate::text::GlyphQuadKind;
+
+pub(in super::super) fn encode_text(
+    renderer: &Renderer,
+    state: &mut EncodeState<'_>,
+    origin: Point,
+    blob_id: fret_core::TextBlobId,
+    color: Color,
+) {
+    state.flush_quad_batch();
+
+    let Some(blob) = renderer.text_system.blob(blob_id) else {
+        return;
+    };
+
+    let group_opacity = state.current_opacity();
+    if group_opacity <= 0.0 || color.a <= 0.0 {
+        return;
+    }
+
+    let t_px = state.current_transform_px();
+
+    let base_x = origin.x.0 * state.scale_factor;
+    let base_y = origin.y.0 * state.scale_factor;
+    let premul = color_to_linear_rgba_premul(EncodeState::color_with_opacity(color, group_opacity));
+
+    let mut active_kind: Option<TextDrawKind> = None;
+    let mut group_first_vertex = state.text_vertices.len() as u32;
+
+    for g in &blob.glyphs {
+        let kind = match g.kind {
+            GlyphQuadKind::Mask => TextDrawKind::Mask,
+            GlyphQuadKind::Color => TextDrawKind::Color,
+        };
+
+        if active_kind != Some(kind) {
+            if let Some(prev) = active_kind {
+                let vertex_count =
+                    (state.text_vertices.len() as u32).saturating_sub(group_first_vertex);
+                if vertex_count > 0 {
+                    state.ordered_draws.push(OrderedDraw::Text(TextDraw {
+                        scissor: state.current_scissor,
+                        uniform_index: state.current_uniform_index,
+                        first_vertex: group_first_vertex,
+                        vertex_count,
+                        kind: prev,
+                    }));
+                }
+            }
+            active_kind = Some(kind);
+            group_first_vertex = state.text_vertices.len() as u32;
+        }
+
+        let vertex_color = match kind {
+            TextDrawKind::Mask => premul,
+            TextDrawKind::Color => [1.0, 1.0, 1.0, premul[3]],
+        };
+
+        let lx0 = base_x + g.rect[0] * state.scale_factor;
+        let ly0 = base_y + g.rect[1] * state.scale_factor;
+        let lx1 = lx0 + g.rect[2] * state.scale_factor;
+        let ly1 = ly0 + g.rect[3] * state.scale_factor;
+        let quad = [
+            apply_transform_px(t_px, lx0, ly0),
+            apply_transform_px(t_px, lx1, ly0),
+            apply_transform_px(t_px, lx1, ly1),
+            apply_transform_px(t_px, lx0, ly1),
+        ];
+
+        let (u0, v0, u1, v1) = (g.uv[0], g.uv[1], g.uv[2], g.uv[3]);
+
+        state.text_vertices.extend_from_slice(&[
+            TextVertex {
+                pos_px: [quad[0].0, quad[0].1],
+                uv: [u0, v0],
+                color: vertex_color,
+            },
+            TextVertex {
+                pos_px: [quad[1].0, quad[1].1],
+                uv: [u1, v0],
+                color: vertex_color,
+            },
+            TextVertex {
+                pos_px: [quad[2].0, quad[2].1],
+                uv: [u1, v1],
+                color: vertex_color,
+            },
+            TextVertex {
+                pos_px: [quad[0].0, quad[0].1],
+                uv: [u0, v0],
+                color: vertex_color,
+            },
+            TextVertex {
+                pos_px: [quad[2].0, quad[2].1],
+                uv: [u1, v1],
+                color: vertex_color,
+            },
+            TextVertex {
+                pos_px: [quad[3].0, quad[3].1],
+                uv: [u0, v1],
+                color: vertex_color,
+            },
+        ]);
+    }
+
+    if let Some(kind) = active_kind {
+        let vertex_count = (state.text_vertices.len() as u32).saturating_sub(group_first_vertex);
+        if vertex_count > 0 {
+            state.ordered_draws.push(OrderedDraw::Text(TextDraw {
+                scissor: state.current_scissor,
+                uniform_index: state.current_uniform_index,
+                first_vertex: group_first_vertex,
+                vertex_count,
+                kind,
+            }));
+        }
+    }
+}
