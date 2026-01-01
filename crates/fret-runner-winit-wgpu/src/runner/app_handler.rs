@@ -934,7 +934,9 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
 
         let drag_poll = self.app.drag().is_some_and(|d| d.cross_window_hover);
         let follow_poll = self.dock_tearoff_follow.is_some();
-        let wants_raf = !self.raf_windows.is_empty() || drag_poll || follow_poll;
+        let wants_poll = drag_poll || follow_poll;
+
+        let wants_raf = !self.raf_windows.is_empty();
         self.raf_windows.clear();
 
         let next = match (next_deadline, wants_raf) {
@@ -944,7 +946,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
             (None, false) => None,
         };
 
-        if drag_poll || follow_poll {
+        if wants_poll {
             event_loop.set_control_flow(ControlFlow::Poll);
         } else if let Some(next) = next {
             event_loop.set_control_flow(ControlFlow::WaitUntil(next));
