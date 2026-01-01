@@ -1,0 +1,64 @@
+use super::*;
+use fret_core::Px;
+use fret_ui::Theme;
+use fret_ui::ThemeConfig;
+
+#[test]
+fn space_falls_back_to_theme_padding_scale() {
+    let mut app = fret_app::App::default();
+
+    let cfg = ThemeConfig {
+        name: "Test".to_string(),
+        metrics: std::collections::HashMap::from([
+            ("metric.padding.sm".to_string(), 12.0),
+            ("metric.padding.md".to_string(), 14.0),
+        ]),
+        ..ThemeConfig::default()
+    };
+    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+
+    let theme = Theme::global(&app);
+    assert_eq!(MetricRef::space(Space::N2).resolve(theme), Px(12.0));
+    assert_eq!(MetricRef::space(Space::N2p5).resolve(theme), Px(14.0));
+    assert_eq!(MetricRef::space(Space::N1).resolve(theme), Px(6.0));
+    assert_eq!(MetricRef::space(Space::N0p5).resolve(theme), Px(3.0));
+    assert_eq!(MetricRef::space(Space::N11).resolve(theme), Px(66.0));
+}
+
+#[test]
+fn space_token_overrides_theme_fallback() {
+    let mut app = fret_app::App::default();
+
+    let cfg = ThemeConfig {
+        name: "Test".to_string(),
+        metrics: std::collections::HashMap::from([
+            ("metric.padding.sm".to_string(), 12.0),
+            ("component.space.2".to_string(), 20.0),
+        ]),
+        ..ThemeConfig::default()
+    };
+    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+
+    let theme = Theme::global(&app);
+    assert_eq!(MetricRef::space(Space::N2).resolve(theme), Px(20.0));
+}
+
+#[test]
+fn radius_falls_back_to_baseline_metric_tokens() {
+    let mut app = fret_app::App::default();
+
+    let cfg = ThemeConfig {
+        name: "Test".to_string(),
+        metrics: std::collections::HashMap::from([
+            ("metric.radius.sm".to_string(), 11.0),
+            ("metric.radius.md".to_string(), 9.0),
+            ("component.radius.md".to_string(), 12.0),
+        ]),
+        ..ThemeConfig::default()
+    };
+    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+
+    let theme = Theme::global(&app);
+    assert_eq!(MetricRef::radius(Radius::Md).resolve(theme), Px(12.0));
+    assert_eq!(MetricRef::radius(Radius::Sm).resolve(theme), Px(11.0));
+}
