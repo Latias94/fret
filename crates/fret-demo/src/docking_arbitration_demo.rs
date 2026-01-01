@@ -325,10 +325,7 @@ impl DockingArbitrationDriver {
             },
         );
 
-        DockingArbitrationWindowState {
-            ui,
-            root: None,
-        }
+        DockingArbitrationWindowState { ui, root: None }
     }
 
     fn ensure_dock_graph(app: &mut App, window: AppWindowId) {

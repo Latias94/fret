@@ -29,6 +29,27 @@ viewport tooling, to avoid late rewrites and accidental behavior drift.
 
 ---
 
+## Driver integration checklist (P0)
+
+These are the most common integration failure modes that cause late rewrites in editor-grade docking.
+
+### Keep the dock host alive
+
+- Always submit a `DockSpace` host for every window that participates in docking.
+- Do not conditionally omit the dock host when a window is "collapsed" or when panels are not currently visible.
+
+### Submit docking early in the per-frame build
+
+- Build the docking host early so it can act as a stable drop target and internal drag route anchor (ADR 0072).
+- Prefer a driver pattern where docking is built before other UI that might participate in hit-testing during drags.
+
+### Bind panel UI roots before layout/paint
+
+- Render/bind dock panel roots every frame before `UiTree::layout_all` / `UiTree::paint_all`.
+- Prefer calling `fret_components_docking::render_and_bind_dock_panels(...)` instead of ad-hoc `DockPanelContentService::set(...)`.
+
+---
+
 ## Conformance checklist (P0)
 
 These items are copied from ADR 0072 and expanded into concrete steps.

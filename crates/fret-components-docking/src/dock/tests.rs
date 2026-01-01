@@ -14,6 +14,7 @@ use fret_core::{
     Size, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle,
 };
 use fret_runtime::PlatformCapabilities;
+use fret_ui::InternalDragRouteService;
 use fret_ui::UiTree;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
@@ -238,9 +239,12 @@ fn render_and_bind_dock_panels_keeps_non_viewport_panel_alive() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    app.with_global_mut(DockPanelRegistryService::<TestHost>::default, |svc, _app| {
-        svc.set(Arc::new(CachedRetainedPanelRegistry::new()));
-    });
+    app.with_global_mut(
+        DockPanelRegistryService::<TestHost>::default,
+        |svc, _app| {
+            svc.set(Arc::new(CachedRetainedPanelRegistry::new()));
+        },
+    );
 
     app.with_global_mut(DockManager::default, |dock, _app| {
         dock.ensure_panel(&panel, || crate::DockPanel {
@@ -256,7 +260,10 @@ fn render_and_bind_dock_panels_keeps_non_viewport_panel_alive() {
     });
 
     let mut services = FakeTextService::default();
-    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(120.0)));
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(120.0)),
+    );
 
     render_and_bind_dock_panels(&mut ui, &mut app, &mut services, window, bounds, dock_space);
 
@@ -281,6 +288,40 @@ fn render_and_bind_dock_panels_keeps_non_viewport_panel_alive() {
         ui.focus(),
         Some(node),
         "expected bound panel node to be focusable and receive pointer events"
+    );
+}
+
+#[test]
+fn dock_space_installs_internal_drag_route_anchor() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    let dock_space = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(dock_space);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let mut services = FakeTextService::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(120.0)),
+    );
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let route = app
+        .global::<InternalDragRouteService>()
+        .and_then(|svc| svc.route(window, DragKind::DockPanel));
+
+    assert_eq!(
+        route,
+        Some(dock_space),
+        "expected DockSpace to install an InternalDragRouteService anchor during paint"
     );
 }
 

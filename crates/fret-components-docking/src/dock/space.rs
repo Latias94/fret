@@ -1768,6 +1768,15 @@ impl<H: UiHost> Widget<H> for DockSpace {
         self.last_bounds = cx.bounds;
         let theme = cx.theme().snapshot();
         let (_chrome, dock_bounds) = dock_space_regions(cx.bounds);
+        // Keep the dock host "alive" as a stable internal drag route target.
+        //
+        // This must be refreshed during paint/layout, not only during event handling, because
+        // cross-window drag routing needs a reliable per-window anchor even when hit-testing is
+        // over unrelated UI (ADR 0072) and even when no events have fired this frame.
+        cx.app
+            .with_global_mut(InternalDragRouteService::default, |routes, _app| {
+                routes.set(self.window, DragKind::DockPanel, cx.node);
+            });
         let overlay_hooks = cx
             .app
             .global::<DockViewportOverlayHooksService>()
@@ -1782,6 +1791,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 self.paint_empty_state(cx);
                 return;
             };
+            dock.register_dock_space_node(self.window, cx.node);
             let Some(root) = dock.graph.window_root(self.window) else {
                 self.paint_empty_state(cx);
                 return;
