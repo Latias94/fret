@@ -6,6 +6,7 @@ mod consts;
 mod hit_test;
 mod layout;
 mod paint;
+mod panel_registry;
 mod prelude_core;
 mod prelude_runtime;
 mod prelude_ui;
@@ -18,6 +19,9 @@ mod manager;
 mod space;
 
 pub use manager::{ActivatePanelOptions, DockManager};
+pub use panel_registry::{
+    DockPanelRegistry, DockPanelRegistryService, render_and_bind_dock_panels,
+};
 pub use services::{DockPanelContentService, DockViewportOverlayHooksService};
 pub use space::DockSpace;
 

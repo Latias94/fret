@@ -1,10 +1,10 @@
 use anyhow::Context as _;
 use fret_app::CreateWindowKind;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
-use fret_components_docking::dock::DockPanelContentService;
 use fret_components_docking::{
-    DockManager, DockPanel, DockViewportOverlayHooks, DockViewportOverlayHooksService,
-    handle_dock_before_close_window, handle_dock_op, handle_dock_window_created,
+    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
+    DockViewportOverlayHooksService, handle_dock_before_close_window, handle_dock_op,
+    handle_dock_window_created, render_and_bind_dock_panels,
 };
 use fret_components_icons::IconRegistry;
 use fret_components_shadcn as shadcn;
@@ -18,10 +18,191 @@ use fret_runner_winit_wgpu::{
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
-use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui::{Invalidation, UiTree};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use winit::event_loop::EventLoop;
+
+#[derive(Clone)]
+struct DockingArbitrationPanelModels {
+    popover_open: Model<bool>,
+    dialog_open: Model<bool>,
+    last_viewport_input: Model<Arc<str>>,
+}
+
+#[derive(Default)]
+struct DockingArbitrationPanelModelsService {
+    by_window: HashMap<AppWindowId, DockingArbitrationPanelModels>,
+}
+
+impl DockingArbitrationPanelModelsService {
+    fn set(&mut self, window: AppWindowId, models: DockingArbitrationPanelModels) {
+        self.by_window.insert(window, models);
+    }
+
+    fn get(&self, window: AppWindowId) -> Option<&DockingArbitrationPanelModels> {
+        self.by_window.get(&window)
+    }
+}
+
+struct DockingArbitrationDockPanelRegistry;
+
+impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
+    fn render_panel(
+        &self,
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        panel: &fret_core::PanelKey,
+    ) -> Option<fret_core::NodeId> {
+        if panel.kind.0 != "demo.controls" {
+            return None;
+        }
+
+        let models = app
+            .global::<DockingArbitrationPanelModelsService>()
+            .and_then(|svc| svc.get(window))
+            .cloned()?;
+
+        let captured = format!("captured={:?}", ui.captured());
+        let layer_lines: Vec<String> = ui
+            .debug_layers_in_paint_order()
+            .iter()
+            .enumerate()
+            .map(|(ix, layer)| {
+                format!(
+                    "#{ix} root={:?} visible={} barrier={} hit_testable={} outside={} move={} timer={}",
+                    layer.root,
+                    layer.visible,
+                    layer.blocks_underlay_input,
+                    layer.hit_testable,
+                    layer.wants_pointer_down_outside_events,
+                    layer.wants_pointer_move_events,
+                    layer.wants_timer_events
+                )
+            })
+            .collect();
+
+        let root_name = "dock.panel.controls";
+        Some(declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            root_name,
+            |cx| {
+                cx.observe_model(&models.popover_open, Invalidation::Layout);
+                cx.observe_model(&models.dialog_open, Invalidation::Layout);
+                cx.observe_model(&models.last_viewport_input, Invalidation::Layout);
+
+                let theme = cx.theme().snapshot();
+                let padding = theme.metrics.padding_md;
+                let background = theme.colors.surface_background;
+
+                let drag_state = cx
+                    .app
+                    .drag()
+                    .map(|d| format!("drag(kind={:?}, dragging={})", d.kind, d.dragging))
+                    .unwrap_or_else(|| "drag(<none>)".to_string());
+
+                let last = cx
+                    .app
+                    .models()
+                    .get_cloned(&models.last_viewport_input)
+                    .unwrap_or_else(|| Arc::<str>::from("<missing>"));
+
+                let popover_open = models.popover_open.clone();
+                let dialog_open = models.dialog_open.clone();
+
+                let popover = shadcn::Popover::new(popover_open.clone())
+                    .auto_focus(true)
+                    .into_element(
+                        cx,
+                        |cx| {
+                            shadcn::Button::new("Open popover")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .toggle_model(popover_open.clone())
+                                .into_element(cx)
+                        },
+                        |cx| {
+                            shadcn::PopoverContent::new(vec![
+                                cx.text("Non-modal overlay (Popover)."),
+                                shadcn::Button::new("Close")
+                                    .variant(shadcn::ButtonVariant::Secondary)
+                                    .toggle_model(popover_open.clone())
+                                    .into_element(cx),
+                            ])
+                            .into_element(cx)
+                        },
+                    );
+
+                let dialog = shadcn::Dialog::new(dialog_open.clone()).into_element(
+                    cx,
+                    |cx| {
+                        shadcn::Button::new("Open modal dialog")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .toggle_model(dialog_open.clone())
+                            .into_element(cx)
+                    },
+                    |cx| {
+                        shadcn::DialogContent::new(vec![
+                            shadcn::DialogHeader::new(vec![
+                                shadcn::DialogTitle::new("Dialog").into_element(cx),
+                                shadcn::DialogDescription::new(
+                                    "Modal barrier should block docking + viewport input.",
+                                )
+                                .into_element(cx),
+                            ])
+                            .into_element(cx),
+                            shadcn::DialogFooter::new(vec![
+                                shadcn::Button::new("Close")
+                                    .variant(shadcn::ButtonVariant::Secondary)
+                                    .toggle_model(dialog_open.clone())
+                                    .into_element(cx),
+                            ])
+                            .into_element(cx),
+                        ])
+                        .into_element(cx)
+                    },
+                );
+
+                vec![cx.container(
+                ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
+                    },
+                    padding: fret_core::Edges::all(padding),
+                    background: Some(background),
+                    ..Default::default()
+                },
+                |cx| {
+                    let mut rows = Vec::new();
+                    rows.push(cx.text("Docking arbitration demo (ADR 0072)"));
+                    rows.push(cx.text(
+                        "Open a popover, then drag a dock tab; start viewport drag inside the blue border; open a modal to block underlay.",
+                    ));
+                    rows.push(cx.text(drag_state));
+                    rows.push(cx.text(captured.clone()));
+                    rows.push(cx.text(format!("last_viewport_input={last}")));
+                    rows.push(popover);
+                    rows.push(dialog);
+                    rows.push(cx.text("Layers (paint order):"));
+                    for line in layer_lines.iter().cloned() {
+                        rows.push(cx.text(line));
+                    }
+                    rows
+                },
+            )]
+            },
+        ))
+    }
+}
 
 #[derive(Default)]
 struct ViewportDebugService {
@@ -59,9 +240,6 @@ impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
 struct DockingArbitrationWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    popover_open: Model<bool>,
-    dialog_open: Model<bool>,
-    last_viewport_input: Model<Arc<str>>,
 }
 
 #[derive(Default)]
@@ -133,12 +311,23 @@ impl DockingArbitrationDriver {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
+        app.with_global_mut(
+            DockingArbitrationPanelModelsService::default,
+            |svc, _app| {
+                svc.set(
+                    window,
+                    DockingArbitrationPanelModels {
+                        popover_open: popover_open.clone(),
+                        dialog_open: dialog_open.clone(),
+                        last_viewport_input: last_viewport_input.clone(),
+                    },
+                );
+            },
+        );
+
         DockingArbitrationWindowState {
             ui,
             root: None,
-            popover_open,
-            dialog_open,
-            last_viewport_input,
         }
     }
 
@@ -323,26 +512,6 @@ impl DockingArbitrationDriver {
     ) {
         Self::ensure_dock_graph(app, window);
 
-        let captured = format!("captured={:?}", state.ui.captured());
-        let layer_lines: Vec<String> = state
-            .ui
-            .debug_layers_in_paint_order()
-            .iter()
-            .enumerate()
-            .map(|(ix, layer)| {
-                format!(
-                    "#{ix} root={:?} visible={} barrier={} hit_testable={} outside={} move={} timer={}",
-                    layer.root,
-                    layer.visible,
-                    layer.blocks_underlay_input,
-                    layer.hit_testable,
-                    layer.wants_pointer_down_outside_events,
-                    layer.wants_pointer_move_events,
-                    layer.wants_timer_events
-                )
-            })
-            .collect();
-
         fret_components_ui::window_overlays::begin_frame(app, window);
 
         let dock_space = state.root.get_or_insert_with(|| {
@@ -351,133 +520,7 @@ impl DockingArbitrationDriver {
             node
         });
 
-        let theme = Theme::global(&*app).clone();
-        let padding = theme.metrics.padding_md;
-        let background = theme.colors.surface_background;
-
-        let popover_open = state.popover_open.clone();
-        let dialog_open = state.dialog_open.clone();
-        let last_viewport_input = state.last_viewport_input.clone();
-
-        let controls = declarative::render_root(
-            &mut state.ui,
-            app,
-            services,
-            window,
-            bounds,
-            "dock.panel.controls",
-            |cx| {
-                cx.observe_model(&popover_open, Invalidation::Layout);
-                cx.observe_model(&dialog_open, Invalidation::Layout);
-                cx.observe_model(&last_viewport_input, Invalidation::Layout);
-
-                let drag_state = cx
-                    .app
-                    .drag()
-                    .map(|d| format!("drag(kind={:?}, dragging={})", d.kind, d.dragging))
-                    .unwrap_or_else(|| "drag(<none>)".to_string());
-
-                let last = cx
-                    .app
-                    .models()
-                    .get_cloned(&last_viewport_input)
-                    .unwrap_or_else(|| Arc::<str>::from("<missing>"));
-
-                let popover = shadcn::Popover::new(popover_open.clone())
-                    .auto_focus(true)
-                    .into_element(
-                        cx,
-                        |cx| {
-                            shadcn::Button::new("Open popover")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .toggle_model(popover_open.clone())
-                                .into_element(cx)
-                        },
-                        |cx| {
-                            shadcn::PopoverContent::new(vec![
-                                cx.text("Non-modal overlay (Popover)."),
-                                shadcn::Button::new("Close")
-                                    .variant(shadcn::ButtonVariant::Secondary)
-                                    .toggle_model(popover_open.clone())
-                                    .into_element(cx),
-                            ])
-                            .into_element(cx)
-                        },
-                    );
-
-                let dialog = shadcn::Dialog::new(dialog_open.clone()).into_element(
-                    cx,
-                    |cx| {
-                        shadcn::Button::new("Open modal dialog")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .toggle_model(dialog_open.clone())
-                            .into_element(cx)
-                    },
-                    |cx| {
-                        shadcn::DialogContent::new(vec![
-                            shadcn::DialogHeader::new(vec![
-                                shadcn::DialogTitle::new("Dialog").into_element(cx),
-                                shadcn::DialogDescription::new(
-                                    "Modal barrier should block docking + viewport input.",
-                                )
-                                .into_element(cx),
-                            ])
-                            .into_element(cx),
-                            shadcn::DialogFooter::new(vec![
-                                shadcn::Button::new("Close")
-                                    .variant(shadcn::ButtonVariant::Secondary)
-                                    .toggle_model(dialog_open.clone())
-                                    .into_element(cx),
-                            ])
-                            .into_element(cx),
-                        ])
-                        .into_element(cx)
-                    },
-                );
-
-                let mut children = Vec::new();
-                children.push(cx.container(
-                    ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
-                            layout
-                        },
-                        padding: fret_core::Edges::all(padding),
-                        background: Some(background),
-                        ..Default::default()
-                    },
-                    |cx| {
-                        let mut rows = Vec::new();
-                        rows.push(cx.text("Docking arbitration demo (ADR 0072)"));
-                        rows.push(cx.text(
-                            "Open a popover, then drag a dock tab; start viewport drag inside the blue border; open a modal to block underlay.",
-                        ));
-                        rows.push(cx.text(drag_state));
-                        rows.push(cx.text(captured.clone()));
-                        rows.push(cx.text(format!("last_viewport_input={last}")));
-                        rows.push(popover);
-                        rows.push(dialog);
-                        rows.push(cx.text("Layers (paint order):"));
-                        for line in layer_lines.iter().cloned() {
-                            rows.push(cx.text(line));
-                        }
-                        rows
-                    },
-                ));
-                children
-            },
-        );
-
-        state.ui.set_children(
-            *dock_space,
-            vec![controls /* viewport panel has no UI node */],
-        );
-
-        app.with_global_mut(DockPanelContentService::default, |svc, _app| {
-            svc.set(window, fret_core::PanelKey::new("demo.controls"), controls);
-        });
+        render_and_bind_dock_panels(&mut state.ui, app, services, window, bounds, *dock_space);
 
         fret_components_ui::window_overlays::render(&mut state.ui, app, services, window, bounds);
     }
@@ -787,6 +830,9 @@ pub fn run() -> anyhow::Result<()> {
     app.set_global(caps);
     app.with_global_mut(IconRegistry::default, |icons, _app| {
         fret_icons_lucide::register_icons(icons);
+    });
+    app.with_global_mut(DockPanelRegistryService::<App>::default, |svc, _app| {
+        svc.set(Arc::new(DockingArbitrationDockPanelRegistry));
     });
     app.with_global_mut(DockViewportOverlayHooksService::default, |svc, _app| {
         svc.set(Arc::new(DemoViewportOverlayHooks));

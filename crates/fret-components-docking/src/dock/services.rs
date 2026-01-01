@@ -49,6 +49,26 @@ impl DockPanelContentService {
             .map(|m| m.iter().map(|(k, v)| (k.clone(), *v)).collect())
             .unwrap_or_default()
     }
+
+    pub fn clear_window(&mut self, window: AppWindowId) {
+        self.per_window.remove(&window);
+    }
+
+    pub fn replace_window(
+        &mut self,
+        window: AppWindowId,
+        nodes: impl IntoIterator<Item = (PanelKey, NodeId)>,
+    ) {
+        let mut map: HashMap<PanelKey, NodeId> = HashMap::new();
+        for (panel, node) in nodes {
+            map.insert(panel, node);
+        }
+        if map.is_empty() {
+            self.per_window.remove(&window);
+        } else {
+            self.per_window.insert(window, map);
+        }
+    }
 }
 
 #[derive(Default)]

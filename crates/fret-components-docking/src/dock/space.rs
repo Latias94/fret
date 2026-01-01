@@ -1962,6 +1962,20 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let panel_nodes = self.panel_nodes(cx.app);
         for (panel, rect) in paint_panels {
             let Some(node) = panel_nodes.get(&panel) else {
+                let is_viewport_panel = cx
+                    .app
+                    .global::<DockManager>()
+                    .and_then(|dock| dock.panel(&panel))
+                    .and_then(|p| p.viewport)
+                    .is_some();
+                if !is_viewport_panel {
+                    tracing::warn!(
+                        window = ?self.window,
+                        panel_kind = %panel.kind.0,
+                        panel_instance = ?panel.instance,
+                        "docking panel is active but has no UI node; expected driver to bind DockPanelContentService (or use DockPanelRegistryService)"
+                    );
+                }
                 continue;
             };
             let bounds = cx.child_bounds(*node).unwrap_or(rect);

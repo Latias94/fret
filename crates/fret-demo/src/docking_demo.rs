@@ -1,9 +1,9 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
-use fret_components_docking::dock::DockPanelContentService;
 use fret_components_docking::{
-    DockManager, DockPanel, DockViewportOverlayHooks, DockViewportOverlayHooksService,
-    handle_dock_before_close_window, handle_dock_op, handle_dock_window_created,
+    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
+    DockViewportOverlayHooksService, handle_dock_before_close_window, handle_dock_op,
+    handle_dock_window_created, render_and_bind_dock_panels,
 };
 use fret_components_icons::IconRegistry;
 use fret_core::{
@@ -19,6 +19,56 @@ use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::{Theme, UiTree};
 use std::sync::Arc;
 use winit::event_loop::EventLoop;
+
+struct DemoDockPanelRegistry;
+
+impl DockPanelRegistry<App> for DemoDockPanelRegistry {
+    fn render_panel(
+        &self,
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        panel: &fret_core::PanelKey,
+    ) -> Option<fret_core::NodeId> {
+        let theme = Theme::global(&*app).clone();
+        let padding = theme.metrics.padding_md;
+        let background = theme.colors.surface_background;
+
+        let label: &str = match panel.kind.0.as_str() {
+            "core.hierarchy" => "Hierarchy panel (declarative root)",
+            "core.inspector" => "Inspector panel (declarative root)",
+            _ => "Panel (unregistered kind)",
+        };
+
+        let root_name = format!("dock_demo.panel.{}", panel.kind.0);
+        Some(declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            &root_name,
+            |cx| {
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        padding: fret_core::Edges::all(padding),
+                        background: Some(background),
+                        ..Default::default()
+                    },
+                    |cx| vec![cx.text(label)],
+                )]
+            },
+        ))
+    }
+}
 
 struct DemoViewportOverlayHooks;
 
@@ -116,76 +166,7 @@ impl DockingDemoDriver {
             node
         });
 
-        let theme = Theme::global(&*app).clone();
-        let padding = theme.metrics.padding_md;
-        let background = theme.colors.surface_background;
-
-        let hierarchy = declarative::render_root(
-            &mut state.ui,
-            app,
-            services,
-            window,
-            bounds,
-            "dock.panel.hierarchy",
-            |cx| {
-                vec![cx.container(
-                    ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
-                            layout
-                        },
-                        padding: fret_core::Edges::all(padding),
-                        background: Some(background),
-                        ..Default::default()
-                    },
-                    |cx| vec![cx.text("Hierarchy panel (declarative root)")],
-                )]
-            },
-        );
-
-        let inspector = declarative::render_root(
-            &mut state.ui,
-            app,
-            services,
-            window,
-            bounds,
-            "dock.panel.inspector",
-            |cx| {
-                vec![cx.container(
-                    ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
-                            layout
-                        },
-                        padding: fret_core::Edges::all(padding),
-                        background: Some(background),
-                        ..Default::default()
-                    },
-                    |cx| vec![cx.text("Inspector panel (declarative root)")],
-                )]
-            },
-        );
-
-        state
-            .ui
-            .set_children(*dock_space, vec![hierarchy, inspector]);
-
-        app.with_global_mut(DockPanelContentService::default, |svc, _app| {
-            svc.set(
-                window,
-                fret_core::PanelKey::new("core.hierarchy"),
-                hierarchy,
-            );
-            svc.set(
-                window,
-                fret_core::PanelKey::new("core.inspector"),
-                inspector,
-            );
-        });
+        render_and_bind_dock_panels(&mut state.ui, app, services, window, bounds, *dock_space);
     }
 }
 
@@ -422,6 +403,9 @@ pub fn run() -> anyhow::Result<()> {
     app.set_global(PlatformCapabilities::default());
     app.with_global_mut(IconRegistry::default, |icons, _app| {
         fret_icons_lucide::register_icons(icons);
+    });
+    app.with_global_mut(DockPanelRegistryService::<App>::default, |svc, _app| {
+        svc.set(Arc::new(DemoDockPanelRegistry));
     });
     app.with_global_mut(DockViewportOverlayHooksService::default, |svc, _app| {
         svc.set(Arc::new(DemoViewportOverlayHooks));

@@ -4,7 +4,10 @@ use super::prelude_core::*;
 use super::prelude_runtime::*;
 use super::prelude_ui::*;
 use super::split_stabilize::{apply_same_axis_locks, compute_same_axis_locks_for_split_drag};
-use super::{DockManager, DockSpace};
+use super::{
+    DockManager, DockPanelContentService, DockPanelRegistry, DockPanelRegistryService, DockSpace,
+    render_and_bind_dock_panels,
+};
 use crate::test_host::TestHost;
 use fret_core::{
     AppWindowId, Event, InternalDragEvent, InternalDragKind, Modifiers, Point, Px, Scene, SceneOp,
@@ -14,6 +17,7 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
+use std::sync::{Arc, Mutex};
 
 #[derive(Default)]
 struct FakeTextService;
@@ -164,6 +168,120 @@ impl DockViewportHarness {
             .expect("expected viewport content rect to be recorded during paint");
         Point::new(Px(rect.origin.x.0 + 10.0), Px(rect.origin.y.0 + 10.0))
     }
+}
+
+struct FocusOnDown;
+
+impl<H: UiHost> Widget<H> for FocusOnDown {
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        true
+    }
+
+    fn is_focusable(&self) -> bool {
+        true
+    }
+
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        if matches!(event, Event::Pointer(fret_core::PointerEvent::Down { .. })) {
+            cx.request_focus(cx.node);
+            cx.stop_propagation();
+        }
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.available
+    }
+}
+
+struct CachedRetainedPanelRegistry {
+    nodes: Mutex<std::collections::HashMap<fret_core::PanelKey, fret_core::NodeId>>,
+}
+
+impl CachedRetainedPanelRegistry {
+    fn new() -> Self {
+        Self {
+            nodes: Mutex::new(std::collections::HashMap::new()),
+        }
+    }
+}
+
+impl DockPanelRegistry<TestHost> for CachedRetainedPanelRegistry {
+    fn render_panel(
+        &self,
+        ui: &mut UiTree<TestHost>,
+        _app: &mut TestHost,
+        _services: &mut dyn fret_core::UiServices,
+        _window: AppWindowId,
+        _bounds: Rect,
+        panel: &fret_core::PanelKey,
+    ) -> Option<fret_core::NodeId> {
+        let mut nodes = self.nodes.lock().expect("registry mutex");
+        if let Some(node) = nodes.get(panel).copied() {
+            return Some(node);
+        }
+        let node = ui.create_node_retained(FocusOnDown);
+        nodes.insert(panel.clone(), node);
+        Some(node)
+    }
+}
+
+#[test]
+fn render_and_bind_dock_panels_keeps_non_viewport_panel_alive() {
+    let window = AppWindowId::default();
+    let panel = fret_core::PanelKey::new("demo.controls");
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    let dock_space = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(dock_space);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    app.with_global_mut(DockPanelRegistryService::<TestHost>::default, |svc, _app| {
+        svc.set(Arc::new(CachedRetainedPanelRegistry::new()));
+    });
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.ensure_panel(&panel, || crate::DockPanel {
+            title: "Controls".to_string(),
+            color: fret_core::Color::TRANSPARENT,
+            viewport: None,
+        });
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel.clone()],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+    });
+
+    let mut services = FakeTextService::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(120.0)));
+
+    render_and_bind_dock_panels(&mut ui, &mut app, &mut services, window, bounds, dock_space);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let node = app
+        .global::<DockPanelContentService>()
+        .and_then(|svc| svc.get(window, &panel))
+        .expect("expected panel node to be bound");
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(60.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+        }),
+    );
+
+    assert_eq!(
+        ui.focus(),
+        Some(node),
+        "expected bound panel node to be focusable and receive pointer events"
+    );
 }
 
 #[test]

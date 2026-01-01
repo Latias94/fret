@@ -10,8 +10,9 @@ mod invalidation;
 pub mod runtime;
 
 pub use dock::{
-    ActivatePanelOptions, DockManager, DockPanel, DockSpace, DockViewportOverlayHooks,
-    DockViewportOverlayHooksService, ViewportPanel, create_dock_space_node,
+    ActivatePanelOptions, DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService,
+    DockSpace, DockViewportOverlayHooks, DockViewportOverlayHooksService, ViewportPanel,
+    create_dock_space_node, render_and_bind_dock_panels,
 };
 pub use runtime::{handle_dock_before_close_window, handle_dock_op, handle_dock_window_created};
 
