@@ -8,6 +8,7 @@ use fret_components_docking::{
 };
 use fret_components_icons::IconRegistry;
 use fret_components_shadcn as shadcn;
+use fret_components_ui::OverlayController;
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, Rect, Scene, SceneOp, UiServices,
     ViewportInputEvent, geometry::Px,
@@ -509,7 +510,7 @@ impl DockingArbitrationDriver {
     ) {
         Self::ensure_dock_graph(app, window);
 
-        fret_components_ui::window_overlays::begin_frame(app, window);
+        OverlayController::begin_frame(app, window);
 
         let dock_space = state.root.get_or_insert_with(|| {
             let node = fret_components_docking::create_dock_space_node(&mut state.ui, window);
@@ -519,7 +520,7 @@ impl DockingArbitrationDriver {
 
         render_and_bind_dock_panels(&mut state.ui, app, services, window, bounds, *dock_space);
 
-        fret_components_ui::window_overlays::render(&mut state.ui, app, services, window, bounds);
+        OverlayController::render(&mut state.ui, app, services, window, bounds);
     }
 }
 

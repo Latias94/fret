@@ -13,7 +13,10 @@ pub mod overlay;
 pub mod overlay_controller;
 pub mod recipes;
 pub mod tree;
+#[cfg(feature = "unstable-internals")]
 pub mod window_overlays;
+#[cfg(not(feature = "unstable-internals"))]
+mod window_overlays;
 
 mod sizing;
 mod style;

@@ -1,6 +1,5 @@
 pub mod action_hooks;
 pub mod collection_semantics;
-pub mod icon;
 pub mod list;
 pub mod model_watch;
 pub mod prelude;
@@ -10,10 +9,15 @@ pub mod scroll;
 pub mod stack;
 pub mod style;
 pub mod text;
-pub mod text_field;
 pub mod tree;
 
 pub use model_watch::ModelWatchExt;
 
 #[cfg(test)]
 mod padding_semantics_tests;
+
+#[cfg(feature = "icons")]
+pub mod icon;
+
+#[cfg(feature = "recipes")]
+pub mod text_field;

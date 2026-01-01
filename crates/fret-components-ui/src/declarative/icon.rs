@@ -1,3 +1,5 @@
+#![cfg(feature = "icons")]
+
 use fret_components_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvg};
 use fret_core::{Color, Px};
 use fret_ui::SvgSource;

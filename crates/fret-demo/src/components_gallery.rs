@@ -3,10 +3,11 @@ use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_components_app::tree::AppTreeRowRenderer;
 use fret_components_icons::IconRegistry;
 use fret_components_shadcn as shadcn;
+use fret_components_ui::OverlayController;
 use fret_components_ui::tree::{TreeItem, TreeItemId, TreeState};
 use fret_core::{
-    AppWindowId, Corners, Edges, Event, FontId, KeyCode, Px, Rect, Scene, SemanticsRole,
-    TextStyle, UiServices,
+    AppWindowId, Corners, Edges, Event, FontId, KeyCode, Px, Rect, Scene, SemanticsRole, TextStyle,
+    UiServices,
 };
 use fret_runner_winit_wgpu::{
     RunnerUserEvent, WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig,
@@ -133,7 +134,7 @@ impl ComponentsGalleryDriver {
         state: &mut ComponentsGalleryWindowState,
         bounds: Rect,
     ) {
-        fret_components_ui::window_overlays::begin_frame(app, window);
+        OverlayController::begin_frame(app, window);
 
         let items = state.items.clone();
         let tree_state = state.tree_state.clone();
@@ -864,7 +865,7 @@ impl ComponentsGalleryDriver {
         );
 
         state.ui.set_root(root);
-        fret_components_ui::window_overlays::render(&mut state.ui, app, services, window, bounds);
+        OverlayController::render(&mut state.ui, app, services, window, bounds);
         state.root = Some(root);
     }
 

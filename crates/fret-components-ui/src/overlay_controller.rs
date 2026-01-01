@@ -296,12 +296,9 @@ impl OverlayController {
                 window_overlays::request_toast_layer_for_window(
                     app,
                     window,
-                    window_overlays::ToastLayerRequest {
-                        id: request.id,
-                        root_name,
-                        store: spec.store,
-                        position: spec.position,
-                    },
+                    window_overlays::ToastLayerRequest::new(request.id, spec.store)
+                        .position(spec.position)
+                        .root_name(root_name),
                 );
             }
         }

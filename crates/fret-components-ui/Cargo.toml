@@ -7,8 +7,21 @@ edition.workspace = true
 fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }
 fret-ui = { path = "../fret-ui" }
-fret-components-icons = { path = "../fret-components-icons" }
+fret-components-icons = { path = "../fret-components-icons", optional = true }
 tracing.workspace = true
+
+[features]
+# Default to a minimal, third-party-friendly foundation surface.
+default = []
+
+# Exposes internal overlay orchestration modules directly. Prefer `OverlayController` instead.
+unstable-internals = []
+
+# Opt-in helpers that integrate with the shared icon registry (`fret-components-icons`).
+icons = ["dep:fret-components-icons"]
+
+# Opinionated declarative helpers that are closer to "recipes" than substrate.
+recipes = ["icons"]
 
 [dev-dependencies]
 fret-app = { path = "../fret-app" }
