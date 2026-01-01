@@ -1,5 +1,5 @@
-use super::*;
 use super::state::WindowOverlays;
+use super::*;
 
 use crate::declarative::action_hooks::ActionHooksExt;
 use fret_app::App;
@@ -10,9 +10,9 @@ use fret_core::{
     Point, Px, Rect, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle,
 };
 use fret_runtime::Model;
+use fret_ui::UiTree;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length, PositionStyle, PressableProps};
 use fret_ui::elements::GlobalElementId;
-use fret_ui::UiTree;
 
 #[derive(Default)]
 struct FakeServices;
@@ -90,6 +90,87 @@ fn render_base_with_trigger(
     });
     ui.set_root(root);
     trigger_id.expect("trigger id")
+}
+
+fn render_base_with_trigger_and_underlay(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    open: Model<bool>,
+    underlay_clicked: Model<bool>,
+) -> (GlobalElementId, GlobalElementId) {
+    begin_frame(app, window);
+
+    let mut trigger_id: Option<GlobalElementId> = None;
+    let mut underlay_id: Option<GlobalElementId> = None;
+
+    let root = fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+        vec![cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Fill;
+                    layout
+                },
+                ..Default::default()
+            },
+            |cx| {
+                vec![
+                    cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.position = PositionStyle::Absolute;
+                                layout.inset.left = Some(Px(0.0));
+                                layout.inset.top = Some(Px(0.0));
+                                layout.size.width = Length::Px(Px(80.0));
+                                layout.size.height = Length::Px(Px(32.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |cx, _st, id| {
+                            cx.pressable_toggle_bool(&open);
+                            trigger_id = Some(id);
+                            Vec::new()
+                        },
+                    ),
+                    cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.position = PositionStyle::Absolute;
+                                layout.inset.left = Some(Px(0.0));
+                                layout.inset.top = Some(Px(120.0));
+                                layout.size.width = Length::Px(Px(160.0));
+                                layout.size.height = Length::Px(Px(32.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |cx, _st, id| {
+                            cx.pressable_toggle_bool(&underlay_clicked);
+                            underlay_id = Some(id);
+                            Vec::new()
+                        },
+                    ),
+                ]
+            },
+        )]
+    });
+    ui.set_root(root);
+
+    (
+        trigger_id.expect("trigger id"),
+        underlay_id.expect("underlay id"),
+    )
 }
 
 #[test]
@@ -775,4 +856,146 @@ fn non_modal_overlay_restores_focus_when_focus_is_missing_on_unmount() {
     let trigger_node =
         fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
     assert_eq!(ui.focus(), Some(trigger_node));
+}
+
+#[test]
+fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmount() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+    let underlay_clicked = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base to establish stable bounds for the trigger element.
+    let (trigger, underlay) = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Open via click on trigger.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+        }),
+    );
+    assert_eq!(app.models().get_copied(&open), Some(true));
+
+    // Second frame: request and render a dismissible popover.
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+
+    let overlay_children =
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "overlay-children", |cx| {
+            vec![cx.container(
+                ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.position = PositionStyle::Absolute;
+                        layout.inset.left = Some(Px(0.0));
+                        layout.inset.top = Some(Px(40.0));
+                        layout.size.width = Length::Px(Px(200.0));
+                        layout.size.height = Length::Px(Px(40.0));
+                        layout
+                    },
+                    ..Default::default()
+                },
+                |_| Vec::new(),
+            )]
+        });
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            children: overlay_children,
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Click underlay while popover is open: outside press is click-through, so focus should move
+    // to the underlay target (and the popover should close).
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&open), Some(false));
+    assert_eq!(app.models().get_copied(&underlay_clicked), Some(true));
+
+    let underlay_node =
+        fret_ui::elements::node_for_element(&mut app, window, underlay).expect("underlay node");
+    assert_eq!(ui.focus(), Some(underlay_node));
+
+    // Third frame: unmount the popover. Focus restoration must not override the new underlay focus.
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(ui.focus(), Some(underlay_node));
 }
