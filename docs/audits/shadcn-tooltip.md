@@ -1,6 +1,6 @@
-# shadcn/ui v4 Audit — Tooltip
+# shadcn/ui v4 Audit - Tooltip
 
-This audit compares Fret’s shadcn-aligned `Tooltip` against the upstream shadcn/ui v4 docs and
+This audit compares Fret's shadcn-aligned `Tooltip` against the upstream shadcn/ui v4 docs and
 examples in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
@@ -29,18 +29,19 @@ Key upstream notes:
 - Pass: `Tooltip`, `TooltipTrigger`, `TooltipContent` exist and are declarative-only.
 - Pass: `TooltipContent` now supports rich children (`Vec<AnyElement>`), matching upstream examples.
 - Defer: `TooltipProvider` surface is not modeled (upstream uses a Provider to control delay).
+- Pass: Fret additionally supports an optional custom placement anchor via `TooltipAnchor` +
+  `Tooltip::anchor_element(...)` (anchor can be separate from the trigger).
 
 ### Open/close behavior
 
 - Pass: Hover open/close is implemented via `HoverRegion` + `HoverIntentState`.
-- Defer: Open-on-keyboard-focus is not implemented (runtime currently does not expose a
-  component-facing focus-change hook/query for arbitrary elements).
+- Pass: Open-on-keyboard-focus is implemented via `ElementCx::is_focused_element(trigger_id)`.
 
 ### Placement & portal behavior
 
 - Pass: Renders into a per-window overlay root (portal-like), not clipped by ancestor overflow.
 - Pass: Supports `side` and `align` placement options.
-- Pass: Default `side_offset` aligns with upstream’s default (`0`) and can be overridden.
+- Pass: Default `side_offset` aligns with upstream's default (`0`) and can be overridden.
 - Pass: Placement anchors to **visual bounds** when available (render-transform aware) via
   `fret-components-ui::overlay::anchor_bounds_for_element`.
 
@@ -53,8 +54,6 @@ Key upstream notes:
 
 ## Follow-ups (recommended)
 
-- Add a small runtime-visible “focus state” signal for declarative elements (or a focus-change hook)
-  so tooltips can open on keyboard focus without embedding policy into `fret-ui`.
+- Consider modeling `TooltipProvider` / shared delay groups if upstream parity needs it.
 - Add an optional arrow primitive for anchored overlays (tooltip/popover/hover-card).
 - Add nextest contract tests for tooltip hover timing + placement invariants.
-

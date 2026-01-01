@@ -56,6 +56,7 @@ pub struct HoverCard {
     open_delay_frames: u32,
     close_delay_frames: u32,
     layout: LayoutRefinement,
+    anchor_override: Option<fret_ui::elements::GlobalElementId>,
 }
 
 impl HoverCard {
@@ -70,6 +71,7 @@ impl HoverCard {
             // Non-zero by default so the user can move from trigger to the overlay content.
             close_delay_frames: 6,
             layout: LayoutRefinement::default(),
+            anchor_override: None,
         }
     }
 
@@ -95,6 +97,16 @@ impl HoverCard {
 
     pub fn window_margin(mut self, margin: Px) -> Self {
         self.window_margin_override = Some(margin);
+        self
+    }
+
+    /// Override the element used as the placement anchor.
+    ///
+    /// Notes:
+    /// - Hover tracking still uses the trigger element.
+    /// - The anchor bounds are resolved from last-frame layout/visual bounds.
+    pub fn anchor_element(mut self, element: fret_ui::elements::GlobalElementId) -> Self {
+        self.anchor_override = Some(element);
         self
     }
 
@@ -128,6 +140,7 @@ impl HoverCard {
         let content = self.content;
         let trigger_id = trigger.id;
         let content_id = content.id;
+        let anchor_id = self.anchor_override.unwrap_or(trigger_id);
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
             let frame = cx.app.frame_id();
             let hover_card_id = cx.root_id();
@@ -156,7 +169,7 @@ impl HoverCard {
             let overlay_root_name = OverlayController::hover_overlay_root_name(hover_card_id);
 
             let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                let anchor = overlay::anchor_bounds_for_element(cx, trigger_id);
+                let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                 let Some(anchor) = anchor else {
                     cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
                         st.overlay_hovered = false;
@@ -239,6 +252,28 @@ impl HoverCardTrigger {
     }
 }
 
+/// Optional layout-only anchor for advanced hover card placement recipes.
+///
+/// Use [`HoverCard::anchor_element`] to wire the anchor element ID into placement.
+#[derive(Debug, Clone)]
+pub struct HoverCardAnchor {
+    child: AnyElement,
+}
+
+impl HoverCardAnchor {
+    pub fn new(child: AnyElement) -> Self {
+        Self { child }
+    }
+
+    pub fn element_id(&self) -> fret_ui::elements::GlobalElementId {
+        self.child.id
+    }
+
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementCx<'_, H>) -> AnyElement {
+        self.child
+    }
+}
+
 /// shadcn/ui `HoverCardContent` (v4).
 #[derive(Debug, Clone)]
 pub struct HoverCardContent {
@@ -279,5 +314,244 @@ impl HoverCardContent {
         props.shadow = Some(decl_style::shadow_md(&theme, radius));
         let children = self.children;
         cx.container(props, move |_cx| children)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, MouseButtons, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
+        PathStyle, Point, Px, Rect, SemanticsRole, SvgId, SvgService, TextBlobId, TextConstraints,
+        TextMetrics, TextService, TextStyle as CoreTextStyle,
+    };
+    use fret_runtime::FrameId;
+    use fret_ui::element::{
+        ContainerProps, LayoutStyle, Length, PositionStyle, PressableProps, SemanticsProps,
+        TextProps,
+    };
+    use fret_ui::overlay_placement;
+    use fret_ui::tree::UiTree;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &CoreTextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: fret_core::Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    fn render_hover_card_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        anchor_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) {
+        OverlayController::begin_frame(app, window);
+
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let anchor_id_out_for_anchor = anchor_id_out.clone();
+                let anchor = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(50.0));
+                            layout.size.height = Length::Px(Px(10.0));
+                            layout.inset.top = Some(Px(120.0));
+                            layout.inset.left = Some(Px(240.0));
+                            layout.position = PositionStyle::Absolute;
+                            layout
+                        },
+                        enabled: false,
+                        focusable: false,
+                        ..Default::default()
+                    },
+                    move |_cx, _st, id| {
+                        anchor_id_out_for_anchor.set(Some(id));
+                        vec![]
+                    },
+                );
+                let anchor_id = anchor_id_out.get().expect("anchor element id");
+
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st, id| {
+                        trigger_id_out.set(Some(id));
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let content = cx.semantics(
+                    SemanticsProps {
+                        role: SemanticsRole::Panel,
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![
+                            HoverCardContent::new(vec![cx.text_props(TextProps::new("card"))])
+                                .into_element(cx),
+                        ]
+                    },
+                );
+                content_id_out.set(Some(content.id));
+
+                vec![
+                    anchor,
+                    HoverCard::new(trigger, content)
+                        .anchor_element(anchor_id)
+                        .align(HoverCardAlign::Start)
+                        .side_offset(Px(8.0))
+                        .window_margin(Px(0.0))
+                        .into_element(cx),
+                ]
+            });
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+    }
+
+    #[test]
+    fn hover_card_anchor_override_uses_anchor_bounds_for_placement() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let anchor_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+
+        // Frame 1: establish bounds for the anchor + element/node mappings.
+        app.set_frame_id(FrameId(1));
+        render_hover_card_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            anchor_id.clone(),
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Move pointer over the trigger to open.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: Point::new(Px(12.0), Px(12.0)),
+                buttons: MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        // Frame 2: hover should request the overlay and mount the content.
+        app.set_frame_id(FrameId(2));
+        render_hover_card_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            anchor_id.clone(),
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_element = content_id.get().expect("content element id");
+
+        let anchor_bounds = Rect::new(
+            Point::new(Px(240.0), Px(120.0)),
+            fret_core::Size::new(Px(50.0), Px(10.0)),
+        );
+
+        let expected = overlay_placement::anchored_panel_bounds_sized(
+            bounds,
+            anchor_bounds,
+            fret_core::Size::new(Px(256.0), Px(120.0)),
+            Px(8.0),
+            overlay_placement::Side::Bottom,
+            overlay_placement::Align::Start,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
+            .expect("content node");
+        let content_bounds = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == content_node)
+            .map(|n| n.bounds)
+            .expect("content bounds");
+
+        assert_eq!(content_bounds.origin, expected.origin);
     }
 }

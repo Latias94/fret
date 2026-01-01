@@ -103,7 +103,9 @@ pub use field::{
     FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle,
 };
 pub use form::{Form, FormControl, FormDescription, FormItem, FormLabel, FormMessage, form};
-pub use hover_card::{HoverCard, HoverCardAlign, HoverCardContent, HoverCardTrigger};
+pub use hover_card::{
+    HoverCard, HoverCardAlign, HoverCardAnchor, HoverCardContent, HoverCardTrigger,
+};
 pub use input::{Input, input};
 pub use input_group::{InputGroup, input_group};
 pub use input_otp::{InputOtp, input_otp};
@@ -119,8 +121,8 @@ pub use pagination::{
     PaginationLinkSize, PaginationNext, PaginationPrevious,
 };
 pub use popover::{
-    Popover, PopoverAlign, PopoverContent, PopoverDescription, PopoverHeader, PopoverSide,
-    PopoverTitle, PopoverTrigger,
+    Popover, PopoverAlign, PopoverAnchor, PopoverContent, PopoverDescription, PopoverHeader,
+    PopoverSide, PopoverTitle, PopoverTrigger,
 };
 pub use progress::{Progress, progress};
 pub use radio_group::{RadioGroup, RadioGroupItem, radio_group};
@@ -153,6 +155,8 @@ pub use toggle::{Toggle, ToggleSize, ToggleVariant, toggle};
 pub use toggle_group::{
     ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple, toggle_group_single,
 };
-pub use tooltip::{Tooltip, TooltipAlign, TooltipContent, TooltipSide, TooltipTrigger};
+pub use tooltip::{
+    Tooltip, TooltipAlign, TooltipAnchor, TooltipContent, TooltipSide, TooltipTrigger,
+};
 
 pub use fret_components_ui::{ChromeRefinement, LayoutRefinement, Radius, Size, Space, StyledExt};

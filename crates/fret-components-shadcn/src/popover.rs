@@ -48,6 +48,7 @@ pub struct Popover {
     window_margin_override: Option<Px>,
     auto_focus: bool,
     initial_focus: Option<fret_ui::elements::GlobalElementId>,
+    anchor_override: Option<fret_ui::elements::GlobalElementId>,
 }
 
 impl std::fmt::Debug for Popover {
@@ -76,6 +77,7 @@ impl Popover {
             window_margin_override: None,
             auto_focus: false,
             initial_focus: None,
+            anchor_override: None,
         }
     }
 
@@ -117,6 +119,17 @@ impl Popover {
         self
     }
 
+    /// Override the element used as the placement anchor.
+    ///
+    /// Notes:
+    /// - Dismissal and focus-restore policies still treat the trigger as the "interactive branch".
+    /// - The anchor bounds are resolved from `ElementCx::last_bounds_for_element` / visual bounds,
+    ///   so it may take one frame to stabilize after layout changes (same as trigger anchoring).
+    pub fn anchor_element(mut self, element: fret_ui::elements::GlobalElementId) -> Self {
+        self.anchor_override = Some(element);
+        self
+    }
+
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementCx<'_, H>,
@@ -138,6 +151,7 @@ impl Popover {
 
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
+            let anchor_id = self.anchor_override.unwrap_or(trigger_id);
 
             let presence = OverlayController::fade_presence(cx, is_open, 4);
             let overlay_presence = OverlayPresence::from_fade(is_open, presence);
@@ -156,7 +170,7 @@ impl Popover {
 
                 let opacity = presence.opacity;
                 let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
-                    let anchor = overlay::anchor_bounds_for_element(cx, trigger_id);
+                    let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                     let Some(anchor) = anchor else {
                         return Vec::new();
                     };
@@ -286,6 +300,29 @@ pub struct PopoverTrigger {
 impl PopoverTrigger {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
+    }
+
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementCx<'_, H>) -> AnyElement {
+        self.child
+    }
+}
+
+/// shadcn/ui `PopoverAnchor` (v4).
+///
+/// This is a layout-only helper. Use [`Popover::anchor_element`] to wire the anchor element ID
+/// into placement.
+#[derive(Debug, Clone)]
+pub struct PopoverAnchor {
+    child: AnyElement,
+}
+
+impl PopoverAnchor {
+    pub fn new(child: AnyElement) -> Self {
+        Self { child }
+    }
+
+    pub fn element_id(&self) -> fret_ui::elements::GlobalElementId {
+        self.child.id
     }
 
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementCx<'_, H>) -> AnyElement {
@@ -489,7 +526,9 @@ mod tests {
 
     use fret_app::App;
     use fret_components_ui::declarative::action_hooks::ActionHooksExt;
-    use fret_core::{AppWindowId, PathCommand, Point, Rect, Size as CoreSize, SvgId, SvgService};
+    use fret_core::{
+        AppWindowId, MouseButton, PathCommand, Point, Rect, Size as CoreSize, SvgId, SvgService,
+    };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{
         Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
@@ -746,5 +785,140 @@ mod tests {
         let underlay_node =
             fret_ui::elements::node_for_element(&mut app, window, underlay_id).expect("underlay");
         assert_eq!(ui.focus(), Some(underlay_node));
+    }
+
+    #[test]
+    fn popover_anchor_override_changes_anchor_rect_passed_to_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open_model = app.models_mut().insert(false);
+        let anchor_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let anchor_rect_out: Rc<Cell<Option<Rect>>> = Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        let render =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut dyn fret_core::UiServices| {
+                OverlayController::begin_frame(app, window);
+                let anchor_id_out_for_frame = anchor_id_out.clone();
+                let anchor_rect_out_for_frame = anchor_rect_out.clone();
+                let open = open_model.clone();
+
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "test",
+                    |cx| {
+                        let anchor_id_out_for_anchor = anchor_id_out_for_frame.clone();
+                        let anchor = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(50.0));
+                                    layout.size.height = Length::Px(Px(10.0));
+                                    layout.inset.top = Some(Px(120.0));
+                                    layout.inset.left = Some(Px(240.0));
+                                    layout.position = PositionStyle::Absolute;
+                                    layout
+                                },
+                                enabled: false,
+                                focusable: false,
+                                ..Default::default()
+                            },
+                            move |_cx, _st, id| {
+                                anchor_id_out_for_anchor.set(Some(id));
+                                vec![]
+                            },
+                        );
+
+                        let anchor_id = anchor_id_out_for_frame.get().expect("anchor id");
+                        let popover = Popover::new(open.clone())
+                            .anchor_element(anchor_id)
+                            .into_element_with_anchor(
+                                cx,
+                                move |cx| {
+                                    let open = open.clone();
+                                    cx.pressable(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            ..Default::default()
+                                        },
+                                        move |cx, _st| {
+                                            cx.pressable_toggle_bool(&open);
+                                            vec![]
+                                        },
+                                    )
+                                },
+                                move |cx, anchor_rect| {
+                                    anchor_rect_out_for_frame.set(Some(anchor_rect));
+                                    PopoverContent::new(vec![]).into_element(cx)
+                                },
+                            );
+
+                        vec![anchor, popover]
+                    },
+                );
+
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+            };
+
+        // Frame 1: closed, establish stable last-bounds for the anchor element.
+        app.set_frame_id(FrameId(1));
+        render(&mut ui, &mut app, &mut services);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Open via trigger click.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(12.0), Px(12.0)),
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(12.0), Px(12.0)),
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open_model), Some(true));
+
+        // Frame 2: open, content closure should observe the anchor override rect.
+        app.set_frame_id(FrameId(2));
+        render(&mut ui, &mut app, &mut services);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let anchor_rect = anchor_rect_out.get().expect("anchor rect");
+        assert_eq!(
+            anchor_rect,
+            Rect::new(
+                Point::new(Px(240.0), Px(120.0)),
+                CoreSize::new(Px(50.0), Px(10.0))
+            )
+        );
     }
 }

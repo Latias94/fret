@@ -83,7 +83,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | empty | `empty` | Present | Unreviewed |  |
 | field | `field` | Present | Unreviewed | Repo-specific “form field” primitives |
 | form | `form` | Present | Unreviewed |  |
-| hover-card | `hover_card` | Present | Unreviewed | Needs tooltip/popover-grade overlay infra for parity |
+| hover-card | `hover_card` | Present | In review | Hover intent + anchored placement; supports custom anchor via `HoverCard::anchor_element(...)`; audit: `docs/audits/shadcn-hover-card.md` |
 | input | `input` | Present | Unreviewed |  |
 | input-group | `input_group` | Present | Unreviewed | Composition over `input` + slots/icons |
 | input-otp | `input_otp` | Present | Unreviewed | Slots rendered over transparent `TextInput`; digits-only clamping; a11y TBD |

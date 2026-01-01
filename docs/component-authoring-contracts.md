@@ -141,7 +141,7 @@ Components should converge on predictable conventions instead of sprinkling ad-h
 - Default primitives remain `Overflow::Visible` to preserve composability (badges, shadows, focus rings).
 - Introduce `Overflow::Clip` at the node that owns the rounded chrome (background + border + corner radius).
 - Keep focus rings outside the clipped chrome: prefer `Pressable (visible) -> chrome container (clip) -> content`.
-- Do not rely on `Overflow::Visible` to “escape” for overlays; install overlays via `OverlayController`/portals.
+- Do not rely on `Overflow::Visible` to "escape" for overlays; install overlays via `OverlayController`/portals.
 
 Recommended helper:
 
@@ -157,6 +157,13 @@ Recommended entry point:
 - Use `OverlayController::{begin_frame, request, render}` to coordinate overlay roots per window.
 - Use `fret_components_ui::overlay::anchor_bounds_for_element(...)` and
   `ElementCx::last_visual_bounds_for_element(...)` for render-transform-aware anchoring.
+- If placement anchoring should differ from the interactive trigger, model them explicitly:
+  - keep the trigger element for hover/focus/dismissal/restore policies, and
+  - accept an optional "anchor element" (`GlobalElementId`) used only for placement bounds.
+  (See the shadcn recipe layer: `Popover::anchor_element(...)`, `Tooltip::anchor_element(...)`,
+  `HoverCard::anchor_element(...)`.)
+- Prefer a layout-only `*Anchor` wrapper type in the recipe layer when upstream exposes an anchor
+  surface (e.g. Radix `PopoverAnchor`): it should just wrap a child and expose `element_id()`.
 
 Avoid:
 
@@ -201,7 +208,7 @@ Notes:
 
 Recommended building blocks:
 
-- `ChromeRefinement` / `LayoutRefinement` and `StyledExt` for “Tailwind-ish” composition.
+- `ChromeRefinement` / `LayoutRefinement` and `StyledExt` for "Tailwind-ish" composition.
 - Theme reads should be token-driven (via `Theme` keys), not hard-coded constants.
 
 Feature flags to be aware of:

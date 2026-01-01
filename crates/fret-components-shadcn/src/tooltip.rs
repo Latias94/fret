@@ -65,6 +65,7 @@ pub struct Tooltip {
     open_delay_frames: u32,
     close_delay_frames: u32,
     layout: LayoutRefinement,
+    anchor_override: Option<fret_ui::elements::GlobalElementId>,
 }
 
 impl Tooltip {
@@ -79,6 +80,7 @@ impl Tooltip {
             open_delay_frames: 0,
             close_delay_frames: 0,
             layout: LayoutRefinement::default(),
+            anchor_override: None,
         }
     }
 
@@ -109,6 +111,16 @@ impl Tooltip {
 
     pub fn window_margin(mut self, margin: Px) -> Self {
         self.window_margin_override = Some(margin);
+        self
+    }
+
+    /// Override the element used as the placement anchor.
+    ///
+    /// Notes:
+    /// - Hover/focus tracking still uses the trigger element.
+    /// - The anchor bounds are resolved from last-frame layout/visual bounds (same as Popover).
+    pub fn anchor_element(mut self, element: fret_ui::elements::GlobalElementId) -> Self {
+        self.anchor_override = Some(element);
         self
     }
 
@@ -143,6 +155,7 @@ impl Tooltip {
         let content = self.content;
         let trigger_id = trigger.id;
         let content_id = content.id;
+        let anchor_id = self.anchor_override.unwrap_or(trigger_id);
 
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
             #[derive(Debug, Default, Clone, Copy)]
@@ -186,7 +199,7 @@ impl Tooltip {
             let overlay_root_name = OverlayController::tooltip_root_name(tooltip_id);
 
             let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                let anchor = overlay::anchor_bounds_for_element(cx, trigger_id);
+                let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                 let Some(anchor) = anchor else {
                     return Vec::new();
                 };
@@ -264,6 +277,28 @@ pub struct TooltipTrigger {
 impl TooltipTrigger {
     pub fn new(child: AnyElement) -> Self {
         Self { child }
+    }
+
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementCx<'_, H>) -> AnyElement {
+        self.child
+    }
+}
+
+/// Optional layout-only anchor for advanced tooltip placement recipes.
+///
+/// Use [`Tooltip::anchor_element`] to wire the anchor element ID into placement.
+#[derive(Debug, Clone)]
+pub struct TooltipAnchor {
+    child: AnyElement,
+}
+
+impl TooltipAnchor {
+    pub fn new(child: AnyElement) -> Self {
+        Self { child }
+    }
+
+    pub fn element_id(&self) -> fret_ui::elements::GlobalElementId {
+        self.child.id
     }
 
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementCx<'_, H>) -> AnyElement {
@@ -352,8 +387,10 @@ mod tests {
     };
     use fret_runtime::FrameId;
     use fret_ui::element::{
-        ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, TextProps,
+        ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps,
+        TextProps,
     };
+    use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -508,5 +545,193 @@ mod tests {
             content_node.is_some(),
             "expected tooltip content to be mounted when focused"
         );
+    }
+
+    #[test]
+    fn tooltip_anchor_override_uses_anchor_bounds_for_placement() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let anchor_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            anchor_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        ) {
+            OverlayController::begin_frame(app, window);
+
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "test",
+                |cx| {
+                    let anchor_id_out_for_anchor = anchor_id_out.clone();
+                    let anchor = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(50.0));
+                                layout.size.height = Length::Px(Px(10.0));
+                                layout.inset.top = Some(Px(120.0));
+                                layout.inset.left = Some(Px(240.0));
+                                layout.position = fret_ui::element::PositionStyle::Absolute;
+                                layout
+                            },
+                            enabled: false,
+                            focusable: false,
+                            ..Default::default()
+                        },
+                        move |_cx, _st, id| {
+                            anchor_id_out_for_anchor.set(Some(id));
+                            vec![]
+                        },
+                    );
+
+                    let anchor_id = anchor_id_out.get().expect("anchor element id");
+
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            a11y: PressableA11y {
+                                role: Some(SemanticsRole::Button),
+                                label: Some(Arc::from("trigger")),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        |cx, _st, id| {
+                            trigger_id_out.set(Some(id));
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        },
+                    );
+
+                    let content = cx.semantics(
+                        SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            ..Default::default()
+                        },
+                        |cx| {
+                            vec![
+                                TooltipContent::new(vec![cx.text_props(TextProps::new("tip"))])
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+                    content_id_out.set(Some(content.id));
+
+                    vec![
+                        anchor,
+                        Tooltip::new(trigger, content)
+                            .anchor_element(anchor_id)
+                            .side(TooltipSide::Bottom)
+                            .align(TooltipAlign::Start)
+                            .side_offset(Px(8.0))
+                            .window_margin(Px(0.0))
+                            .open_delay_frames(0)
+                            .close_delay_frames(0)
+                            .into_element(cx),
+                    ]
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+        }
+
+        // Frame 1: establish bounds for the anchor + element/node mappings.
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            anchor_id.clone(),
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: Point::new(Px(12.0), Px(12.0)),
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        // Frame 2: hover should open the tooltip, and placement should use the anchor override.
+        app.set_frame_id(FrameId(2));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            anchor_id.clone(),
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_element = content_id.get().expect("content element id");
+
+        let anchor_bounds = Rect::new(
+            Point::new(Px(240.0), Px(120.0)),
+            CoreSize::new(Px(50.0), Px(10.0)),
+        );
+
+        let expected = anchored_panel_bounds_sized(
+            bounds,
+            anchor_bounds,
+            CoreSize::new(Px(240.0), Px(44.0)),
+            Px(8.0),
+            Side::Bottom,
+            Align::Start,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
+            .expect("content node");
+        let content_bounds = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == content_node)
+            .map(|n| n.bounds)
+            .expect("content bounds");
+
+        assert_eq!(content_bounds.origin, expected.origin);
     }
 }

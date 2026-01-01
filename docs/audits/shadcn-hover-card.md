@@ -1,0 +1,46 @@
+# shadcn/ui v4 Audit - Hover Card (new-york)
+
+This audit compares Fret's shadcn-aligned `HoverCard` against the upstream shadcn/ui v4 docs and
+the `new-york-v4` registry implementation in `repo-ref/ui`.
+
+## Upstream references (source of truth)
+
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/hover-card.mdx`
+- Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/hover-card.tsx`
+
+## Fret implementation
+
+- Component code: `crates/fret-components-shadcn/src/hover_card.rs`
+- Hover intent state machine: `crates/fret-components-ui/src/headless/hover_intent.rs`
+- Placement helpers: `crates/fret-components-ui/src/overlay.rs`
+- Per-window hover overlay policy: `crates/fret-components-ui/src/window_overlays/mod.rs`
+
+## Audit checklist
+
+### Composition surface
+
+- Pass: `HoverCard`, `HoverCardTrigger`, `HoverCardContent` exist and are declarative-only.
+- Pass: Content is rendered via a per-window overlay root (portal-like), so it is not clipped by
+  ancestor `overflow: Clip`.
+- Pass: Supports an optional custom placement anchor via `HoverCardAnchor` +
+  `HoverCard::anchor_element(...)` (anchor can be separate from the trigger).
+
+### Open/close behavior
+
+- Pass: Hover open/close is implemented via `HoverRegion` + `HoverIntentState`, with a non-zero
+  close delay by default to allow moving from trigger to content.
+
+### Placement & sizing
+
+- Pass: Anchored placement uses deterministic flip/clamp behavior via
+  `overlay_placement::anchored_panel_bounds_sized(...)`.
+- Partial: Arrow is not implemented (upstream can render an arrow).
+
+## Validation
+
+- `cargo check -p fret-components-shadcn`
+- `cargo nextest run -p fret-components-shadcn hover_card::tests`
+
+## Follow-ups (recommended)
+
+- Add optional arrow support shared across hover-card/tooltip/popover.

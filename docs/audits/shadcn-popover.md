@@ -1,55 +1,79 @@
-# shadcn/ui v4 Audit — Popover
+# shadcn/ui v4 Audit - Popover (new-york)
 
-This audit compares Fret’s shadcn-aligned `Popover` against the upstream shadcn/ui v4 docs and
-examples in `repo-ref/ui`.
+This audit compares Fret's shadcn-aligned `Popover` surface against the upstream shadcn/ui v4
+documentation and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
 - Docs page: `repo-ref/ui/apps/v4/content/docs/components/popover.mdx`
-- Reference implementation (Radix base): `repo-ref/ui/apps/v4/registry/bases/radix/ui/popover.tsx`
-- Reference examples: `repo-ref/ui/apps/v4/registry/bases/radix/examples/popover-example.tsx`
+- Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx`
+- Registry demo: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/popover-demo.tsx`
+- Underlying primitive concept: Radix `@radix-ui/react-popover` (portal + anchored content + dismiss)
 
 ## Fret implementation
 
 - Component code: `crates/fret-components-shadcn/src/popover.rs`
-- Overlay policy substrate: `crates/fret-components-ui/src/overlay_controller.rs`
-- Outside-press + dismissible layer mechanism: `crates/fret-ui/src/declarative/host_widget/event/dismissible.rs`
+- Depends on overlay policy/infra:
+  - `crates/fret-components-ui/src/window_overlays/*` (dismissible overlays, focus rules)
+  - `crates/fret-components-ui/src/overlay_controller.rs` (overlay requests + presence)
+  - `crates/fret-ui/src/overlay_placement/solver.rs` (anchored placement + flip/clamp)
+
+## What upstream exports (new-york)
+
+Upstream shadcn/ui exports a thin wrapper around Radix:
+
+- `Popover` (root)
+- `PopoverTrigger`
+- `PopoverContent` (defaults: `align="center"`, `sideOffset={4}`, `w-72`, `p-4`, `rounded-md`,
+  `border`, `shadow-md`, `z-50`, open/close animations keyed off `data-state` and `data-side`)
+- `PopoverAnchor` (optional custom anchor)
 
 ## Audit checklist
 
-### Composition surface
+### API & composition
 
-- Pass: `Popover` + `PopoverTrigger` + `PopoverContent` exist and are declarative-only.
-- Pass: `PopoverHeader` + `PopoverTitle` exist (used by upstream examples).
-- Pass: `PopoverDescription` exists (used by upstream examples).
-- TODO: `PopoverAnchor` is not implemented (upstream exports it in the Radix base wrapper).
+- Pass: Fret exposes a `Popover` recipe with a `Model<bool>` open state.
+- Pass: Trigger/content composition matches the shadcn mental model: trigger element + portal-like
+  content element.
+- Pass: Upstream exports `PopoverAnchor`; Fret provides `PopoverAnchor` and supports custom anchor
+  wiring via `Popover::anchor_element(...)`.
+  (`Popover::into_element_with_anchor(...)` passes the resolved anchor rect to the content closure,
+  which covers common sizing recipes like "content width follows trigger".)
 
-### Placement & portal behavior
+### Placement & collision
 
-- Pass: Renders into a per-window overlay root (portal-like) via `OverlayController`.
-- Pass: Supports `side` and `align` placement options.
-- Pass: Supports `align_offset` and `side_offset` knobs.
-- Pass: Placement anchors to **visual bounds** when available (render-transform aware) via
-  `fret-components-ui::overlay::anchor_bounds_for_element`.
+- Pass: Supports `side`, `align`, and `side_offset` (default 4px) similar to Radix/shadcn.
+- Pass: Performs deterministic flip + clamp within window bounds via
+  `anchored_panel_bounds_sized(...)` (ADR 0064).
+- Partial: No arrow positioning surface yet (upstream can show arrow via Radix; Fret has
+  `anchored_panel_layout_ex(...)` available in runtime but Popover does not expose it).
 
-### Dismissal & focus behavior
+### Dismissal behavior
 
-- Pass: Outside press closes via click-through observer phase and does not override new focus
-  (`popover_outside_press_closes_without_overriding_new_focus`).
-- Pass: Escape requests dismissal via `DismissibleLayer` mechanism.
-- Pass: Non-modal by default (no focus trap); modal behavior belongs to `Dialog`/`Sheet`.
-- Note: Auto-focus behavior is currently explicit (`Popover::auto_focus(true)`), not automatic.
+- Pass: Outside-press dismiss is implemented via the click-through observer pass (ADR 0069) and the
+  window overlay layer.
+- Pass: Escape dismiss is handled by the shared dismissible overlay policy layer.
 
-### Visual defaults (shadcn parity)
+### Focus behavior
 
-- Pass: Default content chrome uses theme popover colors + border + radius + shadow.
-- Pass: Default content width targets upstream’s `w-72` (approx `288px`) and can be overridden via
-  `PopoverContent::refine_layout(...)`.
-- Pass: Default `side_offset` matches upstream `sideOffset=4`.
+- Pass: Default behavior preserves trigger focus (close to Radix default focus restore behavior).
+- Pass: Optional "focus inside on open" is supported via `Popover::auto_focus(true)`.
+- Pass: Explicit focus target is supported via `Popover::initial_focus(...)`.
 
-## Open questions / follow-ups
+### Visual parity (new-york)
 
-- Decide whether `PopoverContent` should use `SemanticsRole::Dialog` (Radix uses `role="dialog"`),
-  or keep `Panel` (current).
-- Consider adding a `PopoverAnchor` surface if shadcn blocks rely on it.
+- Pass: Default `PopoverContent` sizing matches `w-72` (`288px`) and padding matches `p-4`.
+- Pass: Default border/background uses theme keys (`popover`, `border`) and shadow matches the
+  design-system "md" shadow.
+- Partial: Upstream content has open/close + side-based slide/zoom animations; Fret currently uses a
+  simple fade presence.
 
+## Validation
+
+- `cargo check -p fret-components-shadcn`
+- `cargo nextest run -p fret-components-shadcn popover::tests`
+
+## Follow-ups (recommended)
+
+- Expose an optional arrow surface backed by `anchored_panel_layout_ex(...)`.
+- Add side-based slide/zoom transitions (optional) to better match upstream motion.
