@@ -4,7 +4,9 @@ use fret_components_app::tree::AppTreeRowRenderer;
 use fret_components_icons::IconRegistry;
 use fret_components_shadcn as shadcn;
 use fret_components_ui::tree::{TreeItem, TreeItemId, TreeState};
-use fret_core::{AppWindowId, Edges, Event, KeyCode, Px, Rect, Scene, SemanticsRole, UiServices};
+use fret_core::{
+    AppWindowId, Corners, Edges, Event, KeyCode, Px, Rect, Scene, SemanticsRole, UiServices,
+};
 use fret_runner_winit_wgpu::{
     RunnerUserEvent, WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig,
 };
@@ -162,6 +164,15 @@ impl ComponentsGalleryDriver {
                         .map(|id| id.to_string())
                         .unwrap_or_else(|| "<none>".to_string())
                 ));
+                let text_smoke_title: Arc<str> =
+                    Arc::from("Text smoke (verify emoji renders in color)");
+                let text_smoke_lines: [Arc<str>; 5] = [
+                    Arc::from("ASCII: The quick brown fox 0123456789"),
+                    Arc::from("IME provisional (fullwidth): ＡＢＣＤＥＦＧ １２３４５"),
+                    Arc::from("Kana: ひらがな カタカナ"),
+                    Arc::from("CJK: 汉字 漢字 한국어"),
+                    Arc::from("Emoji: 😀 😺 🧑‍💻 ❤️ 👨‍👩‍👧‍👦 🇯🇵 🏳️‍🌈"),
+                ];
 
                 let mut root_layout = LayoutStyle::default();
                 root_layout.size.width = Length::Fill;
@@ -198,6 +209,30 @@ impl ComponentsGalleryDriver {
                                 vec![
                                     cx.text(title),
                                     cx.text(subtitle),
+                                    cx.container(
+                                        ContainerProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Fill;
+                                                layout
+                                            },
+                                            padding: Edges::all(theme.metrics.padding_md),
+                                            background: Some(theme.colors.panel_background),
+                                            border: Edges::all(Px(1.0)),
+                                            border_color: Some(theme.colors.panel_border),
+                                            corner_radii: Corners::all(Px(8.0)),
+                                            ..Default::default()
+                                        },
+                                        |cx| {
+                                            let mut out =
+                                                Vec::with_capacity(1 + text_smoke_lines.len());
+                                            out.push(cx.text(text_smoke_title));
+                                            for line in text_smoke_lines {
+                                                out.push(cx.text(line));
+                                            }
+                                            out
+                                    },
+                                ),
                                     cx.flex(
                                         FlexProps {
                                             layout: LayoutStyle::default(),
