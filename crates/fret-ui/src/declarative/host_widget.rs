@@ -30,6 +30,7 @@ pub(super) struct ElementHostWidget {
     hit_test_children: bool,
     is_focusable: bool,
     is_text_input: bool,
+    can_scroll_descendant: bool,
     clips_hit_test: bool,
     clip_hit_test_corner_radii: Option<fret_core::Corners>,
     text_input: Option<BoundTextInput>,
@@ -48,6 +49,7 @@ impl ElementHostWidget {
             hit_test_children: true,
             is_focusable: false,
             is_text_input: false,
+            can_scroll_descendant: false,
             clips_hit_test: true,
             clip_hit_test_corner_radii: None,
             text_input: None,
@@ -433,6 +435,51 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         self.is_text_input
     }
 
+    fn can_scroll_descendant_into_view(&self) -> bool {
+        self.can_scroll_descendant
+    }
+
+    fn scroll_descendant_into_view(
+        &mut self,
+        cx: &mut crate::widget::ScrollIntoViewCx<'_, H>,
+        descendant_bounds: Rect,
+    ) -> crate::widget::ScrollIntoViewResult {
+        let Some(window) = cx.window else {
+            return crate::widget::ScrollIntoViewResult::NotHandled;
+        };
+        let Some(instance) = self.instance(cx.app, window, cx.node) else {
+            return crate::widget::ScrollIntoViewResult::NotHandled;
+        };
+
+        match instance {
+            ElementInstance::Scroll(props) => {
+                let handle = if let Some(handle) = props.scroll_handle.as_ref() {
+                    handle.clone()
+                } else {
+                    crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        self.element,
+                        crate::element::ScrollState::default,
+                        |state| state.scroll_handle.clone(),
+                    )
+                };
+
+                crate::widget::ScrollIntoViewResult::Handled {
+                    did_scroll: scroll_handle_into_view_y(&handle, cx.bounds, descendant_bounds),
+                }
+            }
+            ElementInstance::VirtualList(props) => crate::widget::ScrollIntoViewResult::Handled {
+                did_scroll: scroll_handle_into_view_y(
+                    props.scroll_handle.base_handle(),
+                    cx.bounds,
+                    descendant_bounds,
+                ),
+            },
+            _ => crate::widget::ScrollIntoViewResult::NotHandled,
+        }
+    }
+
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.event_impl(cx, event);
     }
@@ -465,4 +512,38 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.paint_impl(cx);
     }
+}
+
+fn scroll_handle_into_view_y(
+    handle: &crate::scroll::ScrollHandle,
+    viewport: Rect,
+    child: Rect,
+) -> bool {
+    let viewport_h = viewport.size.height.0.max(0.0);
+    if viewport_h <= 0.0 {
+        return false;
+    }
+
+    let view_top = viewport.origin.y.0;
+    let view_bottom = view_top + viewport_h;
+    let child_top = child.origin.y.0;
+    let child_bottom = child_top + child.size.height.0.max(0.0);
+
+    let delta = if child_top < view_top {
+        child_top - view_top
+    } else if child_bottom > view_bottom {
+        child_bottom - view_bottom
+    } else {
+        0.0
+    };
+
+    if delta.abs() <= 0.01 {
+        return false;
+    }
+
+    let prev = handle.offset();
+    handle.set_offset(Point::new(prev.x, Px(prev.y.0 + delta)));
+
+    let next = handle.offset();
+    (prev.y.0 - next.y.0).abs() > 0.01
 }

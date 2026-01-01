@@ -194,10 +194,56 @@ impl<H: UiHost> UiTree<H> {
             }
             self.focus = Some(next);
             self.mark_invalidation(next, Invalidation::Paint);
+            self.scroll_node_into_view(app, next);
         }
         if let Some(window) = self.window {
             app.request_redraw(window);
         }
         true
+    }
+
+    fn scroll_node_into_view(&mut self, app: &mut H, target: NodeId) -> bool {
+        let Some(target_bounds) = self.nodes.get(target).map(|n| n.bounds) else {
+            return false;
+        };
+
+        let mut node = Some(target);
+        while let Some(id) = node {
+            let parent = self.nodes.get(id).and_then(|n| n.parent);
+            node = parent;
+
+            let Some(bounds) = self.nodes.get(id).map(|n| n.bounds) else {
+                continue;
+            };
+
+            let Some(widget) = self.nodes.get(id).and_then(|n| n.widget.as_ref()) else {
+                continue;
+            };
+            if !widget.can_scroll_descendant_into_view() {
+                continue;
+            }
+
+            let result = self.with_widget_mut(id, |widget, tree| {
+                let mut cx = crate::widget::ScrollIntoViewCx {
+                    app,
+                    node: id,
+                    window: tree.window,
+                    bounds,
+                };
+                widget.scroll_descendant_into_view(&mut cx, target_bounds)
+            });
+
+            if let crate::widget::ScrollIntoViewResult::Handled { did_scroll } = result {
+                if did_scroll {
+                    self.mark_invalidation(id, Invalidation::HitTest);
+                    if let Some(window) = self.window {
+                        app.request_redraw(window);
+                    }
+                }
+                return did_scroll;
+            }
+        }
+
+        false
     }
 }

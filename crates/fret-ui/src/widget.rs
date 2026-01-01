@@ -372,9 +372,36 @@ pub trait Widget<H: UiHost> {
     fn is_text_input(&self) -> bool {
         false
     }
+    /// Whether this node can scroll a focused descendant into view.
+    ///
+    /// This is a mechanism-only capability used by `UiTree` to implement a minimal
+    /// "scroll-into-view" contract for focus traversal (ADR 0068) without coupling focus traversal
+    /// policy into component crates.
+    fn can_scroll_descendant_into_view(&self) -> bool {
+        false
+    }
+    fn scroll_descendant_into_view(
+        &mut self,
+        _cx: &mut ScrollIntoViewCx<'_, H>,
+        _descendant_bounds: Rect,
+    ) -> ScrollIntoViewResult {
+        ScrollIntoViewResult::NotHandled
+    }
     fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
         Size::default()
     }
     fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
     fn semantics(&mut self, _cx: &mut SemanticsCx<'_, H>) {}
+}
+
+pub enum ScrollIntoViewResult {
+    NotHandled,
+    Handled { did_scroll: bool },
+}
+
+pub struct ScrollIntoViewCx<'a, H: UiHost> {
+    pub app: &'a mut H,
+    pub node: NodeId,
+    pub window: Option<AppWindowId>,
+    pub bounds: Rect,
 }

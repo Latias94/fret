@@ -61,6 +61,10 @@ impl ElementHostWidget {
             ElementInstance::Pressable(p) => p.enabled && p.focusable,
             _ => false,
         };
+        self.can_scroll_descendant = matches!(
+            &instance,
+            ElementInstance::Scroll(_) | ElementInstance::VirtualList(_)
+        );
         self.clips_hit_test = match &instance {
             ElementInstance::Container(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Semantics(p) => matches!(p.layout.overflow, Overflow::Clip),

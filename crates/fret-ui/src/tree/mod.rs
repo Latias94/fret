@@ -748,7 +748,9 @@ impl<H: UiHost> UiTree<H> {
         if n.bounds.size.width.0 <= 0.0 || n.bounds.size.height.0 <= 0.0 {
             return;
         }
-        if !Self::rects_intersect(n.bounds, scope_bounds) {
+        if !Self::rects_intersect(n.bounds, scope_bounds)
+            && !self.node_has_scrollable_ancestor_in_scope(node, active_layers, scope_bounds)
+        {
             return;
         }
 
@@ -757,6 +759,41 @@ impl<H: UiHost> UiTree<H> {
         }
         for &child in &n.children {
             self.collect_focusables(child, active_layers, scope_bounds, out);
+        }
+    }
+
+    fn node_has_scrollable_ancestor_in_scope(
+        &self,
+        mut node: NodeId,
+        active_layers: &[NodeId],
+        scope_bounds: Rect,
+    ) -> bool {
+        loop {
+            let Some(parent) = self.nodes.get(node).and_then(|n| n.parent) else {
+                return false;
+            };
+            node = parent;
+
+            if !self.node_in_any_layer(node, active_layers) {
+                return false;
+            }
+
+            let Some(n) = self.nodes.get(node) else {
+                return false;
+            };
+            if n.bounds.size.width.0 <= 0.0 || n.bounds.size.height.0 <= 0.0 {
+                continue;
+            }
+            if !Self::rects_intersect(n.bounds, scope_bounds) {
+                continue;
+            }
+
+            if n.widget
+                .as_ref()
+                .is_some_and(|w| w.can_scroll_descendant_into_view())
+            {
+                return true;
+            }
         }
     }
 
