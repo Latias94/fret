@@ -1,0 +1,277 @@
+use bytemuck::{Pod, Zeroable};
+use fret_core::scene::UvRect;
+use std::time::Duration;
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+pub(super) struct ClipRRectUniform {
+    pub(super) rect: [f32; 4],
+    pub(super) corner_radii: [f32; 4],
+    pub(super) inv0: [f32; 4],
+    pub(super) inv1: [f32; 4],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+pub(super) struct ViewportUniform {
+    pub(super) viewport_size: [f32; 2],
+    pub(super) clip_head: u32,
+    pub(super) clip_count: u32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+pub(super) struct QuadInstance {
+    pub(super) rect: [f32; 4],
+    pub(super) transform0: [f32; 4],
+    pub(super) transform1: [f32; 4],
+    pub(super) color: [f32; 4],
+    pub(super) corner_radii: [f32; 4],
+    pub(super) border: [f32; 4],
+    pub(super) border_color: [f32; 4],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+pub(super) struct ViewportVertex {
+    pub(super) pos_px: [f32; 2],
+    pub(super) uv: [f32; 2],
+    pub(super) opacity: f32,
+    pub(super) _pad: [f32; 3],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+pub(super) struct TextVertex {
+    pub(super) pos_px: [f32; 2],
+    pub(super) uv: [f32; 2],
+    pub(super) color: [f32; 4],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+pub(super) struct PathVertex {
+    pub(super) pos_px: [f32; 2],
+    pub(super) color: [f32; 4],
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct ScissorRect {
+    pub(super) x: u32,
+    pub(super) y: u32,
+    pub(super) w: u32,
+    pub(super) h: u32,
+}
+
+impl ScissorRect {
+    pub(super) fn full(width: u32, height: u32) -> Self {
+        Self {
+            x: 0,
+            y: 0,
+            w: width,
+            h: height,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(super) enum SvgRasterKind {
+    AlphaMask,
+    Rgba,
+}
+
+pub(super) const SVG_MASK_ATLAS_PAGE_SIZE_PX: u32 = 1024;
+pub(super) const SVG_MASK_ATLAS_PADDING_PX: u32 = 1;
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct SvgPerfSnapshot {
+    pub frames: u64,
+    pub prepare_svg_ops_us: u64,
+
+    pub cache_hits: u64,
+    pub cache_misses: u64,
+
+    pub alpha_raster_count: u64,
+    pub alpha_raster_us: u64,
+    pub rgba_raster_count: u64,
+    pub rgba_raster_us: u64,
+
+    pub alpha_atlas_inserts: u64,
+    pub alpha_atlas_write_us: u64,
+    pub alpha_standalone_uploads: u64,
+    pub alpha_standalone_upload_us: u64,
+    pub rgba_uploads: u64,
+    pub rgba_upload_us: u64,
+
+    pub atlas_pages_live: usize,
+    pub svg_rasters_live: usize,
+    pub svg_standalone_bytes_live: u64,
+    pub svg_mask_atlas_bytes_live: u64,
+    pub svg_mask_atlas_used_px: u64,
+    pub svg_mask_atlas_capacity_px: u64,
+}
+
+#[derive(Debug, Default)]
+pub(super) struct SvgPerfStats {
+    pub(super) frames: u64,
+    pub(super) prepare_svg_ops: Duration,
+
+    pub(super) cache_hits: u64,
+    pub(super) cache_misses: u64,
+
+    pub(super) alpha_raster_count: u64,
+    pub(super) alpha_raster: Duration,
+    pub(super) rgba_raster_count: u64,
+    pub(super) rgba_raster: Duration,
+
+    pub(super) alpha_atlas_inserts: u64,
+    pub(super) alpha_atlas_write: Duration,
+    pub(super) alpha_standalone_uploads: u64,
+    pub(super) alpha_standalone_upload: Duration,
+    pub(super) rgba_uploads: u64,
+    pub(super) rgba_upload: Duration,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(super) struct SvgRasterKey {
+    pub(super) svg: fret_core::SvgId,
+    pub(super) target_w: u32,
+    pub(super) target_h: u32,
+    pub(super) smooth_scale_bits: u32,
+    pub(super) kind: SvgRasterKind,
+    pub(super) fit: fret_core::SvgFit,
+}
+
+pub(super) enum SvgRasterStorage {
+    Standalone {
+        _texture: wgpu::Texture,
+    },
+    MaskAtlas {
+        page_index: usize,
+        alloc_id: etagere::AllocId,
+    },
+}
+
+pub(super) struct SvgMaskAtlasPage {
+    pub(super) image: fret_core::ImageId,
+    pub(super) size_px: (u32, u32),
+    pub(super) allocator: etagere::BucketedAtlasAllocator,
+    pub(super) entries: usize,
+    pub(super) last_used_epoch: u64,
+    pub(super) _texture: wgpu::Texture,
+}
+
+pub(super) struct SvgRasterEntry {
+    pub(super) image: fret_core::ImageId,
+    pub(super) uv: UvRect,
+    pub(super) size_px: (u32, u32),
+    pub(super) approx_bytes: u64,
+    pub(super) last_used_epoch: u64,
+    pub(super) storage: SvgRasterStorage,
+}
+
+impl SvgMaskAtlasPage {
+    pub(super) fn bytes(&self) -> u64 {
+        u64::from(self.size_px.0).saturating_mul(u64::from(self.size_px.1))
+    }
+}
+
+pub(super) struct DrawCall {
+    pub(super) scissor: ScissorRect,
+    pub(super) uniform_index: u32,
+    pub(super) first_instance: u32,
+    pub(super) instance_count: u32,
+}
+
+pub(super) struct ViewportDraw {
+    pub(super) scissor: ScissorRect,
+    pub(super) uniform_index: u32,
+    pub(super) first_vertex: u32,
+    pub(super) vertex_count: u32,
+    pub(super) target: fret_core::RenderTargetId,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct ImageDraw {
+    pub(super) scissor: ScissorRect,
+    pub(super) uniform_index: u32,
+    pub(super) first_vertex: u32,
+    pub(super) vertex_count: u32,
+    pub(super) image: fret_core::ImageId,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct MaskDraw {
+    pub(super) scissor: ScissorRect,
+    pub(super) uniform_index: u32,
+    pub(super) first_vertex: u32,
+    pub(super) vertex_count: u32,
+    pub(super) image: fret_core::ImageId,
+}
+
+pub(super) struct TextDraw {
+    pub(super) scissor: ScissorRect,
+    pub(super) uniform_index: u32,
+    pub(super) first_vertex: u32,
+    pub(super) vertex_count: u32,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct PathDraw {
+    pub(super) scissor: ScissorRect,
+    pub(super) uniform_index: u32,
+    pub(super) first_vertex: u32,
+    pub(super) vertex_count: u32,
+}
+
+pub(super) struct PathIntermediate {
+    pub(super) size: (u32, u32),
+    pub(super) format: wgpu::TextureFormat,
+    pub(super) sample_count: u32,
+    pub(super) resolved_view: wgpu::TextureView,
+    pub(super) msaa_view: Option<wgpu::TextureView>,
+    pub(super) bind_group: wgpu::BindGroup,
+}
+
+pub(super) enum OrderedDraw {
+    Quad(DrawCall),
+    Viewport(ViewportDraw),
+    Image(ImageDraw),
+    Mask(MaskDraw),
+    Text(TextDraw),
+    Path(PathDraw),
+}
+
+#[derive(Default)]
+pub(super) struct SceneEncoding {
+    pub(super) instances: Vec<QuadInstance>,
+    pub(super) viewport_vertices: Vec<ViewportVertex>,
+    pub(super) text_vertices: Vec<TextVertex>,
+    pub(super) path_vertices: Vec<PathVertex>,
+    pub(super) clips: Vec<ClipRRectUniform>,
+    pub(super) uniforms: Vec<ViewportUniform>,
+    pub(super) ordered_draws: Vec<OrderedDraw>,
+}
+
+impl SceneEncoding {
+    pub(super) fn clear(&mut self) {
+        self.instances.clear();
+        self.viewport_vertices.clear();
+        self.text_vertices.clear();
+        self.path_vertices.clear();
+        self.clips.clear();
+        self.uniforms.clear();
+        self.ordered_draws.clear();
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct SceneEncodingCacheKey {
+    pub(super) format: wgpu::TextureFormat,
+    pub(super) viewport_size: (u32, u32),
+    pub(super) scale_factor_bits: u32,
+    pub(super) scene_fingerprint: u64,
+    pub(super) scene_ops_len: usize,
+    pub(super) render_targets_generation: u64,
+    pub(super) images_generation: u64,
+}
