@@ -1170,15 +1170,32 @@ impl WebEffectPump {
                     let revision = prev_rev.saturating_add(1);
                     let families = runner.all_font_names();
                     let cache = FontCatalogCache::from_families(revision, &families);
-                    app.set_global::<FontCatalog>(FontCatalog { families, revision });
+                    app.set_global::<FontCatalog>(FontCatalog {
+                        families: families.clone(),
+                        revision,
+                    });
                     app.set_global::<FontCatalogCache>(cache);
 
-                    // See desktop runner rationale: this forces global-change observation even if
-                    // config value is unchanged.
-                    let config = app
+                    // Ensure the renderer has usable default families on platforms without system
+                    // fonts (wasm). If the config is empty, fall back to whatever we just loaded.
+                    let mut config = app
                         .global::<fret_core::TextFontFamilyConfig>()
                         .cloned()
                         .unwrap_or_default();
+                    if config.ui_sans.is_empty() {
+                        config.ui_sans = families.clone();
+                    }
+                    if config.ui_serif.is_empty() {
+                        config.ui_serif = families.clone();
+                    }
+                    if config.ui_mono.is_empty() {
+                        config.ui_mono = families.clone();
+                    }
+
+                    let _ = runner.set_text_font_families(&config);
+
+                    // Re-setting the global forces global-change observation even if the config
+                    // value is unchanged (see desktop runner rationale).
                     app.set_global::<fret_core::TextFontFamilyConfig>(config);
 
                     app.request_redraw(redraw_window);
@@ -1841,6 +1858,10 @@ impl WebRunner {
 
     pub fn all_font_names(&self) -> Vec<String> {
         self.renderer.all_font_names()
+    }
+
+    pub fn set_text_font_families(&mut self, config: &fret_core::TextFontFamilyConfig) -> bool {
+        self.renderer.set_text_font_families(config)
     }
 }
 

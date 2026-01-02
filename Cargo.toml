@@ -11,6 +11,7 @@ members = [
     "crates/fret-components-shadcn",
     "crates/fret-components-ui",
     "crates/fret-core",
+    "crates/fret-fonts",
     "crates/fret-demo",
     "crates/fret-demo-web",
     "crates/fret-platform",

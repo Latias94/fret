@@ -1,0 +1,7 @@
+[package]
+name = "fret-fonts"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+

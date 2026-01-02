@@ -45,7 +45,7 @@ impl WebDemo {
 
         let counter = app.models_mut().insert(0u32);
 
-        Ok(Self {
+        let mut demo = Self {
             runner,
             input,
             effects,
@@ -55,7 +55,18 @@ impl WebDemo {
             tick_id: TickId::default(),
             frame_id: FrameId::default(),
             counter,
-        })
+        };
+
+        // Web/WASM cannot rely on system fonts. Load a small default font so text shaping doesn't
+        // panic before user-provided fonts are available.
+        let fonts = fret_fonts::default_fonts()
+            .iter()
+            .map(|bytes| bytes.to_vec())
+            .collect::<Vec<_>>();
+        demo.app.push_effect(Effect::TextAddFonts { fonts });
+        demo.drain_effects();
+
+        Ok(demo)
     }
 
     fn drain_effects(&mut self) {
