@@ -14,9 +14,9 @@ use wasm_bindgen::JsCast as _;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, spawn_local};
 use web_sys::{
-    CompositionEvent, Event as WebSysEvent, EventTarget, HtmlCanvasElement, HtmlElement,
-    HtmlTextAreaElement, InputEvent, KeyboardEvent, PointerEvent as WebPointerEvent, WheelEvent,
-    Window,
+    AddEventListenerOptions, CompositionEvent, Document, Event as WebSysEvent, EventTarget,
+    HtmlCanvasElement, HtmlElement, HtmlTextAreaElement, InputEvent, KeyboardEvent, Node,
+    PointerEvent as WebPointerEvent, WheelEvent, Window,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,6 +46,14 @@ impl std::error::Error for RunnerError {}
 
 fn window() -> Result<Window, RunnerError> {
     web_sys::window().ok_or_else(|| RunnerError::new("window is not available"))
+}
+
+fn is_web_input_focused(document: &Document, canvas_node: &Node, ime_node: &Node) -> bool {
+    let Some(active) = document.active_element() else {
+        return false;
+    };
+    let active_node: Node = active.unchecked_into();
+    active_node.is_same_node(Some(canvas_node)) || active_node.is_same_node(Some(ime_node))
 }
 
 pub fn canvas_by_id(id: &str) -> Result<HtmlCanvasElement, RunnerError> {
@@ -272,6 +280,9 @@ impl WebInputListeners {
     ) -> Result<Self, RunnerError> {
         let canvas_el: HtmlElement = canvas.clone().unchecked_into();
         canvas_el.set_tab_index(0);
+        if prevent_default {
+            let _ = canvas_el.style().set_property("touch-action", "none");
+        }
 
         let document = window
             .document()
@@ -313,6 +324,10 @@ impl WebInputListeners {
 
         let queue_move = queue.clone();
         let on_pointer_move = Closure::wrap(Box::new(move |event: WebPointerEvent| {
+            if prevent_default {
+                event.prevent_default();
+            }
+
             let position = point_from_dom_offset_xy(event.offset_x(), event.offset_y());
             let modifiers = modifiers_from_pointer_event(&event);
             let buttons = mouse_buttons_from_dom_buttons(event.buttons());
@@ -419,9 +434,19 @@ impl WebInputListeners {
         }) as Box<dyn FnMut(WheelEvent)>);
 
         let queue_key_down = queue.clone();
+        let document_for_keys = document.clone();
+        let canvas_node_for_keys: Node = canvas.clone().unchecked_into();
+        let ime_node_for_keys: Node = ime_textarea.clone().unchecked_into();
         let on_key_down = Closure::wrap(Box::new(move |event: KeyboardEvent| {
+            if !is_web_input_focused(
+                &document_for_keys,
+                &canvas_node_for_keys,
+                &ime_node_for_keys,
+            ) {
+                return;
+            }
+
             if prevent_default {
-                // Avoid browser navigation/scrolling for common shortcuts and Tab focus movement.
                 event.prevent_default();
             }
 
@@ -439,7 +464,18 @@ impl WebInputListeners {
         }) as Box<dyn FnMut(KeyboardEvent)>);
 
         let queue_key_up = queue.clone();
+        let document_for_keys = document.clone();
+        let canvas_node_for_keys: Node = canvas.clone().unchecked_into();
+        let ime_node_for_keys: Node = ime_textarea.clone().unchecked_into();
         let on_key_up = Closure::wrap(Box::new(move |event: KeyboardEvent| {
+            if !is_web_input_focused(
+                &document_for_keys,
+                &canvas_node_for_keys,
+                &ime_node_for_keys,
+            ) {
+                return;
+            }
+
             if prevent_default {
                 event.prevent_default();
             }
@@ -572,8 +608,14 @@ impl WebInputListeners {
                 on_pointer_cancel.as_ref().unchecked_ref(),
             )
             .map_err(|_| RunnerError::new("failed to register pointercancel listener"))?;
+        let wheel_opts = AddEventListenerOptions::new();
+        wheel_opts.set_passive(false);
         canvas_target
-            .add_event_listener_with_callback("wheel", on_wheel.as_ref().unchecked_ref())
+            .add_event_listener_with_callback_and_add_event_listener_options(
+                "wheel",
+                on_wheel.as_ref().unchecked_ref(),
+                &wheel_opts,
+            )
             .map_err(|_| RunnerError::new("failed to register wheel listener"))?;
 
         window_target
