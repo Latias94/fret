@@ -196,7 +196,8 @@ pub(crate) struct KeyActionHooks {
     pub on_key_down: Option<OnKeyDown>,
 }
 
-pub type OnTimer = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, TimerToken) -> bool + 'static>;
+pub type OnTimer =
+    Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, TimerToken) -> bool + 'static>;
 
 #[derive(Default)]
 pub(crate) struct TimerActionHooks {

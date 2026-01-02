@@ -20,7 +20,48 @@ pub(super) fn handle_timer_event<H: UiHost>(
     );
 
     if let Some(h) = hook {
-        let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
+        struct TimerHookHost<'a, H: UiHost> {
+            app: &'a mut H,
+            window: AppWindowId,
+            requested_focus: &'a mut Option<NodeId>,
+        }
+
+        impl<H: UiHost> action::UiActionHost for TimerHookHost<'_, H> {
+            fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+                self.app.models_mut()
+            }
+
+            fn push_effect(&mut self, effect: Effect) {
+                self.app.push_effect(effect);
+            }
+
+            fn request_redraw(&mut self, window: AppWindowId) {
+                self.app.request_redraw(window);
+            }
+
+            fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+                self.app.next_timer_token()
+            }
+        }
+
+        impl<H: UiHost> action::UiFocusActionHost for TimerHookHost<'_, H> {
+            fn request_focus(&mut self, target: crate::GlobalElementId) {
+                let Some(node) = crate::elements::with_window_state(
+                    &mut *self.app,
+                    self.window,
+                    |window_state| window_state.node_entry(target).map(|e| e.node),
+                ) else {
+                    return;
+                };
+                *self.requested_focus = Some(node);
+            }
+        }
+
+        let mut host = TimerHookHost {
+            app: &mut *cx.app,
+            window,
+            requested_focus: &mut cx.requested_focus,
+        };
         let handled = h(
             &mut host,
             action::ActionCx {
