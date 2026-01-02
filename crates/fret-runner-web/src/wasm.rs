@@ -4,8 +4,10 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use fret_core::{
-    Event, ImeEvent, KeyCode, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect,
-    Scene, Size, UiServices,
+    Event, ExternalDragEvent, ExternalDragFiles, ExternalDragKind, ExternalDropDataEvent,
+    ExternalDropFileData, ExternalDropReadError, ExternalDropReadLimits, ExternalDropToken,
+    ImeEvent, KeyCode, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect, Scene,
+    Size, UiServices,
 };
 use fret_render::{ClearColor, RenderSceneParams, Renderer, SurfaceState, WgpuContext};
 use fret_runtime::{Effect, FontCatalog, FontCatalogCache, PlatformCapabilities, TimerToken};
@@ -170,6 +172,17 @@ fn point_from_dom_offset_xy(offset_x: i32, offset_y: i32) -> fret_core::Point {
     fret_core::Point::new(Px(offset_x as f32), Px(offset_y as f32))
 }
 
+fn point_from_dom_client_xy(
+    canvas: &HtmlCanvasElement,
+    client_x: i32,
+    client_y: i32,
+) -> fret_core::Point {
+    let rect = canvas.get_bounding_client_rect();
+    let x = (client_x as f64 - rect.left()).max(0.0) as f32;
+    let y = (client_y as f64 - rect.top()).max(0.0) as f32;
+    fret_core::Point::new(Px(x), Px(y))
+}
+
 fn wheel_delta_from_dom(event: &WheelEvent) -> fret_core::Point {
     // DOM WheelEvent:
     // - deltaMode 0: pixels
@@ -191,6 +204,7 @@ fn wheel_delta_from_dom(event: &WheelEvent) -> fret_core::Point {
 pub struct WebInput {
     queue: Rc<RefCell<WebInputQueue>>,
     activation_callback: Rc<RefCell<Option<Rc<dyn Fn()>>>>,
+    external_drop: Rc<RefCell<WebExternalDropState>>,
     _listeners: WebInputListeners,
 }
 
@@ -199,16 +213,19 @@ impl WebInput {
         let window = window()?;
         let queue = Rc::new(RefCell::new(WebInputQueue::default()));
         let activation_callback = Rc::new(RefCell::new(None));
+        let external_drop = Rc::new(RefCell::new(WebExternalDropState::default()));
         let listeners = WebInputListeners::install(
             window,
             canvas,
             queue.clone(),
             prevent_default,
             activation_callback.clone(),
+            external_drop.clone(),
         )?;
         Ok(Self {
             queue,
             activation_callback,
+            external_drop,
             _listeners: listeners,
         })
     }
@@ -219,6 +236,18 @@ impl WebInput {
 
     pub fn set_user_activation_callback(&mut self, cb: Option<Rc<dyn Fn()>>) {
         *self.activation_callback.borrow_mut() = cb;
+    }
+
+    fn external_drop_files(&self, token: ExternalDropToken) -> Option<Vec<web_sys::File>> {
+        self.external_drop.borrow().selections.get(&token).cloned()
+    }
+
+    fn external_drop_release(&mut self, token: ExternalDropToken) {
+        let mut st = self.external_drop.borrow_mut();
+        st.selections.remove(&token);
+        if st.current_drag_token == Some(token) {
+            st.current_drag_token = None;
+        }
     }
 
     pub fn set_ime_allowed(&mut self, enabled: bool) {
@@ -251,6 +280,11 @@ struct WebInputListeners {
     on_composition_end: Closure<dyn FnMut(CompositionEvent)>,
 
     on_before_input: Closure<dyn FnMut(InputEvent)>,
+
+    on_drag_enter: Closure<dyn FnMut(web_sys::DragEvent)>,
+    on_drag_over: Closure<dyn FnMut(web_sys::DragEvent)>,
+    on_drag_leave: Closure<dyn FnMut(web_sys::DragEvent)>,
+    on_drop: Closure<dyn FnMut(web_sys::DragEvent)>,
 }
 
 impl WebInputListeners {
@@ -290,6 +324,7 @@ impl WebInputListeners {
         queue: Rc<RefCell<WebInputQueue>>,
         prevent_default: bool,
         activation_callback: Rc<RefCell<Option<Rc<dyn Fn()>>>>,
+        external_drop: Rc<RefCell<WebExternalDropState>>,
     ) -> Result<Self, RunnerError> {
         let canvas_el: HtmlElement = canvas.clone().unchecked_into();
         canvas_el.set_tab_index(0);
@@ -622,6 +657,178 @@ impl WebInputListeners {
             }
         }) as Box<dyn FnMut(InputEvent)>);
 
+        let canvas_for_drag = canvas.clone();
+        let queue_drag_enter = queue.clone();
+        let external_drop_for_drag = external_drop.clone();
+        let activation_for_drag_enter = activation_callback.clone();
+        let on_drag_enter = Closure::wrap(Box::new(move |event: web_sys::DragEvent| {
+            event.prevent_default();
+            let Some(dt) = event.data_transfer() else {
+                return;
+            };
+
+            let mut files_meta: Vec<fret_core::ExternalDragFile> = Vec::new();
+            let Some(files) = dt.files() else {
+                return;
+            };
+            for i in 0..files.length() {
+                if let Some(file) = files.item(i) {
+                    files_meta.push(fret_core::ExternalDragFile { name: file.name() });
+                }
+            }
+            if files_meta.is_empty() {
+                return;
+            }
+
+            let token = external_drop_for_drag
+                .borrow_mut()
+                .allocate_token_for_drag();
+            let position =
+                point_from_dom_client_xy(&canvas_for_drag, event.client_x(), event.client_y());
+            let kind = ExternalDragKind::EnterFiles(ExternalDragFiles {
+                token,
+                files: files_meta,
+            });
+            if let Ok(mut q) = queue_drag_enter.try_borrow_mut() {
+                q.push(Event::ExternalDrag(ExternalDragEvent { position, kind }));
+            }
+
+            let cb = activation_for_drag_enter
+                .try_borrow()
+                .ok()
+                .and_then(|v| v.as_ref().cloned());
+            if let Some(cb) = cb {
+                cb();
+            }
+        }) as Box<dyn FnMut(web_sys::DragEvent)>);
+
+        let canvas_for_drag = canvas.clone();
+        let queue_drag_over = queue.clone();
+        let external_drop_for_drag = external_drop.clone();
+        let activation_for_drag_over = activation_callback.clone();
+        let on_drag_over = Closure::wrap(Box::new(move |event: web_sys::DragEvent| {
+            event.prevent_default();
+            let Some(dt) = event.data_transfer() else {
+                return;
+            };
+
+            let mut files_meta: Vec<fret_core::ExternalDragFile> = Vec::new();
+            let Some(files) = dt.files() else {
+                return;
+            };
+            for i in 0..files.length() {
+                if let Some(file) = files.item(i) {
+                    files_meta.push(fret_core::ExternalDragFile { name: file.name() });
+                }
+            }
+            if files_meta.is_empty() {
+                return;
+            }
+
+            let token = external_drop_for_drag
+                .borrow_mut()
+                .allocate_token_for_drag();
+            let position =
+                point_from_dom_client_xy(&canvas_for_drag, event.client_x(), event.client_y());
+            let kind = ExternalDragKind::OverFiles(ExternalDragFiles {
+                token,
+                files: files_meta,
+            });
+            if let Ok(mut q) = queue_drag_over.try_borrow_mut() {
+                q.push(Event::ExternalDrag(ExternalDragEvent { position, kind }));
+            }
+
+            let cb = activation_for_drag_over
+                .try_borrow()
+                .ok()
+                .and_then(|v| v.as_ref().cloned());
+            if let Some(cb) = cb {
+                cb();
+            }
+        }) as Box<dyn FnMut(web_sys::DragEvent)>);
+
+        let canvas_for_drag = canvas.clone();
+        let queue_drag_leave = queue.clone();
+        let external_drop_for_drag = external_drop.clone();
+        let activation_for_drag_leave = activation_callback.clone();
+        let on_drag_leave = Closure::wrap(Box::new(move |event: web_sys::DragEvent| {
+            event.prevent_default();
+            if external_drop_for_drag.borrow().current_drag_token.is_none() {
+                return;
+            }
+            external_drop_for_drag.borrow_mut().current_drag_token = None;
+
+            let position =
+                point_from_dom_client_xy(&canvas_for_drag, event.client_x(), event.client_y());
+            if let Ok(mut q) = queue_drag_leave.try_borrow_mut() {
+                q.push(Event::ExternalDrag(ExternalDragEvent {
+                    position,
+                    kind: ExternalDragKind::Leave,
+                }));
+            }
+            let cb = activation_for_drag_leave
+                .try_borrow()
+                .ok()
+                .and_then(|v| v.as_ref().cloned());
+            if let Some(cb) = cb {
+                cb();
+            }
+        }) as Box<dyn FnMut(web_sys::DragEvent)>);
+
+        let canvas_for_drag = canvas.clone();
+        let queue_drop = queue.clone();
+        let external_drop_for_drop = external_drop.clone();
+        let activation_for_drop = activation_callback.clone();
+        let on_drop = Closure::wrap(Box::new(move |event: web_sys::DragEvent| {
+            event.prevent_default();
+            let Some(dt) = event.data_transfer() else {
+                return;
+            };
+
+            let token = external_drop_for_drop
+                .borrow_mut()
+                .allocate_token_for_drag();
+            external_drop_for_drop.borrow_mut().current_drag_token = None;
+
+            let mut files_meta: Vec<fret_core::ExternalDragFile> = Vec::new();
+            let mut files_for_read: Vec<web_sys::File> = Vec::new();
+            let Some(files) = dt.files() else {
+                return;
+            };
+            for i in 0..files.length() {
+                if let Some(file) = files.item(i) {
+                    files_meta.push(fret_core::ExternalDragFile { name: file.name() });
+                    files_for_read.push(file);
+                }
+            }
+            if files_meta.is_empty() {
+                return;
+            }
+
+            external_drop_for_drop
+                .borrow_mut()
+                .selections
+                .insert(token, files_for_read);
+
+            let position =
+                point_from_dom_client_xy(&canvas_for_drag, event.client_x(), event.client_y());
+            let kind = ExternalDragKind::DropFiles(ExternalDragFiles {
+                token,
+                files: files_meta,
+            });
+            if let Ok(mut q) = queue_drop.try_borrow_mut() {
+                q.push(Event::ExternalDrag(ExternalDragEvent { position, kind }));
+            }
+
+            let cb = activation_for_drop
+                .try_borrow()
+                .ok()
+                .and_then(|v| v.as_ref().cloned());
+            if let Some(cb) = cb {
+                cb();
+            }
+        }) as Box<dyn FnMut(web_sys::DragEvent)>);
+
         let canvas_target: EventTarget = canvas.clone().unchecked_into();
         let window_target: EventTarget = window.clone().unchecked_into();
         let ime_target: EventTarget = ime_textarea.clone().unchecked_into();
@@ -703,6 +910,19 @@ impl WebInputListeners {
             )
             .map_err(|_| RunnerError::new("failed to register beforeinput listener"))?;
 
+        canvas_target
+            .add_event_listener_with_callback("dragenter", on_drag_enter.as_ref().unchecked_ref())
+            .map_err(|_| RunnerError::new("failed to register dragenter listener"))?;
+        canvas_target
+            .add_event_listener_with_callback("dragover", on_drag_over.as_ref().unchecked_ref())
+            .map_err(|_| RunnerError::new("failed to register dragover listener"))?;
+        canvas_target
+            .add_event_listener_with_callback("dragleave", on_drag_leave.as_ref().unchecked_ref())
+            .map_err(|_| RunnerError::new("failed to register dragleave listener"))?;
+        canvas_target
+            .add_event_listener_with_callback("drop", on_drop.as_ref().unchecked_ref())
+            .map_err(|_| RunnerError::new("failed to register drop listener"))?;
+
         let _ = ime_target.add_event_listener_with_callback(
             "compositionstart",
             on_composition_start.as_ref().unchecked_ref(),
@@ -741,6 +961,11 @@ impl WebInputListeners {
             on_composition_end,
 
             on_before_input,
+
+            on_drag_enter,
+            on_drag_over,
+            on_drag_leave,
+            on_drop,
         })
     }
 
@@ -797,6 +1022,21 @@ impl WebInputListeners {
             self.on_before_input.as_ref().unchecked_ref(),
         );
 
+        let _ = canvas_target.remove_event_listener_with_callback(
+            "dragenter",
+            self.on_drag_enter.as_ref().unchecked_ref(),
+        );
+        let _ = canvas_target.remove_event_listener_with_callback(
+            "dragover",
+            self.on_drag_over.as_ref().unchecked_ref(),
+        );
+        let _ = canvas_target.remove_event_listener_with_callback(
+            "dragleave",
+            self.on_drag_leave.as_ref().unchecked_ref(),
+        );
+        let _ = canvas_target
+            .remove_event_listener_with_callback("drop", self.on_drop.as_ref().unchecked_ref());
+
         let _ = ime_target.remove_event_listener_with_callback(
             "compositionstart",
             self.on_composition_start.as_ref().unchecked_ref(),
@@ -852,6 +1092,26 @@ impl WebFileDialogState {
         let next = self.next_token.max(1);
         let token = fret_runtime::FileDialogToken(next);
         self.next_token = next.saturating_add(1);
+        token
+    }
+}
+
+#[derive(Default)]
+struct WebExternalDropState {
+    next_token: u64,
+    current_drag_token: Option<ExternalDropToken>,
+    selections: HashMap<ExternalDropToken, Vec<web_sys::File>>,
+}
+
+impl WebExternalDropState {
+    fn allocate_token_for_drag(&mut self) -> ExternalDropToken {
+        if let Some(existing) = self.current_drag_token {
+            return existing;
+        }
+        let next = self.next_token.max(1);
+        let token = ExternalDropToken(next);
+        self.next_token = next.saturating_add(1);
+        self.current_drag_token = Some(token);
         token
     }
 }
@@ -1137,6 +1397,42 @@ impl WebEffectPump {
                 Effect::FileDialogRelease { token } => {
                     self.file_dialogs.borrow_mut().selections.remove(&token);
                 }
+                Effect::ExternalDropReadAll { token, .. } => {
+                    let caps = app
+                        .global::<PlatformCapabilities>()
+                        .cloned()
+                        .unwrap_or_default();
+                    if !caps.dnd.external {
+                        continue;
+                    }
+                    self.external_drop_read_all(
+                        input,
+                        token,
+                        ExternalDropReadLimits {
+                            max_total_bytes: 64 * 1024 * 1024,
+                            max_file_bytes: 32 * 1024 * 1024,
+                            max_files: 64,
+                        },
+                    );
+                }
+                Effect::ExternalDropReadAllWithLimits { token, limits, .. } => {
+                    let caps = app
+                        .global::<PlatformCapabilities>()
+                        .cloned()
+                        .unwrap_or_default();
+                    if !caps.dnd.external {
+                        continue;
+                    }
+                    let cap = ExternalDropReadLimits {
+                        max_total_bytes: 64 * 1024 * 1024,
+                        max_file_bytes: 32 * 1024 * 1024,
+                        max_files: 64,
+                    };
+                    self.external_drop_read_all(input, token, limits.capped_by(cap));
+                }
+                Effect::ExternalDropRelease { token } => {
+                    input.external_drop_release(token);
+                }
                 other => unhandled.push(other),
             }
         }
@@ -1233,6 +1529,100 @@ impl WebEffectPump {
             let _ = queue
                 .try_borrow_mut()
                 .map(|mut q| q.push(Event::FileDialogData(data)));
+        });
+    }
+
+    fn external_drop_read_all(
+        &self,
+        input: &WebInput,
+        token: ExternalDropToken,
+        limits: ExternalDropReadLimits,
+    ) {
+        let files = input.external_drop_files(token);
+        let Some(files) = files else {
+            return;
+        };
+
+        let queue = self.queued_events.clone();
+        spawn_local(async move {
+            let mut out_files: Vec<ExternalDropFileData> = Vec::new();
+            let mut errors: Vec<ExternalDropReadError> = Vec::new();
+            let mut total: u64 = 0;
+
+            for file in files.into_iter().take(limits.max_files) {
+                let name = file.name();
+                let reported_size = file.size() as u64;
+
+                if reported_size > limits.max_file_bytes {
+                    errors.push(ExternalDropReadError {
+                        name,
+                        message: format!(
+                            "file too large ({} bytes > max_file_bytes {})",
+                            reported_size, limits.max_file_bytes
+                        ),
+                    });
+                    continue;
+                }
+
+                if total >= limits.max_total_bytes {
+                    errors.push(ExternalDropReadError {
+                        name,
+                        message: format!(
+                            "selection too large (total {} >= max_total_bytes {})",
+                            total, limits.max_total_bytes
+                        ),
+                    });
+                    break;
+                }
+
+                let buf = match JsFuture::from(file.array_buffer()).await {
+                    Ok(v) => v,
+                    Err(err) => {
+                        errors.push(ExternalDropReadError {
+                            name,
+                            message: format!("read failed: {err:?}"),
+                        });
+                        continue;
+                    }
+                };
+                let bytes = Uint8Array::new(&buf).to_vec();
+
+                if bytes.len() as u64 > limits.max_file_bytes {
+                    errors.push(ExternalDropReadError {
+                        name,
+                        message: format!(
+                            "file too large ({} bytes > max_file_bytes {})",
+                            bytes.len(),
+                            limits.max_file_bytes
+                        ),
+                    });
+                    continue;
+                }
+
+                let next_total = total.saturating_add(bytes.len() as u64);
+                if next_total > limits.max_total_bytes {
+                    errors.push(ExternalDropReadError {
+                        name,
+                        message: format!(
+                            "selection too large (next_total {} > max_total_bytes {})",
+                            next_total, limits.max_total_bytes
+                        ),
+                    });
+                    break;
+                }
+                total = next_total;
+
+                out_files.push(ExternalDropFileData { name, bytes });
+            }
+
+            let data = ExternalDropDataEvent {
+                token,
+                files: out_files,
+                errors,
+            };
+            let _ = queue
+                .try_borrow_mut()
+                .map(|mut q| q.push(Event::ExternalDropData(data)));
         });
     }
 
