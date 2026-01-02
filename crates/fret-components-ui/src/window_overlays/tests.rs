@@ -241,6 +241,7 @@ fn dismissible_popover_closes_on_outside_press() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_pointer_move: None,
             children: vec![],
         },
     );
@@ -356,6 +357,7 @@ fn dismissible_popover_does_not_close_on_inside_press() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_pointer_move: None,
             children,
         },
     );
@@ -689,6 +691,7 @@ fn non_modal_overlay_can_remain_present_while_pointer_transparent_during_close_a
             open,
             present: true,
             initial_focus: None,
+            on_pointer_move: None,
             children: overlay_children,
         },
     );
@@ -760,6 +763,7 @@ fn non_modal_overlay_does_not_request_outside_press_observer_while_closing() {
             open,
             present: true,
             initial_focus: None,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -831,6 +835,7 @@ fn non_modal_overlay_restores_focus_when_focus_is_missing_on_unmount() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -947,6 +952,7 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_pointer_move: None,
             children: overlay_children,
         },
     );

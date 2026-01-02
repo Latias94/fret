@@ -296,6 +296,103 @@ fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
 }
 
 #[test]
+fn dismissible_layer_pointer_move_observer_does_not_break_click_through() {
+    struct CountPointerDown {
+        clicks: fret_runtime::Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for CountPointerDown {
+        fn hit_test(&self, bounds: Rect, position: Point) -> bool {
+            bounds.contains(position)
+        }
+
+        fn event(&mut self, cx: &mut crate::widget::EventCx<'_, H>, event: &fret_core::Event) {
+            if matches!(
+                event,
+                fret_core::Event::Pointer(fret_core::PointerEvent::Down { .. })
+            ) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.clicks, |v: &mut u32| *v = v.saturating_add(1));
+                cx.stop_propagation();
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let clicks = app.models_mut().insert(0u32);
+    let base = ui.create_node(CountPointerDown {
+        clicks: clicks.clone(),
+    });
+    ui.set_root(base);
+
+    let moves = app.models_mut().insert(0u32);
+    let moves_for_hook = moves.clone();
+    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "dismissible-pointer-move-observer",
+        move |cx| {
+            cx.dismissible_on_pointer_move(Arc::new(move |host, _acx, _mv| {
+                let _ = host
+                    .models_mut()
+                    .update(&moves_for_hook, |v: &mut u32| *v = v.saturating_add(1));
+                false
+            }));
+            Vec::new()
+        },
+    );
+    let layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    ui.set_layer_visible(layer, true);
+    ui.set_layer_hit_testable(layer, true);
+    ui.set_layer_wants_pointer_move_events(layer, true);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let p = Point::new(Px(10.0), Px(10.0));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            position: p,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+        }),
+    );
+    assert_eq!(app.models().get_copied(&moves), Some(1));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: p,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+        }),
+    );
+    assert_eq!(
+        app.models().get_copied(&clicks),
+        Some(1),
+        "expected click-through dispatch to reach the underlay"
+    );
+}
+
+#[test]
 fn declarative_resizable_panel_group_updates_model_on_drag() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

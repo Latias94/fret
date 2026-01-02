@@ -152,9 +152,17 @@ pub(crate) struct PressableHoverActionHooks {
 
 pub type OnDismissRequest = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, DismissReason) + 'static>;
 
+/// Pointer move observer hook for `DismissibleLayer`.
+///
+/// This is intentionally `UiActionHost` (not `UiPointerActionHost`) so dismissible roots can
+/// observe pointer movement without participating in hit-testing or capture.
+pub type OnDismissiblePointerMove =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, PointerMoveCx) -> bool + 'static>;
+
 #[derive(Default)]
 pub(crate) struct DismissibleActionHooks {
     pub on_dismiss_request: Option<OnDismissRequest>,
+    pub on_pointer_move: Option<OnDismissiblePointerMove>,
 }
 
 pub type OnPointerDown =

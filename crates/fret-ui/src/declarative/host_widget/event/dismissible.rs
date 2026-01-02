@@ -68,6 +68,44 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                 cx.request_redraw();
             }
         }
+        Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons,
+            modifiers,
+        }) => {
+            let hook = crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                this.element,
+                crate::action::DismissibleActionHooks::default,
+                |hooks| hooks.on_pointer_move.clone(),
+            );
+
+            let Some(h) = hook else {
+                return;
+            };
+
+            let mv = action::PointerMoveCx {
+                position: *position,
+                buttons: *buttons,
+                modifiers: *modifiers,
+            };
+
+            let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
+            let handled = h(
+                &mut host,
+                action::ActionCx {
+                    window,
+                    target: this.element,
+                },
+                mv,
+            );
+
+            if handled {
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+            }
+        }
         _ => {}
     }
 }

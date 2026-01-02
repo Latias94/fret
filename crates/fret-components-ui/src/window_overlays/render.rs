@@ -145,6 +145,7 @@ pub fn render<H: UiHost>(
         seen_popovers.insert(req.id);
 
         let open_now = app.models().get_copied(&req.open).unwrap_or(false);
+        let on_pointer_move = req.on_pointer_move.clone();
 
         let root = declarative::render_dismissible_root_with_hooks(
             ui,
@@ -155,6 +156,9 @@ pub fn render<H: UiHost>(
             &req.root_name,
             |cx| {
                 let open = req.open;
+                if let Some(on_pointer_move) = on_pointer_move {
+                    cx.dismissible_on_pointer_move(on_pointer_move);
+                }
                 cx.dismissible_on_dismiss_request(Arc::new(
                     move |host, _cx, _reason: DismissReason| {
                         let _ = host.models_mut().update(&open, |v| *v = false);

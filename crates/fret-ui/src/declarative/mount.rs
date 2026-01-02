@@ -111,6 +111,7 @@ pub fn render_root<H: UiHost>(
     let children = crate::elements::with_element_cx(app, window, bounds, root_name, |cx| {
         cx.sync_focused_element_from_focused_node(focused);
         cx.dismissible_clear_on_dismiss_request();
+        cx.dismissible_clear_on_pointer_move();
         render(cx)
     });
 
@@ -242,6 +243,7 @@ fn render_dismissible_root_impl<
     let children = crate::elements::with_element_cx(app, window, bounds, root_name, |cx| {
         cx.sync_focused_element_from_focused_node(focused);
         cx.dismissible_clear_on_dismiss_request();
+        cx.dismissible_clear_on_pointer_move();
         render(cx)
     });
 

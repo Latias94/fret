@@ -8,10 +8,10 @@ use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
 use crate::action::OnHoverChange;
 use crate::action::{
-    DismissibleActionHooks, KeyActionHooks, OnActivate, OnDismissRequest, OnKeyDown, OnPointerDown,
-    OnPointerMove, OnPointerUp, OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead, OnTimer,
-    PointerActionHooks, PressableActionHooks, PressableHoverActionHooks, RovingActionHooks,
-    TimerActionHooks,
+    DismissibleActionHooks, KeyActionHooks, OnActivate, OnDismissRequest, OnDismissiblePointerMove,
+    OnKeyDown, OnPointerDown, OnPointerMove, OnPointerUp, OnRovingActiveChange, OnRovingNavigate,
+    OnRovingTypeahead, OnTimer, PointerActionHooks, PressableActionHooks,
+    PressableHoverActionHooks, RovingActionHooks, TimerActionHooks,
 };
 use crate::element::{
     AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverRegionProps,
@@ -768,6 +768,16 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    /// Register a component-owned pointer-move observer for the current dismissible root element.
+    ///
+    /// This is used for overlay policies that need global pointer movement (e.g. submenu
+    /// safe-hover corridors) without making the overlay hit-testable outside its content.
+    pub fn dismissible_on_pointer_move(&mut self, handler: OnDismissiblePointerMove) {
+        self.with_state(DismissibleActionHooks::default, |hooks| {
+            hooks.on_pointer_move = Some(handler);
+        });
+    }
+
     pub fn dismissible_add_on_dismiss_request(&mut self, handler: OnDismissRequest) {
         self.with_state(DismissibleActionHooks::default, |hooks| {
             hooks.on_dismiss_request = match hooks.on_dismiss_request.clone() {
@@ -783,9 +793,29 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn dismissible_add_on_pointer_move(&mut self, handler: OnDismissiblePointerMove) {
+        self.with_state(DismissibleActionHooks::default, |hooks| {
+            hooks.on_pointer_move = match hooks.on_pointer_move.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, mv| {
+                        prev(host, cx, mv) || next(host, cx, mv)
+                    }))
+                }
+            };
+        });
+    }
+
     pub fn dismissible_clear_on_dismiss_request(&mut self) {
         self.with_state(DismissibleActionHooks::default, |hooks| {
             hooks.on_dismiss_request = None;
+        });
+    }
+
+    pub fn dismissible_clear_on_pointer_move(&mut self) {
+        self.with_state(DismissibleActionHooks::default, |hooks| {
+            hooks.on_pointer_move = None;
         });
     }
 

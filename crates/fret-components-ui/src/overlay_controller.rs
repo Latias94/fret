@@ -1,5 +1,6 @@
 use fret_core::{AppWindowId, Rect};
 use fret_runtime::Model;
+use fret_ui::action::OnDismissiblePointerMove;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost, UiTree};
@@ -56,17 +57,38 @@ pub struct ToastLayerSpec {
     pub position: window_overlays::ToastPosition,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct OverlayRequest {
     pub kind: OverlayKind,
     pub id: GlobalElementId,
     pub root_name: Option<String>,
     pub trigger: Option<GlobalElementId>,
     pub open: Option<Model<bool>>,
+    pub dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
     pub presence: OverlayPresence,
     pub initial_focus: Option<GlobalElementId>,
     pub children: Vec<AnyElement>,
     pub toast_layer: Option<ToastLayerSpec>,
+}
+
+impl std::fmt::Debug for OverlayRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OverlayRequest")
+            .field("kind", &self.kind)
+            .field("id", &self.id)
+            .field("root_name", &self.root_name)
+            .field("trigger", &self.trigger)
+            .field("open", &self.open)
+            .field(
+                "dismissible_on_pointer_move",
+                &self.dismissible_on_pointer_move.is_some(),
+            )
+            .field("presence", &self.presence)
+            .field("initial_focus", &self.initial_focus)
+            .field("children_len", &self.children.len())
+            .field("toast_layer", &self.toast_layer)
+            .finish()
+    }
 }
 
 impl OverlayRequest {
@@ -83,6 +105,7 @@ impl OverlayRequest {
             root_name: None,
             trigger: Some(trigger),
             open: Some(open),
+            dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
             children,
@@ -103,6 +126,7 @@ impl OverlayRequest {
             root_name: None,
             trigger,
             open: Some(open),
+            dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
             children,
@@ -121,6 +145,7 @@ impl OverlayRequest {
             root_name: None,
             trigger: None,
             open: None,
+            dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
             children,
@@ -135,6 +160,7 @@ impl OverlayRequest {
             root_name: None,
             trigger: Some(trigger),
             open: None,
+            dismissible_on_pointer_move: None,
             presence: OverlayPresence {
                 present: true,
                 interactive: true,
@@ -152,6 +178,7 @@ impl OverlayRequest {
             root_name: None,
             trigger: None,
             open: None,
+            dismissible_on_pointer_move: None,
             presence: OverlayPresence::hidden(),
             initial_focus: None,
             children: Vec::new(),
@@ -230,6 +257,7 @@ impl OverlayController {
                         open,
                         present: request.presence.present,
                         initial_focus: request.initial_focus,
+                        on_pointer_move: request.dismissible_on_pointer_move,
                         children: request.children,
                     },
                 );
