@@ -22,6 +22,27 @@ fn shaders_parse_as_wgsl() {
 }
 
 #[test]
+fn shaders_validate_for_webgpu() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+
+    for (name, src) in [
+        ("viewport", VIEWPORT_SHADER),
+        ("quad", QUAD_SHADER),
+        ("composite_premul", COMPOSITE_PREMUL_SHADER),
+        ("path", PATH_SHADER),
+        ("text", TEXT_SHADER),
+        ("text_color", TEXT_COLOR_SHADER),
+        ("mask", MASK_SHADER),
+    ] {
+        let module = naga::front::wgsl::parse_str(src)
+            .unwrap_or_else(|err| panic!("WGSL parse failed for {name} shader: {err}"));
+        Validator::new(ValidationFlags::all(), Capabilities::empty())
+            .validate(&module)
+            .unwrap_or_else(|err| panic!("WGSL validation failed for {name} shader: {err}"));
+    }
+}
+
+#[test]
 fn transform_rows_match_apply_point() {
     let t = Transform2D {
         a: 1.3,

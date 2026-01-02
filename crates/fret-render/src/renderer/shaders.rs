@@ -138,9 +138,6 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
     let aa = max(fwidth(sdf), 1e-4);
     let a = 1.0 - smoothstep(-aa, aa, sdf);
     alpha = alpha * a;
-    if (alpha <= 0.0) {
-      break;
-    }
   }
   return alpha;
 }
@@ -178,12 +175,11 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
     )
   );
 
-  var alpha_inner = 0.0;
-  if (inner_size.x > 0.0 && inner_size.y > 0.0) {
-    let inner_sdf = quad_sdf(input.local_pos, inner_origin, inner_size, inner_radii);
-    let aa_inner = max(fwidth(inner_sdf), 1e-4);
-    alpha_inner = 1.0 - smoothstep(-aa_inner, aa_inner, inner_sdf);
-  }
+  let inner_sdf = quad_sdf(input.local_pos, inner_origin, max(inner_size, vec2<f32>(0.0)), inner_radii);
+  let aa_inner = max(fwidth(inner_sdf), 1e-4);
+  let alpha_inner_raw = 1.0 - smoothstep(-aa_inner, aa_inner, inner_sdf);
+  let inner_valid = inner_size.x > 0.0 && inner_size.y > 0.0;
+  let alpha_inner = select(0.0, alpha_inner_raw, inner_valid);
 
   let border_cov = saturate(alpha_outer - alpha_inner);
   let fill = vec4<f32>(input.color.rgb, input.color.a) * alpha_inner;
@@ -282,9 +278,6 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
     let aa = max(fwidth(sdf), 1e-4);
     let a = 1.0 - smoothstep(-aa, aa, sdf);
     alpha = alpha * a;
-    if (alpha <= 0.0) {
-      break;
-    }
   }
   return alpha;
 }
@@ -401,9 +394,6 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
     let aa = max(fwidth(sdf), 1e-4);
     let a = 1.0 - smoothstep(-aa, aa, sdf);
     alpha = alpha * a;
-    if (alpha <= 0.0) {
-      break;
-    }
   }
   return alpha;
 }
@@ -515,9 +505,6 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
     let aa = max(fwidth(sdf), 1e-4);
     let a = 1.0 - smoothstep(-aa, aa, sdf);
     alpha = alpha * a;
-    if (alpha <= 0.0) {
-      break;
-    }
   }
   return alpha;
 }
@@ -631,9 +618,6 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
     let aa = max(fwidth(sdf), 1e-4);
     let a = 1.0 - smoothstep(-aa, aa, sdf);
     alpha = alpha * a;
-    if (alpha <= 0.0) {
-      break;
-    }
   }
   return alpha;
 }
@@ -750,9 +734,6 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
     let aa = max(fwidth(sdf), 1e-4);
     let a = 1.0 - smoothstep(-aa, aa, sdf);
     alpha = alpha * a;
-    if (alpha <= 0.0) {
-      break;
-    }
   }
   return alpha;
 }
@@ -869,9 +850,6 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
     let aa = max(fwidth(sdf), 1e-4);
     let a = 1.0 - smoothstep(-aa, aa, sdf);
     alpha = alpha * a;
-    if (alpha <= 0.0) {
-      break;
-    }
   }
   return alpha;
 }
