@@ -30,7 +30,7 @@ Without an explicit convention, component implementations drift:
 We want stable conventions that align with:
 
 - GPUI/Zed outcomes (`with_content_mask` / overflow mask) — `repo-ref/zed`
-- Radix Primitives outcomes (Portal + DismissableLayer + FocusScope) — `repo-ref/primitives`
+- Radix Primitives outcomes (Portal + DismissableLayer + FocusScope) — <https://github.com/radix-ui/primitives> (pinned locally; see `docs/repo-ref.md`)
 - shadcn composition expectations — `repo-ref/ui`
 
 ## Decision
@@ -104,4 +104,3 @@ Do not rely on incidental ancestor clipping for scroll behavior.
 - Provide component-layer helpers/recipes that create a "surface chrome" container with
   `Overflow::Clip` + corner radii + border/background tokens.
 - Prefer the structure: `Pressable (visible) -> SurfaceChrome (clip) -> content`.
-

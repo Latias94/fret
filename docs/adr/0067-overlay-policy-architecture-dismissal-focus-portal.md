@@ -162,5 +162,5 @@ Invariants:
 - Multi-root overlays: `docs/adr/0011-overlays-and-multi-root.md`
 - Overlay placement solver: `docs/adr/0064-overlay-placement-contract.md`
 - Non-modal outside press (click-through): `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
-- Authoritative behavior target: Radix UI Primitives (`repo-ref/primitives`) via shadcn/ui (`repo-ref/ui`)
+- Authoritative behavior target: Radix UI Primitives (upstream: <https://github.com/radix-ui/primitives>; pinned locally, see `docs/repo-ref.md`) via shadcn/ui (`repo-ref/ui`)
 - Modal barrier conceptual model: Flutter `ModalBarrier` / WPF-style overlay barrier

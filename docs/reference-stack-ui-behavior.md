@@ -131,7 +131,7 @@ Owns shadcn v4 naming + variants + composition recipes:
 
 ## Pinned local references (repo-ref)
 
-- Radix primitives: `repo-ref/primitives`
+- Radix UI Primitives: <https://github.com/radix-ui/primitives> (pinned locally; see `docs/repo-ref.md`)
 - shadcn/ui v4: `repo-ref/ui`
 - cmdk: `repo-ref/cmdk`
 - Floating UI: `repo-ref/floating-ui`

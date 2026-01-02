@@ -32,7 +32,7 @@ As a baseline, this workspace currently has:
 - `repo-ref/icons`: `112af91`
 - `repo-ref/imgui`: `396b33d0d`
 - `repo-ref/lucide`: `d391bda3`
-- `repo-ref/primitives`: `90751370`
+- Radix UI Primitives: <https://github.com/radix-ui/primitives> (`90751370`)
 - `repo-ref/tailwindcss`: `fbc358ce`
 - `repo-ref/ui` (shadcn/ui): `ccafdaf7`
 - `repo-ref/vello`: `48f38536`

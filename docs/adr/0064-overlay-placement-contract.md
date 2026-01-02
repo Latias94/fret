@@ -89,4 +89,4 @@ Notes:
 
 - Reference stack: `docs/reference-stack-ui-behavior.md`
 - Floating UI (algorithm inspiration): `repo-ref/floating-ui`
-- Radix UI primitives (behavior outcomes): `repo-ref/primitives`
+- Radix UI Primitives (behavior outcomes): <https://github.com/radix-ui/primitives> (pinned locally; see `docs/repo-ref.md`)

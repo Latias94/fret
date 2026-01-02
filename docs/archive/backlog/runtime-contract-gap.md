@@ -14,7 +14,7 @@ Status legend:
 - Authoritative contract set: `docs/adr/0066-fret-ui-runtime-contract-surface.md` (Accepted)
 - Primary references:
   - APG: `docs/reference-stack-ui-behavior.md`
-  - Radix/shadcn outcomes: `repo-ref/primitives`, `repo-ref/ui`
+  - Radix/shadcn outcomes: Radix UI Primitives (upstream: <https://github.com/radix-ui/primitives>; pinned locally, see `docs/repo-ref.md`), `repo-ref/ui`
   - Placement: `repo-ref/floating-ui`
   - Virtualization: `repo-ref/virtual` (TanStack Virtual)
   - Ergonomics reference: `repo-ref/gpui-component`

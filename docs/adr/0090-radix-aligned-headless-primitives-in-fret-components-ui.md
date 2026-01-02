@@ -23,7 +23,7 @@ policy wiring, causing drift and test gaps.
 
 Authoritative references:
 
-- Radix primitives outcomes: `repo-ref/primitives`
+- Radix UI Primitives outcomes: <https://github.com/radix-ui/primitives> (pinned locally; see `docs/repo-ref.md`)
 - shadcn composition expectations: `repo-ref/ui`
 - Focus/keyboard outcomes: WAI-ARIA Authoring Practices (APG)
 - Overlay placement vocabulary: Floating UI (`repo-ref/floating-ui`)
@@ -128,4 +128,3 @@ Existing headless primitives in-tree (subject to evolution):
 - Outside-press observer: `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
 - Focus traversal/scopes: `docs/adr/0068-focus-traversal-and-focus-scopes.md`
 - Active descendant semantics: `docs/adr/0073-active-descendant-and-composite-widget-semantics.md`
-

@@ -237,7 +237,7 @@ flowchart LR
 **Read first**
 
 - `docs/shadcn-declarative-progress.md`
-- Upstream reference: `repo-ref/ui` (registry + recipes) and `repo-ref/primitives`
+- Upstream reference: `repo-ref/ui` (registry + recipes) and Radix UI Primitives (upstream: <https://github.com/radix-ui/primitives>; pinned locally, see `docs/repo-ref.md`)
 
 **Closure checklist (P0)**
 
@@ -320,7 +320,7 @@ flowchart LR
 Pinned references are documented in `docs/repo-ref.md`. The typical mapping is:
 
 - GPUI/Zed substrate patterns: `repo-ref/zed`, `repo-ref/gpui-component`
-- shadcn/Radix outcomes: `repo-ref/ui`, `repo-ref/primitives`
+- shadcn/Radix outcomes: `repo-ref/ui`, Radix UI Primitives (upstream: <https://github.com/radix-ui/primitives>; pinned locally, see `docs/repo-ref.md`)
 - placement vocabulary: `repo-ref/floating-ui`
 - virtualization vocabulary: `repo-ref/virtual` (TanStack) + `repo-ref/virtualizer` (Rust engine)
 - docking UX vocabulary: `repo-ref/imgui`, `repo-ref/dear-imgui-rs`

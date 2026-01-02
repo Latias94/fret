@@ -27,7 +27,7 @@ must name at least one authoritative upstream reference.
 
 - **Keyboard/focus interaction**: WAI-ARIA Authoring Practices (APG) (see `docs/reference-stack-ui-behavior.md`)
 - **Overlay policy outcomes** (dismissal, focus restore/trap, nested overlays): Radix UI Primitives (via shadcn/ui)
-  - Pinned local reference: `repo-ref/primitives`, `repo-ref/ui`
+  - Pinned local reference: Radix UI Primitives (upstream: <https://github.com/radix-ui/primitives>; see `docs/repo-ref.md`), `repo-ref/ui`
 - **Placement algorithms** (flip/shift/size/offset/arrow): Floating UI
   - Pinned local reference: `repo-ref/floating-ui`
 - **Virtualization contract vocabulary** (items/range/measurement/scroll-to): TanStack Virtual

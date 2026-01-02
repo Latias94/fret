@@ -100,7 +100,7 @@ This rule is implemented by `OverlayPortal::hide` and applies to all overlays.
 
 ## References
 
-- Radix primitives: `repo-ref/primitives`
+- Radix UI Primitives: <https://github.com/radix-ui/primitives> (pinned locally; see `docs/repo-ref.md`)
 - Shadcn recipes: `repo-ref/ui`
 - Overlay placement contract: `docs/adr/0064-overlay-placement-contract.md`
 - Overlay policy architecture: `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
