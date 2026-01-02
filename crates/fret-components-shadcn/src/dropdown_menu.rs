@@ -197,6 +197,8 @@ struct DropdownMenuSubmenuState {
     last_pointer: Option<Model<Option<Point>>>,
     geometry: Option<Model<Option<DropdownMenuSubmenuGeometry>>>,
     close_timer: Option<Model<Option<TimerToken>>>,
+    focus_target: Option<Model<Option<fret_ui::GlobalElementId>>>,
+    focus_timer: Option<Model<Option<TimerToken>>>,
     was_open: bool,
 }
 
@@ -208,6 +210,7 @@ struct DropdownMenuSubmenuGeometry {
 
 const SUBMENU_SAFE_HOVER_BUFFER: Px = Px(6.0);
 const SUBMENU_CLOSE_DELAY: Duration = Duration::from_millis(120);
+const SUBMENU_FOCUS_DELAY: Duration = Duration::from_millis(0);
 
 /// shadcn/ui `Dropdown Menu` (v4).
 ///
@@ -324,10 +327,33 @@ impl DropdownMenu {
                     }
                     let _ = cx.app.models_mut().update(&model, |v| *v = None);
                 }
+                if let Some(model) =
+                    cx.with_state(DropdownMenuSubmenuState::default, |st| st.focus_timer.clone())
+                {
+                    let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
+                    if let Some(token) = token {
+                        cx.app.push_effect(Effect::CancelTimer { token });
+                    }
+                    let _ = cx.app.models_mut().update(&model, |v| *v = None);
+                }
+                if let Some(model) =
+                    cx.with_state(DropdownMenuSubmenuState::default, |st| st.focus_target.clone())
+                {
+                    let _ = cx.app.models_mut().update(&model, |v| *v = None);
+                }
                 cx.with_state(DropdownMenuSubmenuState::default, |st| st.was_open = true);
             } else if !is_open && was_open {
                 if let Some(model) =
                     cx.with_state(DropdownMenuSubmenuState::default, |st| st.close_timer.clone())
+                {
+                    let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
+                    if let Some(token) = token {
+                        cx.app.push_effect(Effect::CancelTimer { token });
+                    }
+                    let _ = cx.app.models_mut().update(&model, |v| *v = None);
+                }
+                if let Some(model) =
+                    cx.with_state(DropdownMenuSubmenuState::default, |st| st.focus_timer.clone())
                 {
                     let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
                     if let Some(token) = token {
@@ -422,6 +448,30 @@ impl DropdownMenu {
                         submenu_close_timer
                     };
 
+                    let submenu_focus_target =
+                        cx.with_state(DropdownMenuSubmenuState::default, |st| st.focus_target.clone());
+                    let submenu_focus_target = if let Some(submenu_focus_target) = submenu_focus_target {
+                        submenu_focus_target
+                    } else {
+                        let submenu_focus_target = cx.app.models_mut().insert(None);
+                        cx.with_state(DropdownMenuSubmenuState::default, |st| {
+                            st.focus_target = Some(submenu_focus_target.clone());
+                        });
+                        submenu_focus_target
+                    };
+
+                    let submenu_focus_timer =
+                        cx.with_state(DropdownMenuSubmenuState::default, |st| st.focus_timer.clone());
+                    let submenu_focus_timer = if let Some(submenu_focus_timer) = submenu_focus_timer {
+                        submenu_focus_timer
+                    } else {
+                        let submenu_focus_timer = cx.app.models_mut().insert(None);
+                        cx.with_state(DropdownMenuSubmenuState::default, |st| {
+                            st.focus_timer = Some(submenu_focus_timer.clone());
+                        });
+                        submenu_focus_timer
+                    };
+
                     let item_count = entries
                         .iter()
                         .filter(|e| matches!(e, DropdownMenuEntry::Item(_)))
@@ -492,40 +542,76 @@ impl DropdownMenu {
                     let submenu_geometry_for_menu = submenu_geometry.clone();
                     let submenu_close_timer_for_menu = submenu_close_timer.clone();
                     let submenu_last_pointer_for_menu = submenu_last_pointer.clone();
+                    let submenu_focus_timer_for_menu = submenu_focus_timer.clone();
 
                     let open_for_timer = submenu_open.clone();
                     let trigger_for_timer = submenu_trigger.clone();
                     let last_pointer_for_timer = submenu_last_pointer.clone();
                     let geometry_for_timer = submenu_geometry.clone();
                     let close_timer_for_timer = submenu_close_timer.clone();
+                    let focus_target_for_timer = submenu_focus_target.clone();
+                    let focus_timer_for_timer = submenu_focus_timer.clone();
                     let overlay_root_element = cx.root_id();
                     cx.timer_on_timer_for(
                         overlay_root_element,
                         Arc::new(move |host, acx, token| {
-                            let armed = host
+                            let close_armed = host
                                 .models_mut()
                                 .read(&close_timer_for_timer, |v| *v)
                                 .ok()
                                 .flatten();
-                            if armed != Some(token) {
-                                return false;
+                            let focus_armed = host
+                                .models_mut()
+                                .read(&focus_timer_for_timer, |v| *v)
+                                .ok()
+                                .flatten();
+
+                            if close_armed == Some(token) {
+                                let focus_token = host
+                                    .models_mut()
+                                    .read(&focus_timer_for_timer, |v| *v)
+                                    .ok()
+                                    .flatten();
+                                if let Some(focus_token) = focus_token {
+                                    host.push_effect(Effect::CancelTimer { token: focus_token });
+                                }
+                                let _ = host.models_mut().update(&open_for_timer, |v| *v = None);
+                                let _ = host
+                                    .models_mut()
+                                    .update(&trigger_for_timer, |v| *v = None);
+                                let _ = host
+                                    .models_mut()
+                                    .update(&last_pointer_for_timer, |v| *v = None);
+                                let _ = host
+                                    .models_mut()
+                                    .update(&geometry_for_timer, |v| *v = None);
+                                let _ = host
+                                    .models_mut()
+                                    .update(&close_timer_for_timer, |v| *v = None);
+                                let _ = host
+                                    .models_mut()
+                                    .update(&focus_timer_for_timer, |v| *v = None);
+                                host.request_redraw(acx.window);
+                                return true;
                             }
 
-                            let _ = host.models_mut().update(&open_for_timer, |v| *v = None);
-                            let _ = host
-                                .models_mut()
-                                .update(&trigger_for_timer, |v| *v = None);
-                            let _ = host
-                                .models_mut()
-                                .update(&last_pointer_for_timer, |v| *v = None);
-                            let _ = host
-                                .models_mut()
-                                .update(&geometry_for_timer, |v| *v = None);
-                            let _ = host
-                                .models_mut()
-                                .update(&close_timer_for_timer, |v| *v = None);
-                            host.request_redraw(acx.window);
-                            true
+                            if focus_armed == Some(token) {
+                                let target = host
+                                    .models_mut()
+                                    .read(&focus_target_for_timer, |v| *v)
+                                    .ok()
+                                    .flatten();
+                                if let Some(target) = target {
+                                    host.request_focus(target);
+                                }
+                                let _ = host
+                                    .models_mut()
+                                    .update(&focus_timer_for_timer, |v| *v = None);
+                                host.request_redraw(acx.window);
+                                return true;
+                            }
+
+                            false
                         }),
                     );
 
@@ -951,8 +1037,8 @@ impl DropdownMenu {
                                                                 // - ArrowRight opens the submenu for this item (if any).
                                                                 // - ArrowLeft closes any open submenu.
                                                                 //
-                                                                // Focus transfer into the submenu is not wired yet; users can still
-                                                                // interact via pointer or Tab navigation.
+                                                                // Focus transfer into the submenu is driven via a short timer so the
+                                                                // submenu tree can be rendered before requesting focus.
                                                                 let key_has_submenu = has_submenu;
                                                                 let submenu_open_for_key = submenu_open_for_menu.clone();
                                                                 let submenu_trigger_for_key = submenu_trigger_for_menu.clone();
@@ -960,6 +1046,8 @@ impl DropdownMenu {
                                                                     submenu_geometry_for_menu.clone();
                                                                 let submenu_close_timer_for_key =
                                                                     submenu_close_timer_for_menu.clone();
+                                                                let submenu_focus_timer_for_key =
+                                                                    submenu_focus_timer_for_menu.clone();
                                                                 let value_for_key = value.clone();
                                                                 cx.key_on_key_down_for(
                                                                     item_id,
@@ -971,6 +1059,18 @@ impl DropdownMenu {
                                                                             KeyCode::ArrowRight => {
                                                                                 if !key_has_submenu {
                                                                                     return false;
+                                                                                }
+                                                                                let focus_token = host
+                                                                                    .models_mut()
+                                                                                    .read(&submenu_focus_timer_for_key, |v| *v)
+                                                                                    .ok()
+                                                                                    .flatten();
+                                                                                if let Some(token) = focus_token {
+                                                                                    host.push_effect(Effect::CancelTimer { token });
+                                                                                    let _ = host.models_mut().update(
+                                                                                        &submenu_focus_timer_for_key,
+                                                                                        |v| *v = None,
+                                                                                    );
                                                                                 }
                                                                                 let token = host
                                                                                     .models_mut()
@@ -991,6 +1091,17 @@ impl DropdownMenu {
                                                                                 let _ = host.models_mut().update(
                                                                                     &submenu_trigger_for_key,
                                                                                     |v| *v = Some(acx.target),
+                                                                                );
+                                                                                let token = host.next_timer_token();
+                                                                                host.push_effect(Effect::SetTimer {
+                                                                                    window: Some(acx.window),
+                                                                                    token,
+                                                                                    after: SUBMENU_FOCUS_DELAY,
+                                                                                    repeat: None,
+                                                                                });
+                                                                                let _ = host.models_mut().update(
+                                                                                    &submenu_focus_timer_for_key,
+                                                                                    |v| *v = Some(token),
                                                                                 );
                                                                                 host.request_redraw(acx.window);
                                                                                 true
@@ -1018,6 +1129,18 @@ impl DropdownMenu {
                                                                                 }
                                                                                 let _ = host.models_mut().update(
                                                                                     &submenu_close_timer_for_key,
+                                                                                    |v| *v = None,
+                                                                                );
+                                                                                let focus_token = host
+                                                                                    .models_mut()
+                                                                                    .read(&submenu_focus_timer_for_key, |v| *v)
+                                                                                    .ok()
+                                                                                    .flatten();
+                                                                                if let Some(token) = focus_token {
+                                                                                    host.push_effect(Effect::CancelTimer { token });
+                                                                                }
+                                                                                let _ = host.models_mut().update(
+                                                                                    &submenu_focus_timer_for_key,
                                                                                     |v| *v = None,
                                                                                 );
                                                                                 host.request_redraw(acx.window);
@@ -1253,6 +1376,11 @@ impl DropdownMenu {
                                 });
 
                                 if let Some(submenu_entries) = submenu_entries {
+                                    let _ = cx
+                                        .app
+                                        .models_mut()
+                                        .update(&submenu_focus_target, |v| *v = None);
+
                                     let outer = overlay::outer_bounds_with_window_margin(
                                         cx.bounds,
                                         window_margin,
@@ -1325,6 +1453,7 @@ impl DropdownMenu {
                                                 letter_spacing_em: None,
                                             };
 
+                                            let focus_target_for_submenu = submenu_focus_target.clone();
                                             let submenu = cx.semantics(
                                                 SemanticsProps {
                                                     layout: LayoutStyle::default(),
@@ -1332,6 +1461,11 @@ impl DropdownMenu {
                                                     ..Default::default()
                                                 },
                                                 move |cx| {
+                                                    use std::cell::Cell;
+                                                    use std::rc::Rc;
+
+                                                    let did_set_focus_target = Rc::new(Cell::new(false));
+
                                                     let mut item_ix: usize = 0;
                                                     let mut rows: Vec<AnyElement> =
                                                         Vec::with_capacity(submenu_entries.len());
@@ -1397,10 +1531,25 @@ impl DropdownMenu {
                                                                 let submenu_trigger_for_key =
                                                                     submenu_trigger.clone();
                                                                 let text_style = text_style.clone();
+                                                                let did_set_focus_target =
+                                                                    did_set_focus_target.clone();
+                                                                let focus_target_for_item =
+                                                                    focus_target_for_submenu.clone();
 
                                                                 rows.push(cx.keyed(value.clone(), |cx| {
                                                                     cx.pressable_with_id_props(
                                                                         |cx, st, item_id| {
+                                                                            if !disabled
+                                                                                && !did_set_focus_target.get()
+                                                                            {
+                                                                                did_set_focus_target.set(true);
+                                                                                let _ = cx
+                                                                                    .app
+                                                                                    .models_mut()
+                                                                                    .update(&focus_target_for_item, |v| {
+                                                                                        *v = Some(item_id);
+                                                                                    });
+                                                                            }
                                                                             cx.pressable_dispatch_command_opt(command);
                                                                             if !disabled {
                                                                                 cx.pressable_set_bool(&open, false);
@@ -1420,6 +1569,11 @@ impl DropdownMenu {
                                                                                         return false;
                                                                                     }
 
+                                                                                    let trigger = host
+                                                                                        .models_mut()
+                                                                                        .read(&submenu_trigger_for_key, |v| *v)
+                                                                                        .ok()
+                                                                                        .flatten();
                                                                                     let _ = host.models_mut().update(
                                                                                         &submenu_open_for_key,
                                                                                         |v| *v = None,
@@ -1428,6 +1582,9 @@ impl DropdownMenu {
                                                                                         &submenu_trigger_for_key,
                                                                                         |v| *v = None,
                                                                                     );
+                                                                                    if let Some(trigger) = trigger {
+                                                                                        host.request_focus(trigger);
+                                                                                    }
                                                                                     host.request_redraw(acx.window);
                                                                                     true
                                                                                 }),

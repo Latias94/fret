@@ -71,8 +71,9 @@ Not implemented yet in Fret shadcn surface:
   in some edge cases.
 - Note: Submenu rendering no longer depends on pointer movement; keyboard-opened submenus render even
   when the pointer hasn't moved since the menu opened.
-- Known gap: Keyboard focus transfer into/out of the submenu is not fully wired; ArrowRight/ArrowLeft
-  open/close the submenu, but roving navigation remains within the currently focused list.
+- Pass: Keyboard focus transfer is wired for submenus:
+  - ArrowRight opens the submenu and transfers focus to the first enabled submenu item.
+  - ArrowLeft closes the submenu and restores focus to the trigger item.
 
 Notes on API mapping:
 
