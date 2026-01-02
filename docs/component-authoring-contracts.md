@@ -27,12 +27,12 @@ at least one regression test before expanding usage.
 
 ### Declarative authoring context
 
-- `fret_ui::ElementCx` (the primary API surface for building element subtrees)
-  - Identity: `ElementCx::scope(...)`, `ElementCx::keyed(...)`
-  - Local state: `ElementCx::{with_state, with_state_for}`
-  - Model reads + observation: `ElementCx::{observe_model, read_model_ref, get_model_*}`
-  - Focus reads: `ElementCx::{focused_element, is_focused_element}`
-  - Cross-frame geometry queries: `ElementCx::{last_bounds_for_element, last_visual_bounds_for_element}`
+- `fret_ui::ElementContext` (the primary API surface for building element subtrees)
+  - Identity: `ElementContext::scope(...)`, `ElementContext::keyed(...)`
+  - Local state: `ElementContext::{with_state, with_state_for}`
+  - Model reads + observation: `ElementContext::{observe_model, read_model_ref, get_model_*}`
+  - Focus reads: `ElementContext::{focused_element, is_focused_element}`
+  - Cross-frame geometry queries: `ElementContext::{last_bounds_for_element, last_visual_bounds_for_element}`
 - Element props (mechanism vocabulary): `fret_ui::element::*Props` and `fret_ui::element::LayoutStyle`
 
 ### Component-layer ergonomics (recommended defaults)
@@ -47,10 +47,10 @@ at least one regression test before expanding usage.
 
 ## Identity and element-local state (hard-to-change contract)
 
-- `ElementCx::scope(...)` derives stable element identity from the callsite.
-- `ElementCx::keyed(key, ...)` derives stable identity from `(callsite, key)` and should be used
+- `ElementContext::scope(...)` derives stable element identity from the callsite.
+- `ElementContext::keyed(key, ...)` derives stable identity from `(callsite, key)` and should be used
   for list-like rendering (virtual list items, menus, etc.).
-- `ElementCx::{with_state, with_state_for}` store **element-local, cross-frame** state in the
+- `ElementContext::{with_state, with_state_for}` store **element-local, cross-frame** state in the
   runtime store keyed by `(GlobalElementId, TypeId)`.
 
 Practical guidance:
@@ -69,13 +69,13 @@ Recommended patterns:
 - Use `fret_components_ui::declarative::ModelWatchExt`:
   - `cx.watch_model(&model).layout().cloned()`
   - `cx.watch_model(&model).paint().copied()`
-- Or use `ElementCx::{read_model_ref, get_model_*}` and pass the correct `Invalidation`.
+- Or use `ElementContext::{read_model_ref, get_model_*}` and pass the correct `Invalidation`.
 
 ## Interaction policy via action hooks (ADR 0074)
 
 The runtime provides trigger points; components provide policy.
 
-Runtime hook surfaces (registered during rendering via `ElementCx`):
+Runtime hook surfaces (registered during rendering via `ElementContext`):
 
 - `pressable_on_activate` (and `*_add_*`/`*_clear_*`)
 - `dismissible_on_dismiss_request`
@@ -120,9 +120,9 @@ Mechanism primitives:
 
 Focus state for styling:
 
-- `ElementCx::focused_element()` exposes the currently focused element for the window (as a
+- `ElementContext::focused_element()` exposes the currently focused element for the window (as a
   `GlobalElementId`) when it can be mapped from the focused `NodeId`.
-- `ElementCx::is_focused_element(id)` is the recommended way to compute “focused” affordances
+- `ElementContext::is_focused_element(id)` is the recommended way to compute “focused” affordances
   (menu item active background, tooltip open-on-focus, focus chrome variants) without introducing
   component-local focus mirrors.
 - `fret_ui::element::PressableState` includes `focused: bool` so pressable-based components can
@@ -156,7 +156,7 @@ Recommended entry point:
 
 - Use `OverlayController::{begin_frame, request, render}` to coordinate overlay roots per window.
 - Use `fret_components_ui::overlay::anchor_bounds_for_element(...)` and
-  `ElementCx::last_visual_bounds_for_element(...)` for render-transform-aware anchoring.
+  `ElementContext::last_visual_bounds_for_element(...)` for render-transform-aware anchoring.
 - If placement anchoring should differ from the interactive trigger, model them explicitly:
   - keep the trigger element for hover/focus/dismissal/restore policies, and
   - accept an optional "anchor element" (`GlobalElementId`) used only for placement bounds.

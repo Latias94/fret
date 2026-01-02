@@ -119,7 +119,7 @@ so the runtime can invalidate layout/paint caches when the model changes.
 
 Preferred patterns:
 
-- Use `ElementCx` helpers that combine “observe + read”:
+- Use `ElementContext` helpers that combine “observe + read”:
   - `cx.get_model_copied(&model, Invalidation::Paint)`
   - `cx.get_model_cloned(&model, Invalidation::Layout)`
   - `cx.read_model_ref(&model, Invalidation::Layout, |value| ...)`

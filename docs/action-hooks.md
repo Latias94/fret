@@ -50,16 +50,16 @@ The component provides:
 
 ## Hook Surfaces (Current)
 
-Runtime plumbing is in `crates/fret-ui/src/action.rs` and exposed via `ElementCx` helpers:
+Runtime plumbing is in `crates/fret-ui/src/action.rs` and exposed via `ElementContext` helpers:
 
-- `ElementCx::pressable_on_activate(...)`
-- `ElementCx::dismissible_on_dismiss_request(...)`
-- `ElementCx::roving_on_active_change(...)`
-- `ElementCx::roving_on_typeahead(...)`
-- `ElementCx::pointer_region_on_pointer_down(...)` (for context menus, drag start, etc.)
-- `ElementCx::pointer_region_on_pointer_move(...)` (for drag interactions and pointer capture streams)
-- `ElementCx::pointer_region_on_pointer_up(...)` (for drag end / release semantics)
-- `ElementCx::key_on_key_down_for(...)` (for keyboard-invoked context menus, custom key handling, etc.)
+- `ElementContext::pressable_on_activate(...)`
+- `ElementContext::dismissible_on_dismiss_request(...)`
+- `ElementContext::roving_on_active_change(...)`
+- `ElementContext::roving_on_typeahead(...)`
+- `ElementContext::pointer_region_on_pointer_down(...)` (for context menus, drag start, etc.)
+- `ElementContext::pointer_region_on_pointer_move(...)` (for drag interactions and pointer capture streams)
+- `ElementContext::pointer_region_on_pointer_up(...)` (for drag end / release semantics)
+- `ElementContext::key_on_key_down_for(...)` (for keyboard-invoked context menus, custom key handling, etc.)
 
 Component-layer convenience helpers live in:
 
@@ -72,7 +72,7 @@ Component-layer convenience helpers live in:
 Model invalidation is opt-in: if an element reads a model during rendering but does not register
 observation, the runtime may not know it needs to invalidate layout/paint when the model changes.
 
-Prefer `ElementCx` helpers that combine “observe + read”:
+Prefer `ElementContext` helpers that combine “observe + read”:
 
 - `cx.get_model_copied(&model, Invalidation::Paint)` / `cx.get_model_cloned(&model, Invalidation::Layout)`
 - `cx.read_model_ref(&model, Invalidation::Layout, |value| ...)`

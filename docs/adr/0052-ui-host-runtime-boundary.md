@@ -15,7 +15,7 @@ This is productive for the demo and for “first-party editor apps”.
 However, the long-term project goal includes **third-party editor reuse** (GPUI-like adoption) and **wasm/WebGPU**
 as a mid-term target.
 
-Today, parts of `fret-ui` depend directly on `fret-app::App` (for example in the elements runtime and `ElementCx`).
+Today, parts of `fret-ui` depend directly on `fret-app::App` (for example in the elements runtime and `ElementContext`).
 This creates a decision point:
 
 - Should the “public framework surface” be intentionally **integrated** (third parties adopt `fret-app`), or

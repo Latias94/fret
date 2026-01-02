@@ -189,7 +189,7 @@ The component ecosystem is declarative-first (ADR 0028 / ADR 0039). We treat ret
 
 Rules:
 
-- `fret-components-*` APIs should prefer `ElementCx`/`AnyElement` authoring.
+- `fret-components-*` APIs should prefer `ElementContext`/`AnyElement` authoring.
 - New reusable UI "primitives" should be expressed as element kinds, handles, or pure algorithms
   (not as exported retained widgets).
 

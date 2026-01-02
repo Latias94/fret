@@ -76,7 +76,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | checkbox | `checkbox` | Present | Unreviewed |  |
 | collapsible | `collapsible` | Present | Unreviewed | Headless open/close + a11y semantics |
 | command | `command` | Present | Unreviewed | First pass: visual shell + roving list navigation; filtering is app-owned |
-| context-menu | `context_menu` | Present | Unreviewed | Right click + (macOS) ctrl-click + Shift+F10 |
+| context-menu | `context_menu` | Present | In review | Right click + (macOS) ctrl-click + Shift+F10; audit: `docs/audits/shadcn-context-menu.md` |
 | dialog | `dialog` | Present | Unreviewed | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
 | drawer | `drawer` | Present | Unreviewed | `sheet` facade (defaults to bottom); overlay policy |
 | dropdown-menu | `dropdown_menu` | Present | In review | Menu navigation + typeahead + dismissible popover infra (ADR 0074); now includes `Label`/`Group`/`Shortcut` + destructive items; audit: `docs/audits/shadcn-dropdown-menu.md` |
@@ -90,7 +90,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | item | `item` | Present | Unreviewed | Repo-specific list/item recipes aligned with shadcn style |
 | kbd | `kbd` | Present | Unreviewed |  |
 | label | `label` | Present | Unreviewed |  |
-| menubar | `menubar` | Present | Unreviewed | Click-to-open; hover switching + richer keyboard policy TBD |
+| menubar | `menubar` | Present | In review | Click-to-open; hover switching; audit: `docs/audits/shadcn-menubar.md` |
 | native-select | `native_select` | Defer | Unreviewed | Can map to `select` + platform-native later |
 | navigation-menu | `navigation_menu` | Defer | Unreviewed | Complex; not editor-critical |
 | pagination | `pagination` | Present | Unreviewed |  |

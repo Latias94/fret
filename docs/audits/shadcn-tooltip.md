@@ -35,7 +35,7 @@ Key upstream notes:
 ### Open/close behavior
 
 - Pass: Hover open/close is implemented via `HoverRegion` + `HoverIntentState`.
-- Pass: Open-on-keyboard-focus is implemented via `ElementCx::is_focused_element(trigger_id)`.
+- Pass: Open-on-keyboard-focus is implemented via `ElementContext::is_focused_element(trigger_id)`.
 
 ### Placement & portal behavior
 

@@ -89,7 +89,7 @@ Tradeoffs / limitations (current):
 ## Implementation Notes (Current Prototype)
 
 - Runtime primitive: `crates/fret-ui/src/resizable_panel_group.rs`
-- Declarative surface: `ResizablePanelGroupProps` + `ElementCx::resizable_panel_group(...)`
+- Declarative surface: `ResizablePanelGroupProps` + `ElementContext::resizable_panel_group(...)`
 - shadcn facade: `crates/fret-components-shadcn/src/resizable.rs`
 - Docking integration: split layout/hit-testing/painting delegates to the same panel-group mechanics via `fret-ui/unstable-retained-bridge`.
 - Docking drag commit: drag updates mutate the app-owned graph for immediate feedback; drag end emits a single atomic `DockOp::SetSplitFractionsMany` transaction.

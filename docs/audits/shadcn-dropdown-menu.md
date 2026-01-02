@@ -50,8 +50,8 @@ Key upstream behaviors/surfaces:
 ### Visual parity (shadcn)
 
 - Partial: Menu background/foreground now align with popover tokens (`bg-popover text-popover-foreground`).
-- Partial: Hover/pressed highlight uses `accent` tokens; focus-highlight parity is limited because
-  `PressableState` does not currently expose a “focused” flag for background styling.
+- Partial: Hover/pressed/focused highlight uses `accent` tokens; deeper parity (inset variants,
+  checkmark spacing, icon alignment) is still pending.
 
 ### Missing surfaces (significant)
 
@@ -63,11 +63,14 @@ Not implemented yet in Fret shadcn surface:
 ### Submenus
 
 - Partial: Submenus are supported via `DropdownMenuItem::submenu(Vec<DropdownMenuEntry>)` and open on
-  hover/focus/activate.
+- hover/focus/activate (pointer click), and can be opened/closed with ArrowRight/ArrowLeft.
 - Partial: Pointer "safe hover" is implemented as a deterministic trapezoid corridor between the
   submenu trigger bounds and the submenu panel bounds (inspired by Floating UI `safePolygon`).
-- Known gap: No intent heuristics / close delay yet; fast diagonal travel can still close the submenu
-  in edge cases.
+- Partial: A short close delay is applied when leaving the safe corridor to reduce accidental closes.
+- Known gap: No intent heuristics (velocity/angle-based) yet; fast diagonal travel can still close the submenu
+  in some edge cases.
+- Note: Submenu rendering no longer depends on pointer movement; keyboard-opened submenus render even
+  when the pointer hasn't moved since the menu opened.
 - Known gap: Keyboard focus transfer into/out of the submenu is not fully wired; ArrowRight/ArrowLeft
   open/close the submenu, but roving navigation remains within the currently focused list.
 
@@ -83,6 +86,7 @@ Notes on API mapping:
 - Contract test: `dropdown_menu_items_have_collection_position_metadata_excluding_separators`
   (ensures `pos_in_set`/`set_size` exclude separators).
 - Interaction test: `dropdown_menu_submenu_opens_on_hover_and_closes_on_leave`
+- Keyboard test: `dropdown_menu_submenu_opens_on_arrow_right_without_pointer_move`
 
 ## Follow-ups (recommended)
 
@@ -93,5 +97,5 @@ Notes on API mapping:
 - Consider adding a component-facing focus state for `Pressable` (mechanism-only) so menus can
   style the active item like shadcn (background highlight, not just focus ring).
 - If we want Radix-level submenu ergonomics, consider:
-  - intent-based safe-hover (`safePolygon`) + optional close delay, and
+  - intent-based safe-hover (`safePolygon` velocity heuristics), and
   - explicit keyboard focus transfer between parent menu and submenu.
