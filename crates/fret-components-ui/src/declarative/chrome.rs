@@ -21,7 +21,7 @@ where
         PressableState,
         GlobalElementId,
     ) -> (PressableProps, ContainerProps, C),
-    C: FnOnce(&mut ElementCx<'a, H>) -> Vec<AnyElement>,
+    C: for<'b> FnOnce(&'b mut ElementCx<'a, H>) -> Vec<AnyElement>,
 {
     cx.pressable_with_id_props(|cx, st, id| {
         let (mut pressable_props, mut chrome_props, children) = f(cx, st, id);
