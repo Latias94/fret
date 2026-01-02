@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::rc::Weak;
 use std::sync::Arc;
 
 use fret_core::AppWindowId;
@@ -288,8 +289,25 @@ impl WebDemoHandle {
         prevent_default: bool,
     ) -> Result<WebDemoHandle, JsValue> {
         let demo = WebDemo::new(&canvas_id, prevent_default).await?;
+        let demo = Rc::new(RefCell::new(demo));
+
+        // Some browser APIs (file picker, clipboard, window.open) require being called from a user
+        // activation stack. We use pointer/keyboard callbacks to synchronously run one UI turn.
+        let weak: Weak<RefCell<WebDemo>> = Rc::downgrade(&demo);
+        let cb: Rc<dyn Fn()> = Rc::new(move || {
+            let Some(demo) = weak.upgrade() else {
+                return;
+            };
+            if let Ok(mut d) = demo.try_borrow_mut() {
+                d.tick();
+            }
+        });
+        demo.borrow_mut()
+            .input
+            .set_user_activation_callback(Some(cb));
+
         Ok(WebDemoHandle {
-            demo: Rc::new(RefCell::new(demo)),
+            demo,
             loop_handle: None,
         })
     }

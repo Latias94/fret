@@ -190,6 +190,7 @@ fn wheel_delta_from_dom(event: &WheelEvent) -> fret_core::Point {
 
 pub struct WebInput {
     queue: Rc<RefCell<WebInputQueue>>,
+    activation_callback: Rc<RefCell<Option<Rc<dyn Fn()>>>>,
     _listeners: WebInputListeners,
 }
 
@@ -197,15 +198,27 @@ impl WebInput {
     pub fn new(canvas: HtmlCanvasElement, prevent_default: bool) -> Result<Self, RunnerError> {
         let window = window()?;
         let queue = Rc::new(RefCell::new(WebInputQueue::default()));
-        let listeners = WebInputListeners::install(window, canvas, queue.clone(), prevent_default)?;
+        let activation_callback = Rc::new(RefCell::new(None));
+        let listeners = WebInputListeners::install(
+            window,
+            canvas,
+            queue.clone(),
+            prevent_default,
+            activation_callback.clone(),
+        )?;
         Ok(Self {
             queue,
+            activation_callback,
             _listeners: listeners,
         })
     }
 
     pub fn take_events(&mut self) -> Vec<Event> {
         self.queue.borrow_mut().take()
+    }
+
+    pub fn set_user_activation_callback(&mut self, cb: Option<Rc<dyn Fn()>>) {
+        *self.activation_callback.borrow_mut() = cb;
     }
 
     pub fn set_ime_allowed(&mut self, enabled: bool) {
@@ -217,7 +230,6 @@ impl WebInput {
     }
 }
 
-#[derive(Debug)]
 struct WebInputListeners {
     window: Window,
     canvas: HtmlCanvasElement,
@@ -277,6 +289,7 @@ impl WebInputListeners {
         canvas: HtmlCanvasElement,
         queue: Rc<RefCell<WebInputQueue>>,
         prevent_default: bool,
+        activation_callback: Rc<RefCell<Option<Rc<dyn Fn()>>>>,
     ) -> Result<Self, RunnerError> {
         let canvas_el: HtmlElement = canvas.clone().unchecked_into();
         canvas_el.set_tab_index(0);
@@ -345,6 +358,7 @@ impl WebInputListeners {
         let canvas_focus: HtmlElement = canvas.clone().unchecked_into();
         let ime_focus: HtmlElement = ime_textarea.clone().unchecked_into();
         let ime_enabled_for_down = ime_enabled.clone();
+        let activation_for_pointer_down = activation_callback.clone();
         let canvas_capture = canvas.clone();
         let on_pointer_down = Closure::wrap(Box::new(move |event: WebPointerEvent| {
             if ime_enabled_for_down.get() {
@@ -369,10 +383,19 @@ impl WebInputListeners {
                     modifiers,
                 }));
             }
+
+            let cb = activation_for_pointer_down
+                .try_borrow()
+                .ok()
+                .and_then(|v| v.as_ref().cloned());
+            if let Some(cb) = cb {
+                cb();
+            }
         }) as Box<dyn FnMut(WebPointerEvent)>);
 
         let queue_up = queue.clone();
         let canvas_release = canvas.clone();
+        let activation_for_pointer_up = activation_callback.clone();
         let on_pointer_up = Closure::wrap(Box::new(move |event: WebPointerEvent| {
             let _ = canvas_release.release_pointer_capture(event.pointer_id());
             if prevent_default {
@@ -389,6 +412,14 @@ impl WebInputListeners {
                     button,
                     modifiers,
                 }));
+            }
+
+            let cb = activation_for_pointer_up
+                .try_borrow()
+                .ok()
+                .and_then(|v| v.as_ref().cloned());
+            if let Some(cb) = cb {
+                cb();
             }
         }) as Box<dyn FnMut(WebPointerEvent)>);
 
@@ -437,6 +468,7 @@ impl WebInputListeners {
         let document_for_keys = document.clone();
         let canvas_node_for_keys: Node = canvas.clone().unchecked_into();
         let ime_node_for_keys: Node = ime_textarea.clone().unchecked_into();
+        let activation_for_key_down = activation_callback.clone();
         let on_key_down = Closure::wrap(Box::new(move |event: KeyboardEvent| {
             if !is_web_input_focused(
                 &document_for_keys,
@@ -461,12 +493,21 @@ impl WebInputListeners {
                     repeat,
                 });
             }
+
+            let cb = activation_for_key_down
+                .try_borrow()
+                .ok()
+                .and_then(|v| v.as_ref().cloned());
+            if let Some(cb) = cb {
+                cb();
+            }
         }) as Box<dyn FnMut(KeyboardEvent)>);
 
         let queue_key_up = queue.clone();
         let document_for_keys = document.clone();
         let canvas_node_for_keys: Node = canvas.clone().unchecked_into();
         let ime_node_for_keys: Node = ime_textarea.clone().unchecked_into();
+        let activation_for_key_up = activation_callback.clone();
         let on_key_up = Closure::wrap(Box::new(move |event: KeyboardEvent| {
             if !is_web_input_focused(
                 &document_for_keys,
@@ -485,6 +526,14 @@ impl WebInputListeners {
 
             if let Ok(mut q) = queue_key_up.try_borrow_mut() {
                 q.push(Event::KeyUp { key, modifiers });
+            }
+
+            let cb = activation_for_key_up
+                .try_borrow()
+                .ok()
+                .and_then(|v| v.as_ref().cloned());
+            if let Some(cb) = cb {
+                cb();
             }
         }) as Box<dyn FnMut(KeyboardEvent)>);
 
@@ -783,12 +832,28 @@ pub struct WebEffectPump {
     queued_events: Rc<RefCell<Vec<Event>>>,
     fired_timeouts: Rc<RefCell<Vec<TimerToken>>>,
     timers: HashMap<TimerToken, WebTimer>,
+    file_dialogs: Rc<RefCell<WebFileDialogState>>,
 }
 
 struct WebTimer {
     id: i32,
     repeat: Option<Duration>,
     callback: Closure<dyn FnMut()>,
+}
+
+#[derive(Default)]
+struct WebFileDialogState {
+    next_token: u64,
+    selections: HashMap<fret_runtime::FileDialogToken, Vec<web_sys::File>>,
+}
+
+impl WebFileDialogState {
+    fn allocate_token(&mut self) -> fret_runtime::FileDialogToken {
+        let next = self.next_token.max(1);
+        let token = fret_runtime::FileDialogToken(next);
+        self.next_token = next.saturating_add(1);
+        token
+    }
 }
 
 impl WebEffectPump {
@@ -798,6 +863,7 @@ impl WebEffectPump {
             queued_events: Rc::new(RefCell::new(Vec::new())),
             fired_timeouts: Rc::new(RefCell::new(Vec::new())),
             timers: HashMap::new(),
+            file_dialogs: Rc::new(RefCell::new(WebFileDialogState::default())),
         }
     }
 
@@ -918,10 +984,256 @@ impl WebEffectPump {
                     };
                     let _ = window.open_with_url(&url);
                 }
+                Effect::FileDialogOpen { options, .. } => {
+                    let caps = app
+                        .global::<PlatformCapabilities>()
+                        .cloned()
+                        .unwrap_or_default();
+                    if !caps.fs.file_dialogs {
+                        continue;
+                    }
+
+                    let Some(window) = web_sys::window() else {
+                        continue;
+                    };
+                    let Some(document) = window.document() else {
+                        continue;
+                    };
+                    let Ok(el) = document.create_element("input") else {
+                        continue;
+                    };
+                    let Ok(input) = el.dyn_into::<web_sys::HtmlInputElement>() else {
+                        continue;
+                    };
+
+                    input.set_type("file");
+                    input.set_multiple(options.multiple);
+
+                    let accept = {
+                        let mut parts: Vec<String> = Vec::new();
+                        for filter in &options.filters {
+                            for ext in &filter.extensions {
+                                let ext = ext.trim().trim_start_matches('.');
+                                if ext.is_empty() {
+                                    continue;
+                                }
+                                parts.push(format!(".{ext}"));
+                            }
+                        }
+                        parts.join(",")
+                    };
+                    if !accept.is_empty() {
+                        input.set_accept(&accept);
+                    }
+
+                    let input_el: HtmlElement = input.clone().unchecked_into();
+                    let style = input_el.style();
+                    let _ = style.set_property("position", "absolute");
+                    let _ = style.set_property("left", "0px");
+                    let _ = style.set_property("top", "0px");
+                    let _ = style.set_property("opacity", "0");
+                    let _ = style.set_property("width", "1px");
+                    let _ = style.set_property("height", "1px");
+                    let _ = style.set_property("pointer-events", "none");
+                    let _ = input_el.set_attribute("aria-hidden", "true");
+
+                    if let Some(body) = document.body() {
+                        let _ = body.append_child(&input_el);
+                    }
+
+                    let queue = self.queued_events.clone();
+                    let state = self.file_dialogs.clone();
+                    let input_target: EventTarget = input.clone().unchecked_into();
+                    let input_target_for_cb = input_target.clone();
+                    let input_for_cb = input.clone();
+                    let input_node_for_cb: Node = input.clone().unchecked_into();
+
+                    let callback_cell: Rc<RefCell<Option<Closure<dyn FnMut(WebSysEvent)>>>> =
+                        Rc::new(RefCell::new(None));
+                    let callback_cell_for_cb = callback_cell.clone();
+
+                    let on_change = Closure::wrap(Box::new(move |_event: WebSysEvent| {
+                        if let Some(parent) = input_node_for_cb.parent_node() {
+                            let _ = parent.remove_child(&input_node_for_cb);
+                        }
+
+                        if let Ok(holder) = callback_cell_for_cb.try_borrow() {
+                            if let Some(cb) = holder.as_ref() {
+                                let _ = input_target_for_cb.remove_event_listener_with_callback(
+                                    "change",
+                                    cb.as_ref().unchecked_ref(),
+                                );
+                            }
+                        }
+                        callback_cell_for_cb.borrow_mut().take();
+
+                        let mut selected: Vec<web_sys::File> = Vec::new();
+                        if let Some(files) = input_for_cb.files() {
+                            for i in 0..files.length() {
+                                if let Some(file) = files.item(i) {
+                                    selected.push(file);
+                                }
+                            }
+                        }
+
+                        if selected.is_empty() {
+                            let _ = queue
+                                .try_borrow_mut()
+                                .map(|mut q| q.push(Event::FileDialogCanceled));
+                            return;
+                        }
+
+                        let (token, files_meta) = {
+                            let mut st = state.borrow_mut();
+                            let token = st.allocate_token();
+                            let files_meta = selected
+                                .iter()
+                                .map(|f| fret_core::ExternalDragFile { name: f.name() })
+                                .collect::<Vec<_>>();
+                            st.selections.insert(token, selected);
+                            (token, files_meta)
+                        };
+
+                        let selection = fret_core::FileDialogSelection {
+                            token,
+                            files: files_meta,
+                        };
+                        let _ = queue
+                            .try_borrow_mut()
+                            .map(|mut q| q.push(Event::FileDialogSelection(selection)));
+                    })
+                        as Box<dyn FnMut(WebSysEvent)>);
+
+                    *callback_cell.borrow_mut() = Some(on_change);
+                    if let Ok(holder) = callback_cell.try_borrow() {
+                        if let Some(cb) = holder.as_ref() {
+                            let _ = input_target.add_event_listener_with_callback(
+                                "change",
+                                cb.as_ref().unchecked_ref(),
+                            );
+                        }
+                    }
+
+                    input.click();
+                }
+                Effect::FileDialogReadAll { token, .. } => {
+                    self.file_dialog_read_all(
+                        token,
+                        fret_core::ExternalDropReadLimits {
+                            max_total_bytes: 64 * 1024 * 1024,
+                            max_file_bytes: 32 * 1024 * 1024,
+                            max_files: 64,
+                        },
+                    );
+                }
+                Effect::FileDialogReadAllWithLimits { token, limits, .. } => {
+                    let cap = fret_core::ExternalDropReadLimits {
+                        max_total_bytes: 64 * 1024 * 1024,
+                        max_file_bytes: 32 * 1024 * 1024,
+                        max_files: 64,
+                    };
+                    self.file_dialog_read_all(token, limits.capped_by(cap));
+                }
+                Effect::FileDialogRelease { token } => {
+                    self.file_dialogs.borrow_mut().selections.remove(&token);
+                }
                 other => unhandled.push(other),
             }
         }
         unhandled
+    }
+
+    fn file_dialog_read_all(
+        &self,
+        token: fret_runtime::FileDialogToken,
+        limits: fret_core::ExternalDropReadLimits,
+    ) {
+        let files = self.file_dialogs.borrow().selections.get(&token).cloned();
+        let Some(files) = files else {
+            return;
+        };
+
+        let queue = self.queued_events.clone();
+        spawn_local(async move {
+            let mut out_files: Vec<fret_core::ExternalDropFileData> = Vec::new();
+            let mut errors: Vec<fret_core::ExternalDropReadError> = Vec::new();
+            let mut total: u64 = 0;
+
+            for file in files.into_iter().take(limits.max_files) {
+                let name = file.name();
+                let reported_size = file.size() as u64;
+
+                if reported_size > limits.max_file_bytes {
+                    errors.push(fret_core::ExternalDropReadError {
+                        name,
+                        message: format!(
+                            "file too large ({} bytes > max_file_bytes {})",
+                            reported_size, limits.max_file_bytes
+                        ),
+                    });
+                    continue;
+                }
+
+                if total >= limits.max_total_bytes {
+                    errors.push(fret_core::ExternalDropReadError {
+                        name,
+                        message: format!(
+                            "selection too large (total {} >= max_total_bytes {})",
+                            total, limits.max_total_bytes
+                        ),
+                    });
+                    break;
+                }
+
+                let buf = match JsFuture::from(file.array_buffer()).await {
+                    Ok(v) => v,
+                    Err(err) => {
+                        errors.push(fret_core::ExternalDropReadError {
+                            name,
+                            message: format!("read failed: {err:?}"),
+                        });
+                        continue;
+                    }
+                };
+                let bytes = Uint8Array::new(&buf).to_vec();
+
+                if bytes.len() as u64 > limits.max_file_bytes {
+                    errors.push(fret_core::ExternalDropReadError {
+                        name,
+                        message: format!(
+                            "file too large ({} bytes > max_file_bytes {})",
+                            bytes.len(),
+                            limits.max_file_bytes
+                        ),
+                    });
+                    continue;
+                }
+
+                let next_total = total.saturating_add(bytes.len() as u64);
+                if next_total > limits.max_total_bytes {
+                    errors.push(fret_core::ExternalDropReadError {
+                        name,
+                        message: format!(
+                            "selection too large (next_total {} > max_total_bytes {})",
+                            next_total, limits.max_total_bytes
+                        ),
+                    });
+                    break;
+                }
+                total = next_total;
+
+                out_files.push(fret_core::ExternalDropFileData { name, bytes });
+            }
+
+            let data = fret_core::FileDialogDataEvent {
+                token,
+                files: out_files,
+                errors,
+            };
+            let _ = queue
+                .try_borrow_mut()
+                .map(|mut q| q.push(Event::FileDialogData(data)));
+        });
     }
 
     fn ms(d: Duration) -> i32 {
