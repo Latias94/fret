@@ -5,6 +5,7 @@ pub mod docking_settings;
 pub mod drag;
 pub mod effect;
 pub mod font_catalog;
+pub mod font_catalog_cache;
 #[cfg(test)]
 mod font_config_tests;
 pub mod input;
@@ -28,6 +29,7 @@ pub use docking_settings::{
 pub use drag::{DragKind, DragSession};
 pub use effect::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 pub use font_catalog::FontCatalog;
+pub use font_catalog_cache::FontCatalogCache;
 pub use fret_core::FrameId;
 pub use fret_core::{ClipboardToken, ExternalDropToken, FileDialogToken, TimerToken};
 pub use input::{
