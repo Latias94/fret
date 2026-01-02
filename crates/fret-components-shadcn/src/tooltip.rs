@@ -83,7 +83,7 @@ impl Tooltip {
             side: TooltipSide::default(),
             side_offset: Px(0.0),
             window_margin_override: None,
-            arrow: false,
+            arrow: true,
             arrow_size_override: None,
             arrow_padding_override: None,
             open_delay_frames: 0,
@@ -125,7 +125,7 @@ impl Tooltip {
 
     /// Enables a Tooltip arrow (Radix `TooltipArrow`-style).
     ///
-    /// Default: `false`.
+    /// Default: `true`.
     pub fn arrow(mut self, arrow: bool) -> Self {
         self.arrow = arrow;
         self
@@ -846,6 +846,7 @@ mod tests {
                             .align(TooltipAlign::Start)
                             .side_offset(Px(8.0))
                             .window_margin(Px(0.0))
+                            .arrow(false)
                             .open_delay_frames(0)
                             .close_delay_frames(0)
                             .into_element(cx),

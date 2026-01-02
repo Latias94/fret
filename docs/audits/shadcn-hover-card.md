@@ -34,7 +34,7 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 - Pass: Anchored placement uses deterministic flip/clamp behavior via
   `overlay_placement::anchored_panel_bounds_sized(...)`.
-- Partial: Arrow is not implemented (upstream can render an arrow).
+- Pass: Optional arrow is supported via `HoverCard::arrow(true)` (default is `false`).
 
 ## Validation
 

@@ -45,8 +45,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Supports `side`, `align`, and `side_offset` (default 4px) similar to Radix/shadcn.
 - Pass: Performs deterministic flip + clamp within window bounds via
   `anchored_panel_bounds_sized(...)` (ADR 0064).
-- Partial: No arrow positioning surface yet (upstream can show arrow via Radix; Fret has
-  `anchored_panel_layout_ex(...)` available in runtime but Popover does not expose it).
+- Pass: Optional arrow is supported via `Popover::arrow(true)` (default is `false`).
 
 ### Dismissal behavior
 

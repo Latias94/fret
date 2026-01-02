@@ -50,7 +50,7 @@ Key upstream notes:
 - Pass: Default tooltip background aligns with upstream (`foreground`).
 - Partial: Default “text color inheritance” is not a first-class concept; `TooltipContent::text(...)`
   sets `background` as the text color, but rich children must set colors explicitly for now.
-- Defer: Arrow is not implemented (upstream includes an arrow by default).
+- Pass: Arrow is implemented and enabled by default (can be disabled via `Tooltip::arrow(false)`).
 
 ## Follow-ups (recommended)
 
