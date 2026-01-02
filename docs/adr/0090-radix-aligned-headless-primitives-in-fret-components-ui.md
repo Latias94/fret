@@ -46,6 +46,27 @@ provide:
 This keeps `crates/fret-components-shadcn` as a thin taxonomy/recipe surface and avoids pressure to
 grow the `fret-ui` contract surface with component policies.
 
+### 1.1) Terminology: “headless” vs “primitives” (no conflict)
+
+Radix uses the word “primitives” for a bundle that includes both behavior policy and the
+composition API surface (in React/DOM form). In Fret, we split both **implementation style** and
+**naming surface** explicitly:
+
+- **Headless** describes *how* code is implemented: deterministic logic/state machines, testable
+  without a renderer or platform backend.
+- **Primitives** describes *what* we expose as stable building blocks: a Radix-named facade surface
+  that component recipes can depend on.
+
+Concretely in this repository:
+
+- `fret-components-ui::headless` = the pure logic/state machine layer.
+- `fret-components-ui::primitives` = Radix-named entry points (thin facades) that may call into:
+  - `headless` (logic),
+  - `declarative` (wiring helpers),
+  - and `fret-ui` mechanism types (never policies).
+
+This makes “headless” and “primitives” complementary rather than competing concepts.
+
 ### 2) Port outcomes, not APIs
 
 We do **not** attempt to be API-compatible with `@radix-ui/react-*`.
@@ -69,6 +90,11 @@ We standardize where new building blocks belong:
 - `fret-components-ui::declarative`:
   - ergonomic `ElementContext` helpers that compose runtime element kinds + action hooks,
   - thin wrappers that “wire” headless logic into declarative element trees.
+
+- `fret-components-ui::primitives`:
+  - stable Radix-named facade surface (thin entry points),
+  - no visual defaults, no renderer/platform deps,
+  - avoids duplicating logic that already exists in `headless` / `declarative`.
 
 - `fret-components-ui::{overlay, overlay_controller}`:
   - reusable overlay anchoring helpers and per-window overlay request/presence plumbing.
@@ -111,6 +137,13 @@ Existing headless primitives in-tree (subject to evolution):
 - `headless/cmdk_selection.rs` (active-descendant style selection math)
 - `headless/focus_scope.rs` (focus trap helper)
 - `headless/dismissible_layer.rs` (dismissible root wiring helper)
+
+Radix-named facades (thin entry points, subject to evolution):
+
+- `primitives/dismissable_layer.rs`
+- `primitives/focus_scope.rs`
+- `primitives/popper.rs`
+- `primitives/roving_focus_group.rs`
 
 ## Follow-ups
 
