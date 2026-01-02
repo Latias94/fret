@@ -67,29 +67,37 @@ pub enum MenubarEntry {
 
 #[derive(Clone)]
 pub struct Menubar {
-    children: Vec<AnyElement>,
+    menus: Vec<MenubarMenuEntries>,
     disabled: bool,
+    typeahead_timeout_ticks: u64,
 }
 
 impl std::fmt::Debug for Menubar {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Menubar")
-            .field("children_len", &self.children.len())
+            .field("menus_len", &self.menus.len())
             .field("disabled", &self.disabled)
+            .field("typeahead_timeout_ticks", &self.typeahead_timeout_ticks)
             .finish()
     }
 }
 
 impl Menubar {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(menus: Vec<MenubarMenuEntries>) -> Self {
         Self {
-            children,
+            menus,
             disabled: false,
+            typeahead_timeout_ticks: 30,
         }
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn typeahead_timeout_ticks(mut self, ticks: u64) -> Self {
+        self.typeahead_timeout_ticks = ticks;
         self
     }
 
@@ -105,7 +113,23 @@ impl Menubar {
             let gap = MetricRef::space(Space::N1).resolve(&theme);
 
             let disabled = self.disabled;
-            let children = self.children;
+            let menus = self.menus;
+            let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
+
+            let trigger_labels: Arc<[Arc<str>]> = Arc::from(
+                menus
+                    .iter()
+                    .map(|m| m.menu.label.clone())
+                    .collect::<Vec<_>>()
+                    .into_boxed_slice(),
+            );
+            let trigger_disabled: Arc<[bool]> = Arc::from(
+                menus
+                    .iter()
+                    .map(|m| disabled || m.menu.disabled)
+                    .collect::<Vec<_>>()
+                    .into_boxed_slice(),
+            );
 
             cx.semantics(
                 SemanticsProps {
@@ -131,17 +155,32 @@ impl Menubar {
                             corner_radii: Corners::all(radius),
                         },
                         move |cx| {
-                            vec![cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle::default(),
-                                    direction: fret_core::Axis::Horizontal,
-                                    gap,
-                                    padding: Edges::all(Px(0.0)),
-                                    justify: MainAlign::Start,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
+                            vec![cx.roving_flex(
+                                RovingFlexProps {
+                                    flex: FlexProps {
+                                        layout: LayoutStyle::default(),
+                                        direction: fret_core::Axis::Horizontal,
+                                        gap,
+                                        padding: Edges::all(Px(0.0)),
+                                        justify: MainAlign::Start,
+                                        align: CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    roving: RovingFocusProps {
+                                        enabled: !disabled,
+                                        wrap: true,
+                                        disabled: trigger_disabled.clone(),
+                                    },
                                 },
-                                move |_cx| children,
+                                move |cx| {
+                                    cx.roving_nav_apg();
+                                    cx.roving_typeahead_prefix_arc_str(
+                                        trigger_labels.clone(),
+                                        typeahead_timeout_ticks,
+                                    );
+
+                                    menus.into_iter().map(|m| m.into_element(cx)).collect()
+                                },
                             )]
                         },
                     )]
@@ -199,6 +238,13 @@ impl MenubarMenu {
         }
     }
 
+    pub fn entries(self, entries: Vec<MenubarEntry>) -> MenubarMenuEntries {
+        MenubarMenuEntries {
+            menu: self,
+            entries: Arc::from(entries.into_boxed_slice()),
+        }
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
@@ -218,14 +264,29 @@ impl MenubarMenu {
         self.typeahead_timeout_ticks = ticks;
         self
     }
+}
 
-    pub fn into_element<H: UiHost>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-        entries: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<MenubarEntry>,
-    ) -> AnyElement {
+#[derive(Clone)]
+pub struct MenubarMenuEntries {
+    menu: MenubarMenu,
+    entries: Arc<[MenubarEntry]>,
+}
+
+impl std::fmt::Debug for MenubarMenuEntries {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MenubarMenuEntries")
+            .field("label", &self.menu.label)
+            .field("disabled", &self.menu.disabled)
+            .field("entries_len", &self.entries.len())
+            .finish()
+    }
+}
+
+impl MenubarMenuEntries {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let group = cx.root_id();
-        let key = self.label.clone();
+        let key = self.menu.label.clone();
+        let entries = self.entries.clone();
         cx.keyed(key, |cx| {
             let group_active =
                 cx.with_state_for(group, MenubarGroupState::default, |st| st.active.clone());
@@ -249,7 +310,7 @@ impl MenubarMenu {
             };
 
             let theme = Theme::global(&*cx.app).clone();
-            let enabled = !self.disabled;
+            let enabled = !self.menu.disabled;
 
             let radius = theme.metrics.radius_sm;
             let ring = decl_style::focus_ring(&theme, radius);
@@ -270,7 +331,7 @@ impl MenubarMenu {
                 letter_spacing_em: None,
             };
 
-            let label = self.label.clone();
+            let label = self.menu.label.clone();
 
             cx.pressable_with_id_props(|cx, st, trigger_id| {
                 let mut trigger_layout = LayoutStyle::default();
@@ -378,12 +439,13 @@ impl MenubarMenu {
 
                 if is_open && enabled {
                     let overlay_root_name = OverlayController::popover_root_name(trigger_id);
-                    let side_offset = self.side_offset;
-                    let window_margin = self.window_margin;
-                    let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
+                    let side_offset = self.menu.side_offset;
+                    let window_margin = self.menu.window_margin;
+                    let typeahead_timeout_ticks = self.menu.typeahead_timeout_ticks;
                     let group_active = group_active;
                     let open_for_overlay = open.clone();
                     let text_style = text_style.clone();
+                    let entries = entries.clone();
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                         let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id) else {
@@ -401,7 +463,6 @@ impl MenubarMenu {
                             Align::Start,
                         );
 
-                        let entries = entries(cx);
                         let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries
                             .iter()
                             .map(|e| match e {
@@ -491,8 +552,7 @@ impl MenubarMenu {
                                                     .count();
                                                 let mut item_ix: usize = 0;
 
-                                                for (idx, entry) in entries.into_iter().enumerate()
-                                                {
+                                                for (idx, entry) in entries.iter().enumerate() {
                                                     match entry {
                                                         MenubarEntry::Separator => {
                                                             out.push(cx.container(
@@ -523,7 +583,7 @@ impl MenubarMenu {
                                                             let label = item.label.clone();
                                                             let a11y_label =
                                                                 item.a11y_label.clone();
-                                                            let command = item.command;
+                                                            let command = item.command.clone();
                                                             let open = open_for_overlay.clone();
                                                             let group_active = group_active.clone();
                                                             let text_style = text_style.clone();
@@ -685,7 +745,7 @@ impl MenubarMenu {
 
 pub fn menubar<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<MenubarMenuEntries>,
 ) -> AnyElement {
     Menubar::new(f(cx)).into_element(cx)
 }
@@ -771,6 +831,14 @@ mod tests {
             .unwrap_or(false)
     }
 
+    fn menu_trigger_node_id(snap: &fret_core::SemanticsSnapshot, label: &str) -> fret_core::NodeId {
+        snap.nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some(label))
+            .map(|n| n.id)
+            .unwrap_or_else(|| panic!("missing menu trigger {label:?}"))
+    }
+
     fn render_frame(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -782,23 +850,19 @@ mod tests {
         OverlayController::begin_frame(app, window);
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "menubar", |cx| {
-                vec![menubar(cx, |cx| {
+                vec![menubar(cx, |_cx| {
                     vec![
-                        MenubarMenu::new("File").into_element(cx, |_cx| {
-                            vec![
-                                MenubarEntry::Item(MenubarItem::new("New")),
-                                MenubarEntry::Separator,
-                                MenubarEntry::Item(MenubarItem::new("Open")),
-                                MenubarEntry::Item(MenubarItem::new("Exit")),
-                            ]
-                        }),
-                        MenubarMenu::new("Edit").into_element(cx, |_cx| {
-                            vec![
-                                MenubarEntry::Item(MenubarItem::new("Undo")),
-                                MenubarEntry::Separator,
-                                MenubarEntry::Item(MenubarItem::new("Redo")),
-                            ]
-                        }),
+                        MenubarMenu::new("File").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("New")),
+                            MenubarEntry::Separator,
+                            MenubarEntry::Item(MenubarItem::new("Open")),
+                            MenubarEntry::Item(MenubarItem::new("Exit")),
+                        ]),
+                        MenubarMenu::new("Edit").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("Undo")),
+                            MenubarEntry::Separator,
+                            MenubarEntry::Item(MenubarItem::new("Redo")),
+                        ]),
                     ]
                 })]
             });
@@ -874,6 +938,61 @@ mod tests {
         let snap3 = ui.semantics_snapshot().expect("semantics snapshot");
         assert!(!menu_trigger_expanded(snap3, "File"));
         assert!(menu_trigger_expanded(snap3, "Edit"));
+    }
+
+    #[test]
+    fn menubar_triggers_roving_moves_focus_with_arrow_keys() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let file = menu_trigger_node_id(&snap0, "File");
+        let edit = menu_trigger_node_id(&snap0, "Edit");
+
+        ui.set_focus(Some(file));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowRight,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert_eq!(ui.focus(), Some(edit));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowLeft,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert_eq!(ui.focus(), Some(file));
+
+        // Wrap behavior: ArrowLeft from the first trigger wraps to the last trigger.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowLeft,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert_eq!(ui.focus(), Some(edit));
     }
 
     #[test]

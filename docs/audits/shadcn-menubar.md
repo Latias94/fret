@@ -38,8 +38,8 @@ Key upstream behaviors/surfaces:
 
 ### Keyboard navigation
 
-- Partial: Menu content supports roving + typeahead.
-- Gap: The menubar trigger row does not yet implement ArrowLeft/ArrowRight roving between triggers.
+- Pass: Menu content supports roving + typeahead.
+- Pass: Menubar trigger row supports ArrowLeft/ArrowRight roving (wrap) between triggers.
 
 ### Visual parity
 
@@ -50,10 +50,9 @@ Key upstream behaviors/surfaces:
 
 - Label/group/shortcut surfaces in menu content.
 - Checkbox/radio items and submenus.
-- Keyboard roving between menubar triggers.
 
 ## Validation
 
 - Interaction test: `menubar_hover_switches_open_menu`
+- Interaction test: `menubar_triggers_roving_moves_focus_with_arrow_keys`
 - Contract test: `menubar_items_have_collection_position_metadata_excluding_separators`
-
