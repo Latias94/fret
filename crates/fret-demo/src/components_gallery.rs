@@ -3,8 +3,8 @@ use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_components_app::tree::AppTreeRowRenderer;
 use fret_components_icons::IconRegistry;
 use fret_components_shadcn as shadcn;
-use fret_components_ui::OverlayController;
 use fret_components_ui::tree::{TreeItem, TreeItemId, TreeState};
+use fret_components_ui::{LayoutRefinement, MetricRef, OverlayController};
 use fret_core::{
     AppWindowId, Corners, Edges, Event, FileDialogFilter, FileDialogOptions, FileDialogToken,
     FontId, KeyCode, Px, Rect, SemanticsRole, TextStyle, UiServices,
@@ -353,6 +353,12 @@ impl ComponentsGalleryDriver {
                                                                 .placeholder(
                                                                     "Force UI font (optional)",
                                                                 )
+                                                                .refine_layout(
+                                                                    LayoutRefinement::default()
+                                                                        .w_px(MetricRef::Px(Px(
+                                                                            260.0,
+                                                                        ))),
+                                                                )
                                                                 .items(items.clone())
                                                                 .into_element(cx),
                                                                 shadcn::Select::new(
@@ -362,9 +368,15 @@ impl ComponentsGalleryDriver {
                                                                 .placeholder(
                                                                     "Force emoji font (optional)",
                                                                 )
+                                                                .refine_layout(
+                                                                    LayoutRefinement::default()
+                                                                        .w_px(MetricRef::Px(Px(
+                                                                            260.0,
+                                                                        ))),
+                                                                )
                                                                 .items(items)
                                                                 .into_element(cx),
-                                                                shadcn::Button::new("Load fonts…")
+                                                                shadcn::Button::new("Load fonts...")
                                                                     .variant(
                                                                         shadcn::ButtonVariant::Outline,
                                                                     )
@@ -440,7 +452,20 @@ impl ComponentsGalleryDriver {
                                                             out.push(cx.text_props(props));
                                                             continue;
                                                         }
-                                                        out.push(cx.text(line));
+                                                        if let Some(name) = selected_ui_font.as_deref() {
+                                                            let theme = cx.theme().snapshot();
+                                                            let mut style = TextStyle::default();
+                                                            style.font = FontId::family(name);
+                                                            style.size = theme.metrics.font_size;
+                                                            style.line_height =
+                                                                Some(theme.metrics.font_line_height);
+
+                                                            let mut props = TextProps::new(line.clone());
+                                                            props.style = Some(style);
+                                                            out.push(cx.text_props(props));
+                                                        } else {
+                                                            out.push(cx.text(line));
+                                                        }
                                                     }
                                                     out
                                                 },
@@ -1251,7 +1276,7 @@ impl WinitAppDriver for ComponentsGalleryDriver {
             });
 
             let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from("fonts.load: opening file dialog…");
+                *v = Arc::<str>::from("fonts.load: opening file dialog...");
             });
             return;
         }
@@ -1284,7 +1309,7 @@ impl WinitAppDriver for ComponentsGalleryDriver {
                 });
 
                 let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("fonts.load: reading selected files…");
+                    *v = Arc::<str>::from("fonts.load: reading selected files...");
                 });
                 return;
             }

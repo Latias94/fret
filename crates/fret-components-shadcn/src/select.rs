@@ -64,6 +64,7 @@ pub struct Select {
     placeholder: Arc<str>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    layout: LayoutRefinement,
 }
 
 impl Select {
@@ -72,9 +73,10 @@ impl Select {
             model,
             open,
             items: Vec::new(),
-            placeholder: Arc::from("Select…"),
+            placeholder: Arc::from("Select..."),
             disabled: false,
             a11y_label: None,
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -103,6 +105,11 @@ impl Select {
         self
     }
 
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
         select(
             cx,
@@ -112,6 +119,7 @@ impl Select {
             self.placeholder,
             self.disabled,
             self.a11y_label,
+            self.layout,
         )
     }
 }
@@ -124,6 +132,7 @@ pub fn select<H: UiHost>(
     placeholder: Arc<str>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    layout: LayoutRefinement,
 ) -> AnyElement {
     cx.scope(|cx| {
         let theme = Theme::global(&*cx.app).clone();
@@ -154,9 +163,17 @@ pub fn select<H: UiHost>(
             letter_spacing_em: None,
         };
 
+        let min_width = theme
+            .metric_by_key("component.select.min_width")
+            .unwrap_or(Px(180.0));
+
         let mut trigger_layout = decl_style::layout_style(
             &theme,
-            LayoutRefinement::default().w_full().min_h(MetricRef::Px(resolved.min_height)),
+            LayoutRefinement::default()
+                .w_full()
+                .min_w(MetricRef::Px(min_width))
+                .min_h(MetricRef::Px(resolved.min_height))
+                .merge(layout),
         );
         trigger_layout.size.height = Length::Auto;
         trigger_layout.size.min_height = Some(resolved.min_height);
@@ -171,7 +188,7 @@ pub fn select<H: UiHost>(
         let enabled = !disabled;
 
         decl_chrome::control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
-            let border_color = if st.hovered || st.pressed {
+            let border_color = if st.hovered || st.pressed || st.focused {
                 alpha_mul(border_focus, 0.85)
             } else {
                 border
@@ -182,7 +199,7 @@ pub fn select<H: UiHost>(
             let props = PressableProps {
                 layout: trigger_layout,
                 enabled,
-                focusable: true,
+                focusable: enabled,
                 focus_ring: Some(ring),
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::ComboBox),
@@ -199,7 +216,10 @@ pub fn select<H: UiHost>(
                 && enabled
                 && let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id)
             {
-                    let outer = cx.bounds;
+                    let window_margin = theme
+                        .metric_by_key("component.select.window_margin")
+                        .unwrap_or(Px(8.0));
+                    let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
 
                     let max_h = theme
                         .metric_by_key("component.select.max_list_height")
@@ -208,7 +228,7 @@ pub fn select<H: UiHost>(
                         .metric_by_key("component.select.item_height")
                         .unwrap_or(Px(32.0));
                     let desired_h = Px((item_h.0 * items.len() as f32).min(max_h.0).max(item_h.0));
-                    let desired_w = Px(anchor.size.width.0.max(180.0));
+                    let desired_w = Px(anchor.size.width.0.max(min_width.0));
                     let desired = fret_core::Size::new(desired_w, desired_h);
 
                     let side_offset = theme
