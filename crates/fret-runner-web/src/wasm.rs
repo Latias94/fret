@@ -168,10 +168,6 @@ fn mouse_button_from_dom_button(button: i16) -> MouseButton {
     }
 }
 
-fn point_from_dom_offset_xy(offset_x: i32, offset_y: i32) -> fret_core::Point {
-    fret_core::Point::new(Px(offset_x as f32), Px(offset_y as f32))
-}
-
 fn point_from_dom_client_xy(
     canvas: &HtmlCanvasElement,
     client_x: i32,
@@ -371,12 +367,14 @@ impl WebInputListeners {
         let ime_enabled = Rc::new(Cell::new(false));
 
         let queue_move = queue.clone();
+        let canvas_for_move = canvas.clone();
         let on_pointer_move = Closure::wrap(Box::new(move |event: WebPointerEvent| {
             if prevent_default {
                 event.prevent_default();
             }
 
-            let position = point_from_dom_offset_xy(event.offset_x(), event.offset_y());
+            let position =
+                point_from_dom_client_xy(&canvas_for_move, event.client_x(), event.client_y());
             let modifiers = modifiers_from_pointer_event(&event);
             let buttons = mouse_buttons_from_dom_buttons(event.buttons());
 
@@ -407,7 +405,8 @@ impl WebInputListeners {
                 event.prevent_default();
             }
 
-            let position = point_from_dom_offset_xy(event.offset_x(), event.offset_y());
+            let position =
+                point_from_dom_client_xy(&canvas_capture, event.client_x(), event.client_y());
             let modifiers = modifiers_from_pointer_event(&event);
             let button = mouse_button_from_dom_button(event.button());
 
@@ -437,7 +436,8 @@ impl WebInputListeners {
                 event.prevent_default();
             }
 
-            let position = point_from_dom_offset_xy(event.offset_x(), event.offset_y());
+            let position =
+                point_from_dom_client_xy(&canvas_release, event.client_x(), event.client_y());
             let modifiers = modifiers_from_pointer_event(&event);
             let button = mouse_button_from_dom_button(event.button());
 
@@ -462,7 +462,11 @@ impl WebInputListeners {
         let canvas_cancel_release = canvas.clone();
         let on_pointer_cancel = Closure::wrap(Box::new(move |event: WebPointerEvent| {
             let _ = canvas_cancel_release.release_pointer_capture(event.pointer_id());
-            let position = point_from_dom_offset_xy(event.offset_x(), event.offset_y());
+            let position = point_from_dom_client_xy(
+                &canvas_cancel_release,
+                event.client_x(),
+                event.client_y(),
+            );
             let modifiers = modifiers_from_pointer_event(&event);
             let buttons = mouse_buttons_from_dom_buttons(event.buttons());
             if let Ok(mut q) = queue_cancel.try_borrow_mut() {
@@ -475,12 +479,14 @@ impl WebInputListeners {
         }) as Box<dyn FnMut(WebPointerEvent)>);
 
         let queue_wheel = queue.clone();
+        let canvas_for_wheel = canvas.clone();
         let on_wheel = Closure::wrap(Box::new(move |event: WheelEvent| {
             if prevent_default {
                 event.prevent_default();
             }
 
-            let position = point_from_dom_offset_xy(event.offset_x(), event.offset_y());
+            let position =
+                point_from_dom_client_xy(&canvas_for_wheel, event.client_x(), event.client_y());
             let delta = wheel_delta_from_dom(&event);
             let modifiers = Modifiers {
                 shift: event.shift_key(),
