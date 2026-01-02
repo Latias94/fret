@@ -10,6 +10,7 @@ use fret_ui_app::element::{ContainerProps, LayoutStyle, Length, PressableProps};
 use fret_ui_app::{Invalidation, Theme, UiFrameCx, UiTree};
 use wasm_bindgen::JsCast as _;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::spawn_local;
 use web_sys::Window;
 
 struct WebDemo {
@@ -333,4 +334,30 @@ impl WebDemoHandle {
             demo.tick();
         }
     }
+}
+
+thread_local! {
+    static AUTO_START_HANDLE: RefCell<Option<WebDemoHandle>> = const { RefCell::new(None) };
+}
+
+#[wasm_bindgen(start)]
+pub fn start() -> Result<(), JsValue> {
+    console_error_panic_hook::set_once();
+
+    spawn_local(async move {
+        let handle = WebDemoHandle::create("fret-canvas".to_string(), true).await;
+        match handle {
+            Ok(mut handle) => {
+                let _ = handle.start();
+                AUTO_START_HANDLE.with(|slot| {
+                    *slot.borrow_mut() = Some(handle);
+                });
+            }
+            Err(err) => {
+                web_sys::console::error_1(&err);
+            }
+        }
+    });
+
+    Ok(())
 }
