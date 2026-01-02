@@ -13,7 +13,7 @@ use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableA11y,
     PressableProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -97,7 +97,7 @@ impl Checkbox {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let model = self.model;
 
@@ -168,7 +168,7 @@ impl Checkbox {
                     ..Default::default()
                 };
 
-                let children = move |cx: &mut ElementCx<'_, H>| {
+                let children = move |cx: &mut ElementContext<'_, H>| {
                     if !checked {
                         return Vec::new();
                     }
@@ -210,6 +210,6 @@ impl Checkbox {
     }
 }
 
-pub fn checkbox<H: UiHost>(cx: &mut ElementCx<'_, H>, model: Model<bool>) -> AnyElement {
+pub fn checkbox<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement {
     Checkbox::new(model).into_element(cx)
 }

@@ -162,7 +162,7 @@ impl ComponentsGalleryDriver {
         let cmdk_query = state.cmdk_query.clone();
         let last_action = state.last_action.clone();
 
-        let root = declarative::RenderRootCx::new(&mut state.ui, app, services, window, bounds)
+        let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
             .render_root("components-gallery", |cx| {
                 cx.observe_model(&tree_state, Invalidation::Layout);
                 let theme = Theme::global(&*cx.app).clone();
@@ -640,6 +640,7 @@ impl ComponentsGalleryDriver {
                                                     ])
                                                     .into_element(cx),
                                                 )
+                                                .arrow(true)
                                                 .open_delay_frames(10)
                                                 .close_delay_frames(10)
                                                 .side(shadcn::TooltipSide::Top)
@@ -911,7 +912,7 @@ impl ComponentsGalleryDriver {
                                             .unwrap_or_default();
                                         let query = query.trim().to_ascii_lowercase();
 
-                                        let cmdk_items: Vec<shadcn::CommandItem> = [
+                                        let mut cmdk_entries: Vec<(&str, &str, bool, f32)> = [
                                             ("Open", "open", false),
                                             ("Save", "save", false),
                                             ("Close", "close", false),
@@ -919,11 +920,28 @@ impl ComponentsGalleryDriver {
                                             ("Disabled", "disabled", true),
                                         ]
                                         .into_iter()
-                                        .filter(|(label, _, _)| {
-                                            query.is_empty()
-                                                || label.to_ascii_lowercase().contains(&query)
-                                        })
                                         .map(|(label, id, disabled)| {
+                                            let score = if query.is_empty() {
+                                                1.0
+                                            } else {
+                                                fret_components_ui::headless::cmdk_score::command_score(
+                                                    label,
+                                                    query.as_str(),
+                                                    &[id],
+                                                )
+                                            };
+                                            (label, id, disabled, score)
+                                        })
+                                        .filter(|(_, _, _, score)| query.is_empty() || *score > 0.0)
+                                        .collect();
+
+                                        if !query.is_empty() {
+                                            cmdk_entries.sort_by(|a, b| b.3.total_cmp(&a.3));
+                                        }
+
+                                        let cmdk_items: Vec<shadcn::CommandItem> = cmdk_entries
+                                            .into_iter()
+                                            .map(|(label, id, disabled, _score)| {
                                             shadcn::CommandItem::new(label)
                                                 .disabled(disabled)
                                                 .on_select(CommandId::new(format!(

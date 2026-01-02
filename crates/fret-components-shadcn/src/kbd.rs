@@ -4,7 +4,7 @@ use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, TextProps};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Debug, Clone)]
 pub struct Kbd {
@@ -16,12 +16,12 @@ impl Kbd {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         kbd(cx, self.text)
     }
 }
 
-pub fn kbd<H: UiHost>(cx: &mut ElementCx<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
+pub fn kbd<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
     let text = text.into();
     let theme = Theme::global(&*cx.app).clone();
 

@@ -14,7 +14,7 @@ use fret_ui::element::{
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, SizeStyle,
     TextProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -143,7 +143,7 @@ impl RadioGroup {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let gap_y = row_gap(&theme);
@@ -368,7 +368,7 @@ impl RadioGroup {
 }
 
 pub fn radio_group<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
     items: Vec<RadioGroupItem>,
 ) -> AnyElement {

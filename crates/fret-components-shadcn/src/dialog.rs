@@ -15,7 +15,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
     PositionStyle, PressableProps, SemanticsProps, SizeStyle, TextProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 fn default_overlay_color() -> Color {
     Color {
@@ -81,9 +81,9 @@ impl Dialog {
 
     pub fn into_element<H: UiHost>(
         self,
-        cx: &mut ElementCx<'_, H>,
-        trigger: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
-        content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
@@ -273,7 +273,7 @@ impl DialogContent {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let bg = theme
@@ -330,7 +330,7 @@ impl DialogHeader {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
             ChromeRefinement::default().pb(Space::N4),
@@ -352,7 +352,7 @@ impl DialogFooter {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
             ChromeRefinement::default().pt(Space::N4),
@@ -374,7 +374,7 @@ impl DialogTitle {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("foreground")
@@ -417,7 +417,7 @@ impl DialogDescription {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("muted.foreground")

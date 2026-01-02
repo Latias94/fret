@@ -11,7 +11,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableA11y,
     PressableProps, SizeStyle,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -106,7 +106,7 @@ impl Switch {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let model = self.model;
 
@@ -173,7 +173,7 @@ impl Switch {
                     ..Default::default()
                 };
 
-                let children = move |cx: &mut ElementCx<'_, H>| {
+                let children = move |cx: &mut ElementContext<'_, H>| {
                     let x = if on {
                         Px((w.0 - pad.0 - thumb.0).max(0.0))
                     } else {
@@ -221,6 +221,6 @@ impl Switch {
     }
 }
 
-pub fn switch<H: UiHost>(cx: &mut ElementCx<'_, H>, model: Model<bool>) -> AnyElement {
+pub fn switch<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement {
     Switch::new(model).into_element(cx)
 }

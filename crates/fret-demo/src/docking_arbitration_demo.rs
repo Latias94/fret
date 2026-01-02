@@ -87,7 +87,7 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
 
         let root_name = "dock.panel.controls";
         Some(
-            declarative::RenderRootCx::new(ui, app, services, window, bounds).render_root(
+            declarative::RenderRootContext::new(ui, app, services, window, bounds).render_root(
                 root_name,
                 |cx| {
                 cx.observe_model(&models.popover_open, Invalidation::Layout);

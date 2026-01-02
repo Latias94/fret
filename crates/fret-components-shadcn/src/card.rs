@@ -4,7 +4,7 @@ use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, TextProps};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 fn card_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme
@@ -46,7 +46,7 @@ impl Card {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let chrome = card_chrome(&theme).merge(self.chrome);
         let props = decl_style::container_props(&theme, chrome, self.layout);
@@ -56,8 +56,8 @@ impl Card {
 }
 
 pub fn card<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     Card::new(f(cx)).into_element(cx)
 }
@@ -72,7 +72,7 @@ impl CardHeader {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let props = decl_style::container_props(
             &theme,
@@ -94,7 +94,7 @@ impl CardContent {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let props = decl_style::container_props(
             &theme,
@@ -116,7 +116,7 @@ impl CardFooter {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let props = decl_style::container_props(
             &theme,
@@ -138,7 +138,7 @@ impl CardTitle {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("card.foreground")
@@ -181,7 +181,7 @@ impl CardDescription {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("muted.foreground")

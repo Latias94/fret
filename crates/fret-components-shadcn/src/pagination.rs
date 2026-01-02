@@ -6,7 +6,7 @@ use fret_runtime::CommandId;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PaginationLinkSize {
@@ -82,7 +82,7 @@ impl Pagination {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let layout = decl_style::layout_style(&theme, self.layout);
         let children = self.children;
@@ -112,7 +112,7 @@ impl PaginationContent {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N1).resolve(&theme);
         let children = self.children;
@@ -142,7 +142,7 @@ impl PaginationItem {
         Self { child }
     }
 
-    pub fn into_element<H: UiHost>(self, _cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
 }
@@ -187,7 +187,7 @@ impl PaginationLink {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let r = radius(&theme);
@@ -255,7 +255,7 @@ impl PaginationLink {
             ),
         };
 
-        let content = move |cx: &mut ElementCx<'_, H>, hovered: bool, pressed: bool| {
+        let content = move |cx: &mut ElementContext<'_, H>, hovered: bool, pressed: bool| {
             let bg = if !enabled {
                 base_bg
             } else if pressed {
@@ -354,7 +354,7 @@ impl PaginationPrevious {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut link = PaginationLink::new(vec![cx.text("‹"), cx.text("Previous")])
             .size(PaginationLinkSize::Default)
             .disabled(self.disabled);
@@ -395,7 +395,7 @@ impl PaginationNext {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut link = PaginationLink::new(vec![cx.text("Next"), cx.text("›")])
             .size(PaginationLinkSize::Default)
             .disabled(self.disabled);
@@ -420,7 +420,7 @@ impl PaginationEllipsis {
         Self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let s = icon_size(&theme);
         let layout = decl_style::layout_style(

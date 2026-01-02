@@ -14,7 +14,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
     SemanticsProps, SizeStyle, TextProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::button::{Button, ButtonVariant};
 
@@ -69,9 +69,9 @@ impl AlertDialog {
 
     pub fn into_element<H: UiHost>(
         self,
-        cx: &mut ElementCx<'_, H>,
-        trigger: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
-        content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
@@ -191,7 +191,7 @@ impl AlertDialogTrigger {
         Self { child }
     }
 
-    pub fn into_element<H: UiHost>(self, _cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
 }
@@ -223,7 +223,7 @@ impl AlertDialogContent {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let bg = theme
@@ -280,7 +280,7 @@ impl AlertDialogHeader {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
             ChromeRefinement::default().pb(Space::N4),
@@ -302,7 +302,7 @@ impl AlertDialogFooter {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
             ChromeRefinement::default().pt(Space::N4),
@@ -324,7 +324,7 @@ impl AlertDialogTitle {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("foreground")
@@ -367,7 +367,7 @@ impl AlertDialogDescription {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("muted.foreground")
@@ -442,7 +442,7 @@ impl AlertDialogAction {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         Button::new(self.label)
             .variant(self.variant)
             .disabled(self.disabled)
@@ -485,7 +485,7 @@ impl AlertDialogCancel {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         Button::new(self.label)
             .variant(ButtonVariant::Outline)
             .disabled(self.disabled)

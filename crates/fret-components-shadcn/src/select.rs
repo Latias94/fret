@@ -27,7 +27,7 @@ use fret_ui::element::{
     SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -110,7 +110,7 @@ impl Select {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         select(
             cx,
             self.model,
@@ -125,7 +125,7 @@ impl Select {
 }
 
 pub fn select<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,
     items: &[SelectItem],
@@ -446,7 +446,7 @@ pub fn select<H: UiHost>(
                 border_color,
             );
 
-            let content = move |cx: &mut ElementCx<'_, H>| {
+            let content = move |cx: &mut ElementContext<'_, H>| {
                 vec![cx.flex(
                     FlexProps {
                         layout: LayoutStyle::default(),

@@ -6,7 +6,7 @@ use fret_components_ui::{ChromeRefinement, LayoutRefinement, Size as ComponentSi
 use fret_core::{Axis, Corners, Edges, FontId, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, FlexProps, Length, SizeStyle, TextInputProps};
-use fret_ui::{ElementCx, TextInputStyle, Theme, UiHost};
+use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
 
 #[derive(Clone)]
 pub struct InputGroup {
@@ -92,7 +92,7 @@ impl InputGroup {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let resolved =
@@ -222,6 +222,6 @@ impl InputGroup {
     }
 }
 
-pub fn input_group<H: UiHost>(cx: &mut ElementCx<'_, H>, group: InputGroup) -> AnyElement {
+pub fn input_group<H: UiHost>(cx: &mut ElementContext<'_, H>, group: InputGroup) -> AnyElement {
     group.into_element(cx)
 }

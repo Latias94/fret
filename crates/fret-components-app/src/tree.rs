@@ -6,7 +6,7 @@ use fret_components_ui::{TreeRowRenderer, TreeRowState};
 use fret_core::SemanticsRole;
 use fret_runtime::CommandId;
 use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
-use fret_ui::{ElementCx, UiHost};
+use fret_ui::{ElementContext, UiHost};
 
 /// A minimal “application default” Tree row renderer.
 ///
@@ -17,7 +17,7 @@ pub struct AppTreeRowRenderer;
 impl<H: UiHost> TreeRowRenderer<H> for AppTreeRowRenderer {
     fn render_row(
         &mut self,
-        cx: &mut ElementCx<'_, H>,
+        cx: &mut ElementContext<'_, H>,
         entry: &TreeEntry,
         _state: TreeRowState,
     ) -> Vec<AnyElement> {
@@ -26,7 +26,7 @@ impl<H: UiHost> TreeRowRenderer<H> for AppTreeRowRenderer {
 
     fn render_trailing(
         &mut self,
-        cx: &mut ElementCx<'_, H>,
+        cx: &mut ElementContext<'_, H>,
         entry: &TreeEntry,
         state: TreeRowState,
     ) -> Vec<AnyElement> {

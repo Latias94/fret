@@ -4,19 +4,22 @@ use fret_components_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvg}
 use fret_core::{Color, Px};
 use fret_ui::SvgSource;
 use fret_ui::element::SvgIconProps;
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use super::style;
 use crate::{ColorRef, LayoutRefinement, MetricRef};
 
 #[track_caller]
-pub fn icon<H: UiHost>(cx: &mut ElementCx<'_, H>, icon: IconId) -> fret_ui::element::AnyElement {
+pub fn icon<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    icon: IconId,
+) -> fret_ui::element::AnyElement {
     icon_with(cx, icon, None, None)
 }
 
 #[track_caller]
 pub fn icon_with<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     icon: IconId,
     size: Option<Px>,
     color: Option<ColorRef>,

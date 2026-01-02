@@ -8,7 +8,7 @@ use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_core::SemanticsRole;
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, PressableA11y, PressableProps, SemanticsProps, StackProps};
-use fret_ui::{ElementCx, UiHost};
+use fret_ui::{ElementContext, UiHost};
 
 #[derive(Clone)]
 pub struct Collapsible {
@@ -48,9 +48,9 @@ impl Collapsible {
 
     pub fn into_element<H: UiHost>(
         self,
-        cx: &mut ElementCx<'_, H>,
-        trigger: impl FnOnce(&mut ElementCx<'_, H>, bool) -> AnyElement,
-        content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>, bool) -> AnyElement,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
             let is_open = cx
@@ -132,7 +132,11 @@ impl CollapsibleTrigger {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>, is_open: bool) -> AnyElement {
+    pub fn into_element<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        is_open: bool,
+    ) -> AnyElement {
         let open = self.open;
         let disabled = self.disabled;
         let children = self.children;
@@ -185,7 +189,7 @@ impl CollapsibleContent {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let layout = self.layout;
         let children = self.children;
 
@@ -202,10 +206,10 @@ impl CollapsibleContent {
 }
 
 pub fn collapsible<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
-    trigger: impl FnOnce(&mut ElementCx<'_, H>, bool) -> AnyElement,
-    content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
+    trigger: impl FnOnce(&mut ElementContext<'_, H>, bool) -> AnyElement,
+    content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
 ) -> AnyElement {
     Collapsible::new(open).into_element(cx, trigger, content)
 }

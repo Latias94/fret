@@ -12,7 +12,7 @@ use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, MainAlign, Overflow, PressableProps, RingStyle, SpacerProps,
     TextProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::hover_card::{HoverCard, HoverCardAlign};
 
@@ -125,7 +125,7 @@ impl Sidebar {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let w = if self.collapsed {
@@ -162,7 +162,7 @@ impl SidebarHeader {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let props = decl_style::container_props(
             &theme,
@@ -184,7 +184,7 @@ impl SidebarFooter {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let props = decl_style::container_props(
             &theme,
@@ -215,7 +215,7 @@ impl SidebarContent {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let mut layout = LayoutRefinement::default().h_full();
@@ -256,7 +256,7 @@ impl SidebarGroup {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let chrome = ChromeRefinement::default().p(Space::N2);
         let props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
@@ -284,7 +284,7 @@ impl SidebarGroupLabel {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         if self.collapsed {
             return cx.spacer(fret_ui::element::SpacerProps {
@@ -331,7 +331,7 @@ impl SidebarMenu {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = FlexProps {
             direction: fret_core::Axis::Vertical,
             gap: Px(4.0),
@@ -360,7 +360,7 @@ impl SidebarMenuItem {
         Self { child }
     }
 
-    pub fn into_element<H: UiHost>(self, _cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
 }
@@ -412,7 +412,7 @@ impl SidebarMenuButton {
         self
     }
 
-    fn build_button<H: UiHost>(&self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    fn build_button<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let radius = decl_style::radius(&theme, Radius::Md);
@@ -520,7 +520,7 @@ impl SidebarMenuButton {
         })
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let button = self.build_button(cx);
 
         if !self.collapsed {

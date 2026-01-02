@@ -4,7 +4,7 @@
 
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementCx, UiHost};
+use fret_ui::{ElementContext, UiHost};
 
 use crate::Sheet;
 pub use crate::sheet::{
@@ -55,19 +55,19 @@ impl Drawer {
 
     pub fn into_element<H: UiHost>(
         self,
-        cx: &mut ElementCx<'_, H>,
-        trigger: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
-        content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         self.inner.into_element(cx, trigger, content)
     }
 }
 
 pub fn drawer<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
-    trigger: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
-    content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
+    trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
 ) -> AnyElement {
     Drawer::new(open).into_element(cx, trigger, content)
 }

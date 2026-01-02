@@ -107,7 +107,10 @@ impl OverlayLayerState {
         Self {
             present,
             interactive,
-            wants_timer_events: false,
+            // Non-modal overlays may rely on timers for small interaction policies (e.g. submenu
+            // safe-hover close delays). Keeping this enabled avoids requiring per-overlay opt-in
+            // plumbing while the overlay policy surface is still evolving.
+            wants_timer_events: present,
         }
     }
 
@@ -149,6 +152,7 @@ fn apply_overlay_layer_state<H: UiHost>(
             ui.set_layer_visible(layer, st.present);
             ui.set_layer_hit_testable(layer, st.interactive);
             ui.set_layer_wants_pointer_down_outside_events(layer, st.interactive);
+            ui.set_layer_wants_pointer_move_events(layer, st.interactive);
         }
         OverlayLayerKind::Modal => {
             ui.set_layer_visible(layer, st.present);

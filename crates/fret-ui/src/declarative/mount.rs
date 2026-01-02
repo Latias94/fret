@@ -4,7 +4,7 @@ use super::frame::{
 use super::host_widget::ElementHostWidget;
 use super::prelude::*;
 
-pub struct RenderRootCx<'a, H: UiHost> {
+pub struct RenderRootContext<'a, H: UiHost> {
     pub ui: &'a mut UiTree<H>,
     pub app: &'a mut H,
     pub services: &'a mut dyn fret_core::UiServices,
@@ -12,9 +12,7 @@ pub struct RenderRootCx<'a, H: UiHost> {
     pub bounds: Rect,
 }
 
-pub type RenderRootContext<'a, H> = RenderRootCx<'a, H>;
-
-impl<'a, H: UiHost> RenderRootCx<'a, H> {
+impl<'a, H: UiHost> RenderRootContext<'a, H> {
     pub fn new(
         ui: &'a mut UiTree<H>,
         app: &'a mut H,
@@ -34,7 +32,7 @@ impl<'a, H: UiHost> RenderRootCx<'a, H> {
     pub fn render_root(
         self,
         root_name: &str,
-        render: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+        render: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
     ) -> NodeId {
         crate::declarative::render_root(
             self.ui,
@@ -50,7 +48,7 @@ impl<'a, H: UiHost> RenderRootCx<'a, H> {
     pub fn render_dismissible_root_with_hooks(
         self,
         root_name: &str,
-        render: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+        render: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
     ) -> NodeId {
         crate::declarative::render_dismissible_root_with_hooks(
             self.ui,
@@ -105,7 +103,7 @@ pub fn render_root<H: UiHost>(
     window: AppWindowId,
     bounds: Rect,
     root_name: &str,
-    render: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+    render: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> NodeId {
     let frame_id = app.frame_id();
     let focused = ui.focus();
@@ -220,13 +218,16 @@ pub fn render_dismissible_root_with_hooks<H: UiHost>(
     window: AppWindowId,
     bounds: Rect,
     root_name: &str,
-    render: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+    render: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> NodeId {
     render_dismissible_root_impl(ui, app, services, window, bounds, root_name, render)
 }
 
 #[allow(clippy::too_many_arguments)]
-fn render_dismissible_root_impl<H: UiHost, F: FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>>(
+fn render_dismissible_root_impl<
+    H: UiHost,
+    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn fret_core::UiServices,

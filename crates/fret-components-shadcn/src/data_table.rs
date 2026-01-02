@@ -9,7 +9,7 @@ use fret_ui::element::{
     AnyElement, ColumnProps, GridProps, LayoutStyle, Length, MainAlign, Overflow,
 };
 use fret_ui::scroll::VirtualListScrollHandle;
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::table::{TableCell, TableHead, TableRow};
 
@@ -101,11 +101,11 @@ impl DataTable {
 
     pub fn into_element<H: UiHost>(
         self,
-        cx: &mut ElementCx<'_, H>,
+        cx: &mut ElementContext<'_, H>,
         items_revision: u64,
         key_at: impl FnMut(usize) -> u64,
         mut row_state_at: impl FnMut(usize) -> DataTableRowState,
-        mut cells_at: impl FnMut(&mut ElementCx<'_, H>, usize) -> Vec<AnyElement>,
+        mut cells_at: impl FnMut(&mut ElementContext<'_, H>, usize) -> Vec<AnyElement>,
     ) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 

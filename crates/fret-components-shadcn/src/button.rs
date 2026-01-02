@@ -9,7 +9,7 @@ use fret_components_ui::{
 use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
 use fret_ui::element::{AnyElement, LayoutStyle, PressableA11y, PressableProps, TextProps};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ButtonVariant {
@@ -231,7 +231,7 @@ impl Button {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
 
@@ -343,7 +343,7 @@ impl Button {
                     ..Default::default()
                 };
 
-                let content_children = move |cx: &mut ElementCx<'_, H>| {
+                let content_children = move |cx: &mut ElementContext<'_, H>| {
                     let content = if children.is_empty() {
                         vec![cx.text_props(TextProps {
                             layout: LayoutStyle::default(),

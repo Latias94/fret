@@ -1,7 +1,7 @@
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{ChromeRefinement, LayoutRefinement};
 use fret_ui::element::{AnyElement, Overflow};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 /// shadcn/ui `AspectRatio`.
 ///
@@ -37,7 +37,7 @@ impl AspectRatio {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let base_layout = LayoutRefinement::default().w_full();

@@ -12,7 +12,7 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, MainAlign, PressableA11y, PressableProps, TextProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ToggleVariant {
@@ -179,7 +179,7 @@ impl Toggle {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let model = self.model;
         let label = self.label;
         let children = self.children;
@@ -295,7 +295,7 @@ impl Toggle {
                 ..Default::default()
             };
 
-            let content_children = move |cx: &mut ElementCx<'_, H>| {
+            let content_children = move |cx: &mut ElementContext<'_, H>| {
                 vec![cx.flex(
                     FlexProps {
                         direction: fret_core::Axis::Horizontal,
@@ -306,7 +306,7 @@ impl Toggle {
                         wrap: false,
                         ..Default::default()
                     },
-                    move |cx: &mut ElementCx<'_, H>| {
+                    move |cx: &mut ElementContext<'_, H>| {
                         let mut out = Vec::new();
                         out.extend(children);
                         if let Some(label) = label {
@@ -330,9 +330,9 @@ impl Toggle {
 }
 
 pub fn toggle<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     model: Model<bool>,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     Toggle::new(model).children(f(cx)).into_element(cx)
 }

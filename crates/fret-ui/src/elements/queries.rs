@@ -1,7 +1,7 @@
 use fret_core::{AppWindowId, NodeId, Rect};
 
 use super::with_window_state;
-use super::{ElementCx, ElementRuntime, GlobalElementId};
+use super::{ElementContext, ElementRuntime, GlobalElementId};
 use crate::UiHost;
 
 pub fn with_element_cx<H: UiHost, R>(
@@ -9,10 +9,10 @@ pub fn with_element_cx<H: UiHost, R>(
     window: AppWindowId,
     bounds: Rect,
     root_name: &str,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> R,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
     app.with_global_mut(ElementRuntime::new, |runtime, app| {
-        let mut cx = ElementCx::new_for_root_name(app, runtime, window, bounds, root_name);
+        let mut cx = ElementContext::new_for_root_name(app, runtime, window, bounds, root_name);
         f(&mut cx)
     })
 }

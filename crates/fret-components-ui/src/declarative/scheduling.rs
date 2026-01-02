@@ -1,5 +1,5 @@
 use fret_ui::elements::ContinuousFrames;
-use fret_ui::{ElementCx, UiHost};
+use fret_ui::{ElementContext, UiHost};
 
 #[derive(Default)]
 struct ContinuousFramesLeaseState {
@@ -12,7 +12,7 @@ struct ContinuousFramesLeaseState {
 /// - it reduces duplicated scheduling policy in components,
 /// - it lets the runtime drive per-window RAF requests while any lease is held,
 /// - and it keeps the lease lifetime tied to element state.
-pub fn set_continuous_frames<H: UiHost>(cx: &mut ElementCx<'_, H>, enabled: bool) {
+pub fn set_continuous_frames<H: UiHost>(cx: &mut ElementContext<'_, H>, enabled: bool) {
     let (start, stop) = cx.with_state(ContinuousFramesLeaseState::default, |st| {
         let start = enabled && st.lease.is_none();
         let stop = !enabled && st.lease.is_some();

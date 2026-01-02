@@ -4,7 +4,7 @@ use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef
 use fret_core::{Edges, Px};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, LayoutStyle, Length};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Clone)]
 pub struct Progress {
@@ -50,7 +50,7 @@ impl Progress {
         ((v - self.min) / span).clamp(0.0, 1.0)
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let height = theme
@@ -127,6 +127,6 @@ impl Progress {
     }
 }
 
-pub fn progress<H: UiHost>(cx: &mut ElementCx<'_, H>, model: Model<f32>) -> AnyElement {
+pub fn progress<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<f32>) -> AnyElement {
     Progress::new(model).into_element(cx)
 }

@@ -7,14 +7,19 @@ use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     OverlayRequest, Radius, Space,
 };
-use fret_core::{FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, Size, TextOverflow, TextStyle,
+    TextWrap, Transform2D,
+};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
-    PositionStyle, SemanticsProps, SizeStyle, TextProps,
+    PositionStyle, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
 };
-use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::overlay_placement::{
+    Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
+};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum PopoverAlign {
@@ -46,6 +51,9 @@ pub struct Popover {
     align_offset: Px,
     side_offset: Px,
     window_margin_override: Option<Px>,
+    arrow: bool,
+    arrow_size_override: Option<Px>,
+    arrow_padding_override: Option<Px>,
     auto_focus: bool,
     initial_focus: Option<fret_ui::elements::GlobalElementId>,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
@@ -75,6 +83,9 @@ impl Popover {
             align_offset: Px(0.0),
             side_offset: Px(4.0),
             window_margin_override: None,
+            arrow: false,
+            arrow_size_override: None,
+            arrow_padding_override: None,
             auto_focus: false,
             initial_focus: None,
             anchor_override: None,
@@ -106,6 +117,24 @@ impl Popover {
         self
     }
 
+    /// Enables a Popover arrow (Radix `PopoverArrow`-style).
+    ///
+    /// Default: `false`.
+    pub fn arrow(mut self, arrow: bool) -> Self {
+        self.arrow = arrow;
+        self
+    }
+
+    pub fn arrow_size(mut self, size: Px) -> Self {
+        self.arrow_size_override = Some(size);
+        self
+    }
+
+    pub fn arrow_padding(mut self, padding: Px) -> Self {
+        self.arrow_padding_override = Some(padding);
+        self
+    }
+
     /// When enabled, focus the first focusable descendant inside the popover on open.
     ///
     /// Default: `false` (preserve trigger focus).
@@ -132,18 +161,18 @@ impl Popover {
 
     pub fn into_element<H: UiHost>(
         self,
-        cx: &mut ElementCx<'_, H>,
-        trigger: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
-        content: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         self.into_element_with_anchor(cx, trigger, move |cx, _anchor| content(cx))
     }
 
     pub fn into_element_with_anchor<H: UiHost>(
         self,
-        cx: &mut ElementCx<'_, H>,
-        trigger: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
-        content: impl FnOnce(&mut ElementCx<'_, H>, fret_core::Rect) -> AnyElement,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        content: impl FnOnce(&mut ElementContext<'_, H>, fret_core::Rect) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
@@ -167,6 +196,17 @@ impl Popover {
                         .metric_by_key("component.popover.window_margin")
                         .unwrap_or(Px(8.0))
                 });
+                let arrow = self.arrow;
+                let arrow_size = self.arrow_size_override.unwrap_or_else(|| {
+                    theme
+                        .metric_by_key("component.popover.arrow_size")
+                        .unwrap_or(Px(12.0))
+                });
+                let arrow_padding = self.arrow_padding_override.unwrap_or_else(|| {
+                    theme
+                        .metric_by_key("component.popover.arrow_padding")
+                        .unwrap_or(theme.metrics.radius_md)
+                });
 
                 let opacity = presence.opacity;
                 let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
@@ -178,8 +218,6 @@ impl Popover {
 
                     let content = content(cx, anchor_raw);
                     let content_id = content.id;
-
-                    let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
 
                     let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
                     let estimated = Size::new(Px(288.0), Px(160.0));
@@ -197,57 +235,189 @@ impl Popover {
                         PopoverSide::Left => Side::Left,
                     };
 
-                    let anchor = if align_offset.0.abs() > 0.01 {
-                        match side {
-                            Side::Top | Side::Bottom => {
-                                let origin = fret_core::Point::new(
-                                    Px(anchor.origin.x.0 + align_offset.0),
-                                    anchor.origin.y,
-                                );
-                                fret_core::Rect::new(origin, anchor.size)
-                            }
-                            Side::Left | Side::Right => {
-                                let origin = fret_core::Point::new(
-                                    anchor.origin.x,
-                                    Px(anchor.origin.y.0 + align_offset.0),
-                                );
-                                fret_core::Rect::new(origin, anchor.size)
-                            }
-                        }
+                    let arrow_options = arrow.then_some(ArrowOptions {
+                        size: Size::new(arrow_size, arrow_size),
+                        padding: Edges::all(arrow_padding),
+                    });
+                    let arrow_protrusion = if arrow {
+                        Px(arrow_size.0 * 0.75)
                     } else {
-                        anchor
+                        Px(0.0)
                     };
 
-                    let placed = anchored_panel_bounds_sized(
-                        outer,
+                    let layout = overlay::popper_layout_sized(
+                        overlay::outer_bounds_with_window_margin(cx.bounds, window_margin),
                         anchor,
                         content_size,
                         side_offset,
                         side,
                         align,
+                        AnchoredPanelOptions {
+                            direction: LayoutDirection::Ltr,
+                            offset: Offset {
+                                main_axis: if arrow { arrow_protrusion } else { Px(0.0) },
+                                cross_axis: align_offset,
+                                alignment_axis: None,
+                            },
+                            arrow: arrow_options,
+                        },
                     );
 
-                    let wrapper = cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                position: PositionStyle::Absolute,
-                                inset: InsetStyle {
-                                    left: Some(placed.origin.x),
-                                    top: Some(placed.origin.y),
-                                    ..Default::default()
-                                },
-                                size: SizeStyle {
-                                    width: Length::Px(placed.size.width),
-                                    height: Length::Px(placed.size.height),
-                                    ..Default::default()
-                                },
-                                overflow: Overflow::Visible,
+                    let placed = layout.rect;
+                    let (extra_left, extra_right, extra_top, extra_bottom) =
+                        match layout.arrow.as_ref().map(|a| a.side) {
+                            Some(Side::Top) => (Px(0.0), Px(0.0), arrow_protrusion, Px(0.0)),
+                            Some(Side::Bottom) => (Px(0.0), Px(0.0), Px(0.0), arrow_protrusion),
+                            Some(Side::Left) => (arrow_protrusion, Px(0.0), Px(0.0), Px(0.0)),
+                            Some(Side::Right) => (Px(0.0), arrow_protrusion, Px(0.0), Px(0.0)),
+                            None => (Px(0.0), Px(0.0), Px(0.0), Px(0.0)),
+                        };
+
+                    let bg = theme
+                        .color_by_key("popover")
+                        .unwrap_or(theme.colors.panel_background);
+                    let border = theme
+                        .color_by_key("border")
+                        .unwrap_or(theme.colors.panel_border);
+
+                    let arrow_el = layout.arrow.map(|arrow| {
+                        let (left, top) = match arrow.side {
+                            Side::Top => (
+                                Px(extra_left.0 + arrow.offset.0),
+                                Px(extra_top.0 - arrow_size.0 * 0.5),
+                            ),
+                            Side::Bottom => (
+                                Px(extra_left.0 + arrow.offset.0),
+                                Px(extra_top.0 + placed.size.height.0 - arrow_size.0 * 0.5),
+                            ),
+                            Side::Left => (
+                                Px(extra_left.0 - arrow_size.0 * 0.5),
+                                Px(extra_top.0 + arrow.offset.0),
+                            ),
+                            Side::Right => (
+                                Px(extra_left.0 + placed.size.width.0 - arrow_size.0 * 0.5),
+                                Px(extra_top.0 + arrow.offset.0),
+                            ),
+                        };
+
+                        let layout = LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                left: Some(left),
+                                top: Some(top),
                                 ..Default::default()
                             },
+                            size: SizeStyle {
+                                width: Length::Px(arrow_size),
+                                height: Length::Px(arrow_size),
+                                ..Default::default()
+                            },
+                            overflow: Overflow::Visible,
                             ..Default::default()
-                        },
-                        move |_cx| vec![content],
-                    );
+                        };
+
+                        let center = Point::new(Px(arrow_size.0 * 0.5), Px(arrow_size.0 * 0.5));
+                        let transform = Transform2D::rotation_about_degrees(45.0, center);
+
+                        cx.visual_transform_props(
+                            VisualTransformProps { layout, transform },
+                            move |cx| {
+                                vec![cx.container(
+                                    ContainerProps {
+                                        layout: LayoutStyle {
+                                            size: SizeStyle {
+                                                width: Length::Fill,
+                                                height: Length::Fill,
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        padding: Edges::all(Px(0.0)),
+                                        background: Some(bg),
+                                        shadow: None,
+                                        border: Edges::all(Px(1.0)),
+                                        border_color: Some(border),
+                                        corner_radii: Corners::all(Px(0.0)),
+                                    },
+                                    |_cx| Vec::new(),
+                                )]
+                            },
+                        )
+                    });
+
+                    let wrapper = if let Some(arrow_el) = arrow_el {
+                        cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    position: PositionStyle::Absolute,
+                                    inset: InsetStyle {
+                                        left: Some(Px(placed.origin.x.0 - extra_left.0)),
+                                        top: Some(Px(placed.origin.y.0 - extra_top.0)),
+                                        ..Default::default()
+                                    },
+                                    size: SizeStyle {
+                                        width: Length::Px(Px(placed.size.width.0
+                                            + extra_left.0
+                                            + extra_right.0)),
+                                        height: Length::Px(Px(placed.size.height.0
+                                            + extra_top.0
+                                            + extra_bottom.0)),
+                                        ..Default::default()
+                                    },
+                                    overflow: Overflow::Visible,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                let content = cx.container(
+                                    ContainerProps {
+                                        layout: LayoutStyle {
+                                            position: PositionStyle::Absolute,
+                                            inset: InsetStyle {
+                                                left: Some(extra_left),
+                                                top: Some(extra_top),
+                                                ..Default::default()
+                                            },
+                                            size: SizeStyle {
+                                                width: Length::Px(placed.size.width),
+                                                height: Length::Px(placed.size.height),
+                                                ..Default::default()
+                                            },
+                                            overflow: Overflow::Visible,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    move |_cx| vec![content],
+                                );
+
+                                vec![arrow_el, content]
+                            },
+                        )
+                    } else {
+                        cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    position: PositionStyle::Absolute,
+                                    inset: InsetStyle {
+                                        left: Some(placed.origin.x),
+                                        top: Some(placed.origin.y),
+                                        ..Default::default()
+                                    },
+                                    size: SizeStyle {
+                                        width: Length::Px(placed.size.width),
+                                        height: Length::Px(placed.size.height),
+                                        ..Default::default()
+                                    },
+                                    overflow: Overflow::Visible,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            move |_cx| vec![content],
+                        )
+                    };
 
                     let opacity_layout = LayoutStyle {
                         size: SizeStyle {
@@ -302,7 +472,7 @@ impl PopoverTrigger {
         Self { child }
     }
 
-    pub fn into_element<H: UiHost>(self, _cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
 }
@@ -325,7 +495,7 @@ impl PopoverAnchor {
         self.child.id
     }
 
-    pub fn into_element<H: UiHost>(self, _cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
 }
@@ -380,7 +550,7 @@ impl PopoverContent {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let radius = theme.metrics.radius_md;
         let shadow = decl_style::shadow_md(&theme, radius);
@@ -420,7 +590,7 @@ impl PopoverHeader {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
             ChromeRefinement::default().pb(Space::N4),
@@ -442,7 +612,7 @@ impl PopoverTitle {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("foreground")
@@ -485,7 +655,7 @@ impl PopoverDescription {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("muted.foreground")

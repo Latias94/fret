@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, TextProps};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Debug, Clone)]
 pub struct Label {
@@ -14,12 +14,12 @@ impl Label {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         label(cx, self.text)
     }
 }
 
-pub fn label<H: UiHost>(cx: &mut ElementCx<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
+pub fn label<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
     let text = text.into();
     let theme = Theme::global(&*cx.app).clone();
 

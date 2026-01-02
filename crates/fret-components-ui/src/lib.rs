@@ -11,6 +11,7 @@ pub mod declarative;
 pub mod headless;
 pub mod overlay;
 pub mod overlay_controller;
+pub mod primitives;
 pub mod recipes;
 pub mod tree;
 #[cfg(feature = "unstable-internals")]

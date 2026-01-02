@@ -12,7 +12,7 @@ struct DragState {
     grab_offset: f32,
 }
 
-fn split_log(args: std::fmt::Arguments<'_>) {
+fn split_log(_args: std::fmt::Arguments<'_>) {
     #[cfg(not(target_arch = "wasm32"))]
     {
         use std::{
@@ -46,7 +46,7 @@ fn split_log(args: std::fmt::Arguments<'_>) {
         let Ok(mut file) = file.lock() else {
             return;
         };
-        let _ = writeln!(file, "{}", args);
+        let _ = writeln!(file, "{}", _args);
     }
 }
 

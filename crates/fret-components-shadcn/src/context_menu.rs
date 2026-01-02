@@ -17,7 +17,7 @@ use fret_ui::element::{
     RovingFlexProps, RovingFocusProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
 
@@ -69,7 +69,8 @@ impl ContextMenuItem {
 ///
 /// Notes:
 /// - Position is anchored at the last pointer-down location observed within the trigger region.
-/// - Keyboard invocation (Menu key / Shift+F10) is not implemented yet.
+/// - Keyboard invocation via Shift+F10 is supported (there is no dedicated `ContextMenu` key in
+///   `fret_core::KeyCode` yet).
 #[derive(Clone)]
 pub struct ContextMenu {
     open: Model<bool>,
@@ -132,9 +133,9 @@ impl ContextMenu {
 
     pub fn into_element<H: UiHost>(
         self,
-        cx: &mut ElementCx<'_, H>,
-        trigger: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
-        entries: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<ContextMenuEntry>,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ContextMenuEntry>,
     ) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
@@ -464,7 +465,9 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics};
+    use fret_core::{
+        AppWindowId, Event, KeyCode, Modifiers, PathCommand, PathConstraints, PathId, PathMetrics,
+    };
     use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_core::{TextStyle, UiServices};
@@ -568,6 +571,120 @@ mod tests {
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
+    }
+
+    fn render_frame_focusable_trigger(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "context-menu-shift-f10",
+            |cx| {
+                vec![ContextMenu::new(open).into_element(
+                    cx,
+                    |cx| {
+                        cx.pressable(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st| {
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        )
+                    },
+                    |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+                )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    #[test]
+    fn context_menu_opens_on_shift_f10() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        // First frame: build the tree and establish stable trigger bounds.
+        let root = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::F10,
+                modifiers: Modifiers {
+                    shift: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+
+        // Second frame: ContextMenu emits its OverlayRequest while rendering.
+        // Re-rendering the root is required for the menu items to appear.
+        let _ = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha")
+            }),
+            "menu items should render after Shift+F10 opens the context menu"
+        );
     }
 
     #[test]

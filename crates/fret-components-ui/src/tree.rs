@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementCx, UiHost};
+use fret_ui::{ElementContext, UiHost};
 
 pub type TreeItemId = u64;
 
@@ -18,14 +18,14 @@ pub struct TreeRowState {
 pub trait TreeRowRenderer<H: UiHost> {
     fn render_row(
         &mut self,
-        cx: &mut ElementCx<'_, H>,
+        cx: &mut ElementContext<'_, H>,
         entry: &TreeEntry,
         state: TreeRowState,
     ) -> Vec<AnyElement>;
 
     fn render_trailing(
         &mut self,
-        _cx: &mut ElementCx<'_, H>,
+        _cx: &mut ElementContext<'_, H>,
         _entry: &TreeEntry,
         _state: TreeRowState,
     ) -> Vec<AnyElement> {
@@ -35,11 +35,11 @@ pub trait TreeRowRenderer<H: UiHost> {
 
 impl<H: UiHost, F> TreeRowRenderer<H> for F
 where
-    F: FnMut(&mut ElementCx<'_, H>, &TreeEntry, TreeRowState) -> Vec<AnyElement>,
+    F: FnMut(&mut ElementContext<'_, H>, &TreeEntry, TreeRowState) -> Vec<AnyElement>,
 {
     fn render_row(
         &mut self,
-        cx: &mut ElementCx<'_, H>,
+        cx: &mut ElementContext<'_, H>,
         entry: &TreeEntry,
         state: TreeRowState,
     ) -> Vec<AnyElement> {

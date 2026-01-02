@@ -1,5 +1,5 @@
 use crate::UiHost;
-use crate::elements::{ElementCx, GlobalElementId};
+use crate::elements::{ElementContext, GlobalElementId};
 use fret_core::{
     Color, Corners, Edges, ImageId, NodeId, Px, SemanticsRole, SvgFit, TextOverflow, TextStyle,
     TextWrap, UvRect,
@@ -1012,10 +1012,10 @@ impl IntoElement for &'static str {
 
 /// Stateful view authoring layer (ADR 0039).
 pub trait Render {
-    fn render<H: UiHost>(&mut self, cx: &mut ElementCx<'_, H>) -> AnyElement;
+    fn render<H: UiHost>(&mut self, cx: &mut ElementContext<'_, H>) -> AnyElement;
 }
 
 /// Stateless component authoring layer (ADR 0039).
 pub trait RenderOnce {
-    fn render_once<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement;
+    fn render_once<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement;
 }

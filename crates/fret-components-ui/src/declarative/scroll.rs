@@ -3,7 +3,7 @@ use fret_ui::element::{
     AnyElement, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle, ScrollProps,
     ScrollbarProps, ScrollbarStyle, StackProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::LayoutRefinement;
 use crate::declarative::style;
@@ -13,10 +13,10 @@ use crate::declarative::style;
 /// Fret treats scrolling as an explicit element (not a boolean overflow flag). This wrapper exists
 /// to match gpui/tailwind ergonomics while keeping the runtime contract explicit.
 pub fn overflow_scroll<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
     show_scrollbar: bool,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     let (layout, scrollbar_w, thumb, thumb_hover) = {
         let theme = Theme::global(&*cx.app);
@@ -87,9 +87,9 @@ pub fn overflow_scroll<H: UiHost>(
 }
 
 pub fn overflow_scrollbar<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     overflow_scroll(cx, layout, true, f)
 }

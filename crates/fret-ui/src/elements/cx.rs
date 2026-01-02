@@ -27,7 +27,7 @@ use super::hash::{callsite_hash, derive_child_id, stable_hash};
 use super::runtime::StateEntry;
 use super::{ContinuousFrames, ElementRuntime, GlobalElementId, WindowElementState, global_root};
 
-pub struct ElementCx<'a, H: UiHost> {
+pub struct ElementContext<'a, H: UiHost> {
     pub app: &'a mut H,
     pub window: AppWindowId,
     pub frame_id: FrameId,
@@ -37,7 +37,7 @@ pub struct ElementCx<'a, H: UiHost> {
     child_counters: Vec<u32>,
 }
 
-impl<'a, H: UiHost> ElementCx<'a, H> {
+impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn new(
         app: &'a mut H,
         runtime: &'a mut ElementRuntime,

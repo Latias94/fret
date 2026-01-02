@@ -5,7 +5,7 @@ use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, S
 use fret_core::Color;
 use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, TextProps};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BadgeVariant {
@@ -35,7 +35,7 @@ impl Badge {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         badge(cx, self.label, self.variant)
     }
 }
@@ -84,7 +84,7 @@ fn bg_for(theme: &Theme, variant: BadgeVariant) -> Option<Color> {
 }
 
 pub fn badge<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     label: impl Into<Arc<str>>,
     variant: BadgeVariant,
 ) -> AnyElement {

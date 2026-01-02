@@ -6,7 +6,7 @@ use fret_components_ui::{ChromeRefinement, LayoutRefinement, Size as ComponentSi
 use fret_core::{Color, Corners, Edges, FontId, Px, TextStyle};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, Length, SizeStyle, TextAreaProps};
-use fret_ui::{ElementCx, TextAreaStyle, Theme, UiHost};
+use fret_ui::{ElementContext, TextAreaStyle, Theme, UiHost};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -73,7 +73,7 @@ impl Textarea {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         textarea(
             cx,
             self.model,
@@ -87,7 +87,7 @@ impl Textarea {
 }
 
 pub fn textarea<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
     min_height: Px,

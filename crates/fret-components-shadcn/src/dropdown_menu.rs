@@ -1,23 +1,25 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
+use fret_components_ui::headless::safe_hover::safe_hover_contains;
 use fret_components_ui::overlay;
 use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
     Edges, FontId, FontWeight, KeyCode, Point, Px, Rect, SemanticsRole, Size, TextOverflow,
     TextStyle, TextWrap,
 };
-use fret_runtime::{CommandId, Model};
+use fret_runtime::{CommandId, Effect, Model, TimerToken};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps, RovingFlexProps,
     RovingFocusProps, ScrollAxis, ScrollProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum DropdownMenuAlign {
@@ -154,7 +156,7 @@ impl DropdownMenuShortcut {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("muted.foreground")
@@ -192,87 +194,19 @@ struct DropdownMenuSubmenuState {
     open_value: Option<Model<Option<Arc<str>>>>,
     trigger: Option<Model<Option<fret_ui::GlobalElementId>>>,
     last_pointer: Option<Model<Option<Point>>>,
+    geometry: Option<Model<Option<DropdownMenuSubmenuGeometry>>>,
+    close_timer: Option<Model<Option<TimerToken>>>,
     was_open: bool,
 }
 
-fn rect_expand(rect: Rect, px: Px) -> Rect {
-    Rect::new(
-        Point::new(rect.origin.x - px, rect.origin.y - px),
-        Size::new(rect.size.width + px * 2.0, rect.size.height + px * 2.0),
-    )
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct DropdownMenuSubmenuGeometry {
+    reference: Rect,
+    floating: Rect,
 }
 
-fn is_point_in_polygon(point: Point, polygon: &[Point]) -> bool {
-    if polygon.len() < 3 {
-        return false;
-    }
-
-    let x = point.x.0;
-    let y = point.y.0;
-    let mut inside = false;
-    let mut j = polygon.len() - 1;
-    for i in 0..polygon.len() {
-        let xi = polygon[i].x.0;
-        let yi = polygon[i].y.0;
-        let xj = polygon[j].x.0;
-        let yj = polygon[j].y.0;
-
-        let intersect = (yi >= y) != (yj >= y) && x <= ((xj - xi) * (y - yi)) / (yj - yi) + xi;
-        if intersect {
-            inside = !inside;
-        }
-        j = i;
-    }
-
-    inside
-}
-
-fn safe_polygon_contains(point: Point, reference: Rect, floating: Rect, buffer: Px) -> bool {
-    let reference = rect_expand(reference, buffer);
-    let floating = rect_expand(floating, buffer);
-    if reference.contains(point) || floating.contains(point) {
-        return true;
-    }
-
-    let ref_left = reference.origin.x.0;
-    let ref_right = ref_left + reference.size.width.0;
-    let ref_top = reference.origin.y.0;
-    let ref_bottom = ref_top + reference.size.height.0;
-
-    let float_left = floating.origin.x.0;
-    let float_right = float_left + floating.size.width.0;
-    let float_top = floating.origin.y.0;
-    let float_bottom = float_top + floating.size.height.0;
-
-    // Safe-hover corridor between the reference (submenu trigger) and the floating submenu panel.
-    //
-    // We keep this intentionally simple and deterministic:
-    // - It is symmetric for left/right placement.
-    // - It prefers a trapezoid connecting the facing edges so diagonal mouse travel stays "safe".
-    //
-    // This is inspired by Floating UI's `safePolygon`, but without intent heuristics / delays.
-    if float_left >= ref_right {
-        let poly = [
-            Point::new(Px(ref_right), Px(ref_top)),
-            Point::new(Px(float_left), Px(float_top)),
-            Point::new(Px(float_left), Px(float_bottom)),
-            Point::new(Px(ref_right), Px(ref_bottom)),
-        ];
-        return is_point_in_polygon(point, &poly);
-    }
-
-    if float_right <= ref_left {
-        let poly = [
-            Point::new(Px(float_right), Px(float_top)),
-            Point::new(Px(ref_left), Px(ref_top)),
-            Point::new(Px(ref_left), Px(ref_bottom)),
-            Point::new(Px(float_right), Px(float_bottom)),
-        ];
-        return is_point_in_polygon(point, &poly);
-    }
-
-    false
-}
+const SUBMENU_SAFE_HOVER_BUFFER: Px = Px(6.0);
+const SUBMENU_CLOSE_DELAY: Duration = Duration::from_millis(120);
 
 /// shadcn/ui `Dropdown Menu` (v4).
 ///
@@ -347,9 +281,9 @@ impl DropdownMenu {
 
     pub fn into_element<H: UiHost>(
         self,
-        cx: &mut ElementCx<'_, H>,
-        trigger: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
-        entries: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<DropdownMenuEntry>,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<DropdownMenuEntry>,
     ) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
@@ -375,8 +309,31 @@ impl DropdownMenu {
                 {
                     let _ = cx.app.models_mut().update(&model, |v| *v = None);
                 }
+                if let Some(model) =
+                    cx.with_state(DropdownMenuSubmenuState::default, |st| st.geometry.clone())
+                {
+                    let _ = cx.app.models_mut().update(&model, |v| *v = None);
+                }
+                if let Some(model) =
+                    cx.with_state(DropdownMenuSubmenuState::default, |st| st.close_timer.clone())
+                {
+                    let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
+                    if let Some(token) = token {
+                        cx.app.push_effect(Effect::CancelTimer { token });
+                    }
+                    let _ = cx.app.models_mut().update(&model, |v| *v = None);
+                }
                 cx.with_state(DropdownMenuSubmenuState::default, |st| st.was_open = true);
             } else if !is_open && was_open {
+                if let Some(model) =
+                    cx.with_state(DropdownMenuSubmenuState::default, |st| st.close_timer.clone())
+                {
+                    let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
+                    if let Some(token) = token {
+                        cx.app.push_effect(Effect::CancelTimer { token });
+                    }
+                    let _ = cx.app.models_mut().update(&model, |v| *v = None);
+                }
                 cx.with_state(DropdownMenuSubmenuState::default, |st| st.was_open = false);
             }
 
@@ -438,6 +395,31 @@ impl DropdownMenu {
                         });
                         submenu_last_pointer
                     };
+
+                    let submenu_geometry =
+                        cx.with_state(DropdownMenuSubmenuState::default, |st| st.geometry.clone());
+                    let submenu_geometry = if let Some(submenu_geometry) = submenu_geometry {
+                        submenu_geometry
+                    } else {
+                        let submenu_geometry = cx.app.models_mut().insert(None);
+                        cx.with_state(DropdownMenuSubmenuState::default, |st| {
+                            st.geometry = Some(submenu_geometry.clone());
+                        });
+                        submenu_geometry
+                    };
+
+                    let submenu_close_timer =
+                        cx.with_state(DropdownMenuSubmenuState::default, |st| st.close_timer.clone());
+                    let submenu_close_timer = if let Some(submenu_close_timer) = submenu_close_timer {
+                        submenu_close_timer
+                    } else {
+                        let submenu_close_timer = cx.app.models_mut().insert(None);
+                        cx.with_state(DropdownMenuSubmenuState::default, |st| {
+                            st.close_timer = Some(submenu_close_timer.clone());
+                        });
+                        submenu_close_timer
+                    };
+
                     let item_count = entries
                         .iter()
                         .filter(|e| matches!(e, DropdownMenuEntry::Item(_)))
@@ -505,10 +487,54 @@ impl DropdownMenu {
                     let open_for_submenu = open_for_overlay.clone();
                     let submenu_open_for_menu = submenu_open.clone();
                     let submenu_trigger_for_menu = submenu_trigger.clone();
+                    let submenu_geometry_for_menu = submenu_geometry.clone();
+                    let submenu_close_timer_for_menu = submenu_close_timer.clone();
+                    let submenu_last_pointer_for_menu = submenu_last_pointer.clone();
+
+                    let open_for_timer = submenu_open.clone();
+                    let trigger_for_timer = submenu_trigger.clone();
+                    let last_pointer_for_timer = submenu_last_pointer.clone();
+                    let geometry_for_timer = submenu_geometry.clone();
+                    let close_timer_for_timer = submenu_close_timer.clone();
+                    let overlay_root_element = cx.root_id();
+                    cx.timer_on_timer_for(
+                        overlay_root_element,
+                        Arc::new(move |host, acx, token| {
+                            let armed = host
+                                .models_mut()
+                                .read(&close_timer_for_timer, |v| *v)
+                                .ok()
+                                .flatten();
+                            if armed != Some(token) {
+                                return false;
+                            }
+
+                            let _ = host.models_mut().update(&open_for_timer, |v| *v = None);
+                            let _ = host
+                                .models_mut()
+                                .update(&trigger_for_timer, |v| *v = None);
+                            let _ = host
+                                .models_mut()
+                                .update(&last_pointer_for_timer, |v| *v = None);
+                            let _ = host
+                                .models_mut()
+                                .update(&geometry_for_timer, |v| *v = None);
+                            let _ = host
+                                .models_mut()
+                                .update(&close_timer_for_timer, |v| *v = None);
+                            host.request_redraw(acx.window);
+                            true
+                        }),
+                    );
 
                     let content = cx.semantics(
                         SemanticsProps {
-                            layout: LayoutStyle::default(),
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
                             role: SemanticsRole::Menu,
                             ..Default::default()
                         },
@@ -558,7 +584,11 @@ impl DropdownMenu {
                                             vec![cx.roving_flex(
                                                 RovingFlexProps {
                                                     flex: FlexProps {
-                                                        layout: LayoutStyle::default(),
+                                                        layout: {
+                                                            let mut layout = LayoutStyle::default();
+                                                            layout.size.width = Length::Fill;
+                                                            layout
+                                                        },
                                                         direction: fret_core::Axis::Vertical,
                                                         gap: Px(0.0),
                                                         padding: Edges::all(Px(0.0)),
@@ -687,37 +717,223 @@ impl DropdownMenu {
 
                                                         out.push(cx.keyed(value.clone(), |cx| {
                                                             cx.pressable_with_id_props(|cx, st, item_id| {
-                                                                if !disabled && (st.hovered || st.focused) {
-                                                                    if has_submenu {
-                                                                        let _ = cx.app.models_mut().update(&submenu_open_for_menu, |v| {
-                                                                            if v.as_ref().is_some_and(|cur| cur.as_ref() == value.as_ref()) {
+                                                                if !disabled {
+                                                                    let submenu_open_for_hover = submenu_open_for_menu.clone();
+                                                                    let submenu_trigger_for_hover =
+                                                                        submenu_trigger_for_menu.clone();
+                                                                    let submenu_geometry_for_hover =
+                                                                        submenu_geometry_for_menu.clone();
+                                                                    let submenu_last_pointer_for_hover =
+                                                                        submenu_last_pointer_for_menu.clone();
+                                                                    let submenu_close_timer_for_hover =
+                                                                        submenu_close_timer_for_menu.clone();
+                                                                    let value_for_hover = value.clone();
+                                                                    cx.pressable_add_on_hover_change(Arc::new(
+                                                                        move |host, acx, is_hovered| {
+                                                                            if !is_hovered {
                                                                                 return;
                                                                             }
-                                                                            *v = Some(value.clone());
-                                                                        });
-                                                                        let _ = cx.app.models_mut().update(&submenu_trigger_for_menu, |v| {
-                                                                            *v = Some(item_id);
-                                                                        });
+
+                                                                            let token = host
+                                                                                .models_mut()
+                                                                                .read(&submenu_close_timer_for_hover, |v| *v)
+                                                                                .ok()
+                                                                                .flatten();
+                                                                            if let Some(token) = token {
+                                                                                host.push_effect(Effect::CancelTimer { token });
+                                                                            }
+                                                                            let _ = host.models_mut().update(
+                                                                                &submenu_close_timer_for_hover,
+                                                                                |v| *v = None,
+                                                                            );
+                                                                            let _ = host.models_mut().update(
+                                                                                &submenu_geometry_for_hover,
+                                                                                |v| *v = None,
+                                                                            );
+                                                                            let _ = host.models_mut().update(
+                                                                                &submenu_last_pointer_for_hover,
+                                                                                |v| *v = None,
+                                                                            );
+
+                                                                            if has_submenu {
+                                                                                let _ = host.models_mut().update(
+                                                                                    &submenu_open_for_hover,
+                                                                                    |v| *v = Some(value_for_hover.clone()),
+                                                                                );
+                                                                                let _ = host.models_mut().update(
+                                                                                    &submenu_trigger_for_hover,
+                                                                                    |v| *v = Some(acx.target),
+                                                                                );
+                                                                            } else {
+                                                                                let _ = host.models_mut().update(
+                                                                                    &submenu_open_for_hover,
+                                                                                    |v| *v = None,
+                                                                                );
+                                                                                let _ = host.models_mut().update(
+                                                                                    &submenu_trigger_for_hover,
+                                                                                    |v| *v = None,
+                                                                                );
+                                                                            }
+
+                                                                            host.request_redraw(acx.window);
+                                                                        },
+                                                                    ));
+                                                                }
+
+                                                                if !disabled && st.hovered {
+                                                                    let token = cx
+                                                                        .app
+                                                                        .models_mut()
+                                                                        .read(&submenu_close_timer_for_menu, |v| *v)
+                                                                        .ok()
+                                                                        .flatten();
+                                                                    if let Some(token) = token {
+                                                                        cx.app.push_effect(Effect::CancelTimer { token });
+                                                                    }
+                                                                    let _ = cx.app.models_mut().update(
+                                                                        &submenu_close_timer_for_menu,
+                                                                        |v| *v = None,
+                                                                    );
+
+                                                                    if has_submenu {
+                                                                        let already_open = cx
+                                                                            .app
+                                                                            .models_mut()
+                                                                            .read(&submenu_open_for_menu, |v| {
+                                                                                v.as_ref()
+                                                                                    .is_some_and(|cur| {
+                                                                                        cur.as_ref() == value.as_ref()
+                                                                                    })
+                                                                            })
+                                                                            .ok()
+                                                                            .unwrap_or(false);
+
+                                                                        if !already_open {
+                                                                            let _ = cx.app.models_mut().update(
+                                                                                &submenu_open_for_menu,
+                                                                                |v| *v = Some(value.clone()),
+                                                                            );
+                                                                            let _ = cx.app.models_mut().update(
+                                                                                &submenu_trigger_for_menu,
+                                                                                |v| *v = Some(item_id),
+                                                                            );
+                                                                        } else {
+                                                                            let trigger_missing = cx
+                                                                                .app
+                                                                                .models_mut()
+                                                                                .read(&submenu_trigger_for_menu, |v| v.is_none())
+                                                                                .ok()
+                                                                                .unwrap_or(true);
+                                                                            if trigger_missing {
+                                                                                let _ = cx.app.models_mut().update(
+                                                                                    &submenu_trigger_for_menu,
+                                                                                    |v| *v = Some(item_id),
+                                                                                );
+                                                                            }
+                                                                        }
                                                                     } else {
-                                                                        let _ = cx.app.models_mut().update(&submenu_open_for_menu, |v| *v = None);
-                                                                        let _ = cx.app.models_mut().update(&submenu_trigger_for_menu, |v| *v = None);
+                                                                        let _ = cx.app.models_mut().update(
+                                                                            &submenu_open_for_menu,
+                                                                            |v| *v = None,
+                                                                        );
+                                                                        let _ = cx.app.models_mut().update(
+                                                                            &submenu_trigger_for_menu,
+                                                                            |v| *v = None,
+                                                                        );
+                                                                        let _ = cx.app.models_mut().update(
+                                                                            &submenu_geometry_for_menu,
+                                                                            |v| *v = None,
+                                                                        );
+                                                                    }
+                                                                }
+
+                                                                if !disabled
+                                                                    && st.focused
+                                                                    && cx
+                                                                        .app
+                                                                        .models_mut()
+                                                                        .read(
+                                                                            &submenu_last_pointer_for_menu,
+                                                                            |v| v.is_none(),
+                                                                        )
+                                                                        .ok()
+                                                                        .unwrap_or(true)
+                                                                {
+                                                                    let open_value = cx
+                                                                        .app
+                                                                        .models_mut()
+                                                                        .read(&submenu_open_for_menu, |v| v.clone())
+                                                                        .ok()
+                                                                        .flatten();
+                                                                    let open_trigger = cx
+                                                                        .app
+                                                                        .models_mut()
+                                                                        .read(&submenu_trigger_for_menu, |v| *v)
+                                                                        .ok()
+                                                                        .flatten();
+                                                                    let is_open_here = open_value.as_ref().is_some_and(|cur| {
+                                                                        cur.as_ref() == value.as_ref()
+                                                                    }) && open_trigger == Some(item_id);
+
+                                                                    if !is_open_here {
+                                                                        let _ = cx.app.models_mut().update(
+                                                                            &submenu_open_for_menu,
+                                                                            |v| *v = None,
+                                                                        );
+                                                                        let _ = cx.app.models_mut().update(
+                                                                            &submenu_trigger_for_menu,
+                                                                            |v| *v = None,
+                                                                        );
+                                                                        let _ = cx.app.models_mut().update(
+                                                                            &submenu_geometry_for_menu,
+                                                                            |v| *v = None,
+                                                                        );
+                                                                        let token = cx
+                                                                            .app
+                                                                            .models_mut()
+                                                                            .read(&submenu_close_timer_for_menu, |v| *v)
+                                                                            .ok()
+                                                                            .flatten();
+                                                                        if let Some(token) = token {
+                                                                            cx.app.push_effect(
+                                                                                Effect::CancelTimer { token },
+                                                                            );
+                                                                        }
+                                                                        let _ = cx.app.models_mut().update(
+                                                                            &submenu_close_timer_for_menu,
+                                                                            |v| *v = None,
+                                                                        );
                                                                     }
                                                                 }
 
                                                                 if has_submenu {
                                                                     let submenu_open_for_activate = submenu_open_for_menu.clone();
                                                                     let submenu_trigger_for_activate = submenu_trigger_for_menu.clone();
+                                                                    let submenu_close_timer_for_activate =
+                                                                        submenu_close_timer_for_menu.clone();
                                                                     let value_for_activate = value.clone();
                                                                     cx.pressable_add_on_activate(Arc::new(
                                                                         move |host, acx, _reason| {
                                                                             if disabled {
                                                                                 return;
                                                                             }
+                                                                            let token = host
+                                                                                .models_mut()
+                                                                                .read(&submenu_close_timer_for_activate, |v| *v)
+                                                                                .ok()
+                                                                                .flatten();
+                                                                            if let Some(token) = token {
+                                                                                host.push_effect(Effect::CancelTimer { token });
+                                                                                let _ = host.models_mut().update(
+                                                                                    &submenu_close_timer_for_activate,
+                                                                                    |v| *v = None,
+                                                                                );
+                                                                            }
                                                                             let _ = host.models_mut().update(&submenu_open_for_activate, |v| {
                                                                                 *v = Some(value_for_activate.clone());
                                                                             });
                                                                             let _ = host.models_mut().update(&submenu_trigger_for_activate, |v| {
-                                                                                *v = Some(item_id);
+                                                                                *v = Some(acx.target);
                                                                             });
                                                                             host.request_redraw(acx.window);
                                                                         },
@@ -738,6 +954,10 @@ impl DropdownMenu {
                                                                 let key_has_submenu = has_submenu;
                                                                 let submenu_open_for_key = submenu_open_for_menu.clone();
                                                                 let submenu_trigger_for_key = submenu_trigger_for_menu.clone();
+                                                                let submenu_geometry_for_key =
+                                                                    submenu_geometry_for_menu.clone();
+                                                                let submenu_close_timer_for_key =
+                                                                    submenu_close_timer_for_menu.clone();
                                                                 let value_for_key = value.clone();
                                                                 cx.key_on_key_down_for(
                                                                     item_id,
@@ -750,13 +970,25 @@ impl DropdownMenu {
                                                                                 if !key_has_submenu {
                                                                                     return false;
                                                                                 }
+                                                                                let token = host
+                                                                                    .models_mut()
+                                                                                    .read(&submenu_close_timer_for_key, |v| *v)
+                                                                                    .ok()
+                                                                                    .flatten();
+                                                                                if let Some(token) = token {
+                                                                                    host.push_effect(Effect::CancelTimer { token });
+                                                                                    let _ = host.models_mut().update(
+                                                                                        &submenu_close_timer_for_key,
+                                                                                        |v| *v = None,
+                                                                                    );
+                                                                                }
                                                                                 let _ = host.models_mut().update(
                                                                                     &submenu_open_for_key,
                                                                                     |v| *v = Some(value_for_key.clone()),
                                                                                 );
                                                                                 let _ = host.models_mut().update(
                                                                                     &submenu_trigger_for_key,
-                                                                                    |v| *v = Some(item_id),
+                                                                                    |v| *v = Some(acx.target),
                                                                                 );
                                                                                 host.request_redraw(acx.window);
                                                                                 true
@@ -768,6 +1000,22 @@ impl DropdownMenu {
                                                                                 );
                                                                                 let _ = host.models_mut().update(
                                                                                     &submenu_trigger_for_key,
+                                                                                    |v| *v = None,
+                                                                                );
+                                                                                let _ = host.models_mut().update(
+                                                                                    &submenu_geometry_for_key,
+                                                                                    |v| *v = None,
+                                                                                );
+                                                                                let token = host
+                                                                                    .models_mut()
+                                                                                    .read(&submenu_close_timer_for_key, |v| *v)
+                                                                                    .ok()
+                                                                                    .flatten();
+                                                                                if let Some(token) = token {
+                                                                                    host.push_effect(Effect::CancelTimer { token });
+                                                                                }
+                                                                                let _ = host.models_mut().update(
+                                                                                    &submenu_close_timer_for_key,
                                                                                     |v| *v = None,
                                                                                 );
                                                                                 host.request_redraw(acx.window);
@@ -784,6 +1032,53 @@ impl DropdownMenu {
                                                                     .unwrap_or(None)
                                                                     .as_ref()
                                                                     .is_some_and(|cur| cur.as_ref() == value.as_ref());
+
+                                                                if has_submenu && is_open_submenu {
+                                                                    let _ = cx.app.models_mut().update(
+                                                                        &submenu_trigger_for_menu,
+                                                                        |v| {
+                                                                            if v.is_none() {
+                                                                                *v = Some(item_id);
+                                                                            }
+                                                                        },
+                                                                    );
+
+                                                                    if let Some(trigger_anchor) =
+                                                                        overlay::anchor_bounds_for_element(cx, item_id)
+                                                                    {
+                                                                        let outer =
+                                                                            overlay::outer_bounds_with_window_margin(
+                                                                                cx.bounds,
+                                                                                window_margin,
+                                                                            );
+                                                                        let desired =
+                                                                            Size::new(Px(192.0), Px(1.0e9));
+                                                                        let placed =
+                                                                            anchored_panel_bounds_sized(
+                                                                                outer,
+                                                                                trigger_anchor,
+                                                                                desired,
+                                                                                Px(2.0),
+                                                                                Side::Right,
+                                                                                Align::Start,
+                                                                            );
+                                                                        let geometry = DropdownMenuSubmenuGeometry {
+                                                                            reference: trigger_anchor,
+                                                                            floating: placed,
+                                                                        };
+                                                                        let _ = cx
+                                                                            .app
+                                                                            .models_mut()
+                                                                            .update(&submenu_geometry_for_menu, |v| {
+                                                                                if v.as_ref()
+                                                                                    == Some(&geometry)
+                                                                                {
+                                                                                    return;
+                                                                                }
+                                                                                *v = Some(geometry);
+                                                                            });
+                                                                    }
+                                                                }
 
                                                                 let props = PressableProps {
                                                                     layout: {
@@ -928,63 +1223,125 @@ impl DropdownMenu {
                         },
                         move |cx| {
                             let last_pointer_for_hook = submenu_last_pointer.clone();
+                            let geometry_for_hook = submenu_geometry.clone();
+                            let close_timer_for_hook = submenu_close_timer.clone();
                             cx.pointer_region_on_pointer_move(Arc::new(move |host, acx, mv| {
                                 let _ = host.models_mut().update(&last_pointer_for_hook, |v| {
                                     *v = Some(mv.position);
                                 });
+                                let geometry = host
+                                    .models_mut()
+                                    .read(&geometry_for_hook, |v| *v)
+                                    .ok()
+                                    .flatten();
+                                if let Some(geometry) = geometry {
+                                    let safe = safe_hover_contains(
+                                        mv.position,
+                                        geometry.reference,
+                                        geometry.floating,
+                                        SUBMENU_SAFE_HOVER_BUFFER,
+                                    );
+
+                                    let pending = host
+                                        .models_mut()
+                                        .read(&close_timer_for_hook, |v| *v)
+                                        .ok()
+                                        .flatten();
+                                    if safe {
+                                        if let Some(token) = pending {
+                                            host.push_effect(Effect::CancelTimer { token });
+                                            let _ = host
+                                                .models_mut()
+                                                .update(&close_timer_for_hook, |v| *v = None);
+                                        }
+                                    } else if pending.is_none() {
+                                        let token = host.next_timer_token();
+                                        host.push_effect(Effect::SetTimer {
+                                            window: Some(acx.window),
+                                            token,
+                                            after: SUBMENU_CLOSE_DELAY,
+                                            repeat: None,
+                                        });
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&close_timer_for_hook, |v| *v = Some(token));
+                                    }
+                                }
                                 host.request_redraw(acx.window);
                                 false
                             }));
 
                             let mut children = vec![content];
 
-                            let open_value = cx.watch_model(&submenu_open).cloned().unwrap_or(None);
-                            let open_trigger =
-                                cx.watch_model(&submenu_trigger).copied().unwrap_or(None);
-                            let cursor = cx
-                                .watch_model(&submenu_last_pointer)
-                                .copied()
-                                .unwrap_or(None);
+                            let open_value = cx
+                                .app
+                                .models_mut()
+                                .read(&submenu_open, |v| v.clone())
+                                .ok()
+                                .flatten();
 
-                            if let (Some(open_value), Some(open_trigger), Some(cursor)) =
-                                (open_value, open_trigger, cursor)
-                            {
-                                let trigger_anchor =
-                                    overlay::anchor_bounds_for_element(cx, open_trigger);
-                                if let Some(trigger_anchor) = trigger_anchor {
-                                    let submenu_entries = entries_for_submenu.iter().find_map(|e| {
-                                        let DropdownMenuEntry::Item(item) = e else {
-                                            return None;
-                                        };
-                                        let Some(sub) = item.submenu.clone() else {
-                                            return None;
-                                        };
-                                        (item.value.as_ref() == open_value.as_ref()).then_some(sub)
-                                    });
+                            if let Some(open_value) = open_value {
+                                let submenu_entries = entries_for_submenu.iter().find_map(|e| {
+                                    let DropdownMenuEntry::Item(item) = e else {
+                                        return None;
+                                    };
+                                    let Some(sub) = item.submenu.clone() else {
+                                        return None;
+                                    };
+                                    (item.value.as_ref() == open_value.as_ref()).then_some(sub)
+                                });
 
-                                    if let Some(submenu_entries) = submenu_entries {
-                                        let outer = overlay::outer_bounds_with_window_margin(
-                                            cx.bounds,
-                                            window_margin,
-                                        );
-                                        let desired = Size::new(Px(192.0), Px(1.0e9));
-                                        let placed = anchored_panel_bounds_sized(
-                                            outer,
-                                            trigger_anchor,
-                                            desired,
-                                            Px(2.0),
-                                            Side::Right,
-                                            Align::Start,
-                                        );
+                                if let Some(submenu_entries) = submenu_entries {
+                                    let outer = overlay::outer_bounds_with_window_margin(
+                                        cx.bounds,
+                                        window_margin,
+                                    );
+                                    let desired = Size::new(Px(192.0), Px(1.0e9));
 
-                                        if safe_polygon_contains(cursor, trigger_anchor, placed, Px(6.0)) {
-                                            let mut flat: Vec<DropdownMenuEntry> = Vec::new();
-                                            flatten_entries(&mut flat, submenu_entries);
-                                            let submenu_entries = flat;
-                                            let item_count = submenu_entries
-                                                .iter()
-                                                .filter(|e| matches!(e, DropdownMenuEntry::Item(_)))
-                                                .count();
+                                    let geometry = cx
+                                        .app
+                                        .models_mut()
+                                        .read(&submenu_geometry, |v| *v)
+                                        .ok()
+                                        .flatten()
+                                        .or_else(|| {
+                                            let open_trigger = cx
+                                                .app
+                                                .models_mut()
+                                                .read(&submenu_trigger, |v| *v)
+                                                .ok()
+                                                .flatten()?;
+                                            let trigger_anchor =
+                                                overlay::anchor_bounds_for_element(cx, open_trigger)?;
+                                            let placed = anchored_panel_bounds_sized(
+                                                outer,
+                                                trigger_anchor,
+                                                desired,
+                                                Px(2.0),
+                                                Side::Right,
+                                                Align::Start,
+                                            );
+                                            Some(DropdownMenuSubmenuGeometry {
+                                                reference: trigger_anchor,
+                                                floating: placed,
+                                            })
+                                        });
+
+                                    if let Some(geometry) = geometry {
+                                        let _ = cx.app.models_mut().update(&submenu_geometry, |v| {
+                                            if v.as_ref() == Some(&geometry) {
+                                                return;
+                                            }
+                                            *v = Some(geometry);
+                                        });
+
+                                        let mut flat: Vec<DropdownMenuEntry> = Vec::new();
+                                        flatten_entries(&mut flat, submenu_entries);
+                                        let submenu_entries = flat;
+                                        let item_count = submenu_entries
+                                            .iter()
+                                            .filter(|e| matches!(e, DropdownMenuEntry::Item(_)))
+                                            .count();
 
                                             let font_size = theme.metrics.font_size;
                                             let font_line_height = theme.metrics.font_line_height;
@@ -1256,11 +1613,7 @@ impl DropdownMenu {
                                                 },
                                             );
 
-                                            children.push(submenu);
-                                        } else {
-                                            let _ = cx.app.models_mut().update(&submenu_open, |v| *v = None);
-                                            let _ = cx.app.models_mut().update(&submenu_trigger, |v| *v = None);
-                                        }
+                                        children.push(submenu);
                                     }
                                 }
                             }
@@ -1294,8 +1647,8 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Event, Modifiers, MouseButtons, PathCommand, Point, PointerEvent, Rect, SvgId,
-        SvgService,
+        AppWindowId, Event, KeyCode, Modifiers, MouseButtons, PathCommand, Point, PointerEvent,
+        Rect, SvgId, SvgService,
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, SemanticsRole, Size as CoreSize};
@@ -1517,15 +1870,40 @@ mod tests {
             .iter()
             .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
             .expect("More menu item");
+        let more_bounds = more.bounds;
+        let more_node = more.id;
+        assert!(
+            more_bounds.size.width.0 > 0.0,
+            "expected submenu trigger bounds to be non-zero width for hit-testing; more_bounds={more_bounds:?}"
+        );
+        assert!(
+            ui.debug_node_bounds(more_node).is_some(),
+            "expected submenu trigger node to exist in the UI tree; more_node={more_node:?} layers={:?}",
+            ui.debug_layers_in_paint_order()
+        );
 
         ui.dispatch_event(
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
-                position: rect_center(more.bounds),
+                position: rect_center(more_bounds),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
             }),
+        );
+        let hover_hit = ui.debug_hit_test(rect_center(more_bounds));
+        assert!(
+            hover_hit.hit.is_some(),
+            "expected hover move position to hit-test inside the menu; layers={:?}",
+            ui.debug_layers_in_paint_order()
+        );
+        let hit_node = hover_hit.hit.expect("hit node");
+        let hit_path = ui.debug_node_path(hit_node);
+        assert!(
+            hit_path.contains(&more_node),
+            "expected hover move position to be inside the submenu trigger pressable; hit={hit_node:?} more={more_node:?} more_bounds={more_bounds:?} more_node_bounds={:?} path={hit_path:?} hover_hit={hover_hit:?} layers={:?}",
+            ui.debug_node_bounds(more_node),
+            ui.debug_layers_in_paint_order()
         );
 
         // Third frame: hover "More" should open the submenu.
@@ -1540,6 +1918,15 @@ mod tests {
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item after hover");
+        assert!(
+            more.flags.expanded,
+            "submenu trigger should report expanded=true after hover opens the submenu"
+        );
         assert!(
             snap.nodes
                 .iter()
@@ -1558,7 +1945,16 @@ mod tests {
             }),
         );
 
-        // Fourth frame: leaving the safe corridor should close the submenu (but not the menu).
+        let effects = app.flush_effects();
+        let timer = effects.iter().find_map(|e| match e {
+            Effect::SetTimer { token, .. } => Some(*token),
+            _ => None,
+        });
+        let Some(timer) = timer else {
+            panic!("expected submenu safe-hover close timer effect");
+        };
+
+        // Fourth frame: leaving the safe corridor arms a short close delay (submenu remains visible).
         let _ = render_frame(
             &mut ui,
             &mut app,
@@ -1571,12 +1967,121 @@ mod tests {
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem
+                    && n.label.as_deref() == Some("Sub Alpha")),
+            "submenu should remain visible during the close delay"
+        );
+
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: timer });
+
+        // Fifth frame: after the close timer fires, the submenu closes.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(vec![
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+                ])),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Other")),
+            ],
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
             !snap
                 .nodes
                 .iter()
                 .any(|n| n.role == SemanticsRole::MenuItem
                     && n.label.as_deref() == Some("Sub Alpha")),
-            "submenu should close when the pointer leaves the safe corridor"
+            "submenu should close after the close delay timer fires"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_submenu_opens_on_arrow_right_without_pointer_move() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(
+            DropdownMenuItem::new("More").submenu(vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+            ]),
+        )];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+        ui.set_focus(Some(more.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            entries,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem
+                    && n.label.as_deref() == Some("Sub Alpha")),
+            "submenu items should render after ArrowRight opens the submenu"
         );
     }
 }

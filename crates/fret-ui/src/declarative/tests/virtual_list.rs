@@ -16,7 +16,7 @@ fn virtual_list_computes_visible_range_after_first_layout() {
     let mut list_element_id: Option<crate::elements::GlobalElementId> = None;
 
     fn build_list(
-        cx: &mut ElementCx<'_, TestHost>,
+        cx: &mut ElementContext<'_, TestHost>,
         list_element_id: &mut Option<crate::elements::GlobalElementId>,
         scroll_handle: &crate::scroll::VirtualListScrollHandle,
     ) -> crate::element::AnyElement {
@@ -221,7 +221,7 @@ fn virtual_list_scroll_to_item_uses_measured_row_heights() {
     );
     let mut text = FakeTextService::default();
 
-    fn row_with_height<H: UiHost>(cx: &mut ElementCx<'_, H>, height: Px) -> AnyElement {
+    fn row_with_height<H: UiHost>(cx: &mut ElementContext<'_, H>, height: Px) -> AnyElement {
         let mut style = crate::element::LayoutStyle::default();
         style.size.height = crate::element::Length::Px(height);
         cx.container(
@@ -234,7 +234,7 @@ fn virtual_list_scroll_to_item_uses_measured_row_heights() {
     }
 
     fn build_list<H: UiHost>(
-        cx: &mut ElementCx<'_, H>,
+        cx: &mut ElementContext<'_, H>,
         list_element_id: &mut Option<crate::elements::GlobalElementId>,
         scroll_handle: &crate::scroll::VirtualListScrollHandle,
     ) -> AnyElement {
@@ -336,7 +336,7 @@ fn virtual_list_paint_clips_each_visible_row() {
     let mut text = FakeTextService::default();
 
     fn build_list<H: UiHost>(
-        cx: &mut ElementCx<'_, H>,
+        cx: &mut ElementContext<'_, H>,
         scroll_handle: &crate::scroll::VirtualListScrollHandle,
     ) -> AnyElement {
         cx.virtual_list(
@@ -411,7 +411,7 @@ fn virtual_list_keyed_reuses_node_ids_across_reorder() {
     let mut ids: Vec<(u64, crate::elements::GlobalElementId)> = Vec::new();
 
     fn build_list<H: UiHost>(
-        cx: &mut ElementCx<'_, H>,
+        cx: &mut ElementContext<'_, H>,
         items: &[u64],
         mut ids: Option<&mut Vec<(u64, crate::elements::GlobalElementId)>>,
         scroll_handle: &crate::scroll::VirtualListScrollHandle,

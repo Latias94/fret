@@ -8,7 +8,7 @@ pub(super) use crate::element::{
     HoverRegionProps, LayoutStyle, Length, MainAlign, Overflow, PointerRegionProps, PressableProps,
     SpacerProps, SpinnerProps, StackProps, TextProps, VisualTransformProps,
 };
-pub(super) use crate::elements::{ElementCx, GlobalElementId, NodeEntry};
+pub(super) use crate::elements::{ElementContext, GlobalElementId, NodeEntry};
 pub(super) use crate::text_input::BoundTextInput;
 pub(super) use crate::tree::UiTree;
 pub(super) use crate::widget::{EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget};

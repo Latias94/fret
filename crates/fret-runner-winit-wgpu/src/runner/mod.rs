@@ -12,11 +12,11 @@ use fret_core::{
     InternalDragEvent, InternalDragKind, Modifiers, MouseButton, Point, Px, Rect, Scene, Size,
     UiServices, ViewportInputEvent, WindowMetricsService,
 };
+use fret_platform_desktop::clipboard::DesktopClipboard;
+use fret_platform_desktop::external_drop::DesktopExternalDrop;
+use fret_platform_desktop::file_dialog::DesktopFileDialog;
+use fret_platform_desktop::open_url::DesktopOpenUrl;
 use fret_platform_winit::accessibility;
-use fret_platform_winit::clipboard::WinitClipboard;
-use fret_platform_winit::external_drop::WinitExternalDrop;
-use fret_platform_winit::file_dialog::WinitFileDialog;
-use fret_platform_winit::open_url::WinitOpenUrl;
 use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
 use fret_runtime::{
     ExternalDragPayloadKind, ExternalDragPositionQuality, FrameId, PlatformCapabilities,
@@ -1513,14 +1513,14 @@ pub struct WinitRunner<D: WinitDriver> {
 
     raf_windows: HashSet<fret_core::AppWindowId>,
     timers: HashMap<fret_runtime::TimerToken, TimerEntry>,
-    clipboard: WinitClipboard,
-    open_url: WinitOpenUrl,
-    file_dialog: WinitFileDialog,
+    clipboard: DesktopClipboard,
+    open_url: DesktopOpenUrl,
+    file_dialog: DesktopFileDialog,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
     internal_drag_hover_window: Option<fret_core::AppWindowId>,
     internal_drag_hover_pos: Option<Point>,
 
-    external_drop: WinitExternalDrop,
+    external_drop: DesktopExternalDrop,
 }
 
 #[derive(Debug, Clone)]
@@ -1802,13 +1802,13 @@ impl<D: WinitDriver> WinitRunner<D> {
             frame_id: FrameId::default(),
             raf_windows: HashSet::new(),
             timers: HashMap::new(),
-            clipboard: WinitClipboard::default(),
-            open_url: WinitOpenUrl::default(),
-            file_dialog: WinitFileDialog::default(),
+            clipboard: DesktopClipboard::default(),
+            open_url: DesktopOpenUrl::default(),
+            file_dialog: DesktopFileDialog::default(),
             cursor_screen_pos: None,
             internal_drag_hover_window: None,
             internal_drag_hover_pos: None,
-            external_drop: WinitExternalDrop::default(),
+            external_drop: DesktopExternalDrop::default(),
         }
     }
 
@@ -2573,7 +2573,7 @@ impl<D: WinitDriver> WinitRunner<D> {
 
                         if let Some(paths) = self.external_drop.paths(token).map(|p| p.to_vec()) {
                             if self.spawn_platform_completion_task(window, move || {
-                                let event = WinitExternalDrop::read_paths(token, paths, limits);
+                                let event = DesktopExternalDrop::read_paths(token, paths, limits);
                                 PlatformCompletion::ExternalDropData(event)
                             }) {
                                 continue;
@@ -2599,7 +2599,7 @@ impl<D: WinitDriver> WinitRunner<D> {
 
                         if let Some(paths) = self.external_drop.paths(token).map(|p| p.to_vec()) {
                             if self.spawn_platform_completion_task(window, move || {
-                                let event = WinitExternalDrop::read_paths(token, paths, limits);
+                                let event = DesktopExternalDrop::read_paths(token, paths, limits);
                                 PlatformCompletion::ExternalDropData(event)
                             }) {
                                 continue;
@@ -2671,7 +2671,7 @@ impl<D: WinitDriver> WinitRunner<D> {
 
                         if let Some(paths) = self.file_dialog.paths(token).map(|p| p.to_vec()) {
                             if self.spawn_platform_completion_task(window, move || {
-                                let data = WinitFileDialog::read_paths(token, paths, limits);
+                                let data = DesktopFileDialog::read_paths(token, paths, limits);
                                 PlatformCompletion::FileDialogData(data)
                             }) {
                                 continue;
@@ -2708,7 +2708,7 @@ impl<D: WinitDriver> WinitRunner<D> {
 
                         if let Some(paths) = self.file_dialog.paths(token).map(|p| p.to_vec()) {
                             if self.spawn_platform_completion_task(window, move || {
-                                let data = WinitFileDialog::read_paths(token, paths, limits);
+                                let data = DesktopFileDialog::read_paths(token, paths, limits);
                                 PlatformCompletion::FileDialogData(data)
                             }) {
                                 continue;

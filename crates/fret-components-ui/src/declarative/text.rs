@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{FontId, Px, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, LayoutStyle, TextProps};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 fn font_size(theme: &Theme) -> Px {
     theme
@@ -54,7 +54,7 @@ fn text_base_style(theme: &Theme) -> TextStyle {
 ///
 /// Note: ellipsis only applies when the text is laid out with a constrained width.
 pub fn text_truncate<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
     cx.text_props(TextProps {
@@ -68,7 +68,10 @@ pub fn text_truncate<H: UiHost>(
 }
 
 /// Declarative text helper that matches Tailwind's `whitespace-nowrap` semantics.
-pub fn text_nowrap<H: UiHost>(cx: &mut ElementCx<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
+pub fn text_nowrap<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
     cx.text_props(TextProps {
         layout: LayoutStyle::default(),
         text: text.into(),
@@ -85,7 +88,7 @@ pub fn text_nowrap<H: UiHost>(cx: &mut ElementCx<'_, H>, text: impl Into<Arc<str
 /// Themes can override this via:
 /// - `component.text.sm_px`
 /// - `component.text.sm_line_height`
-pub fn text_sm<H: UiHost>(cx: &mut ElementCx<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
+pub fn text_sm<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
     cx.text_props(TextProps {
         layout: LayoutStyle::default(),
@@ -102,7 +105,10 @@ pub fn text_sm<H: UiHost>(cx: &mut ElementCx<'_, H>, text: impl Into<Arc<str>>) 
 /// Themes can override this via:
 /// - `component.text.base_px`
 /// - `component.text.base_line_height`
-pub fn text_base<H: UiHost>(cx: &mut ElementCx<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
+pub fn text_base<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
     cx.text_props(TextProps {
         layout: LayoutStyle::default(),

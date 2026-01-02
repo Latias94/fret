@@ -1,7 +1,7 @@
 use std::any::Any;
 
 use fret_runtime::{Model, ModelUpdateError};
-use fret_ui::{ElementCx, Invalidation, UiHost};
+use fret_ui::{ElementContext, Invalidation, UiHost};
 
 /// Ergonomic helpers for observing-and-reading models during declarative rendering.
 ///
@@ -18,7 +18,7 @@ pub trait ModelWatchExt {
     ) -> Self::WatchedModel<'cx, 'm, T>;
 }
 
-impl<'a, H: UiHost> ModelWatchExt for ElementCx<'a, H> {
+impl<'a, H: UiHost> ModelWatchExt for ElementContext<'a, H> {
     type WatchedModel<'cx, 'm, T: Any>
         = WatchedModel<'cx, 'm, 'a, H, T>
     where
@@ -38,7 +38,7 @@ impl<'a, H: UiHost> ModelWatchExt for ElementCx<'a, H> {
 
 #[must_use]
 pub struct WatchedModel<'cx, 'm, 'a, H: UiHost, T: Any> {
-    cx: &'cx mut ElementCx<'a, H>,
+    cx: &'cx mut ElementContext<'a, H>,
     model: &'m Model<T>,
     invalidation: Invalidation,
 }

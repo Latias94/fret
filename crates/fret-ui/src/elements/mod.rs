@@ -6,7 +6,7 @@ mod queries;
 mod runtime;
 
 pub use access::{take_element_state, with_element_state};
-pub use cx::ElementCx;
+pub use cx::ElementContext;
 pub use hash::global_root;
 pub use id::GlobalElementId;
 pub use queries::{

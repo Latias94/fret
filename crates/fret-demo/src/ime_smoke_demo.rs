@@ -50,7 +50,7 @@ impl ImeSmokeDriver {
         input_multi: Model<String>,
         last_ime: Model<Arc<str>>,
     ) {
-        let root = declarative::RenderRootCx::new(ui, app, services, window, bounds).render_root(
+        let root = declarative::RenderRootContext::new(ui, app, services, window, bounds).render_root(
             "ime-smoke",
             |cx| {
              cx.observe_model(&input_single, Invalidation::Layout);

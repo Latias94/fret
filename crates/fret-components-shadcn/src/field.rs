@@ -6,7 +6,7 @@ use fret_core::{Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, MainAlign, RowProps, TextProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::label::label as shadcn_label;
 
@@ -27,7 +27,7 @@ impl FieldSet {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N6).resolve(&theme);
         let layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
@@ -44,8 +44,8 @@ impl FieldSet {
 }
 
 pub fn field_set<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     FieldSet::new(f(cx)).into_element(cx)
 }
@@ -76,7 +76,7 @@ impl FieldLegend {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let fg = theme
@@ -121,7 +121,7 @@ impl FieldGroup {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = theme
             .metric_by_key("component.field.group_gap")
@@ -140,8 +140,8 @@ impl FieldGroup {
 }
 
 pub fn field_group<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     FieldGroup::new(f(cx)).into_element(cx)
 }
@@ -156,7 +156,7 @@ impl FieldContent {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N1p5).resolve(&theme);
         let layout =
@@ -183,7 +183,7 @@ impl FieldTitle {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let fg = theme
@@ -225,7 +225,7 @@ impl FieldLabel {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         shadcn_label(cx, self.text)
     }
 }
@@ -240,7 +240,7 @@ impl FieldDescription {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let fg = theme
@@ -283,7 +283,7 @@ impl FieldError {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let fg = theme
@@ -332,7 +332,7 @@ impl FieldSeparator {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let h = theme
@@ -458,7 +458,7 @@ impl Field {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let gap = MetricRef::space(Space::N3).resolve(&theme);

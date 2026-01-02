@@ -1,5 +1,5 @@
 use fret_runtime::{CommandId, Model, WeakModel};
-use fret_ui::ElementCx;
+use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::action::RovingNavigateResult;
 use fret_ui::action::RovingTypeaheadCx;
@@ -94,7 +94,7 @@ pub trait ActionHooksExt {
     fn roving_nav_apg(&mut self);
 }
 
-impl<H: UiHost> ActionHooksExt for ElementCx<'_, H> {
+impl<H: UiHost> ActionHooksExt for ElementContext<'_, H> {
     fn pressable_dispatch_command(&mut self, command: CommandId) {
         self.pressable_add_on_activate(Arc::new(move |host, acx, _reason| {
             host.dispatch_command(Some(acx.window), command.clone());

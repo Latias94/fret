@@ -5,7 +5,7 @@ use fret_core::{Axis, Edges, FontId, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::Invalidation;
 use fret_ui::element::{ContainerProps, FlexProps, Length, SizeStyle, TextInputProps};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::icon;
@@ -16,7 +16,7 @@ use crate::{Items, Justify, LayoutRefinement, MetricRef, Size, Space};
 
 #[track_caller]
 pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     model: Model<String>,
     size: Size,
     leading_icon: IconId,

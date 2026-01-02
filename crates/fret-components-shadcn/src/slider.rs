@@ -10,7 +10,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, PointerRegionProps, PositionStyle,
     SemanticsProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Debug, Clone)]
 pub struct SliderStyle {
@@ -152,7 +152,7 @@ impl Slider {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         slider(
             cx,
             self.model,
@@ -168,7 +168,7 @@ impl Slider {
 }
 
 pub fn slider<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     model: Model<Vec<f32>>,
     min: f32,
     max: f32,

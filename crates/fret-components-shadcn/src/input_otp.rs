@@ -12,7 +12,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     PositionStyle, SizeStyle, TextInputProps, TextProps,
 };
-use fret_ui::{ElementCx, TextInputStyle, Theme, UiHost};
+use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
 use std::sync::Arc;
 
 fn otp_gap(theme: &Theme) -> Px {
@@ -116,7 +116,7 @@ impl InputOtp {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let length = self.length;
@@ -302,7 +302,7 @@ impl InputOtp {
     }
 }
 
-pub fn input_otp<H: UiHost>(cx: &mut ElementCx<'_, H>, otp: InputOtp) -> AnyElement {
+pub fn input_otp<H: UiHost>(cx: &mut ElementContext<'_, H>, otp: InputOtp) -> AnyElement {
     otp.into_element(cx)
 }
 

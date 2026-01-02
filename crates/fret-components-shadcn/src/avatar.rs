@@ -6,7 +6,7 @@ use fret_core::{FontId, FontWeight, ImageId, Px, TextOverflow, TextStyle, TextWr
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, ImageProps, MainAlign, Overflow, TextProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 /// shadcn/ui `Avatar` root.
 ///
@@ -38,7 +38,7 @@ impl Avatar {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let base_chrome = ChromeRefinement::default().rounded(Radius::Full);
@@ -87,7 +87,7 @@ impl AvatarImage {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let layout = decl_style::layout_style(
@@ -136,7 +136,7 @@ impl AvatarFallback {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let bg = theme

@@ -4,7 +4,7 @@ use fret_components_ui::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_core::{Corners, FontId, NodeId, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, Length, Overflow, SizeStyle, TextInputProps};
-use fret_ui::{ElementCx, TextInputStyle, Theme, UiHost};
+use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
 
 #[derive(Clone)]
 pub struct Input {
@@ -53,7 +53,7 @@ impl Input {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         input(
             cx,
             self.model,
@@ -67,7 +67,7 @@ impl Input {
 }
 
 pub fn input<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,

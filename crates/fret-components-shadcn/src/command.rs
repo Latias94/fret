@@ -22,7 +22,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, RowProps, TextProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::{Dialog, DialogContent, Input, ScrollArea};
 
@@ -106,7 +106,7 @@ impl Command {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let base = ChromeRefinement::default()
@@ -176,7 +176,7 @@ impl CommandInput {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             cx.watch_model(&self.model).observe();
@@ -333,7 +333,7 @@ impl CommandList {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let disabled = self.disabled;
         let items = self.items;
@@ -593,7 +593,7 @@ impl CommandPalette {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         #[derive(Clone)]
         struct PaletteEntry {
             value: Arc<str>,
@@ -1172,8 +1172,8 @@ impl CommandDialog {
 
     pub fn into_element<H: UiHost>(
         self,
-        cx: &mut ElementCx<'_, H>,
-        trigger: impl FnOnce(&mut ElementCx<'_, H>) -> AnyElement,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         let open = self.open;
         let query = self.query;
@@ -1205,8 +1205,8 @@ struct CommandPaletteState {
 }
 
 pub fn command<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     Command::new(f(cx)).into_element(cx)
 }

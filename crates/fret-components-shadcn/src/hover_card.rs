@@ -6,9 +6,15 @@ use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayRequest,
     Radius, Space,
 };
-use fret_core::{Px, Size};
-use fret_ui::element::{AnyElement, HoverRegionProps, InsetStyle, LayoutStyle, PositionStyle};
-use fret_ui::{ElementCx, Theme, UiHost, overlay_placement};
+use fret_core::{Corners, Edges, Point, Px, Size, Transform2D};
+use fret_ui::element::{
+    AnyElement, ContainerProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, Overflow,
+    PositionStyle, SizeStyle, VisualTransformProps,
+};
+use fret_ui::overlay_placement::{
+    Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
+};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 fn hover_card_content_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme
@@ -53,6 +59,9 @@ pub struct HoverCard {
     align: HoverCardAlign,
     side_offset: Px,
     window_margin_override: Option<Px>,
+    arrow: bool,
+    arrow_size_override: Option<Px>,
+    arrow_padding_override: Option<Px>,
     open_delay_frames: u32,
     close_delay_frames: u32,
     layout: LayoutRefinement,
@@ -67,6 +76,9 @@ impl HoverCard {
             align: HoverCardAlign::default(),
             side_offset: Px(4.0),
             window_margin_override: None,
+            arrow: false,
+            arrow_size_override: None,
+            arrow_padding_override: None,
             open_delay_frames: 0,
             // Non-zero by default so the user can move from trigger to the overlay content.
             close_delay_frames: 6,
@@ -100,6 +112,24 @@ impl HoverCard {
         self
     }
 
+    /// Enables a HoverCard arrow (Radix `HoverCardArrow`-style).
+    ///
+    /// Default: `false`.
+    pub fn arrow(mut self, arrow: bool) -> Self {
+        self.arrow = arrow;
+        self
+    }
+
+    pub fn arrow_size(mut self, size: Px) -> Self {
+        self.arrow_size_override = Some(size);
+        self
+    }
+
+    pub fn arrow_padding(mut self, padding: Px) -> Self {
+        self.arrow_padding_override = Some(padding);
+        self
+    }
+
     /// Override the element used as the placement anchor.
     ///
     /// Notes:
@@ -115,7 +145,7 @@ impl HoverCard {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let layout = decl_style::layout_style(&theme, self.layout);
@@ -135,6 +165,23 @@ impl HoverCard {
         let align = self.align;
         let open_delay_frames = self.open_delay_frames;
         let close_delay_frames = self.close_delay_frames;
+        let arrow = self.arrow;
+        let arrow_size = self.arrow_size_override.unwrap_or_else(|| {
+            theme
+                .metric_by_key("component.hover_card.arrow_size")
+                .unwrap_or(Px(12.0))
+        });
+        let arrow_padding = self.arrow_padding_override.unwrap_or_else(|| {
+            theme
+                .metric_by_key("component.hover_card.arrow_padding")
+                .unwrap_or(theme.metrics.radius_md)
+        });
+        let arrow_bg = theme
+            .color_by_key("popover")
+            .unwrap_or(theme.colors.panel_background);
+        let arrow_border = theme
+            .color_by_key("border")
+            .unwrap_or(theme.colors.panel_border);
 
         let trigger = self.trigger;
         let content = self.content;
@@ -184,34 +231,133 @@ impl HoverCard {
                 let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
 
                 let align = match align {
-                    HoverCardAlign::Start => overlay_placement::Align::Start,
-                    HoverCardAlign::Center => overlay_placement::Align::Center,
-                    HoverCardAlign::End => overlay_placement::Align::End,
+                    HoverCardAlign::Start => Align::Start,
+                    HoverCardAlign::Center => Align::Center,
+                    HoverCardAlign::End => Align::End,
                 };
 
-                let placed = overlay_placement::anchored_panel_bounds_sized(
+                let arrow_options = arrow.then_some(ArrowOptions {
+                    size: Size::new(arrow_size, arrow_size),
+                    padding: Edges::all(arrow_padding),
+                });
+                let arrow_protrusion = if arrow {
+                    Px(arrow_size.0 * 0.75)
+                } else {
+                    Px(0.0)
+                };
+
+                let layout = overlay::popper_layout_sized(
                     outer,
                     anchor,
                     content_size,
                     side_offset,
-                    overlay_placement::Side::Bottom,
+                    Side::Bottom,
                     align,
+                    AnchoredPanelOptions {
+                        direction: LayoutDirection::Ltr,
+                        offset: Offset {
+                            main_axis: if arrow { arrow_protrusion } else { Px(0.0) },
+                            cross_axis: Px(0.0),
+                            alignment_axis: None,
+                        },
+                        arrow: arrow_options,
+                    },
                 );
+
+                let placed = layout.rect;
+                let (extra_left, extra_right, extra_top, extra_bottom) =
+                    match layout.arrow.as_ref().map(|a| a.side) {
+                        Some(Side::Top) => (Px(0.0), Px(0.0), arrow_protrusion, Px(0.0)),
+                        Some(Side::Bottom) => (Px(0.0), Px(0.0), Px(0.0), arrow_protrusion),
+                        Some(Side::Left) => (arrow_protrusion, Px(0.0), Px(0.0), Px(0.0)),
+                        Some(Side::Right) => (Px(0.0), arrow_protrusion, Px(0.0), Px(0.0)),
+                        None => (Px(0.0), Px(0.0), Px(0.0), Px(0.0)),
+                    };
+
+                let arrow_el = layout.arrow.map(|arrow| {
+                    let (left, top) = match arrow.side {
+                        Side::Top => (
+                            Px(extra_left.0 + arrow.offset.0),
+                            Px(extra_top.0 - arrow_size.0 * 0.5),
+                        ),
+                        Side::Bottom => (
+                            Px(extra_left.0 + arrow.offset.0),
+                            Px(extra_top.0 + placed.size.height.0 - arrow_size.0 * 0.5),
+                        ),
+                        Side::Left => (
+                            Px(extra_left.0 - arrow_size.0 * 0.5),
+                            Px(extra_top.0 + arrow.offset.0),
+                        ),
+                        Side::Right => (
+                            Px(extra_left.0 + placed.size.width.0 - arrow_size.0 * 0.5),
+                            Px(extra_top.0 + arrow.offset.0),
+                        ),
+                    };
+
+                    let layout = LayoutStyle {
+                        position: PositionStyle::Absolute,
+                        inset: InsetStyle {
+                            top: Some(top),
+                            left: Some(left),
+                            ..Default::default()
+                        },
+                        size: SizeStyle {
+                            width: Length::Px(arrow_size),
+                            height: Length::Px(arrow_size),
+                            ..Default::default()
+                        },
+                        overflow: Overflow::Visible,
+                        ..Default::default()
+                    };
+
+                    let center = Point::new(Px(arrow_size.0 * 0.5), Px(arrow_size.0 * 0.5));
+                    let transform = Transform2D::rotation_about_degrees(45.0, center);
+
+                    cx.visual_transform_props(
+                        VisualTransformProps { layout, transform },
+                        move |cx| {
+                            vec![cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Fill,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    padding: Edges::all(Px(0.0)),
+                                    background: Some(arrow_bg),
+                                    shadow: None,
+                                    border: Edges::all(Px(1.0)),
+                                    border_color: Some(arrow_border),
+                                    corner_radii: Corners::all(Px(0.0)),
+                                },
+                                |_cx| Vec::new(),
+                            )]
+                        },
+                    )
+                });
 
                 vec![cx.hover_region(
                     HoverRegionProps {
                         layout: LayoutStyle {
                             position: PositionStyle::Absolute,
                             inset: InsetStyle {
-                                top: Some(placed.origin.y),
-                                left: Some(placed.origin.x),
+                                top: Some(Px(placed.origin.y.0 - extra_top.0)),
+                                left: Some(Px(placed.origin.x.0 - extra_left.0)),
                                 ..Default::default()
                             },
                             size: fret_ui::element::SizeStyle {
-                                width: fret_ui::element::Length::Px(placed.size.width),
-                                height: fret_ui::element::Length::Px(placed.size.height),
+                                width: fret_ui::element::Length::Px(Px(placed.size.width.0
+                                    + extra_left.0
+                                    + extra_right.0)),
+                                height: fret_ui::element::Length::Px(Px(placed.size.height.0
+                                    + extra_top.0
+                                    + extra_bottom.0)),
                                 ..Default::default()
                             },
+                            overflow: Overflow::Visible,
                             ..Default::default()
                         },
                     },
@@ -219,7 +365,38 @@ impl HoverCard {
                         cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
                             st.overlay_hovered = hovered;
                         });
-                        vec![content]
+
+                        let content = if arrow_el.is_some() {
+                            cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle {
+                                        position: PositionStyle::Absolute,
+                                        inset: InsetStyle {
+                                            left: Some(extra_left),
+                                            top: Some(extra_top),
+                                            ..Default::default()
+                                        },
+                                        size: SizeStyle {
+                                            width: Length::Px(placed.size.width),
+                                            height: Length::Px(placed.size.height),
+                                            ..Default::default()
+                                        },
+                                        overflow: Overflow::Visible,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![content],
+                            )
+                        } else {
+                            content
+                        };
+
+                        if let Some(arrow_el) = arrow_el {
+                            vec![arrow_el, content]
+                        } else {
+                            vec![content]
+                        }
                     },
                 )]
             });
@@ -247,7 +424,7 @@ impl HoverCardTrigger {
         Self { child }
     }
 
-    pub fn into_element<H: UiHost>(self, _cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
 }
@@ -269,7 +446,7 @@ impl HoverCardAnchor {
         self.child.id
     }
 
-    pub fn into_element<H: UiHost>(self, _cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
 }
@@ -301,7 +478,7 @@ impl HoverCardContent {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let base_layout = LayoutRefinement::default()

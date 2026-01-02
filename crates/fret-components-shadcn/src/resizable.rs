@@ -4,7 +4,7 @@ use fret_components_ui::recipes::resizable as resizable_recipe;
 use fret_core::{Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ContainerProps, Length, ResizablePanelGroupProps, SizeStyle};
-use fret_ui::{ElementCx, ResizablePanelGroupStyle, Theme, UiHost};
+use fret_ui::{ElementContext, ResizablePanelGroupStyle, Theme, UiHost};
 
 #[derive(Clone)]
 pub struct ResizablePanel {
@@ -42,7 +42,7 @@ impl ResizablePanel {
         self
     }
 
-    fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let layout = decl_style::layout_style(&theme, self.layout.relative().w_full().h_full());
 
@@ -162,7 +162,7 @@ impl ResizablePanelGroup {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         resizable_panel_group_with_entries(
             cx,
             self.axis,
@@ -176,7 +176,7 @@ impl ResizablePanelGroup {
 }
 
 fn resizable_panel_group_with_entries<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     axis: fret_core::Axis,
     model: Model<Vec<f32>>,
     disabled: bool,
@@ -227,9 +227,9 @@ fn resizable_panel_group_with_entries<H: UiHost>(
 }
 
 pub fn resizable_panel_group<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     model: Model<Vec<f32>>,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<ResizableEntry>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ResizableEntry>,
 ) -> AnyElement {
     ResizablePanelGroup::new(model)
         .entries(f(cx))

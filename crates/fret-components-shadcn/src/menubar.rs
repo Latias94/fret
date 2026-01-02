@@ -18,7 +18,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -93,7 +93,7 @@ impl Menubar {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let border = theme
@@ -221,8 +221,8 @@ impl MenubarMenu {
 
     pub fn into_element<H: UiHost>(
         self,
-        cx: &mut ElementCx<'_, H>,
-        entries: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<MenubarEntry>,
+        cx: &mut ElementContext<'_, H>,
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<MenubarEntry>,
     ) -> AnyElement {
         let group = cx.root_id();
         let key = self.label.clone();
@@ -684,8 +684,8 @@ impl MenubarMenu {
 }
 
 pub fn menubar<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     Menubar::new(f(cx)).into_element(cx)
 }

@@ -4,7 +4,7 @@ use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{ColorRef, LayoutRefinement, MetricRef};
 use fret_core::{Point, Px, Transform2D};
 use fret_ui::element::{AnyElement, Length, SvgIconProps, VisualTransformProps};
-use fret_ui::{ElementCx, SvgSource, Theme, UiHost};
+use fret_ui::{ElementContext, SvgSource, Theme, UiHost};
 
 /// shadcn/ui `Spinner` (v4).
 ///
@@ -57,7 +57,7 @@ impl Spinner {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let base_layout = LayoutRefinement::default()

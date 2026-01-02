@@ -7,7 +7,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SpacerProps,
 };
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::model_watch::ModelWatchExt as _;
@@ -64,7 +64,7 @@ struct DefaultTreeRowRenderer;
 impl<H: UiHost> TreeRowRenderer<H> for DefaultTreeRowRenderer {
     fn render_row(
         &mut self,
-        cx: &mut ElementCx<'_, H>,
+        cx: &mut ElementContext<'_, H>,
         entry: &TreeEntry,
         _state: TreeRowState,
     ) -> Vec<AnyElement> {
@@ -97,7 +97,7 @@ fn rebuild_entries(
 /// - selection/expand policies live in the parent `TreeView` widget,
 /// - this function only renders rows and dispatches `tree.select.<id>` / `tree.toggle.<id>` commands.
 pub fn tree_view<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     items: Model<Vec<crate::TreeItem>>,
     state: Model<TreeState>,
     size: Size,
@@ -107,7 +107,7 @@ pub fn tree_view<H: UiHost>(
 }
 
 pub fn tree_view_with_renderer<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     items: Model<Vec<crate::TreeItem>>,
     state: Model<TreeState>,
     size: Size,

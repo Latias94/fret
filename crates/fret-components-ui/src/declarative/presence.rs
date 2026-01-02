@@ -1,4 +1,4 @@
-use fret_ui::ElementCx;
+use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::elements::ContinuousFrames;
 
@@ -21,7 +21,7 @@ struct FadePresenceDriverState {
 /// - it holds a continuous-frames lease while animating (so the runtime continues to request RAF),
 /// - and it requests redraws while animating.
 pub fn fade_presence<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     open: bool,
     fade_ticks: u64,
 ) -> PresenceOutput {

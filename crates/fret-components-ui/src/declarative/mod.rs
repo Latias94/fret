@@ -1,6 +1,8 @@
 pub mod action_hooks;
 pub mod chrome;
 pub mod collection_semantics;
+pub mod dismissible;
+pub mod focus_scope;
 pub mod list;
 pub mod model_watch;
 pub mod prelude;

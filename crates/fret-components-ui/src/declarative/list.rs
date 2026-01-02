@@ -3,7 +3,7 @@ use fret_runtime::CommandId;
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ContainerProps, PressableA11y, PressableProps, SpacerProps};
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -55,7 +55,7 @@ fn resolve_row_padding_y(theme: &Theme) -> Px {
 /// so higher-level shadcn-like components can be built in the component layer via composition.
 #[allow(clippy::too_many_arguments)]
 pub fn list_virtualized<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     selection: Option<Model<Option<usize>>>,
     size: Size,
     row_height: Option<Px>,
@@ -65,7 +65,7 @@ pub fn list_virtualized<H: UiHost>(
     items_revision: u64,
     key_at: impl FnMut(usize) -> u64,
     on_select: impl Fn(usize) -> Option<CommandId>,
-    mut row_contents: impl FnMut(&mut ElementCx<'_, H>, usize) -> Vec<AnyElement>,
+    mut row_contents: impl FnMut(&mut ElementContext<'_, H>, usize) -> Vec<AnyElement>,
 ) -> AnyElement {
     let selected = match &selection {
         Some(m) => cx.watch_model(m).copied().unwrap_or(None),
@@ -151,7 +151,7 @@ pub fn list_virtualized<H: UiHost>(
 
 /// Compatibility helper for simple string lists (used in demos).
 pub fn list_from_strings<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     items: Model<Vec<String>>,
     selection: Option<Model<Option<usize>>>,
     size: Size,

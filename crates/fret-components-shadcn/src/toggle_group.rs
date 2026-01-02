@@ -11,7 +11,7 @@ use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, MainAlign, PressableA11y, PressableProps, RovingFlexProps,
     RovingFocusProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::toggle::{ToggleSize, ToggleVariant};
 
@@ -182,7 +182,7 @@ impl ToggleGroup {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let model = self.model;
         let items = self.items;
         let group_disabled = self.disabled;
@@ -384,17 +384,17 @@ impl ToggleGroup {
 }
 
 pub fn toggle_group_single<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<ToggleGroupItem>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ToggleGroupItem>,
 ) -> AnyElement {
     ToggleGroup::single(model).items(f(cx)).into_element(cx)
 }
 
 pub fn toggle_group_multiple<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     model: Model<Vec<Arc<str>>>,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<ToggleGroupItem>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ToggleGroupItem>,
 ) -> AnyElement {
     ToggleGroup::multiple(model).items(f(cx)).into_element(cx)
 }

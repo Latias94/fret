@@ -1,5 +1,5 @@
 use fret_ui::element::{AnyElement, ColumnProps, RowProps};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::declarative::style;
 use crate::{Items, Justify, LayoutRefinement, Space};
@@ -85,9 +85,9 @@ impl HStackProps {
 ///
 /// This exists to express Tailwind-like `gap-*` ergonomically without reaching into runtime props.
 pub fn hstack<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     props: HStackProps,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app);
     let gap = style::space(theme, props.gap);
@@ -185,9 +185,9 @@ impl VStackProps {
 ///
 /// This exists to express Tailwind-like `gap-*` ergonomically without reaching into runtime props.
 pub fn vstack<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     props: VStackProps,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app);
     let gap = style::space(theme, props.gap);

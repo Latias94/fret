@@ -14,7 +14,7 @@ fn hover_region_reports_hovered_even_when_child_is_pressable() {
     );
     let mut text = FakeTextService::default();
 
-    fn build_root(cx: &mut ElementCx<'_, TestHost>) -> Vec<AnyElement> {
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
         vec![cx.hover_region(
             crate::element::HoverRegionProps::default(),
             |cx, hovered| {

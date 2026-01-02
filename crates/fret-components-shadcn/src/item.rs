@@ -9,7 +9,7 @@ use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableProps,
     TextProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ItemVariant {
@@ -102,7 +102,7 @@ impl ItemGroup {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
         let children = self.children;
@@ -118,8 +118,8 @@ impl ItemGroup {
 }
 
 pub fn item_group<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AnyElement>,
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     ItemGroup::new(f(cx)).into_element(cx)
 }
@@ -132,7 +132,7 @@ impl ItemSeparator {
         Self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let border = theme
             .color_by_key("border")
@@ -179,7 +179,7 @@ impl ItemMedia {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let (size, chrome) = match self.variant {
@@ -247,7 +247,7 @@ impl ItemContent {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N1).resolve(&theme);
         let layout =
@@ -274,7 +274,7 @@ impl ItemActions {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N2).resolve(&theme);
         let layout = decl_style::layout_style(
@@ -307,7 +307,7 @@ impl ItemHeader {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N2).resolve(&theme);
         let layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
@@ -337,7 +337,7 @@ impl ItemFooter {
         Self { children }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         ItemHeader::new(self.children).into_element(cx)
     }
 }
@@ -352,7 +352,7 @@ impl ItemTitle {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("foreground")
@@ -393,7 +393,7 @@ impl ItemDescription {
         Self { text: text.into() }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("muted.foreground")
@@ -472,7 +472,7 @@ impl Item {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let theme_for_content = theme.clone();
 
@@ -500,7 +500,7 @@ impl Item {
         let enabled = self.enabled && self.on_click.is_some();
         let on_click = self.on_click;
 
-        let content = move |cx: &mut ElementCx<'_, H>, hovered: bool, pressed: bool| {
+        let content = move |cx: &mut ElementContext<'_, H>, hovered: bool, pressed: bool| {
             let bg = if !enabled {
                 base_bg
             } else if pressed {

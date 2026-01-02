@@ -3,7 +3,7 @@ use fret_core::AppWindowId;
 use fret_runtime::Model;
 use fret_ui::action::UiActionHost;
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementCx, UiHost};
+use fret_ui::{ElementContext, UiHost};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Toaster {
@@ -28,7 +28,7 @@ impl Toaster {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let id = cx.root_id();
             let store = OverlayController::toast_store(&mut *cx.app);

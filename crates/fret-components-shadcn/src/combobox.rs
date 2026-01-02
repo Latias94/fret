@@ -5,6 +5,7 @@ use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::icon as decl_icon;
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
+use fret_components_ui::headless::cmdk_score;
 use fret_components_ui::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
 use fret_core::{
@@ -15,7 +16,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableA11y, PressableProps, TextProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::{CommandItem, CommandList, CommandPalette, Popover, PopoverContent};
 
@@ -127,7 +128,7 @@ impl Combobox {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         combobox(
             cx,
             self.model,
@@ -146,7 +147,7 @@ impl Combobox {
 
 #[allow(clippy::too_many_arguments)]
 pub fn combobox<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,
     query: Option<Model<String>>,
@@ -336,19 +337,29 @@ pub fn combobox<H: UiHost>(
                         String::new()
                     };
 
-                    let filtered: Vec<ComboboxItem> = items
-                        .iter()
-                        .cloned()
-                        .filter(|it| {
-                            if query.is_empty() {
-                                return true;
-                            }
-                            it.label
-                                .as_ref()
-                                .to_ascii_lowercase()
-                                .contains(query.as_str())
-                        })
-                        .collect();
+                    let filtered: Vec<ComboboxItem> = if query.is_empty() {
+                        items.iter().cloned().collect()
+                    } else {
+                        let mut scored: Vec<(usize, f32, ComboboxItem)> = items
+                            .iter()
+                            .cloned()
+                            .enumerate()
+                            .filter_map(|(idx, it)| {
+                                let score = cmdk_score::command_score(
+                                    it.label.as_ref(),
+                                    query.as_str(),
+                                    &[it.value.as_ref()],
+                                );
+                                (score > 0.0).then_some((idx, score, it))
+                            })
+                            .collect();
+
+                        scored.sort_by(|(a_idx, a_score, _), (b_idx, b_score, _)| {
+                            b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
+                        });
+
+                        scored.into_iter().map(|(_, _, it)| it).collect()
+                    };
 
                     let fg = theme
                         .color_by_key("foreground")

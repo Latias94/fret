@@ -1,5 +1,10 @@
+#[cfg(not(target_arch = "wasm32"))]
 pub mod components_gallery;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod docking_arbitration_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod docking_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod first_frame_smoke_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod ime_smoke_demo;

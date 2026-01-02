@@ -13,7 +13,7 @@ use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, LayoutStyle, MainAlign, PressableA11y,
     PressableProps, RovingFlexProps, RovingFocusProps, RowProps, SemanticsProps, TextProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 fn border_color(theme: &Theme) -> Color {
     theme
@@ -111,7 +111,7 @@ impl AccordionTrigger {
 
     fn into_element<H: UiHost>(
         self,
-        cx: &mut ElementCx<'_, H>,
+        cx: &mut ElementContext<'_, H>,
         model: AccordionModel,
         value: Arc<str>,
         enabled: bool,
@@ -259,7 +259,7 @@ impl AccordionContent {
         self
     }
 
-    fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let chrome = ChromeRefinement::default()
             .pt(Space::N0)
@@ -419,7 +419,7 @@ impl Accordion {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
 
@@ -559,17 +559,17 @@ impl Accordion {
 }
 
 pub fn accordion_single<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AccordionItem>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AccordionItem>,
 ) -> AnyElement {
     Accordion::single(model).items(f(cx)).into_element(cx)
 }
 
 pub fn accordion_multiple<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     model: Model<Vec<Arc<str>>>,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<AccordionItem>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AccordionItem>,
 ) -> AnyElement {
     Accordion::multiple(model).items(f(cx)).into_element(cx)
 }

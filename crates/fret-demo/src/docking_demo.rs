@@ -43,7 +43,7 @@ impl DockPanelRegistry<App> for DemoDockPanelRegistry {
 
         let root_name = format!("dock_demo.panel.{}", panel.kind.0);
         Some(
-            declarative::RenderRootCx::new(ui, app, services, window, bounds).render_root(
+            declarative::RenderRootContext::new(ui, app, services, window, bounds).render_root(
                 &root_name,
                 |cx| {
                     vec![cx.container(

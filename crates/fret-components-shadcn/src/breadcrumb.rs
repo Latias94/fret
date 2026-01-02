@@ -5,7 +5,7 @@ use fret_components_ui::{MetricRef, Space};
 use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps, TextProps};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum BreadcrumbItemKind {
@@ -39,7 +39,7 @@ impl Breadcrumb {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let gap = theme
@@ -141,7 +141,7 @@ impl BreadcrumbItem {
 
     fn render<H: UiHost>(
         self,
-        cx: &mut ElementCx<'_, H>,
+        cx: &mut ElementContext<'_, H>,
         base_style: &TextStyle,
         muted: Color,
         fg: Color,
@@ -171,7 +171,7 @@ impl BreadcrumbItem {
 }
 
 fn breadcrumb_text<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     text: Arc<str>,
     base_style: &TextStyle,
     color: Color,
@@ -187,7 +187,7 @@ fn breadcrumb_text<H: UiHost>(
 }
 
 fn breadcrumb_link_text<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     text: Arc<str>,
     base_style: &TextStyle,
     muted: Color,
@@ -199,7 +199,7 @@ fn breadcrumb_link_text<H: UiHost>(
 }
 
 fn breadcrumb_separator<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     base_style: &TextStyle,
     muted: Color,
 ) -> AnyElement {
@@ -208,7 +208,7 @@ fn breadcrumb_separator<H: UiHost>(
 }
 
 fn breadcrumb_ellipsis<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     base_style: &TextStyle,
     muted: Color,
 ) -> AnyElement {

@@ -1,6 +1,6 @@
 use fret_core::AppWindowId;
 #[cfg(feature = "unstable-internals")]
-use fret_ui::ElementCx;
+use fret_ui::ElementContext;
 use fret_ui::UiHost;
 
 use super::state::WindowOverlays;
@@ -25,7 +25,7 @@ pub fn begin_frame<H: UiHost>(app: &mut H, window: AppWindowId) {
 
 #[cfg(feature = "unstable-internals")]
 pub fn request_dismissible_popover<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     request: DismissiblePopoverRequest,
 ) {
     request_dismissible_popover_for_window(cx.app, cx.window, request);
@@ -43,7 +43,7 @@ pub fn request_dismissible_popover_for_window<H: UiHost>(
 }
 
 #[cfg(feature = "unstable-internals")]
-pub fn request_modal<H: UiHost>(cx: &mut ElementCx<'_, H>, request: ModalRequest) {
+pub fn request_modal<H: UiHost>(cx: &mut ElementContext<'_, H>, request: ModalRequest) {
     request_modal_for_window(cx.app, cx.window, request);
 }
 
@@ -59,7 +59,10 @@ pub fn request_modal_for_window<H: UiHost>(
 }
 
 #[cfg(feature = "unstable-internals")]
-pub fn request_hover_overlay<H: UiHost>(cx: &mut ElementCx<'_, H>, request: HoverOverlayRequest) {
+pub fn request_hover_overlay<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    request: HoverOverlayRequest,
+) {
     request_hover_overlay_for_window(cx.app, cx.window, request);
 }
 
@@ -75,7 +78,7 @@ pub fn request_hover_overlay_for_window<H: UiHost>(
 }
 
 #[cfg(feature = "unstable-internals")]
-pub fn request_tooltip<H: UiHost>(cx: &mut ElementCx<'_, H>, request: TooltipRequest) {
+pub fn request_tooltip<H: UiHost>(cx: &mut ElementContext<'_, H>, request: TooltipRequest) {
     request_tooltip_for_window(cx.app, cx.window, request);
 }
 
@@ -91,7 +94,7 @@ pub fn request_tooltip_for_window<H: UiHost>(
 }
 
 #[cfg(feature = "unstable-internals")]
-pub fn request_toast_layer<H: UiHost>(cx: &mut ElementCx<'_, H>, request: ToastLayerRequest) {
+pub fn request_toast_layer<H: UiHost>(cx: &mut ElementContext<'_, H>, request: ToastLayerRequest) {
     request_toast_layer_for_window(cx.app, cx.window, request);
 }
 

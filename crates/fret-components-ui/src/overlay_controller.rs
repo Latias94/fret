@@ -2,7 +2,7 @@ use fret_core::{AppWindowId, Rect};
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
-use fret_ui::{ElementCx, UiHost, UiTree};
+use fret_ui::{ElementContext, UiHost, UiTree};
 
 use crate::declarative::presence::fade_presence;
 use crate::headless::presence::PresenceOutput;
@@ -200,7 +200,7 @@ impl OverlayController {
         window_overlays::toast_layer_root_name(id)
     }
 
-    pub fn request<H: UiHost>(cx: &mut ElementCx<'_, H>, request: OverlayRequest) {
+    pub fn request<H: UiHost>(cx: &mut ElementContext<'_, H>, request: OverlayRequest) {
         Self::request_for_window(cx.app, cx.window, request);
     }
 
@@ -315,7 +315,7 @@ impl OverlayController {
     }
 
     pub fn fade_presence<H: UiHost>(
-        cx: &mut ElementCx<'_, H>,
+        cx: &mut ElementContext<'_, H>,
         open: bool,
         fade_ticks: u64,
     ) -> PresenceOutput {

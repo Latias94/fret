@@ -8,12 +8,15 @@ use fret_components_ui::{
 };
 use std::sync::Arc;
 
-use fret_core::{Px, Size, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Corners, Edges, Point, Px, Size, TextOverflow, TextStyle, TextWrap, Transform2D};
 use fret_ui::element::{
-    AnyElement, HoverRegionProps, InsetStyle, LayoutStyle, PositionStyle, TextProps,
+    AnyElement, ContainerProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, Overflow,
+    PositionStyle, SizeStyle, TextProps, VisualTransformProps,
 };
-use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::overlay_placement::{
+    Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
+};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
     // shadcn/ui v4 (2025-09-22): tooltip uses `bg-foreground text-background`.
@@ -62,6 +65,9 @@ pub struct Tooltip {
     side: TooltipSide,
     side_offset: Px,
     window_margin_override: Option<Px>,
+    arrow: bool,
+    arrow_size_override: Option<Px>,
+    arrow_padding_override: Option<Px>,
     open_delay_frames: u32,
     close_delay_frames: u32,
     layout: LayoutRefinement,
@@ -77,6 +83,9 @@ impl Tooltip {
             side: TooltipSide::default(),
             side_offset: Px(0.0),
             window_margin_override: None,
+            arrow: false,
+            arrow_size_override: None,
+            arrow_padding_override: None,
             open_delay_frames: 0,
             close_delay_frames: 0,
             layout: LayoutRefinement::default(),
@@ -114,6 +123,24 @@ impl Tooltip {
         self
     }
 
+    /// Enables a Tooltip arrow (Radix `TooltipArrow`-style).
+    ///
+    /// Default: `false`.
+    pub fn arrow(mut self, arrow: bool) -> Self {
+        self.arrow = arrow;
+        self
+    }
+
+    pub fn arrow_size(mut self, size: Px) -> Self {
+        self.arrow_size_override = Some(size);
+        self
+    }
+
+    pub fn arrow_padding(mut self, padding: Px) -> Self {
+        self.arrow_padding_override = Some(padding);
+        self
+    }
+
     /// Override the element used as the placement anchor.
     ///
     /// Notes:
@@ -129,7 +156,7 @@ impl Tooltip {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let layout = decl_style::layout_style(&theme, self.layout);
@@ -145,6 +172,20 @@ impl Tooltip {
                 .metric_by_key("component.tooltip.window_margin")
                 .unwrap_or(Px(8.0))
         });
+        let arrow = self.arrow;
+        let arrow_size = self.arrow_size_override.unwrap_or_else(|| {
+            theme
+                .metric_by_key("component.tooltip.arrow_size")
+                .unwrap_or(Px(10.0))
+        });
+        let arrow_padding = self.arrow_padding_override.unwrap_or_else(|| {
+            theme
+                .metric_by_key("component.tooltip.arrow_padding")
+                .unwrap_or(theme.metrics.radius_sm)
+        });
+        let arrow_bg = theme
+            .color_by_key("foreground")
+            .unwrap_or(theme.colors.text_primary);
 
         let align = self.align;
         let side = self.side;
@@ -222,35 +263,181 @@ impl Tooltip {
                     TooltipSide::Left => Side::Left,
                 };
 
-                let placed = anchored_panel_bounds_sized(
+                let arrow_options = arrow.then_some(ArrowOptions {
+                    size: Size::new(arrow_size, arrow_size),
+                    padding: Edges::all(arrow_padding),
+                });
+                let arrow_protrusion = if arrow {
+                    Px(arrow_size.0 * 0.75)
+                } else {
+                    Px(0.0)
+                };
+
+                let layout = overlay::popper_layout_sized(
                     outer,
                     anchor,
                     content_size,
                     side_offset,
                     side,
                     align,
+                    AnchoredPanelOptions {
+                        direction: LayoutDirection::Ltr,
+                        offset: Offset {
+                            main_axis: if arrow { arrow_protrusion } else { Px(0.0) },
+                            cross_axis: Px(0.0),
+                            alignment_axis: None,
+                        },
+                        arrow: arrow_options,
+                    },
                 );
 
-                let wrapper = cx.container(
-                    fret_ui::element::ContainerProps {
-                        layout: LayoutStyle {
-                            position: PositionStyle::Absolute,
-                            inset: InsetStyle {
-                                top: Some(placed.origin.y),
-                                left: Some(placed.origin.x),
-                                ..Default::default()
-                            },
-                            size: fret_ui::element::SizeStyle {
-                                width: fret_ui::element::Length::Px(placed.size.width),
-                                height: fret_ui::element::Length::Px(placed.size.height),
+                let placed = layout.rect;
+                let (extra_left, extra_right, extra_top, extra_bottom) =
+                    match layout.arrow.as_ref().map(|a| a.side) {
+                        Some(Side::Top) => (Px(0.0), Px(0.0), arrow_protrusion, Px(0.0)),
+                        Some(Side::Bottom) => (Px(0.0), Px(0.0), Px(0.0), arrow_protrusion),
+                        Some(Side::Left) => (arrow_protrusion, Px(0.0), Px(0.0), Px(0.0)),
+                        Some(Side::Right) => (Px(0.0), arrow_protrusion, Px(0.0), Px(0.0)),
+                        None => (Px(0.0), Px(0.0), Px(0.0), Px(0.0)),
+                    };
+
+                let arrow_el = layout.arrow.map(|arrow| {
+                    let (left, top) = match arrow.side {
+                        Side::Top => (
+                            Px(extra_left.0 + arrow.offset.0),
+                            Px(extra_top.0 - arrow_size.0 * 0.5),
+                        ),
+                        Side::Bottom => (
+                            Px(extra_left.0 + arrow.offset.0),
+                            Px(extra_top.0 + placed.size.height.0 - arrow_size.0 * 0.5),
+                        ),
+                        Side::Left => (
+                            Px(extra_left.0 - arrow_size.0 * 0.5),
+                            Px(extra_top.0 + arrow.offset.0),
+                        ),
+                        Side::Right => (
+                            Px(extra_left.0 + placed.size.width.0 - arrow_size.0 * 0.5),
+                            Px(extra_top.0 + arrow.offset.0),
+                        ),
+                    };
+
+                    let layout = LayoutStyle {
+                        position: PositionStyle::Absolute,
+                        inset: InsetStyle {
+                            top: Some(top),
+                            left: Some(left),
+                            ..Default::default()
+                        },
+                        size: SizeStyle {
+                            width: Length::Px(arrow_size),
+                            height: Length::Px(arrow_size),
+                            ..Default::default()
+                        },
+                        overflow: Overflow::Visible,
+                        ..Default::default()
+                    };
+
+                    let center = Point::new(Px(arrow_size.0 * 0.5), Px(arrow_size.0 * 0.5));
+                    let transform = Transform2D::rotation_about_degrees(45.0, center);
+
+                    cx.visual_transform_props(
+                        VisualTransformProps { layout, transform },
+                        move |cx| {
+                            vec![cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Fill,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    padding: Edges::all(Px(0.0)),
+                                    background: Some(arrow_bg),
+                                    shadow: None,
+                                    border: Edges::all(Px(0.0)),
+                                    border_color: None,
+                                    corner_radii: Corners::all(Px(0.0)),
+                                },
+                                |_cx| Vec::new(),
+                            )]
+                        },
+                    )
+                });
+
+                let wrapper = if let Some(arrow_el) = arrow_el {
+                    cx.container(
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    top: Some(Px(placed.origin.y.0 - extra_top.0)),
+                                    left: Some(Px(placed.origin.x.0 - extra_left.0)),
+                                    ..Default::default()
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(Px(placed.size.width.0
+                                        + extra_left.0
+                                        + extra_right.0)),
+                                    height: Length::Px(Px(placed.size.height.0
+                                        + extra_top.0
+                                        + extra_bottom.0)),
+                                    ..Default::default()
+                                },
+                                overflow: Overflow::Visible,
                                 ..Default::default()
                             },
                             ..Default::default()
                         },
-                        ..Default::default()
-                    },
-                    move |_cx| vec![content],
-                );
+                        move |cx| {
+                            let content = cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle {
+                                        position: PositionStyle::Absolute,
+                                        inset: InsetStyle {
+                                            top: Some(extra_top),
+                                            left: Some(extra_left),
+                                            ..Default::default()
+                                        },
+                                        size: SizeStyle {
+                                            width: Length::Px(placed.size.width),
+                                            height: Length::Px(placed.size.height),
+                                            ..Default::default()
+                                        },
+                                        overflow: Overflow::Visible,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![content],
+                            );
+
+                            vec![arrow_el, content]
+                        },
+                    )
+                } else {
+                    cx.container(
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    top: Some(placed.origin.y),
+                                    left: Some(placed.origin.x),
+                                    ..Default::default()
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(placed.size.width),
+                                    height: Length::Px(placed.size.height),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        move |_cx| vec![content],
+                    )
+                };
 
                 vec![wrapper]
             });
@@ -279,7 +466,7 @@ impl TooltipTrigger {
         Self { child }
     }
 
-    pub fn into_element<H: UiHost>(self, _cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
 }
@@ -301,7 +488,7 @@ impl TooltipAnchor {
         self.child.id
     }
 
-    pub fn into_element<H: UiHost>(self, _cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
 }
@@ -323,7 +510,10 @@ impl TooltipContent {
         }
     }
 
-    pub fn text<H: UiHost>(cx: &mut ElementCx<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
+    pub fn text<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        text: impl Into<Arc<str>>,
+    ) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let text = text.into();
 
@@ -359,7 +549,7 @@ impl TooltipContent {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let base_layout = LayoutRefinement::default().flex_shrink_0();

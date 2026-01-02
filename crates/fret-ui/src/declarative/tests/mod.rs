@@ -4,7 +4,7 @@ use super::render_root;
 use crate::UiHost;
 use crate::action::{ActivateReason, DismissReason};
 use crate::element::{AnyElement, CrossAlign, Length, MainAlign, TextInputProps};
-use crate::elements::{ContinuousFrames, ElementCx};
+use crate::elements::{ContinuousFrames, ElementContext};
 use crate::test_host::TestHost;
 use crate::tree::UiTree;
 use crate::widget::Invalidation;
@@ -83,7 +83,7 @@ impl<H: UiHost> Widget<H> for FillStack {
 
 #[track_caller]
 fn build_keyed_rows(
-    cx: &mut ElementCx<'_, TestHost>,
+    cx: &mut ElementContext<'_, TestHost>,
     items: &[u64],
     ids: &mut Vec<(u64, crate::elements::GlobalElementId)>,
 ) -> Vec<crate::element::AnyElement> {

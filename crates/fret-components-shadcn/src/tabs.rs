@@ -13,7 +13,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableA11y, PressableProps,
     RovingFlexProps, RovingFocusProps, SemanticsProps, TextProps,
 };
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 fn tabs_gap(theme: &Theme) -> Px {
     theme
@@ -156,7 +156,7 @@ impl Tabs {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let model = self.model;
         let items = self.items;
         let tabs_disabled = self.disabled;
@@ -341,9 +341,9 @@ impl Tabs {
 }
 
 pub fn tabs<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
-    f: impl FnOnce(&mut ElementCx<'_, H>) -> Vec<TabsItem>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<TabsItem>,
 ) -> AnyElement {
     Tabs::new(model).items(f(cx)).into_element(cx)
 }

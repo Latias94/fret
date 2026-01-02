@@ -6,7 +6,7 @@ use fret_components_ui::{
 };
 use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, TextProps};
-use fret_ui::{ElementCx, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use fret_components_ui::declarative::stack;
 
@@ -29,13 +29,13 @@ impl Empty {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementCx<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         empty(cx, self.title, self.description)
     }
 }
 
 pub fn empty<H: UiHost>(
-    cx: &mut ElementCx<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     title: impl Into<Arc<str>>,
     description: Option<Arc<str>>,
 ) -> AnyElement {
