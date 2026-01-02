@@ -115,7 +115,7 @@ pub use item::{
 };
 pub use kbd::Kbd;
 pub use label::Label;
-pub use menubar::{Menubar, MenubarEntry, MenubarItem, MenubarMenu, menubar};
+pub use menubar::{Menubar, MenubarEntry, MenubarItem, MenubarMenu, MenubarMenuEntries, menubar};
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
     PaginationLinkSize, PaginationNext, PaginationPrevious,
