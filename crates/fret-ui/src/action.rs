@@ -72,6 +72,14 @@ pub trait UiActionHost {
     }
 }
 
+/// Extra runtime-provided operations available to non-pointer action hooks.
+///
+/// This is used by keyboard hooks and other global hooks that need to move focus as a policy
+/// decision (e.g. menu submenu focus transfer).
+pub trait UiFocusActionHost: UiActionHost {
+    fn request_focus(&mut self, target: crate::GlobalElementId);
+}
+
 pub trait UiActionHostExt: UiActionHost {
     fn read_weak_model<T: Any, R>(
         &mut self,
@@ -106,9 +114,8 @@ impl<T> UiActionHostExt for T where T: UiActionHost + ?Sized {}
 ///
 /// This is intentionally separate from `UiActionHost` because pointer capture and cursor updates
 /// are mediated by the UI runtime (`UiTree`), not by the app host (`UiHost`).
-pub trait UiPointerActionHost: UiActionHost {
+pub trait UiPointerActionHost: UiFocusActionHost {
     fn bounds(&self) -> fret_core::Rect;
-    fn request_focus(&mut self, target: crate::GlobalElementId);
     fn capture_pointer(&mut self);
     fn release_pointer_capture(&mut self);
     fn set_cursor_icon(&mut self, icon: CursorIcon);
@@ -181,7 +188,8 @@ pub(crate) struct PointerActionHooks {
     pub on_pointer_up: Option<OnPointerUp>,
 }
 
-pub type OnKeyDown = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, KeyDownCx) -> bool + 'static>;
+pub type OnKeyDown =
+    Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, KeyDownCx) -> bool + 'static>;
 
 #[derive(Default)]
 pub(crate) struct KeyActionHooks {

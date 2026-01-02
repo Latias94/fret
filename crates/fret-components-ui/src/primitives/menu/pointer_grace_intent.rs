@@ -103,12 +103,16 @@ pub fn drive_close_timer_on_pointer_move(
     close_timer: &Model<Option<TimerToken>>,
 ) -> bool {
     let Some(geometry) = geometry else {
-        let _ = host.models_mut().update(last_pointer, |v| *v = Some(mv.position));
+        let _ = host
+            .models_mut()
+            .update(last_pointer, |v| *v = Some(mv.position));
         return false;
     };
 
     let prev = host.models_mut().read(last_pointer, |v| *v).ok().flatten();
-    let _ = host.models_mut().update(last_pointer, |v| *v = Some(mv.position));
+    let _ = host
+        .models_mut()
+        .update(last_pointer, |v| *v = Some(mv.position));
 
     let safe = is_pointer_moving_to_submenu(prev, mv.position, geometry, config.buffer);
 
@@ -139,7 +143,11 @@ pub fn drive_close_timer_on_pointer_move(
     true
 }
 
-pub fn last_pointer_is_safe(pointer: Point, geometry: PointerGraceIntentGeometry, buffer: Px) -> bool {
+pub fn last_pointer_is_safe(
+    pointer: Point,
+    geometry: PointerGraceIntentGeometry,
+    buffer: Px,
+) -> bool {
     safe_hover_contains(pointer, geometry.reference, geometry.floating, buffer)
 }
 
@@ -184,4 +192,3 @@ mod tests {
         assert!(!is_pointer_moving_to_submenu(prev, next, geometry, Px(0.0)));
     }
 }
-

@@ -1,38 +1,58 @@
-use std::{collections::HashMap, path::PathBuf};
-
-use fret_core::{
-    ExternalDropDataEvent, ExternalDropFileData, ExternalDropReadError, ExternalDropToken,
-};
+#[cfg(not(target_arch = "wasm32"))]
+use fret_core::ExternalDropFileData;
+#[cfg(not(target_arch = "wasm32"))]
+use fret_core::ExternalDropReadError;
+use fret_core::{ExternalDropDataEvent, ExternalDropToken};
 use fret_platform::external_drop::{ExternalDropProvider, ExternalDropReadLimits};
 
+#[cfg(not(target_arch = "wasm32"))]
+use std::{collections::HashMap, path::PathBuf};
+
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug)]
-pub struct WinitExternalDrop {
+pub struct DesktopExternalDrop {
     next_token: u64,
     payloads: HashMap<ExternalDropToken, Vec<PathBuf>>,
 }
 
-impl WinitExternalDrop {
+#[cfg(target_arch = "wasm32")]
+#[derive(Debug)]
+pub struct DesktopExternalDrop;
+
+impl DesktopExternalDrop {
     pub fn new() -> Self {
-        Self {
-            next_token: 1,
-            payloads: HashMap::new(),
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            Self {
+                next_token: 1,
+                payloads: HashMap::new(),
+            }
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            Self
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn allocate_token(&mut self) -> ExternalDropToken {
         let token = ExternalDropToken(self.next_token);
         self.next_token = self.next_token.saturating_add(1);
         token
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn set_payload_paths(&mut self, token: ExternalDropToken, paths: Vec<PathBuf>) {
         self.payloads.insert(token, paths);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn paths(&self, token: ExternalDropToken) -> Option<&[PathBuf]> {
         self.payloads.get(&token).map(|v| v.as_slice())
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn read_paths(
         token: ExternalDropToken,
         paths: Vec<PathBuf>,
@@ -130,23 +150,41 @@ impl WinitExternalDrop {
     }
 }
 
-impl Default for WinitExternalDrop {
+impl Default for DesktopExternalDrop {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl ExternalDropProvider for WinitExternalDrop {
+impl ExternalDropProvider for DesktopExternalDrop {
     fn read_all(
         &mut self,
         token: ExternalDropToken,
         limits: ExternalDropReadLimits,
     ) -> Option<ExternalDropDataEvent> {
-        let paths = self.payloads.get(&token)?.clone();
-        Some(Self::read_paths(token, paths, limits))
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let paths = self.payloads.get(&token)?.clone();
+            Some(Self::read_paths(token, paths, limits))
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = token;
+            let _ = limits;
+            None
+        }
     }
 
     fn release(&mut self, token: ExternalDropToken) {
-        self.payloads.remove(&token);
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.payloads.remove(&token);
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = token;
+        }
     }
 }

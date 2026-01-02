@@ -1,7 +1,6 @@
-use fret_components_ui::declarative::scheduling;
 use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::headless::hover_intent::{HoverIntentConfig, HoverIntentState};
 use fret_components_ui::overlay;
+use fret_components_ui::primitives::hover_intent::{self, HoverIntentConfig};
 use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayRequest,
     Radius, Space,
@@ -189,7 +188,6 @@ impl HoverCard {
         let content_id = content.id;
         let anchor_id = self.anchor_override.unwrap_or(trigger_id);
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
-            let frame = cx.app.frame_id();
             let hover_card_id = cx.root_id();
 
             let overlay_hovered =
@@ -199,11 +197,7 @@ impl HoverCard {
             let hovered = hovered || overlay_hovered;
 
             let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
-            let update = cx.with_state(HoverIntentState::default, |state| {
-                state.update(hovered, frame.0, cfg)
-            });
-
-            scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
+            let update = hover_intent::drive(cx, hovered, cfg);
 
             let out = vec![trigger];
             if !update.open {

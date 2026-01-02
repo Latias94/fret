@@ -1,26 +1,48 @@
-use std::{collections::HashMap, path::PathBuf};
-
-use fret_core::{
-    ExternalDragFile, ExternalDropFileData, ExternalDropReadError, FileDialogDataEvent,
-    FileDialogOptions, FileDialogSelection, FileDialogToken,
-};
+#[cfg(not(target_arch = "wasm32"))]
+use fret_core::{ExternalDragFile, ExternalDropFileData, ExternalDropReadError};
+use fret_core::{FileDialogDataEvent, FileDialogOptions, FileDialogSelection, FileDialogToken};
 use fret_platform::external_drop::ExternalDropReadLimits;
 use fret_platform::file_dialog::{FileDialogError, FileDialogProvider};
 
+#[cfg(not(target_arch = "wasm32"))]
+use std::{collections::HashMap, path::PathBuf};
+
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug)]
-pub struct WinitFileDialog {
+pub struct DesktopFileDialog {
     next_token: u64,
     selections: HashMap<FileDialogToken, Vec<PathBuf>>,
 }
 
-impl WinitFileDialog {
+#[cfg(target_arch = "wasm32")]
+#[derive(Debug)]
+pub struct DesktopFileDialog;
+
+impl DesktopFileDialog {
     pub fn new() -> Self {
-        Self {
-            next_token: 1,
-            selections: HashMap::new(),
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            Self {
+                next_token: 1,
+                selections: HashMap::new(),
+            }
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            Self
         }
     }
+}
 
+impl Default for DesktopFileDialog {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl DesktopFileDialog {
     fn allocate_token(&mut self) -> FileDialogToken {
         let token = FileDialogToken(self.next_token);
         self.next_token = self.next_token.saturating_add(1);
@@ -128,51 +150,56 @@ impl WinitFileDialog {
     }
 }
 
-impl Default for WinitFileDialog {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl FileDialogProvider for WinitFileDialog {
+impl FileDialogProvider for DesktopFileDialog {
     fn open_files(
         &mut self,
         options: &FileDialogOptions,
     ) -> Result<Option<FileDialogSelection>, FileDialogError> {
-        let mut dialog = rfd::FileDialog::new();
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let mut dialog = rfd::FileDialog::new();
 
-        if let Some(title) = &options.title {
-            dialog = dialog.set_title(title);
+            if let Some(title) = &options.title {
+                dialog = dialog.set_title(title);
+            }
+
+            for filter in &options.filters {
+                dialog = dialog.add_filter(&filter.name, &filter.extensions);
+            }
+
+            let selected: Option<Vec<PathBuf>> = if options.multiple {
+                dialog.pick_files()
+            } else {
+                dialog.pick_file().map(|p| vec![p])
+            };
+
+            let Some(paths) = selected else {
+                return Ok(None);
+            };
+
+            let token = self.allocate_token();
+            let files = paths
+                .iter()
+                .map(|path| ExternalDragFile {
+                    name: path
+                        .file_name()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_else(|| path.to_string_lossy().to_string()),
+                })
+                .collect::<Vec<_>>();
+
+            self.selections.insert(token, paths);
+
+            Ok(Some(FileDialogSelection { token, files }))
         }
 
-        for filter in &options.filters {
-            dialog = dialog.add_filter(&filter.name, &filter.extensions);
-        }
-
-        let selected: Option<Vec<PathBuf>> = if options.multiple {
-            dialog.pick_files()
-        } else {
-            dialog.pick_file().map(|p| vec![p])
-        };
-
-        let Some(paths) = selected else {
-            return Ok(None);
-        };
-
-        let token = self.allocate_token();
-        let files = paths
-            .iter()
-            .map(|path| ExternalDragFile {
-                name: path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_else(|| path.to_string_lossy().to_string()),
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = options;
+            Err(FileDialogError {
+                kind: fret_platform::file_dialog::FileDialogErrorKind::Unsupported,
             })
-            .collect::<Vec<_>>();
-
-        self.selections.insert(token, paths);
-
-        Ok(Some(FileDialogSelection { token, files }))
+        }
     }
 
     fn read_all(
@@ -180,11 +207,29 @@ impl FileDialogProvider for WinitFileDialog {
         token: FileDialogToken,
         limits: ExternalDropReadLimits,
     ) -> Option<FileDialogDataEvent> {
-        let paths = self.selections.get(&token)?.clone();
-        Some(Self::read_paths(token, paths, limits))
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let paths = self.selections.get(&token)?.clone();
+            Some(Self::read_paths(token, paths, limits))
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = token;
+            let _ = limits;
+            None
+        }
     }
 
     fn release(&mut self, token: FileDialogToken) {
-        self.selections.remove(&token);
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.selections.remove(&token);
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = token;
+        }
     }
 }

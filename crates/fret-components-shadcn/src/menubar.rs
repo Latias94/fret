@@ -6,6 +6,7 @@ use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::overlay;
+use fret_components_ui::primitives::roving_focus_group;
 use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
@@ -155,7 +156,8 @@ impl Menubar {
                             corner_radii: Corners::all(radius),
                         },
                         move |cx| {
-                            vec![cx.roving_flex(
+                            vec![roving_focus_group::roving_focus_group_apg(
+                                cx,
                                 RovingFlexProps {
                                     flex: FlexProps {
                                         layout: LayoutStyle::default(),
@@ -172,15 +174,11 @@ impl Menubar {
                                         disabled: trigger_disabled.clone(),
                                     },
                                 },
-                                move |cx| {
-                                    cx.roving_nav_apg();
-                                    cx.roving_typeahead_prefix_arc_str(
-                                        trigger_labels.clone(),
-                                        typeahead_timeout_ticks,
-                                    );
-
-                                    menus.into_iter().map(|m| m.into_element(cx)).collect()
+                                roving_focus_group::TypeaheadPolicy::Prefix {
+                                    labels: trigger_labels.clone(),
+                                    timeout_ticks: typeahead_timeout_ticks,
                                 },
+                                move |cx| menus.into_iter().map(|m| m.into_element(cx)).collect(),
                             )]
                         },
                     )]
@@ -523,7 +521,8 @@ impl MenubarMenuEntries {
                                         corner_radii: Corners::all(theme.metrics.radius_sm),
                                     },
                                     move |cx| {
-                                        vec![cx.roving_flex(
+                                        vec![roving_focus_group::roving_focus_group_apg(
+                                            cx,
                                             RovingFlexProps {
                                                 flex: FlexProps {
                                                     layout: LayoutStyle::default(),
@@ -536,13 +535,11 @@ impl MenubarMenuEntries {
                                                 },
                                                 roving,
                                             },
+                                            roving_focus_group::TypeaheadPolicy::Prefix {
+                                                labels: labels_arc.clone(),
+                                                timeout_ticks: typeahead_timeout_ticks,
+                                            },
                                             move |cx| {
-                                                cx.roving_nav_apg();
-                                                cx.roving_typeahead_prefix_arc_str(
-                                                    labels_arc.clone(),
-                                                    typeahead_timeout_ticks,
-                                                );
-
                                                 let mut out: Vec<AnyElement> =
                                                     Vec::with_capacity(entries.len());
 

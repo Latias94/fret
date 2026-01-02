@@ -5,8 +5,9 @@ use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::headless::safe_hover::safe_hover_contains;
 use fret_components_ui::overlay;
+use fret_components_ui::primitives::dismissable_layer;
+use fret_components_ui::primitives::menu;
 use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
     Edges, FontId, FontWeight, KeyCode, Point, Px, Rect, SemanticsRole, Size, TextOverflow,
@@ -15,8 +16,8 @@ use fret_core::{
 use fret_runtime::{CommandId, Effect, Model, TimerToken};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps, RovingFlexProps,
-    RovingFocusProps, ScrollAxis, ScrollProps, SemanticsProps, SizeStyle, TextProps,
+    Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
+    ScrollAxis, ScrollProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -349,11 +350,12 @@ impl DropdownMenu {
                 let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
                 let min_width = self.min_width;
 
-                let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
+                let (overlay_children, dismissible_on_pointer_move) =
+                    cx.with_root_name(&overlay_root_name, move |cx| {
                     let theme = &theme;
                     let anchor = overlay::anchor_bounds_for_element(cx, trigger_id);
                     let Some(anchor) = anchor else {
-                        return Vec::new();
+                        return (Vec::new(), None);
                     };
 
                     let mut flat: Vec<DropdownMenuEntry> = Vec::new();
@@ -1200,78 +1202,37 @@ impl DropdownMenu {
                         },
                     );
 
-                    let pointer_layout = LayoutStyle {
-                        position: PositionStyle::Absolute,
-                        inset: InsetStyle {
-                            top: Some(Px(0.0)),
-                            right: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
-                            left: Some(Px(0.0)),
-                        },
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    };
+                    let last_pointer_for_hook = submenu_last_pointer.clone();
+                    let geometry_for_hook = submenu_geometry.clone();
+                    let close_timer_for_hook = submenu_close_timer.clone();
+                    let dismissible_on_pointer_move =
+                        dismissable_layer::pointer_move_handler(move |host, acx, mv| {
+                            let geometry = host
+                                .models_mut()
+                                .read(&geometry_for_hook, |v| *v)
+                                .ok()
+                                .flatten();
 
-                    let content = cx.pointer_region(
-                        PointerRegionProps {
-                            layout: pointer_layout,
-                            enabled: true,
-                        },
-                        move |cx| {
-                            let last_pointer_for_hook = submenu_last_pointer.clone();
-                            let geometry_for_hook = submenu_geometry.clone();
-                            let close_timer_for_hook = submenu_close_timer.clone();
-                            cx.pointer_region_on_pointer_move(Arc::new(move |host, acx, mv| {
-                                let _ = host.models_mut().update(&last_pointer_for_hook, |v| {
-                                    *v = Some(mv.position);
-                                });
-                                let geometry = host
-                                    .models_mut()
-                                    .read(&geometry_for_hook, |v| *v)
-                                    .ok()
-                                    .flatten();
-                                if let Some(geometry) = geometry {
-                                    let safe = safe_hover_contains(
-                                        mv.position,
-                                        geometry.reference,
-                                        geometry.floating,
-                                        SUBMENU_SAFE_HOVER_BUFFER,
-                                    );
+                            let grace = geometry.map(|g| menu::pointer_grace_intent::PointerGraceIntentGeometry {
+                                reference: g.reference,
+                                floating: g.floating,
+                            });
+                            let _ = menu::pointer_grace_intent::drive_close_timer_on_pointer_move(
+                                host,
+                                acx,
+                                mv,
+                                grace,
+                                menu::pointer_grace_intent::PointerGraceIntentConfig::new(
+                                    SUBMENU_SAFE_HOVER_BUFFER,
+                                    SUBMENU_CLOSE_DELAY,
+                                ),
+                                &last_pointer_for_hook,
+                                &close_timer_for_hook,
+                            );
+                            false
+                        });
 
-                                    let pending = host
-                                        .models_mut()
-                                        .read(&close_timer_for_hook, |v| *v)
-                                        .ok()
-                                        .flatten();
-                                    if safe {
-                                        if let Some(token) = pending {
-                                            host.push_effect(Effect::CancelTimer { token });
-                                            let _ = host
-                                                .models_mut()
-                                                .update(&close_timer_for_hook, |v| *v = None);
-                                        }
-                                    } else if pending.is_none() {
-                                        let token = host.next_timer_token();
-                                        host.push_effect(Effect::SetTimer {
-                                            window: Some(acx.window),
-                                            token,
-                                            after: SUBMENU_CLOSE_DELAY,
-                                            repeat: None,
-                                        });
-                                        let _ = host
-                                            .models_mut()
-                                            .update(&close_timer_for_hook, |v| *v = Some(token));
-                                    }
-                                }
-                                host.request_redraw(acx.window);
-                                false
-                            }));
-
-                            let mut children = vec![content];
+                    let mut children = vec![content];
 
                             let open_value = cx
                                 .app
@@ -1618,11 +1579,7 @@ impl DropdownMenu {
                                 }
                             }
 
-                            children
-                        },
-                    );
-
-                    vec![content]
+                    (children, Some(dismissible_on_pointer_move))
                 });
 
                 let mut request = OverlayRequest::dismissible_popover(
@@ -1632,6 +1589,7 @@ impl DropdownMenu {
                     OverlayPresence::instant(true),
                     overlay_children,
                 );
+                request.dismissible_on_pointer_move = dismissible_on_pointer_move;
                 request.root_name = Some(overlay_root_name);
                 OverlayController::request(cx, request);
             }

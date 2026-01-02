@@ -41,11 +41,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
         }
     }
 
-    impl<H: UiHost> action::UiPointerActionHost for PointerHookHost<'_, H> {
-        fn bounds(&self) -> Rect {
-            self.bounds
-        }
-
+    impl<H: UiHost> action::UiFocusActionHost for PointerHookHost<'_, H> {
         fn request_focus(&mut self, target: crate::GlobalElementId) {
             let Some(node) =
                 crate::elements::with_window_state(&mut *self.app, self.window, |window_state| {
@@ -55,6 +51,12 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 return;
             };
             *self.requested_focus = Some(node);
+        }
+    }
+
+    impl<H: UiHost> action::UiPointerActionHost for PointerHookHost<'_, H> {
+        fn bounds(&self) -> Rect {
+            self.bounds
         }
 
         fn capture_pointer(&mut self) {
