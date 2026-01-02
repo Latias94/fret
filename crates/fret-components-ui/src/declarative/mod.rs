@@ -13,6 +13,7 @@ pub mod stack;
 pub mod style;
 pub mod text;
 pub mod tree;
+pub mod visually_hidden;
 
 pub use model_watch::ModelWatchExt;
 

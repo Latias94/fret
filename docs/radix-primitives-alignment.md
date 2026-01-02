@@ -30,10 +30,12 @@ Radix “primitives” span both mechanism and policy in a web/React setting. In
 | --- | --- | --- | --- | --- |
 | Portal | Render outside normal tree; avoid clipping | Multi-root overlays substrate (ADR 0011) | `OverlayController` + per-window orchestration | Fret uses per-window overlay roots, not DOM portals |
 | Presence | Animate mount/unmount | (n/a) | `fret-components-ui::headless::presence::FadePresence` | Component-level helper (time-source agnostic) |
+| VisuallyHidden | Keep content in a11y tree, not visually rendered | `fret-ui::element::Semantics` (paint transparent) | `fret-components-ui::primitives::visually_hidden` | Useful for screen-reader-only labels and hidden descriptions |
 | DismissableLayer | Escape / outside press dismissal hooks | Outside-press observer pass (ADR 0069) + key routing | `fret-components-ui::primitives::dismissable_layer` + overlay policies | Policy decides what to do on dismiss request |
 | FocusScope | Contain focus traversal | `fret-ui::element::FocusScope` (ADR 0068) | `fret-components-ui::headless::focus_scope::focus_trap` | Trap semantics are policy-level composition |
 | RovingFocus | Arrow-key item focus without tab stops | Runtime tracks focusability + pressable focus | `headless::{menu_nav, roving_focus, typeahead}` | Ensure items are not necessarily Tab stops |
-| Popper / placement | Anchored placement, flip/shift/size/offset/arrow | `fret-ui::overlay_placement` (ADR 0064) | `fret-components-ui::overlay::*` helpers | Arrow positioning is a known parity gap in several audits |
+| Popper / placement | Anchored placement, flip/shift/size/offset/arrow | `fret-ui::overlay_placement` (ADR 0064) | `fret-components-ui::overlay::*` helpers | Arrow positioning is supported; visuals live in components/recipes |
+| Arrow | Render a positioned arrow pointing at an anchor | `fret-ui::overlay_placement::ArrowLayout` | `fret-components-ui::primitives::popper` helpers | Visual styling (diamond/border) lives in shadcn recipes |
 | Collection semantics | “Item X of Y”, roles, disabled skipping | Semantics snapshot (ADR 0033) | `fret-components-ui` declarative stamping helpers | Collection metadata is required for menus/lists |
 | Active descendant | Highlight moves while focus stays in input | Semantics schema + snapshot + AccessKit mapping (ADR 0073) | `fret-components-ui::headless::cmdk_selection` + component wiring | Highest-leverage a11y closure item |
 
@@ -58,5 +60,5 @@ Radix “primitives” span both mechanism and policy in a web/React setting. In
 ## Current gaps worth tracking (from audits)
 
 - (Done) Popper + Arrow primitive wiring: `fret-components-ui::primitives::popper` (layout + wrapper insets helpers).
-- DropdownMenu submenu ergonomics: intent heuristics + focus transfer closure.
+- DropdownMenu submenu ergonomics: safe-hover close corridor now wired via `DismissibleLayer` pointer-move observers; remaining: intent heuristics + focus transfer closure.
 - (Done) cmdk-style filtering/scoring headless primitive: `fret-components-ui::headless::cmdk_score`.

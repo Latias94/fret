@@ -8,3 +8,4 @@
 
 pub mod dismissable_layer;
 pub mod popper;
+pub mod visually_hidden;
