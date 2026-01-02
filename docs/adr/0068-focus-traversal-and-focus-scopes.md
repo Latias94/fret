@@ -24,9 +24,16 @@ Known gaps / follow-ups:
      component-owned focus scopes, but `fret-components-ui` does not yet ship a headless
      `FocusScope` policy wrapper that can trap/restore/initial-focus like Radix.
 
-2) **No scroll-into-view contract**
-   - The conservative “intersect scope bounds” filter is implemented, but we still do not have a
-     stable `scroll-into-view` mechanism to make offscreen focus targets visible.
+2) **Scroll-into-view is implemented, but still needs contract polishing**
+   - The runtime now attempts to scroll a newly focused node into view by walking ancestors and
+     calling `Widget::scroll_descendant_into_view` on the first scroll-capable widget.
+     - Runtime entry point: `UiTree::scroll_node_into_view` (`crates/fret-ui/src/tree/commands.rs`)
+     - Widget contract: `can_scroll_descendant_into_view` / `scroll_descendant_into_view`
+       (`crates/fret-ui/src/widget.rs`)
+     - Default declarative implementation (Scroll / VirtualList): `crates/fret-ui/src/declarative/host_widget.rs`
+     - Regression test: `crates/fret-ui/src/tree/tests/scroll_into_view.rs`
+   - Remaining work: clarify axis behavior, nested scroll priority rules, and interactions with
+     overlays/modality so components can rely on a crisp “focus implies visibility” baseline.
 
 ## Context
 
