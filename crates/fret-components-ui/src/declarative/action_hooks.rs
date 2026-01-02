@@ -1,12 +1,9 @@
 use fret_runtime::{CommandId, Model, WeakModel};
 use fret_ui::ElementContext;
 use fret_ui::UiHost;
-use fret_ui::action::RovingNavigateResult;
-use fret_ui::action::RovingTypeaheadCx;
 use fret_ui::action::UiActionHostExt;
 
-use crate::headless::roving_focus;
-use crate::headless::typeahead::{TypeaheadBuffer, match_prefix_arc_str};
+use crate::primitives::roving_focus_group;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -309,160 +306,14 @@ impl<H: UiHost> ActionHooksExt for ElementContext<'_, H> {
     }
 
     fn roving_typeahead_first_char_arc_str(&mut self, labels: Arc<[Arc<str>]>) {
-        struct RovingTypeaheadFirstCharArcStrState {
-            labels: Rc<RefCell<Arc<[Arc<str>]>>>,
-            handler: fret_ui::action::OnRovingTypeahead,
-        }
-
-        let handler = self.with_state(
-            || {
-                let labels_cell: Rc<RefCell<Arc<[Arc<str>]>>> =
-                    Rc::new(RefCell::new(labels.clone()));
-                let labels_read = labels_cell.clone();
-                let handler: fret_ui::action::OnRovingTypeahead = Arc::new(
-                    move |_host: &mut dyn fret_ui::action::UiActionHost,
-                          _cx,
-                          it: RovingTypeaheadCx| {
-                        let labels = labels_read.borrow();
-                        let is_disabled =
-                            |idx: usize| it.disabled.get(idx).copied().unwrap_or(false);
-                        let matches = |idx: usize| -> bool {
-                            if is_disabled(idx) {
-                                return false;
-                            }
-                            let Some(label) = labels.get(idx) else {
-                                return false;
-                            };
-                            let label = label.as_ref().trim_start();
-                            let Some(first) = label.chars().next() else {
-                                return false;
-                            };
-                            first.to_ascii_lowercase() == it.input
-                        };
-
-                        let start = it.current.map(|i| i.saturating_add(1)).unwrap_or(0);
-                        if it.wrap {
-                            for offset in 0..it.len {
-                                let idx = (start + offset) % it.len;
-                                if matches(idx) {
-                                    return Some(idx);
-                                }
-                            }
-                            None
-                        } else {
-                            (start..it.len).find(|&idx| matches(idx))
-                        }
-                    },
-                );
-
-                RovingTypeaheadFirstCharArcStrState {
-                    labels: labels_cell,
-                    handler,
-                }
-            },
-            |state| {
-                *state.labels.borrow_mut() = labels.clone();
-                state.handler.clone()
-            },
-        );
-
-        self.roving_add_on_typeahead(handler);
+        roving_focus_group::typeahead_first_char_arc_str(self, labels);
     }
 
     fn roving_typeahead_prefix_arc_str(&mut self, labels: Arc<[Arc<str>]>, timeout_ticks: u64) {
-        struct RovingTypeaheadPrefixArcStrState {
-            timeout_ticks: u64,
-            labels: Rc<RefCell<Arc<[Arc<str>]>>>,
-            handler: fret_ui::action::OnRovingTypeahead,
-        }
-
-        fn make_state(
-            labels: Arc<[Arc<str>]>,
-            timeout_ticks: u64,
-        ) -> RovingTypeaheadPrefixArcStrState {
-            let labels_cell: Rc<RefCell<Arc<[Arc<str>]>>> = Rc::new(RefCell::new(labels));
-            let buffer: Rc<RefCell<TypeaheadBuffer>> =
-                Rc::new(RefCell::new(TypeaheadBuffer::new(timeout_ticks)));
-
-            let labels_read = labels_cell.clone();
-            let buffer_read = buffer.clone();
-
-            #[allow(clippy::arc_with_non_send_sync)]
-            let handler: fret_ui::action::OnRovingTypeahead = Arc::new(
-                move |_host: &mut dyn fret_ui::action::UiActionHost, _cx, it: RovingTypeaheadCx| {
-                    let mut buf = buffer_read.borrow_mut();
-                    buf.push_char(it.input, it.tick);
-                    let query = buf.query(it.tick)?;
-
-                    let labels = labels_read.borrow();
-                    match_prefix_arc_str(
-                        labels.as_ref(),
-                        it.disabled.as_ref(),
-                        query,
-                        it.current,
-                        it.wrap,
-                    )
-                },
-            );
-
-            RovingTypeaheadPrefixArcStrState {
-                timeout_ticks,
-                labels: labels_cell,
-                handler,
-            }
-        }
-
-        let handler = self.with_state(
-            || make_state(labels.clone(), timeout_ticks),
-            |state| {
-                if state.timeout_ticks != timeout_ticks {
-                    *state = make_state(labels.clone(), timeout_ticks);
-                }
-                *state.labels.borrow_mut() = labels.clone();
-                state.handler.clone()
-            },
-        );
-
-        self.roving_add_on_typeahead(handler);
+        roving_focus_group::typeahead_prefix_arc_str(self, labels, timeout_ticks);
     }
 
     fn roving_nav_apg(&mut self) {
-        self.roving_add_on_navigate(Arc::new(|_host, _cx, it| {
-            use fret_core::KeyCode;
-
-            match it.key {
-                KeyCode::Home => {
-                    return RovingNavigateResult::Handled {
-                        target: roving_focus::first_enabled(&it.disabled),
-                    };
-                }
-                KeyCode::End => {
-                    return RovingNavigateResult::Handled {
-                        target: roving_focus::last_enabled(&it.disabled),
-                    };
-                }
-                _ => {}
-            }
-
-            let Some(current) = it.current else {
-                return RovingNavigateResult::NotHandled;
-            };
-
-            let forward = match (it.axis, it.key) {
-                (fret_core::Axis::Vertical, KeyCode::ArrowDown) => Some(true),
-                (fret_core::Axis::Vertical, KeyCode::ArrowUp) => Some(false),
-                (fret_core::Axis::Horizontal, KeyCode::ArrowRight) => Some(true),
-                (fret_core::Axis::Horizontal, KeyCode::ArrowLeft) => Some(false),
-                _ => None,
-            };
-
-            let Some(forward) = forward else {
-                return RovingNavigateResult::NotHandled;
-            };
-
-            RovingNavigateResult::Handled {
-                target: roving_focus::next_enabled(&it.disabled, current, forward, it.wrap),
-            }
-        }));
+        roving_focus_group::nav_apg(self);
     }
 }

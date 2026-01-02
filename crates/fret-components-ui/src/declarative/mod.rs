@@ -3,6 +3,7 @@ pub mod chrome;
 pub mod collection_semantics;
 pub mod dismissible;
 pub mod focus_scope;
+pub mod hover_intent;
 pub mod list;
 pub mod model_watch;
 pub mod prelude;

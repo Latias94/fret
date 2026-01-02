@@ -5,8 +5,8 @@ use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost, UiTree};
 
-use crate::declarative::presence::fade_presence;
 use crate::headless::presence::PresenceOutput;
+use crate::primitives::presence;
 use crate::window_overlays;
 
 /// Presence state for an overlay root (mount/paint vs interactive).
@@ -347,7 +347,7 @@ impl OverlayController {
         open: bool,
         fade_ticks: u64,
     ) -> PresenceOutput {
-        fade_presence(cx, open, fade_ticks)
+        presence::fade_presence(cx, open, fade_ticks)
     }
 
     pub fn toast_store<H: UiHost>(app: &mut H) -> Model<window_overlays::ToastStore> {

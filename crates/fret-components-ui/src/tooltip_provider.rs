@@ -155,4 +155,3 @@ pub fn note_closed<H: UiHost>(cx: &mut ElementContext<'_, H>, now: u64) {
             svc.current_state_mut().delay_group.note_closed(now);
         });
 }
-
