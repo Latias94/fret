@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
+use fret_components_ui::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{
@@ -9,8 +10,7 @@ use fret_components_ui::{
 use fret_core::{Color, Edges, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableA11y, PressableProps,
-    TextProps,
+    AnyElement, CrossAlign, FlexProps, MainAlign, PressableA11y, PressableProps, TextProps,
 };
 use fret_ui::{ElementCx, Theme, UiHost};
 
@@ -192,7 +192,6 @@ impl Toggle {
         let layout = self.layout;
 
         let theme = Theme::global(&*cx.app).clone();
-        let on_now = cx.watch_model(&model).copied().unwrap_or(false);
 
         let radius = size.control_radius(&theme);
         let ring = decl_style::focus_ring(&theme, radius);
@@ -235,8 +234,54 @@ impl Toggle {
         }
         .merge(chrome);
 
-        cx.pressable(
-            PressableProps {
+        control_chrome_pressable_with_id_props(cx, move |cx, state, _id| {
+            cx.pressable_dispatch_command_opt(on_click);
+            cx.pressable_toggle_bool(&model);
+
+            let on = cx.watch_model(&model).copied().unwrap_or(false);
+            let hovered = state.hovered && !state.pressed;
+            let pressed = state.pressed;
+
+            let mut fg = if disabled {
+                fg_disabled
+            } else if on {
+                fg_on
+            } else if hovered {
+                fg_muted
+            } else {
+                fg_default
+            };
+
+            let mut bg = if on && !disabled {
+                Some(bg_on)
+            } else if hovered && !disabled {
+                Some(bg_hover)
+            } else {
+                None
+            };
+
+            if pressed && !disabled {
+                fg = toggle_fg_muted(&theme);
+                bg = Some(bg_hover);
+            }
+
+            let mut chrome_props = decl_style::container_props(
+                &theme,
+                base_chrome.clone(),
+                LayoutRefinement::default(),
+            );
+            chrome_props.padding = Edges {
+                top: pad_y,
+                right: pad_x,
+                bottom: pad_y,
+                left: pad_x,
+            };
+            if bg.is_some() {
+                chrome_props.background = bg;
+            }
+            chrome_props.layout.size = pressable_layout.size;
+
+            let pressable_props = PressableProps {
                 layout: pressable_layout,
                 enabled: !disabled,
                 focusable: true,
@@ -244,98 +289,43 @@ impl Toggle {
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::Button),
                     label: a11y_label,
-                    selected: on_now,
+                    selected: on,
                     ..Default::default()
                 },
                 ..Default::default()
-            },
-            move |cx, state| {
-                cx.pressable_dispatch_command_opt(on_click);
-                cx.pressable_toggle_bool(&model);
+            };
 
-                let on = cx.watch_model(&model).copied().unwrap_or(false);
-                let hovered = state.hovered && !state.pressed;
-                let pressed = state.pressed;
-
-                let mut fg = if disabled {
-                    fg_disabled
-                } else if on {
-                    fg_on
-                } else if hovered {
-                    fg_muted
-                } else {
-                    fg_default
-                };
-
-                let mut bg = if on && !disabled {
-                    Some(bg_on)
-                } else if hovered && !disabled {
-                    Some(bg_hover)
-                } else {
-                    None
-                };
-
-                if pressed && !disabled {
-                    fg = toggle_fg_muted(&theme);
-                    bg = Some(bg_hover);
-                }
-
-                let mut props = decl_style::container_props(
-                    &theme,
-                    base_chrome.clone(),
-                    LayoutRefinement::default(),
-                );
-                props.padding = Edges {
-                    top: pad_y,
-                    right: pad_x,
-                    bottom: pad_y,
-                    left: pad_x,
-                };
-                if bg.is_some() {
-                    props.background = bg;
-                }
-
-                vec![cx.container(
-                    ContainerProps {
-                        padding: props.padding,
-                        background: props.background,
-                        shadow: props.shadow,
-                        border: props.border,
-                        border_color: props.border_color,
-                        corner_radii: props.corner_radii,
+            let content_children = move |cx: &mut ElementCx<'_, H>| {
+                vec![cx.flex(
+                    FlexProps {
+                        direction: fret_core::Axis::Horizontal,
+                        gap: MetricRef::space(Space::N2).resolve(&theme),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Center,
+                        align: CrossAlign::Center,
+                        wrap: false,
                         ..Default::default()
                     },
-                    move |cx| {
-                        vec![cx.flex(
-                            FlexProps {
-                                direction: fret_core::Axis::Horizontal,
-                                gap: MetricRef::space(Space::N2).resolve(&theme),
-                                padding: Edges::all(Px(0.0)),
-                                justify: MainAlign::Center,
-                                align: CrossAlign::Center,
-                                wrap: false,
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                let mut out = Vec::new();
-                                out.extend(children);
-                                if let Some(label) = label {
-                                    out.push(cx.text_props(TextProps {
-                                        layout: Default::default(),
-                                        text: label,
-                                        style: Some(text_style),
-                                        color: Some(fg),
-                                        wrap: TextWrap::None,
-                                        overflow: TextOverflow::Clip,
-                                    }));
-                                }
-                                out
-                            },
-                        )]
+                    move |cx: &mut ElementCx<'_, H>| {
+                        let mut out = Vec::new();
+                        out.extend(children);
+                        if let Some(label) = label {
+                            out.push(cx.text_props(TextProps {
+                                layout: Default::default(),
+                                text: label,
+                                style: Some(text_style),
+                                color: Some(fg),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Clip,
+                            }));
+                        }
+                        out
                     },
                 )]
-            },
-        )
+            };
+
+            (pressable_props, chrome_props, content_children)
+        })
     }
 }
 

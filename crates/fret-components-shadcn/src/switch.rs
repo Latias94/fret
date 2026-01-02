@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
+use fret_components_ui::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
@@ -110,7 +111,6 @@ impl Switch {
             let model = self.model;
 
             let theme = Theme::global(&*cx.app).clone();
-            let on = cx.watch_model(&model).copied().unwrap_or(false);
 
             let w = switch_track_w(&theme);
             let h = switch_track_h(&theme);
@@ -123,7 +123,6 @@ impl Switch {
             let layout = LayoutRefinement::default()
                 .w_px(MetricRef::Px(w))
                 .h_px(MetricRef::Px(h))
-                .overflow_hidden()
                 .merge(self.layout);
             let pressable_layout = decl_style::layout_style(&theme, layout);
 
@@ -132,8 +131,35 @@ impl Switch {
             let on_click = self.on_click.clone();
             let chrome = self.chrome.clone();
 
-            let pressable = cx.pressable(
-                PressableProps {
+            let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
+                cx.pressable_dispatch_command_opt(on_click);
+                cx.pressable_toggle_bool(&model);
+
+                let theme = Theme::global(&*cx.app).clone();
+                let on = cx.watch_model(&model).copied().unwrap_or(false);
+
+                let mut bg = if on {
+                    switch_bg_on(&theme)
+                } else {
+                    switch_bg_off(&theme)
+                };
+                let hovered = st.hovered && !disabled;
+                if hovered {
+                    bg = alpha_mul(bg, if on { 0.9 } else { 0.7 });
+                }
+
+                let mut chrome_props = decl_style::container_props(
+                    &theme,
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(bg))
+                        .rounded(Radius::Full)
+                        .merge(chrome.clone()),
+                    LayoutRefinement::default(),
+                );
+                chrome_props.corner_radii = Corners::all(radius);
+                chrome_props.layout.size = pressable_layout.size;
+
+                let pressable_props = PressableProps {
                     layout: pressable_layout,
                     enabled: !disabled,
                     focusable: true,
@@ -145,34 +171,9 @@ impl Switch {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
-                move |cx, st| {
-                    cx.pressable_dispatch_command_opt(on_click);
-                    cx.pressable_toggle_bool(&model);
+                };
 
-                    let theme = Theme::global(&*cx.app).clone();
-                    let on = cx.watch_model(&model).copied().unwrap_or(false);
-
-                    let mut bg = if on {
-                        switch_bg_on(&theme)
-                    } else {
-                        switch_bg_off(&theme)
-                    };
-                    let hovered = st.hovered && !disabled;
-                    if hovered {
-                        bg = alpha_mul(bg, if on { 0.9 } else { 0.7 });
-                    }
-
-                    let mut track_props = decl_style::container_props(
-                        &theme,
-                        ChromeRefinement::default()
-                            .bg(ColorRef::Color(bg))
-                            .rounded(Radius::Full)
-                            .merge(chrome.clone()),
-                        LayoutRefinement::default(),
-                    );
-                    track_props.corner_radii = Corners::all(radius);
-
+                let children = move |cx: &mut ElementCx<'_, H>| {
                     let x = if on {
                         Px((w.0 - pad.0 - thumb.0).max(0.0))
                     } else {
@@ -205,11 +206,11 @@ impl Switch {
                         corner_radii: Corners::all(Px((thumb.0 * 0.5).max(0.0))),
                     };
 
-                    vec![cx.container(track_props, move |cx| {
-                        vec![cx.container(thumb_props, |_cx| Vec::new())]
-                    })]
-                },
-            );
+                    vec![cx.container(thumb_props, |_cx| Vec::new())]
+                };
+
+                (pressable_props, chrome_props, children)
+            });
 
             if disabled {
                 cx.opacity(0.5, |_cx| vec![pressable])

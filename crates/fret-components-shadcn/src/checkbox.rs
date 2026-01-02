@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret_components_icons::ids;
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
+use fret_components_ui::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_components_ui::declarative::icon as decl_icon;
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
@@ -9,8 +10,8 @@ use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef
 use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps,
+    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableA11y,
+    PressableProps,
 };
 use fret_ui::{ElementCx, Theme, UiHost};
 
@@ -101,7 +102,6 @@ impl Checkbox {
             let model = self.model;
 
             let theme = Theme::global(&*cx.app).clone();
-            let checked = cx.watch_model(&model).copied().unwrap_or(false);
 
             let size = checkbox_size(&theme);
             let radius = checkbox_radius(&theme);
@@ -112,7 +112,6 @@ impl Checkbox {
             let layout = LayoutRefinement::default()
                 .w_px(MetricRef::Px(size))
                 .h_px(MetricRef::Px(size))
-                .overflow_hidden()
                 .merge(self.layout);
             let pressable_layout = decl_style::layout_style(&theme, layout);
 
@@ -121,8 +120,41 @@ impl Checkbox {
             let on_click = self.on_click.clone();
             let chrome = self.chrome.clone();
 
-            let pressable = cx.pressable(
-                PressableProps {
+            let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
+                cx.pressable_dispatch_command_opt(on_click);
+                cx.pressable_toggle_bool(&model);
+
+                let theme = Theme::global(&*cx.app).clone();
+                let checked = cx.watch_model(&model).copied().unwrap_or(false);
+
+                let mut bg = if checked { bg_on } else { Color::TRANSPARENT };
+                let border_color = if checked { bg_on } else { border };
+                let fg = if checked { fg_on } else { Color::TRANSPARENT };
+
+                let hovered = st.hovered && !disabled;
+                if hovered && !checked {
+                    let hover = theme
+                        .color_by_key("accent")
+                        .or_else(|| theme.color_by_key("hover.background"))
+                        .unwrap_or(theme.colors.hover_background);
+                    bg = alpha_mul(hover, 0.35);
+                }
+
+                let mut chrome_props = decl_style::container_props(
+                    &theme,
+                    ChromeRefinement::default()
+                        .rounded(Radius::Sm)
+                        .border_1()
+                        .bg(ColorRef::Color(bg))
+                        .border_color(ColorRef::Color(border_color))
+                        .merge(chrome.clone()),
+                    LayoutRefinement::default(),
+                );
+                chrome_props.corner_radii = Corners::all(radius);
+                chrome_props.padding = Edges::all(Px(0.0));
+                chrome_props.layout.size = pressable_layout.size;
+
+                let pressable_props = PressableProps {
                     layout: pressable_layout,
                     enabled: !disabled,
                     focusable: true,
@@ -134,81 +166,40 @@ impl Checkbox {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
-                move |cx, st| {
-                    cx.pressable_dispatch_command_opt(on_click);
-                    cx.pressable_toggle_bool(&model);
+                };
 
-                    let theme = Theme::global(&*cx.app).clone();
-                    let checked = cx.watch_model(&model).copied().unwrap_or(false);
-
-                    let mut bg = if checked { bg_on } else { Color::TRANSPARENT };
-                    let border_color = if checked { bg_on } else { border };
-                    let fg = if checked { fg_on } else { Color::TRANSPARENT };
-
-                    let hovered = st.hovered && !disabled;
-                    if hovered && !checked {
-                        let hover = theme
-                            .color_by_key("accent")
-                            .or_else(|| theme.color_by_key("hover.background"))
-                            .unwrap_or(theme.colors.hover_background);
-                        bg = alpha_mul(hover, 0.35);
+                let children = move |cx: &mut ElementCx<'_, H>| {
+                    if !checked {
+                        return Vec::new();
                     }
 
-                    let mut props = decl_style::container_props(
-                        &theme,
-                        ChromeRefinement::default()
-                            .rounded(Radius::Sm)
-                            .border_1()
-                            .bg(ColorRef::Color(bg))
-                            .border_color(ColorRef::Color(border_color))
-                            .merge(chrome.clone()),
-                        LayoutRefinement::default(),
+                    let icon = decl_icon::icon_with(
+                        &mut *cx,
+                        ids::ui::CHECK,
+                        Some(Px(12.0)),
+                        Some(ColorRef::Color(fg)),
                     );
-                    props.corner_radii = Corners::all(radius);
 
                     let mut inner_layout = LayoutStyle::default();
                     inner_layout.size.width = Length::Fill;
                     inner_layout.size.height = Length::Fill;
 
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: props.layout,
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: inner_layout,
+                            direction: Axis::Horizontal,
+                            gap: Px(0.0),
                             padding: Edges::all(Px(0.0)),
-                            background: props.background,
-                            shadow: props.shadow,
-                            border: props.border,
-                            border_color: props.border_color,
-                            corner_radii: props.corner_radii,
+                            justify: MainAlign::Center,
+                            align: CrossAlign::Center,
+                            wrap: false,
                         },
-                        move |cx| {
-                            if !checked {
-                                return Vec::new();
-                            }
-
-                            let icon = decl_icon::icon_with(
-                                cx,
-                                ids::ui::CHECK,
-                                Some(Px(12.0)),
-                                Some(ColorRef::Color(fg)),
-                            );
-
-                            vec![cx.flex(
-                                FlexProps {
-                                    layout: inner_layout,
-                                    direction: Axis::Horizontal,
-                                    gap: Px(0.0),
-                                    padding: Edges::all(Px(0.0)),
-                                    justify: MainAlign::Center,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
-                                },
-                                move |_cx| vec![icon],
-                            )]
-                        },
+                        move |_cx| vec![icon],
                     )]
-                },
-            );
+                };
+
+                (pressable_props, chrome_props, children)
+            });
 
             if disabled {
                 cx.opacity(0.5, |_cx| vec![pressable])

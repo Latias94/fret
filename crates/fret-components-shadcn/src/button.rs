@@ -1,15 +1,14 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
+use fret_components_ui::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space,
 };
 use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
-use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, PressableA11y, PressableProps, TextProps,
-};
+use fret_ui::element::{AnyElement, LayoutStyle, PressableA11y, PressableProps, TextProps};
 use fret_ui::{ElementCx, Theme, UiHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -277,8 +276,62 @@ impl Button {
             let is_icon = self.size == ButtonSize::Icon;
             let children = self.children;
 
-            let pressable = cx.pressable(
-                PressableProps {
+            let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
+                cx.pressable_dispatch_command_opt(command);
+                if let Some(model) = toggle_model {
+                    cx.pressable_toggle_bool(&model);
+                }
+
+                let hovered = st.hovered && !disabled;
+                let pressed = st.pressed && !disabled;
+
+                let (bg, border_color, fg) = if pressed {
+                    (bg_active, border_color, fg)
+                } else if hovered {
+                    (bg_hover, border_color, fg)
+                } else {
+                    (bg, border_color, fg)
+                };
+
+                let padding = if variant == ButtonVariant::Link || is_icon {
+                    ChromeRefinement::default()
+                } else {
+                    match size {
+                        ComponentSize::Small => {
+                            ChromeRefinement::default().px(Space::N3).py(Space::N1)
+                        }
+                        ComponentSize::Medium => {
+                            ChromeRefinement::default().px(Space::N4).py(Space::N2)
+                        }
+                        ComponentSize::Large => {
+                            ChromeRefinement::default().px(Space::N6).py(Space::N2)
+                        }
+                        ComponentSize::XSmall => {
+                            ChromeRefinement::default().px(Space::N2).py(Space::N1)
+                        }
+                    }
+                };
+
+                let mut chrome = padding.merge(ChromeRefinement {
+                    radius: Some(MetricRef::Px(radius)),
+                    border_width: Some(MetricRef::Px(border_w)),
+                    ..Default::default()
+                });
+
+                if !user_bg_override {
+                    chrome.background = Some(ColorRef::Color(bg));
+                }
+                if !user_border_override {
+                    chrome.border_color = Some(ColorRef::Color(border_color));
+                }
+                chrome = chrome.merge(user_chrome.clone());
+
+                let mut chrome_props =
+                    decl_style::container_props(&theme, chrome, LayoutRefinement::default());
+                chrome_props.shadow = shadow;
+                chrome_props.layout.size = pressable_layout.size;
+
+                let pressable_props = PressableProps {
                     layout: pressable_layout,
                     enabled: !disabled,
                     focusable: true,
@@ -288,65 +341,9 @@ impl Button {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
-                move |cx, st| {
-                    cx.pressable_dispatch_command_opt(command);
-                    if let Some(model) = toggle_model {
-                        cx.pressable_toggle_bool(&model);
-                    }
+                };
 
-                    let hovered = st.hovered && !disabled;
-                    let pressed = st.pressed && !disabled;
-
-                    let (bg, border_color, fg) = if pressed {
-                        (bg_active, border_color, fg)
-                    } else if hovered {
-                        (bg_hover, border_color, fg)
-                    } else {
-                        (bg, border_color, fg)
-                    };
-
-                    let padding = if variant == ButtonVariant::Link || is_icon {
-                        ChromeRefinement::default()
-                    } else {
-                        match size {
-                            ComponentSize::Small => {
-                                ChromeRefinement::default().px(Space::N3).py(Space::N1)
-                            }
-                            ComponentSize::Medium => {
-                                ChromeRefinement::default().px(Space::N4).py(Space::N2)
-                            }
-                            ComponentSize::Large => {
-                                ChromeRefinement::default().px(Space::N6).py(Space::N2)
-                            }
-                            ComponentSize::XSmall => {
-                                ChromeRefinement::default().px(Space::N2).py(Space::N1)
-                            }
-                        }
-                    };
-
-                    let mut chrome = padding.merge(ChromeRefinement {
-                        radius: Some(MetricRef::Px(radius)),
-                        border_width: Some(MetricRef::Px(border_w)),
-                        ..Default::default()
-                    });
-
-                    if !user_bg_override {
-                        chrome.background = Some(ColorRef::Color(bg));
-                    }
-                    if !user_border_override {
-                        chrome.border_color = Some(ColorRef::Color(border_color));
-                    }
-                    chrome = chrome.merge(user_chrome.clone());
-
-                    let mut props =
-                        decl_style::container_props(&theme, chrome, LayoutRefinement::default());
-
-                    // Mirror the pressable's size constraints so stretched buttons also stretch visually.
-                    props.layout.size = pressable_layout.size;
-                    props.layout.overflow = pressable_layout.overflow;
-                    props.shadow = shadow;
-
+                let content_children = move |cx: &mut ElementCx<'_, H>| {
                     let content = if children.is_empty() {
                         vec![cx.text_props(TextProps {
                             layout: LayoutStyle::default(),
@@ -360,18 +357,18 @@ impl Button {
                         children.clone()
                     };
 
-                    vec![cx.container(ContainerProps { ..props }, |cx| {
-                        vec![fret_components_ui::declarative::stack::hstack(
-                            cx,
-                            fret_components_ui::declarative::stack::HStackProps::default()
-                                .justify_center()
-                                .items_center()
-                                .gap_x(Space::N2),
-                            |_cx| content,
-                        )]
-                    })]
-                },
-            );
+                    vec![fret_components_ui::declarative::stack::hstack(
+                        cx,
+                        fret_components_ui::declarative::stack::HStackProps::default()
+                            .justify_center()
+                            .items_center()
+                            .gap_x(Space::N2),
+                        |_cx| content,
+                    )]
+                };
+
+                (pressable_props, chrome_props, content_children)
+            });
 
             if disabled {
                 cx.opacity(0.5, |_cx| vec![pressable])
