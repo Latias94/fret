@@ -145,9 +145,6 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
-  if (clip <= 0.0) {
-    discard;
-  }
 
   let outer_sdf = quad_sdf(input.local_pos, input.rect.xy, input.rect.zw, input.corner_radii);
 
@@ -155,11 +152,6 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   // and transforms. See ADR 0030.
   let aa_outer = max(fwidth(outer_sdf), 1e-4);
   let alpha_outer = 1.0 - smoothstep(-aa_outer, aa_outer, outer_sdf);
-
-  let border_sum = input.border.x + input.border.y + input.border.z + input.border.w;
-  if (border_sum <= 0.0) {
-    return vec4<f32>(input.color.rgb, input.color.a) * (alpha_outer * clip);
-  }
 
   // Border alignment: inside. Inner radii are derived by subtracting adjacent border widths.
   let inner_origin = input.rect.xy + vec2<f32>(input.border.x, input.border.y);
@@ -181,11 +173,21 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let inner_valid = inner_size.x > 0.0 && inner_size.y > 0.0;
   let alpha_inner = select(0.0, alpha_inner_raw, inner_valid);
 
-  let border_cov = saturate(alpha_outer - alpha_inner);
-  let fill = vec4<f32>(input.color.rgb, input.color.a) * alpha_inner;
+  let border_sum = input.border.x + input.border.y + input.border.z + input.border.w;
+  let border_present = border_sum > 0.0;
+
+  let alpha_fill = select(alpha_outer, alpha_inner, border_present);
+  let border_cov_raw = saturate(alpha_outer - alpha_inner);
+  let border_cov = select(0.0, border_cov_raw, border_present);
+
+  let fill = vec4<f32>(input.color.rgb, input.color.a) * alpha_fill;
   let border = vec4<f32>(input.border_color.rgb, input.border_color.a) * border_cov;
 
-  return (fill + border) * clip;
+  let out = (fill + border) * clip;
+  if (clip <= 0.0) {
+    discard;
+  }
+  return out;
 }
 "#;
 
