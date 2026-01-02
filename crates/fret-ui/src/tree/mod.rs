@@ -3,6 +3,7 @@ use crate::{
     elements::GlobalElementId,
     widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
 };
+use fret_core::time::{Duration, Instant};
 use fret_core::{
     AppWindowId, Corners, Event, KeyCode, NodeId, Point, PointerEvent, Px, Rect, Scene, SceneOp,
     SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, Transform2D, UiServices,
@@ -15,7 +16,6 @@ use slotmap::SlotMap;
 use std::any::TypeId;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
 
 mod commands;
 mod dispatch;

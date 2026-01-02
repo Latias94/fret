@@ -12,6 +12,7 @@ pub mod semantics;
 pub mod services;
 pub mod svg;
 pub mod text;
+pub mod time;
 pub mod vector_path;
 pub mod viewport;
 pub mod window;

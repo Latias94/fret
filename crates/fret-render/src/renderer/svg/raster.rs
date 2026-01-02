@@ -1,6 +1,6 @@
 use super::super::*;
 use super::SvgRasterGpu;
-use std::time::Instant;
+use fret_core::time::Instant;
 
 use crate::images::{ImageColorSpace, ImageDescriptor};
 use crate::svg::{SMOOTH_SVG_SCALE_FACTOR, upload_alpha_mask, upload_rgba_image};

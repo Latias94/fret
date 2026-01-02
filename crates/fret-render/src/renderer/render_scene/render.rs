@@ -1,5 +1,5 @@
 use super::super::*;
-use std::time::Instant;
+use fret_core::time::Instant;
 
 impl Renderer {
     pub fn render_scene(
