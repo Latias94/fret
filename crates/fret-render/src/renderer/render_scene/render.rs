@@ -40,9 +40,9 @@ impl Renderer {
             self.svg_perf.frames = self.svg_perf.frames.saturating_add(1);
         }
         self.bump_svg_raster_epoch();
-        let svg_prepare_start = Instant::now();
+        let svg_prepare_start = self.svg_perf_enabled.then(Instant::now);
         self.prepare_svg_ops(device, queue, scene, scale_factor);
-        if self.svg_perf_enabled {
+        if let Some(svg_prepare_start) = svg_prepare_start {
             self.svg_perf.prepare_svg_ops += svg_prepare_start.elapsed();
         }
 

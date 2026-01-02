@@ -10,7 +10,7 @@ impl<H: UiHost> UiTree<H> {
         scene: &mut Scene,
         scale_factor: f32,
     ) {
-        let started = self.debug_enabled.then_some(Instant::now());
+        let started = self.debug_enabled.then(Instant::now);
         if self.debug_enabled {
             self.debug_stats.frame_id = app.frame_id();
             self.debug_stats.paint_nodes = 0;

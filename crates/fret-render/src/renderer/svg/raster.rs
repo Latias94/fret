@@ -45,22 +45,22 @@ impl Renderer {
 
         let (image, uv, size_px, approx_bytes, storage) = match kind {
             SvgRasterKind::AlphaMask => {
-                let t_raster = Instant::now();
+                let t_raster = self.svg_perf_enabled.then(Instant::now);
                 let mask = self
                     .svg_renderer
                     .render_alpha_mask_fit_mode(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR, fit)
                     .ok()?;
-                if self.svg_perf_enabled {
+                if let Some(t_raster) = t_raster {
                     self.svg_perf.alpha_raster_count =
                         self.svg_perf.alpha_raster_count.saturating_add(1);
                     self.svg_perf.alpha_raster += t_raster.elapsed();
                 }
 
-                let t_insert = Instant::now();
+                let t_insert = self.svg_perf_enabled.then(Instant::now);
                 if let Some((image, uv, size_px, page_index, alloc_id)) =
                     self.insert_svg_alpha_mask_into_atlas(gpu.device, gpu.queue, &mask)
                 {
-                    if self.svg_perf_enabled {
+                    if let Some(t_insert) = t_insert {
                         self.svg_perf.alpha_atlas_inserts =
                             self.svg_perf.alpha_atlas_inserts.saturating_add(1);
                         self.svg_perf.alpha_atlas_write += t_insert.elapsed();
@@ -76,12 +76,12 @@ impl Renderer {
                         },
                     )
                 } else {
-                    if self.svg_perf_enabled {
+                    if let Some(t_insert) = t_insert {
                         self.svg_perf.alpha_atlas_write += t_insert.elapsed();
                     }
-                    let t_upload = Instant::now();
+                    let t_upload = self.svg_perf_enabled.then(Instant::now);
                     let uploaded = upload_alpha_mask(gpu.device, gpu.queue, &mask);
-                    if self.svg_perf_enabled {
+                    if let Some(t_upload) = t_upload {
                         self.svg_perf.alpha_standalone_uploads =
                             self.svg_perf.alpha_standalone_uploads.saturating_add(1);
                         self.svg_perf.alpha_standalone_upload += t_upload.elapsed();
@@ -106,19 +106,19 @@ impl Renderer {
                 }
             }
             SvgRasterKind::Rgba => {
-                let t_raster = Instant::now();
+                let t_raster = self.svg_perf_enabled.then(Instant::now);
                 let rgba = self
                     .svg_renderer
                     .render_rgba_fit_mode(bytes, target_box_px, SMOOTH_SVG_SCALE_FACTOR, fit)
                     .ok()?;
-                if self.svg_perf_enabled {
+                if let Some(t_raster) = t_raster {
                     self.svg_perf.rgba_raster_count =
                         self.svg_perf.rgba_raster_count.saturating_add(1);
                     self.svg_perf.rgba_raster += t_raster.elapsed();
                 }
-                let t_upload = Instant::now();
+                let t_upload = self.svg_perf_enabled.then(Instant::now);
                 let uploaded = upload_rgba_image(gpu.device, gpu.queue, &rgba);
-                if self.svg_perf_enabled {
+                if let Some(t_upload) = t_upload {
                     self.svg_perf.rgba_uploads = self.svg_perf.rgba_uploads.saturating_add(1);
                     self.svg_perf.rgba_upload += t_upload.elapsed();
                 }
