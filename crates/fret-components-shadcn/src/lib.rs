@@ -156,7 +156,8 @@ pub use toggle_group::{
     ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple, toggle_group_single,
 };
 pub use tooltip::{
-    Tooltip, TooltipAlign, TooltipAnchor, TooltipContent, TooltipSide, TooltipTrigger,
+    Tooltip, TooltipAlign, TooltipAnchor, TooltipContent, TooltipProvider, TooltipSide,
+    TooltipTrigger,
 };
 
 pub use fret_components_ui::{ChromeRefinement, LayoutRefinement, Radius, Size, Space, StyledExt};

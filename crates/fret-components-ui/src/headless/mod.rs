@@ -7,4 +7,5 @@ pub mod menu_nav;
 pub mod presence;
 pub mod roving_focus;
 pub mod safe_hover;
+pub mod tooltip_delay_group;
 pub mod typeahead;

@@ -2,6 +2,7 @@ use fret_components_ui::declarative::scheduling;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::hover_intent::{HoverIntentConfig, HoverIntentState};
 use fret_components_ui::overlay;
+use fret_components_ui::tooltip_provider;
 use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     OverlayRequest, Radius, Space,
@@ -48,6 +49,48 @@ pub enum TooltipSide {
     Left,
 }
 
+/// shadcn/ui `TooltipProvider` (v4).
+///
+/// In Radix/shadcn this is a context provider used to share open-delay behavior across tooltip
+/// instances. In Fret, this is implemented as a declarative scoping helper that persists provider
+/// state (delay group) across frames.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct TooltipProvider {
+    delay_duration_frames: u32,
+    skip_delay_duration_frames: u32,
+}
+
+impl TooltipProvider {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn delay_duration_frames(mut self, frames: u32) -> Self {
+        self.delay_duration_frames = frames;
+        self
+    }
+
+    pub fn skip_delay_duration_frames(mut self, frames: u32) -> Self {
+        self.skip_delay_duration_frames = frames;
+        self
+    }
+
+    pub fn with<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> Vec<AnyElement> {
+        tooltip_provider::with_tooltip_provider(
+            cx,
+            tooltip_provider::TooltipProviderConfig::new(
+                self.delay_duration_frames as u64,
+                self.skip_delay_duration_frames as u64,
+            ),
+            f,
+        )
+    }
+}
+
 /// shadcn/ui `Tooltip` root (v4).
 ///
 /// This is implemented as a component-layer policy built on runtime substrate primitives:
@@ -68,8 +111,8 @@ pub struct Tooltip {
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
-    open_delay_frames: u32,
-    close_delay_frames: u32,
+    open_delay_frames_override: Option<u32>,
+    close_delay_frames_override: Option<u32>,
     layout: LayoutRefinement,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
 }
@@ -86,8 +129,8 @@ impl Tooltip {
             arrow: true,
             arrow_size_override: None,
             arrow_padding_override: None,
-            open_delay_frames: 0,
-            close_delay_frames: 0,
+            open_delay_frames_override: None,
+            close_delay_frames_override: None,
             layout: LayoutRefinement::default(),
             anchor_override: None,
         }
@@ -109,12 +152,12 @@ impl Tooltip {
     }
 
     pub fn open_delay_frames(mut self, frames: u32) -> Self {
-        self.open_delay_frames = frames;
+        self.open_delay_frames_override = Some(frames);
         self
     }
 
     pub fn close_delay_frames(mut self, frames: u32) -> Self {
-        self.close_delay_frames = frames;
+        self.close_delay_frames_override = Some(frames);
         self
     }
 
@@ -189,8 +232,8 @@ impl Tooltip {
 
         let align = self.align;
         let side = self.side;
-        let open_delay_frames = self.open_delay_frames;
-        let close_delay_frames = self.close_delay_frames;
+        let open_delay_frames_override = self.open_delay_frames_override;
+        let close_delay_frames_override = self.close_delay_frames_override;
 
         let trigger = self.trigger;
         let content = self.content;
@@ -204,32 +247,41 @@ impl Tooltip {
                 was_focused: bool,
             }
 
-            let frame = cx.app.frame_id();
+            let now = cx.app.frame_id().0;
             let focused = cx.is_focused_element(trigger_id);
-            let (open_delay_ticks, close_delay_ticks) =
-                cx.with_state(FocusEdgeState::default, |st| {
-                    let was = st.was_focused;
-                    st.was_focused = focused;
+            let open_delay_ticks = if focused {
+                0
+            } else if let Some(frames) = open_delay_frames_override {
+                tooltip_provider::open_delay_ticks_with_base(cx, now, frames as u64)
+            } else {
+                tooltip_provider::open_delay_ticks(cx, now)
+            };
+            let close_delay_ticks = cx.with_state(FocusEdgeState::default, |st| {
+                let was = st.was_focused;
+                st.was_focused = focused;
 
-                    // shadcn/Radix behavior: focus opens immediately, blur closes immediately.
-                    let open = if focused { 0 } else { open_delay_frames as u64 };
-                    let close = if was && !focused {
-                        0
-                    } else if focused {
-                        0
-                    } else {
-                        close_delay_frames as u64
-                    };
-
-                    (open, close)
-                });
+                // shadcn/Radix behavior: blur closes immediately.
+                if was && !focused {
+                    0
+                } else if focused {
+                    0
+                } else {
+                    close_delay_frames_override.unwrap_or(0) as u64
+                }
+            });
 
             let cfg = HoverIntentConfig::new(open_delay_ticks, close_delay_ticks);
-            let update = cx.with_state(HoverIntentState::default, |state| {
-                state.update(hovered || focused, frame.0, cfg)
+            let (was_open, update) = cx.with_state(HoverIntentState::default, |st| {
+                let was_open = st.is_open();
+                let update = st.update(hovered || focused, now, cfg);
+                (was_open, update)
             });
 
             scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
+
+            if was_open && !update.open {
+                tooltip_provider::note_closed(cx, now);
+            }
 
             let out = vec![trigger];
             if !update.open {
@@ -734,6 +786,230 @@ mod tests {
         assert!(
             content_node.is_some(),
             "expected tooltip content to be mounted when focused"
+        );
+    }
+
+    #[test]
+    fn tooltip_provider_skips_delay_after_recent_close() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        // This test "fast-forwards" by jumping `App::frame_id` without rendering intermediate
+        // frames. Keep element state alive across that jump so we can validate provider delay
+        // semantics rather than `ElementRuntime` GC behavior.
+        app.with_global_mut(fret_ui::elements::ElementRuntime::new, |rt, _app| {
+            rt.set_gc_lag_frames(128);
+        });
+
+        let content_1_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_2_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            content_1_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            content_2_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        ) {
+            OverlayController::begin_frame(app, window);
+
+            let root =
+                fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "test",
+                    |cx| {
+                        TooltipProvider::new()
+                            .delay_duration_frames(10)
+                            .skip_delay_duration_frames(30)
+                            .with(cx, |cx| {
+                                vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
+                                    let trigger_1 = cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            a11y: PressableA11y {
+                                                role: Some(SemanticsRole::Button),
+                                                label: Some(Arc::from("trigger_1")),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        |cx, _st, _id| {
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    );
+
+                                    let trigger_2 = cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            a11y: PressableA11y {
+                                                role: Some(SemanticsRole::Button),
+                                                label: Some(Arc::from("trigger_2")),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        |cx, _st, _id| {
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    );
+
+                                    let content_1 = TooltipContent::new(vec![
+                                        cx.text_props(TextProps::new("tip_1")),
+                                    ])
+                                    .into_element(cx);
+                                    content_1_id_out.set(Some(content_1.id));
+
+                                    let content_2 = TooltipContent::new(vec![
+                                        cx.text_props(TextProps::new("tip_2")),
+                                    ])
+                                    .into_element(cx);
+                                    content_2_id_out.set(Some(content_2.id));
+
+                                    vec![
+                                        Tooltip::new(trigger_1, content_1).into_element(cx),
+                                        Tooltip::new(trigger_2, content_2).into_element(cx),
+                                    ]
+                                })]
+                            })
+                    },
+                );
+
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+        }
+
+        // Frame 1: build.
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            content_1_id.clone(),
+            content_2_id.clone(),
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_1 = snap
+            .nodes
+            .iter()
+            .find(|n| n.label.as_deref() == Some("trigger_1"))
+            .expect("trigger_1 node");
+        let trigger_2 = snap
+            .nodes
+            .iter()
+            .find(|n| n.label.as_deref() == Some("trigger_2"))
+            .expect("trigger_2 node");
+
+        let trigger_1_node = trigger_1.id;
+        let trigger_1_bounds = trigger_1.bounds;
+        let trigger_2_bounds = trigger_2.bounds;
+
+        let trigger_1_point = Point::new(
+            Px(trigger_1_bounds.origin.x.0 + trigger_1_bounds.size.width.0 * 0.5),
+            Px(trigger_1_bounds.origin.y.0 + trigger_1_bounds.size.height.0 * 0.5),
+        );
+        let trigger_2_point = Point::new(
+            Px(trigger_2_bounds.origin.x.0 + trigger_2_bounds.size.width.0 * 0.5),
+            Px(trigger_2_bounds.origin.y.0 + trigger_2_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: trigger_1_point,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        // Frame 2: focus should open tooltip 1 immediately (regardless of provider delay).
+        ui.set_focus(Some(trigger_1_node));
+
+        app.set_frame_id(FrameId(2));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            content_1_id.clone(),
+            content_2_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_1_element = content_1_id.get().expect("content_1 element id");
+        assert!(
+            fret_ui::elements::node_for_element(&mut app, window, content_1_element).is_some(),
+            "expected tooltip 1 to be open when focused"
+        );
+
+        // Blur + move to trigger 2, then render: provider should skip delay for the new tooltip.
+        ui.set_focus(None);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: trigger_2_point,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        app.set_frame_id(FrameId(3));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            content_1_id.clone(),
+            content_2_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_2_element = content_2_id.get().expect("content_2 element id");
+        assert!(
+            fret_ui::elements::node_for_element(&mut app, window, content_2_element).is_some(),
+            "expected tooltip 2 to open without delay under the provider skip window"
         );
     }
 

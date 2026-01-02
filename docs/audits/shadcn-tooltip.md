@@ -28,7 +28,7 @@ Key upstream notes:
 
 - Pass: `Tooltip`, `TooltipTrigger`, `TooltipContent` exist and are declarative-only.
 - Pass: `TooltipContent` now supports rich children (`Vec<AnyElement>`), matching upstream examples.
-- Defer: `TooltipProvider` surface is not modeled (upstream uses a Provider to control delay).
+- Pass: `TooltipProvider` exists and provides a shared delay group for consistent open delays.
 - Pass: Fret additionally supports an optional custom placement anchor via `TooltipAnchor` +
   `Tooltip::anchor_element(...)` (anchor can be separate from the trigger).
 
@@ -54,6 +54,6 @@ Key upstream notes:
 
 ## Follow-ups (recommended)
 
-- Consider modeling `TooltipProvider` / shared delay groups if upstream parity needs it.
+- Consider expanding `TooltipProvider` knobs (e.g. disable-hoverable-content) if parity needs it.
 - Add an optional arrow primitive for anchored overlays (tooltip/popover/hover-card).
 - Add nextest contract tests for tooltip hover timing + placement invariants.

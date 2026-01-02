@@ -13,6 +13,7 @@ pub mod overlay;
 pub mod overlay_controller;
 pub mod primitives;
 pub mod recipes;
+pub mod tooltip_provider;
 pub mod tree;
 #[cfg(feature = "unstable-internals")]
 pub mod window_overlays;
