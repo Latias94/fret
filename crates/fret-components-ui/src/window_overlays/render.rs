@@ -137,7 +137,14 @@ pub fn render<H: UiHost>(
         }
         seen_popovers.insert(req.id);
 
-        let open_now = app.models().get_copied(&req.open).unwrap_or(false);
+        let focus_now = ui.focus();
+        let dismissable_branch_nodes: Vec<NodeId> = req
+            .dismissable_branches
+            .iter()
+            .filter_map(|branch| fret_ui::elements::node_for_element(app, window, *branch))
+            .collect();
+
+        let mut open_now = app.models().get_copied(&req.open).unwrap_or(false);
         let on_pointer_move = req.on_pointer_move.clone();
 
         let root = declarative::render_dismissible_root_with_hooks(
@@ -148,7 +155,7 @@ pub fn render<H: UiHost>(
             bounds,
             &req.root_name,
             |cx| {
-                let open = req.open;
+                let open = req.open.clone();
                 if let Some(on_pointer_move) = on_pointer_move {
                     cx.dismissible_on_pointer_move(on_pointer_move);
                 }
@@ -165,7 +172,7 @@ pub fn render<H: UiHost>(
         let restore_focus = ui.focus();
 
         let mut should_focus_initial = false;
-        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        app.with_global_mut(WindowOverlays::default, |overlays, app| {
             let mut created = false;
             let entry = overlays.popovers.entry(key).or_insert_with(|| {
                 created = true;
@@ -176,11 +183,37 @@ pub fn render<H: UiHost>(
                     initial_focus: req.initial_focus,
                     open: false,
                     restore_focus: None,
+                    last_focus: focus_now,
                 }
             });
             entry.root_name = req.root_name.clone();
             entry.trigger = req.trigger;
             entry.initial_focus = req.initial_focus;
+
+            if open_now
+                && let Some(focus) = focus_now
+                && entry.last_focus != Some(focus)
+                && let Some(layer_root) = ui.layer_root(entry.layer)
+            {
+                let focus_inside = ui.is_descendant(layer_root, focus)
+                    || dismissable_branch_nodes
+                        .iter()
+                        .copied()
+                        .any(|branch| ui.is_descendant(branch, focus));
+
+                if !focus_inside {
+                    let _ = app.models_mut().update(&req.open, |v| *v = false);
+                    open_now = false;
+                }
+            }
+
+            ui.set_layer_pointer_down_outside_branches(
+                entry.layer,
+                open_now
+                    .then(|| dismissable_branch_nodes.clone())
+                    .unwrap_or_default(),
+            );
+
             // Non-modal overlays are click-through during close transitions:
             // when `present=true` but `open=false`, they must not participate in hit-testing or
             // the outside-press observer pass.
@@ -192,6 +225,7 @@ pub fn render<H: UiHost>(
                 entry.restore_focus = restore_focus;
             }
             entry.open = open_now;
+            entry.last_focus = focus_now;
         });
 
         if should_focus_initial {
@@ -231,6 +265,7 @@ pub fn render<H: UiHost>(
     for (layer, trigger, restore_focus) in to_hide_popovers {
         if focus_scope_prim::should_restore_focus_for_non_modal_overlay(ui, layer) {
             OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
+            ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
             if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
                 ui,
                 app,
@@ -242,6 +277,7 @@ pub fn render<H: UiHost>(
             }
         } else {
             OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
+            ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
         }
     }
 

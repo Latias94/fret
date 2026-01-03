@@ -673,7 +673,8 @@ impl<H: UiHost> UiTree<H> {
         services: &mut dyn UiServices,
         params: PointerDownOutsideParams<'_>,
     ) {
-        let hit_root = params.hit.and_then(|n| self.node_root(n));
+        let hit = params.hit;
+        let hit_root = hit.and_then(|n| self.node_root(n));
 
         // Only the topmost "dismissable" non-modal overlay should observe outside presses.
         // This mirrors Radix-style DismissableLayer semantics while staying click-through:
@@ -699,6 +700,18 @@ impl<H: UiHost> UiTree<H> {
             // If the pointer event is inside this layer, it will be handled by the normal hit-test
             // dispatch. Do not dismiss anything under it.
             if hit_root == Some(layer.root) {
+                break;
+            }
+
+            // Radix-aligned outcome: allow per-layer "branches" that should not trigger outside
+            // dismissal even though they live outside the layer subtree (e.g. trigger elements).
+            if hit.is_some_and(|hit| {
+                layer
+                    .pointer_down_outside_branches
+                    .iter()
+                    .copied()
+                    .any(|branch| self.is_descendant(branch, hit))
+            }) {
                 break;
             }
 

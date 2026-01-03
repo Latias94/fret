@@ -27,6 +27,7 @@ pub(super) struct ActivePopover {
     pub(super) initial_focus: Option<GlobalElementId>,
     pub(super) open: bool,
     pub(super) restore_focus: Option<NodeId>,
+    pub(super) last_focus: Option<NodeId>,
 }
 
 pub(super) struct ActiveModal {

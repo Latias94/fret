@@ -11,6 +11,7 @@ pub(super) struct UiLayer {
     pub(super) blocks_underlay_input: bool,
     pub(super) hit_testable: bool,
     pub(super) wants_pointer_down_outside_events: bool,
+    pub(super) pointer_down_outside_branches: Vec<NodeId>,
     pub(super) wants_pointer_move_events: bool,
     pub(super) wants_timer_events: bool,
 }
@@ -28,6 +29,7 @@ impl<H: UiHost> UiTree<H> {
             blocks_underlay_input: false,
             hit_testable: true,
             wants_pointer_down_outside_events: false,
+            pointer_down_outside_branches: Vec::new(),
             wants_pointer_move_events: false,
             wants_timer_events: false,
         });
@@ -53,6 +55,7 @@ impl<H: UiHost> UiTree<H> {
             blocks_underlay_input,
             hit_testable,
             wants_pointer_down_outside_events: false,
+            pointer_down_outside_branches: Vec::new(),
             wants_pointer_move_events: false,
             wants_timer_events: false,
         });
@@ -147,6 +150,10 @@ impl<H: UiHost> UiTree<H> {
         self.layers.get(layer).is_some_and(|l| l.visible)
     }
 
+    pub fn layer_root(&self, layer: UiLayerId) -> Option<NodeId> {
+        self.layers.get(layer).map(|l| l.root)
+    }
+
     pub fn set_layer_wants_pointer_move_events(&mut self, layer: UiLayerId, wants: bool) {
         let Some(l) = self.layers.get_mut(layer) else {
             return;
@@ -159,6 +166,17 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
         l.wants_pointer_down_outside_events = wants;
+    }
+
+    pub fn set_layer_pointer_down_outside_branches(
+        &mut self,
+        layer: UiLayerId,
+        branches: Vec<NodeId>,
+    ) {
+        let Some(l) = self.layers.get_mut(layer) else {
+            return;
+        };
+        l.pointer_down_outside_branches = branches;
     }
 
     pub fn set_layer_wants_timer_events(&mut self, layer: UiLayerId, wants: bool) {

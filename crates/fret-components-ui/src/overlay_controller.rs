@@ -63,6 +63,10 @@ pub struct OverlayRequest {
     pub id: GlobalElementId,
     pub root_name: Option<String>,
     pub trigger: Option<GlobalElementId>,
+    /// Extra subtrees that should be treated as "inside" for DismissableLayer-style dismissal.
+    ///
+    /// This is used to align Radix `DismissableLayerBranch` outcomes across disjoint subtrees.
+    pub dismissable_branches: Vec<GlobalElementId>,
     pub open: Option<Model<bool>>,
     pub dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
     pub presence: OverlayPresence,
@@ -78,6 +82,7 @@ impl std::fmt::Debug for OverlayRequest {
             .field("id", &self.id)
             .field("root_name", &self.root_name)
             .field("trigger", &self.trigger)
+            .field("dismissable_branches_len", &self.dismissable_branches.len())
             .field("open", &self.open)
             .field(
                 "dismissible_on_pointer_move",
@@ -104,6 +109,7 @@ impl OverlayRequest {
             id,
             root_name: None,
             trigger: Some(trigger),
+            dismissable_branches: Vec::new(),
             open: Some(open),
             dismissible_on_pointer_move: None,
             presence,
@@ -125,6 +131,7 @@ impl OverlayRequest {
             id,
             root_name: None,
             trigger,
+            dismissable_branches: Vec::new(),
             open: Some(open),
             dismissible_on_pointer_move: None,
             presence,
@@ -144,6 +151,7 @@ impl OverlayRequest {
             id,
             root_name: None,
             trigger: None,
+            dismissable_branches: Vec::new(),
             open: None,
             dismissible_on_pointer_move: None,
             presence,
@@ -159,6 +167,7 @@ impl OverlayRequest {
             id,
             root_name: None,
             trigger: Some(trigger),
+            dismissable_branches: Vec::new(),
             open: None,
             dismissible_on_pointer_move: None,
             presence: OverlayPresence {
@@ -177,6 +186,7 @@ impl OverlayRequest {
             id,
             root_name: None,
             trigger: None,
+            dismissable_branches: Vec::new(),
             open: None,
             dismissible_on_pointer_move: None,
             presence: OverlayPresence::hidden(),
@@ -195,6 +205,11 @@ impl OverlayRequest {
             .as_mut()
             .expect("toast_position requires a ToastLayer request");
         spec.position = position;
+        self
+    }
+
+    pub fn dismissable_branches(mut self, branches: Vec<GlobalElementId>) -> Self {
+        self.dismissable_branches = branches;
         self
     }
 }
@@ -254,6 +269,7 @@ impl OverlayController {
                         id: request.id,
                         root_name,
                         trigger,
+                        dismissable_branches: request.dismissable_branches,
                         open,
                         present: request.presence.present,
                         initial_focus: request.initial_focus,

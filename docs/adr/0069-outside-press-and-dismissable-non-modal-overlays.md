@@ -63,6 +63,19 @@ When a `PointerEvent::Down` occurs and there is no pointer capture, the runtime 
 This is the minimal contract needed to express Radix-like dismissal behavior without adding a
 matrix of per-component runtime toggles.
 
+### Dismissable branches (Radix `DismissableLayerBranch`)
+
+Some disjoint subtrees should be treated as “inside” an overlay for dismissal purposes even though
+they are not descendants of the overlay root (e.g. a trigger button rendered in the underlay).
+
+To support this Radix-aligned outcome, non-modal layers may provide a set of “branch” roots that
+the runtime treats as inside for the outside-press observer pass:
+
+- if the hit-tested target is inside any registered branch subtree, the observer pass does not
+  dispatch an outside-press event for that overlay layer (and does not dismiss anything under it).
+
+This preserves the click-through guarantee: the normal hit-tested dispatch still runs.
+
 ### Presence and close transitions (click-through correctness)
 
 Non-modal overlays commonly animate out (opacity / scale / slide) while remaining mounted.
