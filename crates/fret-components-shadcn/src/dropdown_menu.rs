@@ -339,9 +339,6 @@ impl DropdownMenu {
                     let entries = flat;
 
                     let submenu_open = submenu.open_value.clone();
-                    let submenu_trigger = submenu.trigger.clone();
-                    let submenu_geometry = submenu.geometry.clone();
-                    let submenu_focus_target = submenu.focus_target.clone();
 
                     let item_count = entries
                         .iter()
@@ -870,7 +867,7 @@ impl DropdownMenu {
                                 });
 
                                 if let Some(submenu_entries) = submenu_entries {
-                                    menu::sub::clear_focus_target(cx, &submenu_focus_target);
+                                    menu::sub::clear_focus_target_in_models(cx, &submenu_for_panel);
 
                                     let outer = overlay::outer_bounds_with_window_margin(
                                         cx.bounds,
@@ -878,39 +875,13 @@ impl DropdownMenu {
                                     );
                                     let desired = Size::new(Px(192.0), Px(1.0e9));
 
-                                    let geometry = cx
-                                        .app
-                                        .models_mut()
-                                        .read(&submenu_geometry, |v| *v)
-                                        .ok()
-                                        .flatten()
-                                        .or_else(|| {
-                                            let open_trigger = cx
-                                                .app
-                                                .models_mut()
-                                                .read(&submenu_trigger, |v| *v)
-                                                .ok()
-                                                .flatten()?;
-                                            let trigger_anchor =
-                                                overlay::anchor_bounds_for_element(cx, open_trigger)?;
-                                            let placed = menu::sub::default_submenu_bounds(
-                                                outer,
-                                                trigger_anchor,
-                                                desired,
-                                            );
-                                            Some(menu::sub::MenuSubmenuGeometry {
-                                                reference: trigger_anchor,
-                                                floating: placed,
-                                            })
-                                        });
-
-                                    if let Some(geometry) = geometry {
-                                        menu::sub::set_geometry_if_changed(
-                                            cx,
-                                            geometry,
-                                            &submenu_geometry,
-                                        );
-
+                                    let geometry = menu::sub::resolve_open_geometry(
+                                        cx,
+                                        &submenu_for_panel,
+                                        outer,
+                                        desired,
+                                    );
+                                    if geometry.is_some() {
                                         let mut flat: Vec<DropdownMenuEntry> = Vec::new();
                                         flatten_entries(&mut flat, submenu_entries);
                                         let submenu_entries = flat;

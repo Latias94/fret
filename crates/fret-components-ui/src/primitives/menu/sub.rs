@@ -20,6 +20,7 @@ use fret_ui::action::{ActionCx, KeyDownCx, PointerMoveCx, UiActionHost, UiFocusA
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
+use crate::overlay;
 use crate::primitives::menu::pointer_grace_intent;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -65,6 +66,45 @@ pub fn default_submenu_bounds(outer: Rect, trigger_anchor: Rect, desired: Size) 
         Side::Right,
         Align::Start,
     )
+}
+
+pub fn clear_focus_target_in_models<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    models: &MenuSubmenuModels,
+) {
+    clear_focus_target(cx, &models.focus_target);
+}
+
+pub fn resolve_open_geometry<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    models: &MenuSubmenuModels,
+    outer: Rect,
+    desired: Size,
+) -> Option<MenuSubmenuGeometry> {
+    let geometry = cx
+        .app
+        .models_mut()
+        .read(&models.geometry, |v| *v)
+        .ok()
+        .flatten();
+    if let Some(geometry) = geometry {
+        return Some(geometry);
+    }
+
+    let trigger = cx
+        .app
+        .models_mut()
+        .read(&models.trigger, |v| *v)
+        .ok()
+        .flatten()?;
+    let trigger_anchor = overlay::anchor_bounds_for_element(cx, trigger)?;
+    let placed = default_submenu_bounds(outer, trigger_anchor, desired);
+    let geometry = MenuSubmenuGeometry {
+        reference: trigger_anchor,
+        floating: placed,
+    };
+    set_geometry_if_changed(cx, geometry, &models.geometry);
+    Some(geometry)
 }
 
 #[derive(Debug, Clone)]
