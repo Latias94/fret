@@ -5,6 +5,9 @@ use winit::event::{
 };
 use winit::keyboard::{Key, ModifiersState, NamedKey};
 
+#[cfg(target_arch = "wasm32")]
+use winit::platform::web::WindowExtWebSys;
+
 #[derive(Debug, Default, Clone)]
 pub struct WinitPlatform {
     pub input: WinitInputState,
@@ -57,6 +60,83 @@ pub fn canvas_by_id(id: &str) -> Result<web_sys::HtmlCanvasElement, RunnerError>
         .ok_or_else(|| RunnerError::new("canvas element not found"))?;
     el.dyn_into::<web_sys::HtmlCanvasElement>()
         .map_err(|_| RunnerError::new("element is not a canvas"))
+}
+
+#[cfg(target_arch = "wasm32")]
+pub struct WebCursorListener {
+    _on_move: wasm_bindgen::closure::Closure<dyn FnMut(web_sys::PointerEvent)>,
+    _on_leave: wasm_bindgen::closure::Closure<dyn FnMut(web_sys::PointerEvent)>,
+}
+
+#[cfg(target_arch = "wasm32")]
+mod web_cursor {
+    use std::cell::Cell;
+
+    use wasm_bindgen::JsCast as _;
+    use wasm_bindgen::prelude::wasm_bindgen;
+
+    thread_local! {
+        static LAST_POS: Cell<Option<(f32, f32)>> = const { Cell::new(None) };
+    }
+
+    pub(super) fn set(pos: Option<(f32, f32)>) {
+        LAST_POS.with(|cell| cell.set(pos));
+    }
+
+    pub(super) fn get() -> Option<(f32, f32)> {
+        LAST_POS.with(|cell| cell.get())
+    }
+
+    pub(super) fn pointer_offset(event: &web_sys::PointerEvent) -> (f32, f32) {
+        #[wasm_bindgen]
+        extern "C" {
+            type PointerEventExt;
+
+            #[wasm_bindgen(method, getter, js_name = offsetX)]
+            fn offset_x(this: &PointerEventExt) -> f64;
+
+            #[wasm_bindgen(method, getter, js_name = offsetY)]
+            fn offset_y(this: &PointerEventExt) -> f64;
+        }
+
+        let event: &PointerEventExt = event.unchecked_ref();
+        (event.offset_x() as f32, event.offset_y() as f32)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn install_web_cursor_listener(
+    window: &winit::window::Window,
+) -> Result<WebCursorListener, RunnerError> {
+    use wasm_bindgen::JsCast as _;
+
+    let Some(canvas) = window.canvas() else {
+        return Err(RunnerError::new("winit window has no canvas"));
+    };
+
+    let on_move =
+        wasm_bindgen::closure::Closure::wrap(Box::new(move |event: web_sys::PointerEvent| {
+            let (x, y) = web_cursor::pointer_offset(&event);
+            web_cursor::set(Some((x, y)));
+        }) as Box<dyn FnMut(web_sys::PointerEvent)>);
+
+    let on_leave =
+        wasm_bindgen::closure::Closure::wrap(Box::new(move |_event: web_sys::PointerEvent| {
+            web_cursor::set(None);
+        }) as Box<dyn FnMut(web_sys::PointerEvent)>);
+
+    canvas
+        .add_event_listener_with_callback("pointermove", on_move.as_ref().unchecked_ref())
+        .map_err(|_| RunnerError::new("failed to add pointermove listener"))?;
+
+    canvas
+        .add_event_listener_with_callback("pointerleave", on_leave.as_ref().unchecked_ref())
+        .map_err(|_| RunnerError::new("failed to add pointerleave listener"))?;
+
+    Ok(WebCursorListener {
+        _on_move: on_move,
+        _on_leave: on_leave,
+    })
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -166,6 +246,31 @@ impl WinitInputState {
                 let _ = inner_size_writer;
             }
             _ => {}
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn poll_web_cursor_updates(&mut self, window_scale_factor: f64, out: &mut Vec<Event>) {
+        let Some((x, y)) = web_cursor::get() else {
+            self.cursor_pos_physical = None;
+            return;
+        };
+
+        let changed =
+            (self.cursor_pos.x.0 - x).abs() > 0.001 || (self.cursor_pos.y.0 - y).abs() > 0.001;
+
+        self.cursor_pos = Point::new(Px(x), Px(y));
+        self.cursor_pos_physical = Some(PhysicalPosition::new(
+            x as f64 * window_scale_factor,
+            y as f64 * window_scale_factor,
+        ));
+
+        if changed {
+            out.push(Event::Pointer(PointerEvent::Move {
+                position: self.cursor_pos,
+                buttons: self.pressed_buttons,
+                modifiers: self.modifiers,
+            }));
         }
     }
 

@@ -110,6 +110,9 @@ struct WebDemoApp {
     last_input: Model<Arc<str>>,
     shadcn_checked: Model<bool>,
     platform: fret_runner_winit::WinitPlatform,
+
+    #[cfg(target_arch = "wasm32")]
+    web_cursor: Option<fret_runner_winit::WebCursorListener>,
 }
 
 impl WebDemoApp {
@@ -144,6 +147,8 @@ impl WebDemoApp {
             last_input,
             shadcn_checked,
             platform: fret_runner_winit::WinitPlatform::default(),
+            #[cfg(target_arch = "wasm32")]
+            web_cursor: None,
         }
     }
 
@@ -415,6 +420,11 @@ impl WebDemoApp {
         let scale = window.scale_factor();
 
         #[cfg(target_arch = "wasm32")]
+        self.platform
+            .input
+            .poll_web_cursor_updates(scale, &mut self.pending_events);
+
+        #[cfg(target_arch = "wasm32")]
         let physical = Self::desired_surface_size(window).unwrap_or_else(|| window.inner_size());
         #[cfg(not(target_arch = "wasm32"))]
         let physical = window.inner_size();
@@ -555,6 +565,18 @@ impl ApplicationHandler<()> for WebDemoApp {
         };
 
         self.window_id = Some(window.id());
+
+        #[cfg(target_arch = "wasm32")]
+        if self.web_cursor.is_none() {
+            match fret_runner_winit::install_web_cursor_listener(&window) {
+                Ok(listener) => self.web_cursor = Some(listener),
+                Err(err) => {
+                    web_sys::console::error_1(&JsValue::from_str(&format!(
+                        "failed to install web cursor listener: {err}"
+                    )));
+                }
+            }
+        }
 
         // Kick off wgpu init async. We build the surface from the canvas handle, which allows
         // storing `SurfaceState<'static>` without tying it to the winit `Window` lifetime.

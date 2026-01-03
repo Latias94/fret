@@ -9,4 +9,4 @@ winit.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
-web-sys = { version = "0.3", features = ["Document", "Element", "HtmlCanvasElement", "Window"] }
+web-sys = { version = "0.3", features = ["Document", "Element", "Event", "EventTarget", "HtmlCanvasElement", "PointerEvent", "Window"] }
