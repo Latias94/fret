@@ -533,6 +533,13 @@ impl ApplicationHandler<()> for WebDemoApp {
         };
         let window = window.as_ref();
 
+        #[cfg(target_arch = "wasm32")]
+        if let WindowEvent::MouseInput { state, button, .. } = &event {
+            web_sys::console::log_1(&JsValue::from_str(&format!(
+                "winit mouse input: {state:?} {button:?}"
+            )));
+        }
+
         match &event {
             WindowEvent::CloseRequested => {
                 self.pending_events.push(FretEvent::WindowCloseRequested);
