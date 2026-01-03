@@ -62,7 +62,13 @@ impl Renderer {
         } else {
             let mut encoding = std::mem::take(&mut self.scene_encoding_scratch);
             encoding.clear();
-            self.encode_scene_ops_into(scene, scale_factor, viewport_size, &mut encoding);
+            self.encode_scene_ops_into(
+                scene,
+                scale_factor,
+                viewport_size,
+                format.is_srgb(),
+                &mut encoding,
+            );
 
             // Preserve the old cache's allocations for reuse.
             self.scene_encoding_scratch = std::mem::take(&mut self.scene_encoding_cache);

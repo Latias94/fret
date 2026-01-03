@@ -10,6 +10,10 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  output_is_srgb: u32,
+  _pad0: u32,
+  _pad1: u32,
+  _pad2: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -121,6 +125,25 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
+  let a = 0.055;
+  let lo = rgb * 12.92;
+  let hi = (1.0 + a) * pow(rgb, vec3<f32>(1.0 / 2.4)) - vec3<f32>(a);
+  return select(hi, lo, rgb <= vec3<f32>(0.0031308));
+}
+
+fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
+  if (viewport.output_is_srgb != 0u) {
+    return c;
+  }
+  if (c.a <= 0.0) {
+    return c;
+  }
+  let un = c.rgb / c.a;
+  let enc = linear_to_srgb(un);
+  return vec4<f32>(enc * c.a, c.a);
+}
+
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
@@ -184,7 +207,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let border = vec4<f32>(input.border_color.rgb, input.border_color.a) * border_cov;
 
   let out = (fill + border) * clip;
-  return out;
+  return encode_output_premul(out);
 }
 "#;
 
@@ -200,6 +223,10 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  output_is_srgb: u32,
+  _pad0: u32,
+  _pad1: u32,
+  _pad2: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -281,6 +308,25 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   return alpha;
 }
 
+fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
+  let a = 0.055;
+  let lo = rgb * 12.92;
+  let hi = (1.0 + a) * pow(rgb, vec3<f32>(1.0 / 2.4)) - vec3<f32>(a);
+  return select(hi, lo, rgb <= vec3<f32>(0.0031308));
+}
+
+fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
+  if (viewport.output_is_srgb != 0u) {
+    return c;
+  }
+  if (c.a <= 0.0) {
+    return c;
+  }
+  let un = c.rgb / c.a;
+  let enc = linear_to_srgb(un);
+  return vec4<f32>(enc * c.a, c.a);
+}
+
 @vertex
 fn vs_main(input: VsIn) -> VsOut {
   var out: VsOut;
@@ -297,7 +343,8 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let tex = textureSample(viewport_texture, viewport_sampler, input.uv);
   let a = tex.a * input.opacity * clip;
-  return vec4<f32>(tex.rgb * a, a);
+  let out = vec4<f32>(tex.rgb * a, a);
+  return encode_output_premul(out);
 }
 "#;
 
@@ -313,6 +360,10 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  output_is_srgb: u32,
+  _pad0: u32,
+  _pad1: u32,
+  _pad2: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -394,6 +445,25 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   return alpha;
 }
 
+fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
+  let a = 0.055;
+  let lo = rgb * 12.92;
+  let hi = (1.0 + a) * pow(rgb, vec3<f32>(1.0 / 2.4)) - vec3<f32>(a);
+  return select(hi, lo, rgb <= vec3<f32>(0.0031308));
+}
+
+fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
+  if (viewport.output_is_srgb != 0u) {
+    return c;
+  }
+  if (c.a <= 0.0) {
+    return c;
+  }
+  let un = c.rgb / c.a;
+  let enc = linear_to_srgb(un);
+  return vec4<f32>(enc * c.a, c.a);
+}
+
 @vertex
 fn vs_main(input: VsIn) -> VsOut {
   var out: VsOut;
@@ -410,7 +480,8 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let sample = textureSample(tex, tex_sampler, input.uv);
   let o = clamp(input.opacity, 0.0, 1.0);
-  return vec4<f32>(sample.rgb * o, sample.a * o) * clip;
+  let out = vec4<f32>(sample.rgb * o, sample.a * o) * clip;
+  return encode_output_premul(out);
 }
 "#;
 
@@ -426,6 +497,10 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  output_is_srgb: u32,
+  _pad0: u32,
+  _pad1: u32,
+  _pad2: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -502,6 +577,25 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   return alpha;
 }
 
+fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
+  let a = 0.055;
+  let lo = rgb * 12.92;
+  let hi = (1.0 + a) * pow(rgb, vec3<f32>(1.0 / 2.4)) - vec3<f32>(a);
+  return select(hi, lo, rgb <= vec3<f32>(0.0031308));
+}
+
+fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
+  if (viewport.output_is_srgb != 0u) {
+    return c;
+  }
+  if (c.a <= 0.0) {
+    return c;
+  }
+  let un = c.rgb / c.a;
+  let enc = linear_to_srgb(un);
+  return vec4<f32>(enc * c.a, c.a);
+}
+
 @vertex
 fn vs_main(input: VsIn) -> VsOut {
   var out: VsOut;
@@ -515,7 +609,8 @@ fn vs_main(input: VsIn) -> VsOut {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
-  return input.color * clip;
+  let out = input.color * clip;
+  return encode_output_premul(out);
 }
 "#;
 
@@ -531,6 +626,10 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  output_is_srgb: u32,
+  _pad0: u32,
+  _pad1: u32,
+  _pad2: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -610,6 +709,25 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
     alpha = alpha * a;
   }
   return alpha;
+}
+
+fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
+  let a = 0.055;
+  let lo = rgb * 12.92;
+  let hi = (1.0 + a) * pow(rgb, vec3<f32>(1.0 / 2.4)) - vec3<f32>(a);
+  return select(hi, lo, rgb <= vec3<f32>(0.0031308));
+}
+
+fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
+  if (viewport.output_is_srgb != 0u) {
+    return c;
+  }
+  if (c.a <= 0.0) {
+    return c;
+  }
+  let un = c.rgb / c.a;
+  let enc = linear_to_srgb(un);
+  return vec4<f32>(enc * c.a, c.a);
 }
 
 @vertex
@@ -628,7 +746,8 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
   let coverage = tex.r;
-  return vec4<f32>(input.color.rgb * coverage, input.color.a * coverage) * clip;
+  let out = vec4<f32>(input.color.rgb * coverage, input.color.a * coverage) * clip;
+  return encode_output_premul(out);
 }
 "#;
 
@@ -644,6 +763,10 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  output_is_srgb: u32,
+  _pad0: u32,
+  _pad1: u32,
+  _pad2: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -725,6 +848,25 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   return alpha;
 }
 
+fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
+  let a = 0.055;
+  let lo = rgb * 12.92;
+  let hi = (1.0 + a) * pow(rgb, vec3<f32>(1.0 / 2.4)) - vec3<f32>(a);
+  return select(hi, lo, rgb <= vec3<f32>(0.0031308));
+}
+
+fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
+  if (viewport.output_is_srgb != 0u) {
+    return c;
+  }
+  if (c.a <= 0.0) {
+    return c;
+  }
+  let un = c.rgb / c.a;
+  let enc = linear_to_srgb(un);
+  return vec4<f32>(enc * c.a, c.a);
+}
+
 @vertex
 fn vs_main(input: VsIn) -> VsOut {
   var out: VsOut;
@@ -741,7 +883,8 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
   let a = tex.a * input.color.a;
-  return vec4<f32>(tex.rgb * a, a) * clip;
+  let out = vec4<f32>(tex.rgb * a, a) * clip;
+  return encode_output_premul(out);
 }
 "#;
 
@@ -757,6 +900,10 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  output_is_srgb: u32,
+  _pad0: u32,
+  _pad1: u32,
+  _pad2: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -838,6 +985,25 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   return alpha;
 }
 
+fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
+  let a = 0.055;
+  let lo = rgb * 12.92;
+  let hi = (1.0 + a) * pow(rgb, vec3<f32>(1.0 / 2.4)) - vec3<f32>(a);
+  return select(hi, lo, rgb <= vec3<f32>(0.0031308));
+}
+
+fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
+  if (viewport.output_is_srgb != 0u) {
+    return c;
+  }
+  if (c.a <= 0.0) {
+    return c;
+  }
+  let un = c.rgb / c.a;
+  let enc = linear_to_srgb(un);
+  return vec4<f32>(enc * c.a, c.a);
+}
+
 @vertex
 fn vs_main(input: VsIn) -> VsOut {
   var out: VsOut;
@@ -854,6 +1020,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let tex = textureSample(mask_texture, mask_sampler, input.uv);
   let coverage = tex.r;
-  return vec4<f32>(input.color.rgb * coverage, input.color.a * coverage) * clip;
+  let out = vec4<f32>(input.color.rgb * coverage, input.color.a * coverage) * clip;
+  return encode_output_premul(out);
 }
 "#;

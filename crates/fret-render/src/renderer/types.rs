@@ -17,6 +17,8 @@ pub(super) struct ViewportUniform {
     pub(super) viewport_size: [f32; 2],
     pub(super) clip_head: u32,
     pub(super) clip_count: u32,
+    pub(super) output_is_srgb: u32,
+    pub(super) _pad: [u32; 3],
 }
 
 #[repr(C)]

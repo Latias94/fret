@@ -9,6 +9,7 @@ pub(super) enum ClipPop {
 pub(super) struct EncodeState<'a> {
     pub(super) scale_factor: f32,
     pub(super) viewport_size: (u32, u32),
+    pub(super) output_is_srgb: u32,
 
     pub(super) instances: &'a mut Vec<QuadInstance>,
     pub(super) viewport_vertices: &'a mut Vec<ViewportVertex>,
@@ -38,6 +39,7 @@ impl<'a> EncodeState<'a> {
         encoding: &'a mut SceneEncoding,
         scale_factor: f32,
         viewport_size: (u32, u32),
+        output_is_srgb: bool,
     ) -> Self {
         let instances = &mut encoding.instances;
         let viewport_vertices = &mut encoding.viewport_vertices;
@@ -51,6 +53,7 @@ impl<'a> EncodeState<'a> {
         let mut state = Self {
             scale_factor,
             viewport_size,
+            output_is_srgb: u32::from(output_is_srgb),
             instances,
             viewport_vertices,
             text_vertices,
@@ -93,6 +96,8 @@ impl<'a> EncodeState<'a> {
             viewport_size: [self.viewport_size.0 as f32, self.viewport_size.1 as f32],
             clip_head,
             clip_count,
+            output_is_srgb: self.output_is_srgb,
+            _pad: [0; 3],
         });
         uniform_index
     }
