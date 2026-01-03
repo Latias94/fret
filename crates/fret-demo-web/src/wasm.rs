@@ -84,7 +84,7 @@ struct WebDemoApp {
     fret_window: AppWindowId,
     counter: Model<u32>,
     last_input: Model<Arc<str>>,
-    input: fret_runner_winit::WinitInputState,
+    platform: fret_runner_winit::WinitPlatform,
 }
 
 impl WebDemoApp {
@@ -116,7 +116,7 @@ impl WebDemoApp {
             fret_window,
             counter,
             last_input,
-            input: fret_runner_winit::WinitInputState::default(),
+            platform: fret_runner_winit::WinitPlatform::default(),
         }
     }
 
@@ -512,7 +512,7 @@ impl ApplicationHandler<()> for WebDemoApp {
                 if let Some(gfx) = self.gfx.borrow_mut().as_mut() {
                     gfx.resize(*size);
                 }
-                self.input.handle_window_event(
+                self.platform.handle_window_event(
                     window.scale_factor(),
                     &event,
                     &mut self.pending_events,
@@ -522,7 +522,7 @@ impl ApplicationHandler<()> for WebDemoApp {
                 if let Some(gfx) = self.gfx.borrow_mut().as_mut() {
                     gfx.resize(window.inner_size());
                 }
-                self.input.handle_window_event(
+                self.platform.handle_window_event(
                     window.scale_factor(),
                     &event,
                     &mut self.pending_events,
@@ -542,7 +542,7 @@ impl ApplicationHandler<()> for WebDemoApp {
                 *self.gfx.borrow_mut() = Some(gfx);
             }
             _ => {
-                self.input.handle_window_event(
+                self.platform.handle_window_event(
                     window.scale_factor(),
                     &event,
                     &mut self.pending_events,

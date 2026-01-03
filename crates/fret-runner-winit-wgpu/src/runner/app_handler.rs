@@ -234,11 +234,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                 }
                 self.drain_effects(event_loop);
             }
-            ref ev @ WindowEvent::ModifiersChanged(mods) => {
-                self.raw_modifiers = mods.state();
-                self.modifiers =
-                    fret_runner_winit::map_modifiers(self.raw_modifiers, self.alt_gr_down);
-
+            ref ev @ WindowEvent::ModifiersChanged(..) => {
                 if let Some(state) = self.windows.get_mut(app_window) {
                     state.platform.handle_window_event(
                         state.window.scale_factor(),
@@ -286,12 +282,6 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                 self.drain_effects(event_loop);
             }
             ref ev @ WindowEvent::KeyboardInput { ref event, .. } => {
-                if fret_runner_winit::is_alt_gr_key(&event.logical_key) {
-                    self.alt_gr_down = event.state == ElementState::Pressed;
-                    self.modifiers =
-                        fret_runner_winit::map_modifiers(self.raw_modifiers, self.alt_gr_down);
-                }
-
                 let key = fret_runner_winit::map_physical_key(event.physical_key);
 
                 // ADR 0072 (proposed): Escape cancels an active cross-window dock drag session.

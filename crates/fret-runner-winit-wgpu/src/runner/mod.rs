@@ -9,7 +9,7 @@ use std::{
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
-    InternalDragEvent, InternalDragKind, Modifiers, Point, Px, Rect, Scene, Size, UiServices,
+    InternalDragEvent, InternalDragKind, Point, Px, Rect, Scene, Size, UiServices,
     ViewportInputEvent, WindowMetricsService,
 };
 use fret_platform_desktop::clipboard::DesktopClipboard;
@@ -29,7 +29,6 @@ use winit::{
     dpi::{LogicalSize, PhysicalPosition, Position},
     event::{DeviceEvent, ElementState, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoopProxy},
-    keyboard::ModifiersState,
     window::{Window, WindowId, WindowLevel},
 };
 
@@ -1500,9 +1499,6 @@ pub struct WinitRunner<D: WinitDriver> {
     main_window: Option<fret_core::AppWindowId>,
     windows_pending_front: HashMap<fret_core::AppWindowId, PendingFrontRequest>,
 
-    modifiers: Modifiers,
-    raw_modifiers: ModifiersState,
-    alt_gr_down: bool,
     /// True if this event-loop turn already observed a left mouse release via `WindowEvent`.
     /// On macOS we may also see the same release as a `DeviceEvent`, so this prevents double-drop.
     saw_left_mouse_release_this_turn: bool,
@@ -1769,8 +1765,6 @@ impl<D: WinitDriver> WinitRunner<D> {
         }
         tracing::info!(caps = ?caps, "platform capabilities");
 
-        let raw_modifiers = ModifiersState::empty();
-        let alt_gr_down = false;
         Self {
             config,
             app,
@@ -1783,9 +1777,6 @@ impl<D: WinitDriver> WinitRunner<D> {
             winit_to_app: HashMap::new(),
             main_window: None,
             windows_pending_front: HashMap::new(),
-            modifiers: fret_runner_winit::map_modifiers(raw_modifiers, alt_gr_down),
-            raw_modifiers,
-            alt_gr_down,
             saw_left_mouse_release_this_turn: false,
             left_mouse_down: false,
             dock_tearoff_follow: None,
@@ -3110,6 +3101,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         let Some(state) = self.windows.get_mut(window) else {
             return;
         };
+        let modifiers = state.platform.input.modifiers;
         let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
         self.driver.handle_event(
             &mut self.app,
@@ -3119,7 +3111,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             &Event::InternalDrag(InternalDragEvent {
                 position,
                 kind,
-                modifiers: self.modifiers,
+                modifiers,
             }),
         );
     }
