@@ -13,6 +13,7 @@ use wasm_bindgen_futures::{JsFuture, spawn_local};
 use web_sys::{Document, Event as WebSysEvent, EventTarget, HtmlElement, HtmlInputElement, Node};
 
 type WebChangeCallback = wasm_bindgen::closure::Closure<dyn FnMut(WebSysEvent)>;
+type WebWaker = Rc<dyn Fn()>;
 
 fn window() -> Option<web_sys::Window> {
     web_sys::window()
@@ -25,12 +26,24 @@ fn document() -> Option<Document> {
 /// Web-specific platform services for `fret-runtime::Effect`s that require browser APIs.
 ///
 /// This crate intentionally does *not* implement input/event mapping; use `winit` for that.
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct WebPlatformServices {
     queued_events: Rc<RefCell<Vec<Event>>>,
     fired_timeouts: Rc<RefCell<Vec<TimerToken>>>,
     timers: HashMap<TimerToken, WebTimer>,
     file_dialogs: Rc<RefCell<WebFileDialogState>>,
+    waker: Option<WebWaker>,
+}
+
+impl std::fmt::Debug for WebPlatformServices {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WebPlatformServices")
+            .field("queued_events", &"<Rc<RefCell<Vec<Event>>>>")
+            .field("fired_timeouts", &"<Rc<RefCell<Vec<TimerToken>>>>")
+            .field("timers", &self.timers)
+            .field("file_dialogs", &"<Rc<RefCell<WebFileDialogState>>>")
+            .finish()
+    }
 }
 
 #[derive(Debug)]
@@ -56,6 +69,10 @@ impl WebFileDialogState {
 }
 
 impl WebPlatformServices {
+    pub fn set_waker(&mut self, waker: impl Fn() + 'static) {
+        self.waker = Some(Rc::new(waker));
+    }
+
     pub fn take_events(&mut self) -> Vec<Event> {
         std::mem::take(&mut *self.queued_events.borrow_mut())
     }
@@ -86,8 +103,12 @@ impl WebPlatformServices {
                     };
 
                     let queue = self.fired_timeouts.clone();
+                    let wake = self.waker.clone();
                     let callback = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
                         let _ = queue.try_borrow_mut().map(|mut q| q.push(token));
+                        if let Some(wake) = wake.as_ref() {
+                            wake();
+                        }
                     })
                         as Box<dyn FnMut()>);
 
@@ -128,8 +149,12 @@ impl WebPlatformServices {
                         continue;
                     };
                     let clipboard = window.navigator().clipboard();
+                    let wake = self.waker.clone();
                     spawn_local(async move {
                         let _ = JsFuture::from(clipboard.write_text(&text)).await;
+                        if let Some(wake) = wake.as_ref() {
+                            wake();
+                        }
                     });
                 }
                 Effect::ClipboardGetText { token, .. } => {
@@ -152,6 +177,7 @@ impl WebPlatformServices {
                     };
                     let clipboard = window.navigator().clipboard();
                     let queue = self.queued_events.clone();
+                    let wake = self.waker.clone();
                     spawn_local(async move {
                         let result = JsFuture::from(clipboard.read_text()).await;
                         let event = match result {
@@ -162,6 +188,9 @@ impl WebPlatformServices {
                             Err(_) => Event::ClipboardTextUnavailable { token },
                         };
                         let _ = queue.try_borrow_mut().map(|mut q| q.push(event));
+                        if let Some(wake) = wake.as_ref() {
+                            wake();
+                        }
                     });
                 }
                 Effect::OpenUrl { url } => {
@@ -237,6 +266,7 @@ impl WebPlatformServices {
                     let input_target_for_cb = input_target.clone();
                     let input_for_cb = input.clone();
                     let input_node_for_cb: Node = input.clone().unchecked_into();
+                    let wake = self.waker.clone();
 
                     let callback_cell: Rc<RefCell<Option<WebChangeCallback>>> =
                         Rc::new(RefCell::new(None));
@@ -270,6 +300,9 @@ impl WebPlatformServices {
                             let _ = queue
                                 .try_borrow_mut()
                                 .map(|mut q| q.push(Event::FileDialogCanceled));
+                            if let Some(wake) = wake.as_ref() {
+                                wake();
+                            }
                             return;
                         }
 
@@ -291,6 +324,9 @@ impl WebPlatformServices {
                         let _ = queue
                             .try_borrow_mut()
                             .map(|mut q| q.push(Event::FileDialogSelection(selection)));
+                        if let Some(wake) = wake.as_ref() {
+                            wake();
+                        }
                     })
                         as Box<dyn FnMut(WebSysEvent)>);
 
@@ -344,6 +380,7 @@ impl WebPlatformServices {
         };
 
         let queue = self.queued_events.clone();
+        let wake = self.waker.clone();
         spawn_local(async move {
             let mut out_files: Vec<ExternalDropFileData> = Vec::new();
             let mut errors: Vec<ExternalDropReadError> = Vec::new();
@@ -388,6 +425,9 @@ impl WebPlatformServices {
                 errors,
             });
             let _ = queue.try_borrow_mut().map(|mut q| q.push(event));
+            if let Some(wake) = wake.as_ref() {
+                wake();
+            }
         });
     }
 

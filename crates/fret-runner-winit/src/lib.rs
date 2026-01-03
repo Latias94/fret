@@ -7,6 +7,9 @@ use winit::event::{
 use winit::keyboard::{Key, ModifiersState, NamedKey};
 
 #[cfg(target_arch = "wasm32")]
+use std::rc::Rc;
+
+#[cfg(target_arch = "wasm32")]
 use winit::platform::web::WindowExtWeb;
 
 #[derive(Debug, Default, Clone)]
@@ -108,6 +111,7 @@ mod web_cursor {
 #[cfg(target_arch = "wasm32")]
 pub fn install_web_cursor_listener(
     window: &dyn winit::window::Window,
+    wake: impl Fn() + 'static,
 ) -> Result<WebCursorListener, RunnerError> {
     use wasm_bindgen::JsCast as _;
 
@@ -116,15 +120,20 @@ pub fn install_web_cursor_listener(
     };
     let canvas: web_sys::HtmlCanvasElement = canvas.clone();
 
+    let wake = Rc::new(wake);
+    let wake_move = wake.clone();
     let on_move =
         wasm_bindgen::closure::Closure::wrap(Box::new(move |event: web_sys::PointerEvent| {
             let (x, y) = web_cursor::pointer_offset(&event);
             web_cursor::set(Some((x, y)));
+            wake_move();
         }) as Box<dyn FnMut(web_sys::PointerEvent)>);
 
+    let wake_leave = wake.clone();
     let on_leave =
         wasm_bindgen::closure::Closure::wrap(Box::new(move |_event: web_sys::PointerEvent| {
             web_cursor::set(None);
+            wake_leave();
         }) as Box<dyn FnMut(web_sys::PointerEvent)>);
 
     canvas

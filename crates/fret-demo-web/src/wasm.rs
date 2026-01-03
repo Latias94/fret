@@ -17,7 +17,7 @@ use winit::application::ApplicationHandler;
 use winit::cursor::Cursor;
 use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event::WindowEvent;
-use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
+use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
 use winit::window::{Window, WindowAttributes, WindowId};
 
 #[cfg(target_arch = "wasm32")]
@@ -119,10 +119,13 @@ struct WebDemoApp {
 
     #[cfg(target_arch = "wasm32")]
     web_services: WebPlatformServices,
+
+    #[cfg(target_arch = "wasm32")]
+    event_loop_proxy: EventLoopProxy,
 }
 
 impl WebDemoApp {
-    fn new(canvas_id: String) -> Self {
+    fn new(canvas_id: String, event_loop_proxy: EventLoopProxy) -> Self {
         let mut app = fret_ui_app::App::new();
         let mut caps = PlatformCapabilities::default();
         caps.ui.multi_window = false;
@@ -142,6 +145,10 @@ impl WebDemoApp {
         let last_input = app.models_mut().insert(Arc::<str>::from("input: <none>"));
         let shadcn_checked = app.models_mut().insert(false);
 
+        let mut web_services = WebPlatformServices::default();
+        let proxy = event_loop_proxy.clone();
+        web_services.set_waker(move || proxy.wake_up());
+
         Self {
             canvas_id,
             window: None,
@@ -160,7 +167,9 @@ impl WebDemoApp {
             #[cfg(target_arch = "wasm32")]
             web_cursor: None,
             #[cfg(target_arch = "wasm32")]
-            web_services: WebPlatformServices::default(),
+            web_services,
+            #[cfg(target_arch = "wasm32")]
+            event_loop_proxy,
         }
     }
 
@@ -326,6 +335,9 @@ impl WebDemoApp {
         #[cfg(not(target_arch = "wasm32"))]
         let effects = effects;
 
+        #[cfg(target_arch = "wasm32")]
+        self.pending_events.extend(self.web_services.take_events());
+
         for effect in effects {
             match effect {
                 Effect::TextAddFonts { fonts } => {
@@ -436,17 +448,6 @@ impl WebDemoApp {
         self.app.set_frame_id(self.frame_id);
 
         let scale = window.scale_factor();
-
-        #[cfg(target_arch = "wasm32")]
-        self.platform
-            .input
-            .poll_web_cursor_updates(scale, &mut self.pending_events);
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            self.web_services.tick();
-            self.pending_events.extend(self.web_services.take_events());
-        }
 
         #[cfg(target_arch = "wasm32")]
         let physical = Self::desired_surface_size(window).unwrap_or_else(|| window.surface_size());
@@ -599,7 +600,10 @@ impl ApplicationHandler for WebDemoApp {
 
         #[cfg(target_arch = "wasm32")]
         if self.web_cursor.is_none() {
-            match fret_runner_winit::install_web_cursor_listener(window.as_ref()) {
+            let proxy = self.event_loop_proxy.clone();
+            match fret_runner_winit::install_web_cursor_listener(window.as_ref(), move || {
+                proxy.wake_up();
+            }) {
                 Ok(listener) => self.web_cursor = Some(listener),
                 Err(err) => {
                     web_sys::console::error_1(&JsValue::from_str(&format!(
@@ -614,6 +618,7 @@ impl ApplicationHandler for WebDemoApp {
         #[cfg(target_arch = "wasm32")]
         if let Some(canvas) = window.canvas().map(|c| c.clone()) {
             let gfx_slot = self.gfx.clone();
+            let proxy = self.event_loop_proxy.clone();
             spawn_local(async move {
                 // Resize the canvas backing store before creating/configuring the surface.
                 let (width, height) = {
@@ -675,6 +680,7 @@ impl ApplicationHandler for WebDemoApp {
                     scale_factor,
                     last_surface_error: None,
                 });
+                proxy.wake_up();
             });
         }
 
@@ -686,6 +692,27 @@ impl ApplicationHandler for WebDemoApp {
         self.app.push_effect(Effect::TextAddFonts { fonts });
 
         self.window = Some(window);
+
+        if let Some(window) = self.window.as_ref() {
+            window.request_redraw();
+        }
+    }
+
+    fn proxy_wake_up(&mut self, _event_loop: &dyn ActiveEventLoop) {
+        let Some(window) = self.window.as_ref() else {
+            return;
+        };
+        let window = window.as_ref();
+        let scale = window.scale_factor();
+
+        self.platform
+            .input
+            .poll_web_cursor_updates(scale, &mut self.pending_events);
+
+        self.web_services.tick();
+        self.pending_events.extend(self.web_services.take_events());
+
+        window.request_redraw();
     }
 
     fn window_event(
@@ -712,6 +739,7 @@ impl ApplicationHandler for WebDemoApp {
         match &event {
             WindowEvent::CloseRequested => {
                 self.pending_events.push(FretEvent::WindowCloseRequested);
+                window.request_redraw();
             }
             WindowEvent::SurfaceResized(size) => {
                 if let Some(gfx) = self.gfx.borrow_mut().as_mut() {
@@ -722,6 +750,7 @@ impl ApplicationHandler for WebDemoApp {
                     &event,
                     &mut self.pending_events,
                 );
+                window.request_redraw();
             }
             WindowEvent::ScaleFactorChanged { .. } => {
                 if let Some(gfx) = self.gfx.borrow_mut().as_mut() {
@@ -737,6 +766,7 @@ impl ApplicationHandler for WebDemoApp {
                     &event,
                     &mut self.pending_events,
                 );
+                window.request_redraw();
             }
             WindowEvent::RedrawRequested => {
                 let mut gfx = {
@@ -757,15 +787,15 @@ impl ApplicationHandler for WebDemoApp {
                     &event,
                     &mut self.pending_events,
                 );
+                if !self.pending_events.is_empty() {
+                    window.request_redraw();
+                }
             }
         }
     }
 
     fn about_to_wait(&mut self, event_loop: &dyn ActiveEventLoop) {
-        event_loop.set_control_flow(ControlFlow::Poll);
-        if let Some(window) = self.window.as_ref() {
-            window.request_redraw();
-        }
+        event_loop.set_control_flow(ControlFlow::Wait);
     }
 }
 
@@ -774,7 +804,8 @@ pub fn start() -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
 
     let event_loop = EventLoop::new().map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
-    let app = WebDemoApp::new("fret-canvas".to_string());
+    let proxy = event_loop.create_proxy();
+    let app = WebDemoApp::new("fret-canvas".to_string(), proxy);
 
     #[cfg(target_arch = "wasm32")]
     {
