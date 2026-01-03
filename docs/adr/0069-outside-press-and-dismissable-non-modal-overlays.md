@@ -76,6 +76,18 @@ the runtime treats as inside for the outside-press observer pass:
 
 This preserves the click-through guarantee: the normal hit-tested dispatch still runs.
 
+#### Implicit trigger branch (recommended policy default)
+
+For common toggle-triggered overlays (Popover, DropdownMenu, ContextMenu), the trigger element is
+often rendered outside the overlay subtree. If the trigger is *not* treated as a branch, a trigger
+click while the overlay is open can:
+
+- first close the overlay via the outside-press observer pass, then
+- immediately re-open it when the trigger toggles the open model on activate.
+
+Therefore, component-layer overlay policies should treat the trigger as an implicit
+`DismissableLayerBranch` by default (in addition to any explicit branches).
+
 ### Presence and close transitions (click-through correctness)
 
 Non-modal overlays commonly animate out (opacity / scale / slide) while remaining mounted.
