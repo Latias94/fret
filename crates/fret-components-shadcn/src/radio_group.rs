@@ -1,18 +1,17 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt;
+use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
+use fret_components_ui::primitives::radio_group as radio_group_prim;
 use fret_components_ui::{MetricRef, Space};
-use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, SizeStyle,
-    TextProps,
+    PressableProps, RovingFlexProps, RovingFocusProps, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -164,12 +163,7 @@ impl RadioGroup {
             let model = self.model;
 
             cx.semantics(
-                SemanticsProps {
-                    role: SemanticsRole::List,
-                    label: group_label.clone(),
-                    disabled: group_disabled,
-                    ..Default::default()
-                },
+                radio_group_prim::radio_group_semantics(group_label.clone(), group_disabled),
                 move |cx| {
                     let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().flatten();
 
@@ -229,12 +223,11 @@ impl RadioGroup {
                                         enabled: item_enabled,
                                         focusable: tab_stop,
                                         focus_ring: Some(ring_style),
-                                        a11y: PressableA11y {
-                                            role: Some(SemanticsRole::ListItem),
-                                            label: Some(a11y_label.clone()),
-                                            selected: is_selected,
-                                            ..Default::default()
-                                        },
+                                        a11y: radio_group_prim::radio_button_a11y(
+                                            Some(a11y_label.clone()),
+                                            is_selected,
+                                        )
+                                        .with_collection_position(idx, items.len()),
                                         ..Default::default()
                                     },
                                     move |cx, st| {
@@ -377,4 +370,138 @@ pub fn radio_group<H: UiHost>(
         group = group.item(item);
     }
     group.into_element(cx)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, PathCommand, SemanticsRole, SvgId, SvgService, TextBlobId, TextConstraints,
+        TextMetrics, TextService, TextStyle,
+    };
+    use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_core::{Point, Px, Rect};
+    use fret_ui::{Theme, ThemeConfig, UiTree};
+
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: fret_core::Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn radio_group_emits_radio_group_and_radio_button_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let model = app.models_mut().insert(Some(Arc::from("b")));
+        let items = vec![
+            RadioGroupItem::new("a", "Alpha"),
+            RadioGroupItem::new("b", "Beta"),
+        ];
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                vec![
+                    RadioGroup::new(model.clone())
+                        .a11y_label("Options")
+                        .item(items[0].clone())
+                        .item(items[1].clone())
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.role == SemanticsRole::RadioGroup && n.label.as_deref() == Some("Options")
+            }),
+            "radio group should expose RadioGroup role + label"
+        );
+
+        let alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::RadioButton && n.label.as_deref() == Some("Alpha"))
+            .expect("Alpha radio");
+        assert_eq!(alpha.flags.checked, Some(false));
+        assert_eq!(alpha.pos_in_set, Some(1));
+        assert_eq!(alpha.set_size, Some(2));
+
+        let beta = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::RadioButton && n.label.as_deref() == Some("Beta"))
+            .expect("Beta radio");
+        assert_eq!(beta.flags.checked, Some(true));
+        assert_eq!(beta.pos_in_set, Some(2));
+        assert_eq!(beta.set_size, Some(2));
+    }
 }
