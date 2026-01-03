@@ -21,8 +21,14 @@ Known gaps / follow-ups:
 
 1) **Focus scopes are not yet surfaced as a reusable component policy**
    - The runtime exposes a reusable mechanism (`focus_traverse_in_roots`) intended to be used by
-     component-owned focus scopes, but `fret-components-ui` does not yet ship a headless
-     `FocusScope` policy wrapper that can trap/restore/initial-focus like Radix.
+     component-owned focus scopes.
+   - Partial: `fret-components-ui` now provides:
+     - `primitives::focus_scope::{focus_trap, focus_trap_with_id}` for trap/loop composition, and
+     - reusable “initial focus” / “restore focus” helpers used by the overlay system
+       (`crates/fret-components-ui/src/window_overlays/render.rs`).
+   - Remaining work: extend the primitive to cover non-overlay subtrees (restore semantics when a
+     scope unmounts without being a distinct overlay layer) and expose explicit auto-focus policies
+     (e.g. prevent-scroll, focus guards) as needed.
 
 2) **Scroll-into-view is implemented, but still needs contract polishing**
    - The runtime now attempts to scroll a newly focused node into view by walking ancestors and

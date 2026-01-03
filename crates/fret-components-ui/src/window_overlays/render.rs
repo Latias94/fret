@@ -10,6 +10,8 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::tree::UiLayerId;
 use fret_ui::{Invalidation, UiHost, UiTree};
 
+use crate::primitives::focus_scope as focus_scope_prim;
+
 use super::state::{
     ActiveHoverOverlay, ActiveModal, ActivePopover, ActiveToastLayer, ActiveTooltip, OverlayLayer,
     WindowOverlays,
@@ -118,16 +120,7 @@ pub fn render<H: UiHost>(
             let focus = app.with_global_mut(WindowOverlays::default, |overlays, _app| {
                 overlays.modals.get(&key).and_then(|p| p.initial_focus)
             });
-
-            if let Some(focus) = focus
-                && let Some(node) = fret_ui::elements::node_for_element(app, window, focus)
-            {
-                ui.set_focus(Some(node));
-            } else if let Some(node) =
-                ui.first_focusable_descendant_including_declarative(app, window, root)
-            {
-                ui.set_focus(Some(node));
-            }
+            focus_scope_prim::apply_initial_focus_for_overlay(ui, app, window, root, focus);
         }
     }
 
@@ -205,16 +198,7 @@ pub fn render<H: UiHost>(
             let focus = app.with_global_mut(WindowOverlays::default, |overlays, _app| {
                 overlays.popovers.get(&key).and_then(|p| p.initial_focus)
             });
-
-            if let Some(focus) = focus
-                && let Some(node) = fret_ui::elements::node_for_element(app, window, focus)
-            {
-                ui.set_focus(Some(node));
-            } else if let Some(node) =
-                ui.first_focusable_descendant_including_declarative(app, window, root)
-            {
-                ui.set_focus(Some(node));
-            }
+            focus_scope_prim::apply_initial_focus_for_overlay(ui, app, window, root, focus);
         }
     }
 
@@ -245,16 +229,15 @@ pub fn render<H: UiHost>(
         });
 
     for (layer, trigger, restore_focus) in to_hide_popovers {
-        let focus = ui.focus();
-        if focus.is_none() || focus.is_some_and(|n| ui.node_layer(n) == Some(layer)) {
+        if focus_scope_prim::should_restore_focus_for_non_modal_overlay(ui, layer) {
             OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
-            // Prefer resolving the trigger at restore time to avoid relying on potentially stale
-            // `NodeId` snapshots across frames.
-            if let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger) {
-                ui.set_focus(Some(trigger_node));
-            } else if let Some(node) = restore_focus
-                && ui.node_layer(node).is_some()
-            {
+            if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
+                ui,
+                app,
+                window,
+                Some(trigger),
+                restore_focus,
+            ) {
                 ui.set_focus(Some(node));
             }
         } else {
@@ -268,14 +251,8 @@ pub fn render<H: UiHost>(
         // unmount.
         OverlayLayer::hide_modal().apply(ui, layer);
 
-        // Prefer resolving the trigger at restore time to avoid relying on potentially stale
-        // `NodeId` snapshots across frames.
-        if let Some(trigger) = trigger
-            && let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger)
-        {
-            ui.set_focus(Some(trigger_node));
-        } else if let Some(node) = restore_focus
-            && ui.node_layer(node).is_some()
+        if let Some(node) =
+            focus_scope_prim::resolve_restore_focus_node(ui, app, window, trigger, restore_focus)
         {
             ui.set_focus(Some(node));
         }
