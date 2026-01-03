@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
+use fret_components_ui::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    OverlayRequest, Radius, Space,
+    OverlayRequest, Radius, Size as ComponentSize, Space,
 };
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
@@ -13,7 +14,7 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
-    PositionStyle, PressableProps, SemanticsProps, SizeStyle, TextProps,
+    PositionStyle, PressableA11y, PressableProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -319,6 +320,148 @@ impl DialogContent {
     }
 }
 
+/// shadcn/ui `DialogClose` (v4-aligned recipe).
+///
+/// Upstream shadcn's `DialogContent` renders a close affordance wired to the underlying Radix
+/// primitive. Fret exposes this as an explicit building block so apps can choose to include it (or
+/// replace it) while keeping the modal overlay policy decoupled from visuals.
+#[derive(Clone)]
+pub struct DialogClose {
+    open: Model<bool>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+}
+
+impl std::fmt::Debug for DialogClose {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DialogClose")
+            .field("open", &"<model>")
+            .field("chrome", &self.chrome)
+            .field("layout", &self.layout)
+            .finish()
+    }
+}
+
+impl DialogClose {
+    pub fn new(open: Model<bool>) -> Self {
+        Self {
+            open,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        cx.scope(|cx| {
+            let theme = Theme::global(&*cx.app).clone();
+
+            let fg = theme
+                .color_by_key("muted.foreground")
+                .or_else(|| theme.color_by_key("muted-foreground"))
+                .unwrap_or(theme.colors.text_muted);
+            let bg_hover = theme
+                .color_by_key("accent")
+                .or_else(|| theme.color_by_key("accent.background"))
+                .unwrap_or(theme.colors.hover_background);
+            let bg_active = theme.colors.selection_background;
+
+            let a11y_label: Arc<str> = Arc::from("Close");
+            let open = self.open.clone();
+
+            let size = ComponentSize::Medium;
+            let radius = size.control_radius(&theme);
+            let icon_button_size = size.icon_button_size(&theme);
+
+            let base_layout = LayoutRefinement::default()
+                .absolute()
+                .top(Space::N4)
+                .right(Space::N4)
+                .min_w(MetricRef::Px(icon_button_size))
+                .min_h(MetricRef::Px(icon_button_size))
+                .merge(self.layout);
+            let pressable_layout = decl_style::layout_style(&theme, base_layout);
+
+            let user_chrome = self.chrome;
+            let user_bg_override = user_chrome.background.is_some();
+
+            control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
+                cx.pressable_set_bool(&open, false);
+
+                let hovered = st.hovered;
+                let pressed = st.pressed;
+
+                let bg = if pressed {
+                    bg_active
+                } else if hovered {
+                    bg_hover
+                } else {
+                    Color::TRANSPARENT
+                };
+
+                let mut chrome = ChromeRefinement::default().rounded(Radius::Sm);
+                if !user_bg_override {
+                    chrome.background = Some(ColorRef::Color(bg));
+                }
+                chrome = chrome.merge(user_chrome.clone());
+
+                let mut chrome_props =
+                    decl_style::container_props(&theme, chrome, LayoutRefinement::default());
+                chrome_props.layout.size = pressable_layout.size;
+
+                let pressable_props = PressableProps {
+                    layout: pressable_layout,
+                    enabled: true,
+                    focusable: true,
+                    focus_ring: Some(decl_style::focus_ring(&theme, radius)),
+                    a11y: PressableA11y {
+                        label: Some(a11y_label.clone()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+
+                let children = move |cx: &mut ElementContext<'_, H>| {
+                    let icon_px = Px(size.control_text_px(&theme).0 + 2.0);
+                    let icon = cx.text_props(TextProps {
+                        layout: LayoutStyle::default(),
+                        text: Arc::from("×"),
+                        style: Some(TextStyle {
+                            font: FontId::default(),
+                            size: icon_px,
+                            weight: FontWeight::MEDIUM,
+                            line_height: None,
+                            letter_spacing_em: None,
+                        }),
+                        color: Some(fg),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                    });
+
+                    vec![fret_components_ui::declarative::stack::hstack(
+                        cx,
+                        fret_components_ui::declarative::stack::HStackProps::default()
+                            .justify_center()
+                            .items_center(),
+                        |_cx| vec![icon],
+                    )]
+                };
+
+                (pressable_props, chrome_props, children)
+            })
+        })
+    }
+}
+
 /// shadcn/ui `DialogHeader` (v4).
 #[derive(Debug, Clone)]
 pub struct DialogHeader {
@@ -522,6 +665,7 @@ mod tests {
         overlay_closable: bool,
         content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
         initial_focus_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        close_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
     ) -> fret_ui::elements::GlobalElementId {
         OverlayController::begin_frame(app, window);
 
@@ -572,7 +716,11 @@ mod tests {
                                 },
                             );
 
-                            let content = DialogContent::new(vec![focusable]).into_element(cx);
+                            let close = DialogClose::new(open.clone()).into_element(cx);
+                            close_id_out.set(Some(close.id));
+
+                            let content =
+                                DialogContent::new(vec![focusable, close]).into_element(cx);
                             content_id_out.set(Some(content.id));
                             content
                         },
@@ -624,6 +772,7 @@ mod tests {
             true,
             content_id.clone(),
             Rc::new(Cell::new(None)),
+            Rc::new(Cell::new(None)),
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
@@ -658,6 +807,7 @@ mod tests {
             open.clone(),
             true,
             content_id.clone(),
+            Rc::new(Cell::new(None)),
             Rc::new(Cell::new(None)),
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -737,6 +887,7 @@ mod tests {
             false,
             content_id.clone(),
             Rc::new(Cell::new(None)),
+            Rc::new(Cell::new(None)),
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
@@ -789,6 +940,7 @@ mod tests {
             true,
             content_id.clone(),
             Rc::new(Cell::new(None)),
+            Rc::new(Cell::new(None)),
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
@@ -835,6 +987,7 @@ mod tests {
             true,
             content_id.clone(),
             initial_focus_cell.clone(),
+            Rc::new(Cell::new(None)),
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
@@ -870,6 +1023,7 @@ mod tests {
             true,
             content_id.clone(),
             initial_focus_cell.clone(),
+            Rc::new(Cell::new(None)),
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
@@ -904,6 +1058,131 @@ mod tests {
                 true,
                 content_id.clone(),
                 initial_focus_cell.clone(),
+                Rc::new(Cell::new(None)),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+        assert_eq!(ui.focus(), Some(trigger_node));
+    }
+
+    #[test]
+    fn dialog_close_button_closes_and_restores_trigger_focus() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let initial_focus_cell: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let close_cell: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        // Frame 1: closed.
+        let trigger = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            content_id.clone(),
+            initial_focus_cell.clone(),
+            close_cell.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Open via trigger click.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Frame 2: open (capture close bounds).
+        let _ = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            content_id.clone(),
+            initial_focus_cell.clone(),
+            close_cell.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let close_id = close_cell.get().expect("close element id");
+        let close_node =
+            fret_ui::elements::node_for_element(&mut app, window, close_id).expect("close node");
+        let close_bounds = ui.debug_node_bounds(close_node).expect("close bounds");
+        let click = Point::new(
+            Px(close_bounds.origin.x.0 + close_bounds.size.width.0 * 0.5),
+            Px(close_bounds.origin.y.0 + close_bounds.size.height.0 * 0.5),
+        );
+
+        // Click close and ensure model closes.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(false));
+
+        // Render a few frames to allow presence to complete and focus restore to apply.
+        for _ in 0..4 {
+            let _ = render_dialog_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                true,
+                content_id.clone(),
+                initial_focus_cell.clone(),
+                close_cell.clone(),
             );
             ui.layout_all(&mut app, &mut services, bounds, 1.0);
         }

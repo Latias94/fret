@@ -88,7 +88,7 @@ pub use context_menu::{ContextMenu, ContextMenuEntry, ContextMenuItem};
 #[cfg(feature = "datagrid")]
 pub use data_table::{DataTable, DataTableRowState};
 pub use dialog::{
-    Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+    Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 };
 pub use drawer::{
     Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerSide, DrawerTitle,

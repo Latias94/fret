@@ -37,6 +37,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Trigger/content composition matches the shadcn mental model.
 - Pass: Content is rendered via a per-window overlay root (portal-like), so it is not clipped by
   underlay layout/overflow.
+- Pass: `DialogClose` is available as an explicit close affordance recipe (close button parity).
 
 ### Dismissal behavior
 
@@ -64,5 +65,3 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 ## Follow-ups (recommended)
 
 - Add side-based motion variants consistent with shadcn `data-[state=open]` animations.
-- Add explicit close button recipe parity if desired (`DialogClose`).
-
