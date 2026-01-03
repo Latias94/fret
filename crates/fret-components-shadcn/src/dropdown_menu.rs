@@ -6,11 +6,10 @@ use fret_components_ui::declarative::collection_semantics::CollectionSemanticsEx
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
-use fret_components_ui::primitives::dismissable_layer;
 use fret_components_ui::primitives::menu;
 use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
-    Edges, FontId, FontWeight, KeyCode, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
+    Edges, FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
@@ -278,7 +277,7 @@ impl DropdownMenu {
             let trigger_id = trigger.id;
             let overlay_root_name = OverlayController::popover_root_name(trigger_id);
             cx.with_root_name(&overlay_root_name, |cx| {
-                menu::submenu::sync_root_open(cx, is_open);
+                menu::sub::sync_root_open(cx, is_open);
             });
 
             if is_open {
@@ -303,13 +302,12 @@ impl DropdownMenu {
                     flatten_entries(&mut flat, entries(cx));
                     let entries = flat;
 
-                    let submenu = menu::submenu::ensure_models(cx);
-                    let submenu_cfg = menu::submenu::MenuSubmenuConfig::new(
+                    let submenu = menu::root::ensure_submenu(cx, cx.root_id());
+                    let submenu_cfg = menu::sub::MenuSubmenuConfig::new(
                         SUBMENU_SAFE_HOVER_BUFFER,
                         SUBMENU_CLOSE_DELAY,
                         SUBMENU_FOCUS_DELAY,
                     );
-                    menu::submenu::install_timer_handler(cx, cx.root_id(), submenu.clone());
 
                     let submenu_open = submenu.open_value.clone();
                     let submenu_trigger = submenu.trigger.clone();
@@ -570,121 +568,26 @@ impl DropdownMenu {
 
                                                         out.push(cx.keyed(value.clone(), |cx| {
                                                             cx.pressable_with_id_props(|cx, st, item_id| {
-                                                                if !disabled {
-                                                                    let submenu_for_hover =
-                                                                        submenu_for_item.clone();
-                                                                    let value_for_hover = value.clone();
-                                                                    cx.pressable_add_on_hover_change(Arc::new(
-                                                                        move |host, acx, is_hovered| {
-                                                                            if !is_hovered {
-                                                                                return;
-                                                                            }
-                                                                            menu::submenu::open_on_hover(
-                                                                                host,
-                                                                                acx,
-                                                                                &submenu_for_hover,
-                                                                                has_submenu,
-                                                                                value_for_hover.clone(),
-                                                                            );
-                                                                        },
-                                                                    ));
-                                                                }
-
-                                                                if !disabled && st.hovered {
-                                                                    menu::submenu::sync_while_trigger_hovered(
+                                                                let is_open_submenu =
+                                                                    menu::sub_trigger::wire(
                                                                         cx,
-                                                                        &submenu_for_item,
+                                                                        st,
+                                                                        item_id,
+                                                                        disabled,
                                                                         has_submenu,
                                                                         value.clone(),
-                                                                        item_id,
-                                                                    );
-                                                                }
-
-                                                                if !disabled && st.focused {
-                                                                    menu::submenu::close_if_focus_moved_without_pointer(
-                                                                        cx,
                                                                         &submenu_for_item,
-                                                                        &value,
-                                                                        item_id,
-                                                                    );
-                                                                }
+                                                                        SUBMENU_FOCUS_DELAY,
+                                                                    )
+                                                                    .unwrap_or(false);
 
-                                                                if has_submenu {
-                                                                    let submenu_for_activate =
-                                                                        submenu_for_item.clone();
-                                                                    let value_for_activate = value.clone();
-                                                                    cx.pressable_add_on_activate(Arc::new(
-                                                                        move |host, acx, _reason| {
-                                                                            if disabled {
-                                                                                return;
-                                                                            }
-                                                                            menu::submenu::open_on_activate(
-                                                                                host,
-                                                                                acx,
-                                                                                &submenu_for_activate,
-                                                                                value_for_activate.clone(),
-                                                                            );
-                                                                        },
-                                                                    ));
-                                                                } else {
+                                                                if !has_submenu && !disabled {
                                                                     cx.pressable_dispatch_command_opt(command);
-                                                                    if !disabled {
-                                                                        cx.pressable_set_bool(&open, false);
-                                                                    }
+                                                                    cx.pressable_set_bool(&open, false);
                                                                 }
-
-                                                                // Submenu keyboard affordances (minimal):
-                                                                // - ArrowRight opens the submenu for this item (if any).
-                                                                // - ArrowLeft closes any open submenu.
-                                                                //
-                                                                // Focus transfer into the submenu is driven via a short timer so the
-                                                                // submenu tree can be rendered before requesting focus.
-                                                                let key_has_submenu = has_submenu;
-                                                                let submenu_for_key =
-                                                                    submenu_for_item.clone();
-                                                                let value_for_key = value.clone();
-                                                                cx.key_on_key_down_for(
-                                                                    item_id,
-                                                                    Arc::new(move |host, acx, down| {
-                                                                        if down.repeat {
-                                                                            return false;
-                                                                        }
-                                                                        match down.key {
-                                                                            KeyCode::ArrowRight => {
-                                                                                if !key_has_submenu {
-                                                                                    return false;
-                                                                                }
-                                                                                menu::submenu::open_on_arrow_right(
-                                                                                    host,
-                                                                                    acx,
-                                                                                    &submenu_for_key,
-                                                                                    value_for_key.clone(),
-                                                                                    SUBMENU_FOCUS_DELAY,
-                                                                                );
-                                                                                true
-                                                                            }
-                                                                            KeyCode::ArrowLeft => {
-                                                                                menu::submenu::close_on_arrow_left(
-                                                                                    host,
-                                                                                    acx,
-                                                                                    &submenu_for_key,
-                                                                                );
-                                                                                true
-                                                                            }
-                                                                            _ => false,
-                                                                        }
-                                                                    }),
-                                                                );
-
-                                                                let is_open_submenu = cx
-                                                                    .watch_model(&submenu_for_item.open_value)
-                                                                    .cloned()
-                                                                    .unwrap_or(None)
-                                                                    .as_ref()
-                                                                    .is_some_and(|cur| cur.as_ref() == value.as_ref());
 
                                                                 if has_submenu && is_open_submenu {
-                                                                    menu::submenu::set_trigger_if_none(
+                                                                    menu::sub::set_trigger_if_none(
                                                                         cx,
                                                                         item_id,
                                                                         &submenu_for_item.trigger,
@@ -709,11 +612,11 @@ impl DropdownMenu {
                                                                                 Side::Right,
                                                                                 Align::Start,
                                                                             );
-                                                                        let geometry = menu::submenu::MenuSubmenuGeometry {
+                                                                        let geometry = menu::sub::MenuSubmenuGeometry {
                                                                             reference: trigger_anchor,
                                                                             floating: placed,
                                                                         };
-                                                                        menu::submenu::set_geometry_if_changed(
+                                                                        menu::sub::set_geometry_if_changed(
                                                                             cx,
                                                                             geometry,
                                                                             &submenu_for_item.geometry,
@@ -841,19 +744,8 @@ impl DropdownMenu {
                         },
                     );
 
-                    let submenu_for_hook = submenu.clone();
-                    let cfg_for_hook = submenu_cfg;
                     let dismissible_on_pointer_move =
-                        dismissable_layer::pointer_move_handler(move |host, acx, mv| {
-                            let _ = menu::submenu::handle_dismissible_pointer_move(
-                                host,
-                                acx,
-                                mv,
-                                &submenu_for_hook,
-                                cfg_for_hook,
-                            );
-                            false
-                        });
+                        menu::root::submenu_pointer_move_handler(submenu.clone(), submenu_cfg);
 
                     let mut children = vec![content];
 
@@ -876,7 +768,7 @@ impl DropdownMenu {
                                 });
 
                                 if let Some(submenu_entries) = submenu_entries {
-                                    menu::submenu::clear_focus_target(cx, &submenu_focus_target);
+                                    menu::sub::clear_focus_target(cx, &submenu_focus_target);
 
                                     let outer = overlay::outer_bounds_with_window_margin(
                                         cx.bounds,
@@ -907,14 +799,14 @@ impl DropdownMenu {
                                                 Side::Right,
                                                 Align::Start,
                                             );
-                                            Some(menu::submenu::MenuSubmenuGeometry {
+                                            Some(menu::sub::MenuSubmenuGeometry {
                                                 reference: trigger_anchor,
                                                 floating: placed,
                                             })
                                         });
 
                                     if let Some(geometry) = geometry {
-                                        menu::submenu::set_geometry_if_changed(
+                                        menu::sub::set_geometry_if_changed(
                                             cx,
                                             geometry,
                                             &submenu_geometry,
@@ -1021,26 +913,19 @@ impl DropdownMenu {
                                                                     submenu_models_for_panel.clone();
                                                                 let text_style = text_style.clone();
 
-                                                                rows.push(cx.keyed(value.clone(), |cx| {
+                                                                        rows.push(cx.keyed(value.clone(), |cx| {
                                                                     cx.pressable_with_id_props(
                                                                         |cx, st, item_id| {
-                                                                            menu::submenu::focus_first_available_on_open(
+                                                                            menu::sub_content::wire_item(
                                                                                 cx,
-                                                                                &submenu_for_key,
                                                                                 item_id,
                                                                                 disabled,
+                                                                                &submenu_for_key,
                                                                             );
                                                                             cx.pressable_dispatch_command_opt(command);
                                                                             if !disabled {
                                                                                 cx.pressable_set_bool(&open, false);
                                                                             }
-
-                                                                            cx.key_on_key_down_for(
-                                                                                item_id,
-                                                                                menu::submenu::submenu_item_arrow_left_handler(
-                                                                                    submenu_for_key.clone(),
-                                                                                ),
-                                                                            );
 
                                                                             let props = PressableProps {
                                                                                 layout: {

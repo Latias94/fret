@@ -1,4 +1,4 @@
-//! Menu submenu policy helpers (Radix-aligned outcomes).
+//! Menu Sub (submenu) policy helpers (Radix-aligned outcomes).
 //!
 //! In Radix, `DropdownMenu`, `ContextMenu`, and `Menubar` are wrappers around the lower-level
 //! `Menu` primitive (`@radix-ui/react-menu`):

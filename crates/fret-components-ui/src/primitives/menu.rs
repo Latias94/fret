@@ -7,5 +7,12 @@
 //! exporting a standalone primitive package. We mirror that conceptual grouping here.
 
 pub mod content;
+pub mod item;
 pub mod pointer_grace_intent;
-pub mod submenu;
+pub mod root;
+pub mod sub;
+pub mod sub_content;
+pub mod sub_trigger;
+
+// Compatibility alias: some wrappers still call this `submenu`.
+pub use sub as submenu;
