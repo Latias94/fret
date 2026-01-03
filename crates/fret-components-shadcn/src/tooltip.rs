@@ -788,6 +788,227 @@ mod tests {
     }
 
     #[test]
+    fn tooltip_opens_after_delay_and_closes_after_close_delay() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        ) {
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "test",
+                |cx| {
+                    TooltipProvider::new()
+                        .delay_duration_frames(1)
+                        .skip_delay_duration_frames(0)
+                        .with(cx, |cx| {
+                            let trigger = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        label: Some(Arc::from("trigger")),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |cx, _st, id| {
+                                    trigger_id_out.set(Some(id));
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            );
+
+                            let content =
+                                TooltipContent::new(vec![cx.text_props(TextProps::new("tip"))])
+                                    .into_element(cx);
+                            content_id_out.set(Some(content.id));
+
+                            vec![
+                                Tooltip::new(trigger, content)
+                                    .close_delay_frames(2)
+                                    .into_element(cx),
+                            ]
+                        })
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+        }
+
+        // Frame 1: build and establish mappings.
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Ensure pointer starts outside.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: Point::new(Px(200.0), Px(200.0)),
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        // Hover trigger.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: Point::new(Px(10.0), Px(10.0)),
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        // Frame 2: hovered, but delay not yet elapsed.
+        app.set_frame_id(FrameId(2));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_element = content_id.get().expect("content element id");
+        assert!(
+            fret_ui::elements::node_for_element(&mut app, window, content_element).is_none(),
+            "expected tooltip to still be closed before delay elapses"
+        );
+
+        // Frame 3: delay elapsed -> open.
+        app.set_frame_id(FrameId(3));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
+            .expect("expected tooltip content node to exist after delay elapses");
+        let tooltip_layer_root = *ui
+            .debug_node_path(content_node)
+            .first()
+            .expect("tooltip node path root");
+        assert!(
+            ui.debug_layers_in_paint_order()
+                .iter()
+                .find(|layer| layer.root == tooltip_layer_root)
+                .is_some_and(|layer| layer.visible),
+            "expected tooltip layer to be visible after delay elapses"
+        );
+
+        // Leave hover.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: Point::new(Px(200.0), Px(200.0)),
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        // Frame 4/5: close delay not yet elapsed -> still open.
+        for frame in 4..=5 {
+            app.set_frame_id(FrameId(frame));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                trigger_id.clone(),
+                content_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            assert!(
+                fret_ui::elements::node_for_element(&mut app, window, content_element).is_some(),
+                "expected tooltip to remain mounted during close delay"
+            );
+            assert!(
+                ui.debug_layers_in_paint_order()
+                    .iter()
+                    .find(|layer| layer.root == tooltip_layer_root)
+                    .is_some_and(|layer| layer.visible),
+                "expected tooltip layer to remain visible during close delay"
+            );
+        }
+
+        // Frame 6: close delay elapsed -> closed.
+        app.set_frame_id(FrameId(6));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let tooltip_layer = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|layer| layer.root == tooltip_layer_root);
+        assert!(
+            tooltip_layer.is_none_or(|layer| !layer.visible),
+            "expected tooltip layer to be hidden after close delay elapses"
+        );
+    }
+
+    #[test]
     fn tooltip_provider_skips_delay_after_recent_close() {
         let window = AppWindowId::default();
         let mut app = App::new();
