@@ -2168,19 +2168,19 @@ impl<D: WinitDriver> WinitRunner<D> {
 
         // Best-effort clamping: avoid creating "off-screen" floating windows due to
         // platform-specific coordinate spaces and DPI conversions.
-        if let Some(monitor) = anchor_state.window.current_monitor() {
-            if let (Some(pos), Some(mode)) = (monitor.position(), monitor.current_video_mode()) {
-                let size = mode.size();
-                let min_x = pos.x as f64;
-                let min_y = pos.y as f64;
-                // Leave a small margin so the window stays reachable even if its size is larger
-                // than the monitor work area.
-                let max_x = min_x + size.width as f64 - 40.0;
-                let max_y = min_y + size.height as f64 - 40.0;
+        if let Some(monitor) = anchor_state.window.current_monitor()
+            && let (Some(pos), Some(mode)) = (monitor.position(), monitor.current_video_mode())
+        {
+            let size = mode.size();
+            let min_x = pos.x as f64;
+            let min_y = pos.y as f64;
+            // Leave a small margin so the window stays reachable even if its size is larger
+            // than the monitor work area.
+            let max_x = min_x + size.width as f64 - 40.0;
+            let max_y = min_y + size.height as f64 - 40.0;
 
-                x = x.clamp(min_x, max_x);
-                y = y.clamp(min_y, max_y);
-            }
+            x = x.clamp(min_x, max_x);
+            y = y.clamp(min_y, max_y);
         }
 
         Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
@@ -2196,17 +2196,17 @@ impl<D: WinitDriver> WinitRunner<D> {
         let mut x = screen_pos.x + ox;
         let mut y = screen_pos.y + oy;
 
-        if let Some(monitor) = ref_state.window.current_monitor() {
-            if let (Some(pos), Some(mode)) = (monitor.position(), monitor.current_video_mode()) {
-                let size = mode.size();
-                let min_x = pos.x as f64;
-                let min_y = pos.y as f64;
-                let max_x = min_x + size.width as f64 - 40.0;
-                let max_y = min_y + size.height as f64 - 40.0;
+        if let Some(monitor) = ref_state.window.current_monitor()
+            && let (Some(pos), Some(mode)) = (monitor.position(), monitor.current_video_mode())
+        {
+            let size = mode.size();
+            let min_x = pos.x as f64;
+            let min_y = pos.y as f64;
+            let max_x = min_x + size.width as f64 - 40.0;
+            let max_y = min_y + size.height as f64 - 40.0;
 
-                x = x.clamp(min_x, max_x);
-                y = y.clamp(min_y, max_y);
-            }
+            x = x.clamp(min_x, max_x);
+            y = y.clamp(min_y, max_y);
         }
 
         Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
