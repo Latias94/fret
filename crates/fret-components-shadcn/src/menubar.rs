@@ -353,6 +353,10 @@ impl MenubarMenuEntries {
             let label = self.menu.label.clone();
 
             cx.pressable_with_id_props(|cx, st, trigger_id| {
+                if enabled {
+                    menu::trigger::wire_open_on_arrow_keys(cx, trigger_id, open.clone());
+                }
+
                 let mut trigger_layout = LayoutStyle::default();
                 trigger_layout.size.height = Length::Auto;
                 trigger_layout.size.width = Length::Auto;
@@ -1435,6 +1439,45 @@ mod tests {
             },
         );
         assert_eq!(ui.focus(), Some(edit));
+    }
+
+    #[test]
+    fn menubar_opens_on_arrow_down_from_focused_trigger() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot");
+        let file = menu_trigger_node_id(snap0, "File");
+        ui.set_focus(Some(file));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(menu_trigger_expanded(snap1, "File"));
+        assert!(
+            snap1.nodes.iter().any(|n| {
+                n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New")
+            }),
+            "menu items should render after ArrowDown opens the menubar menu"
+        );
     }
 
     #[test]
