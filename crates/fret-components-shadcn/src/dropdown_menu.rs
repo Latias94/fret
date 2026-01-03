@@ -309,6 +309,7 @@ impl DropdownMenu {
 
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
+            menu::trigger::wire_open_on_arrow_keys(cx, trigger_id, self.open.clone());
             let overlay_root_name = OverlayController::popover_root_name(trigger_id);
             let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
             let submenu =
@@ -1251,6 +1252,58 @@ mod tests {
         root
     }
 
+    fn render_frame_focusable_trigger(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        entries: Vec<DropdownMenuEntry>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "dropdown-menu-trigger",
+            move |cx| {
+                vec![DropdownMenu::new(open).into_element(
+                    cx,
+                    |cx| {
+                        cx.pressable(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st| {
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        )
+                    },
+                    move |_cx| entries,
+                )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     #[test]
     fn dropdown_menu_items_have_collection_position_metadata_excluding_separators() {
         let window = AppWindowId::default();
@@ -1308,6 +1361,67 @@ mod tests {
             .expect("Beta menu item");
         assert_eq!(beta.pos_in_set, Some(2));
         assert_eq!(beta.set_size, Some(3));
+    }
+
+    #[test]
+    fn dropdown_menu_opens_on_arrow_down_from_focused_trigger() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+
+        let root = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            entries,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha")),
+            "menu items should render after ArrowDown opens the menu"
+        );
     }
 
     fn rect_center(rect: Rect) -> Point {

@@ -13,6 +13,7 @@ pub mod root;
 pub mod sub;
 pub mod sub_content;
 pub mod sub_trigger;
+pub mod trigger;
 
 // Compatibility alias: some wrappers still call this `submenu`.
 pub use sub as submenu;
