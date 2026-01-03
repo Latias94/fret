@@ -86,14 +86,15 @@ impl<H: UiHost> UiTree<H> {
                 self.mark_invalidation(id, inv);
             }
 
-            if let Some(focus) = requested_focus
-                && self.focus != Some(focus)
-            {
-                if let Some(prev) = self.focus {
-                    self.mark_invalidation(prev, Invalidation::Paint);
+            if let Some(focus) = requested_focus {
+                let (active_roots, _barrier_root) = self.active_input_layers();
+                if self.focus_request_is_allowed(app, self.window, &active_roots, focus) {
+                    if let Some(prev) = self.focus {
+                        self.mark_invalidation(prev, Invalidation::Paint);
+                    }
+                    self.focus = Some(focus);
+                    self.mark_invalidation(focus, Invalidation::Paint);
                 }
-                self.focus = Some(focus);
-                self.mark_invalidation(focus, Invalidation::Paint);
             }
 
             if did_handle {

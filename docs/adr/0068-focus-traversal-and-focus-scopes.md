@@ -11,6 +11,9 @@ The runtime traversal mechanism described here is **largely implemented** in `cr
   (modal-barrier aware), and applies a conservative **visibility intersection** filter.
 - Cross-root ordering: active roots are iterated in **reverse paint order** (top → bottom), then a
   deterministic pre-order traversal is used within each root.
+- FocusScope trap wiring: declarative `FocusScopeProps { trap_focus: true }` traps Tab traversal
+  inside its subtree, and prevents focus requests that would move focus outside while the trap is
+  active.
 
 Current implementation entry points:
 

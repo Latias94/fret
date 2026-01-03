@@ -581,7 +581,7 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if let Some(focus) = requested_focus
-                    && self.focus != Some(focus)
+                    && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
                 {
                     if let Some(prev) = self.focus {
                         self.mark_invalidation(prev, Invalidation::Paint);
@@ -661,7 +661,7 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if let Some(focus) = requested_focus
-                    && self.focus != Some(focus)
+                    && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
                 {
                     if let Some(prev) = self.focus {
                         self.mark_invalidation(prev, Invalidation::Paint);
