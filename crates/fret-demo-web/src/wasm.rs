@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_components_shadcn as shadcn;
+use fret_ui_shadcn as shadcn;
 use fret_core::{AppWindowId, Event as FretEvent, Point, Px, Rect, Scene, Size, UiServices};
 use fret_render::{ClearColor, RenderSceneParams, Renderer, SurfaceState, WgpuContext};
 use fret_runtime::{Effect, FrameId, Model, PlatformCapabilities, TickId};

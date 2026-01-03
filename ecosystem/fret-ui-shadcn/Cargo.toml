@@ -1,0 +1,19 @@
+[package]
+name = "fret-ui-shadcn"
+version.workspace = true
+edition.workspace = true
+
+[features]
+default = []
+# Heavy, app-specific composites (e.g. data grids / dashboard blocks).
+datagrid = []
+
+[dependencies]
+fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-ui-kit = { path = "../fret-ui-kit", features = ["icons"] }
+fret-icons = { path = "../fret-icons" }
+
+[dev-dependencies]
+fret-app = { path = "../../crates/fret-app" }

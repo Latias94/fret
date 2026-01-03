@@ -1080,18 +1080,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fret-components-shadcn"
-version = "0.1.0"
-dependencies = [
- "fret-app",
- "fret-core",
- "fret-icons",
- "fret-runtime",
- "fret-ui",
- "fret-ui-kit",
-]
-
-[[package]]
 name = "fret-core"
 version = "0.1.0"
 dependencies = [
@@ -1107,7 +1095,6 @@ dependencies = [
  "anyhow",
  "fret-app",
  "fret-components-app",
- "fret-components-shadcn",
  "fret-core",
  "fret-icons",
  "fret-icons-lucide",
@@ -1118,6 +1105,7 @@ dependencies = [
  "fret-ui-app",
  "fret-ui-docking",
  "fret-ui-kit",
+ "fret-ui-shadcn",
  "tracing",
  "tracing-subscriber",
  "winit",
@@ -1128,7 +1116,6 @@ name = "fret-demo-web"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
- "fret-components-shadcn",
  "fret-core",
  "fret-fonts",
  "fret-platform-web",
@@ -1136,6 +1123,7 @@ dependencies = [
  "fret-runner-winit",
  "fret-runtime",
  "fret-ui-app",
+ "fret-ui-shadcn",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -1312,6 +1300,18 @@ dependencies = [
  "fret-runtime",
  "fret-ui",
  "tracing",
+]
+
+[[package]]
+name = "fret-ui-shadcn"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-core",
+ "fret-icons",
+ "fret-runtime",
+ "fret-ui",
+ "fret-ui-kit",
 ]
 
 [[package]]

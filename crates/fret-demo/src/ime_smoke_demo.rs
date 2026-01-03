@@ -1,6 +1,6 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect};
-use fret_components_shadcn as shadcn;
+use fret_ui_shadcn as shadcn;
 use fret_core::{AppWindowId, Event, Px, Rect, UiServices};
 use fret_runner_winit_wgpu::{
     WinitAppBuilder, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
