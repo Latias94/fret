@@ -11,6 +11,7 @@ use fret_components_ui::declarative::scroll as decl_scroll;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::overlay;
+use fret_components_ui::primitives::popper_content;
 use fret_components_ui::recipes::input::{
     InputTokenKeys, input_chrome_container_props, resolve_input_chrome,
 };
@@ -331,9 +332,11 @@ fn select_impl<H: UiHost>(
                     let placed = layout.rect;
                     let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
                     let extra_left = wrapper_insets.left;
-                    let extra_right = wrapper_insets.right;
                     let extra_top = wrapper_insets.top;
-                    let extra_bottom = wrapper_insets.bottom;
+
+                    let theme_for_overlay = theme.clone();
+                    let text_style_for_overlay = text_style.clone();
+                    let open_for_overlay = open.clone();
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
@@ -357,28 +360,8 @@ fn select_impl<H: UiHost>(
                             ..Default::default()
                         };
 
-                        let popover_layout = LayoutStyle {
-                            position: PositionStyle::Absolute,
-                            inset: InsetStyle {
-                                left: Some(Px(placed.origin.x.0 - extra_left.0)),
-                                top: Some(Px(placed.origin.y.0 - extra_top.0)),
-                                ..Default::default()
-                            },
-                            size: SizeStyle {
-                                width: Length::Px(Px(
-                                    placed.size.width.0 + extra_left.0 + extra_right.0,
-                                )),
-                                height: Length::Px(Px(
-                                    placed.size.height.0 + extra_top.0 + extra_bottom.0,
-                                )),
-                                ..Default::default()
-                            },
-                            overflow: Overflow::Visible,
-                            ..Default::default()
-                        };
-
-                        let shadow = decl_style::shadow_sm(&theme, radius);
-                        let arrow_bg = theme.colors.panel_background;
+                        let shadow = decl_style::shadow_sm(&theme_for_overlay, radius);
+                        let arrow_bg = theme_for_overlay.colors.panel_background;
                         let arrow_border = border;
                         let arrow_el = popper_arrow::diamond_arrow_element(
                             cx,
@@ -392,12 +375,8 @@ fn select_impl<H: UiHost>(
                             },
                         );
 
-                        vec![cx.container(
-                            ContainerProps {
-                                layout: popover_layout,
-                                ..Default::default()
-                            },
-                            |cx| {
+                        let wrapper =
+                            popper_content::popper_wrapper_at(cx, placed, wrapper_insets, move |cx| {
                                 let panel = cx.container(
                                     ContainerProps {
                                         layout: LayoutStyle {
@@ -416,7 +395,7 @@ fn select_impl<H: UiHost>(
                                             ..Default::default()
                                         },
                                         padding: Edges::all(Px(0.0)),
-                                        background: Some(theme.colors.panel_background),
+                                        background: Some(theme_for_overlay.colors.panel_background),
                                         shadow: Some(shadow),
                                         border: Edges::all(border_width),
                                         border_color: Some(border),
@@ -467,11 +446,14 @@ fn select_impl<H: UiHost>(
                                                                         .as_ref()
                                                                         .is_some_and(|v| v.as_ref() == item.value.as_ref());
 
-                                                                    let item_ring = decl_style::focus_ring(&theme, theme.metrics.radius_sm);
+                                                                    let item_ring = decl_style::focus_ring(
+                                                                        &theme_for_overlay,
+                                                                        theme_for_overlay.metrics.radius_sm,
+                                                                    );
 
                                                                     let model = model.clone();
-                                                                    let open = open.clone();
-                                                                    let text_style = text_style.clone();
+                                                                    let open = open_for_overlay.clone();
+                                                                    let text_style = text_style_for_overlay.clone();
 
                                                                     out.push(cx.pressable_with_id(
                                                                  PressableProps {
@@ -557,8 +539,9 @@ fn select_impl<H: UiHost>(
                                 } else {
                                     vec![panel]
                                 }
-                            },
-                        )]
+                            });
+
+                        vec![wrapper]
                     });
 
                     let mut request = OverlayRequest::dismissible_popover(
