@@ -1,0 +1,13 @@
+[package]
+name = "fret-ui-docking"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
+tracing.workspace = true
+
+[dev-dependencies]
+slotmap.workspace = true

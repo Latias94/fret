@@ -7,7 +7,7 @@ edition.workspace = true
 anyhow.workspace = true
 fret-components-icons = { path = "../fret-components-icons" }
 fret-components-app = { path = "../fret-components-app" }
-fret-components-docking = { path = "../fret-components-docking" }
+fret-ui-docking = { path = "../../ecosystem/fret-ui-docking" }
 fret-components-shadcn = { path = "../fret-components-shadcn" }
 fret-components-ui = { path = "../fret-components-ui" }
 fret-icons-lucide = { path = "../fret-icons-lucide" }

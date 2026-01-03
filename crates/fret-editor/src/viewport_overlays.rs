@@ -2,7 +2,7 @@
 //!
 //! These are editor/app-level policies (ADR 0027 / ADR 0049). Docking is responsible only for
 //! embedding viewports (render target + input forwarding). The app can paint these overlays via
-//! `fret-components-docking`'s `DockViewportOverlayHooks`.
+//! `fret-ui-docking`'s `DockViewportOverlayHooks`.
 
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Scene, SceneOp,

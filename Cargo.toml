@@ -4,7 +4,6 @@ members = [
     "crates/fret",
     "crates/fret-app",
     "crates/fret-components-app",
-    "crates/fret-components-docking",
     "crates/fret-components-icons",
     "crates/fret-icons-lucide",
     "crates/fret-icons-radix",
@@ -24,6 +23,7 @@ members = [
     "crates/fret-runtime",
     "crates/fret-ui",
     "crates/fret-ui-app",
+    "ecosystem/fret-ui-docking",
 ]
 resolver = "2"
 

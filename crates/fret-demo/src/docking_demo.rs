@@ -1,6 +1,6 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
-use fret_components_docking::{
+use fret_ui_docking::{
     DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
     DockViewportOverlayHooksService, handle_dock_before_close_window, handle_dock_op,
     handle_dock_window_created, render_and_bind_dock_panels,
@@ -74,7 +74,7 @@ impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
         theme: fret_ui::ThemeSnapshot,
         _window: AppWindowId,
         _panel: &fret_core::PanelKey,
-        _viewport: fret_components_docking::ViewportPanel,
+        _viewport: fret_ui_docking::ViewportPanel,
         _mapping: fret_core::ViewportMapping,
         draw_rect: Rect,
         scene: &mut Scene,
@@ -157,7 +157,7 @@ impl DockingDemoDriver {
         Self::ensure_dock_graph(app, window);
 
         let dock_space = state.root.get_or_insert_with(|| {
-            let node = fret_components_docking::create_dock_space_node(&mut state.ui, window);
+            let node = fret_ui_docking::create_dock_space_node(&mut state.ui, window);
             state.ui.set_root(node);
             node
         });
