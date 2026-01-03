@@ -7,6 +7,7 @@
 //! exporting a standalone primitive package. We mirror that conceptual grouping here.
 
 pub mod content;
+pub mod content_panel;
 pub mod item;
 pub mod pointer_grace_intent;
 pub mod root;

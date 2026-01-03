@@ -7,7 +7,9 @@ use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
 use fret_components_ui::primitives::menu;
 use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
-use fret_core::{Edges, MouseButton, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    Edges, MouseButton, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
+};
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::PointerDownCx;
 use fret_ui::element::{
@@ -342,23 +344,11 @@ impl ContextMenu {
                                     ..Default::default()
                                 },
                                 move |cx| {
-                                    let panel = cx.container(
-                                        ContainerProps {
-                                            layout: LayoutStyle {
-                                                position: PositionStyle::Absolute,
-                                                inset: InsetStyle {
-                                                    left: Some(extra_left),
-                                                    top: Some(extra_top),
-                                                    ..Default::default()
-                                                },
-                                                size: SizeStyle {
-                                                    width: Length::Px(placed.size.width),
-                                                    height: Length::Px(placed.size.height),
-                                                    ..Default::default()
-                                                },
-                                                overflow: Overflow::Clip,
-                                                ..Default::default()
-                                            },
+                                    let panel = menu::content_panel::menu_panel_container_at(
+                                        cx,
+                                        Rect::new(Point::new(extra_left, extra_top), placed.size),
+                                        move |layout| ContainerProps {
+                                            layout,
                                             padding: Edges::all(Px(4.0)),
                                             background: Some(theme.colors.panel_background),
                                             shadow: Some(shadow),
@@ -512,7 +502,7 @@ impl ContextMenu {
                                                 }
                                             }
 
-                                            out
+                                                    out
                                                 },
                                             )]
                                         },

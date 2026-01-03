@@ -14,9 +14,8 @@ use fret_core::{
 };
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
-    SemanticsProps, SizeStyle, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
@@ -544,23 +543,11 @@ impl MenubarMenuEntries {
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![cx.container(
-                                    ContainerProps {
-                                        layout: LayoutStyle {
-                                            position: PositionStyle::Absolute,
-                                            inset: InsetStyle {
-                                                left: Some(placed.origin.x),
-                                                top: Some(placed.origin.y),
-                                                ..Default::default()
-                                            },
-                                            size: SizeStyle {
-                                                width: Length::Px(placed.size.width),
-                                                height: Length::Px(placed.size.height),
-                                                ..Default::default()
-                                            },
-                                            overflow: Overflow::Clip,
-                                            ..Default::default()
-                                        },
+                                vec![menu::content_panel::menu_panel_container_at(
+                                    cx,
+                                    placed,
+                                    move |layout| ContainerProps {
+                                        layout,
                                         padding: Edges::all(Px(6.0)),
                                         background: Some(theme.colors.menu_background),
                                         shadow: Some(shadow),
@@ -569,11 +556,11 @@ impl MenubarMenuEntries {
                                         corner_radii: Corners::all(theme.metrics.radius_sm),
                                     },
                                     move |cx| {
-                                            vec![menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
-                                                cx,
-                                                RovingFlexProps {
-                                                    flex: FlexProps {
-                                                        layout: LayoutStyle::default(),
+                                        vec![menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
+                                            cx,
+                                            RovingFlexProps {
+                                                flex: FlexProps {
+                                                    layout: LayoutStyle::default(),
                                                     direction: fret_core::Axis::Vertical,
                                                     gap: Px(0.0),
                                                     padding: Edges::all(Px(0.0)),
@@ -591,7 +578,10 @@ impl MenubarMenuEntries {
 
                                                 let mut item_ix: usize = 0;
 
-                                                for (idx, entry) in entries_for_content.iter().enumerate() {
+                                                for (idx, entry) in entries_for_content
+                                                    .iter()
+                                                    .enumerate()
+                                                {
                                                     let entry_value: Arc<str> =
                                                         Arc::from(format!("entry:{idx}"));
                                                     match entry {
