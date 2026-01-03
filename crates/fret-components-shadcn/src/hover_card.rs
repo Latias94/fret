@@ -2,6 +2,7 @@ use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
 use fret_components_ui::primitives::hover_intent::{self, HoverIntentConfig};
+use fret_components_ui::primitives::popper_content;
 use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayRequest,
     Radius, Space,
@@ -258,9 +259,7 @@ impl HoverCard {
                 let placed = layout.rect;
                 let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
                 let extra_left = wrapper_insets.left;
-                let extra_right = wrapper_insets.right;
                 let extra_top = wrapper_insets.top;
-                let extra_bottom = wrapper_insets.bottom;
 
                 let arrow_el = popper_arrow::diamond_arrow_element(
                     cx,
@@ -276,25 +275,7 @@ impl HoverCard {
 
                 vec![cx.hover_region(
                     HoverRegionProps {
-                        layout: LayoutStyle {
-                            position: PositionStyle::Absolute,
-                            inset: InsetStyle {
-                                top: Some(Px(placed.origin.y.0 - extra_top.0)),
-                                left: Some(Px(placed.origin.x.0 - extra_left.0)),
-                                ..Default::default()
-                            },
-                            size: fret_ui::element::SizeStyle {
-                                width: fret_ui::element::Length::Px(Px(placed.size.width.0
-                                    + extra_left.0
-                                    + extra_right.0)),
-                                height: fret_ui::element::Length::Px(Px(placed.size.height.0
-                                    + extra_top.0
-                                    + extra_bottom.0)),
-                                ..Default::default()
-                            },
-                            overflow: Overflow::Visible,
-                            ..Default::default()
-                        },
+                        layout: popper_content::popper_wrapper_layout(placed, wrapper_insets),
                     },
                     move |cx, hovered| {
                         cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {

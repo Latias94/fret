@@ -13,17 +13,9 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, UiHost};
 
-/// Render a popper wrapper container positioned at `placed` but expanded by `wrapper_insets`.
-///
-/// The wrapper uses `overflow: visible` so an arrow can protrude outside the panel rect while
-/// remaining hit-testable by overlay systems that rely on the overlay root bounds.
-pub fn popper_wrapper_at<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    placed: Rect,
-    wrapper_insets: Edges,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
-    let layout = LayoutStyle {
+/// Returns the wrapper layout used by [`popper_wrapper_at`].
+pub fn popper_wrapper_layout(placed: Rect, wrapper_insets: Edges) -> LayoutStyle {
+    LayoutStyle {
         position: PositionStyle::Absolute,
         inset: InsetStyle {
             left: Some(Px(placed.origin.x.0 - wrapper_insets.left.0)),
@@ -41,11 +33,22 @@ pub fn popper_wrapper_at<H: UiHost>(
         },
         overflow: Overflow::Visible,
         ..Default::default()
-    };
+    }
+}
 
+/// Render a popper wrapper container positioned at `placed` but expanded by `wrapper_insets`.
+///
+/// The wrapper uses `overflow: visible` so an arrow can protrude outside the panel rect while
+/// remaining hit-testable by overlay systems that rely on the overlay root bounds.
+pub fn popper_wrapper_at<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    placed: Rect,
+    wrapper_insets: Edges,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
     cx.container(
         ContainerProps {
-            layout,
+            layout: popper_wrapper_layout(placed, wrapper_insets),
             ..Default::default()
         },
         f,
