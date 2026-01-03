@@ -1,6 +1,6 @@
 //! A small curated set of Lucide SVG icons (vendored) for Fret demos/components.
 
-use fret_components_icons::{IconId, IconRegistry, ids};
+use fret_icons::{IconId, IconRegistry, ids};
 use rust_embed::RustEmbed;
 use std::{borrow::Cow, sync::Arc};
 

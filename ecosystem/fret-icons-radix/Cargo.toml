@@ -1,5 +1,5 @@
 [package]
-name = "fret-icons-lucide"
+name = "fret-icons-radix"
 version.workspace = true
 edition.workspace = true
 
@@ -8,5 +8,5 @@ default = ["semantic-ui"]
 semantic-ui = []
 
 [dependencies]
-fret-components-icons = { path = "../fret-components-icons" }
+fret-icons = { path = "../fret-icons" }
 rust-embed.workspace = true

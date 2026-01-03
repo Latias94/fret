@@ -5,12 +5,12 @@ edition.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-fret-components-icons = { path = "../fret-components-icons" }
+fret-icons = { path = "../../ecosystem/fret-icons" }
 fret-components-app = { path = "../fret-components-app" }
 fret-ui-docking = { path = "../../ecosystem/fret-ui-docking" }
 fret-components-shadcn = { path = "../fret-components-shadcn" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
-fret-icons-lucide = { path = "../fret-icons-lucide" }
+fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
 fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }
 fret-runner-winit-wgpu = { path = "../fret-runner-winit-wgpu" }

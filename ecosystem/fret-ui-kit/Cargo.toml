@@ -7,7 +7,7 @@ edition.workspace = true
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
-fret-components-icons = { path = "../../crates/fret-components-icons", optional = true }
+fret-icons = { path = "../fret-icons", optional = true }
 tracing.workspace = true
 
 [features]
@@ -17,8 +17,8 @@ default = []
 # Exposes internal overlay orchestration modules directly. Prefer `OverlayController` instead.
 unstable-internals = []
 
-# Opt-in helpers that integrate with the shared icon registry (`fret-components-icons`).
-icons = ["dep:fret-components-icons"]
+# Opt-in helpers that integrate with the shared icon registry (`fret-icons`).
+icons = ["dep:fret-icons"]
 
 # Opinionated declarative helpers that are closer to "recipes" than substrate.
 recipes = ["icons"]

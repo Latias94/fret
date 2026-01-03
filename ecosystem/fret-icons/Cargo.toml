@@ -1,5 +1,5 @@
 [package]
-name = "fret-components-icons"
+name = "fret-icons"
 version.workspace = true
 edition.workspace = true
 

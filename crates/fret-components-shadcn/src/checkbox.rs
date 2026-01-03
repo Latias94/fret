@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_components_icons::ids;
+use fret_icons::ids;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;

@@ -1080,16 +1080,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "fret-components-icons"
-version = "0.1.0"
-
-[[package]]
 name = "fret-components-shadcn"
 version = "0.1.0"
 dependencies = [
  "fret-app",
- "fret-components-icons",
  "fret-core",
+ "fret-icons",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",
@@ -1111,9 +1107,9 @@ dependencies = [
  "anyhow",
  "fret-app",
  "fret-components-app",
- "fret-components-icons",
  "fret-components-shadcn",
  "fret-core",
+ "fret-icons",
  "fret-icons-lucide",
  "fret-render",
  "fret-runner-winit-wgpu",
@@ -1152,10 +1148,14 @@ name = "fret-fonts"
 version = "0.1.0"
 
 [[package]]
+name = "fret-icons"
+version = "0.1.0"
+
+[[package]]
 name = "fret-icons-lucide"
 version = "0.1.0"
 dependencies = [
- "fret-components-icons",
+ "fret-icons",
  "rust-embed",
 ]
 
@@ -1163,7 +1163,7 @@ dependencies = [
 name = "fret-icons-radix"
 version = "0.1.0"
 dependencies = [
- "fret-components-icons",
+ "fret-icons",
  "rust-embed",
 ]
 
@@ -1307,8 +1307,8 @@ name = "fret-ui-kit"
 version = "0.1.0"
 dependencies = [
  "fret-app",
- "fret-components-icons",
  "fret-core",
+ "fret-icons",
  "fret-runtime",
  "fret-ui",
  "tracing",

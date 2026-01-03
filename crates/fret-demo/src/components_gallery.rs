@@ -1,7 +1,7 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_components_app::tree::AppTreeRowRenderer;
-use fret_components_icons::IconRegistry;
+use fret_icons::IconRegistry;
 use fret_components_shadcn as shadcn;
 use fret_ui_kit::tree::{TreeItem, TreeItemId, TreeState};
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController};

@@ -6,7 +6,7 @@ use fret_ui_docking::{
     DockViewportOverlayHooksService, handle_dock_before_close_window, handle_dock_op,
     handle_dock_window_created, render_and_bind_dock_panels,
 };
-use fret_components_icons::IconRegistry;
+use fret_icons::IconRegistry;
 use fret_components_shadcn as shadcn;
 use fret_ui_kit::OverlayController;
 use fret_core::{

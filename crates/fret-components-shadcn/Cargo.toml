@@ -13,7 +13,7 @@ fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }
 fret-ui = { path = "../fret-ui" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", features = ["icons"] }
-fret-components-icons = { path = "../fret-components-icons" }
+fret-icons = { path = "../../ecosystem/fret-icons" }
 
 [dev-dependencies]
 fret-app = { path = "../fret-app" }

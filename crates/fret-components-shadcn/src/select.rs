@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
-use fret_components_icons::ids;
+use fret_icons::ids;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::chrome as decl_chrome;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;

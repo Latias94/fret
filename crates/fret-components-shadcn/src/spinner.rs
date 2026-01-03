@@ -1,4 +1,4 @@
-use fret_components_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvg};
+use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvg};
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ColorRef, LayoutRefinement, MetricRef};
