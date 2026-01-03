@@ -184,9 +184,6 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let border = vec4<f32>(input.border_color.rgb, input.border_color.a) * border_cov;
 
   let out = (fill + border) * clip;
-  if (clip <= 0.0) {
-    discard;
-  }
   return out;
 }
 "#;
@@ -298,9 +295,6 @@ fn vs_main(input: VsIn) -> VsOut {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
-  if (clip <= 0.0) {
-    discard;
-  }
   let tex = textureSample(viewport_texture, viewport_sampler, input.uv);
   let a = tex.a * input.opacity * clip;
   return vec4<f32>(tex.rgb * a, a);
@@ -414,9 +408,6 @@ fn vs_main(input: VsIn) -> VsOut {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
-  if (clip <= 0.0) {
-    discard;
-  }
   let sample = textureSample(tex, tex_sampler, input.uv);
   let o = clamp(input.opacity, 0.0, 1.0);
   return vec4<f32>(sample.rgb * o, sample.a * o) * clip;
@@ -524,9 +515,6 @@ fn vs_main(input: VsIn) -> VsOut {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
-  if (clip <= 0.0) {
-    discard;
-  }
   return input.color * clip;
 }
 "#;
@@ -638,9 +626,6 @@ fn vs_main(input: VsIn) -> VsOut {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
-  if (clip <= 0.0) {
-    discard;
-  }
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
   let coverage = tex.r;
   return vec4<f32>(input.color.rgb * coverage, input.color.a * coverage) * clip;
@@ -754,9 +739,6 @@ fn vs_main(input: VsIn) -> VsOut {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
-  if (clip <= 0.0) {
-    discard;
-  }
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
   let a = tex.a * input.color.a;
   return vec4<f32>(tex.rgb * a, a) * clip;
@@ -870,9 +852,6 @@ fn vs_main(input: VsIn) -> VsOut {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
-  if (clip <= 0.0) {
-    discard;
-  }
   let tex = textureSample(mask_texture, mask_sampler, input.uv);
   let coverage = tex.r;
   return vec4<f32>(input.color.rgb * coverage, input.color.a * coverage) * clip;
