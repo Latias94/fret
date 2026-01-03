@@ -7,17 +7,22 @@ use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
 use fret_components_ui::primitives::menu;
+use fret_components_ui::primitives::popper;
 use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
-    Edges, FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
+    Edges, FontId, FontWeight, Point, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
+    Transform2D,
 };
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis,
-    ScrollProps, SemanticsProps, SizeStyle, TextProps,
+    ScrollProps, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
 };
-use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
+use fret_ui::overlay_placement::{
+    Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
+    anchored_panel_bounds_sized,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -205,6 +210,9 @@ pub struct DropdownMenu {
     window_margin: Px,
     typeahead_timeout_ticks: u64,
     min_width: Px,
+    arrow: bool,
+    arrow_size_override: Option<Px>,
+    arrow_padding_override: Option<Px>,
 }
 
 impl std::fmt::Debug for DropdownMenu {
@@ -230,6 +238,9 @@ impl DropdownMenu {
             window_margin: Px(8.0),
             typeahead_timeout_ticks: 30,
             min_width: Px(128.0),
+            arrow: false,
+            arrow_size_override: None,
+            arrow_padding_override: None,
         }
     }
 
@@ -263,6 +274,22 @@ impl DropdownMenu {
         self
     }
 
+    /// Enables a DropdownMenu arrow (Radix `DropdownMenuArrow`-style).
+    pub fn arrow(mut self, arrow: bool) -> Self {
+        self.arrow = arrow;
+        self
+    }
+
+    pub fn arrow_size(mut self, size: Px) -> Self {
+        self.arrow_size_override = Some(size);
+        self
+    }
+
+    pub fn arrow_padding(mut self, padding: Px) -> Self {
+        self.arrow_padding_override = Some(padding);
+        self
+    }
+
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -272,6 +299,19 @@ impl DropdownMenu {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
+            let arrow = self.arrow;
+            let arrow_size = self.arrow_size_override.unwrap_or_else(|| {
+                theme
+                    .metric_by_key("component.dropdown_menu.arrow_size")
+                    .or_else(|| theme.metric_by_key("component.popover.arrow_size"))
+                    .unwrap_or(Px(12.0))
+            });
+            let arrow_padding = self.arrow_padding_override.unwrap_or_else(|| {
+                theme
+                    .metric_by_key("component.dropdown_menu.arrow_padding")
+                    .or_else(|| theme.metric_by_key("component.popover.arrow_padding"))
+                    .unwrap_or(theme.metrics.radius_md)
+            });
 
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
@@ -332,11 +372,11 @@ impl DropdownMenu {
                     let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
                     let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
 
-                    let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                     let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
 
-                    // shadcn: content width tracks trigger width (with a minimum), and height clamps
-                    // to available space (scrolls internally).
-                    let desired = Size::new(Px(anchor.size.width.0.max(min_width.0)), Px(1.0e9));
+                     // shadcn: content width tracks trigger width (with a minimum), and height clamps
+                     // to available space (scrolls internally).
+                     let desired = Size::new(Px(anchor.size.width.0.max(min_width.0)), Px(1.0e9));
 
                     let align = match align {
                         DropdownMenuAlign::Start => Align::Start,
@@ -350,8 +390,40 @@ impl DropdownMenu {
                         DropdownMenuSide::Left => Side::Left,
                     };
 
-                    let placed =
-                        anchored_panel_bounds_sized(outer, anchor, desired, side_offset, side, align);
+                    let arrow_options = arrow.then_some(ArrowOptions {
+                        size: Size::new(arrow_size, arrow_size),
+                        padding: Edges::all(arrow_padding),
+                    });
+                    let arrow_protrusion = if arrow {
+                        popper::default_arrow_protrusion(arrow_size)
+                    } else {
+                        Px(0.0)
+                    };
+
+                    let layout = overlay::popper_layout_sized(
+                        outer,
+                        anchor,
+                        desired,
+                        side_offset,
+                        side,
+                        align,
+                        AnchoredPanelOptions {
+                            direction: LayoutDirection::Ltr,
+                            offset: Offset {
+                                main_axis: if arrow { arrow_protrusion } else { Px(0.0) },
+                                cross_axis: Px(0.0),
+                                alignment_axis: None,
+                            },
+                            arrow: arrow_options,
+                        },
+                    );
+
+                    let placed = layout.rect;
+                    let wrapper_insets = popper::wrapper_insets_for_arrow(&layout, arrow_protrusion);
+                    let extra_left = wrapper_insets.left;
+                    let extra_right = wrapper_insets.right;
+                    let extra_top = wrapper_insets.top;
+                    let extra_bottom = wrapper_insets.bottom;
 
                     let border = theme
                         .color_by_key("border")
@@ -382,6 +454,73 @@ impl DropdownMenu {
 
                     let submenu_for_content = submenu.clone();
                     let submenu_for_panel = submenu.clone();
+                    let arrow_bg = bg;
+                    let arrow_border = border;
+                    let arrow_el = layout.arrow.map(|arrow| {
+                        let (left, top) = match arrow.side {
+                            Side::Top => (
+                                Px(extra_left.0 + arrow.offset.0),
+                                Px(extra_top.0 - arrow_size.0 * 0.5),
+                            ),
+                            Side::Bottom => (
+                                Px(extra_left.0 + arrow.offset.0),
+                                Px(extra_top.0 + placed.size.height.0 - arrow_size.0 * 0.5),
+                            ),
+                            Side::Left => (
+                                Px(extra_left.0 - arrow_size.0 * 0.5),
+                                Px(extra_top.0 + arrow.offset.0),
+                            ),
+                            Side::Right => (
+                                Px(extra_left.0 + placed.size.width.0 - arrow_size.0 * 0.5),
+                                Px(extra_top.0 + arrow.offset.0),
+                            ),
+                        };
+
+                        let layout = LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                left: Some(left),
+                                top: Some(top),
+                                ..Default::default()
+                            },
+                            size: SizeStyle {
+                                width: Length::Px(arrow_size),
+                                height: Length::Px(arrow_size),
+                                ..Default::default()
+                            },
+                            overflow: Overflow::Visible,
+                            ..Default::default()
+                        };
+
+                        let center = Point::new(Px(arrow_size.0 * 0.5), Px(arrow_size.0 * 0.5));
+                        let transform = Transform2D::rotation_about_degrees(45.0, center);
+
+                        cx.visual_transform_props(
+                            VisualTransformProps { layout, transform },
+                            move |cx| {
+                                vec![cx.container(
+                                    ContainerProps {
+                                        layout: LayoutStyle {
+                                            size: SizeStyle {
+                                                width: Length::Fill,
+                                                height: Length::Fill,
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        padding: Edges::all(Px(0.0)),
+                                        background: Some(arrow_bg),
+                                        shadow: None,
+                                        border: Edges::all(Px(1.0)),
+                                        border_color: Some(arrow_border),
+                                        corner_radii: fret_core::Corners::all(Px(0.0)),
+                                    },
+                                    |_cx| Vec::new(),
+                                )]
+                            },
+                        )
+                    });
+
                     let content = cx.semantics(
                         SemanticsProps {
                             layout: {
@@ -399,26 +538,52 @@ impl DropdownMenu {
                                     layout: LayoutStyle {
                                         position: PositionStyle::Absolute,
                                         inset: InsetStyle {
-                                            left: Some(placed.origin.x),
-                                            top: Some(placed.origin.y),
+                                            left: Some(Px(placed.origin.x.0 - extra_left.0)),
+                                            top: Some(Px(placed.origin.y.0 - extra_top.0)),
                                             ..Default::default()
                                         },
                                         size: SizeStyle {
-                                            width: Length::Px(placed.size.width),
-                                            height: Length::Px(placed.size.height),
+                                            width: Length::Px(Px(
+                                                placed.size.width.0 + extra_left.0 + extra_right.0,
+                                            )),
+                                            height: Length::Px(Px(
+                                                placed.size.height.0 + extra_top.0 + extra_bottom.0,
+                                            )),
                                             ..Default::default()
                                         },
-                                        overflow: Overflow::Clip,
+                                        overflow: Overflow::Visible,
                                         ..Default::default()
                                     },
-                                    padding: Edges::all(Px(4.0)),
-                                    background: Some(bg),
-                                    shadow: Some(shadow),
-                                    border: Edges::all(Px(1.0)),
-                                    border_color: Some(border),
-                                    corner_radii: fret_core::Corners::all(theme.metrics.radius_sm),
+                                    ..Default::default()
                                 },
                                 move |cx| {
+                                    let panel = cx.container(
+                                        ContainerProps {
+                                            layout: LayoutStyle {
+                                                position: PositionStyle::Absolute,
+                                                inset: InsetStyle {
+                                                    left: Some(extra_left),
+                                                    top: Some(extra_top),
+                                                    ..Default::default()
+                                                },
+                                                size: SizeStyle {
+                                                    width: Length::Px(placed.size.width),
+                                                    height: Length::Px(placed.size.height),
+                                                    ..Default::default()
+                                                },
+                                                overflow: Overflow::Clip,
+                                                ..Default::default()
+                                            },
+                                            padding: Edges::all(Px(4.0)),
+                                            background: Some(bg),
+                                            shadow: Some(shadow),
+                                            border: Edges::all(Px(1.0)),
+                                            border_color: Some(border),
+                                            corner_radii: fret_core::Corners::all(
+                                                theme.metrics.radius_sm,
+                                            ),
+                                        },
+                                        move |cx| {
                                     let scroll_layout = LayoutStyle {
                                         size: SizeStyle {
                                             width: Length::Fill,
@@ -741,6 +906,14 @@ impl DropdownMenu {
                                             )]
                                         },
                                     )]
+                                },
+                                    );
+
+                                    if let Some(arrow_el) = arrow_el {
+                                        vec![arrow_el, panel]
+                                    } else {
+                                        vec![panel]
+                                    }
                                 },
                             )]
                         },
