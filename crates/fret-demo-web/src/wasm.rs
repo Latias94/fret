@@ -346,38 +346,13 @@ impl WebDemoApp {
                         continue;
                     }
 
-                    let prev_rev = self
-                        .app
-                        .global::<fret_runtime::FontCatalog>()
-                        .map(|c| c.revision)
-                        .unwrap_or(0);
-                    let revision = prev_rev.saturating_add(1);
                     let families = gfx.renderer.all_font_names();
-                    let cache = fret_runtime::FontCatalogCache::from_families(revision, &families);
-                    self.app
-                        .set_global::<fret_runtime::FontCatalog>(fret_runtime::FontCatalog {
-                            families: families.clone(),
-                            revision,
-                        });
-                    self.app.set_global::<fret_runtime::FontCatalogCache>(cache);
-
-                    let mut config = self
-                        .app
-                        .global::<fret_core::TextFontFamilyConfig>()
-                        .cloned()
-                        .unwrap_or_default();
-                    if config.ui_sans.is_empty() {
-                        config.ui_sans = families.clone();
-                    }
-                    if config.ui_serif.is_empty() {
-                        config.ui_serif = families.clone();
-                    }
-                    if config.ui_mono.is_empty() {
-                        config.ui_mono = families.clone();
-                    }
-                    let _ = gfx.renderer.set_text_font_families(&config);
-                    self.app
-                        .set_global::<fret_core::TextFontFamilyConfig>(config);
+                    let update = fret_runtime::apply_font_catalog_update(
+                        &mut self.app,
+                        families,
+                        fret_runtime::FontFamilyDefaultsPolicy::FillIfEmpty,
+                    );
+                    let _ = gfx.renderer.set_text_font_families(&update.config);
                     window.request_redraw();
                 }
                 Effect::CursorSetIcon { icon, .. } => {

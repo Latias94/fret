@@ -2731,30 +2731,12 @@ impl<D: WinitDriver> WinitRunner<D> {
                             continue;
                         }
 
-                        let prev_rev = self
-                            .app
-                            .global::<fret_runtime::FontCatalog>()
-                            .map(|c| c.revision)
-                            .unwrap_or(0);
-                        let revision = prev_rev.saturating_add(1);
                         let families = renderer.all_font_names();
-                        let cache = fret_app::FontCatalogCache::from_families(revision, &families);
-                        self.app.set_global::<fret_runtime::FontCatalog>(
-                            fret_runtime::FontCatalog { families, revision },
+                        let _update = fret_runtime::apply_font_catalog_update(
+                            &mut self.app,
+                            families,
+                            fret_runtime::FontFamilyDefaultsPolicy::None,
                         );
-                        self.app.set_global::<fret_app::FontCatalogCache>(cache);
-
-                        // Adding fonts can change text measurement and can also change which
-                        // concrete families the generic font IDs resolve to (if overrides are set).
-                        // Re-setting the global font-family config forces a relayout via global
-                        // observation, even if the config value itself remains unchanged.
-                        let config = self
-                            .app
-                            .global::<fret_core::TextFontFamilyConfig>()
-                            .cloned()
-                            .unwrap_or_default();
-                        self.app
-                            .set_global::<fret_core::TextFontFamilyConfig>(config);
 
                         for (_id, state) in self.windows.iter() {
                             state.window.request_redraw();
