@@ -791,8 +791,10 @@ mod tests {
         assert_eq!(ui.focus(), Some(modal_a_node));
 
         // Shift+Tab => focus.previous
-        let mut mods = Modifiers::default();
-        mods.shift = true;
+        let mods = Modifiers {
+            shift: true,
+            ..Default::default()
+        };
         dispatch_keydown_and_apply_commands(&mut ui, &mut app, &mut services, KeyCode::Tab, mods);
         assert_eq!(ui.focus(), Some(modal_b_node));
     }

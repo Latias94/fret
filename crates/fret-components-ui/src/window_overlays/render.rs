@@ -200,28 +200,25 @@ pub fn render<H: UiHost>(
             entry.initial_focus = req.initial_focus;
 
             if open_now
-                && let Some(focus) = focus_now
-                && entry.last_focus != Some(focus)
                 && let Some(layer_root) = ui.layer_root(entry.layer)
-            {
-                if dismissable_layer_prim::should_dismiss_on_focus_outside(
+                && dismissable_layer_prim::should_dismiss_on_focus_outside(
                     ui,
                     layer_root,
                     focus_now,
                     entry.last_focus,
                     &dismissable_branch_nodes,
-                ) {
-                    let _ = app.models_mut().update(&req.open, |v| *v = false);
-                    open_now = false;
-                }
+                )
+            {
+                let _ = app.models_mut().update(&req.open, |v| *v = false);
+                open_now = false;
             }
 
-            ui.set_layer_pointer_down_outside_branches(
-                entry.layer,
-                open_now
-                    .then(|| dismissable_branch_nodes.clone())
-                    .unwrap_or_default(),
-            );
+            let dismissable_branches = if open_now {
+                dismissable_branch_nodes.clone()
+            } else {
+                Vec::new()
+            };
+            ui.set_layer_pointer_down_outside_branches(entry.layer, dismissable_branches);
 
             // Non-modal overlays are click-through during close transitions:
             // when `present=true` but `open=false`, they must not participate in hit-testing or

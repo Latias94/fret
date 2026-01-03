@@ -273,7 +273,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             fret_core::Size::new(Px(240.0), Px(160.0)),
         );
-        let mut services = FakeServices::default();
+        let mut services = FakeServices;
 
         let render = |ui: &mut UiTree<App>,
                       app: &mut App,

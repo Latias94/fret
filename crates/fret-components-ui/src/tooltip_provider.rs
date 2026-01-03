@@ -6,7 +6,7 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::headless::tooltip_delay_group::{TooltipDelayGroupConfig, TooltipDelayGroupState};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct TooltipProviderConfig {
     pub delay_duration_ticks: u64,
     pub skip_delay_duration_ticks: u64,
@@ -21,28 +21,10 @@ impl TooltipProviderConfig {
     }
 }
 
-impl Default for TooltipProviderConfig {
-    fn default() -> Self {
-        Self {
-            delay_duration_ticks: 0,
-            skip_delay_duration_ticks: 0,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 struct ProviderState {
     config: TooltipProviderConfig,
     delay_group: TooltipDelayGroupState,
-}
-
-impl Default for ProviderState {
-    fn default() -> Self {
-        Self {
-            config: TooltipProviderConfig::default(),
-            delay_group: TooltipDelayGroupState::default(),
-        }
-    }
 }
 
 #[derive(Default)]

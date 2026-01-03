@@ -16,7 +16,7 @@ use std::time::Duration;
 
 use fret_core::{Point, Px, Rect, Size};
 use fret_runtime::{Effect, Model, TimerToken};
-use fret_ui::action::{ActionCx, KeyDownCx, PointerMoveCx, UiActionHost, UiFocusActionHost};
+use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost, UiFocusActionHost};
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
@@ -670,9 +670,8 @@ pub fn close_and_restore_trigger(
     }
 }
 
-pub fn submenu_item_arrow_left_handler(
-    models: MenuSubmenuModels,
-) -> Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, KeyDownCx) -> bool + 'static> {
+pub fn submenu_item_arrow_left_handler(models: MenuSubmenuModels) -> fret_ui::action::OnKeyDown {
+    #[allow(clippy::arc_with_non_send_sync)]
     Arc::new(move |host, acx, down| {
         if down.repeat || down.key != fret_core::KeyCode::ArrowLeft {
             return false;

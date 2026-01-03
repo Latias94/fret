@@ -67,7 +67,6 @@ pub fn input_chrome_container_props(
         border: Edges::all(chrome.border_width),
         border_color: Some(border_color),
         corner_radii: Corners::all(chrome.radius),
-        ..Default::default()
     }
 }
 

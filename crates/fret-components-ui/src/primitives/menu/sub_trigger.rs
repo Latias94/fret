@@ -26,6 +26,7 @@ pub struct MenuSubTriggerGeometryHint {
 /// Wire submenu-trigger behavior onto a pressable item.
 ///
 /// Returns `Some(expanded)` when the item has a submenu, otherwise `None`.
+#[allow(clippy::too_many_arguments)]
 pub fn wire<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     st: PressableState,
@@ -117,16 +118,16 @@ pub fn wire<H: UiHost>(
             .read(&models.trigger, |v| *v)
             .ok()
             .flatten();
-        if open_trigger.is_none_or(|t| t == item_id) {
-            if let Some(hint) = geometry_hint {
-                sub::set_geometry_from_element_anchor_if_present(
-                    cx,
-                    item_id,
-                    models,
-                    hint.outer,
-                    hint.desired,
-                );
-            }
+        if open_trigger.is_none_or(|t| t == item_id)
+            && let Some(hint) = geometry_hint
+        {
+            sub::set_geometry_from_element_anchor_if_present(
+                cx,
+                item_id,
+                models,
+                hint.outer,
+                hint.desired,
+            );
         }
     }
 
