@@ -29,6 +29,7 @@ struct GfxState {
     clear: ClearColor,
     scene: Scene,
     scale_factor: f32,
+    last_surface_error: Option<wgpu::SurfaceError>,
 }
 
 impl GfxState {
@@ -49,8 +50,30 @@ impl GfxState {
     }
 
     fn render(&mut self) -> Result<(), fret_render::RenderError> {
-        let Ok((frame, view)) = self.surface_state.get_current_frame_view() else {
-            return Ok(());
+        let (frame, view) = match self.surface_state.get_current_frame_view() {
+            Ok(v) => v,
+            Err(err) => {
+                if self.last_surface_error.as_ref() != Some(&err) {
+                    self.last_surface_error = Some(err.clone());
+                    #[cfg(target_arch = "wasm32")]
+                    web_sys::console::error_1(&JsValue::from_str(&format!(
+                        "surface.get_current_texture failed: {:?}",
+                        self.last_surface_error
+                    )));
+                }
+
+                match err {
+                    wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated => {
+                        let (w, h) = self.surface_state.size();
+                        self.surface_state.resize(&self.ctx.device, w, h);
+                    }
+                    wgpu::SurfaceError::Timeout => {}
+                    wgpu::SurfaceError::OutOfMemory => panic!("wgpu surface out of memory"),
+                    wgpu::SurfaceError::Other => {}
+                }
+
+                return Ok(());
+            }
         };
         let cmd = self.renderer.render_scene(
             &self.ctx.device,
@@ -384,6 +407,11 @@ impl WebDemoApp {
         frame.layout_all();
         frame.paint_all(scene);
 
+        #[cfg(target_arch = "wasm32")]
+        if scene.ops_len() == 0 {
+            web_sys::console::warn_1(&JsValue::from_str("paint produced 0 scene ops"));
+        }
+
         let _ = gfx.render();
 
         self.handle_effects(window, gfx);
@@ -476,6 +504,7 @@ impl ApplicationHandler<()> for WebDemoApp {
                     clear,
                     scene,
                     scale_factor,
+                    last_surface_error: None,
                 });
             });
         }
