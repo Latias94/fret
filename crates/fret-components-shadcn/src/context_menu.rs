@@ -5,6 +5,7 @@ use fret_components_ui::declarative::collection_semantics::CollectionSemanticsEx
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
+use fret_components_ui::primitives::menu;
 use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
     Edges, KeyCode, MouseButton, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
@@ -286,7 +287,8 @@ impl ContextMenu {
                                     corner_radii: fret_core::Corners::all(theme.metrics.radius_sm),
                                 },
                                 move |cx| {
-                                    vec![cx.roving_flex(
+                                    vec![menu::content::menu_roving_group_apg_prefix_typeahead(
+                                        cx,
                                         RovingFlexProps {
                                             flex: FlexProps {
                                                 layout: LayoutStyle::default(),
@@ -304,12 +306,9 @@ impl ContextMenu {
                                                 ..Default::default()
                                             },
                                         },
+                                        labels_arc.clone(),
+                                        typeahead_timeout_ticks,
                                         move |cx| {
-                                            cx.roving_nav_apg();
-                                            cx.roving_typeahead_prefix_arc_str(
-                                                labels_arc.clone(),
-                                                typeahead_timeout_ticks,
-                                            );
 
                                             let text_style = TextStyle {
                                                 font: fret_core::FontId::default(),

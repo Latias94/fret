@@ -17,8 +17,8 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, spawn_local};
 use web_sys::{
     AddEventListenerOptions, CompositionEvent, Document, Event as WebSysEvent, EventTarget,
-    HtmlCanvasElement, HtmlElement, HtmlTextAreaElement, InputEvent, KeyboardEvent, Node,
-    PointerEvent as WebPointerEvent, WheelEvent, Window,
+    HtmlCanvasElement, HtmlElement, HtmlTextAreaElement, InputEvent, KeyboardEvent, MouseEvent,
+    Node, PointerEvent as WebPointerEvent, WheelEvent, Window,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -135,6 +135,16 @@ fn modifiers_from_keyboard_event(event: &KeyboardEvent) -> Modifiers {
 }
 
 fn modifiers_from_pointer_event(event: &WebPointerEvent) -> Modifiers {
+    Modifiers {
+        shift: event.shift_key(),
+        ctrl: event.ctrl_key(),
+        alt: event.alt_key(),
+        alt_gr: false,
+        meta: event.meta_key(),
+    }
+}
+
+fn modifiers_from_mouse_event(event: &MouseEvent) -> Modifiers {
     Modifiers {
         shift: event.shift_key(),
         ctrl: event.ctrl_key(),
@@ -267,6 +277,10 @@ struct WebInputListeners {
     on_pointer_cancel: Closure<dyn FnMut(WebPointerEvent)>,
     on_wheel: Closure<dyn FnMut(WheelEvent)>,
 
+    on_mouse_move: Closure<dyn FnMut(MouseEvent)>,
+    on_mouse_down: Closure<dyn FnMut(MouseEvent)>,
+    on_mouse_up: Closure<dyn FnMut(MouseEvent)>,
+
     on_key_down: Closure<dyn FnMut(KeyboardEvent)>,
     on_key_up: Closure<dyn FnMut(KeyboardEvent)>,
     on_window_resize: Closure<dyn FnMut(WebSysEvent)>,
@@ -365,10 +379,14 @@ impl WebInputListeners {
         }
 
         let ime_enabled = Rc::new(Cell::new(false));
+        let pointer_move_seen = Rc::new(Cell::new(false));
+        let pointer_button_seen = Rc::new(Cell::new(false));
 
         let queue_move = queue.clone();
         let canvas_for_move = canvas.clone();
+        let pointer_move_seen_for_move = pointer_move_seen.clone();
         let on_pointer_move = Closure::wrap(Box::new(move |event: WebPointerEvent| {
+            pointer_move_seen_for_move.set(true);
             if prevent_default {
                 event.prevent_default();
             }
@@ -393,7 +411,9 @@ impl WebInputListeners {
         let ime_enabled_for_down = ime_enabled.clone();
         let activation_for_pointer_down = activation_callback.clone();
         let canvas_capture = canvas.clone();
+        let pointer_button_seen_for_down = pointer_button_seen.clone();
         let on_pointer_down = Closure::wrap(Box::new(move |event: WebPointerEvent| {
+            pointer_button_seen_for_down.set(true);
             if ime_enabled_for_down.get() {
                 let _ = ime_focus.focus();
             } else {
@@ -430,7 +450,9 @@ impl WebInputListeners {
         let queue_up = queue.clone();
         let canvas_release = canvas.clone();
         let activation_for_pointer_up = activation_callback.clone();
+        let pointer_button_seen_for_up = pointer_button_seen.clone();
         let on_pointer_up = Closure::wrap(Box::new(move |event: WebPointerEvent| {
+            pointer_button_seen_for_up.set(true);
             let _ = canvas_release.release_pointer_capture(event.pointer_id());
             if prevent_default {
                 event.prevent_default();
@@ -504,6 +526,105 @@ impl WebInputListeners {
                 }));
             }
         }) as Box<dyn FnMut(WheelEvent)>);
+
+        let queue_mouse_move = queue.clone();
+        let canvas_for_mouse_move = canvas.clone();
+        let pointer_move_seen_for_mouse_move = pointer_move_seen.clone();
+        let on_mouse_move = Closure::wrap(Box::new(move |event: MouseEvent| {
+            if pointer_move_seen_for_mouse_move.get() {
+                return;
+            }
+            if prevent_default {
+                event.prevent_default();
+            }
+            let position = point_from_dom_client_xy(
+                &canvas_for_mouse_move,
+                event.client_x(),
+                event.client_y(),
+            );
+            let modifiers = modifiers_from_mouse_event(&event);
+            let buttons = mouse_buttons_from_dom_buttons(event.buttons().max(0) as u16);
+            let _ = queue_mouse_move.try_borrow_mut().map(|mut q| {
+                q.push(Event::Pointer(PointerEvent::Move {
+                    position,
+                    buttons,
+                    modifiers,
+                }));
+            });
+        }) as Box<dyn FnMut(MouseEvent)>);
+
+        let queue_mouse_down = queue.clone();
+        let canvas_for_mouse_down = canvas.clone();
+        let canvas_focus_mouse: HtmlElement = canvas.clone().unchecked_into();
+        let ime_focus_mouse: HtmlElement = ime_textarea.clone().unchecked_into();
+        let ime_enabled_mouse = ime_enabled.clone();
+        let activation_for_mouse_down = activation_callback.clone();
+        let pointer_button_seen_for_mouse_down = pointer_button_seen.clone();
+        let on_mouse_down = Closure::wrap(Box::new(move |event: MouseEvent| {
+            if pointer_button_seen_for_mouse_down.get() {
+                return;
+            }
+            if ime_enabled_mouse.get() {
+                let _ = ime_focus_mouse.focus();
+            } else {
+                let _ = canvas_focus_mouse.focus();
+            }
+            if prevent_default {
+                event.prevent_default();
+            }
+            let position = point_from_dom_client_xy(
+                &canvas_for_mouse_down,
+                event.client_x(),
+                event.client_y(),
+            );
+            let modifiers = modifiers_from_mouse_event(&event);
+            let button = mouse_button_from_dom_button(event.button());
+            let _ = queue_mouse_down.try_borrow_mut().map(|mut q| {
+                q.push(Event::Pointer(PointerEvent::Down {
+                    position,
+                    button,
+                    modifiers,
+                }));
+            });
+            let cb = activation_for_mouse_down
+                .try_borrow()
+                .ok()
+                .and_then(|v| v.as_ref().cloned());
+            if let Some(cb) = cb {
+                cb();
+            }
+        }) as Box<dyn FnMut(MouseEvent)>);
+
+        let queue_mouse_up = queue.clone();
+        let canvas_for_mouse_up = canvas.clone();
+        let activation_for_mouse_up = activation_callback.clone();
+        let pointer_button_seen_for_mouse_up = pointer_button_seen.clone();
+        let on_mouse_up = Closure::wrap(Box::new(move |event: MouseEvent| {
+            if pointer_button_seen_for_mouse_up.get() {
+                return;
+            }
+            if prevent_default {
+                event.prevent_default();
+            }
+            let position =
+                point_from_dom_client_xy(&canvas_for_mouse_up, event.client_x(), event.client_y());
+            let modifiers = modifiers_from_mouse_event(&event);
+            let button = mouse_button_from_dom_button(event.button());
+            let _ = queue_mouse_up.try_borrow_mut().map(|mut q| {
+                q.push(Event::Pointer(PointerEvent::Up {
+                    position,
+                    button,
+                    modifiers,
+                }));
+            });
+            let cb = activation_for_mouse_up
+                .try_borrow()
+                .ok()
+                .and_then(|v| v.as_ref().cloned());
+            if let Some(cb) = cb {
+                cb();
+            }
+        }) as Box<dyn FnMut(MouseEvent)>);
 
         let queue_key_down = queue.clone();
         let document_for_keys = document.clone();
@@ -870,6 +991,17 @@ impl WebInputListeners {
                 on_pointer_cancel.as_ref().unchecked_ref(),
             )
             .map_err(|_| RunnerError::new("failed to register pointercancel listener"))?;
+
+        // Mouse fallback: some environments still rely on mouse events (or disable pointer events).
+        canvas_target
+            .add_event_listener_with_callback("mousemove", on_mouse_move.as_ref().unchecked_ref())
+            .map_err(|_| RunnerError::new("failed to register mousemove listener"))?;
+        canvas_target
+            .add_event_listener_with_callback("mousedown", on_mouse_down.as_ref().unchecked_ref())
+            .map_err(|_| RunnerError::new("failed to register mousedown listener"))?;
+        canvas_target
+            .add_event_listener_with_callback("mouseup", on_mouse_up.as_ref().unchecked_ref())
+            .map_err(|_| RunnerError::new("failed to register mouseup listener"))?;
         let wheel_opts = AddEventListenerOptions::new();
         wheel_opts.set_passive(false);
         canvas_target
@@ -958,6 +1090,10 @@ impl WebInputListeners {
             on_pointer_cancel,
             on_wheel,
 
+            on_mouse_move,
+            on_mouse_down,
+            on_mouse_up,
+
             on_key_down,
             on_key_up,
             on_window_resize,
@@ -995,6 +1131,18 @@ impl WebInputListeners {
         let _ = canvas_target.remove_event_listener_with_callback(
             "pointercancel",
             self.on_pointer_cancel.as_ref().unchecked_ref(),
+        );
+        let _ = canvas_target.remove_event_listener_with_callback(
+            "mousemove",
+            self.on_mouse_move.as_ref().unchecked_ref(),
+        );
+        let _ = canvas_target.remove_event_listener_with_callback(
+            "mousedown",
+            self.on_mouse_down.as_ref().unchecked_ref(),
+        );
+        let _ = canvas_target.remove_event_listener_with_callback(
+            "mouseup",
+            self.on_mouse_up.as_ref().unchecked_ref(),
         );
         let _ = canvas_target
             .remove_event_listener_with_callback("wheel", self.on_wheel.as_ref().unchecked_ref());

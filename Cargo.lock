@@ -1324,12 +1324,15 @@ dependencies = [
  "console_error_panic_hook",
  "fret-core",
  "fret-fonts",
- "fret-runner-web",
+ "fret-render",
+ "fret-runner-winit",
  "fret-runtime",
  "fret-ui-app",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+ "wgpu",
+ "winit",
 ]
 
 [[package]]
@@ -1412,6 +1415,16 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "wgpu",
+]
+
+[[package]]
+name = "fret-runner-winit"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "wasm-bindgen",
+ "web-sys",
+ "winit",
 ]
 
 [[package]]

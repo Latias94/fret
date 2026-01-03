@@ -188,16 +188,14 @@ pub(crate) struct PointerActionHooks {
     pub on_pointer_up: Option<OnPointerUp>,
 }
 
-pub type OnKeyDown =
-    Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, KeyDownCx) -> bool + 'static>;
+pub type OnKeyDown = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, KeyDownCx) -> bool + 'static>;
 
 #[derive(Default)]
 pub(crate) struct KeyActionHooks {
     pub on_key_down: Option<OnKeyDown>,
 }
 
-pub type OnTimer =
-    Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, TimerToken) -> bool + 'static>;
+pub type OnTimer = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, TimerToken) -> bool + 'static>;
 
 #[derive(Default)]
 pub(crate) struct TimerActionHooks {

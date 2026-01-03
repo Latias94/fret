@@ -339,41 +339,51 @@ fn key_hook_can_request_focus() {
     let mut first_id: Option<crate::elements::GlobalElementId> = None;
     let mut second_id: Option<crate::elements::GlobalElementId> = None;
 
-    let root = render_root(&mut ui, &mut app, &mut services, window, bounds, "key-hook-focus", |cx| {
-        let mut props = crate::element::PressableProps::default();
-        props.layout.size.width = Length::Px(Px(80.0));
-        props.layout.size.height = Length::Px(Px(32.0));
-        props.focusable = true;
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "key-hook-focus",
+        |cx| {
+            let mut props = crate::element::PressableProps::default();
+            props.layout.size.width = Length::Px(Px(80.0));
+            props.layout.size.height = Length::Px(Px(32.0));
+            props.focusable = true;
 
-        let first = cx.pressable_with_id(props, |_cx, _st, id| {
-            first_id = Some(id);
-            Vec::new()
-        });
+            let first = cx.pressable_with_id(props, |_cx, _st, id| {
+                first_id = Some(id);
+                Vec::new()
+            });
 
-        let mut props2 = crate::element::PressableProps::default();
-        props2.layout.size.width = Length::Px(Px(80.0));
-        props2.layout.size.height = Length::Px(Px(32.0));
-        props2.focusable = true;
+            let mut props2 = crate::element::PressableProps::default();
+            props2.layout.size.width = Length::Px(Px(80.0));
+            props2.layout.size.height = Length::Px(Px(32.0));
+            props2.focusable = true;
 
-        let second = cx.pressable_with_id(props2, |_cx, _st, id| {
-            second_id = Some(id);
-            Vec::new()
-        });
+            let second = cx.pressable_with_id(props2, |_cx, _st, id| {
+                second_id = Some(id);
+                Vec::new()
+            });
 
-        let second_target = second.id;
-        cx.key_on_key_down_for(
-            first.id,
-            Arc::new(move |host, _cx, down| {
-                if down.repeat || down.key != fret_core::KeyCode::ArrowRight {
-                    return false;
-                }
-                host.request_focus(second_target);
-                true
-            }),
-        );
+            let second_target = second.id;
+            cx.key_on_key_down_for(
+                first.id,
+                Arc::new(move |host, _cx, down| {
+                    if down.repeat || down.key != fret_core::KeyCode::ArrowRight {
+                        return false;
+                    }
+                    host.request_focus(second_target);
+                    true
+                }),
+            );
 
-        vec![cx.column(crate::element::ColumnProps::default(), |_| vec![first, second])]
-    });
+            vec![cx.column(crate::element::ColumnProps::default(), |_| {
+                vec![first, second]
+            })]
+        },
+    );
     ui.set_root(root);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
@@ -381,7 +391,8 @@ fn key_hook_can_request_focus() {
     let second_id = second_id.expect("second element id");
 
     let first_node = crate::elements::node_for_element(&mut app, window, first_id).expect("first");
-    let second_node = crate::elements::node_for_element(&mut app, window, second_id).expect("second");
+    let second_node =
+        crate::elements::node_for_element(&mut app, window, second_id).expect("second");
 
     let first_bounds = ui.debug_node_bounds(first_node).expect("first bounds");
     let pos = Point::new(

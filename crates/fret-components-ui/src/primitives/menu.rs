@@ -6,4 +6,6 @@
 //! Note: Radix embeds some behaviors (like “pointer grace intent”) inside Menu rather than
 //! exporting a standalone primitive package. We mirror that conceptual grouping here.
 
+pub mod content;
 pub mod pointer_grace_intent;
+pub mod submenu;

@@ -10,10 +10,13 @@ crate-type = ["cdylib", "rlib"]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 fret-core = { path = "../fret-core" }
-fret-runner-web = { path = "../fret-runner-web" }
+fret-render = { path = "../fret-render" }
+fret-runner-winit = { path = "../fret-runner-winit" }
 fret-runtime = { path = "../fret-runtime" }
 fret-ui-app = { path = "../fret-ui-app" }
 fret-fonts = { path = "../fret-fonts" }
+winit.workspace = true
+wgpu.workspace = true
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 console_error_panic_hook = "0.1"
