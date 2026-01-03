@@ -736,6 +736,121 @@ fn dismissible_popover_closes_on_focus_change_outside() {
 }
 
 #[test]
+fn dismissible_popover_does_not_close_on_focus_change_to_trigger() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+    let underlay_clicked = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: base layer, open via trigger click.
+    let (_trigger, _underlay) = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+        }),
+    );
+    assert_eq!(app.models().get_copied(&open), Some(true));
+
+    // Second frame: request the popover and render it.
+    begin_frame(&mut app, window);
+    let (trigger, _underlay2) = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Simulate a focus change to the trigger element (branch subtree).
+    let trigger_node =
+        fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+    ui.set_focus(Some(trigger_node));
+
+    // Third frame: focus is outside the overlay root but inside the trigger branch, so it should
+    // remain open.
+    begin_frame(&mut app, window);
+    let (trigger, _underlay3) = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(app.models().get_copied(&open), Some(true));
+}
+
+#[test]
 fn modal_blocks_underlay_click_and_closes_on_escape() {
     let window = AppWindowId::default();
     let mut app = App::new();
