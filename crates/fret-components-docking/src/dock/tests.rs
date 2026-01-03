@@ -259,7 +259,7 @@ fn render_and_bind_dock_panels_keeps_non_viewport_panel_alive() {
         dock.graph.set_window_root(window, tabs);
     });
 
-    let mut services = FakeTextService::default();
+    let mut services = FakeTextService;
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(200.0), Px(120.0)),
@@ -303,7 +303,7 @@ fn dock_space_installs_internal_drag_route_anchor() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
 
-    let mut services = FakeTextService::default();
+    let mut services = FakeTextService;
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(200.0), Px(120.0)),
