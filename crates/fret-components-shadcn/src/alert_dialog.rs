@@ -9,14 +9,20 @@ use fret_components_ui::{
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
-use fret_runtime::Model;
+use fret_runtime::{Model, ModelId};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
     SemanticsProps, SizeStyle, TextProps,
 };
+use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::button::{Button, ButtonVariant};
+
+#[derive(Default)]
+struct AlertDialogCancelRegistry {
+    by_open: std::collections::HashMap<ModelId, GlobalElementId>,
+}
 
 fn default_overlay_color() -> Color {
     Color {
@@ -76,12 +82,18 @@ impl AlertDialog {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
+            let open_id = self.open.id();
 
             let trigger = trigger(cx);
             let id = trigger.id;
             let overlay_root_name = OverlayController::modal_root_name(id);
 
             if is_open {
+                cx.app
+                    .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
+                        reg.by_open.remove(&open_id);
+                    });
+
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
 
@@ -167,12 +179,22 @@ impl AlertDialog {
                 let mut request = OverlayRequest::modal(
                     id,
                     Some(id),
-                    self.open,
+                    self.open.clone(),
                     OverlayPresence::instant(true),
                     overlay_children,
                 );
                 request.root_name = Some(overlay_root_name);
+                request.initial_focus = cx
+                    .app
+                    .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
+                        reg.by_open.get(&open_id).copied()
+                    });
                 OverlayController::request(cx, request);
+            } else {
+                cx.app
+                    .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
+                        reg.by_open.remove(&open_id);
+                    });
             }
 
             trigger
@@ -486,11 +508,19 @@ impl AlertDialogCancel {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        Button::new(self.label)
+        let open_id = self.open.id();
+        let element = Button::new(self.label)
             .variant(ButtonVariant::Outline)
             .disabled(self.disabled)
             .toggle_model(self.open)
-            .into_element(cx)
+            .into_element(cx);
+
+        cx.app
+            .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
+                reg.by_open.entry(open_id).or_insert(element.id);
+            });
+
+        element
     }
 }
 
@@ -749,6 +779,130 @@ mod tests {
 
         let trigger_node =
             fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+        assert_eq!(ui.focus(), Some(trigger_node));
+    }
+
+    #[test]
+    fn alert_dialog_prefers_cancel_as_initial_focus_even_when_action_is_first() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let cancel_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame = |ui: &mut UiTree<App>,
+                            app: &mut App,
+                            services: &mut dyn fret_core::UiServices,
+                            frame: u64| {
+            app.set_frame_id(FrameId(frame));
+            OverlayController::begin_frame(app, window);
+
+            let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "test",
+                |cx| {
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |cx, _st, id| {
+                            cx.pressable_toggle_bool(&open);
+                            trigger_id = Some(id);
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        },
+                    );
+
+                    let open_for_dialog = open.clone();
+                    let open_for_action = open.clone();
+                    let open_for_cancel = open.clone();
+                    let cancel_id_out = cancel_id.clone();
+
+                    let alert = AlertDialog::new(open_for_dialog).into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let action =
+                                AlertDialogAction::new("Delete", open_for_action).into_element(cx);
+                            let cancel =
+                                AlertDialogCancel::new("Cancel", open_for_cancel).into_element(cx);
+                            cancel_id_out.set(Some(cancel.id));
+
+                            AlertDialogContent::new(vec![action, cancel]).into_element(cx)
+                        },
+                    );
+
+                    vec![alert]
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+            trigger_id.expect("trigger id")
+        };
+
+        // Frame 1: closed.
+        let trigger = render_frame(&mut ui, &mut app, &mut services, 1);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Open via trigger click.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Frame 2: open, initial focus should prefer Cancel, not the first Action.
+        let _ = render_frame(&mut ui, &mut app, &mut services, 2);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let cancel = cancel_id.get().expect("cancel id");
+        let cancel_node =
+            fret_ui::elements::node_for_element(&mut app, window, cancel).expect("cancel node");
+        assert_eq!(ui.focus(), Some(cancel_node));
+
+        // Close and ensure focus restores to trigger.
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        let _ = render_frame(&mut ui, &mut app, &mut services, 3);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
         assert_eq!(ui.focus(), Some(trigger_node));
     }
 }
