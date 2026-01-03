@@ -4,6 +4,7 @@ use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
+use fret_components_ui::primitives::popper_content;
 use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     OverlayRequest, Radius, Space,
@@ -262,9 +263,7 @@ impl Popover {
                     let placed = layout.rect;
                     let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
                     let extra_left = wrapper_insets.left;
-                    let extra_right = wrapper_insets.right;
                     let extra_top = wrapper_insets.top;
-                    let extra_bottom = wrapper_insets.bottom;
 
                     let bg = theme
                         .color_by_key("popover")
@@ -285,79 +284,36 @@ impl Popover {
                         },
                     );
 
-                    let wrapper = if let Some(arrow_el) = arrow_el {
-                        cx.container(
-                            ContainerProps {
-                                layout: LayoutStyle {
-                                    position: PositionStyle::Absolute,
-                                    inset: InsetStyle {
-                                        left: Some(Px(placed.origin.x.0 - extra_left.0)),
-                                        top: Some(Px(placed.origin.y.0 - extra_top.0)),
-                                        ..Default::default()
-                                    },
-                                    size: SizeStyle {
-                                        width: Length::Px(Px(placed.size.width.0
-                                            + extra_left.0
-                                            + extra_right.0)),
-                                        height: Length::Px(Px(placed.size.height.0
-                                            + extra_top.0
-                                            + extra_bottom.0)),
-                                        ..Default::default()
-                                    },
-                                    overflow: Overflow::Visible,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                let content = cx.container(
-                                    ContainerProps {
-                                        layout: LayoutStyle {
-                                            position: PositionStyle::Absolute,
-                                            inset: InsetStyle {
-                                                left: Some(extra_left),
-                                                top: Some(extra_top),
-                                                ..Default::default()
-                                            },
-                                            size: SizeStyle {
-                                                width: Length::Px(placed.size.width),
-                                                height: Length::Px(placed.size.height),
-                                                ..Default::default()
-                                            },
-                                            overflow: Overflow::Visible,
+                    let wrapper =
+                        popper_content::popper_wrapper_at(cx, placed, wrapper_insets, move |cx| {
+                            let content = cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle {
+                                        position: PositionStyle::Absolute,
+                                        inset: InsetStyle {
+                                            left: Some(extra_left),
+                                            top: Some(extra_top),
                                             ..Default::default()
                                         },
+                                        size: SizeStyle {
+                                            width: Length::Px(placed.size.width),
+                                            height: Length::Px(placed.size.height),
+                                            ..Default::default()
+                                        },
+                                        overflow: Overflow::Visible,
                                         ..Default::default()
                                     },
-                                    move |_cx| vec![content],
-                                );
-
-                                vec![arrow_el, content]
-                            },
-                        )
-                    } else {
-                        cx.container(
-                            ContainerProps {
-                                layout: LayoutStyle {
-                                    position: PositionStyle::Absolute,
-                                    inset: InsetStyle {
-                                        left: Some(placed.origin.x),
-                                        top: Some(placed.origin.y),
-                                        ..Default::default()
-                                    },
-                                    size: SizeStyle {
-                                        width: Length::Px(placed.size.width),
-                                        height: Length::Px(placed.size.height),
-                                        ..Default::default()
-                                    },
-                                    overflow: Overflow::Visible,
                                     ..Default::default()
                                 },
-                                ..Default::default()
-                            },
-                            move |_cx| vec![content],
-                        )
-                    };
+                                move |_cx| vec![content],
+                            );
+
+                            if let Some(arrow_el) = arrow_el {
+                                vec![arrow_el, content]
+                            } else {
+                                vec![content]
+                            }
+                        });
 
                     let opacity_layout = LayoutStyle {
                         size: SizeStyle {
