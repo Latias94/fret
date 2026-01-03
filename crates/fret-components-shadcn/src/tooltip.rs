@@ -12,10 +12,7 @@ use fret_components_ui::{
 use std::sync::Arc;
 
 use fret_core::{Edges, Px, Size, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{
-    AnyElement, ContainerProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, Overflow,
-    PositionStyle, SizeStyle, TextProps,
-};
+use fret_ui::element::{AnyElement, HoverRegionProps, LayoutStyle, Overflow, TextProps};
 use fret_ui::overlay_placement::{
     Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
 };
@@ -343,8 +340,6 @@ impl Tooltip {
 
                 let placed = layout.rect;
                 let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
-                let extra_left = wrapper_insets.left;
-                let extra_top = wrapper_insets.top;
 
                 let arrow_el = popper_arrow::diamond_arrow_element(
                     cx,
@@ -359,25 +354,11 @@ impl Tooltip {
                 );
 
                 let wrapper = popper_content::popper_wrapper_at(cx, placed, wrapper_insets, |cx| {
-                    let content = cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                position: PositionStyle::Absolute,
-                                inset: InsetStyle {
-                                    top: Some(extra_top),
-                                    left: Some(extra_left),
-                                    ..Default::default()
-                                },
-                                size: SizeStyle {
-                                    width: Length::Px(placed.size.width),
-                                    height: Length::Px(placed.size.height),
-                                    ..Default::default()
-                                },
-                                overflow: Overflow::Visible,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
+                    let content = popper_content::popper_panel_at(
+                        cx,
+                        placed,
+                        wrapper_insets,
+                        Overflow::Visible,
                         move |_cx| vec![content],
                     );
 

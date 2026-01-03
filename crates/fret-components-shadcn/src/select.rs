@@ -24,9 +24,8 @@ use fret_core::{
 };
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
-    SemanticsProps, SizeStyle, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, TextProps,
 };
 use fret_ui::overlay_placement::{
     Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
@@ -331,8 +330,6 @@ fn select_impl<H: UiHost>(
 
                     let placed = layout.rect;
                     let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
-                    let extra_left = wrapper_insets.left;
-                    let extra_top = wrapper_insets.top;
 
                     let theme_for_overlay = theme.clone();
                     let text_style_for_overlay = text_style.clone();
@@ -379,21 +376,11 @@ fn select_impl<H: UiHost>(
                             popper_content::popper_wrapper_at(cx, placed, wrapper_insets, move |cx| {
                                 let panel = cx.container(
                                     ContainerProps {
-                                        layout: LayoutStyle {
-                                            position: PositionStyle::Absolute,
-                                            inset: InsetStyle {
-                                                left: Some(extra_left),
-                                                top: Some(extra_top),
-                                                ..Default::default()
-                                            },
-                                            size: SizeStyle {
-                                                width: Length::Px(placed.size.width),
-                                                height: Length::Px(placed.size.height),
-                                                ..Default::default()
-                                            },
-                                            overflow: Overflow::Clip,
-                                            ..Default::default()
-                                        },
+                                        layout: popper_content::popper_panel_layout(
+                                            placed,
+                                            wrapper_insets,
+                                            Overflow::Clip,
+                                        ),
                                         padding: Edges::all(Px(0.0)),
                                         background: Some(theme_for_overlay.colors.panel_background),
                                         shadow: Some(shadow),

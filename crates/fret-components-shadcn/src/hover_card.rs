@@ -8,10 +8,7 @@ use fret_components_ui::{
     Radius, Space,
 };
 use fret_core::{Edges, Px, Size};
-use fret_ui::element::{
-    AnyElement, ContainerProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, Overflow,
-    PositionStyle, SizeStyle,
-};
+use fret_ui::element::{AnyElement, HoverRegionProps, Overflow};
 use fret_ui::overlay_placement::{
     Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
 };
@@ -258,8 +255,6 @@ impl HoverCard {
 
                 let placed = layout.rect;
                 let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
-                let extra_left = wrapper_insets.left;
-                let extra_top = wrapper_insets.top;
 
                 let arrow_el = popper_arrow::diamond_arrow_element(
                     cx,
@@ -283,25 +278,11 @@ impl HoverCard {
                         });
 
                         let content = if arrow_el.is_some() {
-                            cx.container(
-                                ContainerProps {
-                                    layout: LayoutStyle {
-                                        position: PositionStyle::Absolute,
-                                        inset: InsetStyle {
-                                            left: Some(extra_left),
-                                            top: Some(extra_top),
-                                            ..Default::default()
-                                        },
-                                        size: SizeStyle {
-                                            width: Length::Px(placed.size.width),
-                                            height: Length::Px(placed.size.height),
-                                            ..Default::default()
-                                        },
-                                        overflow: Overflow::Visible,
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
+                            popper_content::popper_panel_at(
+                                cx,
+                                placed,
+                                wrapper_insets,
+                                Overflow::Visible,
                                 move |_cx| vec![content],
                             )
                         } else {

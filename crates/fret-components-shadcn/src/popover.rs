@@ -14,8 +14,8 @@ use fret_core::{
 };
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
-    PositionStyle, SemanticsProps, SizeStyle, TextProps,
+    AnyElement, ContainerProps, LayoutStyle, Length, OpacityProps, Overflow, SemanticsProps,
+    SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{
     Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
@@ -262,8 +262,6 @@ impl Popover {
 
                     let placed = layout.rect;
                     let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
-                    let extra_left = wrapper_insets.left;
-                    let extra_top = wrapper_insets.top;
 
                     let bg = theme
                         .color_by_key("popover")
@@ -286,25 +284,11 @@ impl Popover {
 
                     let wrapper =
                         popper_content::popper_wrapper_at(cx, placed, wrapper_insets, move |cx| {
-                            let content = cx.container(
-                                ContainerProps {
-                                    layout: LayoutStyle {
-                                        position: PositionStyle::Absolute,
-                                        inset: InsetStyle {
-                                            left: Some(extra_left),
-                                            top: Some(extra_top),
-                                            ..Default::default()
-                                        },
-                                        size: SizeStyle {
-                                            width: Length::Px(placed.size.width),
-                                            height: Length::Px(placed.size.height),
-                                            ..Default::default()
-                                        },
-                                        overflow: Overflow::Visible,
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
+                            let content = popper_content::popper_panel_at(
+                                cx,
+                                placed,
+                                wrapper_insets,
+                                Overflow::Visible,
                                 move |_cx| vec![content],
                             );
 
@@ -674,7 +658,7 @@ mod tests {
                             layout.size.height = Length::Px(Px(40.0));
                             layout.inset.top = Some(Px(300.0));
                             layout.inset.left = Some(Px(400.0));
-                            layout.position = PositionStyle::Absolute;
+                            layout.position = fret_ui::element::PositionStyle::Absolute;
                             layout
                         },
                         enabled: true,
@@ -1018,7 +1002,7 @@ mod tests {
                                     layout.size.height = Length::Px(Px(10.0));
                                     layout.inset.top = Some(Px(120.0));
                                     layout.inset.left = Some(Px(240.0));
-                                    layout.position = PositionStyle::Absolute;
+                                    layout.position = fret_ui::element::PositionStyle::Absolute;
                                     layout
                                 },
                                 enabled: false,

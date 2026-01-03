@@ -36,6 +36,46 @@ pub fn popper_wrapper_layout(placed: Rect, wrapper_insets: Edges) -> LayoutStyle
     }
 }
 
+/// Returns the inner panel layout used inside a popper wrapper.
+///
+/// The returned layout is positioned relative to the wrapper origin (which is already expanded by
+/// `wrapper_insets`), so the panel's top-left starts at `(wrapper_insets.left, wrapper_insets.top)`.
+pub fn popper_panel_layout(placed: Rect, wrapper_insets: Edges, overflow: Overflow) -> LayoutStyle {
+    LayoutStyle {
+        position: PositionStyle::Absolute,
+        inset: InsetStyle {
+            left: Some(wrapper_insets.left),
+            top: Some(wrapper_insets.top),
+            ..Default::default()
+        },
+        size: SizeStyle {
+            width: Length::Px(placed.size.width),
+            height: Length::Px(placed.size.height),
+            ..Default::default()
+        },
+        overflow,
+        ..Default::default()
+    }
+}
+
+/// Render a popper inner panel container inside the wrapper.
+#[track_caller]
+pub fn popper_panel_at<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    placed: Rect,
+    wrapper_insets: Edges,
+    overflow: Overflow,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    cx.container(
+        ContainerProps {
+            layout: popper_panel_layout(placed, wrapper_insets, overflow),
+            ..Default::default()
+        },
+        f,
+    )
+}
+
 /// Render a popper wrapper container positioned at `placed` but expanded by `wrapper_insets`.
 ///
 /// The wrapper uses `overflow: visible` so an arrow can protrude outside the panel rect while
