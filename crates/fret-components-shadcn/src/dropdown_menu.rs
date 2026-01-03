@@ -883,6 +883,36 @@ impl DropdownMenu {
                                                 letter_spacing_em: None,
                                             };
 
+                                            let (submenu_labels, submenu_disabled_flags): (
+                                                Vec<Arc<str>>,
+                                                Vec<bool>,
+                                            ) = submenu_entries
+                                                .iter()
+                                                .map(|e| match e {
+                                                    DropdownMenuEntry::Item(item) => {
+                                                        (item.label.clone(), item.disabled)
+                                                    }
+                                                    DropdownMenuEntry::Label(_)
+                                                    | DropdownMenuEntry::Separator => {
+                                                        (Arc::from(""), true)
+                                                    }
+                                                    DropdownMenuEntry::Group(_) => {
+                                                        unreachable!("groups are flattened")
+                                                    }
+                                                })
+                                                .unzip();
+                                            let submenu_labels_arc: Arc<[Arc<str>]> =
+                                                Arc::from(submenu_labels.into_boxed_slice());
+                                            let submenu_disabled_arc: Arc<[bool]> = Arc::from(
+                                                submenu_disabled_flags.into_boxed_slice(),
+                                            );
+                                            let roving = RovingFocusProps {
+                                                enabled: true,
+                                                wrap: true,
+                                                disabled: submenu_disabled_arc,
+                                                ..Default::default()
+                                            };
+
                                             let submenu_models_for_panel = submenu_for_panel.clone();
                                             let submenu_panel = menu::sub_content::submenu_panel_at(
                                                 cx,
@@ -1073,16 +1103,22 @@ impl DropdownMenu {
                                                         }
                                                     }
 
-                                                    vec![cx.flex(
-                                                        FlexProps {
-                                                            layout: LayoutStyle::default(),
-                                                            direction: fret_core::Axis::Vertical,
-                                                            gap: Px(0.0),
-                                                            padding: Edges::all(Px(0.0)),
-                                                            justify: MainAlign::Start,
-                                                            align: CrossAlign::Stretch,
-                                                            wrap: false,
+                                                    vec![menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
+                                                        cx,
+                                                        RovingFlexProps {
+                                                            flex: FlexProps {
+                                                                layout: LayoutStyle::default(),
+                                                                direction: fret_core::Axis::Vertical,
+                                                                gap: Px(0.0),
+                                                                padding: Edges::all(Px(0.0)),
+                                                                justify: MainAlign::Start,
+                                                                align: CrossAlign::Stretch,
+                                                                wrap: false,
+                                                            },
+                                                            roving,
                                                         },
+                                                        submenu_labels_arc.clone(),
+                                                        typeahead_timeout_ticks,
                                                         move |_cx| rows.clone(),
                                                     )]
                                                 },

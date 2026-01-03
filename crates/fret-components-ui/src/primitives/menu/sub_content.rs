@@ -14,7 +14,10 @@ use fret_ui::element::{
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
+use std::sync::Arc;
+
 use crate::primitives::menu::sub;
+use crate::primitives::menu::{content, content::RovingFlexProps, content::TypeaheadPolicy};
 
 /// Render a submenu content panel anchored at the submenu geometry's floating rect.
 ///
@@ -51,6 +54,25 @@ pub fn submenu_panel_at<H: UiHost>(
             };
             vec![cx.container(build_container(layout), f)]
         },
+    )
+}
+
+/// Render a submenu roving group with APG-aligned keyboard navigation and prefix typeahead.
+pub fn submenu_roving_group_apg_prefix_typeahead<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    props: RovingFlexProps,
+    labels: Arc<[Arc<str>]>,
+    timeout_ticks: u64,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    content::menu_roving_group_apg(
+        cx,
+        props,
+        TypeaheadPolicy::Prefix {
+            labels,
+            timeout_ticks,
+        },
+        f,
     )
 }
 

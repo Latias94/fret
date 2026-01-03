@@ -565,11 +565,11 @@ impl MenubarMenuEntries {
                                         corner_radii: Corners::all(theme.metrics.radius_sm),
                                     },
                                     move |cx| {
-                                        vec![menu::content::menu_roving_group_apg_prefix_typeahead(
-                                            cx,
-                                            RovingFlexProps {
-                                                flex: FlexProps {
-                                                    layout: LayoutStyle::default(),
+                                            vec![menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
+                                                cx,
+                                                RovingFlexProps {
+                                                    flex: FlexProps {
+                                                        layout: LayoutStyle::default(),
                                                     direction: fret_core::Axis::Vertical,
                                                     gap: Px(0.0),
                                                     padding: Edges::all(Px(0.0)),
