@@ -733,6 +733,24 @@ impl ModelStore {
     }
 }
 
+impl Clone for ModelStore {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            _not_send: PhantomData,
+        }
+    }
+}
+
+impl Default for ModelStore {
+    fn default() -> Self {
+        Self {
+            inner: Rc::new(ModelStoreInner::default()),
+            _not_send: PhantomData,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -863,6 +881,7 @@ mod tests {
         assert!(!store.state().storage.contains_key(id));
     }
 
+    #[allow(clippy::mutable_key_type)]
     #[test]
     fn model_equality_and_hash_are_scoped_to_the_store() {
         let mut store_a = ModelStore::default();
@@ -881,23 +900,5 @@ mod tests {
         let weak_a = a.downgrade();
         let weak_b = b.downgrade();
         assert_ne!(weak_a, weak_b);
-    }
-}
-
-impl Clone for ModelStore {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-            _not_send: PhantomData,
-        }
-    }
-}
-
-impl Default for ModelStore {
-    fn default() -> Self {
-        Self {
-            inner: Rc::new(ModelStoreInner::default()),
-            _not_send: PhantomData,
-        }
     }
 }
