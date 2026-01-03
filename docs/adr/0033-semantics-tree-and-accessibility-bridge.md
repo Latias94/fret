@@ -110,6 +110,9 @@ Recommended default (P0):
 
 - Use `accesskit` as the bridge implementation where possible, to avoid per-OS bespoke trees and to keep behavior consistent.
   - In this workspace, the AccessKit mapping logic lives in `crates/fret-a11y-accesskit`, with winit adapter glue in `crates/fret-runner-winit`.
+  - Note: `accesskit_winit` support lags behind `winit` releases. While the workspace uses `winit 0.31` (pre-stable), the adapter glue in
+    `crates/fret-runner-winit` may remain a stub. We plan to re-enable the real AccessKit adapter once `winit 0.31` is stable and a compatible
+    `accesskit_winit` is available.
 
 Fret’s core contracts remain OS-agnostic:
 

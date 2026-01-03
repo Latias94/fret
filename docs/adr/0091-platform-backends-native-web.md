@@ -56,3 +56,4 @@ Compatibility shims may exist temporarily to reduce churn:
 - Consider a `fret-platform-default` facade that selects the right backend via `cfg(...)`.
 - Keep `fret-runner-winit` responsibilities limited to concerns that are truly `winit`-specific
   (e.g. window a11y bridge), not general OS/browser I/O.
+- Re-enable the real AccessKit adapter in `fret-runner-winit` once `winit 0.31` is stable and `accesskit_winit` has a compatible release.
