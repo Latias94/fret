@@ -1242,6 +1242,15 @@ version = "0.1.0"
 dependencies = [
  "fret-app",
  "fret-core",
+ "fret-fonts",
+ "fret-platform",
+ "fret-platform-native",
+ "fret-platform-web",
+ "fret-platform-winit",
+ "fret-render",
+ "fret-runner-winit",
+ "fret-runner-winit-wgpu",
+ "fret-runtime",
  "fret-ui",
 ]
 

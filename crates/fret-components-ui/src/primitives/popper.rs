@@ -34,6 +34,70 @@ pub fn anchored_panel_options_for_popper_content(
     }
 }
 
+/// Placement policy for Radix-like `PopperContent`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PopperContentPlacement {
+    pub direction: LayoutDirection,
+    pub side: Side,
+    pub align: Align,
+    pub side_offset: Px,
+    pub align_offset: Px,
+    pub arrow: Option<ArrowOptions>,
+    pub arrow_protrusion: Px,
+}
+
+impl PopperContentPlacement {
+    pub fn new(direction: LayoutDirection, side: Side, align: Align, side_offset: Px) -> Self {
+        Self {
+            direction,
+            side,
+            align,
+            side_offset,
+            align_offset: Px(0.0),
+            arrow: None,
+            arrow_protrusion: Px(0.0),
+        }
+    }
+
+    pub fn with_align_offset(mut self, align_offset: Px) -> Self {
+        self.align_offset = align_offset;
+        self
+    }
+
+    pub fn with_arrow(mut self, arrow: Option<ArrowOptions>, arrow_protrusion: Px) -> Self {
+        self.arrow = arrow;
+        self.arrow_protrusion = arrow_protrusion;
+        self
+    }
+
+    pub fn options(self) -> AnchoredPanelOptions {
+        anchored_panel_options_for_popper_content(
+            self.direction,
+            self.arrow_protrusion,
+            self.align_offset,
+            self.arrow,
+        )
+    }
+}
+
+/// Computes a Radix-style `PopperContent` layout from a placement policy.
+pub fn popper_content_layout_sized(
+    outer: Rect,
+    anchor: Rect,
+    desired: Size,
+    placement: PopperContentPlacement,
+) -> AnchoredPanelLayout {
+    popper_layout_sized(
+        outer,
+        anchor,
+        desired,
+        placement.side_offset,
+        placement.side,
+        placement.align,
+        placement.options(),
+    )
+}
+
 /// Computes an anchored popper layout (rect + optional arrow) with deterministic flip/clamp rules.
 pub fn popper_layout_sized(
     outer: Rect,

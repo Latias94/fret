@@ -309,19 +309,17 @@ fn select_impl<H: UiHost>(
                     });
                     let arrow_protrusion = popper_arrow::arrow_protrusion(arrow, arrow_size);
 
-                    let layout = overlay::popper_layout_sized(
+                    let layout = popper::popper_content_layout_sized(
                         outer,
                         anchor,
                         desired,
-                        side_offset,
-                        Side::Bottom,
-                        Align::Start,
-                        popper::anchored_panel_options_for_popper_content(
+                        popper::PopperContentPlacement::new(
                             LayoutDirection::Ltr,
-                            arrow_protrusion,
-                            Px(0.0),
-                            arrow_options,
-                        ),
+                            Side::Bottom,
+                            Align::Start,
+                            side_offset,
+                        )
+                        .with_arrow(arrow_options, arrow_protrusion),
                     );
 
                     let placed = layout.rect;

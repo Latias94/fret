@@ -6,6 +6,7 @@ use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
 use fret_components_ui::primitives::menu;
+use fret_components_ui::primitives::popper;
 use fret_components_ui::primitives::popper_content;
 use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
@@ -18,9 +19,7 @@ use fret_ui::element::{
     PointerRegionProps, PointerRegionState, PressableProps, RovingFlexProps, RovingFocusProps,
     SemanticsProps, TextProps,
 };
-use fret_ui::overlay_placement::{
-    Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
-};
+use fret_ui::overlay_placement::{Align, ArrowOptions, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
@@ -269,22 +268,17 @@ impl ContextMenu {
                     let arrow_protrusion = popper_arrow::arrow_protrusion(arrow, arrow_size);
 
                     let anchor_rect = overlay::anchor_rect_from_point(anchor);
-                    let layout = overlay::popper_layout_sized(
+                    let layout = popper::popper_content_layout_sized(
                         outer,
                         anchor_rect,
                         estimated,
-                        side_offset,
-                        side,
-                        align,
-                        AnchoredPanelOptions {
-                            direction: LayoutDirection::Ltr,
-                            offset: Offset {
-                                main_axis: arrow_protrusion,
-                                cross_axis: Px(0.0),
-                                alignment_axis: None,
-                            },
-                            arrow: arrow_options,
-                        },
+                        popper::PopperContentPlacement::new(
+                            LayoutDirection::Ltr,
+                            side,
+                            align,
+                            side_offset,
+                        )
+                        .with_arrow(arrow_options, arrow_protrusion),
                     );
 
                     let placed = layout.rect;
