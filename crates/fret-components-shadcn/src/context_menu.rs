@@ -7,9 +7,7 @@ use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
 use fret_components_ui::primitives::menu;
 use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
-use fret_core::{
-    Edges, KeyCode, MouseButton, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Edges, MouseButton, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::PointerDownCx;
 use fret_ui::element::{
@@ -184,6 +182,8 @@ impl ContextMenu {
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
 
+            menu::trigger::wire_open_on_shift_f10(cx, trigger_id, self.open.clone());
+
             let open = self.open;
             let open_for_pointer = open.clone();
             let pointer_policy = Arc::new(move |host: &mut dyn fret_ui::action::UiPointerActionHost,
@@ -205,22 +205,6 @@ impl ContextMenu {
                 cx.pointer_region_on_pointer_down(pointer_policy);
                 vec![trigger]
             });
-
-            let key_open = open.clone();
-            cx.key_on_key_down_for(
-                trigger_id,
-                Arc::new(move |host, _cx, down| {
-                    if down.repeat {
-                        return false;
-                    }
-                    let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
-                    if !is_shift_f10 {
-                        return false;
-                    }
-                    let _ = host.models_mut().update(&key_open, |v| *v = true);
-                    true
-                }),
-            );
 
             let pointer_down = cx.with_state(PointerRegionState::default, |st| st.last_down);
             let anchor_point = pointer_down.map(|it| it.position);
