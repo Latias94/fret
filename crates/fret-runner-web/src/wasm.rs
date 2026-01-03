@@ -295,7 +295,8 @@ impl WebPlatformServices {
                         as Box<dyn FnMut(WebSysEvent)>);
 
                     *callback_cell.borrow_mut() = Some(on_change);
-                    if let Ok(holder) = callback_cell.try_borrow() && let Some(cb) = holder.as_ref()
+                    if let Ok(holder) = callback_cell.try_borrow()
+                        && let Some(cb) = holder.as_ref()
                     {
                         let _ = input_target.add_event_listener_with_callback(
                             "change",
