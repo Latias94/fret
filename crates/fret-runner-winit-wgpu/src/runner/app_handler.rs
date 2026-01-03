@@ -234,10 +234,18 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                 }
                 self.drain_effects(event_loop);
             }
-            WindowEvent::ModifiersChanged(mods) => {
+            ref ev @ WindowEvent::ModifiersChanged(mods) => {
                 self.raw_modifiers = mods.state();
                 self.modifiers =
                     fret_runner_winit::map_modifiers(self.raw_modifiers, self.alt_gr_down);
+
+                if let Some(state) = self.windows.get_mut(app_window) {
+                    state.platform.handle_window_event(
+                        state.window.scale_factor(),
+                        ev,
+                        &mut Vec::new(),
+                    );
+                }
 
                 if self.app.drag().is_some_and(|d| {
                     d.cross_window_hover && d.kind == fret_app::DragKind::DockPanel
@@ -250,7 +258,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                 if let Some(state) = self.windows.get_mut(app_window) {
                     state.is_focused = focused;
                     if !focused {
-                        state.input.pressed_buttons = fret_core::MouseButtons::default();
+                        state.platform.input.pressed_buttons = fret_core::MouseButtons::default();
                     }
                 }
                 macos_window_log(format_args!(
@@ -258,98 +266,65 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                     app_window, focused, window_id
                 ));
             }
-            WindowEvent::Moved(position) => {
-                if let Some(state) = self.windows.get_mut(app_window) {
-                    let logical = position.to_logical::<f32>(state.window.scale_factor());
-                    let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
-                    self.driver.handle_event(
-                        &mut self.app,
-                        services,
-                        app_window,
-                        &mut state.user,
-                        &Event::WindowMoved(fret_core::WindowLogicalPosition {
-                            x: logical.x.round() as i32,
-                            y: logical.y.round() as i32,
-                        }),
+            ref ev @ WindowEvent::Moved(_) => {
+                let mapped = {
+                    let Some(state) = self.windows.get_mut(app_window) else {
+                        return;
+                    };
+                    let mut mapped = Vec::new();
+                    state.platform.handle_window_event(
+                        state.window.scale_factor(),
+                        ev,
+                        &mut mapped,
                     );
+                    mapped
+                };
+
+                for evt in mapped {
+                    self.deliver_window_event_now(app_window, &evt);
                 }
                 self.drain_effects(event_loop);
             }
-            WindowEvent::KeyboardInput { event, .. } => {
+            ref ev @ WindowEvent::KeyboardInput { ref event, .. } => {
                 if fret_runner_winit::is_alt_gr_key(&event.logical_key) {
                     self.alt_gr_down = event.state == ElementState::Pressed;
                     self.modifiers =
                         fret_runner_winit::map_modifiers(self.raw_modifiers, self.alt_gr_down);
                 }
-                if let Some(state) = self.windows.get_mut(app_window) {
-                    let key = fret_runner_winit::map_physical_key(event.physical_key);
-                    let repeat = event.repeat;
 
-                    match event.state {
-                        ElementState::Pressed => {
-                            // ADR 0072 (proposed): Escape cancels an active cross-window dock drag
-                            // session (ImGui/Zed-class behavior). Handle it here so we can also
-                            // clear internal drag hover state and stop any tear-off follow
-                            // movement immediately.
-                            if key == fret_core::KeyCode::Escape
-                                && self.app.drag().is_some_and(|d| {
-                                    d.cross_window_hover && d.kind == fret_app::DragKind::DockPanel
-                                })
-                            {
-                                self.app.cancel_drag();
-                                let _ = self.clear_internal_drag_hover_if_needed();
-                                if self.dock_tearoff_follow.is_some() {
-                                    self.stop_dock_tearoff_follow(Instant::now(), true);
-                                }
-                                self.drain_effects(event_loop);
-                                return;
-                            }
+                let key = fret_runner_winit::map_physical_key(event.physical_key);
 
-                            let services =
-                                Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
-                            self.driver.handle_event(
-                                &mut self.app,
-                                services,
-                                app_window,
-                                &mut state.user,
-                                &Event::KeyDown {
-                                    key,
-                                    modifiers: self.modifiers,
-                                    repeat,
-                                },
-                            );
-                            if let Some(text) = event.text
-                                && let Some(text) =
-                                    fret_runner_winit::sanitize_text_input(text.as_str())
-                            {
-                                let services = Self::ui_services_mut(
-                                    &mut self.renderer,
-                                    &mut self.no_services,
-                                );
-                                self.driver.handle_event(
-                                    &mut self.app,
-                                    services,
-                                    app_window,
-                                    &mut state.user,
-                                    &Event::TextInput(text),
-                                );
-                            }
-                        }
-                        ElementState::Released => {
-                            let services =
-                                Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
-                            self.driver.handle_event(
-                                &mut self.app,
-                                services,
-                                app_window,
-                                &mut state.user,
-                                &Event::KeyUp {
-                                    key,
-                                    modifiers: self.modifiers,
-                                },
-                            );
-                        }
+                // ADR 0072 (proposed): Escape cancels an active cross-window dock drag session.
+                if event.state == ElementState::Pressed
+                    && key == fret_core::KeyCode::Escape
+                    && self.app.drag().is_some_and(|d| {
+                        d.cross_window_hover && d.kind == fret_app::DragKind::DockPanel
+                    })
+                {
+                    self.app.cancel_drag();
+                    let _ = self.clear_internal_drag_hover_if_needed();
+                    if self.dock_tearoff_follow.is_some() {
+                        self.stop_dock_tearoff_follow(Instant::now(), true);
                     }
+                    self.drain_effects(event_loop);
+                    return;
+                }
+
+                let mapped = {
+                    let Some(state) = self.windows.get_mut(app_window) else {
+                        return;
+                    };
+                    let mut mapped = Vec::new();
+                    state.platform.handle_window_event(
+                        state.window.scale_factor(),
+                        ev,
+                        &mut mapped,
+                    );
+                    mapped
+                };
+
+                for evt in mapped {
+                    self.deliver_window_event_now(app_window, &evt);
                 }
                 self.drain_effects(event_loop);
             }
@@ -402,7 +377,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                     if state.external_drag_token.is_none() {
                         state.external_drag_token = Some(token);
                     }
-                    let position = state.input.cursor_pos;
+                    let position = state.platform.input.cursor_pos;
                     state.external_drag_files.push(path);
                     let files = state.external_drag_files.clone();
                     let kind = if state.external_drag_files.len() == 1 {
@@ -443,7 +418,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                     if state.external_drag_token.is_none() {
                         state.external_drag_token = Some(token);
                     }
-                    let position = state.input.cursor_pos;
+                    let position = state.platform.input.cursor_pos;
                     if state.external_drag_files.is_empty() {
                         state.external_drag_files.push(path);
                     }
@@ -475,7 +450,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                         self.drain_effects(event_loop);
                         return;
                     };
-                    let position = state.input.cursor_pos;
+                    let position = state.platform.input.cursor_pos;
                     state.external_drag_files.clear();
                     let token = state.external_drag_token.take();
                     (position, token)
@@ -534,15 +509,21 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                 }
                 self.app.request_redraw(app_window);
             }
-            WindowEvent::CursorMoved { position, .. } => {
-                let (pos, buttons, external_drag_token, screen_pos) = {
+            ref ev @ WindowEvent::CursorMoved { position, .. } => {
+                let (mapped, pos, external_drag_token, screen_pos) = {
                     let Some(state) = self.windows.get_mut(app_window) else {
                         return;
                     };
-                    let logical = position.to_logical::<f32>(state.window.scale_factor());
-                    state.input.cursor_pos = Point::new(Px(logical.x), Px(logical.y));
-                    state.input.cursor_pos_physical = Some(position);
 
+                    let mut mapped = Vec::new();
+                    state.platform.handle_window_event(
+                        state.window.scale_factor(),
+                        ev,
+                        &mut mapped,
+                    );
+
+                    let pos = state.platform.input.cursor_pos;
+                    let external_drag_token = state.external_drag_token;
                     let screen_pos = state.window.inner_position().ok().map(|inner| {
                         PhysicalPosition::new(
                             inner.x as f64 + position.x,
@@ -550,12 +531,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                         )
                     });
 
-                    (
-                        state.input.cursor_pos,
-                        state.input.pressed_buttons,
-                        state.external_drag_token,
-                        screen_pos,
-                    )
+                    (mapped, pos, external_drag_token, screen_pos)
                 };
 
                 if let Some(p) = screen_pos {
@@ -567,64 +543,32 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                 if let Some(token) = external_drag_token {
                     let paths = self.external_drop.paths(token).unwrap_or(&[]);
                     let kind = ExternalDragKind::OverFiles(Self::external_drag_files(token, paths));
-                    if let Some(state) = self.windows.get_mut(app_window) {
-                        let services =
-                            Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
-                        self.driver.handle_event(
-                            &mut self.app,
-                            services,
-                            app_window,
-                            &mut state.user,
-                            &Event::ExternalDrag(ExternalDragEvent {
-                                position: pos,
-                                kind,
-                            }),
-                        );
-                    }
-                }
-                self.dispatch_pointer_event(
-                    app_window,
-                    fret_core::PointerEvent::Move {
+                    let evt = Event::ExternalDrag(ExternalDragEvent {
                         position: pos,
-                        buttons,
-                        modifiers: self.modifiers,
-                    },
-                );
+                        kind,
+                    });
+                    self.deliver_window_event_now(app_window, &evt);
+                }
+
+                for evt in mapped {
+                    self.deliver_window_event_now(app_window, &evt);
+                }
+
                 self.route_internal_drag_hover_from_cursor();
                 self.drain_effects(event_loop);
             }
-            WindowEvent::MouseInput { state, button, .. } => {
-                let pos = {
+            ref ev @ WindowEvent::MouseInput { state, button, .. } => {
+                let mapped = {
                     let Some(runtime) = self.windows.get_mut(app_window) else {
                         return;
                     };
-                    let pos = runtime
-                        .input
-                        .cursor_pos_physical
-                        .map(|physical| {
-                            let logical: winit::dpi::LogicalPosition<f32> =
-                                physical.to_logical(runtime.window.scale_factor());
-                            Point::new(Px(logical.x), Px(logical.y))
-                        })
-                        .unwrap_or(runtime.input.cursor_pos);
-                    runtime.input.cursor_pos = pos;
-                    match state {
-                        ElementState::Pressed => {
-                            fret_runner_winit::set_mouse_buttons(
-                                &mut runtime.input.pressed_buttons,
-                                button,
-                                true,
-                            );
-                        }
-                        ElementState::Released => {
-                            fret_runner_winit::set_mouse_buttons(
-                                &mut runtime.input.pressed_buttons,
-                                button,
-                                false,
-                            );
-                        }
-                    }
-                    pos
+                    let mut mapped = Vec::new();
+                    runtime.platform.handle_window_event(
+                        runtime.window.scale_factor(),
+                        ev,
+                        &mut mapped,
+                    );
+                    mapped
                 };
 
                 let Some(button) = fret_runner_winit::map_mouse_button(button) else {
@@ -636,14 +580,6 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                         if button == fret_core::MouseButton::Left {
                             self.left_mouse_down = true;
                         }
-                        self.dispatch_pointer_event(
-                            app_window,
-                            fret_core::PointerEvent::Down {
-                                position: pos,
-                                button,
-                                modifiers: self.modifiers,
-                            },
-                        );
                     }
                     ElementState::Released => {
                         if button == fret_core::MouseButton::Left {
@@ -658,43 +594,31 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                                 let _ = self.clear_internal_drag_hover_if_needed();
                             }
                         }
-                        self.dispatch_pointer_event(
-                            app_window,
-                            fret_core::PointerEvent::Up {
-                                position: pos,
-                                button,
-                                modifiers: self.modifiers,
-                            },
-                        );
                     }
+                }
+
+                for evt in mapped {
+                    self.deliver_window_event_now(app_window, &evt);
                 }
                 self.drain_effects(event_loop);
             }
-            WindowEvent::MouseWheel { delta, .. } => {
-                let (pos, scroll) = {
-                    let Some(runtime) = self.windows.get(app_window) else {
+            ref ev @ WindowEvent::MouseWheel { .. } => {
+                let mapped = {
+                    let Some(runtime) = self.windows.get_mut(app_window) else {
                         return;
                     };
-                    let pos = runtime.input.cursor_pos;
-                    let scroll = fret_runner_winit::map_wheel_delta(
-                        delta,
+                    let mut mapped = Vec::new();
+                    runtime.platform.handle_window_event(
                         runtime.window.scale_factor(),
-                        fret_runner_winit::WheelConfig {
-                            line_delta_px: self.config.wheel_line_delta_px,
-                            pixel_delta_scale: self.config.wheel_pixel_delta_scale,
-                        },
+                        ev,
+                        &mut mapped,
                     );
-                    (pos, scroll)
+                    mapped
                 };
 
-                self.dispatch_pointer_event(
-                    app_window,
-                    fret_core::PointerEvent::Wheel {
-                        position: pos,
-                        delta: scroll,
-                        modifiers: self.modifiers,
-                    },
-                );
+                for evt in mapped {
+                    self.deliver_window_event_now(app_window, &evt);
+                }
                 self.drain_effects(event_loop);
             }
             WindowEvent::RedrawRequested => {

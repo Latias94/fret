@@ -5,6 +5,24 @@ use winit::event::{
 };
 use winit::keyboard::{Key, ModifiersState, NamedKey};
 
+#[derive(Debug, Default, Clone)]
+pub struct WinitPlatform {
+    pub input: WinitInputState,
+    pub wheel: WheelConfig,
+}
+
+impl WinitPlatform {
+    pub fn handle_window_event(
+        &mut self,
+        window_scale_factor: f64,
+        event: &WindowEvent,
+        out: &mut Vec<Event>,
+    ) {
+        self.input
+            .handle_window_event_with_config(window_scale_factor, event, self.wheel, out);
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RunnerError {
     message: String,
@@ -58,10 +76,32 @@ impl WinitInputState {
         event: &WindowEvent,
         out: &mut Vec<Event>,
     ) {
+        self.handle_window_event_with_config(
+            window_scale_factor,
+            event,
+            WheelConfig::default(),
+            out,
+        );
+    }
+
+    pub fn handle_window_event_with_config(
+        &mut self,
+        window_scale_factor: f64,
+        event: &WindowEvent,
+        wheel: WheelConfig,
+        out: &mut Vec<Event>,
+    ) {
         match event {
             WindowEvent::ModifiersChanged(mods) => {
                 self.raw_modifiers = mods.state();
                 self.modifiers = map_modifiers(self.raw_modifiers, self.alt_gr_down);
+            }
+            WindowEvent::Moved(position) => {
+                let logical = position.to_logical::<f32>(window_scale_factor);
+                out.push(Event::WindowMoved(fret_core::WindowLogicalPosition {
+                    x: logical.x.round() as i32,
+                    y: logical.y.round() as i32,
+                }));
             }
             WindowEvent::KeyboardInput { event, .. } => {
                 self.handle_key_event(event, out);
@@ -77,6 +117,11 @@ impl WinitInputState {
                 }));
             }
             WindowEvent::MouseInput { state, button, .. } => {
+                if let Some(physical) = self.cursor_pos_physical {
+                    let logical: LogicalPosition<f32> = physical.to_logical(window_scale_factor);
+                    self.cursor_pos = Point::new(Px(logical.x), Px(logical.y));
+                }
+
                 let winit_button = *button;
                 let Some(button) = map_mouse_button(winit_button) else {
                     return;
@@ -99,7 +144,7 @@ impl WinitInputState {
                 out.push(Event::Pointer(evt));
             }
             WindowEvent::MouseWheel { delta, .. } => {
-                let scroll = map_wheel_delta(*delta, window_scale_factor, WheelConfig::default());
+                let scroll = map_wheel_delta(*delta, window_scale_factor, wheel);
                 out.push(Event::Pointer(PointerEvent::Wheel {
                     position: self.cursor_pos,
                     delta: scroll,

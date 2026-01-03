@@ -1466,7 +1466,7 @@ struct WindowRuntime<S> {
     last_accessibility_snapshot: Option<std::sync::Arc<fret_core::SemanticsSnapshot>>,
     surface: SurfaceState<'static>,
     scene: Scene,
-    input: fret_runner_winit::WinitInputState,
+    platform: fret_runner_winit::WinitPlatform,
     is_focused: bool,
     ime_allowed: bool,
     ime_cursor_area: Option<Rect>,
@@ -2086,7 +2086,13 @@ impl<D: WinitDriver> WinitRunner<D> {
                 last_accessibility_snapshot: None,
                 surface,
                 scene: Scene::default(),
-                input: fret_runner_winit::WinitInputState::default(),
+                platform: fret_runner_winit::WinitPlatform {
+                    wheel: fret_runner_winit::WheelConfig {
+                        line_delta_px: self.config.wheel_line_delta_px,
+                        pixel_delta_scale: self.config.wheel_pixel_delta_scale,
+                    },
+                    ..Default::default()
+                },
                 is_focused: false,
                 ime_allowed: false,
                 ime_cursor_area: None,
@@ -3095,24 +3101,6 @@ impl<D: WinitDriver> WinitRunner<D> {
         true
     }
 
-    fn dispatch_pointer_event(
-        &mut self,
-        window: fret_core::AppWindowId,
-        pe: fret_core::PointerEvent,
-    ) {
-        let Some(state) = self.windows.get_mut(window) else {
-            return;
-        };
-        let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
-        self.driver.handle_event(
-            &mut self.app,
-            services,
-            window,
-            &mut state.user,
-            &Event::Pointer(pe),
-        );
-    }
-
     fn dispatch_internal_drag_event(
         &mut self,
         window: fret_core::AppWindowId,
@@ -3291,8 +3279,8 @@ impl<D: WinitDriver> WinitRunner<D> {
         let state = self.windows.get(window)?;
         let inner = state.window.inner_position().ok()?;
         let scale = state.window.scale_factor();
-        let x = inner.x as f64 + state.input.cursor_pos.x.0 as f64 * scale;
-        let y = inner.y as f64 + state.input.cursor_pos.y.0 as f64 * scale;
+        let x = inner.x as f64 + state.platform.input.cursor_pos.x.0 as f64 * scale;
+        let y = inner.y as f64 + state.platform.input.cursor_pos.y.0 as f64 * scale;
         Some(PhysicalPosition::new(x, y))
     }
 
@@ -3374,7 +3362,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             || self
                 .windows
                 .get(window)
-                .is_some_and(|w| w.input.pressed_buttons.left)
+                .is_some_and(|w| w.platform.input.pressed_buttons.left)
     }
 
     fn update_dock_tearoff_follow(&mut self) -> bool {
