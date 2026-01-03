@@ -18,6 +18,7 @@ fret-platform = { path = "../fret-platform" }
 fret-platform-desktop = { path = "../fret-platform-desktop" }
 fret-platform-winit = { path = "../fret-platform-winit" }
 fret-render = { path = "../fret-render" }
+fret-runner-winit = { path = "../fret-runner-winit" }
 pollster.workspace = true
 slotmap.workspace = true
 thiserror.workspace = true

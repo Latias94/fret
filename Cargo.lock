@@ -1438,6 +1438,7 @@ dependencies = [
  "fret-platform-desktop",
  "fret-platform-winit",
  "fret-render",
+ "fret-runner-winit",
  "fret-runtime",
  "objc",
  "pollster",

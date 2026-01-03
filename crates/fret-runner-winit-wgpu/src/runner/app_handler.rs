@@ -236,7 +236,8 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
             }
             WindowEvent::ModifiersChanged(mods) => {
                 self.raw_modifiers = mods.state();
-                self.modifiers = map_modifiers(self.raw_modifiers, self.alt_gr_down);
+                self.modifiers =
+                    fret_runner_winit::map_modifiers(self.raw_modifiers, self.alt_gr_down);
 
                 if self.app.drag().is_some_and(|d| {
                     d.cross_window_hover && d.kind == fret_app::DragKind::DockPanel
@@ -249,7 +250,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                 if let Some(state) = self.windows.get_mut(app_window) {
                     state.is_focused = focused;
                     if !focused {
-                        state.pressed_buttons = fret_core::MouseButtons::default();
+                        state.input.pressed_buttons = fret_core::MouseButtons::default();
                     }
                 }
                 macos_window_log(format_args!(
@@ -275,12 +276,13 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                 self.drain_effects(event_loop);
             }
             WindowEvent::KeyboardInput { event, .. } => {
-                if is_alt_gr_key(&event.logical_key) {
+                if fret_runner_winit::is_alt_gr_key(&event.logical_key) {
                     self.alt_gr_down = event.state == ElementState::Pressed;
-                    self.modifiers = map_modifiers(self.raw_modifiers, self.alt_gr_down);
+                    self.modifiers =
+                        fret_runner_winit::map_modifiers(self.raw_modifiers, self.alt_gr_down);
                 }
                 if let Some(state) = self.windows.get_mut(app_window) {
-                    let key = map_physical_key(event.physical_key);
+                    let key = fret_runner_winit::map_physical_key(event.physical_key);
                     let repeat = event.repeat;
 
                     match event.state {
@@ -317,7 +319,8 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                                 },
                             );
                             if let Some(text) = event.text
-                                && let Some(text) = sanitize_text_input(text.as_str())
+                                && let Some(text) =
+                                    fret_runner_winit::sanitize_text_input(text.as_str())
                             {
                                 let services = Self::ui_services_mut(
                                     &mut self.renderer,
@@ -399,7 +402,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                     if state.external_drag_token.is_none() {
                         state.external_drag_token = Some(token);
                     }
-                    let position = state.cursor_pos;
+                    let position = state.input.cursor_pos;
                     state.external_drag_files.push(path);
                     let files = state.external_drag_files.clone();
                     let kind = if state.external_drag_files.len() == 1 {
@@ -440,7 +443,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                     if state.external_drag_token.is_none() {
                         state.external_drag_token = Some(token);
                     }
-                    let position = state.cursor_pos;
+                    let position = state.input.cursor_pos;
                     if state.external_drag_files.is_empty() {
                         state.external_drag_files.push(path);
                     }
@@ -472,7 +475,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                         self.drain_effects(event_loop);
                         return;
                     };
-                    let position = state.cursor_pos;
+                    let position = state.input.cursor_pos;
                     state.external_drag_files.clear();
                     let token = state.external_drag_token.take();
                     (position, token)
@@ -537,8 +540,8 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                         return;
                     };
                     let logical = position.to_logical::<f32>(state.window.scale_factor());
-                    state.cursor_pos = Point::new(Px(logical.x), Px(logical.y));
-                    state.cursor_pos_physical = Some(position);
+                    state.input.cursor_pos = Point::new(Px(logical.x), Px(logical.y));
+                    state.input.cursor_pos_physical = Some(position);
 
                     let screen_pos = state.window.inner_position().ok().map(|inner| {
                         PhysicalPosition::new(
@@ -548,8 +551,8 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                     });
 
                     (
-                        state.cursor_pos,
-                        state.pressed_buttons,
+                        state.input.cursor_pos,
+                        state.input.pressed_buttons,
                         state.external_drag_token,
                         screen_pos,
                     )
@@ -596,26 +599,35 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                         return;
                     };
                     let pos = runtime
+                        .input
                         .cursor_pos_physical
                         .map(|physical| {
                             let logical: winit::dpi::LogicalPosition<f32> =
                                 physical.to_logical(runtime.window.scale_factor());
                             Point::new(Px(logical.x), Px(logical.y))
                         })
-                        .unwrap_or(runtime.cursor_pos);
-                    runtime.cursor_pos = pos;
+                        .unwrap_or(runtime.input.cursor_pos);
+                    runtime.input.cursor_pos = pos;
                     match state {
                         ElementState::Pressed => {
-                            set_mouse_buttons(&mut runtime.pressed_buttons, button, true);
+                            fret_runner_winit::set_mouse_buttons(
+                                &mut runtime.input.pressed_buttons,
+                                button,
+                                true,
+                            );
                         }
                         ElementState::Released => {
-                            set_mouse_buttons(&mut runtime.pressed_buttons, button, false);
+                            fret_runner_winit::set_mouse_buttons(
+                                &mut runtime.input.pressed_buttons,
+                                button,
+                                false,
+                            );
                         }
                     }
                     pos
                 };
 
-                let Some(button) = map_mouse_button(button) else {
+                let Some(button) = fret_runner_winit::map_mouse_button(button) else {
                     return;
                 };
 
@@ -663,8 +675,15 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                     let Some(runtime) = self.windows.get(app_window) else {
                         return;
                     };
-                    let pos = runtime.cursor_pos;
-                    let scroll = Self::map_wheel_delta(&self.config, &runtime.window, delta);
+                    let pos = runtime.input.cursor_pos;
+                    let scroll = fret_runner_winit::map_wheel_delta(
+                        delta,
+                        runtime.window.scale_factor(),
+                        fret_runner_winit::WheelConfig {
+                            line_delta_px: self.config.wheel_line_delta_px,
+                            pixel_delta_scale: self.config.wheel_pixel_delta_scale,
+                        },
+                    );
                     (pos, scroll)
                 };
 

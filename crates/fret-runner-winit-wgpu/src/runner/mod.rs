@@ -9,8 +9,8 @@ use std::{
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
-    InternalDragEvent, InternalDragKind, Modifiers, MouseButton, Point, Px, Rect, Scene, Size,
-    UiServices, ViewportInputEvent, WindowMetricsService,
+    InternalDragEvent, InternalDragKind, Modifiers, Point, Px, Rect, Scene, Size, UiServices,
+    ViewportInputEvent, WindowMetricsService,
 };
 use fret_platform_desktop::clipboard::DesktopClipboard;
 use fret_platform_desktop::external_drop::DesktopExternalDrop;
@@ -27,11 +27,9 @@ use tracing::error;
 use winit::{
     application::ApplicationHandler,
     dpi::{LogicalSize, PhysicalPosition, Position},
-    event::{
-        DeviceEvent, ElementState, MouseButton as WinitMouseButton, MouseScrollDelta, WindowEvent,
-    },
+    event::{DeviceEvent, ElementState, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoopProxy},
-    keyboard::{Key, ModifiersState, NamedKey},
+    keyboard::ModifiersState,
     window::{Window, WindowId, WindowLevel},
 };
 
@@ -84,16 +82,19 @@ pub fn run_app_with_event_loop<D: WinitAppDriver>(
     Ok(())
 }
 
+type OnMainWindowCreatedHook = dyn FnOnce(&mut App, fret_core::AppWindowId) + 'static;
+type OnGpuReadyHook = dyn FnOnce(&mut App, &WgpuContext, &mut Renderer) + 'static;
+type EventLoopBuilderHook =
+    dyn FnOnce(&mut winit::event_loop::EventLoopBuilder<RunnerUserEvent>) + 'static;
+
 pub struct WinitAppBuilder<D: WinitAppDriver> {
     config: WinitRunnerConfig,
     app: App,
     driver: D,
     windows_ime_msg_hook_enabled: bool,
-    on_main_window_created: Option<Box<dyn FnOnce(&mut App, fret_core::AppWindowId) + 'static>>,
-    on_gpu_ready: Option<Box<dyn FnOnce(&mut App, &WgpuContext, &mut Renderer) + 'static>>,
-    event_loop_builder_hook: Option<
-        Box<dyn FnOnce(&mut winit::event_loop::EventLoopBuilder<RunnerUserEvent>) + 'static>,
-    >,
+    on_main_window_created: Option<Box<OnMainWindowCreatedHook>>,
+    on_gpu_ready: Option<Box<OnGpuReadyHook>>,
+    event_loop_builder_hook: Option<Box<EventLoopBuilderHook>>,
     event_loop: Option<winit::event_loop::EventLoop<RunnerUserEvent>>,
 }
 
@@ -226,8 +227,8 @@ impl<D: WinitAppDriver> WinitAppBuilder<D> {
 
 struct HookedDriver<D> {
     inner: D,
-    on_main_window_created: Option<Box<dyn FnOnce(&mut App, fret_core::AppWindowId) + 'static>>,
-    on_gpu_ready: Option<Box<dyn FnOnce(&mut App, &WgpuContext, &mut Renderer) + 'static>>,
+    on_main_window_created: Option<Box<OnMainWindowCreatedHook>>,
+    on_gpu_ready: Option<Box<OnGpuReadyHook>>,
 }
 
 impl<D: WinitAppDriver> WinitAppDriver for HookedDriver<D> {
@@ -1182,6 +1183,7 @@ pub trait WinitAppDriver {
     ) {
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn accessibility_set_text_selection(
         &mut self,
         _app: &mut App,
@@ -1433,6 +1435,7 @@ pub trait WinitDriver {
     ) {
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn accessibility_set_text_selection(
         &mut self,
         _app: &mut App,
@@ -1463,9 +1466,7 @@ struct WindowRuntime<S> {
     last_accessibility_snapshot: Option<std::sync::Arc<fret_core::SemanticsSnapshot>>,
     surface: SurfaceState<'static>,
     scene: Scene,
-    cursor_pos: Point,
-    cursor_pos_physical: Option<PhysicalPosition<f64>>,
-    pressed_buttons: fret_core::MouseButtons,
+    input: fret_runner_winit::WinitInputState,
     is_focused: bool,
     ime_allowed: bool,
     ime_cursor_area: Option<Rect>,
@@ -1752,16 +1753,6 @@ impl<D: WinitDriver> WinitRunner<D> {
         }
     }
 
-    fn map_cursor_icon(icon: fret_core::CursorIcon) -> winit::window::CursorIcon {
-        match icon {
-            fret_core::CursorIcon::Default => winit::window::CursorIcon::Default,
-            fret_core::CursorIcon::Pointer => winit::window::CursorIcon::Pointer,
-            fret_core::CursorIcon::Text => winit::window::CursorIcon::Text,
-            fret_core::CursorIcon::ColResize => winit::window::CursorIcon::ColResize,
-            fret_core::CursorIcon::RowResize => winit::window::CursorIcon::RowResize,
-        }
-    }
-
     pub fn new(config: WinitRunnerConfig, app: App, driver: D) -> Self {
         let mut app = app;
         let requested = match app.global::<PlatformCapabilities>().cloned() {
@@ -1792,7 +1783,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             winit_to_app: HashMap::new(),
             main_window: None,
             windows_pending_front: HashMap::new(),
-            modifiers: map_modifiers(raw_modifiers, alt_gr_down),
+            modifiers: fret_runner_winit::map_modifiers(raw_modifiers, alt_gr_down),
             raw_modifiers,
             alt_gr_down,
             saw_left_mouse_release_this_turn: false,
@@ -1803,7 +1794,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             raf_windows: HashSet::new(),
             timers: HashMap::new(),
             clipboard: DesktopClipboard::default(),
-            open_url: DesktopOpenUrl::default(),
+            open_url: DesktopOpenUrl,
             file_dialog: DesktopFileDialog::default(),
             cursor_screen_pos: None,
             internal_drag_hover_window: None,
@@ -2095,9 +2086,7 @@ impl<D: WinitDriver> WinitRunner<D> {
                 last_accessibility_snapshot: None,
                 surface,
                 scene: Scene::default(),
-                cursor_pos: Point::new(Px(0.0), Px(0.0)),
-                cursor_pos_physical: None,
-                pressed_buttons: fret_core::MouseButtons::default(),
+                input: fret_runner_winit::WinitInputState::default(),
                 is_focused: false,
                 ime_allowed: false,
                 ime_cursor_area: None,
@@ -2512,7 +2501,9 @@ impl<D: WinitDriver> WinitRunner<D> {
                             continue;
                         }
                         state.cursor_icon = icon;
-                        state.window.set_cursor(Self::map_cursor_icon(icon));
+                        state
+                            .window
+                            .set_cursor(fret_runner_winit::map_cursor_icon(icon));
                     }
                     Effect::RequestAnimationFrame(window) => {
                         self.raf_windows.insert(window);
@@ -2571,13 +2562,13 @@ impl<D: WinitDriver> WinitRunner<D> {
                             max_files: self.config.external_drop_max_files,
                         };
 
-                        if let Some(paths) = self.external_drop.paths(token).map(|p| p.to_vec()) {
-                            if self.spawn_platform_completion_task(window, move || {
+                        if let Some(paths) = self.external_drop.paths(token).map(|p| p.to_vec())
+                            && self.spawn_platform_completion_task(window, move || {
                                 let event = DesktopExternalDrop::read_paths(token, paths, limits);
                                 PlatformCompletion::ExternalDropData(event)
-                            }) {
-                                continue;
-                            }
+                            })
+                        {
+                            continue;
                         }
 
                         let Some(event) = self.external_drop.read_all(token, limits) else {
@@ -2597,13 +2588,13 @@ impl<D: WinitDriver> WinitRunner<D> {
                         };
                         let limits = limits.capped_by(cap);
 
-                        if let Some(paths) = self.external_drop.paths(token).map(|p| p.to_vec()) {
-                            if self.spawn_platform_completion_task(window, move || {
+                        if let Some(paths) = self.external_drop.paths(token).map(|p| p.to_vec())
+                            && self.spawn_platform_completion_task(window, move || {
                                 let event = DesktopExternalDrop::read_paths(token, paths, limits);
                                 PlatformCompletion::ExternalDropData(event)
-                            }) {
-                                continue;
-                            }
+                            })
+                        {
+                            continue;
                         }
 
                         let Some(event) = self.external_drop.read_all(token, limits) else {
@@ -2669,13 +2660,13 @@ impl<D: WinitDriver> WinitRunner<D> {
                             max_files: self.config.file_dialog_max_files,
                         };
 
-                        if let Some(paths) = self.file_dialog.paths(token).map(|p| p.to_vec()) {
-                            if self.spawn_platform_completion_task(window, move || {
+                        if let Some(paths) = self.file_dialog.paths(token).map(|p| p.to_vec())
+                            && self.spawn_platform_completion_task(window, move || {
                                 let data = DesktopFileDialog::read_paths(token, paths, limits);
                                 PlatformCompletion::FileDialogData(data)
-                            }) {
-                                continue;
-                            }
+                            })
+                        {
+                            continue;
                         }
 
                         let Some(data) = self.file_dialog.read_all(token, limits) else {
@@ -2706,13 +2697,13 @@ impl<D: WinitDriver> WinitRunner<D> {
                         };
                         let limits = limits.capped_by(cap);
 
-                        if let Some(paths) = self.file_dialog.paths(token).map(|p| p.to_vec()) {
-                            if self.spawn_platform_completion_task(window, move || {
+                        if let Some(paths) = self.file_dialog.paths(token).map(|p| p.to_vec())
+                            && self.spawn_platform_completion_task(window, move || {
                                 let data = DesktopFileDialog::read_paths(token, paths, limits);
                                 PlatformCompletion::FileDialogData(data)
-                            }) {
-                                continue;
-                            }
+                            })
+                        {
+                            continue;
                         }
 
                         let Some(data) = self.file_dialog.read_all(token, limits) else {
@@ -2947,11 +2938,10 @@ impl<D: WinitDriver> WinitRunner<D> {
                 self.renderer.as_mut(),
                 self.app.global::<fret_core::TextFontFamilyConfig>(),
             )
+            && renderer.set_text_font_families(config)
         {
-            if renderer.set_text_font_families(config) {
-                for (_id, state) in self.windows.iter() {
-                    state.window.request_redraw();
-                }
+            for (_id, state) in self.windows.iter() {
+                state.window.request_redraw();
             }
         }
 
@@ -3301,8 +3291,8 @@ impl<D: WinitDriver> WinitRunner<D> {
         let state = self.windows.get(window)?;
         let inner = state.window.inner_position().ok()?;
         let scale = state.window.scale_factor();
-        let x = inner.x as f64 + state.cursor_pos.x.0 as f64 * scale;
-        let y = inner.y as f64 + state.cursor_pos.y.0 as f64 * scale;
+        let x = inner.x as f64 + state.input.cursor_pos.x.0 as f64 * scale;
+        let y = inner.y as f64 + state.input.cursor_pos.y.0 as f64 * scale;
         Some(PhysicalPosition::new(x, y))
     }
 
@@ -3372,26 +3362,6 @@ impl<D: WinitDriver> WinitRunner<D> {
         fallback
     }
 
-    fn map_wheel_delta(
-        config: &WinitRunnerConfig,
-        window: &Window,
-        delta: MouseScrollDelta,
-    ) -> Point {
-        match delta {
-            MouseScrollDelta::LineDelta(x, y) => Point::new(
-                Px(x * config.wheel_line_delta_px),
-                Px(y * config.wheel_line_delta_px),
-            ),
-            MouseScrollDelta::PixelDelta(p) => {
-                let logical = p.to_logical::<f32>(window.scale_factor());
-                Point::new(
-                    Px(logical.x * config.wheel_pixel_delta_scale),
-                    Px(logical.y * config.wheel_pixel_delta_scale),
-                )
-            }
-        }
-    }
-
     fn is_left_mouse_down_for_window(&self, window: fret_core::AppWindowId) -> bool {
         #[cfg(target_os = "macos")]
         {
@@ -3404,7 +3374,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             || self
                 .windows
                 .get(window)
-                .is_some_and(|w| w.pressed_buttons.left)
+                .is_some_and(|w| w.input.pressed_buttons.left)
     }
 
     fn update_dock_tearoff_follow(&mut self) -> bool {
@@ -3486,185 +3456,6 @@ impl<D: WinitDriver> WinitRunner<D> {
         if _raise_on_macos {
             self.enqueue_window_front(follow.window, Some(follow.source_window), None, _now);
         }
-    }
-}
-
-fn is_alt_gr_key(key: &Key) -> bool {
-    matches!(key, Key::Named(NamedKey::AltGraph))
-}
-
-fn map_modifiers(state: ModifiersState, alt_gr_down: bool) -> Modifiers {
-    let mut mods = Modifiers {
-        shift: state.shift_key(),
-        ctrl: state.control_key(),
-        alt: state.alt_key(),
-        alt_gr: alt_gr_down,
-        meta: state.super_key(),
-    };
-
-    if mods.alt_gr {
-        mods.ctrl = false;
-        mods.alt = false;
-    }
-
-    mods
-}
-
-fn map_mouse_button(button: WinitMouseButton) -> Option<MouseButton> {
-    Some(match button {
-        WinitMouseButton::Left => MouseButton::Left,
-        WinitMouseButton::Right => MouseButton::Right,
-        WinitMouseButton::Middle => MouseButton::Middle,
-        WinitMouseButton::Back => MouseButton::Back,
-        WinitMouseButton::Forward => MouseButton::Forward,
-        WinitMouseButton::Other(v) => MouseButton::Other(v),
-    })
-}
-
-fn set_mouse_buttons(
-    buttons: &mut fret_core::MouseButtons,
-    button: WinitMouseButton,
-    pressed: bool,
-) {
-    match button {
-        WinitMouseButton::Left => buttons.left = pressed,
-        WinitMouseButton::Right => buttons.right = pressed,
-        WinitMouseButton::Middle => buttons.middle = pressed,
-        WinitMouseButton::Back | WinitMouseButton::Forward | WinitMouseButton::Other(_) => {}
-    }
-}
-
-fn map_physical_key(key: winit::keyboard::PhysicalKey) -> fret_core::KeyCode {
-    use winit::keyboard::KeyCode as WinitKeyCode;
-
-    let winit::keyboard::PhysicalKey::Code(code) = key else {
-        return fret_core::KeyCode::Unknown;
-    };
-
-    match code {
-        WinitKeyCode::Escape => fret_core::KeyCode::Escape,
-        WinitKeyCode::Enter => fret_core::KeyCode::Enter,
-        WinitKeyCode::Tab => fret_core::KeyCode::Tab,
-        WinitKeyCode::Backspace => fret_core::KeyCode::Backspace,
-        WinitKeyCode::Space => fret_core::KeyCode::Space,
-
-        WinitKeyCode::ArrowUp => fret_core::KeyCode::ArrowUp,
-        WinitKeyCode::ArrowDown => fret_core::KeyCode::ArrowDown,
-        WinitKeyCode::ArrowLeft => fret_core::KeyCode::ArrowLeft,
-        WinitKeyCode::ArrowRight => fret_core::KeyCode::ArrowRight,
-
-        WinitKeyCode::Home => fret_core::KeyCode::Home,
-        WinitKeyCode::End => fret_core::KeyCode::End,
-        WinitKeyCode::PageUp => fret_core::KeyCode::PageUp,
-        WinitKeyCode::PageDown => fret_core::KeyCode::PageDown,
-        WinitKeyCode::Insert => fret_core::KeyCode::Insert,
-        WinitKeyCode::Delete => fret_core::KeyCode::Delete,
-
-        WinitKeyCode::CapsLock => fret_core::KeyCode::CapsLock,
-
-        WinitKeyCode::ShiftLeft => fret_core::KeyCode::ShiftLeft,
-        WinitKeyCode::ShiftRight => fret_core::KeyCode::ShiftRight,
-        WinitKeyCode::ControlLeft => fret_core::KeyCode::ControlLeft,
-        WinitKeyCode::ControlRight => fret_core::KeyCode::ControlRight,
-        WinitKeyCode::AltLeft => fret_core::KeyCode::AltLeft,
-        WinitKeyCode::AltRight => fret_core::KeyCode::AltRight,
-        WinitKeyCode::SuperLeft => fret_core::KeyCode::SuperLeft,
-        WinitKeyCode::SuperRight => fret_core::KeyCode::SuperRight,
-
-        WinitKeyCode::Digit0 => fret_core::KeyCode::Digit0,
-        WinitKeyCode::Digit1 => fret_core::KeyCode::Digit1,
-        WinitKeyCode::Digit2 => fret_core::KeyCode::Digit2,
-        WinitKeyCode::Digit3 => fret_core::KeyCode::Digit3,
-        WinitKeyCode::Digit4 => fret_core::KeyCode::Digit4,
-        WinitKeyCode::Digit5 => fret_core::KeyCode::Digit5,
-        WinitKeyCode::Digit6 => fret_core::KeyCode::Digit6,
-        WinitKeyCode::Digit7 => fret_core::KeyCode::Digit7,
-        WinitKeyCode::Digit8 => fret_core::KeyCode::Digit8,
-        WinitKeyCode::Digit9 => fret_core::KeyCode::Digit9,
-
-        WinitKeyCode::KeyA => fret_core::KeyCode::KeyA,
-        WinitKeyCode::KeyB => fret_core::KeyCode::KeyB,
-        WinitKeyCode::KeyC => fret_core::KeyCode::KeyC,
-        WinitKeyCode::KeyD => fret_core::KeyCode::KeyD,
-        WinitKeyCode::KeyE => fret_core::KeyCode::KeyE,
-        WinitKeyCode::KeyF => fret_core::KeyCode::KeyF,
-        WinitKeyCode::KeyG => fret_core::KeyCode::KeyG,
-        WinitKeyCode::KeyH => fret_core::KeyCode::KeyH,
-        WinitKeyCode::KeyI => fret_core::KeyCode::KeyI,
-        WinitKeyCode::KeyJ => fret_core::KeyCode::KeyJ,
-        WinitKeyCode::KeyK => fret_core::KeyCode::KeyK,
-        WinitKeyCode::KeyL => fret_core::KeyCode::KeyL,
-        WinitKeyCode::KeyM => fret_core::KeyCode::KeyM,
-        WinitKeyCode::KeyN => fret_core::KeyCode::KeyN,
-        WinitKeyCode::KeyO => fret_core::KeyCode::KeyO,
-        WinitKeyCode::KeyP => fret_core::KeyCode::KeyP,
-        WinitKeyCode::KeyQ => fret_core::KeyCode::KeyQ,
-        WinitKeyCode::KeyR => fret_core::KeyCode::KeyR,
-        WinitKeyCode::KeyS => fret_core::KeyCode::KeyS,
-        WinitKeyCode::KeyT => fret_core::KeyCode::KeyT,
-        WinitKeyCode::KeyU => fret_core::KeyCode::KeyU,
-        WinitKeyCode::KeyV => fret_core::KeyCode::KeyV,
-        WinitKeyCode::KeyW => fret_core::KeyCode::KeyW,
-        WinitKeyCode::KeyX => fret_core::KeyCode::KeyX,
-        WinitKeyCode::KeyY => fret_core::KeyCode::KeyY,
-        WinitKeyCode::KeyZ => fret_core::KeyCode::KeyZ,
-
-        WinitKeyCode::Minus => fret_core::KeyCode::Minus,
-        WinitKeyCode::Equal => fret_core::KeyCode::Equal,
-        WinitKeyCode::BracketLeft => fret_core::KeyCode::BracketLeft,
-        WinitKeyCode::BracketRight => fret_core::KeyCode::BracketRight,
-        WinitKeyCode::Backslash => fret_core::KeyCode::Backslash,
-        WinitKeyCode::Semicolon => fret_core::KeyCode::Semicolon,
-        WinitKeyCode::Quote => fret_core::KeyCode::Quote,
-        WinitKeyCode::Backquote => fret_core::KeyCode::Backquote,
-        WinitKeyCode::Comma => fret_core::KeyCode::Comma,
-        WinitKeyCode::Period => fret_core::KeyCode::Period,
-        WinitKeyCode::Slash => fret_core::KeyCode::Slash,
-
-        WinitKeyCode::F1 => fret_core::KeyCode::F1,
-        WinitKeyCode::F2 => fret_core::KeyCode::F2,
-        WinitKeyCode::F3 => fret_core::KeyCode::F3,
-        WinitKeyCode::F4 => fret_core::KeyCode::F4,
-        WinitKeyCode::F5 => fret_core::KeyCode::F5,
-        WinitKeyCode::F6 => fret_core::KeyCode::F6,
-        WinitKeyCode::F7 => fret_core::KeyCode::F7,
-        WinitKeyCode::F8 => fret_core::KeyCode::F8,
-        WinitKeyCode::F9 => fret_core::KeyCode::F9,
-        WinitKeyCode::F10 => fret_core::KeyCode::F10,
-        WinitKeyCode::F11 => fret_core::KeyCode::F11,
-        WinitKeyCode::F12 => fret_core::KeyCode::F12,
-
-        WinitKeyCode::Numpad0 => fret_core::KeyCode::Numpad0,
-        WinitKeyCode::Numpad1 => fret_core::KeyCode::Numpad1,
-        WinitKeyCode::Numpad2 => fret_core::KeyCode::Numpad2,
-        WinitKeyCode::Numpad3 => fret_core::KeyCode::Numpad3,
-        WinitKeyCode::Numpad4 => fret_core::KeyCode::Numpad4,
-        WinitKeyCode::Numpad5 => fret_core::KeyCode::Numpad5,
-        WinitKeyCode::Numpad6 => fret_core::KeyCode::Numpad6,
-        WinitKeyCode::Numpad7 => fret_core::KeyCode::Numpad7,
-        WinitKeyCode::Numpad8 => fret_core::KeyCode::Numpad8,
-        WinitKeyCode::Numpad9 => fret_core::KeyCode::Numpad9,
-        WinitKeyCode::NumpadAdd => fret_core::KeyCode::NumpadAdd,
-        WinitKeyCode::NumpadSubtract => fret_core::KeyCode::NumpadSubtract,
-        WinitKeyCode::NumpadMultiply => fret_core::KeyCode::NumpadMultiply,
-        WinitKeyCode::NumpadDivide => fret_core::KeyCode::NumpadDivide,
-        WinitKeyCode::NumpadDecimal => fret_core::KeyCode::NumpadDecimal,
-        WinitKeyCode::NumpadEnter => fret_core::KeyCode::NumpadEnter,
-
-        _ => fret_core::KeyCode::Unknown,
-    }
-}
-
-fn sanitize_text_input(text: &str) -> Option<String> {
-    // Contract: `Event::TextInput` represents committed insertion text and must not include
-    // control characters. Keys like Backspace/Enter/Tab must be handled via `KeyDown` + commands.
-    //
-    // Some platform stacks report control keys in `KeyboardInput.text` (e.g. backspace on macOS).
-    let filtered: String = text.chars().filter(|ch| !ch.is_control()).collect();
-    if filtered.is_empty() {
-        None
-    } else {
-        Some(filtered)
     }
 }
 

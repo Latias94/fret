@@ -112,11 +112,11 @@ It complements (but does not replace) ADRs:
   - Update: contract locked (ADR 0080). Follow-up work is conformance testing and any v2 surface expansion (joins/caps/dashes).
 
 - **Clarify the runner vs platform split in docs and code**
-  - Problem: `fret-platform-winit` hosts the AccessKit bridge (and other desktop platform I/O), while winit event mapping/effects draining live in `fret-runner-winit-wgpu`; keep responsibilities crisp to avoid duplicating window registries and event translation.
+  - Problem: `fret-platform-winit` hosts the AccessKit bridge (and other desktop platform I/O), while winit event mapping lives in `fret-runner-winit` and effect draining/presentation live in `fret-runner-winit-wgpu`; keep responsibilities crisp to avoid duplicating window registries and event translation.
   - ADRs: `docs/adr/0003-platform-boundary.md`
-  - Code: `crates/fret-platform/src/*`, `crates/fret-platform-winit/src/*`, `crates/fret-runner-winit-wgpu/src/runner.rs`
+  - Code: `crates/fret-platform/src/*`, `crates/fret-platform-winit/src/*`, `crates/fret-runner-winit/src/lib.rs`, `crates/fret-runner-winit-wgpu/src/runner/*`
 
 - **Decide whether `fret-platform-winit` grows into a broader platform IO boundary**
   - Problem: `crates/fret-platform` is now intentionally portable contracts-only, while the concrete desktop backend lives in `crates/fret-platform-winit` and the event loop/effect draining live in `crates/fret-runner-winit-wgpu`; decide how much window registry/event translation should live in the platform-backend crate vs the runner as more backends (web/mobile) arrive.
   - ADRs: `docs/adr/0003-platform-boundary.md`
-  - Code: `crates/fret-platform-winit/src/*`, `crates/fret-runner-winit-wgpu/src/runner.rs`
+  - Code: `crates/fret-platform-winit/src/*`, `crates/fret-runner-winit/src/lib.rs`, `crates/fret-runner-winit-wgpu/src/runner/*`

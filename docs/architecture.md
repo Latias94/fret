@@ -73,7 +73,8 @@ In both cases, surface creation must use the same `wgpu::Instance` as the device
 - `crates/fret-app`: app runtime (global services, models/entities, scheduling, command/action dispatch).
 - `crates/fret-platform`: portable platform I/O contracts (clipboard, external drops, file dialogs, open-url).
 - `crates/fret-platform-winit`: desktop/winit backend implementation for `fret-platform` contracts (+ AccessKit glue).
-- `crates/fret-runner-winit-wgpu`: desktop runner wiring winit + wgpu + renderer (composition + presentation).
+- `crates/fret-runner-winit`: winit platform adapter (event mapping, cursor/modifiers/key normalization, canvas binding on web).
+- `crates/fret-runner-winit-wgpu`: desktop runner glue (winit event loop + `fret-runner-winit` + wgpu presentation + effect draining).
 - `crates/fret-render`: wgpu-based renderer building blocks (context/device bootstrap, rendering backends).
 - `crates/fret-ui`: UI runtime (layout, hit-testing, focus routing, display list builder).
 - `crates/fret-components-ui`: component infrastructure (policies, style composition, overlay managers) built on `fret-ui`.

@@ -20,13 +20,15 @@ The desktop implementation is split across:
   open-url). This crate is intentionally backend-agnostic.
 - `fret-platform-winit`: the desktop/winit backend implementation for `fret-platform` contracts,
   plus the AccessKit adapter glue (`accesskit_winit`).
-- `fret-runner-winit-wgpu`: the concrete desktop runner that owns the event loop, maps winit events
-  into `fret-core` events, drains `App` effects, and drives presentation via `fret-render`.
+- `fret-runner-winit`: the reusable winit platform adapter that maps `winit` events into `fret-core`
+  events (shared by desktop and wasm/web backends).
+- `fret-runner-winit-wgpu`: the concrete desktop runner that owns the event loop, drains `App`
+  effects, and drives presentation via `fret-render`.
 
 Keep the runner boundary responsible for:
 
 - window lifecycle (create/close, mapping OS ids to `AppWindowId`),
-- translating OS events into `fret-core` events,
+- translating OS events into `fret-core` events (delegating the pure mapping layer to `fret-runner-winit`),
 - owning presentable surfaces (swapchains) and calling the renderer,
 - draining `App` effects and executing platform operations.
 

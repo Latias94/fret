@@ -9,14 +9,14 @@ impl Default for DesktopClipboard {
     fn default() -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         {
-            return Self {
+            Self {
                 inner: arboard::Clipboard::new().ok(),
-            };
+            }
         }
 
         #[cfg(target_arch = "wasm32")]
         {
-            return Self {};
+            Self {}
         }
     }
 }

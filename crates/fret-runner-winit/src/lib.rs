@@ -47,6 +47,7 @@ pub struct WinitInputState {
     pub cursor_pos_physical: Option<PhysicalPosition<f64>>,
     pub pressed_buttons: MouseButtons,
     pub modifiers: Modifiers,
+    pub raw_modifiers: ModifiersState,
     pub alt_gr_down: bool,
 }
 
@@ -59,7 +60,8 @@ impl WinitInputState {
     ) {
         match event {
             WindowEvent::ModifiersChanged(mods) => {
-                self.modifiers = map_modifiers(mods.state(), self.alt_gr_down);
+                self.raw_modifiers = mods.state();
+                self.modifiers = map_modifiers(self.raw_modifiers, self.alt_gr_down);
             }
             WindowEvent::KeyboardInput { event, .. } => {
                 self.handle_key_event(event, out);
@@ -97,7 +99,7 @@ impl WinitInputState {
                 out.push(Event::Pointer(evt));
             }
             WindowEvent::MouseWheel { delta, .. } => {
-                let scroll = map_wheel_delta(*delta, window_scale_factor);
+                let scroll = map_wheel_delta(*delta, window_scale_factor, WheelConfig::default());
                 out.push(Event::Pointer(PointerEvent::Wheel {
                     position: self.cursor_pos,
                     delta: scroll,
@@ -130,14 +132,20 @@ impl WinitInputState {
         // and explicitly model it to avoid "Ctrl+Alt" shortcuts firing while typing.
         if is_alt_gr_key(&event.logical_key) {
             self.alt_gr_down = matches!(event.state, ElementState::Pressed);
+            self.modifiers = map_modifiers(self.raw_modifiers, self.alt_gr_down);
         }
 
         match event.state {
-            ElementState::Pressed => out.push(Event::KeyDown {
-                key,
-                modifiers: self.modifiers,
-                repeat,
-            }),
+            ElementState::Pressed => {
+                out.push(Event::KeyDown {
+                    key,
+                    modifiers: self.modifiers,
+                    repeat,
+                });
+                if let Some(text) = event.text.as_ref().and_then(|t| sanitize_text_input(t)) {
+                    out.push(Event::TextInput(text));
+                }
+            }
             ElementState::Released => out.push(Event::KeyUp {
                 key,
                 modifiers: self.modifiers,
@@ -146,7 +154,45 @@ impl WinitInputState {
     }
 }
 
-fn map_modifiers(state: ModifiersState, alt_gr_down: bool) -> Modifiers {
+#[derive(Debug, Clone, Copy)]
+pub struct WheelConfig {
+    pub line_delta_px: f32,
+    pub pixel_delta_scale: f32,
+}
+
+impl Default for WheelConfig {
+    fn default() -> Self {
+        Self {
+            line_delta_px: 16.0,
+            pixel_delta_scale: 1.0,
+        }
+    }
+}
+
+pub fn map_cursor_icon(icon: fret_core::CursorIcon) -> winit::window::CursorIcon {
+    match icon {
+        fret_core::CursorIcon::Default => winit::window::CursorIcon::Default,
+        fret_core::CursorIcon::Pointer => winit::window::CursorIcon::Pointer,
+        fret_core::CursorIcon::Text => winit::window::CursorIcon::Text,
+        fret_core::CursorIcon::ColResize => winit::window::CursorIcon::ColResize,
+        fret_core::CursorIcon::RowResize => winit::window::CursorIcon::RowResize,
+    }
+}
+
+pub fn sanitize_text_input(text: &str) -> Option<String> {
+    // Contract: `Event::TextInput` represents committed insertion text and must not include
+    // control characters. Keys like Backspace/Enter/Tab must be handled via `KeyDown` + commands.
+    //
+    // Some platform stacks report control keys in `KeyboardInput.text` (e.g. backspace on macOS).
+    let filtered: String = text.chars().filter(|ch| !ch.is_control()).collect();
+    if filtered.is_empty() {
+        None
+    } else {
+        Some(filtered)
+    }
+}
+
+pub fn map_modifiers(state: ModifiersState, alt_gr_down: bool) -> Modifiers {
     let mut mods = Modifiers {
         shift: state.shift_key(),
         ctrl: state.control_key(),
@@ -163,7 +209,7 @@ fn map_modifiers(state: ModifiersState, alt_gr_down: bool) -> Modifiers {
     mods
 }
 
-fn map_mouse_button(button: WinitMouseButton) -> Option<MouseButton> {
+pub fn map_mouse_button(button: WinitMouseButton) -> Option<MouseButton> {
     Some(match button {
         WinitMouseButton::Left => MouseButton::Left,
         WinitMouseButton::Right => MouseButton::Right,
@@ -174,7 +220,7 @@ fn map_mouse_button(button: WinitMouseButton) -> Option<MouseButton> {
     })
 }
 
-fn set_mouse_buttons(buttons: &mut MouseButtons, button: WinitMouseButton, pressed: bool) {
+pub fn set_mouse_buttons(buttons: &mut MouseButtons, button: WinitMouseButton, pressed: bool) {
     match button {
         WinitMouseButton::Left => buttons.left = pressed,
         WinitMouseButton::Right => buttons.right = pressed,
@@ -183,26 +229,143 @@ fn set_mouse_buttons(buttons: &mut MouseButtons, button: WinitMouseButton, press
     }
 }
 
-fn map_wheel_delta(delta: MouseScrollDelta, scale_factor: f64) -> Point {
+pub fn map_wheel_delta(delta: MouseScrollDelta, scale_factor: f64, config: WheelConfig) -> Point {
     // `fret-core` wheel delta follows winit semantics: positive y means wheel up.
     match delta {
-        MouseScrollDelta::LineDelta(dx, dy) => Point::new(Px(dx * 16.0), Px(dy * 16.0)),
+        MouseScrollDelta::LineDelta(dx, dy) => {
+            Point::new(Px(dx * config.line_delta_px), Px(dy * config.line_delta_px))
+        }
         MouseScrollDelta::PixelDelta(physical) => {
             let logical: LogicalPosition<f32> = physical.to_logical(scale_factor);
-            Point::new(Px(logical.x), Px(logical.y))
+            Point::new(
+                Px(logical.x * config.pixel_delta_scale),
+                Px(logical.y * config.pixel_delta_scale),
+            )
         }
     }
 }
 
-fn is_alt_gr_key(key: &Key) -> bool {
+pub fn is_alt_gr_key(key: &Key) -> bool {
     matches!(key, Key::Named(NamedKey::AltGraph))
 }
 
-fn map_physical_key(key: winit::keyboard::PhysicalKey) -> KeyCode {
-    // For now, prefer token-based mapping to keep this crate small. The desktop runner has a full
-    // match table; we can move it here once `fret-runner-winit` becomes the only winit front-end.
+pub fn map_physical_key(key: winit::keyboard::PhysicalKey) -> KeyCode {
+    use winit::keyboard::KeyCode as WinitKeyCode;
+
     let winit::keyboard::PhysicalKey::Code(code) = key else {
         return KeyCode::Unknown;
     };
-    KeyCode::from_token(&format!("{code:?}")).unwrap_or(KeyCode::Unknown)
+
+    match code {
+        WinitKeyCode::Escape => KeyCode::Escape,
+        WinitKeyCode::Enter => KeyCode::Enter,
+        WinitKeyCode::Tab => KeyCode::Tab,
+        WinitKeyCode::Backspace => KeyCode::Backspace,
+        WinitKeyCode::Space => KeyCode::Space,
+
+        WinitKeyCode::ArrowUp => KeyCode::ArrowUp,
+        WinitKeyCode::ArrowDown => KeyCode::ArrowDown,
+        WinitKeyCode::ArrowLeft => KeyCode::ArrowLeft,
+        WinitKeyCode::ArrowRight => KeyCode::ArrowRight,
+
+        WinitKeyCode::Home => KeyCode::Home,
+        WinitKeyCode::End => KeyCode::End,
+        WinitKeyCode::PageUp => KeyCode::PageUp,
+        WinitKeyCode::PageDown => KeyCode::PageDown,
+        WinitKeyCode::Insert => KeyCode::Insert,
+        WinitKeyCode::Delete => KeyCode::Delete,
+
+        WinitKeyCode::CapsLock => KeyCode::CapsLock,
+
+        WinitKeyCode::ShiftLeft => KeyCode::ShiftLeft,
+        WinitKeyCode::ShiftRight => KeyCode::ShiftRight,
+        WinitKeyCode::ControlLeft => KeyCode::ControlLeft,
+        WinitKeyCode::ControlRight => KeyCode::ControlRight,
+        WinitKeyCode::AltLeft => KeyCode::AltLeft,
+        WinitKeyCode::AltRight => KeyCode::AltRight,
+        WinitKeyCode::SuperLeft => KeyCode::SuperLeft,
+        WinitKeyCode::SuperRight => KeyCode::SuperRight,
+
+        WinitKeyCode::Digit0 => KeyCode::Digit0,
+        WinitKeyCode::Digit1 => KeyCode::Digit1,
+        WinitKeyCode::Digit2 => KeyCode::Digit2,
+        WinitKeyCode::Digit3 => KeyCode::Digit3,
+        WinitKeyCode::Digit4 => KeyCode::Digit4,
+        WinitKeyCode::Digit5 => KeyCode::Digit5,
+        WinitKeyCode::Digit6 => KeyCode::Digit6,
+        WinitKeyCode::Digit7 => KeyCode::Digit7,
+        WinitKeyCode::Digit8 => KeyCode::Digit8,
+        WinitKeyCode::Digit9 => KeyCode::Digit9,
+
+        WinitKeyCode::KeyA => KeyCode::KeyA,
+        WinitKeyCode::KeyB => KeyCode::KeyB,
+        WinitKeyCode::KeyC => KeyCode::KeyC,
+        WinitKeyCode::KeyD => KeyCode::KeyD,
+        WinitKeyCode::KeyE => KeyCode::KeyE,
+        WinitKeyCode::KeyF => KeyCode::KeyF,
+        WinitKeyCode::KeyG => KeyCode::KeyG,
+        WinitKeyCode::KeyH => KeyCode::KeyH,
+        WinitKeyCode::KeyI => KeyCode::KeyI,
+        WinitKeyCode::KeyJ => KeyCode::KeyJ,
+        WinitKeyCode::KeyK => KeyCode::KeyK,
+        WinitKeyCode::KeyL => KeyCode::KeyL,
+        WinitKeyCode::KeyM => KeyCode::KeyM,
+        WinitKeyCode::KeyN => KeyCode::KeyN,
+        WinitKeyCode::KeyO => KeyCode::KeyO,
+        WinitKeyCode::KeyP => KeyCode::KeyP,
+        WinitKeyCode::KeyQ => KeyCode::KeyQ,
+        WinitKeyCode::KeyR => KeyCode::KeyR,
+        WinitKeyCode::KeyS => KeyCode::KeyS,
+        WinitKeyCode::KeyT => KeyCode::KeyT,
+        WinitKeyCode::KeyU => KeyCode::KeyU,
+        WinitKeyCode::KeyV => KeyCode::KeyV,
+        WinitKeyCode::KeyW => KeyCode::KeyW,
+        WinitKeyCode::KeyX => KeyCode::KeyX,
+        WinitKeyCode::KeyY => KeyCode::KeyY,
+        WinitKeyCode::KeyZ => KeyCode::KeyZ,
+
+        WinitKeyCode::Minus => KeyCode::Minus,
+        WinitKeyCode::Equal => KeyCode::Equal,
+        WinitKeyCode::BracketLeft => KeyCode::BracketLeft,
+        WinitKeyCode::BracketRight => KeyCode::BracketRight,
+        WinitKeyCode::Backslash => KeyCode::Backslash,
+        WinitKeyCode::Semicolon => KeyCode::Semicolon,
+        WinitKeyCode::Quote => KeyCode::Quote,
+        WinitKeyCode::Backquote => KeyCode::Backquote,
+        WinitKeyCode::Comma => KeyCode::Comma,
+        WinitKeyCode::Period => KeyCode::Period,
+        WinitKeyCode::Slash => KeyCode::Slash,
+
+        WinitKeyCode::F1 => KeyCode::F1,
+        WinitKeyCode::F2 => KeyCode::F2,
+        WinitKeyCode::F3 => KeyCode::F3,
+        WinitKeyCode::F4 => KeyCode::F4,
+        WinitKeyCode::F5 => KeyCode::F5,
+        WinitKeyCode::F6 => KeyCode::F6,
+        WinitKeyCode::F7 => KeyCode::F7,
+        WinitKeyCode::F8 => KeyCode::F8,
+        WinitKeyCode::F9 => KeyCode::F9,
+        WinitKeyCode::F10 => KeyCode::F10,
+        WinitKeyCode::F11 => KeyCode::F11,
+        WinitKeyCode::F12 => KeyCode::F12,
+
+        WinitKeyCode::Numpad0 => KeyCode::Numpad0,
+        WinitKeyCode::Numpad1 => KeyCode::Numpad1,
+        WinitKeyCode::Numpad2 => KeyCode::Numpad2,
+        WinitKeyCode::Numpad3 => KeyCode::Numpad3,
+        WinitKeyCode::Numpad4 => KeyCode::Numpad4,
+        WinitKeyCode::Numpad5 => KeyCode::Numpad5,
+        WinitKeyCode::Numpad6 => KeyCode::Numpad6,
+        WinitKeyCode::Numpad7 => KeyCode::Numpad7,
+        WinitKeyCode::Numpad8 => KeyCode::Numpad8,
+        WinitKeyCode::Numpad9 => KeyCode::Numpad9,
+        WinitKeyCode::NumpadAdd => KeyCode::NumpadAdd,
+        WinitKeyCode::NumpadSubtract => KeyCode::NumpadSubtract,
+        WinitKeyCode::NumpadMultiply => KeyCode::NumpadMultiply,
+        WinitKeyCode::NumpadDivide => KeyCode::NumpadDivide,
+        WinitKeyCode::NumpadDecimal => KeyCode::NumpadDecimal,
+        WinitKeyCode::NumpadEnter => KeyCode::NumpadEnter,
+
+        _ => KeyCode::Unknown,
+    }
 }

@@ -7,7 +7,10 @@ use std::ffi::c_void;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{LazyLock, Mutex, OnceLock};
 
-static IME_CURSOR_AREA_BY_HWND: LazyLock<Mutex<HashMap<isize, (i32, i32, i32, i32)>>> =
+type ImeCursorArea = (i32, i32, i32, i32);
+type ImeCursorAreaByHwnd = HashMap<isize, ImeCursorArea>;
+
+static IME_CURSOR_AREA_BY_HWND: LazyLock<Mutex<ImeCursorAreaByHwnd>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 static MSG_HOOK_SEEN: AtomicBool = AtomicBool::new(false);
 static IMM_TSF_DISABLE_ATTEMPTED: OnceLock<()> = OnceLock::new();

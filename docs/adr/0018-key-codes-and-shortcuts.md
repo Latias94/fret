@@ -87,4 +87,4 @@ Reserved future extension:
 Prototype implementation exists (subset of common keys, aligned with winit names):
 
 - `crates/fret-core/src/input.rs`
-- `crates/fret-runner-winit-wgpu/src/runner.rs` (`map_physical_key`)
+- `crates/fret-runner-winit/src/lib.rs` (`map_physical_key`)
