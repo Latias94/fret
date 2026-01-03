@@ -20,14 +20,6 @@ pub(crate) struct DiamondArrowStyle {
     pub border_width: Px,
 }
 
-pub(crate) fn arrow_protrusion(enabled: bool, arrow_size: Px) -> Px {
-    if enabled {
-        popper::default_arrow_protrusion(arrow_size)
-    } else {
-        Px(0.0)
-    }
-}
-
 pub(crate) fn wrapper_insets(layout: &AnchoredPanelLayout, protrusion: Px) -> Edges {
     popper::wrapper_insets_for_arrow(layout, protrusion)
 }

@@ -19,7 +19,7 @@ use fret_ui::element::{
     PointerRegionProps, PointerRegionState, PressableProps, RovingFlexProps, RovingFocusProps,
     SemanticsProps, TextProps,
 };
-use fret_ui::overlay_placement::{Align, ArrowOptions, LayoutDirection, Side};
+use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
@@ -261,11 +261,8 @@ impl ContextMenu {
                         DropdownMenuSide::Left => Side::Left,
                     };
 
-                    let arrow_options = arrow.then_some(ArrowOptions {
-                        size: Size::new(arrow_size, arrow_size),
-                        padding: Edges::all(arrow_padding),
-                    });
-                    let arrow_protrusion = popper_arrow::arrow_protrusion(arrow, arrow_size);
+                    let (arrow_options, arrow_protrusion) =
+                        popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
                     let anchor_rect = overlay::anchor_rect_from_point(anchor);
                     let layout = popper::popper_content_layout_sized(

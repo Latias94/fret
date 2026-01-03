@@ -119,6 +119,27 @@ pub fn default_arrow_protrusion(arrow_size: Px) -> Px {
     Px(arrow_size.0 * 0.75)
 }
 
+/// Build Radix-style "diamond arrow" placement options.
+///
+/// Returns `(arrow_options, arrow_protrusion)`.
+pub fn diamond_arrow_options(
+    enabled: bool,
+    arrow_size: Px,
+    arrow_padding: Px,
+) -> (Option<ArrowOptions>, Px) {
+    if !enabled {
+        return (None, Px(0.0));
+    }
+
+    (
+        Some(ArrowOptions {
+            size: Size::new(arrow_size, arrow_size),
+            padding: Edges::all(arrow_padding),
+        }),
+        default_arrow_protrusion(arrow_size),
+    )
+}
+
 /// Returns wrapper insets that keep the arrow hit-testable by expanding the overlay container.
 ///
 /// This is useful when the overlay system uses the overlay root bounds for hit-testing
