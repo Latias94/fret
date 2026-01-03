@@ -127,7 +127,7 @@ Preferred patterns:
 
 This keeps component code from accidentally reading models without registering observation.
 
-As an optional convenience layer for component code, `fret-components-ui` provides a small wrapper
+As an optional convenience layer for component code, `fret-ui-kit` provides a small wrapper
 API that lets you choose invalidation once and then read:
 
 ```rust

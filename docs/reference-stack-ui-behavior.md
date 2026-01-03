@@ -113,7 +113,7 @@ Note:
   runtime substrate primitives (`HoverRegion`, cross-frame geometry queries, and the placement
   solver). `crates/fret-ui` does not ship a `HoverCard` runtime element.
 
-### `crates/fret-components-ui` (infrastructure)
+### `ecosystem/fret-ui-kit` (infrastructure)
 
 Owns reusable typed authoring ergonomics:
 

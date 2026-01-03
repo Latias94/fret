@@ -98,7 +98,7 @@ continue to rely on semantic IDs (e.g. `ui.close`) for portability.
 
 ### Rendering contract (components layer)
 
-Component-layer helpers (e.g. `fret-components-ui` `Icon` / `IconButton`) render an `IconId` by resolving
+Component-layer helpers (e.g. `fret-ui-kit` `Icon` / `IconButton`) render an `IconId` by resolving
 `IconSource`:
 
 - Preferred: SVG bytes -> `fret_ui::SvgSource` + declarative `SvgIcon` element (`ElementContext::svg_icon`), emitting `SceneOp::SvgMaskIcon`.

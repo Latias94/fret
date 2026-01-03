@@ -18,9 +18,9 @@ Key upstream notes:
 ## Fret implementation
 
 - Component code: `crates/fret-components-shadcn/src/tooltip.rs`
-- Hover intent state machine: `crates/fret-components-ui/src/headless/hover_intent.rs`
-- Overlay placement helpers: `crates/fret-components-ui/src/overlay.rs`
-- Per-window tooltip overlay policy: `crates/fret-components-ui/src/window_overlays/mod.rs`
+- Hover intent state machine: `ecosystem/fret-ui-kit/src/headless/hover_intent.rs`
+- Overlay placement helpers: `ecosystem/fret-ui-kit/src/overlay.rs`
+- Per-window tooltip overlay policy: `ecosystem/fret-ui-kit/src/window_overlays/mod.rs`
 
 ## Audit checklist
 
@@ -43,7 +43,7 @@ Key upstream notes:
 - Pass: Supports `side` and `align` placement options.
 - Pass: Default `side_offset` aligns with upstream's default (`0`) and can be overridden.
 - Pass: Placement anchors to **visual bounds** when available (render-transform aware) via
-  `fret-components-ui::overlay::anchor_bounds_for_element`.
+  `fret-ui-kit::overlay::anchor_bounds_for_element`.
 
 ### Visual defaults (shadcn parity)
 

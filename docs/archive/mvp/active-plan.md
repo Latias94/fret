@@ -42,9 +42,9 @@ definitions live in `docs/archive/mvp/reference-plan.md`.
 ## Next Queue (What We Should Build Next)
 
 - MVP 68: eliminate remaining interaction policy leaks from `fret-ui` (foundation / gating for component scale)
-  - Goal: keep `crates/fret-ui` mechanism-only; move policy/state machines to `crates/fret-components-ui`.
+  - Goal: keep `crates/fret-ui` mechanism-only; move policy/state machines to `ecosystem/fret-ui-kit`.
   - Replace runtime “shortcut model writes” (pressable toggle/set variants) with component-owned handlers (ADR 0074).
-  - Move dismissal policy (Escape / outside press) fully to `fret-components-ui` overlay policy code (ADR 0067/0069/0074).
+  - Move dismissal policy (Escape / outside press) fully to `fret-ui-kit` overlay policy code (ADR 0067/0069/0074).
   - Ensure roving/typeahead/menu navigation remain component-owned headless helpers (MVP 64), not runtime props.
 
 - MVP 69: Docking layering cleanup (B route)
@@ -73,7 +73,7 @@ definitions live in `docs/archive/mvp/reference-plan.md`.
 - MVP 56: unify the VirtualList contract surface
   - converge on “framework owns virtualization, components own selection/keyboard/menu policies”
   - treat schema-based `VirtualListRow` as legacy during migration, then remove.
-  - keep `fret-components-ui` free of schema-based retained list widgets (prefer declarative composition)
+  - keep `fret-ui-kit` free of schema-based retained list widgets (prefer declarative composition)
   - compatibility: avoid introducing retained/widget-based list primitives; prefer declarative composition.
   - landed: TanStack vocabulary alignment + stable item keys contract (ADR 0070)
 - MVP 61: declarative layout performance hardening (Taffy integration)

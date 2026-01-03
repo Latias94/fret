@@ -1,4 +1,4 @@
-# ADR 0090: Radix-Aligned Headless Primitives in `fret-components-ui`
+# ADR 0090: Radix-Aligned Headless Primitives in `fret-ui-kit`
 
 Status: Proposed
 
@@ -9,14 +9,14 @@ non-DOM runtime. ADR 0066 and ADR 0074 lock a hard boundary:
 
 - `crates/fret-ui` stays **mechanism-only** (routing, focus/capture, layout, semantics output,
   multi-root overlays substrate, placement solver).
-- `crates/fret-components-ui` and above own **interaction policy** (APG/Radix outcomes, dismissal
+- `ecosystem/fret-ui-kit` and above own **interaction policy** (APG/Radix outcomes, dismissal
   rules, roving/typeahead/menu navigation, focus trap/restore composition).
 
 Radix UI Primitives is the behavioral target for a large slice of “standard surfaces” (popover,
 dialog, menu, tooltip, hover-card, toast), but we cannot reuse Radix’s React/DOM implementation.
 Instead, we must port the outcomes as a set of reusable, deterministic building blocks.
 
-The repo already contains early headless building blocks under `crates/fret-components-ui/src/headless/`,
+The repo already contains early headless building blocks under `ecosystem/fret-ui-kit/src/headless/`,
 but the boundary, naming, and “what counts as a headless primitive” is not yet locked. Without an
 explicit decision, new shadcn-aligned components will tend to re-invent local state machines and
 policy wiring, causing drift and test gaps.
@@ -30,9 +30,9 @@ Authoritative references:
 
 ## Decision
 
-### 1) Adopt a stable “headless primitives” layer in `crates/fret-components-ui`
+### 1) Adopt a stable “headless primitives” layer in `ecosystem/fret-ui-kit`
 
-`crates/fret-components-ui` will expose a public, reusable set of **Radix-aligned headless
+`ecosystem/fret-ui-kit` will expose a public, reusable set of **Radix-aligned headless
 primitives**.
 
 These primitives are not UI components and should not provide shadcn visual defaults. Instead they
@@ -59,8 +59,8 @@ composition API surface (in React/DOM form). In Fret, we split both **implementa
 
 Concretely in this repository:
 
-- `fret-components-ui::headless` = the pure logic/state machine layer.
-- `fret-components-ui::primitives` = Radix-named entry points (thin facades) that may call into:
+- `fret-ui-kit::headless` = the pure logic/state machine layer.
+- `fret-ui-kit::primitives` = Radix-named entry points (thin facades) that may call into:
   - `headless` (logic),
   - `declarative` (wiring helpers),
   - and `fret-ui` mechanism types (never policies).
@@ -77,35 +77,35 @@ Alignment means:
 - comparable composition points (trigger/content, portal/layering, focus scope/trap),
 - comparable accessibility semantics at the snapshot/bridge level.
 
-### 3) Module boundaries inside `fret-components-ui`
+### 3) Module boundaries inside `fret-ui-kit`
 
 We standardize where new building blocks belong:
 
-- `fret-components-ui::headless`:
+- `fret-ui-kit::headless`:
   - pure and deterministic logic (index math, state machines),
   - may be time-source agnostic (caller supplies ticks/instants),
   - may depend on `fret-core` and `fret-ui` portable types,
   - must not depend on platform backends or renderer crates.
 
-- `fret-components-ui::declarative`:
+- `fret-ui-kit::declarative`:
   - ergonomic `ElementContext` helpers that compose runtime element kinds + action hooks,
   - thin wrappers that “wire” headless logic into declarative element trees.
 
-- `fret-components-ui::primitives`:
+- `fret-ui-kit::primitives`:
   - stable Radix-named facade surface (thin entry points),
   - no visual defaults, no renderer/platform deps,
   - avoids duplicating logic that already exists in `headless` / `declarative`.
 
-- `fret-components-ui::{overlay, overlay_controller}`:
+- `fret-ui-kit::{overlay, overlay_controller}`:
   - reusable overlay anchoring helpers and per-window overlay request/presence plumbing.
 
-- `fret-components-ui::window_overlays`:
+- `fret-ui-kit::window_overlays`:
   - higher-level per-window overlay policy orchestration (dialogs/menus/tooltips/toasts),
   - remains implementation-private by default; only stable facade types are re-exported.
 
 ### 4) Stability policy (component layer)
 
-We treat `fret-components-ui::headless` as a stable surface that upper-layer crates can depend on.
+We treat `fret-ui-kit::headless` as a stable surface that upper-layer crates can depend on.
 Additions are allowed; breaking changes require an ADR update and migration plan, similar to ADR
 0066’s “runtime stability tiers”.
 

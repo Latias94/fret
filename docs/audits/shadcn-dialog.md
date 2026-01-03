@@ -13,8 +13,8 @@ and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 - Component code: `crates/fret-components-shadcn/src/dialog.rs`
 - Depends on overlay policy/infra:
-  - `crates/fret-components-ui/src/window_overlays/*` (modal overlays, focus restore/initial focus)
-  - `crates/fret-components-ui/src/overlay_controller.rs` (overlay requests + presence)
+  - `ecosystem/fret-ui-kit/src/window_overlays/*` (modal overlays, focus restore/initial focus)
+  - `ecosystem/fret-ui-kit/src/overlay_controller.rs` (overlay requests + presence)
   - `crates/fret-ui/src/tree/*` (modal barrier scoping + focus traversal contract, ADR 0068)
 
 ## What upstream exports (new-york)

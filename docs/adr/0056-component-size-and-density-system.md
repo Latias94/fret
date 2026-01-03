@@ -5,7 +5,7 @@ Scope: Component ecosystem (`fret-components-*`), built on top of `fret-ui` + th
 
 ## Context
 
-Fret already has a prototype **general-purpose UI kit** (`crates/fret-components-ui`) and a theme/token
+Fret already has a prototype **general-purpose UI kit** (`ecosystem/fret-ui-kit`) and a theme/token
 foundation (ADR 0032 / ADR 0050). Dogfooding the UI kit exposed a recurring problem:
 
 - visual density and control sizing drift between components (inputs/lists/buttons/tabs),
@@ -32,7 +32,7 @@ Reference: `repo-ref/gpui-component/crates/ui/src/styled.rs` (search `Size`, `St
 
 ### 1) Introduce a shared `Size` for all components
 
-Define a `Size` enum in the component ecosystem (recommended: `fret-components-ui`), with the canonical set:
+Define a `Size` enum in the component ecosystem (recommended: `fret-ui-kit`), with the canonical set:
 
 - `XSmall` (`xs`)
 - `Small` (`sm`)
@@ -133,13 +133,13 @@ Cons:
 ## Implementation Notes (Non-Normative)
 
 - `Size` should be carried in component props and default to `Medium`.
-- The mapping table can live in a small module (e.g. `fret-components-ui::sizing`) and should be unit-tested.
+- The mapping table can live in a small module (e.g. `fret-ui-kit::sizing`) and should be unit-tested.
 - Avoid leaking sizing into `fret-core` or `fret-ui`; keep it in the component ecosystem.
 
 ## Current Status
 
 - Prototype implemented in-tree:
-  - `crates/fret-components-ui/src/sizing.rs` defines `Size` and `Sizable`.
+  - `ecosystem/fret-ui-kit/src/sizing.rs` defines `Size` and `Sizable`.
   - Core UI kit components adopt `.with_size(...)` and derive paddings/heights from `Size`.
   - `fret-ui::VirtualList` exposes `set_style` / `set_row_height` so component wrappers can apply size-specific
     list styling without rebuilding the widget.

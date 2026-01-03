@@ -47,11 +47,11 @@ These items are intentionally scheduled early because they define “hard-to-cha
   - make `merge` semantics match Tailwind edge accumulation (e.g. `mt-*` + `ml-*` composes without dropping edges).
 - P0: Tighten the **framework vs components** boundary so Tailwind/shadcn sizing/variants can converge without fighting runtime widgets:
   - keep `fret-ui` as the runtime substrate (tree, routing, layers, docking, performance primitives),
-  - move the “standard UI kit surfaces” (popover/dialog/menu/tooltip/toast/command palette/menubar) to the components layer (`fret-components-shadcn` surface built on `fret-components-ui`),
+  - move the “standard UI kit surfaces” (popover/dialog/menu/tooltip/toast/command palette/menubar) to the components layer (`fret-components-shadcn` surface built on `fret-ui-kit`),
   - remove hard-coded control heights/spacing from runtime primitives (notably `TextInput`) so `Size` (ADR 0056) stays component-owned. (MVP 48; in progress: `TextInput` done; overlay surfaces moved)
 - P0: Eliminate **interaction policy leaks** from `crates/fret-ui` so the runtime contract surface stays small and optimizable. (done; ADR 0074 / MVP 68)
   - Removed runtime “shortcut model writes” (pressable toggle/set variants, dismiss-by-model patterns) and roving/typeahead coupling.
-  - Components must express policy via action hooks + component-owned headless helpers (`fret-components-ui` / `fret-components-shadcn`).
+  - Components must express policy via action hooks + component-owned headless helpers (`fret-ui-kit` / `fret-components-shadcn`).
 - P0: Move **Docking UI** out of `crates/fret-ui` (policy-heavy, hard to optimize) into a dedicated component/app layer crate, while keeping runtime substrate clean.
   - Keep dock **data model + ops + persistence shapes** in `fret-core` (as stable contracts).
   - Keep `fret-ui` responsible only for **generic mechanisms** (event routing, drag routing hooks, overlay roots/layers, viewport embedding).
@@ -250,9 +250,9 @@ validate that the framework contracts are sufficient.
 - P1: Theme/tokens (typed core tokens + extensible namespaced keys for component ecosystems) (ADR 0032 / ADR 0050). (prototype implemented)
 - P0: Component size/density system (Tailwind-like scales) so control heights/paddings converge before scaling the UI kit (ADR 0056). (prototype implemented; see `docs/archive/mvp/active-plan.md` MVP 47)
 - P1: Anchored overlays (popover-style) for component primitives.
-  - Note: overlay surfaces now live in the components layer (`fret-components-shadcn` surface on top of `fret-components-ui`), while `fret-ui` retains the overlay-layer mechanism.
+  - Note: overlay surfaces now live in the components layer (`fret-components-shadcn` surface on top of `fret-ui-kit`), while `fret-ui` retains the overlay-layer mechanism.
 - P1: Spin up `fret-components` repo workspace and establish a **general-purpose** component library baseline (ADR 0037):
-  - `fret-components-ui` (token-driven infrastructure + composition helpers) and `fret-components-shadcn` (shadcn/ui v4-aligned component surface) (prototype implemented in-tree),
+  - `fret-ui-kit` (token-driven infrastructure + composition helpers) and `fret-components-shadcn` (shadcn/ui v4-aligned component surface) (prototype implemented in-tree),
   - `fret-components-icons` (icon registry + sets; atlas-friendly; renderer-agnostic) (prototype implemented in-tree),
   - optional later: `fret-components-editor` (editor-only patterns: inspector/table/tree wrappers).
 

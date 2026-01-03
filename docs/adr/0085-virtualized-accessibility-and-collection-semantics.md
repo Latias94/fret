@@ -97,7 +97,7 @@ Runtime (`crates/fret-ui`):
   - `pos_in_set` / `set_size` (new).
 - Must remain policy-free (ADR 0066).
 
-Component layer (`crates/fret-components-ui` / `crates/fret-components-shadcn`):
+Component layer (`ecosystem/fret-ui-kit` / `crates/fret-components-shadcn`):
 
 - Owns “which nodes are exposed” for a given surface (menus, lists, comboboxes, cmdk).
 - Owns scroll/virtualization policy and ensures:
@@ -182,12 +182,12 @@ Cons:
 
 ### Phase B — Component policy wiring (virtualized list surfaces)
 
-1) Add a small helper in `crates/fret-components-ui` for “collection semantics stamping”:
+1) Add a small helper in `ecosystem/fret-ui-kit` for “collection semantics stamping”:
    - given `(index, count)` assign `pos_in_set`/`set_size` to item semantics,
    - enforce the 1-based invariant.
 2) Update at least one dogfooding surface in `crates/fret-components-shadcn` (e.g. `Command` or a
    virtualized list demo) to populate the metadata.
-3) Add regression tests in `crates/fret-components-ui` that validate:
+3) Add regression tests in `ecosystem/fret-ui-kit` that validate:
    - metadata correctness for visible items,
    - `active_descendant` behavior when selection changes and when a modal barrier is present.
 
@@ -205,8 +205,8 @@ P0 baseline is implemented end-to-end:
 - Runtime snapshot production: `crates/fret-ui/src/tree/mod.rs` (collects/stamps collection metadata and enforces basic invariants).
 - AccessKit mapping: `crates/fret-a11y-accesskit/src/lib.rs` (maps to `active_descendant`, `position_in_set`, `size_of_set`).
 - Component policy helpers and adoption:
-  - `crates/fret-components-ui/src/declarative/collection_semantics.rs`
-  - `crates/fret-components-ui/src/declarative/list.rs` (virtualized list stamps list item metadata)
+  - `ecosystem/fret-ui-kit/src/declarative/collection_semantics.rs`
+  - `ecosystem/fret-ui-kit/src/declarative/list.rs` (virtualized list stamps list item metadata)
   - shadcn surfaces (cmdk/select/context menu) assert metadata in tests
 
 Follow-ups remain P1:

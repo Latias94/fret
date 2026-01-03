@@ -47,7 +47,7 @@ contracts early to avoid large rewrites later.
 - App runtime (effects + models + commands): `crates/fret-app/src/app.rs`
 - Desktop runner (winit window lifecycle + scheduling): `crates/fret-runner-winit-wgpu/src/runner.rs`
 - UI runtime (retained tree prototype): `crates/fret-ui/src/tree/mod.rs`
-- Docking UI (`DockSpace`, policy-heavy): `crates/fret-components-docking/src/dock/space.rs`
+- Docking UI (`DockSpace`, policy-heavy): `ecosystem/fret-ui-docking/src/dock/space.rs`
 - Renderer (display list → wgpu pipelines; SDF AA lives here): `crates/fret-render/src/renderer.rs`
 
 ## Repository references

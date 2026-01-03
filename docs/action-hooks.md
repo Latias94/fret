@@ -23,7 +23,7 @@ matching, etc.), we end up with:
 ## Layering Rule
 
 - `crates/fret-ui`: mechanisms + contracts only (tree, layout, hit-test, focus, semantics, overlay roots).
-- `crates/fret-components-ui`: reusable infra (tokens, recipes, headless state machines).
+- `ecosystem/fret-ui-kit`: reusable infra (tokens, recipes, headless state machines).
 - `crates/fret-components-shadcn`: shadcn/ui v4 naming surface (recipes; no retained widgets).
 
 **Policy lives in the component layer**:
@@ -63,7 +63,7 @@ Runtime plumbing is in `crates/fret-ui/src/action.rs` and exposed via `ElementCo
 
 Component-layer convenience helpers live in:
 
-- `crates/fret-components-ui/src/declarative/action_hooks.rs` (`ActionHooksExt`)
+- `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (`ActionHooksExt`)
 
 ## Recommended Usage Patterns
 
@@ -89,7 +89,7 @@ This attaches a `pressable_on_activate` hook, rather than using runtime shortcut
 
 ### Close an Overlay on Dismiss
 
-Overlays should be created via `fret-components-ui` overlay policy code (e.g. `window_overlays`).
+Overlays should be created via `fret-ui-kit` overlay policy code (e.g. `window_overlays`).
 Then register dismissal handlers via `dismissible_on_dismiss_request`:
 
 - close on Escape

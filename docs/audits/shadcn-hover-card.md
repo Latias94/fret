@@ -11,9 +11,9 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 ## Fret implementation
 
 - Component code: `crates/fret-components-shadcn/src/hover_card.rs`
-- Hover intent state machine: `crates/fret-components-ui/src/headless/hover_intent.rs`
-- Placement helpers: `crates/fret-components-ui/src/overlay.rs`
-- Per-window hover overlay policy: `crates/fret-components-ui/src/window_overlays/mod.rs`
+- Hover intent state machine: `ecosystem/fret-ui-kit/src/headless/hover_intent.rs`
+- Placement helpers: `ecosystem/fret-ui-kit/src/overlay.rs`
+- Per-window hover overlay policy: `ecosystem/fret-ui-kit/src/window_overlays/mod.rs`
 
 ## Audit checklist
 

@@ -92,7 +92,7 @@ Ergonomics note (non-contractual):
 
 - To reduce bugs where a widget reads a model but forgets to register observation, higher layers may
   provide “observe + read” helpers/wrappers (e.g. `ElementContext::read_model_ref(...)` in `fret-ui`, or
-  component-layer sugar in `fret-components-ui`). These helpers must remain semantically explicit
+  component-layer sugar in `fret-ui-kit`). These helpers must remain semantically explicit
   about the invalidation strength and must not introduce implicit “track all reads” behavior in P0.
 
 Semantics:

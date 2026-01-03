@@ -45,9 +45,9 @@ For each module, we consider it “closed enough to scale” when:
 
 **Component layer (policy-heavy):**
 
-- `crates/fret-components-ui` — headless policies + composition helpers (action hooks, overlays policy, tokens/recipes infra).
+- `ecosystem/fret-ui-kit` — headless policies + composition helpers (action hooks, overlays policy, tokens/recipes infra).
 - `crates/fret-components-shadcn` — shadcn/ui v4-aligned component surface (recipes, variants, behaviors).
-- `crates/fret-components-docking` — docking UI + interaction policy (B-route; policy outside runtime).
+- `ecosystem/fret-ui-docking` — docking UI + interaction policy (B-route; policy outside runtime).
 
 **Backends (not portable):**
 
@@ -198,7 +198,7 @@ flowchart LR
 ```
 
 - **Event routing + capture + focus**: ADR 0005 / 0020 / 0068; code: `crates/fret-ui/src/tree/mod.rs`
-- **Overlays + barriers + outside press**: ADR 0011 / 0067 / 0069; code: `crates/fret-ui/src/tree/mod.rs`; policy: `crates/fret-components-ui/src/window_overlays/*`
+- **Overlays + barriers + outside press**: ADR 0011 / 0067 / 0069; code: `crates/fret-ui/src/tree/mod.rs`; policy: `ecosystem/fret-ui-kit/src/window_overlays/*`
 - **Anchored overlays (placement)**: ADR 0064; code: `crates/fret-ui/src/overlay_placement.rs`; reference: `repo-ref/floating-ui`
 - **RenderTransform + anchor geometry**: ADR 0083; code: `crates/fret-ui/src/tree/mod.rs` (hit-test mapping + `visual_bounds_for_element` recording) + `crates/fret-ui/src/elements/mod.rs` (cross-frame geometry queries)
 - **Layout**: ADR 0035 / 0057 / 0062 / 0076; code: `crates/fret-ui/src/declarative.rs`, `crates/fret-ui/src/element.rs`
@@ -214,7 +214,7 @@ flowchart LR
 - Determinism: hit testing + paint + semantics snapshots remain consistent across overlay roots.
 - Performance: layout/paint invalidation is explicit and test-covered for key edge cases.
 
-### `fret-components-ui` (Headless Policies + Composition Helpers)
+### `fret-ui-kit` (Headless Policies + Composition Helpers)
 
 **Read first**
 
@@ -224,8 +224,8 @@ flowchart LR
 
 **Code entry points**
 
-- `crates/fret-components-ui/src/declarative/action_hooks.rs`
-- `crates/fret-components-ui/src/window_overlays/*`
+- `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs`
+- `ecosystem/fret-ui-kit/src/window_overlays/*`
 
 **Closure checklist (P0)**
 
@@ -243,7 +243,7 @@ flowchart LR
 
 - Components validate runtime mechanisms (popover/menu/cmdk are “acceptance tests” for focus, overlays, semantics).
 
-### `fret-components-docking` (Docking UI + Policy)
+### `fret-ui-docking` (Docking UI + Policy)
 
 **Read first**
 
@@ -254,10 +254,10 @@ flowchart LR
 
 **Code entry points**
 
-- `crates/fret-components-docking/src/dock/space.rs` (DockSpace UI)
-- `crates/fret-components-docking/src/dock/manager.rs` (DockManager + ops integration)
-- `crates/fret-components-docking/src/dock/viewport.rs` (viewport hit mapping → `ViewportInputEvent`)
-- `crates/fret-components-docking/src/dock/mod.rs` (`DockViewportOverlayHooks`)
+- `ecosystem/fret-ui-docking/src/dock/space.rs` (DockSpace UI)
+- `ecosystem/fret-ui-docking/src/dock/manager.rs` (DockManager + ops integration)
+- `ecosystem/fret-ui-docking/src/dock/viewport.rs` (viewport hit mapping → `ViewportInputEvent`)
+- `ecosystem/fret-ui-docking/src/dock/mod.rs` (`DockViewportOverlayHooks`)
 
 **Closure checklist (P0)**
 

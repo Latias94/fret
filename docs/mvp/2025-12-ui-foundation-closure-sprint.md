@@ -43,7 +43,7 @@ Each item is “done” when we have: (a) accepted contract or explicit decision
 - Contract: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
 - Checklist: `docs/docking-arbitration-checklist.md`
 - Demo harness: `cargo run -p fret-demo --bin docking_arbitration_demo`
-- Regression tests: `cargo nextest run -p fret-components-docking`
+- Regression tests: `cargo nextest run -p fret-ui-docking`
 
 Hardening targets (follow-ups):
 

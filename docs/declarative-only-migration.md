@@ -29,7 +29,7 @@ Does not own:
 - shadcn/Radix policy surfaces (Popover/Dialog/Menu/Tooltip/HoverCard/Toast/Command palette)
 - per-component default values (row heights, paddings, delays) beyond minimal deterministic runtime defaults
 
-### `crates/fret-components-ui` (infrastructure)
+### `ecosystem/fret-ui-kit` (infrastructure)
 
 Owns:
 
@@ -43,7 +43,7 @@ Owns:
 Owns:
 
 - shadcn/ui v4 naming surface and recipe-level composition
-- behavior outcomes aligned with Radix/APG/Floating UI, implemented on top of `fret-components-ui`
+- behavior outcomes aligned with Radix/APG/Floating UI, implemented on top of `fret-ui-kit`
 
 ## Migration strategy (delete-first, then re-add)
 
@@ -85,7 +85,7 @@ Actions:
 
 Acceptance:
 
-- `fret-components-ui` list/command/table/tree surfaces can share one virtualization contract.
+- `fret-ui-kit` list/command/table/tree surfaces can share one virtualization contract.
 
 ### Phase 3 — move overlay policy out of runtime
 
@@ -93,7 +93,7 @@ Actions:
 
 - Keep runtime-only:
   - layers (portal roots), focus/capture semantics, placement solver, deterministic hit testing
-- Move to `fret-components-ui`:
+- Move to `fret-ui-kit`:
   - open/close state machines
   - dismissal rules (escape/click-outside)
   - focus trap + restore policy

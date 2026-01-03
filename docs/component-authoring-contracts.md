@@ -1,4 +1,4 @@
-# Component Authoring Contracts (fret-ui + fret-components-ui)
+# Component Authoring Contracts (fret-ui + fret-ui-kit)
 
 This document is a **component-authoring-focused** checklist of the public APIs and structural
 contracts that upper-layer code is expected to use.
@@ -14,7 +14,7 @@ It complements (but does not replace) the ADRs:
 - `crates/fret-ui` (**mechanisms/contracts only**): element tree, layout, hit-test, focus,
   semantics/a11y snapshot, overlay roots/layers, placement solver, scroll/virtualization
   mechanisms, text input/area engines.
-- `crates/fret-components-ui` (**policy helpers + infra**): token-driven styling (`ChromeRefinement`
+- `ecosystem/fret-ui-kit` (**policy helpers + infra**): token-driven styling (`ChromeRefinement`
   / `LayoutRefinement`), headless state machines (roving/typeahead/menu nav), overlay orchestration
   policy, and ergonomic declarative helpers.
 - `crates/fret-components-shadcn` (**recipes/taxonomy**): shadcn/ui-aligned component naming and
@@ -150,7 +150,7 @@ Recommended helper:
 ## Overlays (policy vs mechanism)
 
 - Mechanism: multi-root overlay/layer substrate and modal barrier gating live in `fret-ui`.
-- Policy: request queues, dismissal rules, and focus restore live in `fret-components-ui`.
+- Policy: request queues, dismissal rules, and focus restore live in `fret-ui-kit`.
 
 Recommended entry point:
 
@@ -168,7 +168,7 @@ Recommended entry point:
 Avoid:
 
 - Depending directly on `fret_components_ui::window_overlays::*` internals unless you explicitly
-  enable `fret-components-ui/unstable-internals`.
+  enable `fret-ui-kit/unstable-internals`.
 
 ## Scrolling and virtualization
 
@@ -213,9 +213,9 @@ Recommended building blocks:
 
 Feature flags to be aware of:
 
-- `fret-components-ui/icons`: integrates shared icons (`fret-components-icons`)
-- `fret-components-ui/recipes`: opinionated higher-level helpers (implies `icons`)
-- `fret-components-ui/unstable-internals`: exposes overlay orchestration internals directly
+- `fret-ui-kit/icons`: integrates shared icons (`fret-components-icons`)
+- `fret-ui-kit/recipes`: opinionated higher-level helpers (implies `icons`)
+- `fret-ui-kit/unstable-internals`: exposes overlay orchestration internals directly
 
 ## Checklist for adding a new component surface
 

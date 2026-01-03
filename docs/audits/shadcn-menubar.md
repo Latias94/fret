@@ -20,8 +20,8 @@ Key upstream behaviors/surfaces:
 ## Fret implementation
 
 - Component code: `crates/fret-components-shadcn/src/menubar.rs`
-- Overlay policy substrate: `crates/fret-components-ui/src/overlay_controller.rs`
-- Dismissible popover policy: `crates/fret-components-ui/src/window_overlays/mod.rs`
+- Overlay policy substrate: `ecosystem/fret-ui-kit/src/overlay_controller.rs`
+- Dismissible popover policy: `ecosystem/fret-ui-kit/src/window_overlays/mod.rs`
 
 ## Audit checklist
 

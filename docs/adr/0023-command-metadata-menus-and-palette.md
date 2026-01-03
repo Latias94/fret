@@ -55,10 +55,10 @@ Implementation anchors (current workspace):
 - Keymap reverse lookup for UI display (best-effort): `crates/fret-app/src/keymap.rs`
 - Minimal menu model types (data-only): `crates/fret-app/src/menu.rs`
 - Command palette UI surface:
-  - The previous retained-widget implementation lived in `fret-components-ui`, but the public component surface is
+  - The previous retained-widget implementation lived in `fret-ui-kit`, but the public component surface is
     now declarative-only (see ADR 0066 / migration notes in `docs/shadcn-declarative-progress.md`).
   - The planned declarative surface is `fret-components-shadcn::command` backed by reusable infra in
-    `fret-components-ui` (overlay policy + headless filtering/navigation).
+    `fret-ui-kit` (overlay policy + headless filtering/navigation).
 
 ### 2) Menus and toolbars are derived from command metadata
 

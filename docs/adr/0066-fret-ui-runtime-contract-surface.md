@@ -69,7 +69,7 @@ To keep the runtime usable but clean, we classify public runtime APIs as:
 
 ### 3) Stable runtime contracts (P0) — contract table
 
-This is the minimum contract set `fret-components-ui` can depend on long-term.
+This is the minimum contract set `fret-ui-kit` can depend on long-term.
 
 | Contract | `fret-ui` provides (mechanism) | Invariants (must hold) | Reference (authoritative) | Related ADRs / docs |
 | --- | --- | --- | --- | --- |
@@ -205,7 +205,7 @@ GPUI provides a useful “contract vs component” separation reference:
 Fret’s target mapping:
 
 - `gpui` (runtime substrate) ≈ `crates/fret-ui`
-- gpui-component `crates/ui` (policy + recipes) ≈ `crates/fret-components-ui` (infra) +
+- gpui-component `crates/ui` (policy + recipes) ≈ `ecosystem/fret-ui-kit` (infra) +
   `crates/fret-components-shadcn` (taxonomy + recipes)
 
 Key principle:

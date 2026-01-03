@@ -19,7 +19,7 @@ What exists today:
   - `crates/fret-a11y-accesskit/src/lib.rs` (AccessKit mapping + unit tests)
   - `crates/fret-runner-winit/src/accessibility.rs` (winit adapter glue)
 - Overlay + list semantics tests for several window-scoped overlay surfaces
-  (see `docs/a11y-acceptance-checklist.md` and `crates/fret-components-ui/src/window_overlays.rs`).
+  (see `docs/a11y-acceptance-checklist.md` and `ecosystem/fret-ui-kit/src/window_overlays.rs`).
 - Roving-focus navigation for composite lists is typically implemented by **moving focus** between
   rows (via `UiTree` focus primitives), which works without `active_descendant` but is not ideal
   for cmdk-style “focus stays in the text field” experiences.
@@ -162,7 +162,7 @@ Cons:
 
 ### Phase B — Component-layer policy (cmdk-style command palette)
 
-1) Define a headless “command palette selection” policy in `crates/fret-components-ui`:
+1) Define a headless “command palette selection” policy in `ecosystem/fret-ui-kit`:
    - Keep focus in the text input (better IME/caret behavior).
    - Maintain an internal “active index / active row id”.
 2) In `fret-components-shadcn`, wire `Command`/`CommandList` recipes so:

@@ -32,23 +32,23 @@ ADR or adding a new ADR) before scaling feature surface area.
   - Update: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`
   - Decide: what it means for a dock host to be "kept alive" when collapsed/hidden, and the required ordering constraints for building docking targets.
   - Decide: the `DockOp` pattern that avoids one-frame "holes" when closing tabs programmatically (ImGui `SetTabItemClosed`-class issue).
-  - Implement: `crates/fret-components-docking/src/dock/space.rs`, `crates/fret-components-docking/src/dock/manager.rs`, app integration points applying `DockOp` + invalidation.
+  - Implement: `ecosystem/fret-ui-docking/src/dock/space.rs`, `ecosystem/fret-ui-docking/src/dock/manager.rs`, app integration points applying `DockOp` + invalidation.
 
 - **Docking drag vs overlays vs viewport capture: arbitration matrix**
   - Update: `docs/adr/0072-docking-interaction-arbitration-matrix.md` (Accepted)
   - Decide: drag start/stop precedence, which overlays close/freeze during dock drags, and how modal barriers intentionally block docking/tool input.
-  - Implement: `crates/fret-components-docking/src/dock/space.rs`, `crates/fret-components-ui/src/overlay_policy.rs`, `crates/fret-ui/src/tree/mod.rs` (capture + layering).
+  - Implement: `ecosystem/fret-ui-docking/src/dock/space.rs`, `ecosystem/fret-ui-kit/src/overlay_policy.rs`, `crates/fret-ui/src/tree/mod.rs` (capture + layering).
 
 - **Multi-window degradation policy (single-window platforms)**
   - Update: `docs/adr/0084-multi-window-degradation-policy.md` (Accepted)
-  - Implement: `crates/fret-core` import fallback + `crates/fret-components-docking` tear-off degradation (demo harness still recommended).
+  - Implement: `crates/fret-core` import fallback + `ecosystem/fret-ui-docking` tear-off degradation (demo harness still recommended).
 
 ### P1 (Lock soon; otherwise behavior will drift)
 
 - **Docking split sizing + resizable primitive contract**
   - Update: `docs/adr/0077-resizable-panel-groups-and-docking-split-sizing.md` (Accepted)
   - Decide: runtime-owned resize mechanics, docking integration shape, and whether to eventually persist pixel `preferred_px` hints vs fractions-only.
-  - Implement: docking host rendering in `crates/fret-components-docking`, runtime substrate in `crates/fret-ui`.
+  - Implement: docking host rendering in `ecosystem/fret-ui-docking`, runtime substrate in `crates/fret-ui`.
 
 - **Text input semantics for multiline + IME composition ranges**
   - Update: `docs/adr/0071-text-input-multiline-composition-contract.md` (Accepted)
@@ -113,7 +113,7 @@ These anchors are intentionally few; use `rg` to drill down from them.
 - App/effects/models: `crates/fret-app/src/app.rs`
 - Desktop runner (winit + wgpu): `crates/fret-runner-winit-wgpu/src/runner.rs`
 - UI runtime (retained tree prototype): `crates/fret-ui/src/tree/mod.rs`
-- Docking UI (`DockSpace`, policy-heavy): `crates/fret-components-docking/src/dock/space.rs`
+- Docking UI (`DockSpace`, policy-heavy): `ecosystem/fret-ui-docking/src/dock/space.rs`
 - Core contracts (IDs, dock graph, scene ops): `crates/fret-core/src/lib.rs`
 - Renderer (quads/SDF/text hooks): `crates/fret-render/src/renderer.rs`
 - Demo (end-to-end wiring): `crates/fret-demo/src/components_gallery.rs`, `crates/fret-demo/src/docking_demo.rs`
@@ -256,7 +256,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0008-threading-logging-errors.md`
 - `docs/adr/0027-framework-scope-and-responsibilities.md`
 - `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
-- `docs/adr/0090-radix-aligned-headless-primitives-in-fret-components-ui.md`
+- `docs/adr/0090-radix-aligned-headless-primitives-in-fret-ui-kit.md`
 - `docs/adr/0058-typography-v1-textstyle-weight-lineheight-tracking.md`
 - `docs/adr/0059-text-overflow-ellipsis-and-truncation.md`
 - `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`

@@ -38,7 +38,7 @@ We want a **stable contract** that:
 3) Keep shadow semantics **low-opinionated** and component-owned:
 
 - `fret-ui` exposes the primitive but does not prescribe `shadow-sm/md/lg` or interaction policies.
-- `fret-components-ui` maps shadcn-like elevation levels to `ShadowStyle` using theme extension
+- `fret-ui-kit` maps shadcn-like elevation levels to `ShadowStyle` using theme extension
   tokens under `component.shadow.*`.
 
 ## Theme / Tokens

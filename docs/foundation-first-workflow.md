@@ -31,7 +31,7 @@ Not allowed:
 Mechanism-only APIs must remain easy to optimize: fewer public knobs, fewer side effects, and
 explicit invalidation contracts.
 
-### `fret-components-ui` (headless + reusable policy helpers)
+### `fret-ui-kit` (headless + reusable policy helpers)
 
 Allowed:
 
@@ -47,7 +47,7 @@ Allowed:
 Allowed:
 
 - shadcn naming/taxonomy and visual recipes (tokens, variants, composition).
-- Components built on `fret-components-ui` headless helpers + `fret-ui` primitives.
+- Components built on `fret-ui-kit` headless helpers + `fret-ui` primitives.
 
 Not allowed:
 

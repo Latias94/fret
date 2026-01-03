@@ -61,12 +61,12 @@ It complements (but does not replace) ADRs:
 - **Dock host keep-alive and early submission**
   - Goal: ensure dock hosts remain stable targets and do not "drop" docked content due to conditional submission.
   - ADRs: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`
-  - Code: `crates/fret-components-docking/src/dock/space.rs`, `crates/fret-components-docking/src/dock/manager.rs`, runner/driver UI build order.
+  - Code: `ecosystem/fret-ui-docking/src/dock/space.rs`, `ecosystem/fret-ui-docking/src/dock/manager.rs`, runner/driver UI build order.
 
 - **Programmatic close without one-frame tab "hole"**
   - Goal: add a `DockOp`/notify pattern so closing tabs from commands does not produce a transient no-selection/flicker.
   - ADRs: `docs/adr/0013-docking-ops-and-persistence.md`
-  - Code: `crates/fret-components-docking/src/dock/space.rs`, app integration applying `DockOp` + invalidation.
+  - Code: `ecosystem/fret-ui-docking/src/dock/space.rs`, app integration applying `DockOp` + invalidation.
 
 ## P0 - Scheduling / Render Lifecycle
 

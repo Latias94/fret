@@ -11,7 +11,7 @@ Status: Accepted
 This ADR is implemented for the non-modal overlay stack and docking drags:
 
 - Dock drag sessions are represented as `DragKind::DockPanel` (runtime-level mechanism).
-- While a dock drag session is active in a window, `fret-components-ui/window_overlays` closes
+- While a dock drag session is active in a window, `fret-ui-kit/window_overlays` closes
   non-modal popovers (sets their `open` model to `false`) and suppresses hover overlays to avoid
   fighting docking interaction.
 - While a dock drag session is active, docking suppresses starting competing capture sessions from

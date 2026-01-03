@@ -65,7 +65,7 @@ MVP work is allowed to prototype quickly, but changes that affect “hard-to-cha
 - Inspector + viewport tooling boundaries: drafted as Proposed ADRs
   - ADR 0048: Inspector property protocol + custom editor registry (example editor layer)
   - ADR 0049: Viewport tools (input capture + overlay rendering) (example editor layer)
-- Next major refactor (planned): tighten `fret-ui` vs `fret-components-ui` boundaries so Tailwind/shadcn sizing/variants stay component-owned (see MVP 48).
+- Next major refactor (planned): tighten `fret-ui` vs `fret-ui-kit` boundaries so Tailwind/shadcn sizing/variants stay component-owned (see MVP 48).
 
 ## MVP 7 — Command UI Surfaces (Palette + Menu Skeleton)
 
@@ -1038,7 +1038,7 @@ Goal: establish a **general-purpose** component library baseline (GPUI-component
 Status:
 
   - Prototype implemented (incubated in this repo):
-  - `crates/fret-components-ui`: token-driven components + Tailwind-like typed style refinements (`Button`, `IconButton`, `TextField`, `Select`, `Checkbox`, `Switch`, `Separator`, `Tabs`, `Toolbar`).
+  - `ecosystem/fret-ui-kit`: token-driven components + Tailwind-like typed style refinements (`Button`, `IconButton`, `TextField`, `Select`, `Checkbox`, `Switch`, `Separator`, `Tabs`, `Toolbar`).
     - Tailwind-like primitive vocabulary is now explicit and reusable: `Space` + `Radius` (typed) backed by theme extension tokens (`component.space.*`, `component.radius.*`).
     - Component authoring ergonomics are now GPUI-component-like: `StyleRefinement` is a composable “style patch” and `StyledExt` provides `.styled().px_3().py_2().rounded_md()...` chains; any component can opt in by implementing `RefineStyle`.
     - Recipes (P0): component-level “recipes” provide shared, token-driven chrome contracts. Input-family controls (TextField/Select/Combobox/TextAreaField) share a single `resolve_input_chrome(...)` resolver that enforces a stable override priority (callsite refinement → component tokens → shared input tokens → size/baseline fallbacks).
@@ -1049,7 +1049,7 @@ Status:
     - `ResizablePanelGroup` provides a component-level naming surface for the resizable split primitive (shadcn-style vocabulary).
     - `Combobox` provides a minimal typeahead + anchored list interaction (focus stays in input; list is `Popover`-backed).
     - `sonner::toast(...)` provides a shadcn-style facade for transient notifications.
-  - Overlay “surfaces” have been migrated to `crates/fret-components-ui` as part of MVP 48 boundary tightening:
+  - Overlay “surfaces” have been migrated to `ecosystem/fret-ui-kit` as part of MVP 48 boundary tightening:
     - `ContextMenu`, `Popover`, `DialogOverlay`, `CommandPaletteOverlay`, `AppMenuBar`, `ToastOverlay`, `TooltipOverlay`.
     - The runtime still owns the overlay-layer mechanism (`UiTree` layers) and the menu request store (`ContextMenuService`).
   - `crates/fret-components-icons`: renderer-agnostic icon registry + small builtin glyph fallback set.
@@ -1136,7 +1136,7 @@ apps), not about editor-only UI.
   - baseline metrics come from typed tokens (ADR 0050),
   - component ecosystems can override via namespaced dotted keys (ADR 0050 §5.1),
   - list-specific tokens (e.g. `metric.list.*`) remain valid, but are consumed through the sizing layer.
-- Migrate existing `crates/fret-components-ui` components to the new sizing system and remove ad-hoc per-component
+- Migrate existing `ecosystem/fret-ui-kit` components to the new sizing system and remove ad-hoc per-component
   “magic numbers” where possible.
 
 **Non-goals**
@@ -1155,7 +1155,7 @@ apps), not about editor-only UI.
 Status:
 
 - Prototype implemented:
-  - `crates/fret-components-ui/src/sizing.rs` defines `Size` + `Sizable`.
+  - `ecosystem/fret-ui-kit/src/sizing.rs` defines `Size` + `Sizable`.
     - `Size::control_text_px` now derives from the theme’s base typography (`metric.font.size`, alias `font.size`) by default, so a theme can scale the entire component ecosystem consistently.
   - Core UI kit components adopt `.with_size(...)` and derive control metrics from `Size`.
   - `fret-ui::VirtualList` exposes `set_style` / `set_row_height` for size-aware list wrappers.
@@ -1171,7 +1171,7 @@ References:
 
 Goal: make the **Tailwind/shadcn sizing + variants system** (ADR 0056) the single source of truth by
 removing “UI kit opinions” from the runtime crate (`fret-ui`) and concentrating shadcn-like surfaces
-in the component crate (`crates/fret-components-ui`), closer to the GPUI vs gpui-component split.
+in the component crate (`ecosystem/fret-ui-kit`), closer to the GPUI vs gpui-component split.
 
 This is a deliberate, “no fear” refactor MVP to prevent slow drift and perpetual per-widget patches.
 
@@ -1179,7 +1179,7 @@ This is a deliberate, “no fear” refactor MVP to prevent slow drift and perpe
 
 - Clarify and enforce the boundary (ADR 0037):
   - `fret-ui`: runtime substrate (tree, routing, focus/capture, layers, docking, perf primitives like `VirtualList`/`Scroll`).
-  - `crates/fret-components-ui`: shadcn-like surfaces and policies (popover/dialog/menu/tooltip/toast/command palette/menubar),
+  - `ecosystem/fret-ui-kit`: shadcn-like surfaces and policies (popover/dialog/menu/tooltip/toast/command palette/menubar),
     and all sizing/variants/token recipes.
 - Remove hard-coded control heights/spacing from runtime primitives:
   - `TextInput`/`TextArea` stop deciding “control height”; component wrappers (`TextField`, etc.) own the chrome sizing via `Size`.
@@ -1198,16 +1198,16 @@ This is a deliberate, “no fear” refactor MVP to prevent slow drift and perpe
 **Definition of Done**
 
 - `fret-demo` and `fret-demo --bin shadcn_gallery` no longer depend on `fret_ui::WindowOverlays` or runtime overlay widgets directly;
-  they use `crates/fret-components-ui` surfaces instead.
+  they use `ecosystem/fret-ui-kit` surfaces instead.
 - Runtime primitives have no “opinionated” shadcn sizing baked in (notably `TextInput` height).
 - `cargo test --workspace` passes and the UI kit still works.
 
 Status:
 
 - MVP done (with a remaining follow-up tracked by MVP 51):
-  - `WindowOverlays` moved from `fret-ui` into `crates/fret-components-ui` to keep overlay policy/component ergonomics out of the runtime crate.
+  - `WindowOverlays` moved from `fret-ui` into `ecosystem/fret-ui-kit` to keep overlay policy/component ergonomics out of the runtime crate.
   - `TextInput` no longer hard-codes control height; `Size` (ADR 0056) stays component-owned.
-  - Overlay widgets moved from `fret-ui` into `crates/fret-components-ui` (context menu, popover, dialog, command palette shell, menubar, toast, tooltip).
+  - Overlay widgets moved from `fret-ui` into `ecosystem/fret-ui-kit` (context menu, popover, dialog, command palette shell, menubar, toast, tooltip).
   - `EventCx::open_context_menu*` centralizes “open menu” wiring so runtime widgets (e.g. docking) don’t depend on component surfaces.
   - Token drift mitigation: `Space` and `Radius` fall back to baseline `metric.*` when `component.*` is missing.
   - Follow-up: some UI-kit-shaped runtime widgets still exist (e.g. `TreeView`); migrating them cleanly depends on landing the declarative authoring model (MVP 49/50).
@@ -1230,7 +1230,7 @@ References:
 - Command palette demo widget: `crates/fret-demo/src/command_palette.rs`
 - Focus + routing: `crates/fret-ui/src/tree/mod.rs`
 - Overlay/multi-root: `crates/fret-ui/src/tree/mod.rs`, `docs/adr/0011-overlays-and-multi-root.md`
-- Context menu: `crates/fret-components-ui/src/context_menu.rs`
+- Context menu: `ecosystem/fret-ui-kit/src/context_menu.rs`
 - Virtualized lists: `crates/fret-ui/src/primitives/virtual_list.rs`, `crates/fret-ui/src/legacy_widgets/tree_view.rs`
 - Editor shell wiring: `crates/fret-demo/src/editor_shell.rs`
 - Desktop runner: `crates/fret-runner-winit-wgpu/src/runner.rs`

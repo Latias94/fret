@@ -14,8 +14,8 @@ documentation and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 - Component code: `crates/fret-components-shadcn/src/popover.rs`
 - Depends on overlay policy/infra:
-  - `crates/fret-components-ui/src/window_overlays/*` (dismissible overlays, focus rules)
-  - `crates/fret-components-ui/src/overlay_controller.rs` (overlay requests + presence)
+  - `ecosystem/fret-ui-kit/src/window_overlays/*` (dismissible overlays, focus rules)
+  - `ecosystem/fret-ui-kit/src/overlay_controller.rs` (overlay requests + presence)
   - `crates/fret-ui/src/overlay_placement/solver.rs` (anchored placement + flip/clamp)
 
 ## What upstream exports (new-york)

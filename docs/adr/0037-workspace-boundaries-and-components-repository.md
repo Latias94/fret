@@ -61,8 +61,8 @@ This repository is explicitly expected to ship an **editor kit**:
 Example crate layout (names are placeholders):
 
 - **Primitives / shadcn-style UI**
-  - `fret-components-ui`: reusable component infrastructure (token-driven styling, `StyledExt`, size/density vocabulary, low-level building blocks).
-  - `fret-components-shadcn`: shadcn/ui (v4) aligned component surface (names + variants + policies), built on top of `fret-components-ui`.
+  - `fret-ui-kit`: reusable component infrastructure (token-driven styling, `StyledExt`, size/density vocabulary, low-level building blocks).
+  - `fret-components-shadcn`: shadcn/ui (v4) aligned component surface (names + variants + policies), built on top of `fret-ui-kit`.
   - `fret-components-icons`: icon primitives and common icon sets (as data + paint, not platform APIs).
 - **Editor patterns**
   - `fret-components-tree`: tree view + virtualization (hierarchy/project browser patterns).
@@ -166,14 +166,14 @@ For `fret-components`:
 Current status:
 
 - Implemented in this workspace as `crates/fret-runner-winit-wgpu`.
-- MVP45 incubation: `crates/fret-components-ui` exists in-tree to validate the component API and token wiring before
+- MVP45 incubation: `ecosystem/fret-ui-kit` exists in-tree to validate the component API and token wiring before
   extracting to a separate `fret-components` repository.
 
 ## Clarification (2025): General-purpose UI first, editor kit is layered
 
 Although Fret’s motivating use case is an editor, the component ecosystem should remain **general-purpose by default**:
 
-- `fret-components-ui` should target application UIs (forms, navigation, dialogs, lists) and avoid engine/editor domain concepts.
+- `fret-ui-kit` should target application UIs (forms, navigation, dialogs, lists) and avoid engine/editor domain concepts.
 - Editor-only patterns (inspector, hierarchy, scene graph affordances) should live in separate crates (e.g. `fret-components-editor`) or in the app.
 
 Component styling guidance:

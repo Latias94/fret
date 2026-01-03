@@ -39,7 +39,7 @@ without forcing runtime churn (ADR 0066).
 - deterministic hit testing and pointer routing across roots (including pointer transparency),
 - placement solver (`overlay_placement`) and geometry queries (`elements::bounds_for_element`).
 
-`crates/fret-components-ui` owns overlay **policies**:
+`ecosystem/fret-ui-kit` owns overlay **policies**:
 
 - dismissal rules (Escape, click outside, focus outside, nested overlay ordering),
 - focus trap/restore (modal vs non-modal),
@@ -50,7 +50,7 @@ without forcing runtime churn (ADR 0066).
 
 ### 2) Policy primitives (component-owned)
 
-`fret-components-ui` should provide small, headless, composable overlay primitives modeled after
+`fret-ui-kit` should provide small, headless, composable overlay primitives modeled after
 Radix outcomes:
 
 #### 2.1 Portal (layer install/uninstall)

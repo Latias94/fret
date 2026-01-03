@@ -80,7 +80,7 @@ Notes:
 
 ## Consequences
 
-- Overlay widgets in `fret-components-ui` should use this solver rather than bespoke “below/above”
+- Overlay widgets in `fret-ui-kit` should use this solver rather than bespoke “below/above”
   positioning logic.
 - The solver is intentionally conservative: predictable and testable first, then grow capability
   behind regression tests.

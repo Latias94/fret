@@ -5,7 +5,7 @@ map into Fret’s typed UI contracts.
 
 Scope:
 
-- `crates/fret-components-ui`: typed, Tailwind-like authoring vocabulary (`ChromeRefinement`, `LayoutRefinement`)
+- `ecosystem/fret-ui-kit`: typed, Tailwind-like authoring vocabulary (`ChromeRefinement`, `LayoutRefinement`)
 - `crates/fret-ui`: runtime substrate (`LayoutStyle`, `FlexProps`, `GridProps`, `ScrollProps`, hit-test/paint rules)
 - `crates/fret-components-shadcn`: shadcn-style taxonomy surface (recipes should rely on the semantics below)
 
@@ -30,11 +30,11 @@ contracts.
 
 Fret deliberately splits “Tailwind-like” knobs by intent to avoid silent no-ops:
 
-- **ChromeRefinement** (`crates/fret-components-ui/src/style.rs`)
+- **ChromeRefinement** (`ecosystem/fret-ui-kit/src/style.rs`)
   - visual/chrome: padding, border, radius, bg/fg colors, min-height (for controls), etc.
   - applies to component widgets that implement `RefineStyle` / `StyledExt`.
   - may be interpreted as *symmetric* padding for many surfaces (see “Padding semantics”).
-- **LayoutRefinement** (`crates/fret-components-ui/src/style.rs`)
+- **LayoutRefinement** (`ecosystem/fret-ui-kit/src/style.rs`)
   - layout-only: margin, position/inset, size constraints, flex-item shorthands, aspect ratio.
   - **only applies in declarative authoring** (ADR 0057) via bridging helpers.
 - **Runtime layout contracts** (`crates/fret-ui/src/element.rs`, `crates/fret-ui/src/declarative.rs`)
@@ -101,7 +101,7 @@ Fret has a strict separation:
 - `LayoutStyle.overflow = Clip` is Tailwind-like `overflow-hidden` (paint + hit-test clip).
 - “Scrollable” behavior is **not** a boolean flag; it uses an explicit `Scroll` element
   (`crates/fret-ui/src/element.rs`).
-  - Component-layer helper: `crates/fret-components-ui/src/declarative/scroll.rs` (`overflow_scroll`)
+  - Component-layer helper: `ecosystem/fret-ui-kit/src/declarative/scroll.rs` (`overflow_scroll`)
 
 This avoids CSS-like ambiguous “overflow auto” semantics and keeps virtualization boundaries clear.
 

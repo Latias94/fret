@@ -25,10 +25,10 @@ Known gaps / follow-ups:
 1) **Focus scopes are not yet surfaced as a reusable component policy**
    - The runtime exposes a reusable mechanism (`focus_traverse_in_roots`) intended to be used by
      component-owned focus scopes.
-   - Partial: `fret-components-ui` now provides:
+   - Partial: `fret-ui-kit` now provides:
      - `primitives::focus_scope::{focus_trap, focus_trap_with_id}` for trap/loop composition, and
      - reusable “initial focus” / “restore focus” helpers used by the overlay system
-       (`crates/fret-components-ui/src/window_overlays/render.rs`).
+       (`ecosystem/fret-ui-kit/src/window_overlays/render.rs`).
    - Remaining work: extend the primitive to cover non-overlay subtrees (restore semantics when a
      scope unmounts without being a distinct overlay layer) and expose explicit auto-focus policies
      (e.g. prevent-scroll, focus guards) as needed.
@@ -79,7 +79,7 @@ either:
   - intercepting traversal commands in specific subtrees (future FocusScope policy, component-owned).
 
 This ADR does not introduce a shadcn/Radix-style `FocusScope` component in the runtime. A headless
-`FocusScope` policy belongs in `fret-components-ui` (see ADR 0067).
+`FocusScope` policy belongs in `fret-ui-kit` (see ADR 0067).
 
 ### 2) Modal barrier defines the traversal scope root (P0)
 

@@ -7,9 +7,9 @@ title: UI Subsystem Closure Map (fret-ui)
 This document is the **closure-oriented index** for Fret’s UI substrate and its immediate neighbors:
 
 - `crates/fret-ui` (mechanism-only runtime substrate)
-- `crates/fret-components-ui` (policy + headless infra)
+- `ecosystem/fret-ui-kit` (policy + headless infra)
 - `crates/fret-components-shadcn` (recipes + shadcn v4 surface)
-- `crates/fret-components-docking` (docking UI + policy)
+- `ecosystem/fret-ui-docking` (docking UI + policy)
 - `crates/fret-platform` (portable platform I/O contracts)
 - `crates/fret-runner-winit` (AccessKit bridge + winit glue)
 
@@ -141,7 +141,7 @@ Validation anchors:
 
 **Policy (components)**
 
-- `crates/fret-components-ui/src/window_overlays/*`
+- `ecosystem/fret-ui-kit/src/window_overlays/*`
 - shadcn surfaces in `crates/fret-components-shadcn/src/*`
 
 **Demo harness**
@@ -272,7 +272,7 @@ Validation anchors:
 
 **Code entry points**
 
-- Docking UI/policy: `crates/fret-components-docking/src/dock/*`
+- Docking UI/policy: `ecosystem/fret-ui-docking/src/dock/*`
 - Docking demo (baseline): `crates/fret-demo/src/docking_demo.rs`
 - Docking arbitration harness (ADR 0072 conformance): `crates/fret-demo/src/docking_arbitration_demo.rs`
 - Conformance checklist: `docs/docking-arbitration-checklist.md`
@@ -317,7 +317,7 @@ This is the “do it now or pay later” list, ordered by expected rewrite cost.
 
 2. **Docking + overlay + viewport capture conformance**
    - Status:
-     - targeted regressions exist in `crates/fret-components-docking/src/dock/tests.rs`,
+     - targeted regressions exist in `ecosystem/fret-ui-docking/src/dock/tests.rs`,
      - end-to-end harness exists in `crates/fret-demo/src/docking_arbitration_demo.rs`,
      - manual checklist lives in `docs/docking-arbitration-checklist.md`.
    - Remaining: expand coverage for cross-window edge cases (tear-off + drag cancel + modal barrier) and any platform-specific pointer capture quirks.

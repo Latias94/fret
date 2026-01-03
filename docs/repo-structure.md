@@ -59,8 +59,8 @@ Rule of thumb:
 Common examples:
 
 - Component/policy layers built on top of `fret-ui`:
-  - `fret-ui-kit` (was `fret-components-ui`)
-  - `fret-ui-docking` (was `fret-components-docking`)
+  - `fret-ui-kit` (was `fret-ui-kit`)
+  - `fret-ui-docking` (was `fret-ui-docking`)
   - `fret-ui-shadcn` (was `fret-components-shadcn`)
 - “App kit” / default app policies:
   - `fret-app-kit` (was `fret-components-app`)

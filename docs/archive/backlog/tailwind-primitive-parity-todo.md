@@ -22,7 +22,7 @@ composition and shadcn-style component parity.
 
 ## Scope and constraints
 
-- Scope: `crates/fret-components-ui` (typed primitives + composition helpers) and the minimal
+- Scope: `ecosystem/fret-ui-kit` (typed primitives + composition helpers) and the minimal
   bridging required in `crates/fret-ui` to make those primitives real in **declarative** layout.
 - Non-goals:
   - A runtime Tailwind class parser.
@@ -44,14 +44,14 @@ composition and shadcn-style component parity.
   - Styling vocabulary usage: `repo-ref/gpui-component/crates/ui/src/styled.rs`
   - Theme keys (semantic palette): `repo-ref/gpui-component/crates/ui/src/theme/default-theme.json`
 - Fret:
-  - Typed primitive surface: `crates/fret-components-ui/src/style.rs`, `crates/fret-components-ui/src/styled.rs`
-  - Declarative bridging: `crates/fret-components-ui/src/declarative/style.rs`
+  - Typed primitive surface: `ecosystem/fret-ui-kit/src/style.rs`, `ecosystem/fret-ui-kit/src/styled.rs`
+  - Declarative bridging: `ecosystem/fret-ui-kit/src/declarative/style.rs`
   - Runtime layout vocabulary: `crates/fret-ui/src/element.rs`, `crates/fret-ui/src/declarative.rs`
 
 ## Current primitive baseline (what exists today)
 
 - Typed scales:
-  - `Space` + `Radius` in `crates/fret-components-ui/src/style.rs`
+  - `Space` + `Radius` in `ecosystem/fret-ui-kit/src/style.rs`
   - Theme extension keys: `component.space.*`, `component.radius.*`
   - Fallback behavior to baseline `metric.*` (see `docs/archive/backlog/ui-kit-gap.md`)
 - Style patches (“Tailwind-like”), split by intent:
@@ -61,7 +61,7 @@ composition and shadcn-style component parity.
   - `Styled<T>` is intentionally **chrome-only** (to avoid “layout no-ops” on retained widgets).
   - Layout-like APIs live on `LayoutRefinement` and are consumed by declarative helpers.
 - shadcn-ish polish primitives:
-  - Focus ring (ADR 0061): `component.ring.width`, `component.ring.offset` (see `crates/fret-components-ui/src/declarative/style.rs`)
+  - Focus ring (ADR 0061): `component.ring.width`, `component.ring.offset` (see `ecosystem/fret-ui-kit/src/declarative/style.rs`)
   - Shadows/elevation (ADR 0060): `component.shadow.{sm,md,lg}.*`
 
 ## Parity target (gpui-component “Tailwind-like” surface, in practice)
@@ -88,7 +88,7 @@ Fret does **not** need to replicate every numeric preset from gpui-component, bu
 - [x] Split style patches into `ChromeRefinement` vs `LayoutRefinement` (MVP 59).
   - Acceptance: layout-like APIs are impossible to apply “silently” to retained widgets; either they
     apply in declarative composition, or they must be wrapped in an explicit layout container.
-- [x] Add per-edge padding primitives to `fret-components-ui` (Tailwind parity).
+- [x] Add per-edge padding primitives to `fret-ui-kit` (Tailwind parity).
   - Add `pt/pr/pb/pl` (and `p*` convenience) at the typed layer.
   - Acceptance: common shadcn input/icon overlays (padding only on one side) can be expressed without
     bespoke widget props.
@@ -115,7 +115,7 @@ Fret does **not** need to replicate every numeric preset from gpui-component, bu
 - [x] Add `gap-x` / `gap-y` semantics (or decide to keep a single `gap` and document it).
   - Implemented for component-layer stacks: `HStackProps::gap_x` and `VStackProps::gap_y`.
 - [x] Add typed alignment wrappers (`items_*`, `justify_*`) to avoid leaking runtime enums into recipes.
-  - `Justify` / `Items` live in `crates/fret-components-ui/src/style.rs` and are used by `hstack/vstack`.
+  - `Justify` / `Items` live in `ecosystem/fret-ui-kit/src/style.rs` and are used by `hstack/vstack`.
 - [x] Add typed sizing wrappers (`w_*`, `h_*`, `min_w_*`, `max_w_*`, `size_full`, `w_full`, `h_full`).
   - Decide which are “scale-based” (Space) vs “absolute” (Px) vs “semantic” (`full`).
   - Note: we currently provide `LayoutRefinement::{w/h/min/max,w_full,h_full,size_full}`; the
@@ -123,12 +123,12 @@ Fret does **not** need to replicate every numeric preset from gpui-component, bu
 - [x] Add typed overflow wrappers (`overflow_hidden`, `overflow_scroll`, `overflow_x_*`, `overflow_y_*`)
   and ensure paint/hit-test semantics stay consistent (ADR 0057).
   - `overflow_scroll` is implemented as an explicit scroll element wrapper:
-    `crates/fret-components-ui/src/declarative/scroll.rs`
+    `ecosystem/fret-ui-kit/src/declarative/scroll.rs`
 - [x] Add typed text helpers needed by shadcn recipes: `truncate`, `whitespace_nowrap`, and a minimal
   `text_*` size vocabulary at the component surface (not necessarily at the runtime substrate).
-  - [x] `truncate` helper exists: `crates/fret-components-ui/src/declarative/text.rs`
-  - [x] `whitespace-nowrap` helper exists: `crates/fret-components-ui/src/declarative/text.rs`
-  - [x] Minimal `text-sm` / `text-base` helpers exist: `crates/fret-components-ui/src/declarative/text.rs`
+  - [x] `truncate` helper exists: `ecosystem/fret-ui-kit/src/declarative/text.rs`
+  - [x] `whitespace-nowrap` helper exists: `ecosystem/fret-ui-kit/src/declarative/text.rs`
+  - [x] Minimal `text-sm` / `text-base` helpers exist: `ecosystem/fret-ui-kit/src/declarative/text.rs`
 
 ### P2 — explicitly decide on non-trivial Tailwind semantics (avoid accidental commitments)
 
@@ -142,10 +142,10 @@ Fret does **not** need to replicate every numeric preset from gpui-component, bu
 ## Implementation notes (where code will likely land)
 
 - Typed primitives and fluent API surface:
-  - `crates/fret-components-ui/src/style.rs`
-  - `crates/fret-components-ui/src/styled.rs`
+  - `ecosystem/fret-ui-kit/src/style.rs`
+  - `ecosystem/fret-ui-kit/src/styled.rs`
 - Declarative bridging helpers (style patch → `fret-ui` props):
-  - `crates/fret-components-ui/src/declarative/style.rs`
+  - `ecosystem/fret-ui-kit/src/declarative/style.rs`
 - Runtime layout vocabulary (should already exist per ADR 0057/0062; only extend if gaps remain):
   - `crates/fret-ui/src/element.rs` and `crates/fret-ui/src/declarative.rs`
 

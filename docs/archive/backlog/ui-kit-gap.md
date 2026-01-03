@@ -35,7 +35,7 @@ Scope: this is a pragmatic “what’s missing / what’s broken / what’s next
 - Menu request store: `ContextMenuService` + `ContextMenuRequest` (surface moved to component kit)
 - `TreeView` (legacy, gated), `TextArea`, `ResizableSplit`, `Dock` (docking + multi-window)
 
-### Component kit (`crates/fret-components-shadcn` on top of `crates/fret-components-ui`)
+### Component kit (`crates/fret-components-shadcn` on top of `ecosystem/fret-ui-kit`)
 
 - Buttons: `Button`, `IconButton`, `Toolbar`
 - Inputs: `TextField`, `Checkbox`, `Switch`, `Select`, `Slider`
@@ -93,7 +93,7 @@ Tracking:
 - This should be solved by promoting sizing/density to a single component-level contract (MVP 47):
   `Size` (xs/sm/md/lg) + derived control metrics (list padding/row gaps/input heights), inspired by
   gpui-component’s `Size` + `StyleSized` helpers (`repo-ref/gpui-component/crates/ui/src/styled.rs`).
-  - Fret now uses a shared `fret-components-ui` list style helper to keep multi-line spacing consistent
+  - Fret now uses a shared `fret-ui-kit` list style helper to keep multi-line spacing consistent
     across list-like components (`ListView`, `CommandList`).
 
 ### VirtualList hover not showing on first pointer move (fixed)
@@ -125,7 +125,7 @@ optional integration with `@tanstack/react-virtual` / `react-window`. For Fret, 
 
 - `Command` (command UI): searchable list + groups + shortcuts + keyboard navigation
 - `Popover` + `HoverCard` equivalents: anchored overlays and hover previews
-- `Toast`/`Sonner`: transient notifications + stacking + timers (prototype implemented in `crates/fret-components-ui` today; intended shadcn surface lives in `crates/fret-components-shadcn`)
+- `Toast`/`Sonner`: transient notifications + stacking + timers (prototype implemented in `ecosystem/fret-ui-kit` today; intended shadcn surface lives in `crates/fret-components-shadcn`)
 - `Menubar`: application menus (native integration later; custom first is ok)
 - `Combobox`: typeahead + filtering + virtualization for large option sets
 
@@ -170,7 +170,7 @@ Practical gaps to prioritize for parity:
    - migrate `Command` and at least one “tree-like” surface to prove the model.
 3. Complete the runtime/components boundary tightening:
    - keep `fret-ui` as the runtime substrate + perf primitives,
-   - ensure shadcn-like surfaces and policies stay in `crates/fret-components-shadcn` (built on `crates/fret-components-ui`),
+   - ensure shadcn-like surfaces and policies stay in `crates/fret-components-shadcn` (built on `ecosystem/fret-ui-kit`),
    - remove remaining UI-kit-shaped runtime widgets once composition exists.
 
 Update:

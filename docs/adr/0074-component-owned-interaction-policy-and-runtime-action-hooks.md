@@ -7,7 +7,7 @@ Status: Accepted
 The action-hook mechanism and its initial migrations are implemented:
 
 - Runtime provides `UiActionHost` + `ActionCx` and hook plumbing in `crates/fret-ui`.
-- Components use `fret-components-ui::declarative::action_hooks::ActionHooksExt` helpers.
+- Components use `fret-ui-kit::declarative::action_hooks::ActionHooksExt` helpers.
 - Outside-press observer and dismissal are expressed via hooks (ADR 0069) instead of runtime model writes.
 
 ## Context
@@ -34,7 +34,7 @@ We want:
 
 - `crates/fret-ui` to remain **mechanism-only** (routing, focus, hit-test, layout, layers, scroll,
   virtualization, placement, semantics output),
-- `crates/fret-components-ui` / `crates/fret-components-shadcn` to own **interaction policy**
+- `ecosystem/fret-ui-kit` / `crates/fret-components-shadcn` to own **interaction policy**
   (Radix/APG outcomes, dismissal rules, roving/typeahead/menu navigation, selection policies),
 - to keep a path for component code to run “on interaction” without adding new runtime policy
   variants.
@@ -49,7 +49,7 @@ We want:
 - dismissal and focus-restore rules for overlays,
 - roving focus/typeahead/menu navigation policies.
 
-These belong to `crates/fret-components-ui` (infra/headless) and `crates/fret-components-shadcn`
+These belong to `ecosystem/fret-ui-kit` (infra/headless) and `crates/fret-components-shadcn`
 (taxonomy + recipes).
 
 ### 2) Naming (locked for this migration)
@@ -105,7 +105,7 @@ contract surface mechanism-only (ADR 0066):
 Component code should implement these behaviors via action hooks (ADR 0074):
 
 - `ElementCx::{pressable_*, dismissible_*, roving_*}`
-- `fret-components-ui::declarative::action_hooks::ActionHooksExt` (recommended convenience layer)
+- `fret-ui-kit::declarative::action_hooks::ActionHooksExt` (recommended convenience layer)
 
 ## Consequences
 
@@ -128,10 +128,10 @@ Component code should implement these behaviors via action hooks (ADR 0074):
 ## Migration Plan (High-Level)
 
 1) Add action-hook substrate (Experimental) + tests in `fret-ui`. (done)
-2) Implement component-layer helpers in `fret-components-ui`: (done)
+2) Implement component-layer helpers in `fret-ui-kit`: (done)
    - `pressable_toggle(...)`, `pressable_set(...)`, `dismissible(...)`, roving helpers.
 3) Migrate `fret-components-shadcn` usage off runtime shortcut props. (done)
-4) Replace runtime-owned dismissal policy with `fret-components-ui/window_overlays` policy that composes runtime layers + outside-press observer. (done)
+4) Replace runtime-owned dismissal policy with `fret-ui-kit/window_overlays` policy that composes runtime layers + outside-press observer. (done)
 5) Deprecate and remove legacy shortcut props (Compatibility → removed) once no longer used. (done)
 
 ## References

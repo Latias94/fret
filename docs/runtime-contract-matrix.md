@@ -4,7 +4,7 @@ This document is a *living checklist* for what the `crates/fret-ui` runtime prov
 exists, and which mature ecosystem reference we align with.
 
 It is intentionally **mechanism-only**: component policies and UI recipes belong in
-`crates/fret-components-ui` and `crates/fret-components-shadcn`.
+`ecosystem/fret-ui-kit` and `crates/fret-components-shadcn`.
 
 For a closure-oriented, module-by-module index (contracts → code → tests → demos), see:
 
@@ -13,7 +13,7 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 ## Layering (GPUI mapping)
 
 - `gpui` (runtime substrate) ≈ `crates/fret-ui`
-- `gpui-component/crates/ui` (policy + recipes) ≈ `crates/fret-components-ui` (infra) +
+- `gpui-component/crates/ui` (policy + recipes) ≈ `ecosystem/fret-ui-kit` (infra) +
   `crates/fret-components-shadcn` (taxonomy + recipes)
 
 ## Contracts (P0)
@@ -44,7 +44,7 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 - **Related contract(s):**
   - Cross-frame anchor geometry for declarative elements: `crates/fret-ui/src/elements/mod.rs` (`bounds_for_element`, `root_bounds_for_element`)
   - RenderTransform-aware anchoring: `docs/adr/0083-render-transform-hit-testing.md` + `crates/fret-ui/src/elements/mod.rs` (`visual_bounds_for_element`, `last_visual_bounds_for_element`)
-  - Stable overlay owner identity for declarative triggers: `crates/fret-ui/src/elements/mod.rs` (`GlobalElementId`), consumed via `crates/fret-components-ui` (`OverlayOwnerId`)
+  - Stable overlay owner identity for declarative triggers: `crates/fret-ui/src/elements/mod.rs` (`GlobalElementId`), consumed via `ecosystem/fret-ui-kit` (`OverlayOwnerId`)
 
 ### Declarative layout vocabulary (Tailwind/CSS semantics)
 
