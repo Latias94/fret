@@ -4,6 +4,37 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-fret-core = { path = "../fret-core" }
-fret-app = { path = "../fret-app" }
-fret-ui = { path = "../fret-ui" }
+fret-core = { path = "../fret-core", optional = true }
+fret-app = { path = "../fret-app", optional = true }
+fret-ui = { path = "../fret-ui", optional = true }
+fret-runtime = { path = "../fret-runtime", optional = true }
+fret-render = { path = "../fret-render", optional = true }
+fret-platform = { path = "../fret-platform", optional = true }
+fret-platform-native = { path = "../fret-platform-native", optional = true }
+fret-platform-web = { path = "../fret-platform-web", optional = true }
+fret-platform-winit = { path = "../fret-platform-winit", optional = true }
+fret-runner-winit = { path = "../fret-runner-winit", optional = true }
+fret-runner-winit-wgpu = { path = "../fret-runner-winit-wgpu", optional = true }
+fret-fonts = { path = "../fret-fonts", optional = true }
+
+[features]
+default = ["core", "app", "ui"]
+
+core = ["dep:fret-core"]
+app = ["dep:fret-app", "core"]
+ui = ["dep:fret-ui", "core"]
+runtime = ["dep:fret-runtime", "core"]
+render = ["dep:fret-render", "core"]
+fonts = ["dep:fret-fonts"]
+
+platform-contracts = ["dep:fret-platform", "core"]
+platform-native = ["dep:fret-platform-native", "platform-contracts"]
+platform-web = ["dep:fret-platform-web", "core", "runtime"]
+platform-winit = ["dep:fret-platform-winit"]
+
+runner-winit = ["dep:fret-runner-winit"]
+runner-winit-wgpu = ["dep:fret-runner-winit-wgpu"]
+
+# Convenience bundles (optional).
+native-wgpu = ["runner-winit-wgpu", "platform-native", "platform-winit", "render", "runtime"]
+web = ["runner-winit", "platform-web", "render", "runtime"]

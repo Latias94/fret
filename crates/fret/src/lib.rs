@@ -1,11 +1,71 @@
-pub mod app {
-    pub use fret_app::*;
-}
-
+#[cfg(feature = "core")]
 pub mod core {
     pub use fret_core::*;
 }
 
+#[cfg(feature = "app")]
+pub mod app {
+    pub use fret_app::*;
+}
+
+#[cfg(feature = "ui")]
 pub mod ui {
     pub use fret_ui::*;
+}
+
+#[cfg(feature = "runtime")]
+pub mod runtime {
+    pub use fret_runtime::*;
+}
+
+#[cfg(feature = "render")]
+pub mod render {
+    pub use fret_render::*;
+}
+
+#[cfg(feature = "platform-contracts")]
+pub mod platform {
+    pub use fret_platform::*;
+}
+
+#[cfg(feature = "platform-native")]
+pub mod platform_native {
+    pub use fret_platform_native::*;
+}
+
+#[cfg(feature = "platform-web")]
+pub mod platform_web {
+    pub use fret_platform_web::*;
+}
+
+#[cfg(feature = "platform-winit")]
+pub mod platform_winit {
+    pub use fret_platform_winit::*;
+}
+
+#[cfg(feature = "runner-winit")]
+pub mod runner_winit {
+    pub use fret_runner_winit::*;
+}
+
+#[cfg(feature = "runner-winit-wgpu")]
+pub mod runner_winit_wgpu {
+    pub use fret_runner_winit_wgpu::*;
+}
+
+pub mod prelude {
+    #[cfg(feature = "app")]
+    pub use fret_app::{App, Effect};
+
+    #[cfg(feature = "core")]
+    pub use fret_core::{AppWindowId, CursorIcon, Event, Point, Px, Rect, Scene, Size};
+
+    #[cfg(feature = "runtime")]
+    pub use fret_runtime::{
+        CommandId, Effect as RuntimeEffect, GlobalsHost, PlatformCapabilities, PlatformCompletion,
+        TickId, UiHost,
+    };
+
+    #[cfg(feature = "ui")]
+    pub use fret_ui::{ElementContext, ElementRuntime, UiTree};
 }
