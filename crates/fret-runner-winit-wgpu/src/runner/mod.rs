@@ -2461,7 +2461,47 @@ impl<D: WinitDriver> WinitRunner<D> {
                     }
                     Effect::ImeAllow { window, enabled } => {
                         if let Some(state) = self.windows.get_mut(window) {
-                            state.window.set_ime_allowed(enabled);
+                            if enabled {
+                                let rect = state.ime_cursor_area.unwrap_or_else(|| Rect {
+                                    origin: fret_core::Point::new(
+                                        fret_core::Px(0.0),
+                                        fret_core::Px(0.0),
+                                    ),
+                                    size: fret_core::Size::new(
+                                        fret_core::Px(1.0),
+                                        fret_core::Px(1.0),
+                                    ),
+                                });
+
+                                let request_data = winit::window::ImeRequestData::default()
+                                    .with_cursor_area(
+                                        winit::dpi::LogicalPosition::new(
+                                            rect.origin.x.0,
+                                            rect.origin.y.0,
+                                        )
+                                        .into(),
+                                        winit::dpi::LogicalSize::new(
+                                            rect.size.width.0,
+                                            rect.size.height.0,
+                                        )
+                                        .into(),
+                                    );
+
+                                let caps = winit::window::ImeCapabilities::new().with_cursor_area();
+                                let Some(enable) =
+                                    winit::window::ImeEnableRequest::new(caps, request_data)
+                                else {
+                                    state.ime_allowed = enabled;
+                                    continue;
+                                };
+                                let _ = state
+                                    .window
+                                    .request_ime_update(winit::window::ImeRequest::Enable(enable));
+                            } else {
+                                let _ = state
+                                    .window
+                                    .request_ime_update(winit::window::ImeRequest::Disable);
+                            }
                             state.ime_allowed = enabled;
                         }
                     }
@@ -2483,10 +2523,24 @@ impl<D: WinitDriver> WinitRunner<D> {
                                 windows_ime::set_ime_cursor_area(state.window.as_ref(), rect);
                             }
                             #[cfg(not(windows))]
-                            state.window.set_ime_cursor_area(
-                                winit::dpi::LogicalPosition::new(rect.origin.x.0, rect.origin.y.0),
-                                winit::dpi::LogicalSize::new(rect.size.width.0, rect.size.height.0),
-                            );
+                            {
+                                let request_data = winit::window::ImeRequestData::default()
+                                    .with_cursor_area(
+                                        winit::dpi::LogicalPosition::new(
+                                            rect.origin.x.0,
+                                            rect.origin.y.0,
+                                        )
+                                        .into(),
+                                        winit::dpi::LogicalSize::new(
+                                            rect.size.width.0,
+                                            rect.size.height.0,
+                                        )
+                                        .into(),
+                                    );
+                                let _ = state.window.request_ime_update(
+                                    winit::window::ImeRequest::Update(request_data),
+                                );
+                            }
                         }
                     }
                     Effect::CursorSetIcon { window, icon } => {

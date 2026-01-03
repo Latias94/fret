@@ -130,13 +130,11 @@ fn set_ime_cursor_area_via_winit(window: &dyn Window, rect: Rect) {
         );
     }
 
-    window.set_ime_cursor_area(
-        winit::dpi::Position::Physical(winit::dpi::PhysicalPosition::new(x, y)),
-        winit::dpi::Size::Physical(winit::dpi::PhysicalSize::new(
-            width.max(1) as u32,
-            height.max(1) as u32,
-        )),
+    let request_data = winit::window::ImeRequestData::default().with_cursor_area(
+        winit::dpi::PhysicalPosition::new(x, y).into(),
+        winit::dpi::PhysicalSize::new(width.max(1) as u32, height.max(1) as u32).into(),
     );
+    let _ = window.request_ime_update(winit::window::ImeRequest::Update(request_data));
 }
 
 fn set_ime_cursor_area_via_imm(window: &dyn Window, rect: Rect) {
