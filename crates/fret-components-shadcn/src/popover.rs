@@ -1,21 +1,20 @@
 use std::sync::Arc;
 
+use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
-use fret_components_ui::primitives::popper;
 use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     OverlayRequest, Radius, Space,
 };
 use fret_core::{
-    Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, Size, TextOverflow, TextStyle,
-    TextWrap, Transform2D,
+    Edges, FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
-    PositionStyle, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
+    PositionStyle, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{
     Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
@@ -240,11 +239,7 @@ impl Popover {
                         size: Size::new(arrow_size, arrow_size),
                         padding: Edges::all(arrow_padding),
                     });
-                    let arrow_protrusion = if arrow {
-                        popper::default_arrow_protrusion(arrow_size)
-                    } else {
-                        Px(0.0)
-                    };
+                    let arrow_protrusion = popper_arrow::arrow_protrusion(arrow, arrow_size);
 
                     let layout = overlay::popper_layout_sized(
                         overlay::outer_bounds_with_window_margin(cx.bounds, window_margin),
@@ -265,8 +260,7 @@ impl Popover {
                     );
 
                     let placed = layout.rect;
-                    let wrapper_insets =
-                        popper::wrapper_insets_for_arrow(&layout, arrow_protrusion);
+                    let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
                     let extra_left = wrapper_insets.left;
                     let extra_right = wrapper_insets.right;
                     let extra_top = wrapper_insets.top;
@@ -279,70 +273,17 @@ impl Popover {
                         .color_by_key("border")
                         .unwrap_or(theme.colors.panel_border);
 
-                    let arrow_el = layout.arrow.map(|arrow| {
-                        let (left, top) = match arrow.side {
-                            Side::Top => (
-                                Px(extra_left.0 + arrow.offset.0),
-                                Px(extra_top.0 - arrow_size.0 * 0.5),
-                            ),
-                            Side::Bottom => (
-                                Px(extra_left.0 + arrow.offset.0),
-                                Px(extra_top.0 + placed.size.height.0 - arrow_size.0 * 0.5),
-                            ),
-                            Side::Left => (
-                                Px(extra_left.0 - arrow_size.0 * 0.5),
-                                Px(extra_top.0 + arrow.offset.0),
-                            ),
-                            Side::Right => (
-                                Px(extra_left.0 + placed.size.width.0 - arrow_size.0 * 0.5),
-                                Px(extra_top.0 + arrow.offset.0),
-                            ),
-                        };
-
-                        let layout = LayoutStyle {
-                            position: PositionStyle::Absolute,
-                            inset: InsetStyle {
-                                left: Some(left),
-                                top: Some(top),
-                                ..Default::default()
-                            },
-                            size: SizeStyle {
-                                width: Length::Px(arrow_size),
-                                height: Length::Px(arrow_size),
-                                ..Default::default()
-                            },
-                            overflow: Overflow::Visible,
-                            ..Default::default()
-                        };
-
-                        let center = Point::new(Px(arrow_size.0 * 0.5), Px(arrow_size.0 * 0.5));
-                        let transform = Transform2D::rotation_about_degrees(45.0, center);
-
-                        cx.visual_transform_props(
-                            VisualTransformProps { layout, transform },
-                            move |cx| {
-                                vec![cx.container(
-                                    ContainerProps {
-                                        layout: LayoutStyle {
-                                            size: SizeStyle {
-                                                width: Length::Fill,
-                                                height: Length::Fill,
-                                                ..Default::default()
-                                            },
-                                            ..Default::default()
-                                        },
-                                        padding: Edges::all(Px(0.0)),
-                                        background: Some(bg),
-                                        shadow: None,
-                                        border: Edges::all(Px(1.0)),
-                                        border_color: Some(border),
-                                        corner_radii: Corners::all(Px(0.0)),
-                                    },
-                                    |_cx| Vec::new(),
-                                )]
-                            },
-                        )
-                    });
+                    let arrow_el = popper_arrow::diamond_arrow_element(
+                        cx,
+                        &layout,
+                        wrapper_insets,
+                        arrow_size,
+                        DiamondArrowStyle {
+                            bg,
+                            border: Some(border),
+                            border_width: Px(1.0),
+                        },
+                    );
 
                     let wrapper = if let Some(arrow_el) = arrow_el {
                         cx.container(

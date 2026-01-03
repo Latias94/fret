@@ -6,18 +6,16 @@ use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
 use fret_components_ui::primitives::menu;
-use fret_components_ui::primitives::popper;
 use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
-    Edges, KeyCode, MouseButton, Point, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
-    Transform2D,
+    Edges, KeyCode, MouseButton, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::PointerDownCx;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PointerRegionProps, PointerRegionState, PositionStyle, PressableProps,
-    RovingFlexProps, RovingFocusProps, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
+    RovingFlexProps, RovingFocusProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{
     Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
@@ -25,6 +23,7 @@ use fret_ui::overlay_placement::{
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
+use crate::popper_arrow::{self, DiamondArrowStyle};
 
 #[derive(Debug, Clone)]
 pub enum ContextMenuEntry {
@@ -280,11 +279,7 @@ impl ContextMenu {
                         size: Size::new(arrow_size, arrow_size),
                         padding: Edges::all(arrow_padding),
                     });
-                    let arrow_protrusion = if arrow {
-                        popper::default_arrow_protrusion(arrow_size)
-                    } else {
-                        Px(0.0)
-                    };
+                    let arrow_protrusion = popper_arrow::arrow_protrusion(arrow, arrow_size);
 
                     let anchor_rect = overlay::anchor_rect_from_point(anchor);
                     let layout = overlay::popper_layout_sized(
@@ -297,7 +292,7 @@ impl ContextMenu {
                         AnchoredPanelOptions {
                             direction: LayoutDirection::Ltr,
                             offset: Offset {
-                                main_axis: if arrow { arrow_protrusion } else { Px(0.0) },
+                                main_axis: arrow_protrusion,
                                 cross_axis: Px(0.0),
                                 alignment_axis: None,
                             },
@@ -306,7 +301,7 @@ impl ContextMenu {
                     );
 
                     let placed = layout.rect;
-                    let wrapper_insets = popper::wrapper_insets_for_arrow(&layout, arrow_protrusion);
+                    let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
                     let extra_left = wrapper_insets.left;
                     let extra_right = wrapper_insets.right;
                     let extra_top = wrapper_insets.top;
@@ -320,72 +315,17 @@ impl ContextMenu {
                     let pad_x = MetricRef::space(Space::N3).resolve(&theme);
                     let pad_y = MetricRef::space(Space::N2).resolve(&theme);
 
-                    let arrow_bg = theme.colors.panel_background;
-                    let arrow_border = border;
-                    let arrow_el = layout.arrow.map(|arrow| {
-                        let (left, top) = match arrow.side {
-                            Side::Top => (
-                                Px(extra_left.0 + arrow.offset.0),
-                                Px(extra_top.0 - arrow_size.0 * 0.5),
-                            ),
-                            Side::Bottom => (
-                                Px(extra_left.0 + arrow.offset.0),
-                                Px(extra_top.0 + placed.size.height.0 - arrow_size.0 * 0.5),
-                            ),
-                            Side::Left => (
-                                Px(extra_left.0 - arrow_size.0 * 0.5),
-                                Px(extra_top.0 + arrow.offset.0),
-                            ),
-                            Side::Right => (
-                                Px(extra_left.0 + placed.size.width.0 - arrow_size.0 * 0.5),
-                                Px(extra_top.0 + arrow.offset.0),
-                            ),
-                        };
-
-                        let layout = LayoutStyle {
-                            position: PositionStyle::Absolute,
-                            inset: InsetStyle {
-                                left: Some(left),
-                                top: Some(top),
-                                ..Default::default()
-                            },
-                            size: SizeStyle {
-                                width: Length::Px(arrow_size),
-                                height: Length::Px(arrow_size),
-                                ..Default::default()
-                            },
-                            overflow: Overflow::Visible,
-                            ..Default::default()
-                        };
-
-                        let center = Point::new(Px(arrow_size.0 * 0.5), Px(arrow_size.0 * 0.5));
-                        let transform = Transform2D::rotation_about_degrees(45.0, center);
-
-                        cx.visual_transform_props(
-                            VisualTransformProps { layout, transform },
-                            move |cx| {
-                                vec![cx.container(
-                                    ContainerProps {
-                                        layout: LayoutStyle {
-                                            size: SizeStyle {
-                                                width: Length::Fill,
-                                                height: Length::Fill,
-                                                ..Default::default()
-                                            },
-                                            ..Default::default()
-                                        },
-                                        padding: Edges::all(Px(0.0)),
-                                        background: Some(arrow_bg),
-                                        shadow: None,
-                                        border: Edges::all(Px(1.0)),
-                                        border_color: Some(arrow_border),
-                                        corner_radii: fret_core::Corners::all(Px(0.0)),
-                                    },
-                                    |_cx| Vec::new(),
-                                )]
-                            },
-                        )
-                    });
+                    let arrow_el = popper_arrow::diamond_arrow_element(
+                        cx,
+                        &layout,
+                        wrapper_insets,
+                        arrow_size,
+                        DiamondArrowStyle {
+                            bg: theme.colors.panel_background,
+                            border: Some(border),
+                            border_width: Px(1.0),
+                        },
+                    );
 
                     let content = cx.semantics(
                         SemanticsProps {

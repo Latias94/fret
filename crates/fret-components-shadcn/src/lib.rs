@@ -40,6 +40,7 @@ pub mod label;
 pub mod menubar;
 pub mod pagination;
 pub mod popover;
+mod popper_arrow;
 pub mod progress;
 pub mod radio_group;
 pub mod resizable;
