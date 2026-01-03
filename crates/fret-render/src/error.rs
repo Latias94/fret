@@ -28,4 +28,10 @@ pub enum RenderError {
 
     #[error("surface reported no alpha modes")]
     SurfaceNoAlphaModes,
+
+    #[error("wgpu surface get_current_texture failed")]
+    SurfaceAcquireFailed {
+        #[source]
+        source: wgpu::SurfaceError,
+    },
 }

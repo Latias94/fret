@@ -673,24 +673,6 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                         return;
                     };
 
-                    let (frame, view) = match state.surface.get_current_frame_view() {
-                        Ok(v) => v,
-                        Err(wgpu::SurfaceError::Lost) => {
-                            let size = state.window.surface_size();
-                            self.resize_surface(app_window, size.width, size.height);
-                            return;
-                        }
-                        Err(wgpu::SurfaceError::OutOfMemory) => {
-                            event_loop.exit();
-                            return;
-                        }
-                        Err(
-                            wgpu::SurfaceError::Outdated
-                            | wgpu::SurfaceError::Timeout
-                            | wgpu::SurfaceError::Other,
-                        ) => return,
-                    };
-
                     let scale_factor = state.window.scale_factor() as f32;
                     let physical = state.window.surface_size();
                     let logical: winit::dpi::LogicalSize<f32> =
@@ -772,23 +754,47 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                         }
                     }
 
-                    let ui_cmd = renderer.render_scene(
-                        &context.device,
-                        &context.queue,
-                        fret_render::RenderSceneParams {
-                            format: state.surface.format(),
-                            target_view: &view,
-                            scene: &state.scene,
-                            clear: self.config.clear_color,
-                            scale_factor,
-                            viewport_size: state.surface.size(),
-                        },
-                    );
+                    let draw_result = state.surface.present_with(&context.queue, |view| {
+                        let ui_cmd = renderer.render_scene(
+                            &context.device,
+                            &context.queue,
+                            fret_render::RenderSceneParams {
+                                format: state.surface.format(),
+                                target_view: view,
+                                scene: &state.scene,
+                                clear: self.config.clear_color,
+                                scale_factor,
+                                viewport_size: state.surface.size(),
+                            },
+                        );
 
-                    let mut cmd_buffers = engine_frame.command_buffers;
-                    cmd_buffers.push(ui_cmd);
-                    context.queue.submit(cmd_buffers);
-                    frame.present();
+                        let mut cmd_buffers = engine_frame.command_buffers;
+                        cmd_buffers.push(ui_cmd);
+                        cmd_buffers
+                    });
+
+                    if let Err(err) = draw_result {
+                        match err {
+                            fret_render::RenderError::SurfaceAcquireFailed {
+                                source: wgpu::SurfaceError::Lost,
+                            } => {
+                                let size = state.window.surface_size();
+                                self.resize_surface(app_window, size.width, size.height);
+                                return;
+                            }
+                            fret_render::RenderError::SurfaceAcquireFailed {
+                                source: wgpu::SurfaceError::OutOfMemory,
+                            } => {
+                                event_loop.exit();
+                                return;
+                            }
+                            fret_render::RenderError::SurfaceAcquireFailed { .. } => return,
+                            _ => {
+                                error!(?err, "render error");
+                                return;
+                            }
+                        }
+                    }
 
                     self.frame_id.0 = self.frame_id.0.saturating_add(1);
                     self.app.set_frame_id(self.frame_id);

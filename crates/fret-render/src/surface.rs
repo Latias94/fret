@@ -70,4 +70,19 @@ impl<'window> SurfaceState<'window> {
     pub fn size(&self) -> (u32, u32) {
         (self.config.width, self.config.height)
     }
+
+    pub fn present_with(
+        &self,
+        queue: &wgpu::Queue,
+        build_commands: impl FnOnce(&wgpu::TextureView) -> Vec<wgpu::CommandBuffer>,
+    ) -> Result<(), RenderError> {
+        let (frame, view) = self
+            .get_current_frame_view()
+            .map_err(|source| RenderError::SurfaceAcquireFailed { source })?;
+
+        let cmd_buffers = build_commands(&view);
+        queue.submit(cmd_buffers);
+        frame.present();
+        Ok(())
+    }
 }
