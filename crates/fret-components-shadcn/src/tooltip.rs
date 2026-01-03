@@ -3,6 +3,7 @@ use fret_components_ui::declarative::scheduling;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::hover_intent::{HoverIntentConfig, HoverIntentState};
 use fret_components_ui::overlay;
+use fret_components_ui::primitives::popper;
 use fret_components_ui::primitives::popper_content;
 use fret_components_ui::tooltip_provider;
 use fret_components_ui::{
@@ -13,9 +14,7 @@ use std::sync::Arc;
 
 use fret_core::{Edges, Px, Size, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, HoverRegionProps, LayoutStyle, Overflow, TextProps};
-use fret_ui::overlay_placement::{
-    Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
-};
+use fret_ui::overlay_placement::{Align, ArrowOptions, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
@@ -327,15 +326,12 @@ impl Tooltip {
                     side_offset,
                     side,
                     align,
-                    AnchoredPanelOptions {
-                        direction: LayoutDirection::Ltr,
-                        offset: Offset {
-                            main_axis: arrow_protrusion,
-                            cross_axis: Px(0.0),
-                            alignment_axis: None,
-                        },
-                        arrow: arrow_options,
-                    },
+                    popper::anchored_panel_options_for_popper_content(
+                        LayoutDirection::Ltr,
+                        arrow_protrusion,
+                        Px(0.0),
+                        arrow_options,
+                    ),
                 );
 
                 let placed = layout.rect;

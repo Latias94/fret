@@ -11,6 +11,7 @@ use fret_components_ui::declarative::scroll as decl_scroll;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::overlay;
+use fret_components_ui::primitives::popper;
 use fret_components_ui::primitives::popper_content;
 use fret_components_ui::recipes::input::{
     InputTokenKeys, input_chrome_container_props, resolve_input_chrome,
@@ -27,9 +28,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, TextProps,
 };
-use fret_ui::overlay_placement::{
-    Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
-};
+use fret_ui::overlay_placement::{Align, ArrowOptions, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -317,15 +316,12 @@ fn select_impl<H: UiHost>(
                         side_offset,
                         Side::Bottom,
                         Align::Start,
-                        AnchoredPanelOptions {
-                            direction: LayoutDirection::Ltr,
-                            offset: Offset {
-                                main_axis: arrow_protrusion,
-                                cross_axis: Px(0.0),
-                                alignment_axis: None,
-                            },
-                            arrow: arrow_options,
-                        },
+                        popper::anchored_panel_options_for_popper_content(
+                            LayoutDirection::Ltr,
+                            arrow_protrusion,
+                            Px(0.0),
+                            arrow_options,
+                        ),
                     );
 
                     let placed = layout.rect;

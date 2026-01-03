@@ -10,6 +10,30 @@ use fret_ui::overlay_placement::{
 
 pub use fret_ui::overlay_placement::{Align, ArrowLayout, ArrowOptions, LayoutDirection, Offset};
 
+/// Build `AnchoredPanelOptions` for popper-like floating content.
+///
+/// Radix `PopperContent` effectively adds an extra main-axis offset when an arrow is present
+/// (the arrow protrudes outside the panel rect), and supports a cross-axis alignment offset.
+///
+/// In Fret we keep `side_offset` (gap between anchor and panel) separate from the arrow
+/// protrusion, so callers pass `arrow_protrusion` here and keep `side_offset` for the solver.
+pub fn anchored_panel_options_for_popper_content(
+    direction: LayoutDirection,
+    arrow_protrusion: Px,
+    align_offset: Px,
+    arrow: Option<ArrowOptions>,
+) -> AnchoredPanelOptions {
+    AnchoredPanelOptions {
+        direction,
+        offset: Offset {
+            main_axis: arrow_protrusion,
+            cross_axis: align_offset,
+            alignment_axis: None,
+        },
+        arrow,
+    }
+}
+
 /// Computes an anchored popper layout (rect + optional arrow) with deterministic flip/clamp rules.
 pub fn popper_layout_sized(
     outer: Rect,

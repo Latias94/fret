@@ -2,6 +2,7 @@ use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
 use fret_components_ui::primitives::hover_intent::{self, HoverIntentConfig};
+use fret_components_ui::primitives::popper;
 use fret_components_ui::primitives::popper_content;
 use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayRequest,
@@ -9,9 +10,7 @@ use fret_components_ui::{
 };
 use fret_core::{Edges, Px, Size};
 use fret_ui::element::{AnyElement, HoverRegionProps, Overflow};
-use fret_ui::overlay_placement::{
-    Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
-};
+use fret_ui::overlay_placement::{Align, ArrowOptions, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 fn hover_card_content_chrome(theme: &Theme) -> ChromeRefinement {
@@ -242,15 +241,12 @@ impl HoverCard {
                     side_offset,
                     Side::Bottom,
                     align,
-                    AnchoredPanelOptions {
-                        direction: LayoutDirection::Ltr,
-                        offset: Offset {
-                            main_axis: arrow_protrusion,
-                            cross_axis: Px(0.0),
-                            alignment_axis: None,
-                        },
-                        arrow: arrow_options,
-                    },
+                    popper::anchored_panel_options_for_popper_content(
+                        LayoutDirection::Ltr,
+                        arrow_protrusion,
+                        Px(0.0),
+                        arrow_options,
+                    ),
                 );
 
                 let placed = layout.rect;

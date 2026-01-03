@@ -4,6 +4,7 @@ use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
+use fret_components_ui::primitives::popper;
 use fret_components_ui::primitives::popper_content;
 use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
@@ -17,9 +18,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, OpacityProps, Overflow, SemanticsProps,
     SizeStyle, TextProps,
 };
-use fret_ui::overlay_placement::{
-    Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
-};
+use fret_ui::overlay_placement::{Align, ArrowOptions, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -249,15 +248,12 @@ impl Popover {
                         side_offset,
                         side,
                         align,
-                        AnchoredPanelOptions {
-                            direction: LayoutDirection::Ltr,
-                            offset: Offset {
-                                main_axis: arrow_protrusion,
-                                cross_axis: align_offset,
-                                alignment_axis: None,
-                            },
-                            arrow: arrow_options,
-                        },
+                        popper::anchored_panel_options_for_popper_content(
+                            LayoutDirection::Ltr,
+                            arrow_protrusion,
+                            align_offset,
+                            arrow_options,
+                        ),
                     );
 
                     let placed = layout.rect;
