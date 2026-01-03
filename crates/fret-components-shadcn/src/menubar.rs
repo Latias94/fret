@@ -598,16 +598,12 @@ impl MenubarMenuEntries {
                                                                     enabled: item_enabled,
                                                                     focusable,
                                                                     focus_ring: Some(item_ring),
-                                                                    a11y: PressableA11y {
-                                                                        role: Some(
-                                                                            SemanticsRole::MenuItem,
-                                                                        ),
-                                                                        label: a11y_label
-                                                                            .or_else(|| {
-                                                                                Some(label.clone())
-                                                                            }),
-                                                                        ..Default::default()
-                                                                    }
+                                                                    a11y: menu::item::menu_item_a11y(
+                                                                        a11y_label.or_else(|| {
+                                                                            Some(label.clone())
+                                                                        }),
+                                                                        None,
+                                                                    )
                                                                     .with_collection_position(
                                                                         collection_index,
                                                                         item_count,

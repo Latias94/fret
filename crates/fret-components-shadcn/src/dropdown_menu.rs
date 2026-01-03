@@ -14,8 +14,8 @@ use fret_core::{
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
-    ScrollAxis, ScrollProps, SemanticsProps, SizeStyle, TextProps,
+    Overflow, PositionStyle, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis,
+    ScrollProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -634,13 +634,15 @@ impl DropdownMenu {
                                                                     enabled: !disabled,
                                                                     focusable: !disabled,
                                                                     focus_ring: Some(ring),
-                                                                    a11y: PressableA11y {
-                                                                        role: Some(SemanticsRole::MenuItem),
-                                                                        label: a11y_label,
-                                                                        expanded: has_submenu.then_some(is_open_submenu),
-                                                                        ..Default::default()
-                                                                    }
-                                                                    .with_collection_position(collection_index, item_count),
+                                                                    a11y: menu::item::menu_item_a11y(
+                                                                        a11y_label,
+                                                                        has_submenu
+                                                                            .then_some(is_open_submenu),
+                                                                    )
+                                                                    .with_collection_position(
+                                                                        collection_index,
+                                                                        item_count,
+                                                                    ),
                                                                     ..Default::default()
                                                                 };
 
@@ -937,11 +939,10 @@ impl DropdownMenu {
                                                                                 enabled: !disabled,
                                                                                 focusable: !disabled,
                                                                                 focus_ring: Some(ring),
-                                                                                a11y: PressableA11y {
-                                                                                    role: Some(SemanticsRole::MenuItem),
-                                                                                    label: a11y_label,
-                                                                                    ..Default::default()
-                                                                                }
+                                                                                a11y: menu::item::menu_item_a11y(
+                                                                                    a11y_label,
+                                                                                    None,
+                                                                                )
                                                                                 .with_collection_position(
                                                                                     collection_index,
                                                                                     item_count,

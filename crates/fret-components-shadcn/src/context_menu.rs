@@ -14,7 +14,7 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::action::PointerDownCx;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PointerRegionProps, PointerRegionState, PositionStyle, PressableA11y, PressableProps,
+    Overflow, PointerRegionProps, PointerRegionState, PositionStyle, PressableProps,
     RovingFlexProps, RovingFocusProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
@@ -369,11 +369,10 @@ impl ContextMenu {
                                                                 enabled: !disabled,
                                                                 focusable: !disabled,
                                                                 focus_ring: Some(ring),
-                                                                a11y: PressableA11y {
-                                                                    role: Some(SemanticsRole::MenuItem),
-                                                                    label: a11y_label,
-                                                                    ..Default::default()
-                                                                }
+                                                                a11y: menu::item::menu_item_a11y(
+                                                                    a11y_label,
+                                                                    None,
+                                                                )
                                                                 .with_collection_position(
                                                                     collection_index,
                                                                     item_count,
