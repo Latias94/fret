@@ -145,15 +145,42 @@ impl WebDemoApp {
 
     #[cfg(target_arch = "wasm32")]
     fn desired_surface_size(window: &Window) -> Option<PhysicalSize<u32>> {
+        fn url_debug_enabled() -> bool {
+            web_sys::window()
+                .and_then(|w| w.location().hash().ok())
+                .is_some_and(|h| h.contains("debug"))
+        }
+
         let canvas = window.canvas()?;
         let web_window = web_sys::window()?;
         let dpr = web_window.device_pixel_ratio().max(1.0);
         let css_w = canvas.client_width().max(0) as f64;
         let css_h = canvas.client_height().max(0) as f64;
-        Some(PhysicalSize::new(
+        let physical = PhysicalSize::new(
             (css_w * dpr).round().max(1.0) as u32,
             (css_h * dpr).round().max(1.0) as u32,
-        ))
+        );
+
+        // Important: wgpu's web surface is backed by the canvas *attribute* size, not CSS size.
+        if canvas.width() != physical.width {
+            canvas.set_width(physical.width);
+        }
+        if canvas.height() != physical.height {
+            canvas.set_height(physical.height);
+        }
+
+        if url_debug_enabled() {
+            web_sys::console::log_1(&JsValue::from_str(&format!(
+                "canvas css={}x{} dpr={:.2} backing={}x{}",
+                css_w,
+                css_h,
+                dpr,
+                canvas.width(),
+                canvas.height()
+            )));
+        }
+
+        Some(physical)
     }
 
     fn ensure_root(&mut self, bounds: Rect, services: &mut dyn UiServices) {
@@ -390,6 +417,11 @@ impl WebDemoApp {
         let (cur_w, cur_h) = gfx.surface_state.size();
         if (cur_w, cur_h) != (physical.width.max(1), physical.height.max(1)) {
             gfx.resize(physical);
+            #[cfg(target_arch = "wasm32")]
+            web_sys::console::log_1(&JsValue::from_str(&format!(
+                "surface resize -> {}x{} (from {}x{})",
+                physical.width, physical.height, cur_w, cur_h
+            )));
         }
 
         let bounds = gfx.ui_bounds(logical);
@@ -434,6 +466,37 @@ impl WebDemoApp {
         #[cfg(target_arch = "wasm32")]
         if scene.ops_len() == 0 {
             web_sys::console::warn_1(&JsValue::from_str("paint produced 0 scene ops"));
+        }
+        #[cfg(target_arch = "wasm32")]
+        if web_sys::window()
+            .and_then(|w| w.location().hash().ok())
+            .is_some_and(|h| h.contains("debug"))
+        {
+            use fret_core::scene::{DrawOrder, SceneOp};
+            use fret_core::{Color, Corners, Edges};
+
+            // Draw a tiny debug quad (unclipped, no text) to validate the wgpu pipeline end-to-end.
+            scene.push(SceneOp::Quad {
+                order: DrawOrder(u32::MAX),
+                rect: Rect::new(
+                    Point::new(Px(24.0), Px(24.0)),
+                    Size::new(Px(120.0), Px(120.0)),
+                ),
+                background: Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                },
+                border: Edges::all(Px(0.0)),
+                border_color: Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 0.0,
+                },
+                corner_radii: Corners::all(Px(0.0)),
+            });
         }
 
         let _ = gfx.render();
@@ -490,7 +553,18 @@ impl ApplicationHandler<()> for WebDemoApp {
         if let Some(canvas) = window.canvas() {
             let gfx_slot = self.gfx.clone();
             spawn_local(async move {
-                let (width, height) = (canvas.width().max(1), canvas.height().max(1));
+                // Resize the canvas backing store before creating/configuring the surface.
+                let (width, height) = {
+                    let web_window = web_sys::window().unwrap();
+                    let dpr = web_window.device_pixel_ratio().max(1.0);
+                    let css_w = canvas.client_width().max(0) as f64;
+                    let css_h = canvas.client_height().max(0) as f64;
+                    let w = (css_w * dpr).round().max(1.0) as u32;
+                    let h = (css_h * dpr).round().max(1.0) as u32;
+                    canvas.set_width(w);
+                    canvas.set_height(h);
+                    (w, h)
+                };
                 let (ctx, surface) = match WgpuContext::new_with_surface(
                     wgpu::SurfaceTarget::Canvas(canvas),
                 )
