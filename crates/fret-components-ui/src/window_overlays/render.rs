@@ -138,11 +138,24 @@ pub fn render<H: UiHost>(
         seen_popovers.insert(req.id);
 
         let focus_now = ui.focus();
-        let dismissable_branch_nodes: Vec<NodeId> = req
-            .dismissable_branches
-            .iter()
-            .filter_map(|branch| fret_ui::elements::node_for_element(app, window, *branch))
-            .collect();
+        // Radix-aligned default: treat the trigger as an implicit DismissableLayerBranch so clicks
+        // on the trigger don't count as "outside press" for this overlay layer.
+        //
+        // Without this, a trigger click while the popover is open can:
+        // - first close the popover via the outside-press observer pass, then
+        // - re-open it when the trigger toggles the open model on activate.
+        let mut dismissable_branch_nodes: Vec<NodeId> =
+            Vec::with_capacity(1 + req.dismissable_branches.len());
+        if let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, req.trigger) {
+            dismissable_branch_nodes.push(trigger_node);
+        }
+        dismissable_branch_nodes.extend(
+            req.dismissable_branches
+                .iter()
+                .filter_map(|branch| fret_ui::elements::node_for_element(app, window, *branch)),
+        );
+        let mut seen: HashSet<NodeId> = HashSet::with_capacity(dismissable_branch_nodes.len());
+        dismissable_branch_nodes.retain(|id| seen.insert(*id));
 
         let mut open_now = app.models().get_copied(&req.open).unwrap_or(false);
         let on_pointer_move = req.on_pointer_move.clone();
