@@ -17,3 +17,23 @@ pub fn menu_item_a11y(label: Option<Arc<str>>, expanded: Option<bool>) -> Pressa
         ..Default::default()
     }
 }
+
+/// Build a11y metadata for a checkbox-style menu item pressable.
+pub fn menu_item_checkbox_a11y(label: Option<Arc<str>>, checked: bool) -> PressableA11y {
+    PressableA11y {
+        role: Some(SemanticsRole::MenuItemCheckbox),
+        label,
+        checked: Some(checked),
+        ..Default::default()
+    }
+}
+
+/// Build a11y metadata for a radio-style menu item pressable.
+pub fn menu_item_radio_a11y(label: Option<Arc<str>>, checked: bool) -> PressableA11y {
+    PressableA11y {
+        role: Some(SemanticsRole::MenuItemRadio),
+        label,
+        checked: Some(checked),
+        ..Default::default()
+    }
+}

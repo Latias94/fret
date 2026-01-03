@@ -42,16 +42,22 @@ fn map_role(role: SemanticsRole) -> Role {
         SemanticsRole::Window => Role::Pane,
         SemanticsRole::Panel => Role::Pane,
         SemanticsRole::Dialog => Role::Dialog,
+        SemanticsRole::AlertDialog => Role::AlertDialog,
         SemanticsRole::Alert => Role::Alert,
         SemanticsRole::Button => Role::Button,
         SemanticsRole::Checkbox => Role::CheckBox,
         SemanticsRole::Switch => Role::Switch,
         SemanticsRole::Slider => Role::Slider,
         SemanticsRole::ComboBox => Role::ComboBox,
+        SemanticsRole::RadioGroup => Role::RadioGroup,
+        SemanticsRole::RadioButton => Role::RadioButton,
         SemanticsRole::Tab => Role::Tab,
         SemanticsRole::MenuBar => Role::MenuBar,
         SemanticsRole::Menu => Role::Menu,
         SemanticsRole::MenuItem => Role::MenuItem,
+        SemanticsRole::MenuItemCheckbox => Role::MenuItemCheckBox,
+        SemanticsRole::MenuItemRadio => Role::MenuItemRadio,
+        SemanticsRole::Tooltip => Role::Tooltip,
         SemanticsRole::Text => Role::Label,
         SemanticsRole::TextField => Role::TextInput,
         SemanticsRole::List => Role::List,
@@ -397,6 +403,7 @@ mod tests {
         replace_selected_text_from_action, set_text_selection_from_action, text_run_id_for,
         to_accesskit_id, tree_update_from_snapshot,
     };
+    use accesskit::Role;
     use fret_core::{
         AppWindowId, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole,
         SemanticsRoot, SemanticsSnapshot,
@@ -405,6 +412,28 @@ mod tests {
 
     fn node(id: u64) -> fret_core::NodeId {
         fret_core::NodeId::from(KeyData::from_ffi(id))
+    }
+
+    #[test]
+    fn maps_extended_semantics_roles_to_accesskit_roles() {
+        assert_eq!(
+            super::map_role(SemanticsRole::AlertDialog),
+            Role::AlertDialog
+        );
+        assert_eq!(super::map_role(SemanticsRole::RadioGroup), Role::RadioGroup);
+        assert_eq!(
+            super::map_role(SemanticsRole::RadioButton),
+            Role::RadioButton
+        );
+        assert_eq!(
+            super::map_role(SemanticsRole::MenuItemCheckbox),
+            Role::MenuItemCheckBox
+        );
+        assert_eq!(
+            super::map_role(SemanticsRole::MenuItemRadio),
+            Role::MenuItemRadio
+        );
+        assert_eq!(super::map_role(SemanticsRole::Tooltip), Role::Tooltip);
     }
 
     #[test]
