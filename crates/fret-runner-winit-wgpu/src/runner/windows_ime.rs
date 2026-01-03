@@ -81,7 +81,7 @@ pub fn msg_hook(msg: *const c_void) -> bool {
     false
 }
 
-pub fn set_ime_cursor_area(window: &Window, rect: Rect) {
+pub fn set_ime_cursor_area(window: &dyn Window, rect: Rect) {
     if !force_imm_enabled() {
         set_ime_cursor_area_via_winit(window, rect);
         return;
@@ -89,7 +89,7 @@ pub fn set_ime_cursor_area(window: &Window, rect: Rect) {
     set_ime_cursor_area_via_imm(window, rect);
 }
 
-fn hwnd_for_window(window: &Window) -> Option<windows_sys::Win32::Foundation::HWND> {
+fn hwnd_for_window(window: &dyn Window) -> Option<windows_sys::Win32::Foundation::HWND> {
     let handle = window.window_handle().ok()?;
     let RawWindowHandle::Win32(handle) = handle.as_raw() else {
         return None;
@@ -97,7 +97,7 @@ fn hwnd_for_window(window: &Window) -> Option<windows_sys::Win32::Foundation::HW
     Some(handle.hwnd.get() as windows_sys::Win32::Foundation::HWND)
 }
 
-fn set_ime_cursor_area_via_winit(window: &Window, rect: Rect) {
+fn set_ime_cursor_area_via_winit(window: &dyn Window, rect: Rect) {
     let scale_factor = window.scale_factor();
     let x = (rect.origin.x.0 as f64 * scale_factor).round() as i32;
     let y = (rect.origin.y.0 as f64 * scale_factor).round() as i32;
@@ -131,12 +131,15 @@ fn set_ime_cursor_area_via_winit(window: &Window, rect: Rect) {
     }
 
     window.set_ime_cursor_area(
-        winit::dpi::PhysicalPosition::new(x, y),
-        winit::dpi::PhysicalSize::new(width.max(1) as u32, height.max(1) as u32),
+        winit::dpi::Position::Physical(winit::dpi::PhysicalPosition::new(x, y)),
+        winit::dpi::Size::Physical(winit::dpi::PhysicalSize::new(
+            width.max(1) as u32,
+            height.max(1) as u32,
+        )),
     );
 }
 
-fn set_ime_cursor_area_via_imm(window: &Window, rect: Rect) {
+fn set_ime_cursor_area_via_imm(window: &dyn Window, rect: Rect) {
     disable_text_frame_service_if_requested();
 
     use windows_sys::Win32::Foundation::{POINT, RECT};

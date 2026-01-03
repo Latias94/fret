@@ -1,10 +1,10 @@
 use super::*;
 
-impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
+impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
     fn device_event(
         &mut self,
-        event_loop: &ActiveEventLoop,
-        _device_id: winit::event::DeviceId,
+        event_loop: &dyn ActiveEventLoop,
+        _device_id: Option<winit::event::DeviceId>,
         event: DeviceEvent,
     ) {
         if !self.app.drag().is_some_and(|d| d.cross_window_hover)
@@ -14,7 +14,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
         }
 
         match event {
-            DeviceEvent::MouseMotion { delta } => {
+            DeviceEvent::PointerMotion { delta } => {
                 #[cfg(target_os = "windows")]
                 {
                     if let Some(p) = win32::cursor_pos_physical() {
@@ -111,7 +111,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
         }
     }
 
-    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+    fn can_create_surfaces(&mut self, event_loop: &dyn ActiveEventLoop) {
         if self.context.is_some() {
             return;
         }
@@ -195,18 +195,28 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
         self.drain_effects(event_loop);
     }
 
-    fn user_event(&mut self, event_loop: &ActiveEventLoop, event: RunnerUserEvent) {
-        match event {
-            RunnerUserEvent::PlatformCompletion { window, completion } => {
-                self.deliver_platform_completion_now(window, completion);
-                self.drain_effects(event_loop);
+    fn proxy_wake_up(&mut self, event_loop: &dyn ActiveEventLoop) {
+        let pending = self
+            .proxy_events
+            .lock()
+            .ok()
+            .map(|mut q| std::mem::take(&mut *q))
+            .unwrap_or_default();
+
+        for event in pending {
+            match event {
+                RunnerUserEvent::PlatformCompletion { window, completion } => {
+                    self.deliver_platform_completion_now(window, completion);
+                }
             }
         }
+
+        self.drain_effects(event_loop);
     }
 
     fn window_event(
         &mut self,
-        event_loop: &ActiveEventLoop,
+        event_loop: &dyn ActiveEventLoop,
         window_id: WindowId,
         event: WindowEvent,
     ) {
@@ -217,7 +227,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
         if let Some(state) = self.windows.get_mut(app_window)
             && let Some(a11y) = state.accessibility.as_mut()
         {
-            a11y.process_event(&state.window, &event);
+            a11y.process_event(state.window.as_ref(), &event);
         }
 
         match event {
@@ -339,6 +349,10 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                         winit::event::Ime::Preedit(text, cursor) => {
                             fret_core::ImeEvent::Preedit { text, cursor }
                         }
+                        winit::event::Ime::DeleteSurrounding { .. } => {
+                            self.drain_effects(event_loop);
+                            return;
+                        }
                     };
                     let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                     self.driver.handle_event(
@@ -351,8 +365,8 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                 }
                 self.drain_effects(event_loop);
             }
-            WindowEvent::HoveredFile(path) => {
-                tracing::debug!(path = %path.display(), "winit hovered file");
+            WindowEvent::DragEntered { paths, position } => {
+                tracing::debug!(count = paths.len(), "winit drag entered");
                 let existing = self
                     .windows
                     .get(app_window)
@@ -367,14 +381,13 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                     if state.external_drag_token.is_none() {
                         state.external_drag_token = Some(token);
                     }
-                    let position = state.platform.input.cursor_pos;
-                    state.external_drag_files.push(path);
+                    let logical: winit::dpi::LogicalPosition<f32> =
+                        position.to_logical(state.window.scale_factor());
+                    let position = Point::new(Px(logical.x), Px(logical.y));
+                    state.external_drag_files = paths;
                     let files = state.external_drag_files.clone();
-                    let kind = if state.external_drag_files.len() == 1 {
-                        ExternalDragKind::EnterFiles(Self::external_drag_files(token, &files))
-                    } else {
-                        ExternalDragKind::OverFiles(Self::external_drag_files(token, &files))
-                    };
+                    let kind =
+                        ExternalDragKind::EnterFiles(Self::external_drag_files(token, &files));
                     (position, kind, files)
                 };
 
@@ -392,8 +405,30 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                 }
                 self.drain_effects(event_loop);
             }
-            WindowEvent::DroppedFile(path) => {
-                tracing::debug!(path = %path.display(), "winit dropped file");
+            WindowEvent::DragMoved { position } => {
+                let (position, token) = {
+                    let Some(state) = self.windows.get_mut(app_window) else {
+                        self.drain_effects(event_loop);
+                        return;
+                    };
+                    let logical: winit::dpi::LogicalPosition<f32> =
+                        position.to_logical(state.window.scale_factor());
+                    let position = Point::new(Px(logical.x), Px(logical.y));
+                    (position, state.external_drag_token)
+                };
+
+                if let Some(token) = token {
+                    let paths = self.external_drop.paths(token).unwrap_or(&[]);
+                    let kind = ExternalDragKind::OverFiles(Self::external_drag_files(token, paths));
+                    self.deliver_window_event_now(
+                        app_window,
+                        &Event::ExternalDrag(ExternalDragEvent { position, kind }),
+                    );
+                }
+                self.drain_effects(event_loop);
+            }
+            WindowEvent::DragDropped { paths, position } => {
+                tracing::debug!(count = paths.len(), "winit drag dropped");
                 let existing = self
                     .windows
                     .get(app_window)
@@ -408,9 +443,11 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                     if state.external_drag_token.is_none() {
                         state.external_drag_token = Some(token);
                     }
-                    let position = state.platform.input.cursor_pos;
+                    let logical: winit::dpi::LogicalPosition<f32> =
+                        position.to_logical(state.window.scale_factor());
+                    let position = Point::new(Px(logical.x), Px(logical.y));
                     if state.external_drag_files.is_empty() {
-                        state.external_drag_files.push(path);
+                        state.external_drag_files = paths;
                     }
                     let files = std::mem::take(&mut state.external_drag_files);
                     state.external_drag_token = None;
@@ -433,14 +470,20 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                 }
                 self.drain_effects(event_loop);
             }
-            WindowEvent::HoveredFileCancelled => {
-                tracing::debug!("winit hovered file cancelled");
+            WindowEvent::DragLeft { position } => {
+                tracing::debug!("winit drag left");
                 let (position, token) = {
                     let Some(state) = self.windows.get_mut(app_window) else {
                         self.drain_effects(event_loop);
                         return;
                     };
-                    let position = state.platform.input.cursor_pos;
+                    let position = if let Some(position) = position {
+                        let logical: winit::dpi::LogicalPosition<f32> =
+                            position.to_logical(state.window.scale_factor());
+                        Point::new(Px(logical.x), Px(logical.y))
+                    } else {
+                        state.platform.input.cursor_pos
+                    };
                     state.external_drag_files.clear();
                     let token = state.external_drag_token.take();
                     (position, token)
@@ -465,7 +508,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                 }
                 self.drain_effects(event_loop);
             }
-            WindowEvent::Resized(size) => {
+            WindowEvent::SurfaceResized(size) => {
                 self.resize_surface(app_window, size.width, size.height);
                 if let Some(state) = self.windows.get_mut(app_window) {
                     let scale = state.window.scale_factor() as f32;
@@ -499,7 +542,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                 }
                 self.app.request_redraw(app_window);
             }
-            ref ev @ WindowEvent::CursorMoved { position, .. } => {
+            ref ev @ WindowEvent::PointerMoved { position, .. } => {
                 let (mapped, pos, external_drag_token, screen_pos) = {
                     let Some(state) = self.windows.get_mut(app_window) else {
                         return;
@@ -514,10 +557,11 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
 
                     let pos = state.platform.input.cursor_pos;
                     let external_drag_token = state.external_drag_token;
-                    let screen_pos = state.window.inner_position().ok().map(|inner| {
+                    let screen_pos = state.window.outer_position().ok().map(|outer| {
+                        let surface = state.window.surface_position();
                         PhysicalPosition::new(
-                            inner.x as f64 + position.x,
-                            inner.y as f64 + position.y,
+                            outer.x as f64 + surface.x as f64 + position.x,
+                            outer.y as f64 + surface.y as f64 + position.y,
                         )
                     });
 
@@ -547,7 +591,9 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                 self.route_internal_drag_hover_from_cursor();
                 self.drain_effects(event_loop);
             }
-            ref ev @ WindowEvent::MouseInput { state, button, .. } => {
+            ref ev @ WindowEvent::PointerButton {
+                state, ref button, ..
+            } => {
                 let mapped = {
                     let Some(runtime) = self.windows.get_mut(app_window) else {
                         return;
@@ -561,9 +607,10 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                     mapped
                 };
 
-                let Some(button) = fret_runner_winit::map_mouse_button(button) else {
+                let Some(winit_button) = fret_runner_winit::map_pointer_button(button) else {
                     return;
                 };
+                let button = fret_runner_winit::map_mouse_button(winit_button);
 
                 match state {
                     ElementState::Pressed => {
@@ -629,7 +676,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                     let (frame, view) = match state.surface.get_current_frame_view() {
                         Ok(v) => v,
                         Err(wgpu::SurfaceError::Lost) => {
-                            let size = state.window.inner_size();
+                            let size = state.window.surface_size();
                             self.resize_surface(app_window, size.width, size.height);
                             return;
                         }
@@ -645,7 +692,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
                     };
 
                     let scale_factor = state.window.scale_factor() as f32;
-                    let physical = state.window.inner_size();
+                    let physical = state.window.surface_size();
                     let logical: winit::dpi::LogicalSize<f32> =
                         physical.to_logical(state.window.scale_factor());
 
@@ -755,7 +802,7 @@ impl<D: WinitDriver> ApplicationHandler<RunnerUserEvent> for WinitRunner<D> {
         }
     }
 
-    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+    fn about_to_wait(&mut self, event_loop: &dyn ActiveEventLoop) {
         self.tick_id.0 = self.tick_id.0.saturating_add(1);
         self.app.set_tick_id(self.tick_id);
         self.saw_left_mouse_release_this_turn = false;

@@ -2,7 +2,7 @@ use std::{
     any::TypeId,
     collections::{HashMap, HashSet},
     fmt,
-    sync::Arc,
+    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 
@@ -28,7 +28,7 @@ use winit::{
     application::ApplicationHandler,
     dpi::{LogicalSize, PhysicalPosition, Position},
     event::{DeviceEvent, ElementState, WindowEvent},
-    event_loop::{ActiveEventLoop, ControlFlow, EventLoopProxy},
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopBuilder, EventLoopProxy},
     window::{Window, WindowId, WindowLevel},
 };
 
@@ -60,31 +60,29 @@ pub enum RunnerUserEvent {
     },
 }
 
-pub fn run_app<D: WinitAppDriver>(
+pub fn run_app<D: WinitAppDriver + 'static>(
     config: WinitRunnerConfig,
     app: App,
     driver: D,
 ) -> Result<(), RunnerError> {
-    let event_loop = winit::event_loop::EventLoop::<RunnerUserEvent>::with_user_event().build()?;
-    run_app_with_event_loop(event_loop, config, app, driver)
+    run_app_with_event_loop(EventLoop::new()?, config, app, driver)
 }
 
-pub fn run_app_with_event_loop<D: WinitAppDriver>(
-    event_loop: winit::event_loop::EventLoop<RunnerUserEvent>,
+pub fn run_app_with_event_loop<D: WinitAppDriver + 'static>(
+    event_loop: EventLoop,
     config: WinitRunnerConfig,
     app: App,
     driver: D,
 ) -> Result<(), RunnerError> {
     let mut runner = WinitRunner::new_app(config, app, driver);
     runner.set_event_loop_proxy(event_loop.create_proxy());
-    event_loop.run_app(&mut runner)?;
+    event_loop.run_app(runner)?;
     Ok(())
 }
 
 type OnMainWindowCreatedHook = dyn FnOnce(&mut App, fret_core::AppWindowId) + 'static;
 type OnGpuReadyHook = dyn FnOnce(&mut App, &WgpuContext, &mut Renderer) + 'static;
-type EventLoopBuilderHook =
-    dyn FnOnce(&mut winit::event_loop::EventLoopBuilder<RunnerUserEvent>) + 'static;
+type EventLoopBuilderHook = dyn FnOnce(&mut EventLoopBuilder) + 'static;
 
 pub struct WinitAppBuilder<D: WinitAppDriver> {
     config: WinitRunnerConfig,
@@ -94,10 +92,10 @@ pub struct WinitAppBuilder<D: WinitAppDriver> {
     on_main_window_created: Option<Box<OnMainWindowCreatedHook>>,
     on_gpu_ready: Option<Box<OnGpuReadyHook>>,
     event_loop_builder_hook: Option<Box<EventLoopBuilderHook>>,
-    event_loop: Option<winit::event_loop::EventLoop<RunnerUserEvent>>,
+    event_loop: Option<EventLoop>,
 }
 
-impl<D: WinitAppDriver> WinitAppBuilder<D> {
+impl<D: WinitAppDriver + 'static> WinitAppBuilder<D> {
     pub fn new(app: App, driver: D) -> Self {
         Self {
             config: WinitRunnerConfig::default(),
@@ -142,17 +140,14 @@ impl<D: WinitAppDriver> WinitAppBuilder<D> {
         self
     }
 
-    pub fn with_event_loop(
-        mut self,
-        event_loop: winit::event_loop::EventLoop<RunnerUserEvent>,
-    ) -> Self {
+    pub fn with_event_loop(mut self, event_loop: EventLoop) -> Self {
         self.event_loop = Some(event_loop);
         self
     }
 
     pub fn with_event_loop_builder_hook(
         mut self,
-        hook: impl FnOnce(&mut winit::event_loop::EventLoopBuilder<RunnerUserEvent>) + 'static,
+        hook: impl FnOnce(&mut EventLoopBuilder) + 'static,
     ) -> Self {
         self.event_loop_builder_hook = Some(Box::new(hook));
         self
@@ -203,8 +198,7 @@ impl<D: WinitAppDriver> WinitAppBuilder<D> {
         match event_loop {
             Some(event_loop) => run_app_with_event_loop(event_loop, config, app, driver),
             None => {
-                let mut builder =
-                    winit::event_loop::EventLoop::<RunnerUserEvent>::with_user_event();
+                let mut builder = EventLoop::builder();
                 if let Some(hook) = event_loop_builder_hook {
                     hook(&mut builder);
                 }
@@ -802,7 +796,7 @@ fn bring_window_to_front(window: &Window, sender: Option<&Window>) -> bool {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn bring_window_to_front(window: &Window, _sender: Option<&Window>) -> bool {
+fn bring_window_to_front(window: &dyn Window, _sender: Option<&dyn Window>) -> bool {
     window.focus_window();
     true
 }
@@ -893,8 +887,8 @@ pub enum WgpuInit {
     Factory(Box<WgpuFactoryFn>),
 }
 
-type WgpuFactoryFn =
-    dyn FnOnce(Arc<Window>) -> Result<(WgpuContext, wgpu::Surface<'static>), RunnerError> + 'static;
+type WgpuFactoryFn = dyn FnOnce(Arc<dyn Window>) -> Result<(WgpuContext, wgpu::Surface<'static>), RunnerError>
+    + 'static;
 
 impl Default for WinitRunnerConfig {
     fn default() -> Self {
@@ -1460,7 +1454,7 @@ pub trait WinitDriver {
 }
 
 struct WindowRuntime<S> {
-    window: Arc<Window>,
+    window: Arc<dyn Window>,
     accessibility: Option<accessibility::WinitAccessibility>,
     last_accessibility_snapshot: Option<std::sync::Arc<fret_core::SemanticsSnapshot>>,
     surface: SurfaceState<'static>,
@@ -1488,7 +1482,8 @@ pub struct WinitRunner<D: WinitDriver> {
     pub config: WinitRunnerConfig,
     pub app: App,
     pub driver: D,
-    event_loop_proxy: Option<EventLoopProxy<RunnerUserEvent>>,
+    event_loop_proxy: Option<EventLoopProxy>,
+    proxy_events: Arc<Mutex<Vec<RunnerUserEvent>>>,
 
     context: Option<WgpuContext>,
     renderer: Option<Renderer>,
@@ -1555,20 +1550,25 @@ struct RectF64 {
 impl<D: WinitDriver> WinitRunner<D> {
     const WINDOW_VISIBILITY_PADDING_PX: f64 = 40.0;
 
-    fn virtual_desktop_bounds(window: &Window) -> Option<MonitorRectF64> {
+    fn virtual_desktop_bounds(window: &dyn Window) -> Option<MonitorRectF64> {
         let mut monitors = window.available_monitors();
         let first = monitors.next()?;
 
-        let first_pos = first.position();
-        let first_size = first.size();
+        let first_pos = first.position()?;
+        let first_size = first.current_video_mode()?.size();
         let mut min_x = first_pos.x as f64;
         let mut min_y = first_pos.y as f64;
         let mut max_x = first_pos.x as f64 + first_size.width as f64;
         let mut max_y = first_pos.y as f64 + first_size.height as f64;
 
         for monitor in monitors {
-            let pos = monitor.position();
-            let size = monitor.size();
+            let Some(pos) = monitor.position() else {
+                continue;
+            };
+            let Some(mode) = monitor.current_video_mode() else {
+                continue;
+            };
+            let size = mode.size();
             min_x = min_x.min(pos.x as f64);
             min_y = min_y.min(pos.y as f64);
             max_x = max_x.max(pos.x as f64 + size.width as f64);
@@ -1583,18 +1583,18 @@ impl<D: WinitDriver> WinitRunner<D> {
         })
     }
 
-    fn monitor_rects_physical(window: &Window) -> Vec<MonitorRectF64> {
+    fn monitor_rects_physical(window: &dyn Window) -> Vec<MonitorRectF64> {
         window
             .available_monitors()
-            .map(|m| {
-                let pos = m.position();
-                let size = m.size();
-                MonitorRectF64 {
+            .filter_map(|m| {
+                let pos = m.position()?;
+                let size = m.current_video_mode()?.size();
+                Some(MonitorRectF64 {
                     min_x: pos.x as f64,
                     min_y: pos.y as f64,
                     max_x: pos.x as f64 + size.width as f64,
                     max_y: pos.y as f64 + size.height as f64,
-                }
+                })
             })
             .collect()
     }
@@ -1689,7 +1689,7 @@ impl<D: WinitDriver> WinitRunner<D> {
 
     fn settle_window_outer_position(
         &self,
-        window: &Window,
+        window: &dyn Window,
         cursor_screen_pos: Option<PhysicalPosition<f64>>,
     ) -> Option<PhysicalPosition<i32>> {
         let outer_pos = window.outer_position().ok()?;
@@ -1770,6 +1770,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             app,
             driver,
             event_loop_proxy: None,
+            proxy_events: Arc::new(Mutex::new(Vec::new())),
             context: None,
             renderer: None,
             no_services: NoUiServices,
@@ -1932,7 +1933,7 @@ impl<D: WinitDriver> WinitRunner<D> {
     /// window event stream.
     ///
     /// Without a proxy, the runner falls back to synchronous delivery for platform effects.
-    pub fn set_event_loop_proxy(&mut self, proxy: EventLoopProxy<RunnerUserEvent>) {
+    pub fn set_event_loop_proxy(&mut self, proxy: EventLoopProxy) {
         self.event_loop_proxy = Some(proxy);
     }
 
@@ -1943,10 +1944,14 @@ impl<D: WinitDriver> WinitRunner<D> {
         let Some(proxy) = self.event_loop_proxy.clone() else {
             return false;
         };
+        let events = self.proxy_events.clone();
 
         std::thread::spawn(move || {
             let completion = task();
-            let _ = proxy.send_event(RunnerUserEvent::PlatformCompletion { window, completion });
+            if let Ok(mut queue) = events.lock() {
+                queue.push(RunnerUserEvent::PlatformCompletion { window, completion });
+            }
+            proxy.wake_up();
         });
 
         true
@@ -2016,12 +2021,12 @@ impl<D: WinitDriver> WinitRunner<D> {
 
     fn create_os_window(
         &mut self,
-        event_loop: &ActiveEventLoop,
+        event_loop: &dyn ActiveEventLoop,
         spec: WindowCreateSpec,
-    ) -> Result<(Arc<Window>, Option<accessibility::WinitAccessibility>), RunnerError> {
-        let mut attrs = Window::default_attributes()
+    ) -> Result<(Arc<dyn Window>, Option<accessibility::WinitAccessibility>), RunnerError> {
+        let mut attrs = winit::window::WindowAttributes::default()
             .with_title(spec.title)
-            .with_inner_size(spec.size)
+            .with_surface_size(spec.size)
             .with_visible(if self.config.accessibility_enabled {
                 false
             } else {
@@ -2030,7 +2035,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         if let Some(position) = spec.position {
             attrs = attrs.with_position(position);
         }
-        let window = Arc::new(
+        let window = Arc::<dyn Window>::from(
             event_loop
                 .create_window(attrs)
                 .map_err(|source| RunnerError::CreateWindowFailed { source })?,
@@ -2041,7 +2046,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         let accessibility = self
             .config
             .accessibility_enabled
-            .then(|| accessibility::WinitAccessibility::new(event_loop, &window));
+            .then(|| accessibility::WinitAccessibility::new(event_loop, window.as_ref()));
 
         if self.config.accessibility_enabled && spec.visible {
             window.set_visible(true);
@@ -2052,7 +2057,7 @@ impl<D: WinitDriver> WinitRunner<D> {
 
     fn insert_window(
         &mut self,
-        window: Arc<Window>,
+        window: Arc<dyn Window>,
         accessibility: Option<accessibility::WinitAccessibility>,
         surface: wgpu::Surface<'static>,
     ) -> Result<fret_core::AppWindowId, RunnerError> {
@@ -2060,7 +2065,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             return Err(RunnerError::WgpuNotInitialized);
         };
 
-        let size = window.inner_size();
+        let size = window.surface_size();
         let surface = SurfaceState::new(
             &context.adapter,
             &context.device,
@@ -2095,7 +2100,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         });
 
         if let Some(state) = self.windows.get(id) {
-            let size_phys = state.window.inner_size();
+            let size_phys = state.window.surface_size();
             let size_logical: winit::dpi::LogicalSize<f32> =
                 size_phys.to_logical(state.window.scale_factor());
             self.app
@@ -2151,31 +2156,31 @@ impl<D: WinitDriver> WinitRunner<D> {
 
     fn compute_window_position_from_anchor(&self, anchor: WindowAnchor) -> Option<Position> {
         let anchor_state = self.windows.get(anchor.window)?;
-        // Use the client-area origin as the base; `WindowAnchor::position` is expressed in
-        // window-local logical coordinates (matching pointer events), which aligns with
-        // `inner_position` rather than `outer_position` (decorations).
-        let inner = anchor_state.window.inner_position().ok()?;
+        // `WindowAnchor::position` is in surface-local logical coordinates (matching pointer
+        // events), so start from the surface origin in desktop coordinates.
+        let outer = anchor_state.window.outer_position().ok()?;
+        let surface = anchor_state.window.surface_position();
         let scale = anchor_state.window.scale_factor();
 
         let (ox, oy) = self.config.new_window_anchor_offset;
-        let mut x = inner.x as f64 + anchor.position.x.0 as f64 * scale + ox;
-        let mut y = inner.y as f64 + anchor.position.y.0 as f64 * scale + oy;
+        let mut x = outer.x as f64 + surface.x as f64 + anchor.position.x.0 as f64 * scale + ox;
+        let mut y = outer.y as f64 + surface.y as f64 + anchor.position.y.0 as f64 * scale + oy;
 
         // Best-effort clamping: avoid creating "off-screen" floating windows due to
         // platform-specific coordinate spaces and DPI conversions.
         if let Some(monitor) = anchor_state.window.current_monitor() {
-            let pos = monitor.position();
-            let size = monitor.size();
+            if let (Some(pos), Some(mode)) = (monitor.position(), monitor.current_video_mode()) {
+                let size = mode.size();
+                let min_x = pos.x as f64;
+                let min_y = pos.y as f64;
+                // Leave a small margin so the window stays reachable even if its size is larger
+                // than the monitor work area.
+                let max_x = min_x + size.width as f64 - 40.0;
+                let max_y = min_y + size.height as f64 - 40.0;
 
-            let min_x = pos.x as f64;
-            let min_y = pos.y as f64;
-            // Leave a small margin so the window stays reachable even if its size is larger than
-            // the monitor work area.
-            let max_x = min_x + size.width as f64 - 40.0;
-            let max_y = min_y + size.height as f64 - 40.0;
-
-            x = x.clamp(min_x, max_x);
-            y = y.clamp(min_y, max_y);
+                x = x.clamp(min_x, max_x);
+                y = y.clamp(min_y, max_y);
+            }
         }
 
         Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
@@ -2192,16 +2197,16 @@ impl<D: WinitDriver> WinitRunner<D> {
         let mut y = screen_pos.y + oy;
 
         if let Some(monitor) = ref_state.window.current_monitor() {
-            let pos = monitor.position();
-            let size = monitor.size();
+            if let (Some(pos), Some(mode)) = (monitor.position(), monitor.current_video_mode()) {
+                let size = mode.size();
+                let min_x = pos.x as f64;
+                let min_y = pos.y as f64;
+                let max_x = min_x + size.width as f64 - 40.0;
+                let max_y = min_y + size.height as f64 - 40.0;
 
-            let min_x = pos.x as f64;
-            let min_y = pos.y as f64;
-            let max_x = min_x + size.width as f64 - 40.0;
-            let max_y = min_y + size.height as f64 - 40.0;
-
-            x = x.clamp(min_x, max_x);
-            y = y.clamp(min_y, max_y);
+                x = x.clamp(min_x, max_x);
+                y = y.clamp(min_y, max_y);
+            }
         }
 
         Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
@@ -2228,7 +2233,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         // grab offset comes from the source window's client coordinates; if the new floating
         // window is smaller, keeping the original offset would place the cursor outside the new
         // window (visible as a fixed offset between cursor and window).
-        let target_inner = state.window.inner_size();
+        let target_inner = state.window.surface_size();
         let target_inner_logical: winit::dpi::LogicalSize<f32> = target_inner.to_logical(scale);
         let max_x = target_inner_logical.width;
         let max_y = target_inner_logical.height;
@@ -2250,18 +2255,12 @@ impl<D: WinitDriver> WinitRunner<D> {
         // - winit expects outer position
         // - therefore: outer = desired_client - decoration_offset(window)
         // See `repo-ref/dear-imgui-rs/backends/dear-imgui-winit/src/multi_viewport.rs:winit_set_window_pos`.
-        let deco_offset = if let (Ok(outer), Ok(inner)) =
-            (state.window.outer_position(), state.window.inner_position())
-        {
-            (inner.x - outer.x, inner.y - outer.y)
-        } else {
-            (0, 0)
-        };
+        let deco_offset = state.window.surface_position();
 
         let grab_client_x = grab_x as f64 * scale;
         let grab_client_y = grab_y as f64 * scale;
-        let grab_outer_x = deco_offset.0 as f64 + grab_client_x;
-        let grab_outer_y = deco_offset.1 as f64 + grab_client_y;
+        let grab_outer_x = deco_offset.x as f64 + grab_client_x;
+        let grab_outer_y = deco_offset.y as f64 + grab_client_y;
 
         let mut x = screen_pos.x - grab_outer_x;
         let mut y = screen_pos.y - grab_outer_y;
@@ -2333,7 +2332,7 @@ impl<D: WinitDriver> WinitRunner<D> {
 
     fn create_window_from_request(
         &mut self,
-        event_loop: &ActiveEventLoop,
+        event_loop: &dyn ActiveEventLoop,
         request: &CreateWindowRequest,
     ) -> Result<fret_core::AppWindowId, RunnerError> {
         let mut spec = self
@@ -2444,7 +2443,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         fired_any
     }
 
-    fn drain_effects(&mut self, event_loop: &ActiveEventLoop) {
+    fn drain_effects(&mut self, event_loop: &dyn ActiveEventLoop) {
         const MAX_EFFECT_DRAIN_TURNS: usize = 8;
 
         for _ in 0..MAX_EFFECT_DRAIN_TURNS {
@@ -2481,7 +2480,7 @@ impl<D: WinitDriver> WinitRunner<D> {
                             state.ime_cursor_area = Some(rect);
                             #[cfg(windows)]
                             {
-                                windows_ime::set_ime_cursor_area(&state.window, rect);
+                                windows_ime::set_ime_cursor_area(state.window.as_ref(), rect);
                             }
                             #[cfg(not(windows))]
                             state.window.set_ime_cursor_area(
@@ -2498,9 +2497,9 @@ impl<D: WinitDriver> WinitRunner<D> {
                             continue;
                         }
                         state.cursor_icon = icon;
-                        state
-                            .window
-                            .set_cursor(fret_runner_winit::map_cursor_icon(icon));
+                        state.window.set_cursor(winit::cursor::Cursor::Icon(
+                            fret_runner_winit::map_cursor_icon(icon),
+                        ));
                     }
                     Effect::RequestAnimationFrame(window) => {
                         self.raf_windows.insert(window);
@@ -2886,7 +2885,7 @@ impl<D: WinitDriver> WinitRunner<D> {
                                 .and_then(|id| self.windows.get(id))
                                 .map(|w| w.window.as_ref());
                             if let Some(state) = self.windows.get(window) {
-                                let _ = bring_window_to_front(&state.window, sender_window);
+                                let _ = bring_window_to_front(state.window.as_ref(), sender_window);
                                 state.window.request_redraw();
                             }
                             #[cfg(target_os = "macos")]
@@ -3026,7 +3025,7 @@ impl<D: WinitDriver> WinitRunner<D> {
                     .source_window
                     .and_then(|id| self.windows.get(id))
                     .map(|w| w.window.as_ref());
-                let _ = bring_window_to_front(&state.window, sender);
+                let _ = bring_window_to_front(state.window.as_ref(), sender);
                 state.window.request_redraw();
                 req.attempts_left = req.attempts_left.saturating_sub(1);
                 req.next_attempt_at = now + Duration::from_millis(60);
@@ -3243,7 +3242,7 @@ impl<D: WinitDriver> WinitRunner<D> {
                 .windows
                 .get(drag.source_window)
                 .map(|w| w.window.as_ref());
-            let _ = bring_window_to_front(&runtime.window, sender);
+            let _ = bring_window_to_front(runtime.window.as_ref(), sender);
         }
 
         if let Some(prev) = self.internal_drag_hover_window.take()
@@ -3269,7 +3268,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         window: fret_core::AppWindowId,
     ) -> Option<PhysicalPosition<f64>> {
         let state = self.windows.get(window)?;
-        let inner = state.window.inner_position().ok()?;
+        let inner = state.window.surface_position();
         let scale = state.window.scale_factor();
         let x = inner.x as f64 + state.platform.input.cursor_pos.x.0 as f64 * scale;
         let y = inner.y as f64 + state.platform.input.cursor_pos.y.0 as f64 * scale;
@@ -3284,10 +3283,8 @@ impl<D: WinitDriver> WinitRunner<D> {
         let Some(state) = self.windows.get(window) else {
             return false;
         };
-        let Ok(inner) = state.window.inner_position() else {
-            return false;
-        };
-        let size = state.window.inner_size();
+        let inner = state.window.surface_position();
+        let size = state.window.surface_size();
         let left = inner.x as f64;
         let top = inner.y as f64;
         let right = left + size.width as f64;
@@ -3301,7 +3298,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         screen_pos: PhysicalPosition<f64>,
     ) -> Option<Point> {
         let state = self.windows.get(window)?;
-        let inner = state.window.inner_position().ok()?;
+        let inner = state.window.surface_position();
         let local_physical =
             PhysicalPosition::new(screen_pos.x - inner.x as f64, screen_pos.y - inner.y as f64);
         let local_logical: winit::dpi::LogicalPosition<f32> =
@@ -3319,10 +3316,8 @@ impl<D: WinitDriver> WinitRunner<D> {
             let Some(state) = self.windows.get(w) else {
                 continue;
             };
-            let Ok(inner) = state.window.inner_position() else {
-                continue;
-            };
-            let size = state.window.inner_size();
+            let inner = state.window.surface_position();
+            let size = state.window.surface_size();
             let left = inner.x as f64;
             let top = inner.y as f64;
             let right = left + size.width as f64;

@@ -11,7 +11,7 @@ pub enum RunnerError {
     #[error("failed to create OS window")]
     CreateWindowFailed {
         #[source]
-        source: winit::error::OsError,
+        source: winit::error::RequestError,
     },
 
     #[error(transparent)]

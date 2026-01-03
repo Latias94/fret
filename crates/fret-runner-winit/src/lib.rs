@@ -1,12 +1,13 @@
 use fret_core::{Event, KeyCode, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px};
 use winit::dpi::{LogicalPosition, LogicalSize, PhysicalPosition};
 use winit::event::{
-    ElementState, KeyEvent, MouseButton as WinitMouseButton, MouseScrollDelta, WindowEvent,
+    ButtonSource, ElementState, KeyEvent, MouseButton as WinitMouseButton, MouseScrollDelta,
+    WindowEvent,
 };
 use winit::keyboard::{Key, ModifiersState, NamedKey};
 
 #[cfg(target_arch = "wasm32")]
-use winit::platform::web::WindowExtWebSys;
+use winit::platform::web::WindowExtWeb;
 
 #[derive(Debug, Default, Clone)]
 pub struct WinitPlatform {
@@ -106,13 +107,14 @@ mod web_cursor {
 
 #[cfg(target_arch = "wasm32")]
 pub fn install_web_cursor_listener(
-    window: &winit::window::Window,
+    window: &dyn winit::window::Window,
 ) -> Result<WebCursorListener, RunnerError> {
     use wasm_bindgen::JsCast as _;
 
     let Some(canvas) = window.canvas() else {
         return Err(RunnerError::new("winit window has no canvas"));
     };
+    let canvas: web_sys::HtmlCanvasElement = canvas.clone();
 
     let on_move =
         wasm_bindgen::closure::Closure::wrap(Box::new(move |event: web_sys::PointerEvent| {
@@ -186,7 +188,7 @@ impl WinitInputState {
             WindowEvent::KeyboardInput { event, .. } => {
                 self.handle_key_event(event, out);
             }
-            WindowEvent::CursorMoved { position, .. } => {
+            WindowEvent::PointerMoved { position, .. } => {
                 self.cursor_pos_physical = Some(*position);
                 let logical: LogicalPosition<f32> = position.to_logical(window_scale_factor);
                 self.cursor_pos = Point::new(Px(logical.x), Px(logical.y));
@@ -196,28 +198,32 @@ impl WinitInputState {
                     modifiers: self.modifiers,
                 }));
             }
-            WindowEvent::MouseInput { state, button, .. } => {
-                if let Some(physical) = self.cursor_pos_physical {
-                    let logical: LogicalPosition<f32> = physical.to_logical(window_scale_factor);
-                    self.cursor_pos = Point::new(Px(logical.x), Px(logical.y));
-                }
+            WindowEvent::PointerButton {
+                state,
+                position,
+                button,
+                ..
+            } => {
+                self.cursor_pos_physical = Some(*position);
+                let logical: LogicalPosition<f32> = position.to_logical(window_scale_factor);
+                self.cursor_pos = Point::new(Px(logical.x), Px(logical.y));
 
-                let winit_button = *button;
-                let Some(button) = map_mouse_button(winit_button) else {
+                let Some(winit_button) = map_pointer_button(button) else {
                     return;
                 };
                 let pressed = matches!(state, ElementState::Pressed);
                 set_mouse_buttons(&mut self.pressed_buttons, winit_button, pressed);
+
                 let evt = if pressed {
                     PointerEvent::Down {
                         position: self.cursor_pos,
-                        button,
+                        button: map_mouse_button(winit_button),
                         modifiers: self.modifiers,
                     }
                 } else {
                     PointerEvent::Up {
                         position: self.cursor_pos,
-                        button,
+                        button: map_mouse_button(winit_button),
                         modifiers: self.modifiers,
                     }
                 };
@@ -231,7 +237,7 @@ impl WinitInputState {
                     modifiers: self.modifiers,
                 }));
             }
-            WindowEvent::Resized(size) => {
+            WindowEvent::SurfaceResized(size) => {
                 let logical: LogicalSize<f32> = size.to_logical(window_scale_factor);
                 out.push(Event::WindowResized {
                     width: Px(logical.width),
@@ -240,10 +246,9 @@ impl WinitInputState {
             }
             WindowEvent::ScaleFactorChanged {
                 scale_factor,
-                inner_size_writer,
+                surface_size_writer: _,
             } => {
                 out.push(Event::WindowScaleFactorChanged(*scale_factor as f32));
-                let _ = inner_size_writer;
             }
             _ => {}
         }
@@ -319,13 +324,13 @@ impl Default for WheelConfig {
     }
 }
 
-pub fn map_cursor_icon(icon: fret_core::CursorIcon) -> winit::window::CursorIcon {
+pub fn map_cursor_icon(icon: fret_core::CursorIcon) -> winit::cursor::CursorIcon {
     match icon {
-        fret_core::CursorIcon::Default => winit::window::CursorIcon::Default,
-        fret_core::CursorIcon::Pointer => winit::window::CursorIcon::Pointer,
-        fret_core::CursorIcon::Text => winit::window::CursorIcon::Text,
-        fret_core::CursorIcon::ColResize => winit::window::CursorIcon::ColResize,
-        fret_core::CursorIcon::RowResize => winit::window::CursorIcon::RowResize,
+        fret_core::CursorIcon::Default => winit::cursor::CursorIcon::Default,
+        fret_core::CursorIcon::Pointer => winit::cursor::CursorIcon::Pointer,
+        fret_core::CursorIcon::Text => winit::cursor::CursorIcon::Text,
+        fret_core::CursorIcon::ColResize => winit::cursor::CursorIcon::ColResize,
+        fret_core::CursorIcon::RowResize => winit::cursor::CursorIcon::RowResize,
     }
 }
 
@@ -348,7 +353,7 @@ pub fn map_modifiers(state: ModifiersState, alt_gr_down: bool) -> Modifiers {
         ctrl: state.control_key(),
         alt: state.alt_key(),
         alt_gr: alt_gr_down,
-        meta: state.super_key(),
+        meta: state.meta_key(),
     };
 
     if mods.alt_gr {
@@ -359,15 +364,24 @@ pub fn map_modifiers(state: ModifiersState, alt_gr_down: bool) -> Modifiers {
     mods
 }
 
-pub fn map_mouse_button(button: WinitMouseButton) -> Option<MouseButton> {
-    Some(match button {
+pub fn map_mouse_button(button: WinitMouseButton) -> MouseButton {
+    match button {
         WinitMouseButton::Left => MouseButton::Left,
         WinitMouseButton::Right => MouseButton::Right,
         WinitMouseButton::Middle => MouseButton::Middle,
         WinitMouseButton::Back => MouseButton::Back,
         WinitMouseButton::Forward => MouseButton::Forward,
-        WinitMouseButton::Other(v) => MouseButton::Other(v),
-    })
+        other => MouseButton::Other(other as u16),
+    }
+}
+
+pub fn map_pointer_button(button: &ButtonSource) -> Option<WinitMouseButton> {
+    match button {
+        ButtonSource::Mouse(mouse) => Some(*mouse),
+        ButtonSource::Touch { .. } => Some(WinitMouseButton::Left),
+        ButtonSource::TabletTool { .. } => Some(WinitMouseButton::Left),
+        ButtonSource::Unknown(_) => None,
+    }
 }
 
 pub fn set_mouse_buttons(buttons: &mut MouseButtons, button: WinitMouseButton, pressed: bool) {
@@ -375,7 +389,7 @@ pub fn set_mouse_buttons(buttons: &mut MouseButtons, button: WinitMouseButton, p
         WinitMouseButton::Left => buttons.left = pressed,
         WinitMouseButton::Right => buttons.right = pressed,
         WinitMouseButton::Middle => buttons.middle = pressed,
-        WinitMouseButton::Back | WinitMouseButton::Forward | WinitMouseButton::Other(_) => {}
+        _ => {}
     }
 }
 
@@ -433,8 +447,8 @@ pub fn map_physical_key(key: winit::keyboard::PhysicalKey) -> KeyCode {
         WinitKeyCode::ControlRight => KeyCode::ControlRight,
         WinitKeyCode::AltLeft => KeyCode::AltLeft,
         WinitKeyCode::AltRight => KeyCode::AltRight,
-        WinitKeyCode::SuperLeft => KeyCode::SuperLeft,
-        WinitKeyCode::SuperRight => KeyCode::SuperRight,
+        WinitKeyCode::MetaLeft => KeyCode::SuperLeft,
+        WinitKeyCode::MetaRight => KeyCode::SuperRight,
 
         WinitKeyCode::Digit0 => KeyCode::Digit0,
         WinitKeyCode::Digit1 => KeyCode::Digit1,

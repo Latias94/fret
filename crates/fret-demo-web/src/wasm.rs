@@ -14,14 +14,14 @@ use fret_ui_app::{Invalidation, Theme, UiFrameCx, UiTree};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use winit::application::ApplicationHandler;
+use winit::cursor::Cursor;
 use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
-use winit::window::Cursor;
 use winit::window::{Window, WindowAttributes, WindowId};
 
 #[cfg(target_arch = "wasm32")]
-use winit::platform::web::{EventLoopExtWebSys, WindowAttributesExtWebSys, WindowExtWebSys};
+use winit::platform::web::{WindowAttributesWeb, WindowExtWeb};
 
 struct GfxState {
     ctx: WgpuContext,
@@ -96,7 +96,7 @@ impl GfxState {
 
 struct WebDemoApp {
     canvas_id: String,
-    window: Option<Rc<Window>>,
+    window: Option<Rc<dyn Window>>,
     window_id: Option<WindowId>,
     gfx: Rc<RefCell<Option<GfxState>>>,
     pending_events: Vec<FretEvent>,
@@ -153,14 +153,14 @@ impl WebDemoApp {
     }
 
     #[cfg(target_arch = "wasm32")]
-    fn desired_surface_size(window: &Window) -> Option<PhysicalSize<u32>> {
+    fn desired_surface_size(window: &dyn Window) -> Option<PhysicalSize<u32>> {
         fn url_debug_enabled() -> bool {
             web_sys::window()
                 .and_then(|w| w.location().hash().ok())
                 .is_some_and(|h| h.contains("debug"))
         }
 
-        let canvas = window.canvas()?;
+        let canvas: web_sys::HtmlCanvasElement = window.canvas()?.clone();
         let web_window = web_sys::window()?;
         let dpr = web_window.device_pixel_ratio().max(1.0);
         let css_w = canvas.client_width().max(0) as f64;
@@ -302,7 +302,7 @@ impl WebDemoApp {
         self.ui.set_root(root);
     }
 
-    fn handle_effects(&mut self, window: &Window, gfx: &mut GfxState) {
+    fn handle_effects(&mut self, window: &dyn Window, gfx: &mut GfxState) {
         let effects = self.app.flush_effects();
         if effects.is_empty() {
             return;
@@ -352,11 +352,11 @@ impl WebDemoApp {
                 }
                 Effect::CursorSetIcon { icon, .. } => {
                     let cursor = match icon {
-                        fret_core::CursorIcon::Default => winit::window::CursorIcon::Default,
-                        fret_core::CursorIcon::Pointer => winit::window::CursorIcon::Pointer,
-                        fret_core::CursorIcon::Text => winit::window::CursorIcon::Text,
-                        fret_core::CursorIcon::ColResize => winit::window::CursorIcon::ColResize,
-                        fret_core::CursorIcon::RowResize => winit::window::CursorIcon::RowResize,
+                        fret_core::CursorIcon::Default => winit::cursor::CursorIcon::Default,
+                        fret_core::CursorIcon::Pointer => winit::cursor::CursorIcon::Pointer,
+                        fret_core::CursorIcon::Text => winit::cursor::CursorIcon::Text,
+                        fret_core::CursorIcon::ColResize => winit::cursor::CursorIcon::ColResize,
+                        fret_core::CursorIcon::RowResize => winit::cursor::CursorIcon::RowResize,
                     };
                     window.set_cursor(Cursor::Icon(cursor));
                 }
@@ -411,7 +411,7 @@ impl WebDemoApp {
         });
     }
 
-    fn tick_ui(&mut self, window: &Window, gfx: &mut GfxState) {
+    fn tick_ui(&mut self, window: &dyn Window, gfx: &mut GfxState) {
         self.tick_id.0 = self.tick_id.0.saturating_add(1);
         self.frame_id.0 = self.frame_id.0.saturating_add(1);
         self.app.set_tick_id(self.tick_id);
@@ -425,9 +425,9 @@ impl WebDemoApp {
             .poll_web_cursor_updates(scale, &mut self.pending_events);
 
         #[cfg(target_arch = "wasm32")]
-        let physical = Self::desired_surface_size(window).unwrap_or_else(|| window.inner_size());
+        let physical = Self::desired_surface_size(window).unwrap_or_else(|| window.surface_size());
         #[cfg(not(target_arch = "wasm32"))]
-        let physical = window.inner_size();
+        let physical = window.surface_size();
 
         let logical: LogicalSize<f32> = physical.to_logical(scale);
         gfx.scale_factor = scale as f32;
@@ -524,8 +524,12 @@ impl WebDemoApp {
     }
 }
 
-impl ApplicationHandler<()> for WebDemoApp {
-    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+impl ApplicationHandler for WebDemoApp {
+    fn can_create_surfaces(&mut self, event_loop: &dyn ActiveEventLoop) {
+        self.resumed(event_loop);
+    }
+
+    fn resumed(&mut self, event_loop: &dyn ActiveEventLoop) {
         if self.window.is_some() {
             return;
         }
@@ -546,11 +550,13 @@ impl ApplicationHandler<()> for WebDemoApp {
 
         #[cfg(target_arch = "wasm32")]
         {
-            attrs = attrs
-                .with_canvas(canvas)
-                .with_append(false)
-                .with_focusable(true)
-                .with_prevent_default(true);
+            attrs = attrs.with_platform_attributes(Box::new(
+                WindowAttributesWeb::default()
+                    .with_canvas(canvas)
+                    .with_append(false)
+                    .with_focusable(true)
+                    .with_prevent_default(true),
+            ));
         }
 
         let window = match event_loop.create_window(attrs) {
@@ -564,11 +570,12 @@ impl ApplicationHandler<()> for WebDemoApp {
             }
         };
 
+        let window: Rc<dyn Window> = window.into();
         self.window_id = Some(window.id());
 
         #[cfg(target_arch = "wasm32")]
         if self.web_cursor.is_none() {
-            match fret_runner_winit::install_web_cursor_listener(&window) {
+            match fret_runner_winit::install_web_cursor_listener(window.as_ref()) {
                 Ok(listener) => self.web_cursor = Some(listener),
                 Err(err) => {
                     web_sys::console::error_1(&JsValue::from_str(&format!(
@@ -581,7 +588,7 @@ impl ApplicationHandler<()> for WebDemoApp {
         // Kick off wgpu init async. We build the surface from the canvas handle, which allows
         // storing `SurfaceState<'static>` without tying it to the winit `Window` lifetime.
         #[cfg(target_arch = "wasm32")]
-        if let Some(canvas) = window.canvas() {
+        if let Some(canvas) = window.canvas().map(|c| c.clone()) {
             let gfx_slot = self.gfx.clone();
             spawn_local(async move {
                 // Resize the canvas backing store before creating/configuring the surface.
@@ -654,12 +661,12 @@ impl ApplicationHandler<()> for WebDemoApp {
             .collect::<Vec<_>>();
         self.app.push_effect(Effect::TextAddFonts { fonts });
 
-        self.window = Some(Rc::new(window));
+        self.window = Some(window);
     }
 
     fn window_event(
         &mut self,
-        _event_loop: &ActiveEventLoop,
+        _event_loop: &dyn ActiveEventLoop,
         window_id: WindowId,
         event: WindowEvent,
     ) {
@@ -672,7 +679,7 @@ impl ApplicationHandler<()> for WebDemoApp {
         let window = window.as_ref();
 
         #[cfg(target_arch = "wasm32")]
-        if let WindowEvent::MouseInput { state, button, .. } = &event {
+        if let WindowEvent::PointerButton { state, button, .. } = &event {
             web_sys::console::log_1(&JsValue::from_str(&format!(
                 "winit mouse input: {state:?} {button:?}"
             )));
@@ -682,7 +689,7 @@ impl ApplicationHandler<()> for WebDemoApp {
             WindowEvent::CloseRequested => {
                 self.pending_events.push(FretEvent::WindowCloseRequested);
             }
-            WindowEvent::Resized(size) => {
+            WindowEvent::SurfaceResized(size) => {
                 if let Some(gfx) = self.gfx.borrow_mut().as_mut() {
                     gfx.resize(*size);
                 }
@@ -694,7 +701,12 @@ impl ApplicationHandler<()> for WebDemoApp {
             }
             WindowEvent::ScaleFactorChanged { .. } => {
                 if let Some(gfx) = self.gfx.borrow_mut().as_mut() {
-                    gfx.resize(window.inner_size());
+                    #[cfg(target_arch = "wasm32")]
+                    let size =
+                        Self::desired_surface_size(window).unwrap_or_else(|| window.surface_size());
+                    #[cfg(not(target_arch = "wasm32"))]
+                    let size = window.surface_size();
+                    gfx.resize(size);
                 }
                 self.platform.handle_window_event(
                     window.scale_factor(),
@@ -725,7 +737,7 @@ impl ApplicationHandler<()> for WebDemoApp {
         }
     }
 
-    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+    fn about_to_wait(&mut self, event_loop: &dyn ActiveEventLoop) {
         event_loop.set_control_flow(ControlFlow::Poll);
         if let Some(window) = self.window.as_ref() {
             window.request_redraw();
@@ -737,12 +749,14 @@ impl ApplicationHandler<()> for WebDemoApp {
 pub fn start() -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
 
-    let event_loop = EventLoop::<()>::new().map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
+    let event_loop = EventLoop::new().map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
     let app = WebDemoApp::new("fret-canvas".to_string());
 
     #[cfg(target_arch = "wasm32")]
     {
-        event_loop.spawn_app(app);
+        event_loop
+            .run_app(app)
+            .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
         return Ok(());
     }
 

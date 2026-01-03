@@ -5,6 +5,10 @@ edition.workspace = true
 
 [dependencies]
 accesskit.workspace = true
-accesskit_winit.workspace = true
+accesskit_winit = { workspace = true, optional = true }
 fret-a11y-accesskit = { path = "../fret-a11y-accesskit" }
 winit.workspace = true
+
+[features]
+default = []
+accesskit = ["dep:accesskit_winit"]
