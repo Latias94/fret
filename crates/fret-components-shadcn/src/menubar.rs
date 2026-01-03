@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -21,6 +22,10 @@ use fret_ui::element::{
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementContext, Theme, UiHost};
+
+const SUBMENU_SAFE_HOVER_BUFFER: Px = Px(6.0);
+const SUBMENU_CLOSE_DELAY: Duration = Duration::from_millis(120);
+const SUBMENU_FOCUS_DELAY: Duration = Duration::from_millis(0);
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -45,6 +50,10 @@ impl MenubarItem {
         }
     }
 
+    pub fn submenu(self, entries: Vec<MenubarEntry>) -> MenubarSubmenu {
+        MenubarSubmenu::new(self, entries)
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
@@ -62,8 +71,24 @@ impl MenubarItem {
 }
 
 #[derive(Debug, Clone)]
+pub struct MenubarSubmenu {
+    pub trigger: MenubarItem,
+    pub entries: Arc<[MenubarEntry]>,
+}
+
+impl MenubarSubmenu {
+    pub fn new(trigger: MenubarItem, entries: Vec<MenubarEntry>) -> Self {
+        Self {
+            trigger,
+            entries: Arc::from(entries.into_boxed_slice()),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum MenubarEntry {
     Item(MenubarItem),
+    Submenu(MenubarSubmenu),
     Separator,
 }
 
@@ -414,6 +439,10 @@ impl MenubarMenuEntries {
                 }));
 
                 let is_open = cx.watch_model(&open).copied().unwrap_or(false);
+                let overlay_root_name = OverlayController::popover_root_name(trigger_id);
+                cx.with_root_name(&overlay_root_name, |cx| {
+                    menu::sub::sync_root_open(cx, is_open);
+                });
                 let trigger_bg = if is_open {
                     Some(bg_open)
                 } else if st.hovered || st.pressed {
@@ -437,7 +466,6 @@ impl MenubarMenuEntries {
                 };
 
                 if is_open && enabled {
-                    let overlay_root_name = OverlayController::popover_root_name(trigger_id);
                     let side_offset = self.menu.side_offset;
                     let window_margin = self.menu.window_margin;
                     let typeahead_timeout_ticks = self.menu.typeahead_timeout_ticks;
@@ -446,9 +474,10 @@ impl MenubarMenuEntries {
                     let text_style = text_style.clone();
                     let entries = entries.clone();
 
-                    let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
+                    let (overlay_children, dismissible_on_pointer_move) =
+                        cx.with_root_name(&overlay_root_name, move |cx| {
                         let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id) else {
-                            return Vec::new();
+                            return (Vec::new(), None);
                         };
                         let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
                         let estimated = fret_core::Size::new(Px(240.0), Px(220.0));
@@ -462,10 +491,30 @@ impl MenubarMenuEntries {
                             Align::Start,
                         );
 
+                        let submenu = menu::root::ensure_submenu(cx, cx.root_id());
+                        let submenu_cfg = menu::sub::MenuSubmenuConfig::new(
+                            SUBMENU_SAFE_HOVER_BUFFER,
+                            SUBMENU_CLOSE_DELAY,
+                            SUBMENU_FOCUS_DELAY,
+                        );
+
+                        let submenu_open = submenu.open_value.clone();
+                        let submenu_trigger = submenu.trigger.clone();
+                        let submenu_geometry = submenu.geometry.clone();
+                        let submenu_focus_target = submenu.focus_target.clone();
+
+                        let item_count = entries
+                            .iter()
+                            .filter(|e| matches!(e, MenubarEntry::Item(_) | MenubarEntry::Submenu(_)))
+                            .count();
+
                         let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries
                             .iter()
                             .map(|e| match e {
                                 MenubarEntry::Item(item) => (item.label.clone(), item.disabled),
+                                MenubarEntry::Submenu(submenu) => {
+                                    (submenu.trigger.label.clone(), submenu.trigger.disabled)
+                                }
                                 MenubarEntry::Separator => (Arc::from(""), true),
                             })
                             .unzip();
@@ -489,6 +538,16 @@ impl MenubarMenuEntries {
                         let item_ring = decl_style::focus_ring(&theme, theme.metrics.radius_sm);
                         let pad_x = MetricRef::space(Space::N3).resolve(&theme);
                         let pad_y = MetricRef::space(Space::N2).resolve(&theme);
+
+                        let open_for_submenu = open_for_overlay.clone();
+                        let submenu_for_content = submenu.clone();
+                        let submenu_for_panel = submenu.clone();
+                        let entries_for_content = entries.clone();
+                        let entries_for_submenu = entries.clone();
+                        let group_active_for_content = group_active.clone();
+                        let group_active_for_submenu = group_active.clone();
+                        let text_style_for_content = text_style.clone();
+                        let text_style_for_submenu = text_style.clone();
 
                         let content = cx.semantics(
                             SemanticsProps {
@@ -540,15 +599,13 @@ impl MenubarMenuEntries {
                                             typeahead_timeout_ticks,
                                             move |cx| {
                                                 let mut out: Vec<AnyElement> =
-                                                    Vec::with_capacity(entries.len());
+                                                    Vec::with_capacity(entries_for_content.len());
 
-                                                let item_count = entries
-                                                    .iter()
-                                                    .filter(|e| matches!(e, MenubarEntry::Item(_)))
-                                                    .count();
                                                 let mut item_ix: usize = 0;
 
-                                                for (idx, entry) in entries.iter().enumerate() {
+                                                for (idx, entry) in entries_for_content.iter().enumerate() {
+                                                    let entry_value: Arc<str> =
+                                                        Arc::from(format!("entry:{idx}"));
                                                     match entry {
                                                         MenubarEntry::Separator => {
                                                             out.push(cx.container(
@@ -568,7 +625,11 @@ impl MenubarMenuEntries {
                                                                 |_| Vec::new(),
                                                             ));
                                                         }
-                                                        MenubarEntry::Item(item) => {
+                                                        MenubarEntry::Item(item)
+                                                        | MenubarEntry::Submenu(MenubarSubmenu {
+                                                            trigger: item,
+                                                            ..
+                                                        }) => {
                                                             let collection_index = item_ix;
                                                             item_ix = item_ix.saturating_add(1);
 
@@ -581,9 +642,119 @@ impl MenubarMenuEntries {
                                                                 item.a11y_label.clone();
                                                             let command = item.command.clone();
                                                             let open = open_for_overlay.clone();
-                                                            let group_active = group_active.clone();
-                                                            let text_style = text_style.clone();
+                                                            let group_active =
+                                                                group_active_for_content.clone();
+                                                            let text_style =
+                                                                text_style_for_content.clone();
+                                                            let has_submenu =
+                                                                matches!(entry, MenubarEntry::Submenu(_));
 
+                                                            let submenu_for_item =
+                                                                submenu_for_content.clone();
+                                                            let value = entry_value.clone();
+                                                            out.push(cx.keyed(value.clone(), move |cx| {
+                                                                cx.pressable_with_id_props(move |cx, st, item_id| {
+                                                                    let expanded = menu::sub_trigger::wire(
+                                                                        cx,
+                                                                        st,
+                                                                        item_id,
+                                                                        !item_enabled,
+                                                                        has_submenu,
+                                                                        value.clone(),
+                                                                        &submenu_for_item,
+                                                                        SUBMENU_FOCUS_DELAY,
+                                                                    );
+
+                                                                    if !has_submenu {
+                                                                        cx.pressable_dispatch_command_opt(command);
+                                                                        if item_enabled {
+                                                                            cx.pressable_set_bool(&open, false);
+                                                                        }
+
+                                                                        let group_active_for_activate =
+                                                                            group_active.clone();
+                                                                        cx.pressable_add_on_activate(
+                                                                            Arc::new(move |host, _cx, _reason| {
+                                                                                let _ = host
+                                                                                    .models_mut()
+                                                                                    .update(&group_active_for_activate, |v| *v = None);
+                                                                            }),
+                                                                        );
+                                                                    }
+
+                                                                    let mut bg = Color::TRANSPARENT;
+                                                                    if st.hovered || st.pressed {
+                                                                        bg = alpha_mul(
+                                                                            theme.colors.menu_item_hover,
+                                                                            0.9,
+                                                                        );
+                                                                    }
+                                                                    let fg = if item_enabled {
+                                                                        fg
+                                                                    } else {
+                                                                        alpha_mul(fg_muted, 0.85)
+                                                                    };
+
+                                                                    let props = PressableProps {
+                                                                        layout: {
+                                                                            let mut layout =
+                                                                                LayoutStyle::default();
+                                                                            layout.size.width =
+                                                                                Length::Fill;
+                                                                            layout.size.height =
+                                                                                Length::Auto;
+                                                                            layout
+                                                                        },
+                                                                        enabled: item_enabled,
+                                                                        focusable,
+                                                                        focus_ring: Some(item_ring),
+                                                                        a11y: menu::item::menu_item_a11y(
+                                                                            a11y_label.or_else(|| {
+                                                                                Some(label.clone())
+                                                                            }),
+                                                                            expanded,
+                                                                        )
+                                                                        .with_collection_position(
+                                                                            collection_index,
+                                                                            item_count,
+                                                                        ),
+                                                                        ..Default::default()
+                                                                    };
+
+                                                                    let children = vec![cx.container(
+                                                                        ContainerProps {
+                                                                            layout: LayoutStyle::default(),
+                                                                            padding: Edges {
+                                                                                top: pad_y,
+                                                                                right: pad_x,
+                                                                                bottom: pad_y,
+                                                                                left: pad_x,
+                                                                            },
+                                                                            background: Some(bg),
+                                                                            shadow: None,
+                                                                            border: Edges::all(Px(0.0)),
+                                                                            border_color: None,
+                                                                            corner_radii: Corners::all(
+                                                                                theme.metrics.radius_sm,
+                                                                            ),
+                                                                        },
+                                                                        move |cx| {
+                                                                            vec![cx.text_props(TextProps {
+                                                                                layout: LayoutStyle::default(),
+                                                                                text: label.clone(),
+                                                                                style: Some(text_style.clone()),
+                                                                                color: Some(fg),
+                                                                                wrap: TextWrap::None,
+                                                                                overflow: TextOverflow::Clip,
+                                                                            })]
+                                                                        },
+                                                                    )];
+
+                                                                    (props, children)
+                                                                })
+                                                            }));
+
+                                                            #[cfg(any())]
                                                             out.push(cx.pressable(
                                                                 PressableProps {
                                                                     layout: {
@@ -688,7 +859,320 @@ impl MenubarMenuEntries {
                             },
                         );
 
-                        vec![content]
+                        let dismissible_on_pointer_move =
+                            menu::root::submenu_pointer_move_handler(submenu.clone(), submenu_cfg);
+
+                        let mut children = vec![content];
+                        let open_value = cx
+                            .app
+                            .models_mut()
+                            .read(&submenu_open, |v| v.clone())
+                            .ok()
+                            .flatten();
+
+                        if let Some(open_value) = open_value {
+                            let submenu_entries =
+                                entries_for_submenu.iter().enumerate().find_map(|(idx, e)| {
+                                    let MenubarEntry::Submenu(submenu) = e else {
+                                        return None;
+                                    };
+                                    let value = format!("entry:{idx}");
+                                    (value.as_str() == open_value.as_ref())
+                                        .then_some(submenu.entries.clone())
+                                });
+
+                            if let Some(submenu_entries) = submenu_entries {
+                                menu::sub::clear_focus_target(cx, &submenu_focus_target);
+
+                                let desired = fret_core::Size::new(Px(240.0), Px(1.0e9));
+                                let geometry = cx
+                                    .app
+                                    .models_mut()
+                                    .read(&submenu_geometry, |v| *v)
+                                    .ok()
+                                    .flatten()
+                                    .or_else(|| {
+                                        let open_trigger = cx
+                                            .app
+                                            .models_mut()
+                                            .read(&submenu_trigger, |v| *v)
+                                            .ok()
+                                            .flatten()?;
+                                        let trigger_anchor = overlay::anchor_bounds_for_element(
+                                            cx,
+                                            open_trigger,
+                                        )?;
+                                        let placed = anchored_panel_bounds_sized(
+                                            outer,
+                                            trigger_anchor,
+                                            desired,
+                                            Px(2.0),
+                                            Side::Right,
+                                            Align::Start,
+                                        );
+                                        Some(menu::sub::MenuSubmenuGeometry {
+                                            reference: trigger_anchor,
+                                            floating: placed,
+                                        })
+                                    });
+
+                                if let Some(geometry) = geometry {
+                                    menu::sub::set_geometry_if_changed(
+                                        cx,
+                                        geometry,
+                                        &submenu_geometry,
+                                    );
+
+                                    let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) =
+                                        submenu_entries
+                                            .iter()
+                                            .map(|e| match e {
+                                                MenubarEntry::Item(item) => {
+                                                    (item.label.clone(), item.disabled)
+                                                }
+                                                MenubarEntry::Submenu(submenu) => (
+                                                    submenu.trigger.label.clone(),
+                                                    submenu.trigger.disabled,
+                                                ),
+                                                MenubarEntry::Separator => (Arc::from(""), true),
+                                            })
+                                            .unzip();
+
+                                    let labels_arc: Arc<[Arc<str>]> =
+                                        Arc::from(labels.into_boxed_slice());
+                                    let disabled_arc: Arc<[bool]> = Arc::from(
+                                        disabled_flags.clone().into_boxed_slice(),
+                                    );
+                                    let active = roving_focus::first_enabled(&disabled_flags);
+                                    let item_count = submenu_entries
+                                        .iter()
+                                        .filter(|e| {
+                                            matches!(
+                                                e,
+                                                MenubarEntry::Item(_) | MenubarEntry::Submenu(_)
+                                            )
+                                        })
+                                        .count();
+
+                                    let roving = RovingFocusProps {
+                                        enabled: true,
+                                        wrap: true,
+                                        disabled: disabled_arc,
+                                        ..Default::default()
+                                    };
+
+                                    let placed = geometry.floating;
+                                    let submenu_entries_for_panel = submenu_entries.clone();
+                                    let open_for_submenu = open_for_submenu.clone();
+                                    let group_active = group_active_for_submenu.clone();
+                                    let text_style = text_style_for_submenu.clone();
+                                    let submenu_models_for_panel = submenu_for_panel.clone();
+                                    let item_ring = item_ring;
+
+                                    let submenu_panel = cx.semantics(
+                                        SemanticsProps {
+                                            layout: LayoutStyle::default(),
+                                            role: SemanticsRole::Menu,
+                                            ..Default::default()
+                                        },
+                                        move |cx| {
+                                            vec![cx.container(
+                                                ContainerProps {
+                                                    layout: LayoutStyle {
+                                                        position: PositionStyle::Absolute,
+                                                        inset: InsetStyle {
+                                                            left: Some(placed.origin.x),
+                                                            top: Some(placed.origin.y),
+                                                            ..Default::default()
+                                                        },
+                                                        size: SizeStyle {
+                                                            width: Length::Px(placed.size.width),
+                                                            height: Length::Px(
+                                                                placed.size.height,
+                                                            ),
+                                                            ..Default::default()
+                                                        },
+                                                        overflow: Overflow::Clip,
+                                                        ..Default::default()
+                                                    },
+                                                    padding: Edges::all(Px(6.0)),
+                                                    background: Some(
+                                                        theme.colors.menu_background,
+                                                    ),
+                                                    shadow: Some(shadow),
+                                                    border: Edges::all(Px(1.0)),
+                                                    border_color: Some(border),
+                                                    corner_radii: Corners::all(
+                                                        theme.metrics.radius_sm,
+                                                    ),
+                                                },
+                                                move |cx| {
+                                                    vec![menu::content::menu_roving_group_apg_prefix_typeahead(
+                                                        cx,
+                                                        RovingFlexProps {
+                                                            flex: FlexProps {
+                                                                layout: LayoutStyle::default(),
+                                                                direction: fret_core::Axis::Vertical,
+                                                                gap: Px(0.0),
+                                                                padding: Edges::all(Px(0.0)),
+                                                                justify: MainAlign::Start,
+                                                                align: CrossAlign::Stretch,
+                                                                wrap: false,
+                                                            },
+                                                            roving,
+                                                        },
+                                                        labels_arc.clone(),
+                                                        typeahead_timeout_ticks,
+                                                        move |cx| {
+                                                            let mut out: Vec<AnyElement> =
+                                                                Vec::with_capacity(submenu_entries_for_panel.len());
+                                                            let mut item_ix: usize = 0;
+
+                                                            for (idx, entry) in submenu_entries_for_panel.iter().enumerate() {
+                                                                let entry_value: Arc<str> =
+                                                                    Arc::from(format!("submenu_entry:{idx}"));
+                                                                match entry {
+                                                                    MenubarEntry::Separator => {
+                                                                        out.push(cx.container(
+                                                                            ContainerProps {
+                                                                                layout: {
+                                                                                    let mut layout =
+                                                                                        LayoutStyle::default();
+                                                                                    layout.size.width =
+                                                                                        Length::Fill;
+                                                                                    layout.size.height =
+                                                                                        Length::Px(Px(1.0));
+                                                                                    layout
+                                                                                },
+                                                                                background: Some(border),
+                                                                                ..Default::default()
+                                                                            },
+                                                                            |_| Vec::new(),
+                                                                        ));
+                                                                    }
+                                                                    MenubarEntry::Item(item) => {
+                                                                        let collection_index = item_ix;
+                                                                        item_ix = item_ix.saturating_add(1);
+
+                                                                        let item_enabled = !item.disabled;
+                                                                        let focusable = active.is_some_and(|a| a == idx);
+                                                                        let label = item.label.clone();
+                                                                        let a11y_label = item.a11y_label.clone();
+                                                                        let command = item.command.clone();
+                                                                        let open = open_for_submenu.clone();
+                                                                        let group_active = group_active.clone();
+                                                                        let submenu_for_key = submenu_models_for_panel.clone();
+                                                                        let value = entry_value.clone();
+                                                                        let text_style = text_style.clone();
+
+                                                                        out.push(cx.keyed(value.clone(), move |cx| {
+                                                                            cx.pressable_with_id_props(move |cx, st, item_id| {
+                                                                                menu::sub_content::wire_item(
+                                                                                    cx,
+                                                                                    item_id,
+                                                                                    !item_enabled,
+                                                                                    &submenu_for_key,
+                                                                                );
+
+                                                                                cx.pressable_dispatch_command_opt(command);
+                                                                                if item_enabled {
+                                                                                    cx.pressable_set_bool(&open, false);
+                                                                                }
+
+                                                                                let group_active_for_activate =
+                                                                                    group_active.clone();
+                                                                                cx.pressable_add_on_activate(
+                                                                                    Arc::new(move |host, _cx, _reason| {
+                                                                                        let _ = host
+                                                                                            .models_mut()
+                                                                                            .update(&group_active_for_activate, |v| *v = None);
+                                                                                    }),
+                                                                                );
+
+                                                                                let mut bg = Color::TRANSPARENT;
+                                                                                if st.hovered || st.pressed {
+                                                                                    bg = alpha_mul(
+                                                                                        theme.colors.menu_item_hover,
+                                                                                        0.9,
+                                                                                    );
+                                                                                }
+                                                                                let fg = if item_enabled {
+                                                                                    fg
+                                                                                } else {
+                                                                                    alpha_mul(fg_muted, 0.85)
+                                                                                };
+
+                                                                                let props = PressableProps {
+                                                                                    layout: {
+                                                                                        let mut layout =
+                                                                                            LayoutStyle::default();
+                                                                                        layout.size.width = Length::Fill;
+                                                                                        layout.size.height = Length::Auto;
+                                                                                        layout
+                                                                                    },
+                                                                                    enabled: item_enabled,
+                                                                                    focusable,
+                                                                                    focus_ring: Some(item_ring),
+                                                                                    a11y: menu::item::menu_item_a11y(
+                                                                                        a11y_label.or_else(|| Some(label.clone())),
+                                                                                        None,
+                                                                                    )
+                                                                                    .with_collection_position(
+                                                                                        collection_index,
+                                                                                        item_count,
+                                                                                    ),
+                                                                                    ..Default::default()
+                                                                                };
+
+                                                                                let children = vec![cx.container(
+                                                                                    ContainerProps {
+                                                                                        layout: LayoutStyle::default(),
+                                                                                        padding: Edges {
+                                                                                            top: pad_y,
+                                                                                            right: pad_x,
+                                                                                            bottom: pad_y,
+                                                                                            left: pad_x,
+                                                                                        },
+                                                                                        background: Some(bg),
+                                                                                        shadow: None,
+                                                                                        border: Edges::all(Px(0.0)),
+                                                                                        border_color: None,
+                                                                                        corner_radii: Corners::all(theme.metrics.radius_sm),
+                                                                                    },
+                                                                                    move |cx| {
+                                                                                        vec![cx.text_props(TextProps {
+                                                                                            layout: LayoutStyle::default(),
+                                                                                            text: label.clone(),
+                                                                                            style: Some(text_style.clone()),
+                                                                                            color: Some(fg),
+                                                                                            wrap: TextWrap::None,
+                                                                                            overflow: TextOverflow::Clip,
+                                                                                        })]
+                                                                                    },
+                                                                                )];
+
+                                                                                (props, children)
+                                                                            })
+                                                                        }));
+                                                                    }
+                                                                    MenubarEntry::Submenu(_submenu) => {}
+                                                                }
+                                                            }
+
+                                                            out
+                                                        },
+                                                    )]
+                                                },
+                                            )]
+                                        },
+                                    );
+
+                                    children.push(submenu_panel);
+                                }
+                            }
+                        }
+
+                        (children, Some(dismissible_on_pointer_move))
                     });
 
                     let mut request = OverlayRequest::dismissible_popover(
@@ -699,6 +1183,7 @@ impl MenubarMenuEntries {
                         overlay_children,
                     );
                     request.root_name = Some(overlay_root_name);
+                    request.dismissible_on_pointer_move = dismissible_on_pointer_move;
                     OverlayController::request(cx, request);
                 }
 
@@ -858,6 +1343,45 @@ mod tests {
                     ]
                 })]
             });
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    fn render_frame_with_submenu(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+    ) {
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "menubar-submenu",
+            |cx| {
+                vec![menubar(cx, |_cx| {
+                    vec![
+                        MenubarMenu::new("File").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("New")),
+                            MenubarEntry::Submenu(MenubarItem::new("More").submenu(vec![
+                                MenubarEntry::Item(MenubarItem::new("Sub Alpha")),
+                                MenubarEntry::Item(MenubarItem::new("Sub Beta")),
+                            ])),
+                            MenubarEntry::Item(MenubarItem::new("Exit")),
+                        ]),
+                        MenubarMenu::new("Edit")
+                            .entries(vec![MenubarEntry::Item(MenubarItem::new("Undo"))]),
+                    ]
+                })]
+            },
+        );
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
         ui.request_semantics_snapshot();
@@ -1046,5 +1570,115 @@ mod tests {
             .unwrap_or_else(|| panic!("Open node not found; observed={observed:?}"));
         assert_eq!(open.pos_in_set, Some(2));
         assert_eq!(open.set_size, Some(3));
+    }
+
+    #[test]
+    fn menubar_submenu_opens_on_arrow_right_and_closes_on_arrow_left_restoring_focus() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        render_frame_with_submenu(&mut ui, &mut app, &mut services, window, bounds);
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let file = center(menu_trigger_bounds(&snap0, "File"));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: file,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: file,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        render_frame_with_submenu(&mut ui, &mut app, &mut services, window, bounds);
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(menu_trigger_expanded(snap1, "File"));
+
+        let more = snap1
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More submenu trigger");
+        ui.set_focus(Some(more.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowRight,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        render_frame_with_submenu(&mut ui, &mut app, &mut services, window, bounds);
+        let snap2 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(menu_trigger_expanded(snap2, "More"));
+        assert!(
+            snap2
+                .nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem
+                    && n.label.as_deref() == Some("Sub Alpha")),
+            "submenu items should render after ArrowRight opens the submenu"
+        );
+
+        let sub_alpha = snap2
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub Alpha"))
+            .expect("Sub Alpha submenu item");
+        ui.set_focus(Some(sub_alpha.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowLeft,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        render_frame_with_submenu(&mut ui, &mut app, &mut services, window, bounds);
+        let snap3 = ui.semantics_snapshot().expect("semantics snapshot");
+
+        assert!(
+            !snap3
+                .nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem
+                    && n.label.as_deref() == Some("Sub Alpha")),
+            "submenu should close on ArrowLeft"
+        );
+
+        let more_after_close = snap3
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More submenu trigger after close");
+        assert_eq!(
+            ui.focus(),
+            Some(more_after_close.id),
+            "ArrowLeft should restore focus to the submenu trigger"
+        );
     }
 }
