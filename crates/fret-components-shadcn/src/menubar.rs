@@ -913,45 +913,20 @@ impl MenubarMenuEntries {
                                     let submenu_models_for_panel = submenu_for_panel.clone();
                                     let item_ring = item_ring;
 
-                                    let submenu_panel = cx.semantics(
-                                        SemanticsProps {
-                                            layout: LayoutStyle::default(),
-                                            role: SemanticsRole::Menu,
-                                            ..Default::default()
+                                    let submenu_panel = menu::sub_content::submenu_panel_at(
+                                        cx,
+                                        placed,
+                                        move |layout| ContainerProps {
+                                            layout,
+                                            padding: Edges::all(Px(6.0)),
+                                            background: Some(theme.colors.menu_background),
+                                            shadow: Some(shadow),
+                                            border: Edges::all(Px(1.0)),
+                                            border_color: Some(border),
+                                            corner_radii: Corners::all(theme.metrics.radius_sm),
                                         },
                                         move |cx| {
-                                            vec![cx.container(
-                                                ContainerProps {
-                                                    layout: LayoutStyle {
-                                                        position: PositionStyle::Absolute,
-                                                        inset: InsetStyle {
-                                                            left: Some(placed.origin.x),
-                                                            top: Some(placed.origin.y),
-                                                            ..Default::default()
-                                                        },
-                                                        size: SizeStyle {
-                                                            width: Length::Px(placed.size.width),
-                                                            height: Length::Px(
-                                                                placed.size.height,
-                                                            ),
-                                                            ..Default::default()
-                                                        },
-                                                        overflow: Overflow::Clip,
-                                                        ..Default::default()
-                                                    },
-                                                    padding: Edges::all(Px(6.0)),
-                                                    background: Some(
-                                                        theme.colors.menu_background,
-                                                    ),
-                                                    shadow: Some(shadow),
-                                                    border: Edges::all(Px(1.0)),
-                                                    border_color: Some(border),
-                                                    corner_radii: Corners::all(
-                                                        theme.metrics.radius_sm,
-                                                    ),
-                                                },
-                                                move |cx| {
-                                                    vec![menu::content::menu_roving_group_apg_prefix_typeahead(
+                                            vec![menu::content::menu_roving_group_apg_prefix_typeahead(
                                                         cx,
                                                         RovingFlexProps {
                                                             flex: FlexProps {
@@ -1106,8 +1081,6 @@ impl MenubarMenuEntries {
                                                             out
                                                         },
                                                     )]
-                                                },
-                                            )]
                                         },
                                     );
 

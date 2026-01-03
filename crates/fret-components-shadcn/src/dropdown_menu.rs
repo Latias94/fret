@@ -884,11 +884,19 @@ impl DropdownMenu {
                                             };
 
                                             let submenu_models_for_panel = submenu_for_panel.clone();
-                                            let submenu_panel = cx.semantics(
-                                                SemanticsProps {
-                                                    layout: LayoutStyle::default(),
-                                                    role: SemanticsRole::Menu,
-                                                    ..Default::default()
+                                            let submenu_panel = menu::sub_content::submenu_panel_at(
+                                                cx,
+                                                placed,
+                                                move |layout| ContainerProps {
+                                                    layout,
+                                                    padding: Edges::all(Px(4.0)),
+                                                    background: Some(bg),
+                                                    shadow: Some(shadow),
+                                                    border: Edges::all(Px(1.0)),
+                                                    border_color: Some(border),
+                                                    corner_radii: fret_core::Corners::all(
+                                                        theme.metrics.radius_sm,
+                                                    ),
                                                 },
                                                 move |cx| {
                                                     let mut item_ix: usize = 0;
@@ -1065,46 +1073,17 @@ impl DropdownMenu {
                                                         }
                                                     }
 
-                                                    vec![cx.container(
-                                                        ContainerProps {
-                                                            layout: LayoutStyle {
-                                                                position: PositionStyle::Absolute,
-                                                                inset: InsetStyle {
-                                                                    left: Some(placed.origin.x),
-                                                                    top: Some(placed.origin.y),
-                                                                    ..Default::default()
-                                                                },
-                                                                size: SizeStyle {
-                                                                    width: Length::Px(placed.size.width),
-                                                                    height: Length::Px(placed.size.height),
-                                                                    ..Default::default()
-                                                                },
-                                                                overflow: Overflow::Clip,
-                                                                ..Default::default()
-                                                            },
-                                                            padding: Edges::all(Px(4.0)),
-                                                            background: Some(bg),
-                                                            shadow: Some(shadow),
-                                                            border: Edges::all(Px(1.0)),
-                                                            border_color: Some(border),
-                                                            corner_radii: fret_core::Corners::all(
-                                                                theme.metrics.radius_sm,
-                                                            ),
+                                                    vec![cx.flex(
+                                                        FlexProps {
+                                                            layout: LayoutStyle::default(),
+                                                            direction: fret_core::Axis::Vertical,
+                                                            gap: Px(0.0),
+                                                            padding: Edges::all(Px(0.0)),
+                                                            justify: MainAlign::Start,
+                                                            align: CrossAlign::Stretch,
+                                                            wrap: false,
                                                         },
-                                                        move |cx| {
-                                                            vec![cx.flex(
-                                                                FlexProps {
-                                                                    layout: LayoutStyle::default(),
-                                                                    direction: fret_core::Axis::Vertical,
-                                                                    gap: Px(0.0),
-                                                                    padding: Edges::all(Px(0.0)),
-                                                                    justify: MainAlign::Start,
-                                                                    align: CrossAlign::Stretch,
-                                                                    wrap: false,
-                                                                },
-                                                                move |_cx| rows.clone(),
-                                                            )]
-                                                        },
+                                                        move |_cx| rows.clone(),
                                                     )]
                                                 },
                                             );
