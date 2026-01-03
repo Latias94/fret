@@ -1,11 +1,13 @@
 use fret_platform::clipboard::{Clipboard, ClipboardError, ClipboardErrorKind};
 
-pub struct DesktopClipboard {
+pub struct NativeClipboard {
     #[cfg(not(target_arch = "wasm32"))]
     inner: Option<arboard::Clipboard>,
 }
 
-impl Default for DesktopClipboard {
+pub type DesktopClipboard = NativeClipboard;
+
+impl Default for NativeClipboard {
     fn default() -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -21,7 +23,7 @@ impl Default for DesktopClipboard {
     }
 }
 
-impl Clipboard for DesktopClipboard {
+impl Clipboard for NativeClipboard {
     fn set_text(&mut self, text: &str) -> Result<(), ClipboardError> {
         #[cfg(not(target_arch = "wasm32"))]
         {

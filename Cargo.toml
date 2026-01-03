@@ -15,6 +15,8 @@ members = [
     "crates/fret-demo",
     "crates/fret-demo-web",
     "crates/fret-platform",
+    "crates/fret-platform-native",
+    "crates/fret-platform-web",
     "crates/fret-platform-winit",
     "crates/fret-render",
     "crates/fret-runner-web",

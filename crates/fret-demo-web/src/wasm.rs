@@ -24,7 +24,7 @@ use winit::window::{Window, WindowAttributes, WindowId};
 use winit::platform::web::{WindowAttributesWeb, WindowExtWeb};
 
 #[cfg(target_arch = "wasm32")]
-use fret_runner_web::WebPlatformServices;
+use fret_platform_web::WebPlatformServices;
 
 struct GfxState {
     ctx: WgpuContext,

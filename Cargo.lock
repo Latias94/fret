@@ -1359,8 +1359,8 @@ dependencies = [
  "fret-components-shadcn",
  "fret-core",
  "fret-fonts",
+ "fret-platform-web",
  "fret-render",
- "fret-runner-web",
  "fret-runner-winit",
  "fret-runtime",
  "fret-ui-app",
@@ -1399,7 +1399,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fret-platform-desktop"
+name = "fret-platform-native"
 version = "0.1.0"
 dependencies = [
  "arboard",
@@ -1407,6 +1407,18 @@ dependencies = [
  "fret-platform",
  "rfd",
  "webbrowser",
+]
+
+[[package]]
+name = "fret-platform-web"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]
@@ -1443,12 +1455,7 @@ dependencies = [
 name = "fret-runner-web"
 version = "0.1.0"
 dependencies = [
- "fret-core",
- "fret-runtime",
- "js-sys",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
+ "fret-platform-web",
 ]
 
 [[package]]
@@ -1469,7 +1476,7 @@ dependencies = [
  "fret-app",
  "fret-core",
  "fret-platform",
- "fret-platform-desktop",
+ "fret-platform-native",
  "fret-platform-winit",
  "fret-render",
  "fret-runner-winit",

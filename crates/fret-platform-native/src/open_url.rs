@@ -1,9 +1,11 @@
 use fret_platform::open_url::{OpenUrl, OpenUrlError, OpenUrlErrorKind};
 
 #[derive(Debug, Default)]
-pub struct DesktopOpenUrl;
+pub struct NativeOpenUrl;
 
-impl OpenUrl for DesktopOpenUrl {
+pub type DesktopOpenUrl = NativeOpenUrl;
+
+impl OpenUrl for NativeOpenUrl {
     fn open_url(&mut self, url: &str) -> Result<(), OpenUrlError> {
         #[cfg(not(target_arch = "wasm32"))]
         {

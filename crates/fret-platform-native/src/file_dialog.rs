@@ -9,16 +9,18 @@ use std::{collections::HashMap, path::PathBuf};
 
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug)]
-pub struct DesktopFileDialog {
+pub struct NativeFileDialog {
     next_token: u64,
     selections: HashMap<FileDialogToken, Vec<PathBuf>>,
 }
 
 #[cfg(target_arch = "wasm32")]
 #[derive(Debug)]
-pub struct DesktopFileDialog;
+pub struct NativeFileDialog;
 
-impl DesktopFileDialog {
+pub type DesktopFileDialog = NativeFileDialog;
+
+impl NativeFileDialog {
     pub fn new() -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -35,14 +37,14 @@ impl DesktopFileDialog {
     }
 }
 
-impl Default for DesktopFileDialog {
+impl Default for NativeFileDialog {
     fn default() -> Self {
         Self::new()
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-impl DesktopFileDialog {
+impl NativeFileDialog {
     fn allocate_token(&mut self) -> FileDialogToken {
         let token = FileDialogToken(self.next_token);
         self.next_token = self.next_token.saturating_add(1);
@@ -150,7 +152,7 @@ impl DesktopFileDialog {
     }
 }
 
-impl FileDialogProvider for DesktopFileDialog {
+impl FileDialogProvider for NativeFileDialog {
     fn open_files(
         &mut self,
         options: &FileDialogOptions,

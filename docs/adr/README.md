@@ -226,6 +226,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 ## Platform (`fret-platform`)
 
 - `docs/adr/0003-platform-boundary.md`
+- `docs/adr/0091-platform-backends-native-web.md`
 - `docs/adr/0017-multi-window-display-and-dpi.md`
 - `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
 - `docs/adr/0034-timers-animation-and-redraw-scheduling.md`

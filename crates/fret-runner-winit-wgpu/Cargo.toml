@@ -15,7 +15,7 @@ fret-app = { path = "../fret-app" }
 fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }
 fret-platform = { path = "../fret-platform" }
-fret-platform-desktop = { path = "../fret-platform-desktop" }
+fret-platform-native = { path = "../fret-platform-native" }
 fret-platform-winit = { path = "../fret-platform-winit" }
 fret-render = { path = "../fret-render" }
 fret-runner-winit = { path = "../fret-runner-winit" }

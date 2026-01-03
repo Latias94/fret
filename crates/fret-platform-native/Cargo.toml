@@ -1,0 +1,13 @@
+[package]
+name = "fret-platform-native"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fret-core = { path = "../fret-core" }
+fret-platform = { path = "../fret-platform" }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+arboard.workspace = true
+rfd.workspace = true
+webbrowser.workspace = true

@@ -10,16 +10,18 @@ use std::{collections::HashMap, path::PathBuf};
 
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug)]
-pub struct DesktopExternalDrop {
+pub struct NativeExternalDrop {
     next_token: u64,
     payloads: HashMap<ExternalDropToken, Vec<PathBuf>>,
 }
 
 #[cfg(target_arch = "wasm32")]
 #[derive(Debug)]
-pub struct DesktopExternalDrop;
+pub struct NativeExternalDrop;
 
-impl DesktopExternalDrop {
+pub type DesktopExternalDrop = NativeExternalDrop;
+
+impl NativeExternalDrop {
     pub fn new() -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -150,13 +152,13 @@ impl DesktopExternalDrop {
     }
 }
 
-impl Default for DesktopExternalDrop {
+impl Default for NativeExternalDrop {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl ExternalDropProvider for DesktopExternalDrop {
+impl ExternalDropProvider for NativeExternalDrop {
     fn read_all(
         &mut self,
         token: ExternalDropToken,

@@ -1,6 +1,10 @@
 # ADR 0003: Platform Boundary (winit runner)
 
-Status: Accepted
+Status: Superseded (see ADR 0091-platform-backends-native-web.md)
+
+Note: This ADR reflected an early desktop-only split. The current implementation separates
+portable contracts (`fret-platform`) from per-target backends (`fret-platform-native`,
+`fret-platform-web`) while keeping winit glue in runner/backend crates.
 
 ## Context
 
