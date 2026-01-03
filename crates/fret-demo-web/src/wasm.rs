@@ -143,6 +143,19 @@ impl WebDemoApp {
         }
     }
 
+    #[cfg(target_arch = "wasm32")]
+    fn desired_surface_size(window: &Window) -> Option<PhysicalSize<u32>> {
+        let canvas = window.canvas()?;
+        let web_window = web_sys::window()?;
+        let dpr = web_window.device_pixel_ratio().max(1.0);
+        let css_w = canvas.client_width().max(0) as f64;
+        let css_h = canvas.client_height().max(0) as f64;
+        Some(PhysicalSize::new(
+            (css_w * dpr).round().max(1.0) as u32,
+            (css_h * dpr).round().max(1.0) as u32,
+        ))
+    }
+
     fn ensure_root(&mut self, bounds: Rect, services: &mut dyn UiServices) {
         let counter = self.counter.clone();
         let last_input = self.last_input.clone();
@@ -364,13 +377,16 @@ impl WebDemoApp {
         self.app.set_frame_id(self.frame_id);
 
         let scale = window.scale_factor();
-        let logical: LogicalSize<f32> = window.inner_size().to_logical(scale);
+
+        #[cfg(target_arch = "wasm32")]
+        let physical = Self::desired_surface_size(window).unwrap_or_else(|| window.inner_size());
+        #[cfg(not(target_arch = "wasm32"))]
+        let physical = window.inner_size();
+
+        let logical: LogicalSize<f32> = physical.to_logical(scale);
         gfx.scale_factor = scale as f32;
         let scale_factor = gfx.scale_factor;
 
-        // Web backends don't always deliver `WindowEvent::Resized` reliably when the canvas is
-        // styled via CSS. Keep the wgpu surface in sync with the current window size.
-        let physical = window.inner_size();
         let (cur_w, cur_h) = gfx.surface_state.size();
         if (cur_w, cur_h) != (physical.width.max(1), physical.height.max(1)) {
             gfx.resize(physical);
@@ -504,6 +520,15 @@ impl ApplicationHandler<()> for WebDemoApp {
                 let clear = ClearColor::default();
                 let scene = Scene::default();
                 let scale_factor = 1.0;
+
+                web_sys::console::log_1(&JsValue::from_str(&format!(
+                    "wgpu surface: {}x{} format={:?} present={:?} alpha={:?}",
+                    surface_state.config.width,
+                    surface_state.config.height,
+                    surface_state.config.format,
+                    surface_state.config.present_mode,
+                    surface_state.config.alpha_mode,
+                )));
 
                 *gfx_slot.borrow_mut() = Some(GfxState {
                     ctx,
