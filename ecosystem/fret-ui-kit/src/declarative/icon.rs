@@ -1,4 +1,4 @@
-use fret_components_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvg};
+use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvg};
 use fret_core::{Color, Px};
 use fret_ui::SvgSource;
 use fret_ui::element::SvgIconProps;

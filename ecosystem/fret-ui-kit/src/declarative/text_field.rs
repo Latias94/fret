@@ -1,6 +1,6 @@
 #![cfg(feature = "recipes")]
 
-use fret_components_icons::{IconId, ids};
+use fret_icons::{IconId, ids};
 use fret_core::{Axis, Edges, FontId, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::Invalidation;
