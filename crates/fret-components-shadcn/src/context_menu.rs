@@ -6,6 +6,7 @@ use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
 use fret_components_ui::primitives::menu;
+use fret_components_ui::primitives::popper_content;
 use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
     Edges, MouseButton, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
@@ -13,9 +14,9 @@ use fret_core::{
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::PointerDownCx;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PointerRegionProps, PointerRegionState, PositionStyle, PressableProps,
-    RovingFlexProps, RovingFocusProps, SemanticsProps, SizeStyle, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    PointerRegionProps, PointerRegionState, PressableProps, RovingFlexProps, RovingFocusProps,
+    SemanticsProps, TextProps,
 };
 use fret_ui::overlay_placement::{
     Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
@@ -289,9 +290,7 @@ impl ContextMenu {
                     let placed = layout.rect;
                     let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
                     let extra_left = wrapper_insets.left;
-                    let extra_right = wrapper_insets.right;
                     let extra_top = wrapper_insets.top;
-                    let extra_bottom = wrapper_insets.bottom;
 
                     let border = theme
                         .color_by_key("border")
@@ -320,29 +319,10 @@ impl ContextMenu {
                             ..Default::default()
                         },
                         move |cx| {
-                            vec![cx.container(
-                                ContainerProps {
-                                    layout: LayoutStyle {
-                                        position: PositionStyle::Absolute,
-                                        inset: InsetStyle {
-                                            left: Some(Px(placed.origin.x.0 - extra_left.0)),
-                                            top: Some(Px(placed.origin.y.0 - extra_top.0)),
-                                            ..Default::default()
-                                        },
-                                        size: SizeStyle {
-                                            width: Length::Px(Px(
-                                                placed.size.width.0 + extra_left.0 + extra_right.0,
-                                            )),
-                                            height: Length::Px(Px(
-                                                placed.size.height.0 + extra_top.0 + extra_bottom.0,
-                                            )),
-                                            ..Default::default()
-                                        },
-                                        overflow: Overflow::Visible,
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
+                            vec![popper_content::popper_wrapper_at(
+                                cx,
+                                placed,
+                                wrapper_insets,
                                 move |cx| {
                                     let panel = menu::content_panel::menu_panel_container_at(
                                         cx,

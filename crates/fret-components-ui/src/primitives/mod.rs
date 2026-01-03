@@ -28,6 +28,7 @@ pub mod focus_scope;
 pub mod hover_intent;
 pub mod menu;
 pub mod popper;
+pub mod popper_content;
 pub mod presence;
 pub mod roving_focus_group;
 pub mod tooltip_delay_group;
