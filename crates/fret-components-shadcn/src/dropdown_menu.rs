@@ -338,8 +338,6 @@ impl DropdownMenu {
                     flatten_entries(&mut flat, entries(cx));
                     let entries = flat;
 
-                    let submenu_open = submenu.open_value.clone();
-
                     let item_count = entries
                         .iter()
                         .filter(|e| matches!(e, DropdownMenuEntry::Item(_)))
@@ -835,41 +833,27 @@ impl DropdownMenu {
                         menu::root::submenu_pointer_move_handler(submenu.clone(), submenu_cfg);
 
                     let mut children = vec![content];
+                    let desired = Size::new(Px(192.0), Px(1.0e9));
+                    let open_submenu = menu::sub::with_open_submenu(
+                        cx,
+                        &submenu_for_panel,
+                        outer,
+                        desired,
+                        |_cx, open_value, geometry| (open_value, geometry.floating),
+                    );
 
-                            let open_value = cx
-                                .app
-                                .models_mut()
-                                .read(&submenu_open, |v| v.clone())
-                                .ok()
-                                .flatten();
+                    if let Some((open_value, placed)) = open_submenu {
+                        let submenu_entries = entries_for_submenu.iter().find_map(|e| {
+                            let DropdownMenuEntry::Item(item) = e else {
+                                return None;
+                            };
+                            let Some(sub) = item.submenu.clone() else {
+                                return None;
+                            };
+                            (item.value.as_ref() == open_value.as_ref()).then_some(sub)
+                        });
 
-                            if let Some(open_value) = open_value {
-                                let submenu_entries = entries_for_submenu.iter().find_map(|e| {
-                                    let DropdownMenuEntry::Item(item) = e else {
-                                        return None;
-                                    };
-                                    let Some(sub) = item.submenu.clone() else {
-                                        return None;
-                                    };
-                                    (item.value.as_ref() == open_value.as_ref()).then_some(sub)
-                                });
-
-                                if let Some(submenu_entries) = submenu_entries {
-                                    menu::sub::clear_focus_target_in_models(cx, &submenu_for_panel);
-
-                                    let outer = overlay::outer_bounds_with_window_margin(
-                                        cx.bounds,
-                                        window_margin,
-                                    );
-                                    let desired = Size::new(Px(192.0), Px(1.0e9));
-
-                                    let geometry = menu::sub::resolve_open_geometry(
-                                        cx,
-                                        &submenu_for_panel,
-                                        outer,
-                                        desired,
-                                    );
-                                    if geometry.is_some() {
+                        if let Some(submenu_entries) = submenu_entries {
                                         let mut flat: Vec<DropdownMenuEntry> = Vec::new();
                                         flatten_entries(&mut flat, submenu_entries);
                                         let submenu_entries = flat;
@@ -1128,7 +1112,6 @@ impl DropdownMenu {
                                         children.push(submenu_panel);
                                     }
                                 }
-                            }
 
                     (children, Some(dismissible_on_pointer_move))
                 });

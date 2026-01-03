@@ -75,6 +75,26 @@ pub fn clear_focus_target_in_models<H: UiHost>(
     clear_focus_target(cx, &models.focus_target);
 }
 
+pub fn with_open_submenu<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    models: &MenuSubmenuModels,
+    outer: Rect,
+    desired: Size,
+    f: impl FnOnce(&mut ElementContext<'_, H>, Arc<str>, MenuSubmenuGeometry) -> R,
+) -> Option<R> {
+    let open_value = cx
+        .app
+        .models_mut()
+        .read(&models.open_value, |v| v.clone())
+        .ok()
+        .flatten()?;
+
+    clear_focus_target_in_models(cx, models);
+
+    let geometry = resolve_open_geometry(cx, models, outer, desired)?;
+    Some(f(cx, open_value, geometry))
+}
+
 pub fn resolve_open_geometry<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     models: &MenuSubmenuModels,

@@ -487,8 +487,6 @@ impl MenubarMenuEntries {
                             Align::Start,
                         );
 
-                        let submenu_open = submenu.open_value.clone();
-
                         let item_count = entries
                             .iter()
                             .filter(|e| matches!(e, MenubarEntry::Item(_) | MenubarEntry::Submenu(_)))
@@ -849,14 +847,16 @@ impl MenubarMenuEntries {
                             menu::root::submenu_pointer_move_handler(submenu.clone(), submenu_cfg);
 
                         let mut children = vec![content];
-                        let open_value = cx
-                            .app
-                            .models_mut()
-                            .read(&submenu_open, |v| v.clone())
-                            .ok()
-                            .flatten();
+                        let desired = fret_core::Size::new(Px(240.0), Px(1.0e9));
+                        let open_submenu = menu::sub::with_open_submenu(
+                            cx,
+                            &submenu_for_panel,
+                            outer,
+                            desired,
+                            |_cx, open_value, geometry| (open_value, geometry.floating),
+                        );
 
-                        if let Some(open_value) = open_value {
+                        if let Some((open_value, placed)) = open_submenu {
                             let submenu_entries =
                                 entries_for_submenu.iter().enumerate().find_map(|(idx, e)| {
                                     let MenubarEntry::Submenu(submenu) = e else {
@@ -868,17 +868,6 @@ impl MenubarMenuEntries {
                                 });
 
                             if let Some(submenu_entries) = submenu_entries {
-                                menu::sub::clear_focus_target_in_models(cx, &submenu_for_panel);
-
-                                let desired = fret_core::Size::new(Px(240.0), Px(1.0e9));
-                                let geometry = menu::sub::resolve_open_geometry(
-                                    cx,
-                                    &submenu_for_panel,
-                                    outer,
-                                    desired,
-                                );
-
-                                if let Some(geometry) = geometry {
                                     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) =
                                         submenu_entries
                                             .iter()
@@ -917,7 +906,6 @@ impl MenubarMenuEntries {
                                         ..Default::default()
                                     };
 
-                                    let placed = geometry.floating;
                                     let submenu_entries_for_panel = submenu_entries.clone();
                                     let open_for_submenu = open_for_submenu.clone();
                                     let group_active = group_active_for_submenu.clone();
@@ -1124,7 +1112,6 @@ impl MenubarMenuEntries {
                                     );
 
                                     children.push(submenu_panel);
-                                }
                             }
                         }
 
