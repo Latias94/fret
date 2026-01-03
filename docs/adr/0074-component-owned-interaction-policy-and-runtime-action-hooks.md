@@ -34,7 +34,7 @@ We want:
 
 - `crates/fret-ui` to remain **mechanism-only** (routing, focus, hit-test, layout, layers, scroll,
   virtualization, placement, semantics output),
-- `ecosystem/fret-ui-kit` / `crates/fret-components-shadcn` to own **interaction policy**
+- `ecosystem/fret-ui-kit` / `ecosystem/fret-ui-shadcn` to own **interaction policy**
   (Radix/APG outcomes, dismissal rules, roving/typeahead/menu navigation, selection policies),
 - to keep a path for component code to run “on interaction” without adding new runtime policy
   variants.
@@ -49,7 +49,7 @@ We want:
 - dismissal and focus-restore rules for overlays,
 - roving focus/typeahead/menu navigation policies.
 
-These belong to `ecosystem/fret-ui-kit` (infra/headless) and `crates/fret-components-shadcn`
+These belong to `ecosystem/fret-ui-kit` (infra/headless) and `ecosystem/fret-ui-shadcn`
 (taxonomy + recipes).
 
 ### 2) Naming (locked for this migration)
@@ -130,7 +130,7 @@ Component code should implement these behaviors via action hooks (ADR 0074):
 1) Add action-hook substrate (Experimental) + tests in `fret-ui`. (done)
 2) Implement component-layer helpers in `fret-ui-kit`: (done)
    - `pressable_toggle(...)`, `pressable_set(...)`, `dismissible(...)`, roving helpers.
-3) Migrate `fret-components-shadcn` usage off runtime shortcut props. (done)
+3) Migrate `fret-ui-shadcn` usage off runtime shortcut props. (done)
 4) Replace runtime-owned dismissal policy with `fret-ui-kit/window_overlays` policy that composes runtime layers + outside-press observer. (done)
 5) Deprecate and remove legacy shortcut props (Compatibility → removed) once no longer used. (done)
 

@@ -16,10 +16,10 @@ This file is a historical snapshot and is not maintained as an active execution 
 
 - MVP 49 (in progress): Make the declarative component authoring model (ADR 0028 + ADR 0039) the primary, end-to-end usable path (not just a state store): `IntoElement` + `Render`/`RenderOnce` + composition ergonomics, plus a clear `render_root(...)` contract (when it must be called, and what it guarantees).
 - MVP 50 (in progress): Consolidate virtualization around composable, declarative row content (GPUI-style). Runtime contract is now TanStack-aligned (ADR 0070); remaining work is migrating surfaces off fixed-schema runtime rows (`VirtualListRow { text/secondary/trailing... }`) and retiring the legacy path where feasible.
-- MVP 51 (in progress): Tighten the framework/components boundary by moving “standard surfaces” (popover/dialog/menu/tooltip/toast/command palette/menubar) fully into the components layer, keeping `fret-ui` as runtime substrate + performance primitives. `fret-ui-kit` remains the reusable infrastructure, while `fret-components-shadcn` becomes the shadcn/ui (v4) aligned naming/taxonomy surface. Compatibility retained widgets stay behind `fret-ui`’s `retained-widgets` feature (`crates/fret-ui/src/primitives/*`) until removal.
+- MVP 51 (in progress): Tighten the framework/components boundary by moving “standard surfaces” (popover/dialog/menu/tooltip/toast/command palette/menubar) fully into the components layer, keeping `fret-ui` as runtime substrate + performance primitives. `fret-ui-kit` remains the reusable infrastructure, while `fret-ui-shadcn` becomes the shadcn/ui (v4) aligned naming/taxonomy surface. Compatibility retained widgets stay behind `fret-ui`’s `retained-widgets` feature (`crates/fret-ui/src/primitives/*`) until removal.
 - MVP 68 (done): Eliminate interaction policy leaks from `fret-ui` before scaling the component surface.
   - Removed runtime “shortcut model writes” (pressable toggle/set variants, dismiss-by-model, roving/typeahead coupling) per ADR 0074.
-  - Components must express policy via action hooks + component-owned headless helpers (`fret-ui-kit` / `fret-components-shadcn`).
+  - Components must express policy via action hooks + component-owned headless helpers (`fret-ui-kit` / `fret-ui-shadcn`).
 - MVP 69 (done): Docking layering cleanup (B route): move docking UI/policy out of `fret-ui`.
   - Keep dock graph/ops/persistence in `fret-core` (stable contract).
   - Add a generic internal-drag routing hook in `fret-ui` so docking can preserve tear-off/cross-window drags.

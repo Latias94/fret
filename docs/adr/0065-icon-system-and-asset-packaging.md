@@ -42,7 +42,7 @@ We define an **SVG-first** icon system for Fret components with three strict sep
 
 ### 1) Icon identity: semantic keys
 
-`fret-components-icons` provides an `IconId` that is a stable semantic key (string-like), not tied to a specific icon
+`fret-icons` provides an `IconId` that is a stable semantic key (string-like), not tied to a specific icon
 set or upstream filename.
 
 Naming guidelines:
@@ -59,7 +59,7 @@ Ergonomics:
 
 ### 2) Icon registry: source is data, not rendering
 
-`fret-components-icons` also provides an `IconRegistry` mapping `IconId -> IconSource`.
+`fret-icons` also provides an `IconRegistry` mapping `IconId -> IconSource`.
 
 `IconSource` is renderer-agnostic and supports:
 
@@ -130,7 +130,7 @@ No component code holds `ImageId` or manages raster caches directly.
 
 ## In-repo maintenance (Lucide)
 
-- Curated list: `crates/fret-icons-lucide/icon-list.txt`
+- Curated list: `ecosystem/fret-icons-lucide/icon-list.txt`
 - Sync vendored SVGs from `repo-ref`:
   - Windows: `pwsh tools/sync_icons.ps1 -Pack lucide -Clean`
   - macOS/Linux: `python3 tools/sync_icons.py --pack lucide --clean`

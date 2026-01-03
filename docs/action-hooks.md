@@ -24,7 +24,7 @@ matching, etc.), we end up with:
 
 - `crates/fret-ui`: mechanisms + contracts only (tree, layout, hit-test, focus, semantics, overlay roots).
 - `ecosystem/fret-ui-kit`: reusable infra (tokens, recipes, headless state machines).
-- `crates/fret-components-shadcn`: shadcn/ui v4 naming surface (recipes; no retained widgets).
+- `ecosystem/fret-ui-shadcn`: shadcn/ui v4 naming surface (recipes; no retained widgets).
 
 **Policy lives in the component layer**:
 

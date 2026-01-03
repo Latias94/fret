@@ -42,7 +42,7 @@ Allowed:
   - composite widget focus strategies (e.g. cmdk).
 - Small declarative helpers that are not runtime contracts.
 
-### `fret-components-shadcn` (shadcn/ui-aligned surface)
+### `fret-ui-shadcn` (shadcn/ui-aligned surface)
 
 Allowed:
 

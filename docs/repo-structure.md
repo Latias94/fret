@@ -61,11 +61,11 @@ Common examples:
 - Component/policy layers built on top of `fret-ui`:
   - `fret-ui-kit` (was `fret-ui-kit`)
   - `fret-ui-docking` (was `fret-ui-docking`)
-  - `fret-ui-shadcn` (was `fret-components-shadcn`)
+  - `fret-ui-shadcn` (was `fret-ui-shadcn`)
 - “App kit” / default app policies:
-  - `fret-app-kit` (was `fret-components-app`)
+  - `fret-app-kit` (was `fret-app-kit`)
 - Icons:
-  - `fret-icons` (primitives/registry; was `fret-components-icons`)
+  - `fret-icons` (primitives/registry; was `fret-icons`)
   - `fret-icons-lucide` (icon set)
   - `fret-icons-radix` (icon set)
 

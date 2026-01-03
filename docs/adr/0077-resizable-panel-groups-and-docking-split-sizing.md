@@ -69,7 +69,7 @@ If later UX parity requires pixel-sticky sizing (ImGui `SizeRef` feel), add a ne
 
 ### 4) Component layer provides shadcn taxonomy, not mechanics
 
-`fret-components-shadcn` exposes shadcn-aligned names:
+`fret-ui-shadcn` exposes shadcn-aligned names:
 
 - `ResizablePanelGroup`, `ResizablePanel`, `ResizableHandle`
 
@@ -90,7 +90,7 @@ Tradeoffs / limitations (current):
 
 - Runtime primitive: `crates/fret-ui/src/resizable_panel_group.rs`
 - Declarative surface: `ResizablePanelGroupProps` + `ElementContext::resizable_panel_group(...)`
-- shadcn facade: `crates/fret-components-shadcn/src/resizable.rs`
+- shadcn facade: `ecosystem/fret-ui-shadcn/src/resizable.rs`
 - Docking integration: split layout/hit-testing/painting delegates to the same panel-group mechanics via `fret-ui/unstable-retained-bridge`.
 - Docking drag commit: drag updates mutate the app-owned graph for immediate feedback; drag end emits a single atomic `DockOp::SetSplitFractionsMany` transaction.
 

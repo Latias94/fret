@@ -7,7 +7,7 @@ Scope:
 
 - `ecosystem/fret-ui-kit`: typed, Tailwind-like authoring vocabulary (`ChromeRefinement`, `LayoutRefinement`)
 - `crates/fret-ui`: runtime substrate (`LayoutStyle`, `FlexProps`, `GridProps`, `ScrollProps`, hit-test/paint rules)
-- `crates/fret-components-shadcn`: shadcn-style taxonomy surface (recipes should rely on the semantics below)
+- `ecosystem/fret-ui-shadcn`: shadcn-style taxonomy surface (recipes should rely on the semantics below)
 
 Non-scope / non-goals:
 

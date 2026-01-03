@@ -94,11 +94,11 @@ Expected semantics outcomes:
 Collection position metadata checks:
 
 - cmdk list items:
-  - `crates/fret-components-shadcn/src/command.rs` (`cmdk_arrow_moves_highlight_while_focus_stays_in_input`)
+  - `ecosystem/fret-ui-shadcn/src/command.rs` (`cmdk_arrow_moves_highlight_while_focus_stays_in_input`)
 - Select popover items:
-  - `crates/fret-components-shadcn/src/select.rs` (`select_popover_items_have_collection_position_metadata`)
+  - `ecosystem/fret-ui-shadcn/src/select.rs` (`select_popover_items_have_collection_position_metadata`)
 - Context menu items (separator excluded from count):
-  - `crates/fret-components-shadcn/src/context_menu.rs` (`context_menu_items_have_collection_position_metadata_excluding_separators`)
+  - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_items_have_collection_position_metadata_excluding_separators`)
 
 Platform mapping check (AccessKit):
 
@@ -107,7 +107,7 @@ Platform mapping check (AccessKit):
 Run:
 
 ```bash
-cargo nextest run -p fret-components-shadcn
+cargo nextest run -p fret-ui-shadcn
 cargo nextest run -p fret-a11y-accesskit
 ```
 

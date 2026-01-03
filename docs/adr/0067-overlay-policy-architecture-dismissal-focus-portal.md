@@ -46,7 +46,7 @@ without forcing runtime churn (ADR 0066).
 - open/close intent (hover intent delays, long-press, etc.),
 - mount/unmount/transitions (presence).
 
-`crates/fret-components-shadcn` owns shadcn v4 APIs and recipes on top of those policies.
+`ecosystem/fret-ui-shadcn` owns shadcn v4 APIs and recipes on top of those policies.
 
 ### 2) Policy primitives (component-owned)
 

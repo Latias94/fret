@@ -12,7 +12,7 @@ Historical documents under `docs/archive/` are kept for context only and may be 
 
 ## Scope
 
-- `crates/fret-components-shadcn`: shadcn/ui v4 naming + taxonomy surface (recipes).
+- `ecosystem/fret-ui-shadcn`: shadcn/ui v4 naming + taxonomy surface (recipes).
 - `ecosystem/fret-ui-kit`: reusable infra (tokens/recipes/headless helpers).
 - `crates/fret-ui`: runtime substrate (contracts/mechanisms only).
 
@@ -22,16 +22,16 @@ This repo intentionally splits responsibilities across three layers (similar to 
 
 - `fret-ui` (**mechanisms/contracts**): element tree, hit-test, focus, semantics/a11y, overlay roots/layers, outside-press observers, layout, paint.
 - `fret-ui-kit` (**design-system + infra**, Tailwind-ish): token-driven styling (`Theme` keys + refinements), reusable declarative helpers (`scroll`, `text_field`, etc), and headless state machines (`roving_focus`, hover intent, menu navigation).
-- `fret-components-shadcn` (**taxonomy + recipes**): shadcn/ui v4 naming surface and component composition; no retained widgets, no renderer/platform deps.
+- `fret-ui-shadcn` (**taxonomy + recipes**): shadcn/ui v4 naming surface and component composition; no retained widgets, no renderer/platform deps.
 
-App/editor-specific composition belongs in `fret-components-app` / `fret-editor` (e.g. app toolbars, menu bars, command palette wiring).
+App/editor-specific composition belongs in `fret-app-kit` / `fret-editor` (e.g. app toolbars, menu bars, command palette wiring).
 
 ### Interaction Policy (Action Hooks)
 
 Cross-cutting interaction policies (toggle models, close overlays, selection writes, “dismiss on escape/outside press”, etc.) are *component-owned*:
 
 - `fret-ui` provides hook plumbing (`on_activate`, `on_dismiss_request`) as a mechanism-only substrate (ADR 0074).
-- `fret-ui-kit` and `fret-components-shadcn` register handlers to implement policies for each component.
+- `fret-ui-kit` and `fret-ui-shadcn` register handlers to implement policies for each component.
 - Legacy runtime shortcuts on `PressableProps` / dismissible roots have been removed from `crates/fret-ui`.
   Use component-owned action hooks (`fret-ui-kit::declarative::action_hooks::ActionHooksExt`) instead.
 
@@ -123,7 +123,7 @@ These are shadcn-style surfaces referenced by docs/demos but not part of the `re
 | --- | --- | --- | --- | --- |
 | combobox | `combobox` | Present | In review | Now implemented as `Popover` + `CommandPalette` recipe; audit: `docs/audits/shadcn-combobox.md` |
 | date picker | `date_picker` | Missing | Unreviewed | Upstream is a `Popover` + `Calendar` recipe; consider shipping as a recipe/example first |
-| data table / datagrid | `data_table` | Feature-gated | Unreviewed | Enabled by `fret-components-shadcn/datagrid`; not a `registry:ui` item upstream |
+| data table / datagrid | `data_table` | Feature-gated | Unreviewed | Enabled by `fret-ui-shadcn/datagrid`; not a `registry:ui` item upstream |
 | toast | `toast` | Skip | Unreviewed | Upstream `toast` is deprecated in favor of `sonner`; this repo ships `sonner` |
 | typography | `typography` | Skip | Unreviewed | Upstream typography page is docs-only and not shipped as a component |
 
@@ -135,7 +135,7 @@ Notes:
 ## Recommended Order (Near-term)
 
 1. `fret-ui-kit`: declarative primitives and headless helpers used by everything (pressable, list/tree, focus).
-2. `fret-components-shadcn`: primitives first (`Button` -> `Input/Textarea` -> `Checkbox/Switch/RadioGroup` -> `Tabs/Accordion`).
+2. `fret-ui-shadcn`: primitives first (`Button` -> `Input/Textarea` -> `Checkbox/Switch/RadioGroup` -> `Tabs/Accordion`).
 3. Overlays (policy lives in components, mechanism lives in runtime): `Popover` -> `Dialog` -> `Tooltip/HoverCard` -> menus -> `Toast`.
 4. Complex components: calendar/date picker, navigation menu, data table (virtualization + selection).
 
@@ -154,7 +154,7 @@ Notes:
 
 ## Infrastructure Backlog (components-ui / runtime)
 
-The goal is to keep `fret-components-shadcn` mostly “composition + styling”, and put reusable mechanisms/state in `fret-ui` / `fret-ui-kit`.
+The goal is to keep `fret-ui-shadcn` mostly “composition + styling”, and put reusable mechanisms/state in `fret-ui` / `fret-ui-kit`.
 
 **Overlay stack (highest leverage)**
 - `fret-ui` (mechanism): multi-root rendering per window, overlay layer install/uninstall, outside-press observers, modal barrier semantics, focus restore primitives.
@@ -171,7 +171,7 @@ The goal is to keep `fret-components-shadcn` mostly “composition + styling”,
 - `sonner`/toast: global service API + per-window overlay root + timers + action dispatch.
 
 **Command palette (`command` / cmdk-style)**
-- Component surface belongs in `fret-components-shadcn` (shadcn taxonomy), but the heavy lifting should live in `fret-ui-kit`:
+- Component surface belongs in `fret-ui-shadcn` (shadcn taxonomy), but the heavy lifting should live in `fret-ui-kit`:
   - headless filtering/scoring + match highlighting ranges
   - keyboard navigation (up/down/home/end, typeahead, disabled skipping)
   - optional virtualization integration
@@ -204,7 +204,7 @@ Cross-cutting a11y constraint to keep in mind:
 - GPUI provides mechanisms like `DismissEvent`, `anchored(...)` placement, focus handles, and deferred overlays.
 - gpui-component implements policy and styling at the component layer (`Popover::overlay_closable`, tooltip styling, input popovers, etc).
 
-This matches Fret’s intended split: `fret-ui` as mechanism; `fret-ui-kit`/`fret-components-shadcn` as policy + composition.
+This matches Fret’s intended split: `fret-ui` as mechanism; `fret-ui-kit`/`fret-ui-shadcn` as policy + composition.
 
 ## Tracking Table (Update as work proceeds)
 
@@ -212,6 +212,6 @@ This matches Fret’s intended split: `fret-ui` as mechanism; `fret-ui-kit`/`fre
 | --- | --- | --- | --- | --- | --- | --- |
 | Boundary | Retained API hidden | Done | `fret-ui` | - | - | `widget` + `create_node` are crate-private |
 | Infra | Declarative tree | Done | `fret-ui-kit` | Partial | Partial | Expand with roving focus + typeahead helpers |
-| Primitives | Button | Present | `fret-components-shadcn` | Partial | Not started | Style parity + a11y checklist still pending |
-| Primitives | Input | Present | `fret-components-shadcn` | Partial | Not started | Uses runtime `TextInput` semantics + theming |
-| Overlays | Select | Present | `fret-components-shadcn` | Partial | Partial | Uses `fret-ui-kit/window_overlays` dismissible popover |
+| Primitives | Button | Present | `fret-ui-shadcn` | Partial | Not started | Style parity + a11y checklist still pending |
+| Primitives | Input | Present | `fret-ui-shadcn` | Partial | Not started | Uses runtime `TextInput` semantics + theming |
+| Overlays | Select | Present | `fret-ui-shadcn` | Partial | Partial | Uses `fret-ui-kit/window_overlays` dismissible popover |

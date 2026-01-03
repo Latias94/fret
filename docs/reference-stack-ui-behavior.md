@@ -109,7 +109,7 @@ Non-goal:
 
 Note:
 
-- `HoverCard` is implemented in `crates/fret-components-shadcn` as component-layer policy, built on
+- `HoverCard` is implemented in `ecosystem/fret-ui-shadcn` as component-layer policy, built on
   runtime substrate primitives (`HoverRegion`, cross-frame geometry queries, and the placement
   solver). `crates/fret-ui` does not ship a `HoverCard` runtime element.
 
@@ -121,7 +121,7 @@ Owns reusable typed authoring ergonomics:
 - token mapping helpers (Tailwind-like `Space/Radius`),
 - behavior helpers that are still framework-agnostic (small headless state machines).
 
-### `crates/fret-components-shadcn` (taxonomy + recipes)
+### `ecosystem/fret-ui-shadcn` (taxonomy + recipes)
 
 Owns shadcn v4 naming + variants + composition recipes:
 

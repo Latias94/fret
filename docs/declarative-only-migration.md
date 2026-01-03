@@ -38,7 +38,7 @@ Owns:
 - headless state machines (roving focus, typeahead, dismissal) as reusable helpers
 - overlay policy managers that compose runtime layers/placement/focus/capture
 
-### `crates/fret-components-shadcn` (taxonomy + recipes)
+### `ecosystem/fret-ui-shadcn` (taxonomy + recipes)
 
 Owns:
 

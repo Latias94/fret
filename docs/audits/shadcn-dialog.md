@@ -11,7 +11,7 @@ and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ## Fret implementation
 
-- Component code: `crates/fret-components-shadcn/src/dialog.rs`
+- Component code: `ecosystem/fret-ui-shadcn/src/dialog.rs`
 - Depends on overlay policy/infra:
   - `ecosystem/fret-ui-kit/src/window_overlays/*` (modal overlays, focus restore/initial focus)
   - `ecosystem/fret-ui-kit/src/overlay_controller.rs` (overlay requests + presence)
@@ -59,8 +59,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 ## Validation
 
-- `cargo check -p fret-components-shadcn`
-- `cargo nextest run -p fret-components-shadcn dialog::tests`
+- `cargo check -p fret-ui-shadcn`
+- `cargo nextest run -p fret-ui-shadcn dialog::tests`
 
 ## Follow-ups (recommended)
 

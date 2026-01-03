@@ -17,7 +17,7 @@ Key upstream notes:
 
 ## Fret implementation
 
-- Component code: `crates/fret-components-shadcn/src/tooltip.rs`
+- Component code: `ecosystem/fret-ui-shadcn/src/tooltip.rs`
 - Hover intent state machine: `ecosystem/fret-ui-kit/src/headless/hover_intent.rs`
 - Overlay placement helpers: `ecosystem/fret-ui-kit/src/overlay.rs`
 - Per-window tooltip overlay policy: `ecosystem/fret-ui-kit/src/window_overlays/mod.rs`

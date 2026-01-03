@@ -46,7 +46,7 @@ For each module, we consider it “closed enough to scale” when:
 **Component layer (policy-heavy):**
 
 - `ecosystem/fret-ui-kit` — headless policies + composition helpers (action hooks, overlays policy, tokens/recipes infra).
-- `crates/fret-components-shadcn` — shadcn/ui v4-aligned component surface (recipes, variants, behaviors).
+- `ecosystem/fret-ui-shadcn` — shadcn/ui v4-aligned component surface (recipes, variants, behaviors).
 - `ecosystem/fret-ui-docking` — docking UI + interaction policy (B-route; policy outside runtime).
 
 **Backends (not portable):**
@@ -232,7 +232,7 @@ flowchart LR
 - Policy is testable without a runner (unit/integration tests).
 - Overlay dismissal/focus-restore rules are centralized here (not in runtime).
 
-### `fret-components-shadcn` (shadcn/ui v4 Surface)
+### `fret-ui-shadcn` (shadcn/ui v4 Surface)
 
 **Read first**
 

@@ -36,7 +36,7 @@ Each item is “done” when we have: (a) accepted contract or explicit decision
 ### 1) RenderTransform-aware hit testing + anchored overlays (Done)
 
 - Contract: `docs/adr/0083-render-transform-hit-testing.md`
-- Validation: `cargo nextest run -p fret-ui` and shadcn overlay anchoring tests (`cargo nextest run -p fret-components-shadcn`)
+- Validation: `cargo nextest run -p fret-ui` and shadcn overlay anchoring tests (`cargo nextest run -p fret-ui-shadcn`)
 
 ### 2) Docking interaction arbitration (Done, keep hardening)
 

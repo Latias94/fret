@@ -97,7 +97,7 @@ Runtime (`crates/fret-ui`):
   - `pos_in_set` / `set_size` (new).
 - Must remain policy-free (ADR 0066).
 
-Component layer (`ecosystem/fret-ui-kit` / `crates/fret-components-shadcn`):
+Component layer (`ecosystem/fret-ui-kit` / `ecosystem/fret-ui-shadcn`):
 
 - Owns “which nodes are exposed” for a given surface (menus, lists, comboboxes, cmdk).
 - Owns scroll/virtualization policy and ensures:
@@ -185,7 +185,7 @@ Cons:
 1) Add a small helper in `ecosystem/fret-ui-kit` for “collection semantics stamping”:
    - given `(index, count)` assign `pos_in_set`/`set_size` to item semantics,
    - enforce the 1-based invariant.
-2) Update at least one dogfooding surface in `crates/fret-components-shadcn` (e.g. `Command` or a
+2) Update at least one dogfooding surface in `ecosystem/fret-ui-shadcn` (e.g. `Command` or a
    virtualized list demo) to populate the metadata.
 3) Add regression tests in `ecosystem/fret-ui-kit` that validate:
    - metadata correctness for visible items,

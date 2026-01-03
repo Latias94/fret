@@ -206,7 +206,7 @@ Fret’s target mapping:
 
 - `gpui` (runtime substrate) ≈ `crates/fret-ui`
 - gpui-component `crates/ui` (policy + recipes) ≈ `ecosystem/fret-ui-kit` (infra) +
-  `crates/fret-components-shadcn` (taxonomy + recipes)
+  `ecosystem/fret-ui-shadcn` (taxonomy + recipes)
 
 Key principle:
 

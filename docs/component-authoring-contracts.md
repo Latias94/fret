@@ -17,7 +17,7 @@ It complements (but does not replace) the ADRs:
 - `ecosystem/fret-ui-kit` (**policy helpers + infra**): token-driven styling (`ChromeRefinement`
   / `LayoutRefinement`), headless state machines (roving/typeahead/menu nav), overlay orchestration
   policy, and ergonomic declarative helpers.
-- `crates/fret-components-shadcn` (**recipes/taxonomy**): shadcn/ui-aligned component naming and
+- `ecosystem/fret-ui-shadcn` (**recipes/taxonomy**): shadcn/ui-aligned component naming and
   composition; should not introduce new runtime contracts.
 
 If a new surface “needs runtime changes”, treat it as a decision gate: write/update an ADR and add
@@ -213,7 +213,7 @@ Recommended building blocks:
 
 Feature flags to be aware of:
 
-- `fret-ui-kit/icons`: integrates shared icons (`fret-components-icons`)
+- `fret-ui-kit/icons`: integrates shared icons (`fret-icons`)
 - `fret-ui-kit/recipes`: opinionated higher-level helpers (implies `icons`)
 - `fret-ui-kit/unstable-internals`: exposes overlay orchestration internals directly
 

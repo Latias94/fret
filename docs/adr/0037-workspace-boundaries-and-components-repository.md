@@ -62,8 +62,8 @@ Example crate layout (names are placeholders):
 
 - **Primitives / shadcn-style UI**
   - `fret-ui-kit`: reusable component infrastructure (token-driven styling, `StyledExt`, size/density vocabulary, low-level building blocks).
-  - `fret-components-shadcn`: shadcn/ui (v4) aligned component surface (names + variants + policies), built on top of `fret-ui-kit`.
-  - `fret-components-icons`: icon primitives and common icon sets (as data + paint, not platform APIs).
+  - `fret-ui-shadcn`: shadcn/ui (v4) aligned component surface (names + variants + policies), built on top of `fret-ui-kit`.
+  - `fret-icons`: icon primitives and common icon sets (as data + paint, not platform APIs).
 - **Editor patterns**
   - `fret-components-tree`: tree view + virtualization (hierarchy/project browser patterns).
   - `fret-components-inspector`: inspector/form patterns and field widgets.

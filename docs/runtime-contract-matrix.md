@@ -4,7 +4,7 @@ This document is a *living checklist* for what the `crates/fret-ui` runtime prov
 exists, and which mature ecosystem reference we align with.
 
 It is intentionally **mechanism-only**: component policies and UI recipes belong in
-`ecosystem/fret-ui-kit` and `crates/fret-components-shadcn`.
+`ecosystem/fret-ui-kit` and `ecosystem/fret-ui-shadcn`.
 
 For a closure-oriented, module-by-module index (contracts → code → tests → demos), see:
 
@@ -14,7 +14,7 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 
 - `gpui` (runtime substrate) ≈ `crates/fret-ui`
 - `gpui-component/crates/ui` (policy + recipes) ≈ `ecosystem/fret-ui-kit` (infra) +
-  `crates/fret-components-shadcn` (taxonomy + recipes)
+  `ecosystem/fret-ui-shadcn` (taxonomy + recipes)
 
 ## Contracts (P0)
 

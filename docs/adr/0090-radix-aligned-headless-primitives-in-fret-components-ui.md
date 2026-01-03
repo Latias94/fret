@@ -43,7 +43,7 @@ provide:
 - overlay orchestration helpers built on top of the runtime overlay substrate (ADR 0011 / ADR 0067 / ADR 0069),
 - accessibility “stamping” helpers for common patterns (collections, active-descendant).
 
-This keeps `crates/fret-components-shadcn` as a thin taxonomy/recipe surface and avoids pressure to
+This keeps `ecosystem/fret-ui-shadcn` as a thin taxonomy/recipe surface and avoids pressure to
 grow the `fret-ui` contract surface with component policies.
 
 ### 1.1) Terminology: “headless” vs “primitives” (no conflict)

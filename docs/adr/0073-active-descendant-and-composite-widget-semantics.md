@@ -165,7 +165,7 @@ Cons:
 1) Define a headless “command palette selection” policy in `ecosystem/fret-ui-kit`:
    - Keep focus in the text input (better IME/caret behavior).
    - Maintain an internal “active index / active row id”.
-2) In `fret-components-shadcn`, wire `Command`/`CommandList` recipes so:
+2) In `fret-ui-shadcn`, wire `Command`/`CommandList` recipes so:
    - the highlighted row is marked `selected=true`, and
    - the input semantics node sets `active_descendant` to the highlighted row id.
 

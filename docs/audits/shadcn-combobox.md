@@ -12,10 +12,10 @@ examples in `repo-ref/ui`.
 
 ## Fret implementation
 
-- Component code: `crates/fret-components-shadcn/src/combobox.rs`
+- Component code: `ecosystem/fret-ui-shadcn/src/combobox.rs`
 - Reused building blocks:
-  - `crates/fret-components-shadcn/src/popover.rs`
-  - `crates/fret-components-shadcn/src/command.rs`
+  - `ecosystem/fret-ui-shadcn/src/popover.rs`
+  - `ecosystem/fret-ui-shadcn/src/command.rs`
 
 ## Audit checklist
 
@@ -58,7 +58,7 @@ examples in `repo-ref/ui`.
 
 ## Validation
 
-- `cargo check -p fret-components-shadcn`
+- `cargo check -p fret-ui-shadcn`
 
 ## Follow-ups (recommended)
 

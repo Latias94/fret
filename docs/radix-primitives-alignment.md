@@ -5,7 +5,7 @@ layered architecture:
 
 - `crates/fret-ui` (mechanism-only runtime substrate)
 - `ecosystem/fret-ui-kit` (headless primitives + policy helpers + overlay orchestration)
-- `crates/fret-components-shadcn` (shadcn-aligned taxonomy + recipes)
+- `ecosystem/fret-ui-shadcn` (shadcn-aligned taxonomy + recipes)
 
 This is **not** an API-compatibility goal. We port **behavior outcomes**, not React/DOM
 implementations.
@@ -22,7 +22,7 @@ Radix “primitives” span both mechanism and policy in a web/React setting. In
 
 - Mechanism belongs to `fret-ui` (focus/capture/overlay roots, outside-press observation, placement).
 - Policy composition belongs to `fret-ui-kit` (headless state machines + action hook wiring).
-- shadcn recipes belong to `fret-components-shadcn` (names + default styling + composition).
+- shadcn recipes belong to `fret-ui-shadcn` (names + default styling + composition).
 
 ## Mapping table (concept → Fret)
 
@@ -57,7 +57,7 @@ Radix “primitives” span both mechanism and policy in a web/React setting. In
   and must be justified by an ADR + tests (ADR 0066).
 - If it is a **state machine** or **interaction policy composition**, it belongs in
   `fret-ui-kit` (ADR 0074 / ADR 0090).
-- If it is **shadcn naming or default styling**, it belongs in `fret-components-shadcn`.
+- If it is **shadcn naming or default styling**, it belongs in `fret-ui-shadcn`.
 
 ## Current gaps worth tracking (from audits)
 

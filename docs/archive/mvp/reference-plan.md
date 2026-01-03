@@ -1052,7 +1052,7 @@ Status:
   - Overlay “surfaces” have been migrated to `ecosystem/fret-ui-kit` as part of MVP 48 boundary tightening:
     - `ContextMenu`, `Popover`, `DialogOverlay`, `CommandPaletteOverlay`, `AppMenuBar`, `ToastOverlay`, `TooltipOverlay`.
     - The runtime still owns the overlay-layer mechanism (`UiTree` layers) and the menu request store (`ContextMenuService`).
-  - `crates/fret-components-icons`: renderer-agnostic icon registry + small builtin glyph fallback set.
+  - `ecosystem/fret-icons`: renderer-agnostic icon registry + small builtin glyph fallback set.
   - `fret-demo`: adds a `shadcn_gallery` panel (`PanelKey` `core.shadcn_gallery`) to validate composition and theme-driven styling.
   - `fret-demo --bin shadcn_gallery`: standalone shadcn gallery window (no docking/editor shell) to validate component ergonomics and overlays in isolation.
 

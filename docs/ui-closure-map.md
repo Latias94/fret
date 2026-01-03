@@ -8,7 +8,7 @@ This document is the **closure-oriented index** for Fret’s UI substrate and it
 
 - `crates/fret-ui` (mechanism-only runtime substrate)
 - `ecosystem/fret-ui-kit` (policy + headless infra)
-- `crates/fret-components-shadcn` (recipes + shadcn v4 surface)
+- `ecosystem/fret-ui-shadcn` (recipes + shadcn v4 surface)
 - `ecosystem/fret-ui-docking` (docking UI + policy)
 - `crates/fret-platform` (portable platform I/O contracts)
 - `crates/fret-runner-winit` (AccessKit bridge + winit glue)
@@ -88,7 +88,7 @@ Implementation anchors:
 
 - `crates/fret-ui/src/tree/mod.rs` (transform propagation, hit-test mapping)
 - `crates/fret-ui/src/elements/mod.rs` (`visual_bounds_for_element`, last-frame geometry)
-- Component anchoring: `crates/fret-components-shadcn/src/overlay_anchor.rs`
+- Component anchoring: `ecosystem/fret-ui-shadcn/src/overlay_anchor.rs`
 
 Validation anchors:
 
@@ -142,7 +142,7 @@ Validation anchors:
 **Policy (components)**
 
 - `ecosystem/fret-ui-kit/src/window_overlays/*`
-- shadcn surfaces in `crates/fret-components-shadcn/src/*`
+- shadcn surfaces in `ecosystem/fret-ui-shadcn/src/*`
 
 **Demo harness**
 
