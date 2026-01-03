@@ -3,6 +3,7 @@ use fret_components_ui::declarative::scheduling;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::hover_intent::{HoverIntentConfig, HoverIntentState};
 use fret_components_ui::overlay;
+use fret_components_ui::primitives::popper_content;
 use fret_components_ui::tooltip_provider;
 use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
@@ -343,9 +344,7 @@ impl Tooltip {
                 let placed = layout.rect;
                 let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
                 let extra_left = wrapper_insets.left;
-                let extra_right = wrapper_insets.right;
                 let extra_top = wrapper_insets.top;
-                let extra_bottom = wrapper_insets.bottom;
 
                 let arrow_el = popper_arrow::diamond_arrow_element(
                     cx,
@@ -359,64 +358,14 @@ impl Tooltip {
                     },
                 );
 
-                let wrapper = if let Some(arrow_el) = arrow_el {
-                    cx.container(
+                let wrapper = popper_content::popper_wrapper_at(cx, placed, wrapper_insets, |cx| {
+                    let content = cx.container(
                         ContainerProps {
                             layout: LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    top: Some(Px(placed.origin.y.0 - extra_top.0)),
-                                    left: Some(Px(placed.origin.x.0 - extra_left.0)),
-                                    ..Default::default()
-                                },
-                                size: SizeStyle {
-                                    width: Length::Px(Px(placed.size.width.0
-                                        + extra_left.0
-                                        + extra_right.0)),
-                                    height: Length::Px(Px(placed.size.height.0
-                                        + extra_top.0
-                                        + extra_bottom.0)),
-                                    ..Default::default()
-                                },
-                                overflow: Overflow::Visible,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            let content = cx.container(
-                                ContainerProps {
-                                    layout: LayoutStyle {
-                                        position: PositionStyle::Absolute,
-                                        inset: InsetStyle {
-                                            top: Some(extra_top),
-                                            left: Some(extra_left),
-                                            ..Default::default()
-                                        },
-                                        size: SizeStyle {
-                                            width: Length::Px(placed.size.width),
-                                            height: Length::Px(placed.size.height),
-                                            ..Default::default()
-                                        },
-                                        overflow: Overflow::Visible,
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                move |_cx| vec![content],
-                            );
-
-                            vec![arrow_el, content]
-                        },
-                    )
-                } else {
-                    cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                position: PositionStyle::Absolute,
-                                inset: InsetStyle {
-                                    top: Some(placed.origin.y),
-                                    left: Some(placed.origin.x),
+                                    top: Some(extra_top),
+                                    left: Some(extra_left),
                                     ..Default::default()
                                 },
                                 size: SizeStyle {
@@ -424,13 +373,20 @@ impl Tooltip {
                                     height: Length::Px(placed.size.height),
                                     ..Default::default()
                                 },
+                                overflow: Overflow::Visible,
                                 ..Default::default()
                             },
                             ..Default::default()
                         },
                         move |_cx| vec![content],
-                    )
-                };
+                    );
+
+                    if let Some(arrow_el) = arrow_el {
+                        vec![arrow_el, content]
+                    } else {
+                        vec![content]
+                    }
+                });
 
                 vec![wrapper]
             });
