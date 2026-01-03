@@ -1360,6 +1360,7 @@ dependencies = [
  "fret-core",
  "fret-fonts",
  "fret-render",
+ "fret-runner-web",
  "fret-runner-winit",
  "fret-runtime",
  "fret-ui-app",

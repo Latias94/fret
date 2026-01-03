@@ -23,6 +23,9 @@ use winit::window::{Window, WindowAttributes, WindowId};
 #[cfg(target_arch = "wasm32")]
 use winit::platform::web::{WindowAttributesWeb, WindowExtWeb};
 
+#[cfg(target_arch = "wasm32")]
+use fret_runner_web::WebPlatformServices;
+
 struct GfxState {
     ctx: WgpuContext,
     surface_state: SurfaceState<'static>,
@@ -113,14 +116,21 @@ struct WebDemoApp {
 
     #[cfg(target_arch = "wasm32")]
     web_cursor: Option<fret_runner_winit::WebCursorListener>,
+
+    #[cfg(target_arch = "wasm32")]
+    web_services: WebPlatformServices,
 }
 
 impl WebDemoApp {
     fn new(canvas_id: String) -> Self {
         let mut app = fret_ui_app::App::new();
         let mut caps = PlatformCapabilities::default();
+        caps.ui.multi_window = false;
+        caps.ui.window_tear_off = false;
         caps.gfx.webgpu = true;
         caps.gfx.native_gpu = false;
+        caps.ime.enabled = false;
+        caps.ime.set_cursor_area = false;
         caps.fs.real_paths = false;
         app.set_global(caps);
 
@@ -149,6 +159,8 @@ impl WebDemoApp {
             platform: fret_runner_winit::WinitPlatform::default(),
             #[cfg(target_arch = "wasm32")]
             web_cursor: None,
+            #[cfg(target_arch = "wasm32")]
+            web_services: WebPlatformServices::default(),
         }
     }
 
@@ -308,6 +320,12 @@ impl WebDemoApp {
             return;
         }
 
+        #[cfg(target_arch = "wasm32")]
+        let effects = self.web_services.handle_effects(&mut self.app, effects);
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let effects = effects;
+
         for effect in effects {
             match effect {
                 Effect::TextAddFonts { fonts } => {
@@ -423,6 +441,12 @@ impl WebDemoApp {
         self.platform
             .input
             .poll_web_cursor_updates(scale, &mut self.pending_events);
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.web_services.tick();
+            self.pending_events.extend(self.web_services.take_events());
+        }
 
         #[cfg(target_arch = "wasm32")]
         let physical = Self::desired_surface_size(window).unwrap_or_else(|| window.surface_size());

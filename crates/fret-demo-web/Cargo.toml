@@ -13,6 +13,7 @@ fret-core = { path = "../fret-core" }
 fret-components-shadcn = { path = "../fret-components-shadcn" }
 fret-render = { path = "../fret-render" }
 fret-runner-winit = { path = "../fret-runner-winit" }
+fret-runner-web = { path = "../fret-runner-web" }
 fret-runtime = { path = "../fret-runtime" }
 fret-ui-app = { path = "../fret-ui-app" }
 fret-fonts = { path = "../fret-fonts" }
