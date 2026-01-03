@@ -107,6 +107,30 @@ pub fn resolve_open_geometry<H: UiHost>(
     Some(geometry)
 }
 
+/// Update submenu geometry from a specific trigger element's current anchor bounds.
+///
+/// This is typically called from within a `MenuSubTrigger` pressable closure when the submenu is
+/// already open, so pointer-grace intent has up-to-date geometry even before the submenu panel is
+/// rendered/measured.
+pub fn set_geometry_from_element_anchor_if_present<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    element: GlobalElementId,
+    models: &MenuSubmenuModels,
+    outer: Rect,
+    desired: Size,
+) {
+    let Some(anchor) = overlay::anchor_bounds_for_element(cx, element) else {
+        return;
+    };
+
+    let floating = default_submenu_bounds(outer, anchor, desired);
+    let geometry = MenuSubmenuGeometry {
+        reference: anchor,
+        floating,
+    };
+    set_geometry_if_changed(cx, geometry, &models.geometry);
+}
+
 #[derive(Debug, Clone)]
 pub struct MenuSubmenuModels {
     pub open_value: Model<Option<Arc<str>>>,

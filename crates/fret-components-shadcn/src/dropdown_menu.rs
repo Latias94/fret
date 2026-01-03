@@ -685,32 +685,20 @@ impl DropdownMenu {
                                                                         &submenu_for_item.trigger,
                                                                     );
 
-                                                                    if let Some(trigger_anchor) =
-                                                                        overlay::anchor_bounds_for_element(cx, item_id)
-                                                                    {
-                                                                        let outer =
-                                                                            overlay::outer_bounds_with_window_margin(
-                                                                                cx.bounds,
-                                                                                window_margin,
-                                                                            );
-                                                                        let desired =
-                                                                            Size::new(Px(192.0), Px(1.0e9));
-                                                                        let placed =
-                                                                            menu::sub::default_submenu_bounds(
-                                                                                outer,
-                                                                                trigger_anchor,
-                                                                                desired,
-                                                                            );
-                                                                        let geometry = menu::sub::MenuSubmenuGeometry {
-                                                                            reference: trigger_anchor,
-                                                                            floating: placed,
-                                                                        };
-                                                                        menu::sub::set_geometry_if_changed(
-                                                                            cx,
-                                                                            geometry,
-                                                                            &submenu_for_item.geometry,
+                                                                    let outer =
+                                                                        overlay::outer_bounds_with_window_margin(
+                                                                            cx.bounds,
+                                                                            window_margin,
                                                                         );
-                                                                    }
+                                                                    let desired =
+                                                                        Size::new(Px(192.0), Px(1.0e9));
+                                                                    menu::sub::set_geometry_from_element_anchor_if_present(
+                                                                        cx,
+                                                                        item_id,
+                                                                        &submenu_for_item,
+                                                                        outer,
+                                                                        desired,
+                                                                    );
                                                                 }
 
                                                                 let props = PressableProps {
