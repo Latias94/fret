@@ -43,6 +43,7 @@ pub fn estimated_element_size<H: UiHost>(
         .unwrap_or(fallback)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn anchored_panel_bounds_for_element<H: UiHost>(
     cx: &ElementContext<'_, H>,
     trigger: GlobalElementId,
@@ -91,6 +92,7 @@ pub fn popper_layout_sized(
 ///
 /// - `outer` is derived from `cx.bounds` inset by `window_margin`.
 /// - `desired` is derived from last-frame content size (falls back to `fallback_size`).
+#[allow(clippy::too_many_arguments)]
 pub fn popper_layout_for_element<H: UiHost>(
     cx: &ElementContext<'_, H>,
     anchor: GlobalElementId,

@@ -1,7 +1,7 @@
 use fret_core::Px;
 use fret_ui::element::{
     AnyElement, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle, ScrollProps,
-    ScrollbarProps, ScrollbarStyle, StackProps,
+    ScrollbarProps, ScrollbarStyle, SizeStyle, StackProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -60,15 +60,20 @@ pub fn overflow_scroll<H: UiHost>(
         let scroll_id = scroll.id;
         let mut children = vec![scroll];
         if show_scrollbar {
-            let mut scrollbar_layout = LayoutStyle::default();
-            scrollbar_layout.position = PositionStyle::Absolute;
-            scrollbar_layout.inset = InsetStyle {
-                top: Some(Px(0.0)),
-                right: Some(Px(0.0)),
-                bottom: Some(Px(0.0)),
-                left: None,
+            let scrollbar_layout = LayoutStyle {
+                position: PositionStyle::Absolute,
+                inset: InsetStyle {
+                    top: Some(Px(0.0)),
+                    right: Some(Px(0.0)),
+                    bottom: Some(Px(0.0)),
+                    left: None,
+                },
+                size: SizeStyle {
+                    width: Length::Px(scrollbar_w),
+                    ..Default::default()
+                },
+                ..Default::default()
             };
-            scrollbar_layout.size.width = Length::Px(scrollbar_w);
 
             children.push(cx.scrollbar(ScrollbarProps {
                 layout: scrollbar_layout,

@@ -4,7 +4,7 @@
 //! - the first tooltip opens after a delay, but
 //! - moving between tooltips shortly after closing skips the delay.
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct TooltipDelayGroupConfig {
     pub delay_ticks: u64,
     pub skip_delay_ticks: u64,
@@ -15,15 +15,6 @@ impl TooltipDelayGroupConfig {
         Self {
             delay_ticks,
             skip_delay_ticks,
-        }
-    }
-}
-
-impl Default for TooltipDelayGroupConfig {
-    fn default() -> Self {
-        Self {
-            delay_ticks: 0,
-            skip_delay_ticks: 0,
         }
     }
 }

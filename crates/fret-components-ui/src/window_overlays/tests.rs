@@ -11,7 +11,9 @@ use fret_core::{
 };
 use fret_runtime::Model;
 use fret_ui::UiTree;
-use fret_ui::element::{ContainerProps, LayoutStyle, Length, PositionStyle, PressableProps};
+use fret_ui::element::{
+    ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps, SizeStyle,
+};
 use fret_ui::elements::GlobalElementId;
 
 #[derive(Default)]
@@ -122,13 +124,20 @@ fn render_base_with_trigger_and_underlay(
                     cx.pressable_with_id(
                         PressableProps {
                             layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.position = PositionStyle::Absolute;
-                                layout.inset.left = Some(Px(0.0));
-                                layout.inset.top = Some(Px(0.0));
-                                layout.size.width = Length::Px(Px(80.0));
-                                layout.size.height = Length::Px(Px(32.0));
-                                layout
+                                LayoutStyle {
+                                    position: PositionStyle::Absolute,
+                                    inset: InsetStyle {
+                                        left: Some(Px(0.0)),
+                                        top: Some(Px(0.0)),
+                                        ..Default::default()
+                                    },
+                                    size: SizeStyle {
+                                        width: Length::Px(Px(80.0)),
+                                        height: Length::Px(Px(32.0)),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                }
                             },
                             enabled: true,
                             focusable: true,
@@ -143,13 +152,20 @@ fn render_base_with_trigger_and_underlay(
                     cx.pressable_with_id(
                         PressableProps {
                             layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.position = PositionStyle::Absolute;
-                                layout.inset.left = Some(Px(0.0));
-                                layout.inset.top = Some(Px(120.0));
-                                layout.size.width = Length::Px(Px(160.0));
-                                layout.size.height = Length::Px(Px(32.0));
-                                layout
+                                LayoutStyle {
+                                    position: PositionStyle::Absolute,
+                                    inset: InsetStyle {
+                                        left: Some(Px(0.0)),
+                                        top: Some(Px(120.0)),
+                                        ..Default::default()
+                                    },
+                                    size: SizeStyle {
+                                        width: Length::Px(Px(160.0)),
+                                        height: Length::Px(Px(32.0)),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                }
                             },
                             enabled: true,
                             focusable: true,
@@ -1255,10 +1271,10 @@ fn non_modal_overlay_does_not_request_outside_press_observer_while_closing() {
         .find(|l| l.id == layer)
         .expect("popover debug layer info");
 
-    assert_eq!(info.visible, true);
-    assert_eq!(info.blocks_underlay_input, false);
-    assert_eq!(info.hit_testable, false);
-    assert_eq!(info.wants_pointer_down_outside_events, false);
+    assert!(info.visible);
+    assert!(!info.blocks_underlay_input);
+    assert!(!info.hit_testable);
+    assert!(!info.wants_pointer_down_outside_events);
 }
 
 #[test]
@@ -1402,13 +1418,20 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
             vec![cx.container(
                 ContainerProps {
                     layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.position = PositionStyle::Absolute;
-                        layout.inset.left = Some(Px(0.0));
-                        layout.inset.top = Some(Px(40.0));
-                        layout.size.width = Length::Px(Px(200.0));
-                        layout.size.height = Length::Px(Px(40.0));
-                        layout
+                        LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                left: Some(Px(0.0)),
+                                top: Some(Px(40.0)),
+                                ..Default::default()
+                            },
+                            size: SizeStyle {
+                                width: Length::Px(Px(200.0)),
+                                height: Length::Px(Px(40.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }
                     },
                     ..Default::default()
                 },

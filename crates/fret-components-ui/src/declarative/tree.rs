@@ -116,11 +116,8 @@ pub fn tree_view_with_renderer<H: UiHost>(
     let items_revision = cx.app.models().revision(&items).unwrap_or(0);
     let state_revision = cx.app.models().revision(&state).unwrap_or(0);
 
-    let TreeState { selected, expanded } = cx
-        .watch_model(&state)
-        .paint()
-        .cloned()
-        .unwrap_or_else(TreeState::default);
+    let TreeState { selected, expanded } =
+        cx.watch_model(&state).paint().cloned().unwrap_or_default();
 
     let items_value = cx.watch_model(&items).layout().cloned().unwrap_or_default();
 

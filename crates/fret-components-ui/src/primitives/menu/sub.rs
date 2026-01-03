@@ -357,6 +357,7 @@ pub fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> MenuSubmenuMo
 }
 
 pub fn on_timer_handler(models: MenuSubmenuModels) -> fret_ui::action::OnTimer {
+    #[allow(clippy::arc_with_non_send_sync)]
     Arc::new(move |host, acx, token| {
         let close_armed = host
             .models_mut()
