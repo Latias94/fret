@@ -638,6 +638,15 @@ impl MenubarMenuEntries {
                                                             let value = entry_value.clone();
                                                             out.push(cx.keyed(value.clone(), move |cx| {
                                                                 cx.pressable_with_id_props(move |cx, st, item_id| {
+                                                                    let geometry_hint = has_submenu.then_some(
+                                                                        menu::sub_trigger::MenuSubTriggerGeometryHint {
+                                                                            outer,
+                                                                            desired: fret_core::Size::new(
+                                                                                Px(240.0),
+                                                                                Px(1.0e9),
+                                                                            ),
+                                                                        },
+                                                                    );
                                                                     let expanded = menu::sub_trigger::wire(
                                                                         cx,
                                                                         st,
@@ -646,7 +655,8 @@ impl MenubarMenuEntries {
                                                                         has_submenu,
                                                                         value.clone(),
                                                                         &submenu_for_item,
-                                                                        submenu_cfg.focus_delay,
+                                                                        submenu_cfg,
+                                                                        geometry_hint,
                                                                     );
 
                                                                     if !has_submenu {

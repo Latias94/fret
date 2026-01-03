@@ -8,15 +8,20 @@
 //! In Fret, wrappers call these helpers from within a pressable item closure.
 
 use std::sync::Arc;
-use std::time::Duration;
 
-use fret_core::KeyCode;
+use fret_core::{KeyCode, Rect, Size};
 use fret_ui::element::PressableState;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::model_watch::ModelWatchExt as _;
 use crate::primitives::menu::sub;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MenuSubTriggerGeometryHint {
+    pub outer: Rect,
+    pub desired: Size,
+}
 
 /// Wire submenu-trigger behavior onto a pressable item.
 ///
@@ -29,7 +34,8 @@ pub fn wire<H: UiHost>(
     has_submenu: bool,
     value: Arc<str>,
     models: &sub::MenuSubmenuModels,
-    focus_delay: Duration,
+    cfg: sub::MenuSubmenuConfig,
+    geometry_hint: Option<MenuSubTriggerGeometryHint>,
 ) -> Option<bool> {
     if disabled {
         return has_submenu.then_some(false);
@@ -65,6 +71,7 @@ pub fn wire<H: UiHost>(
     let key_has_submenu = has_submenu;
     let models_for_key = models.clone();
     let value_for_key = value.clone();
+    let cfg_for_key = cfg;
     cx.key_on_key_down_for(
         item_id,
         Arc::new(move |host, acx, down| {
@@ -81,7 +88,7 @@ pub fn wire<H: UiHost>(
                         acx,
                         &models_for_key,
                         value_for_key.clone(),
-                        focus_delay,
+                        cfg_for_key.focus_delay,
                     );
                     true
                 }
@@ -100,6 +107,28 @@ pub fn wire<H: UiHost>(
         .unwrap_or(None)
         .as_ref()
         .is_some_and(|cur: &Arc<str>| cur.as_ref() == value.as_ref());
+
+    if has_submenu && expanded {
+        sub::set_trigger_if_none(cx, item_id, &models.trigger);
+
+        let open_trigger = cx
+            .app
+            .models_mut()
+            .read(&models.trigger, |v| *v)
+            .ok()
+            .flatten();
+        if open_trigger.is_none_or(|t| t == item_id) {
+            if let Some(hint) = geometry_hint {
+                sub::set_geometry_from_element_anchor_if_present(
+                    cx,
+                    item_id,
+                    models,
+                    hint.outer,
+                    hint.desired,
+                );
+            }
+        }
+    }
 
     has_submenu.then_some(expanded)
 }

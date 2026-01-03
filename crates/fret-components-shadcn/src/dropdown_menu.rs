@@ -656,8 +656,23 @@ impl DropdownMenu {
                                                         let submenu_for_item =
                                                             submenu_for_content.clone();
 
-                                                        out.push(cx.keyed(value.clone(), |cx| {
+                                                                out.push(cx.keyed(value.clone(), |cx| {
                                                             cx.pressable_with_id_props(|cx, st, item_id| {
+                                                                let geometry_hint = has_submenu.then(|| {
+                                                                    let outer =
+                                                                        overlay::outer_bounds_with_window_margin(
+                                                                            cx.bounds,
+                                                                            window_margin,
+                                                                        );
+                                                                    let desired = Size::new(
+                                                                        Px(192.0),
+                                                                        Px(1.0e9),
+                                                                    );
+                                                                    menu::sub_trigger::MenuSubTriggerGeometryHint {
+                                                                        outer,
+                                                                        desired,
+                                                                    }
+                                                                });
                                                                 let is_open_submenu =
                                                                     menu::sub_trigger::wire(
                                                                         cx,
@@ -667,36 +682,14 @@ impl DropdownMenu {
                                                                         has_submenu,
                                                                         value.clone(),
                                                                         &submenu_for_item,
-                                                                        submenu_cfg.focus_delay,
+                                                                        submenu_cfg,
+                                                                        geometry_hint,
                                                                     )
                                                                     .unwrap_or(false);
 
                                                                 if !has_submenu && !disabled {
                                                                     cx.pressable_dispatch_command_opt(command);
                                                                     cx.pressable_set_bool(&open, false);
-                                                                }
-
-                                                                if has_submenu && is_open_submenu {
-                                                                    menu::sub::set_trigger_if_none(
-                                                                        cx,
-                                                                        item_id,
-                                                                        &submenu_for_item.trigger,
-                                                                    );
-
-                                                                    let outer =
-                                                                        overlay::outer_bounds_with_window_margin(
-                                                                            cx.bounds,
-                                                                            window_margin,
-                                                                        );
-                                                                    let desired =
-                                                                        Size::new(Px(192.0), Px(1.0e9));
-                                                                    menu::sub::set_geometry_from_element_anchor_if_present(
-                                                                        cx,
-                                                                        item_id,
-                                                                        &submenu_for_item,
-                                                                        outer,
-                                                                        desired,
-                                                                    );
                                                                 }
 
                                                                 let props = PressableProps {
